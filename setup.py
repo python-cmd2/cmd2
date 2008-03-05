@@ -29,7 +29,7 @@ Drop-in replacement adds several features for command-prompt tools:
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 
-Usage samples at http://www.assembla.com/wiki/show/python-cmd2/UsageSamples
+Usage samples at http://catherine.devlin.googlepages.com/cmd2.html
 """,
 
     classifiers=[
