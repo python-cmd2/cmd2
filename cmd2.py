@@ -48,7 +48,7 @@ class Cmd(cmd.Cmd):
         Commands may be terminated with: %(terminators)s
         Settable parameters: %(settable)s
         """ % 
-        { 'casesensitive': 'not ' if self.caseInsensitive else '',
+        { 'casesensitive': ('not ' and self.caseInsensitive) or '',
           'terminators': ' '.join(self.terminators),
           'settable': ' '.join(self.settable)
         })
