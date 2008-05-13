@@ -63,23 +63,35 @@ class Cmd(cmd.Cmd):
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
     legalFileName = re.compile(r'''^[^"'\s]+$''')
-    def parseRedirector(self, statement, symbol):
+    def parseRedirector(self, statement, symbol, mustBeTerminated=False):
         parts = statement.split(symbol)
-        if len(parts) < 2:
+        if (len(parts) < 2):
             return statement, None
-        (newStatement, redirect) = (' '.join(parts[:-1]), parts[-1].strip())
+        if mustBeTerminated and (parts[-2].strip()[-1] not in self.terminators):
+            return statement, None
+        (newStatement, redirect) = (symbol.join(parts[:-1]), parts[-1].strip())
         if not self.legalFileName.search(redirect):
             return statement, None
         return newStatement, redirect
     
+    def extractCommand(self, statement):
+        try:
+            (command, args) = statement.split(None,1)
+        except ValueError:
+            (command, args) = statement, ''
+        if self.caseInsensitive:
+            command = command.lower()
+        return command, args
+    
     def parseRedirectors(self, statement):
-        newStatement, redirect = self.parseRedirector(statement, '>>')
+        mustBeTerminated = self.extractCommand(statement)[0] in self.multilineCommands
+        newStatement, redirect = self.parseRedirector(statement, '>>', mustBeTerminated)
         if redirect:
             return newStatement, redirect, 'a'        
-        newStatement, redirect = self.parseRedirector(statement, '>')
+        newStatement, redirect = self.parseRedirector(statement, '>', mustBeTerminated)
         if redirect:
             return newStatement, redirect, 'w'
-        newStatement, redirect = self.parseRedirector(statement, '<')
+        newStatement, redirect = self.parseRedirector(statement, '<', mustBeTerminated)
         if redirect:
             return newStatement, redirect, 'r'
         return statement, '', ''
@@ -93,13 +105,8 @@ class Cmd(cmd.Cmd):
         The return value is a flag indicating whether interpretation of
         commands by the interpreter should stop.
 
-        """        
-        try:
-            (command, args) = line.split(None,1)
-        except ValueError:
-            (command, args) = line, ''
-        if self.caseInsensitive:
-            command = command.lower()
+        """
+        command, args = self.extractCommand(line)
         statement = ' '.join([command, args])
         if command in self.multilineCommands:
             statement = self.finishStatement(statement)
@@ -113,6 +120,7 @@ class Cmd(cmd.Cmd):
                 statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
         stop = cmd.Cmd.onecmd(self, statement)
         try:
+            # unnecessary to compute command again?
             command = statement.split(None,1)[0].lower()
             if command not in self.excludeFromHistory:
                 self.history.append(statement)
@@ -124,6 +132,7 @@ class Cmd(cmd.Cmd):
         
     statementEndPattern = re.compile(r'[%s]\s*$' % terminators)        
     def statementHasEnded(self, lines):
+        #import pdb; pdb.set_trace()
         return bool(self.statementEndPattern.search(lines)) \
                or lines[-3:] == 'EOF' \
                or self.parseRedirectors(lines)[1]
