@@ -120,8 +120,6 @@ class Cmd(cmd.Cmd):
                 statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
         stop = cmd.Cmd.onecmd(self, statement)
         try:
-            # unnecessary to compute command again?
-            command = statement.split(None,1)[0].lower()
             if command not in self.excludeFromHistory:
                 self.history.append(statement)
         finally:
