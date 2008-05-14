@@ -13,7 +13,7 @@ setup(
     license = 'MIT',
     keywords = 'command prompt console cmd',
     url = 'http://www.assembla.com/wiki/show/python-cmd2',
-    package_data = {'':['*.cfg']},
+    include_package_data=True,
     
     long_description = """Enhancements for standard library's cmd module.
 
