@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name="cmd2",
     version="0.2.2",
-    py_modules = ['cmd2','flagReader'],
+    py_modules = ['cmd2','flagReader','bootstrap'],
     
     # metadata for upload to PyPI
     author = 'Catherine Devlin',
@@ -13,6 +13,7 @@ setup(
     license = 'MIT',
     keywords = 'command prompt console cmd',
     url = 'http://www.assembla.com/wiki/show/python-cmd2',
+    package_data = {'':['*.cfg']},
     
     long_description = """Enhancements for standard library's cmd module.
 
