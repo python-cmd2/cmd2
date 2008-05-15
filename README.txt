@@ -48,7 +48,7 @@ Instructions for implementing each feature follow.
     ::
     
         @options([make_option('-m', '--myoption', action="store_true", help="all about my option")])
-        def myfunc(self, arg, opts):
+        def do_myfunc(self, arg, opts):
             if opts.myoption:
                 ...
             
