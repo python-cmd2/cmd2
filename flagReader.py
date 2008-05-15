@@ -1,9 +1,13 @@
 """Defines and parses UNIX-style flags to modify command arguments.
 
+Use of flagReader is DEPRECATED in favor of optparse from the
+Python standard library.  For backwards compatibility, flagReader
+has been re-implemented as a wrapper around optparse.
+
 print flagReader.FlagSet.parse.__doc__ for usage examples.
 """
 
-import re
+import re, optparse
 
 class Flag(object):
     def __init__(self, name, abbrev=None, nargs=0):
@@ -56,29 +60,26 @@ class FlagSet(object):
         >>> f.parse('-g myarg -b')
         ({'gimmea': ['myarg'], 'bar': []}, '')
         """
+        parser = optparse.OptionParser()
+        for flag in self.flags:
+            if flag.nargs:
+                parser.add_option(flag.fullabbrev, flag.fullname, action="store",
+                                  type="string", dest=flag.name)
+            else:
+                parser.add_option(flag.fullabbrev, flag.fullname, action="store_true",
+                                  dest=flag.name)
+        try:
+            (options, args) = parser.parse_args(arg.split())
+        except SystemExit, e:
+            return {}, arg
+        
         result = {}
-        words = arg.split()
-        while words:
-            word = words[0]
-            flag = self.lookup.get(word)
-            if flag:
-                result[flag.name] = []
-                words.pop(0)
-                for arg in range(flag.nargs):
-                    try:
-                        result[flag.name].append(words.pop(0))
-                    except IndexError: # there aren't as many args as we expect
-                        raise IndexError, '%s expects %d arguments' % (word, flag.nargs)
-                continue  # on to next word
-            smashedAbbrevs = self.abbrevPattern.search(word)
-            if smashedAbbrevs:
-                for abbrev in smashedAbbrevs.group(1):
-                    result[self.lookup[abbrev].name] = []
-                words.pop(0)
-                continue # on to next word
-            #if you get to here, word[0] does not denote options
-            break
-        return result, ' '.join(words)
+        for (k,v) in options.__dict__.items():
+            if v == True:
+                result[k] = []
+            elif v:
+                result[k] = [v]
+        return result, ' '.join(args)
 
 def _test():
     import doctest
