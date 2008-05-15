@@ -48,12 +48,13 @@ Instructions for implementing each feature follow.
     ::
     
         @options([make_option('-m', '--myoption', action="store_true", help="all about my option")])
-        def myfunc(self, arg):
-            ...
+        def myfunc(self, arg, opts):
+            if opts.myoption:
+                ...
             
     See Python standard library's `optparse` documentation: http://docs.python.org/lib/optparse-defining-options.html
     
-- Catherine Devlin, catherinedevlin.blogspot.com
+- Catherine Devlin, http://catherinedevlin.blogspot.com
 
 cmd2 can be installed with `easy_install cmd2`
 
