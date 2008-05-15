@@ -23,9 +23,24 @@ example of flag usage
 import cmd, re, os, sys, optparse
 from optparse import make_option
 
+class OptionParser(optparse.OptionParser):
+    def exit(self, status=0, msg=None):
+        if msg:
+            sys.stderr.write(msg)
+
+    def error(self, msg):
+        """error(msg : string)
+
+        Print a usage message incorporating 'msg' to stderr and exit.
+        If you override this in a subclass, it should not return -- it
+        should either exit or raise an exception.
+        """
+        self.stderr.write(msg)        
+        self.print_usage(sys.stderr)
+        
 def options(option_list):
     def option_setup(func):
-        optionParser = optparse.OptionParser()
+        optionParser = OptionParser()
         for opt in option_list:
             optionParser.add_option(opt)
         def newFunc(instance, arg):
