@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cmd2",
-    version="0.2.3",
+    version="0.3.0",
     py_modules = ['cmd2','flagReader','bootstrap'],
     
     # metadata for upload to PyPI
