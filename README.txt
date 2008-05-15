@@ -57,7 +57,7 @@ Instructions for implementing each feature follow.
 
 cmd2 can be installed with `easy_install cmd2`
 
-Cheese Shop page: http://pypi.python.org/pypi/cmd2/0.1
+Cheese Shop page: http://pypi.python.org/pypi/cmd2
 
 Example cmd2 application (cmd2_example.py) ::
 
