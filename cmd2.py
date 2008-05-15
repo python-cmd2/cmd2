@@ -12,17 +12,11 @@ Settable environment parameters
 Parsing commands with `optparse` options (flags)
 Redirection to file with >, >>; input from file with <
 
-CHANGES:
-As of 0.3.0, options should be specified as optparse options.  See README.txt.
-flagReader.py options are still supported for backward compatibility
-"""
-
-"""
-todo:
-edited commands end with "EOF".  Hmm.
-example of flag usage
-
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
+
+CHANGES:
+As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
+flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse
 from optparse import make_option
