@@ -60,7 +60,8 @@ Cheese Shop page: http://pypi.python.org/pypi/cmd2/0.1
 
 Example cmd2 application (cmd2_example.py) ::
 
-    from cmd2 import Cmd, flagReader
+    from cmd2 import Cmd
+    import optparse
     
     class CmdLineApp(Cmd):
         multilineCommands = ['orate']
@@ -71,20 +72,23 @@ Example cmd2 application (cmd2_example.py) ::
                                          flagReader.Flag('shout'),
                                          flagReader.Flag('repeat', nargs=1)
                                          ])                
+        speakOptionParser = optparse.OptionParser()
+        speakOptionParser.add_option('-p', '--piglatin', action="store_true", help="atinLay")
+        speakOptionParser.add_option('-s', '--shout', action="store_true", help="output in ALL CAPS")
+        speakOptionParser.add_option('-r', '--repeat', type="int", help="output [n] times")
         def do_speak(self, arg):
             """Repeats what you tell me to.
             
             args: --piglatin, -p: translate to Pig Latin
                   --shout, -s: emulate internet newbie
                   --repeat (nTimes), -r: be redundant"""
-            (options, arg) = self.speakflags.parse(arg)
+            (options, arg) = speakOptionParser.parse_args(arg.split())
             
-            if options.has_key('piglatin'):
+            if options.piglatin:
                 arg = '%s%say' % (arg[1:], arg[0])
-            if options.has_key('shout'):
+            if options.shout:
                 arg = arg.upper()            
-            repetitions = options.get('repeat')
-            repetitions = int(repetitions[0]) if repetitions else 1
+            repetitions = options.repeat or 1
             for i in range(min(repetitions, self.maxrepeats)):
                 self.stdout.write(arg)
                 self.stdout.write('\n')

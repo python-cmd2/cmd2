@@ -20,8 +20,28 @@ example of flag usage
 
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 """
-import cmd, re, os, sys
-import flagReader
+import cmd, re, os, sys, optparse
+from optparse import make_option
+
+def options(option_list):
+    def option_setup(func):
+        optionParser = optparse.OptionParser()
+        for opt in option_list:
+            optionParser.add_option(opt)
+        def newFunc(instance, arg):
+            optionParser.set_usage("%s [options] arg" % func.__name__)
+            try:
+                opts, arg = optionParser.parse_args(arg.split())   
+            except optparse.OptionValueError, e:
+                print e
+                optionParser.print_help()
+                return 
+            result = func(instance, arg, opts)
+            #import pdb; pdb.set_trace()
+            return result
+        newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
+        return newFunc
+    return option_setup
 
 class Cmd(cmd.Cmd):
     caseInsensitive = True
@@ -52,6 +72,15 @@ class Cmd(cmd.Cmd):
           'terminators': ' '.join(self.terminators),
           'settable': ' '.join(self.settable)
         })
+        
+    def do_help(self, arg):
+        cmd.Cmd.do_help(self, arg)
+        try:
+            fn = getattr(self, 'do_' + arg)
+            if fn and fn.optionParser:
+                fn.optionParser.print_help(file=self.stdout)
+        except AttributeError:
+            pass
         
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
