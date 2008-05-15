@@ -9,8 +9,12 @@ Multi-line commands
 Case-insensitive commands
 Special-character shortcut commands (beyond cmd's "@" and "!")
 Settable environment parameters
-Parsing commands with flags
+Parsing commands with `optparse` options (flags)
 Redirection to file with >, >>; input from file with <
+
+CHANGES:
+As of 0.3.0, options should be specified as optparse options.  See README.txt.
+flagReader.py options are still supported for backward compatibility
 """
 
 """

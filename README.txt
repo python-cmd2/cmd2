@@ -43,15 +43,16 @@ Instructions for implementing each feature follow.
     To allow a user to change an environment parameter during program execution, 
     append the parameter's name to `Cmd.settable`.
     
-- Parsing commands with flags
+- Parsing commands with `optparse` options (flags) 
 
-    To allow a command to parse flags:
-  
-    1. Create a flagset: `flags = flagReader.FlagSet([flagReader.Flag('option')])`
-    2. Within the command's function, `(opts, arg) = flags.parse(arg)`
-    3. `opts` is a dictionary whose keys are the flags given, and whose values
-       are the arguments to those flags (if any).
-
+    ::
+    
+        @options([make_option('-m', '--myoption', action="store_true", help="atinLay")])
+        def myfunc(self, arg):
+            ...
+            
+    See Python standard library's `optparse` documentation: http://docs.python.org/lib/optparse-defining-options.html
+    
 - Catherine Devlin, catherinedevlin.blogspot.com
 
 cmd2 can be installed with `easy_install cmd2`
@@ -60,43 +61,35 @@ Cheese Shop page: http://pypi.python.org/pypi/cmd2/0.1
 
 Example cmd2 application (cmd2_example.py) ::
 
-    from cmd2 import Cmd
-    import optparse
-    
+    from cmd2 import Cmd, make_option, options
+
     class CmdLineApp(Cmd):
         multilineCommands = ['orate']
         Cmd.shortcuts.update({'&': 'speak'})
         maxrepeats = 3
-        Cmd.settable.append('maxrepeats')
-        speakflags = flagReader.FlagSet([flagReader.Flag('piglatin'),
-                                         flagReader.Flag('shout'),
-                                         flagReader.Flag('repeat', nargs=1)
-                                         ])                
-        speakOptionParser = optparse.OptionParser()
-        speakOptionParser.add_option('-p', '--piglatin', action="store_true", help="atinLay")
-        speakOptionParser.add_option('-s', '--shout', action="store_true", help="output in ALL CAPS")
-        speakOptionParser.add_option('-r', '--repeat', type="int", help="output [n] times")
-        def do_speak(self, arg):
-            """Repeats what you tell me to.
-            
-            args: --piglatin, -p: translate to Pig Latin
-                  --shout, -s: emulate internet newbie
-                  --repeat (nTimes), -r: be redundant"""
-            (options, arg) = speakOptionParser.parse_args(arg.split())
-            
-            if options.piglatin:
+        Cmd.settable.append('maxrepeats')       
+    
+        @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
+                  make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
+                  make_option('-r', '--repeat', type="int", help="output [n] times")
+                 ])
+        def do_speak(self, arg, opts=None):
+            """Repeats what you tell me to."""
+            arg = ' '.join(arg)
+            if opts.piglatin:
                 arg = '%s%say' % (arg[1:], arg[0])
-            if options.shout:
+            if opts.shout:
                 arg = arg.upper()            
-            repetitions = options.repeat or 1
+            repetitions = opts.repeat or 1
             for i in range(min(repetitions, self.maxrepeats)):
                 self.stdout.write(arg)
                 self.stdout.write('\n')
                 # self.stdout.write is better than "print", because Cmd can be 
                 # initialized with a non-standard output destination
+        
         do_say = do_speak     # now "say" is a synonym for "speak"
         do_orate = do_speak   # another synonym, but this one takes multi-line input
-            
+    
     app = CmdLineApp()
     app.cmdloop()    
 
