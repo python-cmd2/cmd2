@@ -45,8 +45,11 @@ def options(option_list):
         optionParser.set_usage("%s [options] arg" % func.__name__.strip('do_'))
         def newFunc(instance, arg):
             try:
-                opts, arg = optionParser.parse_args(arg.split())  
-            except optparse.OptionValueError, e:
+                opts, arg = optionParser.parse_args(arg.split())
+                arg = ' '.join(arg)
+            except (optparse.OptionValueError, optparse.BadOptionError,
+                    optparse.OptionError, optparse.AmbiguousOptionError,
+                    optparse.OptionConflictError), e:
                 print e
                 optionParser.print_help()
                 return 
