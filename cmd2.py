@@ -24,7 +24,7 @@ from optparse import make_option
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
         if msg:
-            sys.stderr.write(msg)
+            print msg
 
     def error(self, msg):
         """error(msg : string)
@@ -33,8 +33,9 @@ class OptionParser(optparse.OptionParser):
         If you override this in a subclass, it should not return -- it
         should either exit or raise an exception.
         """
-        self.stderr.write(msg)        
-        self.print_usage(sys.stderr)
+        #print msg
+        #print self.format_help()
+        raise
         
 def options(option_list):
     def option_setup(func):
@@ -44,13 +45,12 @@ def options(option_list):
         optionParser.set_usage("%s [options] arg" % func.__name__.strip('do_'))
         def newFunc(instance, arg):
             try:
-                opts, arg = optionParser.parse_args(arg.split())   
+                opts, arg = optionParser.parse_args(arg.split())  
             except optparse.OptionValueError, e:
                 print e
                 optionParser.print_help()
                 return 
-            result = func(instance, arg, opts)
-            #import pdb; pdb.set_trace()
+            result = func(instance, arg, opts)                            
             return result
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
         return newFunc
