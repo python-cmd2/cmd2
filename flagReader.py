@@ -7,7 +7,8 @@ has been re-implemented as a wrapper around optparse.
 print flagReader.FlagSet.parse.__doc__ for usage examples.
 """
 
-import re, optparse
+import re, optparse, warnings
+warnings.warn("""flagReader has been deprecated.  Use optparse instead.""", DeprecationWarning)
 
 class Flag(object):
     def __init__(self, name, abbrev=None, nargs=0):
