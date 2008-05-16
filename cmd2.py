@@ -18,7 +18,7 @@ CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
-import cmd, re, os, sys, optparse
+import cmd, re, os, sys, optparse, subprocess
 from optparse import make_option
 
 class OptionParser(optparse.OptionParser):
@@ -112,8 +112,11 @@ class Cmd(cmd.Cmd):
         if mustBeTerminated and (parts[-2].strip()[-1] not in self.terminators):
             return statement, None
         (newStatement, redirect) = (symbol.join(parts[:-1]), parts[-1].strip())
-        if not self.legalFileName.search(redirect):
-            return statement, None
+        if redirect:
+            if not self.legalFileName.search(redirect):
+                return statement, None
+        else:
+            redirect = 1
         return newStatement, redirect
     
     def extractCommand(self, statement):
@@ -128,7 +131,7 @@ class Cmd(cmd.Cmd):
     def parseRedirectors(self, statement):
         mustBeTerminated = self.extractCommand(statement)[0] in self.multilineCommands
         newStatement, redirect = self.parseRedirector(statement, '>>', mustBeTerminated)
-        if redirect:
+        if redirect:            
             return newStatement, redirect, 'a'        
         newStatement, redirect = self.parseRedirector(statement, '>', mustBeTerminated)
         if redirect:
@@ -154,7 +157,17 @@ class Cmd(cmd.Cmd):
             statement = self.finishStatement(statement)
         statekeeper = None
         statement, redirect, mode = self.parseRedirectors(statement)
-        if redirect:
+        if redirect == 1:
+            if mode in ('a', 'r'):
+                clipcontents = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE).stdout.read()
+            if mode in ('w', 'a'):
+                statekeeper = Statekeeper(self, ('stdout',))
+                self.stdout = subprocess.Popen('xclip -sel clip', shell=True, stdin=subprocess.PIPE).stdin
+                if mode == 'a':
+                    self.stdout.write(clipcontents + '\n')
+            else:
+                statement = '%s %s' % (statement, clipcontents)
+        elif redirect:
             if mode in ('w','a'):
                 statekeeper = Statekeeper(self, ('stdout',))
                 self.stdout = open(redirect, mode)            
