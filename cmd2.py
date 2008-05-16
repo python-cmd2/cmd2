@@ -70,7 +70,7 @@ class Cmd(cmd.Cmd):
             editor = 'notepad'
         else:
             for editor in ['gedit', 'kate', 'vim', 'emacs', 'nano', 'pico']:
-                if not os.system('which %s' % (editor)):
+                if os.system('which %s' % (editor)):
                     break
             
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive']
