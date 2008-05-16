@@ -18,7 +18,7 @@ CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
-import cmd, re, os, sys, optparse, subprocess
+import cmd, re, os, sys, optparse, subprocess, tempfile
 from optparse import make_option
 
 class OptionParser(optparse.OptionParser):
@@ -75,6 +75,7 @@ class Cmd(cmd.Cmd):
             
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive']
     terminators = ';\n'
+    _TO_PASTE_BUFFER = 1
     def do_cmdenvironment(self, args):
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
@@ -116,7 +117,7 @@ class Cmd(cmd.Cmd):
             if not self.legalFileName.search(redirect):
                 return statement, None
         else:
-            redirect = 1
+            redirect = self._TO_PASTE_BUFFER
         return newStatement, redirect
     
     def extractCommand(self, statement):
@@ -141,6 +142,13 @@ class Cmd(cmd.Cmd):
             return newStatement, redirect, 'r'
         return statement, '', ''
         
+    def pasteBufferProcess(self, mode='read'):
+        if mode == 'read':
+            command = 'xclip -o -sel clip'
+        else:
+            command = 'xclip -sel clip'
+        return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -157,14 +165,14 @@ class Cmd(cmd.Cmd):
             statement = self.finishStatement(statement)
         statekeeper = None
         statement, redirect, mode = self.parseRedirectors(statement)
-        if redirect == 1:
+        if redirect == self._TO_PASTE_BUFFER:
             if mode in ('a', 'r'):
-                clipcontents = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE).stdout.read()
+                clipcontents = self.pasteBufferProcess('read').stdout.read()
             if mode in ('w', 'a'):
                 statekeeper = Statekeeper(self, ('stdout',))
-                self.stdout = subprocess.Popen('xclip -sel clip', shell=True, stdin=subprocess.PIPE).stdin
+                self.stdout = self.pasteBufferProcess('write').stdin
                 if mode == 'a':
-                    self.stdout.write(clipcontents + '\n')
+                    self.stdout.write(clipcontents)
             else:
                 statement = '%s %s' % (statement, clipcontents)
         elif redirect:
