@@ -141,14 +141,24 @@ class Cmd(cmd.Cmd):
         if redirect:
             return newStatement, redirect, 'r'
         return statement, '', ''
-        
+            
     def pasteBufferProcess(self, mode='read'):
         if mode == 'read':
-            command = 'xclip -o -sel clip'
+            command = 'xc1ip -o -sel clip'
         else:
             command = 'xclip -sel clip'
-        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        #TODO: need a better response to user who lacks xclip
+        errf = tempfile.TemporaryFile()
+        result = subprocess.Popen(command, shell=True, stderr=errf, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        errf.seek(0)
+        if 'not found' in errf.read():
+            msg = """Redirecting to or from paste buffer requires xclip to be installed on operating system.
+            On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""
+            print msg
+            print '---'
+            errf.seek(0)
+            print errf.read()
+            print '---'
+            raise EnvironmentError, msg
         return result
         
     def onecmd(self, line):
@@ -166,17 +176,21 @@ class Cmd(cmd.Cmd):
         if command in self.multilineCommands:
             statement = self.finishStatement(statement)
         statekeeper = None
+        stop = 0
         statement, redirect, mode = self.parseRedirectors(statement)
         if redirect == self._TO_PASTE_BUFFER:
-            if mode in ('a', 'r'):
-                clipcontents = self.pasteBufferProcess('read').stdout.read()
-            if mode in ('w', 'a'):
-                statekeeper = Statekeeper(self, ('stdout',))
-                self.stdout = self.pasteBufferProcess('write').stdin
-                if mode == 'a':
-                    self.stdout.write(clipcontents)
-            else:
-                statement = '%s %s' % (statement, clipcontents)
+            try:
+                if mode in ('a', 'r'):
+                    clipcontents = self.pasteBufferProcess('read').stdout.read()
+                if mode in ('w', 'a'):
+                    statekeeper = Statekeeper(self, ('stdout',))
+                    self.stdout = self.pasteBufferProcess('write').stdin
+                    if mode == 'a':
+                        self.stdout.write(clipcontents)
+                else:
+                    statement = '%s %s' % (statement, clipcontents)
+            except EnvironmentError, e:
+                return 0
         elif redirect:
             if mode in ('w','a'):
                 statekeeper = Statekeeper(self, ('stdout',))
