@@ -147,7 +147,9 @@ class Cmd(cmd.Cmd):
             command = 'xclip -o -sel clip'
         else:
             command = 'xclip -sel clip'
-        return subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        #TODO: need a better response to user who lacks xclip
+        return result
         
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
