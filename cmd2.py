@@ -72,7 +72,7 @@ class Cmd(cmd.Cmd):
         if sys.platform[:3] == 'win':
             editor = 'notepad'
         else:
-            for editor in ['gedit', 'kate', 'vim', 'emacs', 'nano', 'pico']:
+            for editor in ['gedit', 'kate', 'vim', 'emacs', 'nano', 'pico', 'vi']:
                 if not os.system('which %s' % (editor)):
                     break
             
@@ -160,7 +160,11 @@ class Cmd(cmd.Cmd):
         if redirect:
             if mode in ('w','a'):
                 statekeeper = Statekeeper(self, ('stdout',))
-                self.stdout = open(redirect, mode)            
+                try:
+                    self.stdout = open(redirect, mode)            
+                except IOError, e:
+                    print str(e)
+                    return 0
             else:
                 statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
         stop = cmd.Cmd.onecmd(self, statement)
