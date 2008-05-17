@@ -18,7 +18,7 @@ CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
-import cmd, re, os, sys, optparse
+import cmd, re, os, sys, optparse, subprocess, tempfile
 from optparse import make_option
 
 class OptionParser(optparse.OptionParser):
@@ -46,7 +46,6 @@ def options(option_list):
         def newFunc(instance, arg):
             try:
                 opts, arg = optionParser.parse_args(arg.split())
-                arg = ' '.join(arg)
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -73,11 +72,12 @@ class Cmd(cmd.Cmd):
             editor = 'notepad'
         else:
             for editor in ['gedit', 'kate', 'vim', 'emacs', 'nano', 'pico']:
-                if not os.system('which %s' % (editor)):
+                if os.system('which %s' % (editor)):
                     break
             
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive']
     terminators = ';\n'
+    _TO_PASTE_BUFFER = 1
     def do_cmdenvironment(self, args):
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
@@ -115,8 +115,11 @@ class Cmd(cmd.Cmd):
         if mustBeTerminated and (parts[-2].strip()[-1] not in self.terminators):
             return statement, None
         (newStatement, redirect) = (symbol.join(parts[:-1]), parts[-1].strip())
-        if not self.legalFileName.search(redirect):
-            return statement, None
+        if redirect:
+            if not self.legalFileName.search(redirect):
+                return statement, None
+        else:
+            redirect = self._TO_PASTE_BUFFER
         return newStatement, redirect
     
     def extractCommand(self, statement):
@@ -131,7 +134,7 @@ class Cmd(cmd.Cmd):
     def parseRedirectors(self, statement):
         mustBeTerminated = self.extractCommand(statement)[0] in self.multilineCommands
         newStatement, redirect = self.parseRedirector(statement, '>>', mustBeTerminated)
-        if redirect:
+        if redirect:            
             return newStatement, redirect, 'a'        
         newStatement, redirect = self.parseRedirector(statement, '>', mustBeTerminated)
         if redirect:
@@ -140,7 +143,15 @@ class Cmd(cmd.Cmd):
         if redirect:
             return newStatement, redirect, 'r'
         return statement, '', ''
-        
+
+    def pasteBufferProcess(self, mode='read'):
+        if mode == 'read':
+            command = 'xc1ip -o -sel clip'
+        else:
+            command = 'xclip -sel clip'
+        result = subprocess.check_call(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        return result
+    
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -156,8 +167,25 @@ class Cmd(cmd.Cmd):
         if command in self.multilineCommands:
             statement = self.finishStatement(statement)
         statekeeper = None
+        stop = 0
         statement, redirect, mode = self.parseRedirectors(statement)
-        if redirect:
+        if redirect == self._TO_PASTE_BUFFER:
+            try:
+                if mode in ('a', 'r'):
+                    clipcontents = self.pasteBufferProcess('read').stdout.read()
+                if mode in ('w', 'a'):
+                    statekeeper = Statekeeper(self, ('stdout',))
+                    self.stdout = self.pasteBufferProcess('write').stdin
+                    if mode == 'a':
+                        self.stdout.write(clipcontents)
+                else:
+                    statement = '%s %s' % (statement, clipcontents)
+            except subprocess.CalledProcessError:
+                print """Redirecting to or from paste buffer requires xclip 
+to be installed on operating system.
+On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""
+                return 0
+        elif redirect:
             if mode in ('w','a'):
                 statekeeper = Statekeeper(self, ('stdout',))
                 self.stdout = open(redirect, mode)            
