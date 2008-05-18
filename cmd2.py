@@ -71,14 +71,15 @@ Download from http://sourceforge.net/projects/pywin32/"""
         errmsg = """Redirecting to or from paste buffer requires xclip 
 to be installed on operating system.
 On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""        
-    def __init__(self, msg):
+    def __init__(self):
         Exception.__init__(self, self.errmsg)
 
 if sys.platform[:3] == 'win':
     def getPasteBuffer():
-        if not win32clipboard:
+        try:
+            win32clipboard.OpenClipboard(0)
+        except NameError:
             raise PasteBufferError
-        win32clipboard.OpenClipboard(0)
         try:
             result = win32clipboard.GetClipboardData()
         except TypeError:
@@ -86,16 +87,17 @@ if sys.platform[:3] == 'win':
         win32clipboard.CloseClipboard()
         return result
     def writeToPasteBuffer(txt):
-        if not win32clipboard:
+        try:
+            win32clipboard.OpenClipboard(0)
+        except NameError:
             raise PasteBufferError
-        win32clipboard.OpenClipboard(0)
         win32clipboard.EmptyClipboard()
         win32clipboard.SetClipboardText(txt)
         win32clipboard.CloseClipboard()
 else:
     def getPasteBuffer():
         try:
-            xclipproc = subprocess.check_call('xc1ip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc = subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         except subprocess.CalledProcessError:
             raise PasteBufferError
         return xclipproc.stdout.read()
@@ -219,7 +221,8 @@ class Cmd(cmd.Cmd):
                         self.stdout.write(clipcontents)
                 else:
                     statement = '%s %s' % (statement, clipcontents)
-            except PasteBufferError:
+            except PasteBufferError, e:
+                print e
                 return 0
         elif redirect:
             if mode in ('w','a'):
