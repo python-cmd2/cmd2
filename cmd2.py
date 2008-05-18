@@ -20,6 +20,10 @@ flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile
 from optparse import make_option
+try:
+    import win32clipboard
+except:
+    pass
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -58,6 +62,50 @@ def options(option_list):
         return newFunc
     return option_setup
 
+class PasteBufferError(EnvironmentError):
+    if sys.platform[:3] == 'win':
+        errmsg = """Redirecting to or from paste buffer requires pywin32
+to be installed on operating system.
+Download from http://sourceforge.net/projects/pywin32/"""
+    else:
+        errmsg = """Redirecting to or from paste buffer requires xclip 
+to be installed on operating system.
+On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""        
+    def __init__(self, msg):
+        Exception.__init__(self, self.errmsg)
+
+if sys.platform[:3] == 'win':
+    def getPasteBuffer():
+        if not win32clipboard:
+            raise PasteBufferError
+        win32clipboard.OpenClipboard(0)
+        try:
+            result = win32clipboard.GetClipboardData()
+        except TypeError:
+            result = ''  #non-text
+        win32clipboard.CloseClipboard()
+        return result
+    def writeToPasteBuffer(txt):
+        if not win32clipboard:
+            raise PasteBufferError
+        win32clipboard.OpenClipboard(0)
+        win32clipboard.EmptyClipboard()
+        win32clipboard.SetClipboardText(txt)
+        win32clipboard.CloseClipboard()
+else:
+    def getPasteBuffer():
+        try:
+            xclipproc = subprocess.check_call('xc1ip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        except subprocess.CalledProcessError:
+            raise PasteBufferError
+        return xclipproc.stdout.read()
+    def writeToPasteBuffer(txt):
+        try:
+            xclipproc = subprocess.check_call('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        except subprocess.CalledProcessError:
+            raise PasteBufferError
+        xclipporc.stdin.write(txt)
+        
 class Cmd(cmd.Cmd):
     caseInsensitive = True
     multilineCommands = []
@@ -143,15 +191,7 @@ class Cmd(cmd.Cmd):
         if redirect:
             return newStatement, redirect, 'r'
         return statement, '', ''
-
-    def pasteBufferProcess(self, mode='read'):
-        if mode == 'read':
-            command = 'xc1ip -o -sel clip'
-        else:
-            command = 'xclip -sel clip'
-        result = subprocess.check_call(command, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        return result
-    
+           
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -171,19 +211,15 @@ class Cmd(cmd.Cmd):
         statement, redirect, mode = self.parseRedirectors(statement)
         if redirect == self._TO_PASTE_BUFFER:
             try:
-                if mode in ('a', 'r'):
-                    clipcontents = self.pasteBufferProcess('read').stdout.read()
+                clipcontents = getPasteBuffer()
                 if mode in ('w', 'a'):
                     statekeeper = Statekeeper(self, ('stdout',))
-                    self.stdout = self.pasteBufferProcess('write').stdin
+                    self.stdout = tempfile.TemporaryFile()
                     if mode == 'a':
                         self.stdout.write(clipcontents)
                 else:
                     statement = '%s %s' % (statement, clipcontents)
-            except subprocess.CalledProcessError:
-                print """Redirecting to or from paste buffer requires xclip 
-to be installed on operating system.
-On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""
+            except PasteBufferError:
                 return 0
         elif redirect:
             if mode in ('w','a'):
@@ -197,6 +233,9 @@ On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""
                 self.history.append(statement)
         finally:
             if statekeeper:
+                if redirect == self._TO_PASTE_BUFFER:
+                    self.stdout.seek(0)
+                    writeToPasteBuffer(self.stdout.read())
                 self.stdout.close()
                 statekeeper.restore()
             return stop        
