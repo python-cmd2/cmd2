@@ -101,8 +101,11 @@ else:
         can_clip = True
     except AttributeError:  # check_call not defined, Python < 2.5
         teststring = 'Testing for presence of xclip.'
-        xclipproc = subprocess.check_call('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        #import pdb; pdb.set_trace()
+        xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         xclipproc.stdin.write(teststring)
+        xclipproc.stdin.close()
+        xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)        
         if xclipproc.stdout.read() == teststring:
             can_clip = True
     except (subprocess.CalledProcessError, OSError):
