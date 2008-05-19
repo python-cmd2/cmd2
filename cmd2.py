@@ -18,7 +18,7 @@ CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
-import cmd, re, os, sys, optparse
+import cmd, re, os, sys, optparse, subprocess, tempfile
 from optparse import make_option
 
 class OptionParser(optparse.OptionParser):
@@ -46,19 +46,83 @@ def options(option_list):
         def newFunc(instance, arg):
             try:
                 opts, arg = optionParser.parse_args(arg.split())
-                arg = ' '.join(arg)
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
                 print e
                 optionParser.print_help()
                 return 
-            result = func(instance, arg, opts)                            
+            result = func(instance, ' '.join(arg), opts)                            
             return result
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
         return newFunc
     return option_setup
 
+class PasteBufferError(EnvironmentError):
+    if sys.platform[:3] == 'win':
+        errmsg = """Redirecting to or from paste buffer requires pywin32
+to be installed on operating system.
+Download from http://sourceforge.net/projects/pywin32/"""
+    else:
+        errmsg = """Redirecting to or from paste buffer requires xclip 
+to be installed on operating system.
+On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""        
+    def __init__(self):
+        Exception.__init__(self, self.errmsg)
+
+'''check here if functions exist; otherwise, stub out'''
+pastebufferr = """Redirecting to or from paste buffer requires %s
+to be installed on operating system.
+%s"""
+if subprocess.mswindows:
+    try:
+        import win32clipboard
+        def getPasteBuffer():
+            win32clipboard.OpenClipboard(0)
+            try:
+                result = win32clipboard.GetClipboardData()
+            except TypeError:
+                result = ''  #non-text
+            win32clipboard.CloseClipboard()
+            return result            
+        def writeToPasteBuffer(txt):
+            win32clipboard.OpenClipboard(0)
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(txt)
+            win32clipboard.CloseClipboard()        
+    except ImportError:
+        def getPasteBuffer():
+            raise OSError, pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/')
+        setPasteBuffer = getPasteBuffer
+else:
+    can_clip = False
+    try:
+        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        can_clip = True
+    except AttributeError:  # check_call not defined, Python < 2.5
+        teststring = 'Testing for presence of xclip.'
+        #import pdb; pdb.set_trace()
+        xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        xclipproc.stdin.write(teststring)
+        xclipproc.stdin.close()
+        xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)        
+        if xclipproc.stdout.read() == teststring:
+            can_clip = True
+    except (subprocess.CalledProcessError, OSError):
+        pass
+    if can_clip:    
+        def getPasteBuffer():
+            xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            return xclipproc.stdout.read()
+        def writeToPasteBuffer(txt):
+            xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc.stdin.write(txt)
+            xclipproc.stdin.close()
+    else:
+        def getPasteBuffer():
+            raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
+        setPasteBuffer = getPasteBuffer
+                
 class Cmd(cmd.Cmd):
     caseInsensitive = True
     multilineCommands = []
@@ -72,12 +136,13 @@ class Cmd(cmd.Cmd):
         if sys.platform[:3] == 'win':
             editor = 'notepad'
         else:
-            for editor in ['gedit', 'kate', 'vim', 'emacs', 'nano', 'pico', 'vi']:
-                if not os.system('which %s' % (editor)):
+            for editor in ['gedit', 'kate', 'vim', 'emacs', 'nano', 'pico']:
+                if os.system('which %s' % (editor)):
                     break
             
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive']
     terminators = ';\n'
+    _TO_PASTE_BUFFER = 1
     def do_cmdenvironment(self, args):
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
@@ -115,8 +180,11 @@ class Cmd(cmd.Cmd):
         if mustBeTerminated and (parts[-2].strip()[-1] not in self.terminators):
             return statement, None
         (newStatement, redirect) = (symbol.join(parts[:-1]), parts[-1].strip())
-        if not self.legalFileName.search(redirect):
-            return statement, None
+        if redirect:
+            if not self.legalFileName.search(redirect):
+                return statement, None
+        else:
+            redirect = self._TO_PASTE_BUFFER
         return newStatement, redirect
     
     def extractCommand(self, statement):
@@ -131,7 +199,7 @@ class Cmd(cmd.Cmd):
     def parseRedirectors(self, statement):
         mustBeTerminated = self.extractCommand(statement)[0] in self.multilineCommands
         newStatement, redirect = self.parseRedirector(statement, '>>', mustBeTerminated)
-        if redirect:
+        if redirect:            
             return newStatement, redirect, 'a'        
         newStatement, redirect = self.parseRedirector(statement, '>', mustBeTerminated)
         if redirect:
@@ -140,7 +208,7 @@ class Cmd(cmd.Cmd):
         if redirect:
             return newStatement, redirect, 'r'
         return statement, '', ''
-        
+           
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -156,15 +224,25 @@ class Cmd(cmd.Cmd):
         if command in self.multilineCommands:
             statement = self.finishStatement(statement)
         statekeeper = None
+        stop = 0
         statement, redirect, mode = self.parseRedirectors(statement)
-        if redirect:
+        if redirect == self._TO_PASTE_BUFFER:
+            try:
+                clipcontents = getPasteBuffer()
+                if mode in ('w', 'a'):
+                    statekeeper = Statekeeper(self, ('stdout',))
+                    self.stdout = tempfile.TemporaryFile()
+                    if mode == 'a':
+                        self.stdout.write(clipcontents)
+                else:
+                    statement = '%s %s' % (statement, clipcontents)
+            except OSError, e:
+                print e
+                return 0
+        elif redirect:
             if mode in ('w','a'):
                 statekeeper = Statekeeper(self, ('stdout',))
-                try:
-                    self.stdout = open(redirect, mode)            
-                except IOError, e:
-                    print str(e)
-                    return 0
+                self.stdout = open(redirect, mode)            
             else:
                 statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
         stop = cmd.Cmd.onecmd(self, statement)
@@ -173,6 +251,9 @@ class Cmd(cmd.Cmd):
                 self.history.append(statement)
         finally:
             if statekeeper:
+                if redirect == self._TO_PASTE_BUFFER:
+                    self.stdout.seek(0)
+                    writeToPasteBuffer(self.stdout.read())
                 self.stdout.close()
                 statekeeper.restore()
             return stop        

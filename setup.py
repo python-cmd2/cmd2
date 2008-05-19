@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cmd2",
-    version="0.3.0",
+    version="0.3.1",
     py_modules = ['cmd2','flagReader','bootstrap'],
     
     # metadata for upload to PyPI
@@ -26,7 +26,9 @@ Drop-in replacement adds several features for command-prompt tools:
     * Special-character shortcut commands (beyond cmd's "@" and "!")
     * Settable environment parameters
     * Parsing commands with flags
-    * Redirection to file with >, >>; input from file with <
+    * > (filename), >> (filename) redirect output to file
+    * < (filename) gets input from file
+    * bare >, >>, < redirect to/from paste buffer     
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 
