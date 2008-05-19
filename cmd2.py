@@ -20,10 +20,6 @@ flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile
 from optparse import make_option
-try:
-    import win32clipboard
-except:
-    pass
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -74,40 +70,56 @@ On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""
     def __init__(self):
         Exception.__init__(self, self.errmsg)
 
-if sys.platform[:3] == 'win':
-    def getPasteBuffer():
-        try:
+'''check here if functions exist; otherwise, stub out'''
+pastebufferr = """Redirecting to or from paste buffer requires %s
+to be installed on operating system.
+%s"""
+if subprocess.mswindows:
+    try:
+        import win32clipboard
+        def getPasteBuffer():
             win32clipboard.OpenClipboard(0)
-        except NameError:
-            raise PasteBufferError
-        try:
-            result = win32clipboard.GetClipboardData()
-        except TypeError:
-            result = ''  #non-text
-        win32clipboard.CloseClipboard()
-        return result
-    def writeToPasteBuffer(txt):
-        try:
+            try:
+                result = win32clipboard.GetClipboardData()
+            except TypeError:
+                result = ''  #non-text
+            win32clipboard.CloseClipboard()
+            return result            
+        def writeToPasteBuffer(txt):
             win32clipboard.OpenClipboard(0)
-        except NameError:
-            raise PasteBufferError
-        win32clipboard.EmptyClipboard()
-        win32clipboard.SetClipboardText(txt)
-        win32clipboard.CloseClipboard()
+            win32clipboard.EmptyClipboard()
+            win32clipboard.SetClipboardText(txt)
+            win32clipboard.CloseClipboard()        
+    except ImportError:
+        def getPasteBuffer():
+            raise OSError, pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/')
+        setPasteBuffer = getPasteBuffer
 else:
-    def getPasteBuffer():
-        try:
-            xclipproc = subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            raise PasteBufferError
-        return xclipproc.stdout.read()
-    def writeToPasteBuffer(txt):
-        try:
-            xclipproc = subprocess.check_call('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        except subprocess.CalledProcessError:
-            raise PasteBufferError
-        xclipporc.stdin.write(txt)
-        
+    can_clip = False
+    try:
+        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        can_clip = True
+    except AttributeError:  # check_call not defined, Python < 2.5
+        teststring = 'Testing for presence of xclip.'
+        xclipproc = subprocess.check_call('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        xclipproc.stdin.write(teststring)
+        if xclipproc.stdout.read() == teststring:
+            can_clip = True
+    except (subprocess.CalledProcessError, OSError):
+        pass
+    if can_clip:    
+        def getPasteBuffer():
+            xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            return xclipproc.stdout.read()
+        def writeToPasteBuffer(txt):
+            xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc.stdin.write(txt)
+            xclipproc.stdin.close()
+    else:
+        def getPasteBuffer():
+            raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
+        setPasteBuffer = getPasteBuffer
+                
 class Cmd(cmd.Cmd):
     caseInsensitive = True
     multilineCommands = []
@@ -221,7 +233,7 @@ class Cmd(cmd.Cmd):
                         self.stdout.write(clipcontents)
                 else:
                     statement = '%s %s' % (statement, clipcontents)
-            except PasteBufferError, e:
+            except OSError, e:
                 print e
                 return 0
         elif redirect:
