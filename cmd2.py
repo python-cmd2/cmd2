@@ -46,13 +46,14 @@ def options(option_list):
         def newFunc(instance, arg):
             try:
                 opts, arg = optionParser.parse_args(arg.split())
+                arg = ' '.join(arg)
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
                 print e
                 optionParser.print_help()
                 return 
-            result = func(instance, ' '.join(arg), opts)                            
+            result = func(instance, arg, opts)                            
             return result
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
         return newFunc
@@ -177,7 +178,7 @@ class Cmd(cmd.Cmd):
         parts = statement.split(symbol)
         if (len(parts) < 2):
             return statement, None
-        if mustBeTerminated and (parts[-2].strip()[-1] not in self.terminators):
+        if mustBeTerminated and (not self.statementEndPattern.search(parts[-2])):            
             return statement, None
         (newStatement, redirect) = (symbol.join(parts[:-1]), parts[-1].strip())
         if redirect:
