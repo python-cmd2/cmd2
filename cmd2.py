@@ -21,10 +21,34 @@ flagReader.py options are still supported for backward compatibility
 import cmd, re, os, sys, optparse, subprocess, tempfile
 from optparse import make_option
 
+class Option(optparse.Option):
+    # optparse.Option.take_action keeps trying to use sys.exit.  That's very rude.
+    # We don't want to exit, we just want to know so we can terminate a particular
+    # function call.
+    def take_action(self, action, dest, opt, value, values, parser):
+        if action == "help":
+            parser.print_help()
+            parser.exit()
+            setattr(values, '_exit', True)
+        elif action == "version":
+            parser.print_version()
+            parser.exit()
+            setattr(values, '_exit', True)
+
+        else:
+            return optparse.Option.take_action(self, action, dest, opt, value, values, parser)
+
+        return 1
+    
+#make_option = Option
+
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
+        self.values._exit = True
         if msg:
             print msg
+            # though we must trap and prevent the exit, we also want to end whatever command
+            # was called
 
     def error(self, msg):
         """error(msg : string)
@@ -52,7 +76,9 @@ def options(option_list):
                     optparse.OptionConflictError), e:
                 print e
                 optionParser.print_help()
-                return 
+                return
+            if hasattr(opts, '_exit'):
+                return None
             result = func(instance, arg, opts)                            
             return result
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
