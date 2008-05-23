@@ -487,15 +487,18 @@ class Cmd(cmd.Cmd):
         if fname is None:
             fname = self.defaultFileName        
         keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuationPrompt'))
-        try:
-            self.stdin = open(fname, 'r')
-        except IOError, e:
+        if isinstance(fname, file):
+            self.stdin = fname
+        else:           
             try:
-                self.stdin = open('%s.%s' % (fname, self.defaultExtension), 'r')
-            except IOError:
-                print 'Problem opening file %s: \n%s' % (fname, e)
-                keepstate.restore()
-                return
+                self.stdin = open(fname, 'r')
+            except IOError, e:
+                try:
+                    self.stdin = open('%s.%s' % (fname, self.defaultExtension), 'r')
+                except IOError:
+                    print 'Problem opening file %s: \n%s' % (fname, e)
+                    keepstate.restore()
+                    return
         self.use_rawinput = False
         self.prompt = self.continuationPrompt = ''
         self.cmdloop()
