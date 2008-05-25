@@ -125,6 +125,9 @@ else:
             raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
         setPasteBuffer = getPasteBuffer
                 
+class ExitException(Exception):
+    pass
+
 class Cmd(cmd.Cmd):
     caseInsensitive = True
     multilineCommands = []
@@ -134,6 +137,7 @@ class Cmd(cmd.Cmd):
     defaultExtension = 'txt'
     defaultFileName = 'command.txt'
     editor = os.environ.get('EDITOR')
+    _STOP_AND_EXIT = 2
     if not editor:
         if sys.platform[:3] == 'win':
             editor = 'notepad'
@@ -336,6 +340,7 @@ class Cmd(cmd.Cmd):
                     readline.set_completer(self.old_completer)
                 except ImportError:
                     pass    
+        return stop
 
     def do_EOF(self, arg):
         return True
@@ -370,7 +375,7 @@ class Cmd(cmd.Cmd):
             self.stdout.write('%s: %s\n' % (param, str(getattr(self, param))))
 
     def do_quit(self, arg):
-        return 1
+        raise ExitException
     do_exit = do_quit
     do_q = do_quit
     
@@ -501,10 +506,12 @@ class Cmd(cmd.Cmd):
                     return
         self.use_rawinput = False
         self.prompt = self.continuationPrompt = ''
-        self.cmdloop()
+        stop = self.cmdloop()
+        # but how to detect whether to exit totally?  
         self.stdin.close()
         keepstate.restore()
         self.lastcmd = ''
+        return (stop == self._STOP_AND_EXIT)
         
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
