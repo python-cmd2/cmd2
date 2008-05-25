@@ -125,9 +125,6 @@ else:
             raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
         setPasteBuffer = getPasteBuffer
                 
-class ExitException(Exception):
-    pass
-
 class Cmd(cmd.Cmd):
     caseInsensitive = True
     multilineCommands = []
@@ -340,7 +337,7 @@ class Cmd(cmd.Cmd):
                     readline.set_completer(self.old_completer)
                 except ImportError:
                     pass    
-        return stop
+            return stop
 
     def do_EOF(self, arg):
         return True
@@ -375,7 +372,7 @@ class Cmd(cmd.Cmd):
             self.stdout.write('%s: %s\n' % (param, str(getattr(self, param))))
 
     def do_quit(self, arg):
-        raise ExitException
+        return self._STOP_AND_EXIT
     do_exit = do_quit
     do_q = do_quit
     
@@ -507,12 +504,11 @@ class Cmd(cmd.Cmd):
         self.use_rawinput = False
         self.prompt = self.continuationPrompt = ''
         stop = self.cmdloop()
-        # but how to detect whether to exit totally?  
         self.stdin.close()
         keepstate.restore()
         self.lastcmd = ''
-        return (stop == self._STOP_AND_EXIT)
-        
+        return (stop == self._STOP_AND_EXIT) and self._STOP_AND_EXIT
+    
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
         
