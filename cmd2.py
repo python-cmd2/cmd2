@@ -18,7 +18,7 @@ CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
-import cmd, re, os, sys, optparse, subprocess, tempfile
+import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing
 from optparse import make_option
 
 class OptionParser(optparse.OptionParser):
@@ -175,8 +175,15 @@ class Cmd(cmd.Cmd):
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
+    pipeFinder = pyparsing.SkipTo(pyparsing.Literal('|') ^ pyparsing.StringEnd())
+    pipeFinder.ignore(pyparsing.sglQuotedString)
+    pipeFinder.ignore(pyparsing.dblQuotedString)
+    pipeFinder.ignore("--" + pyparsing.ZeroOrMore(pyparsing.CharsNotIn("\n"))) # sql-style comment
+    pipeFinder.ignore(pyparsing.cStyleComment)
+    
     legalFileName = re.compile(r'''^[^"'\s]+$''')
     def parseRedirector(self, statement, symbol, mustBeTerminated=False):
+        # pipeFinder.scanString(statement)
         parts = statement.split(symbol)
         if (len(parts) < 2):
             return statement, None
@@ -212,7 +219,7 @@ class Cmd(cmd.Cmd):
             return newStatement, redirect, 'r'
         return statement, '', ''
            
-    def onecmd(self, line):
+    def onecmd(self, line, assumeComplete=False):
         """Interpret the argument as though it had been typed in response
         to the prompt.
 
@@ -224,7 +231,7 @@ class Cmd(cmd.Cmd):
         """
         command, args = self.extractCommand(line)
         statement = ' '.join([command, args])
-        if command in self.multilineCommands:
+        if (not assumeComplete) and (command in self.multilineCommands):
             statement = self.finishStatement(statement)
         statekeeper = None
         stop = 0
