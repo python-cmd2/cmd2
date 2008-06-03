@@ -103,7 +103,6 @@ else:
         can_clip = True
     except AttributeError:  # check_call not defined, Python < 2.5
         teststring = 'Testing for presence of xclip.'
-        #import pdb; pdb.set_trace()
         xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         xclipproc.stdin.write(teststring)
         xclipproc.stdin.close()
@@ -240,30 +239,38 @@ class Cmd(cmd.Cmd):
             statement = self.finishStatement(statement)
         statekeeper = None
         stop = 0
-        statement, redirect, mode = self.parseRedirectors(statement)
-        if redirect == self._TO_PASTE_BUFFER:
-            try:
-                clipcontents = getPasteBuffer()
-                if mode in ('w', 'a'):
+        statement, redirect = self.pipeFinder(statement)
+        if redirect:
+            redirect = subprocess.Popen(redirect, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            redirect.stdin = self.stdout
+            stop = cmd.Cmd.onecmd(self, statement)            
+            self.stdout.write(redirect.stdout.read())
+            return stop # didn't record in history
+        else:
+            statement, redirect, mode = self.parseRedirectors(statement)
+            if redirect == self._TO_PASTE_BUFFER:
+                try:
+                    clipcontents = getPasteBuffer()
+                    if mode in ('w', 'a'):
+                        statekeeper = Statekeeper(self, ('stdout',))
+                        self.stdout = tempfile.TemporaryFile()
+                        if mode == 'a':
+                            self.stdout.write(clipcontents)
+                    else:
+                        statement = '%s %s' % (statement, clipcontents)
+                except OSError, e:
+                    print e
+                    return 0
+            elif redirect:
+                if mode in ('w','a'):
                     statekeeper = Statekeeper(self, ('stdout',))
-                    self.stdout = tempfile.TemporaryFile()
-                    if mode == 'a':
-                        self.stdout.write(clipcontents)
+                    self.stdout = open(redirect, mode)            
                 else:
-                    statement = '%s %s' % (statement, clipcontents)
-            except OSError, e:
-                print e
-                return 0
-        elif redirect:
-            if mode in ('w','a'):
-                statekeeper = Statekeeper(self, ('stdout',))
-                self.stdout = open(redirect, mode)            
-            else:
-                statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
+                    statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
         stop = cmd.Cmd.onecmd(self, statement)
         try:
             if command not in self.excludeFromHistory:
-                self.history.append(statement)
+                self.history.append(statement) # or should we append the unmodified statement?
         finally:
             if statekeeper:
                 if redirect == self._TO_PASTE_BUFFER:
