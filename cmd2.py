@@ -175,11 +175,16 @@ class Cmd(cmd.Cmd):
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
-    pipeFinder = pyparsing.SkipTo(pyparsing.Literal('|') ^ pyparsing.StringEnd())
-    pipeFinder.ignore(pyparsing.sglQuotedString)
-    pipeFinder.ignore(pyparsing.dblQuotedString)
-    pipeFinder.ignore("--" + pyparsing.ZeroOrMore(pyparsing.CharsNotIn("\n"))) # sql-style comment
-    pipeFinder.ignore(pyparsing.cStyleComment)
+    notAPipe = pyparsing.SkipTo('|')
+    notAPipe.ignore(pyparsing.sglQuotedString)
+    notAPipe.ignore(pyparsing.dblQuotedString)    
+    pipeFinder = notAPipe + '|' + pyparsing.SkipTo(pyparsing.StringEnd())
+    def findPipe(self, statement):
+        try:
+            statement, pipe, destination = pipeFinder.parseString(statement)
+            return statement, destination
+        except pyparsing.ParseException:
+            return statement, None
     
     legalFileName = re.compile(r'''^[^"'\s]+$''')
     def parseRedirector(self, statement, symbol, mustBeTerminated=False):
