@@ -129,7 +129,7 @@ class Cmd(cmd.Cmd):
     multilineCommands = []
     continuationPrompt = '> '    
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load'}
-    excludeFromHistory = '''run r list l history hi ed li eof'''.split()   
+    excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()   
     defaultExtension = 'txt'
     defaultFileName = 'command.txt'
     editor = os.environ.get('EDITOR')
@@ -139,7 +139,7 @@ class Cmd(cmd.Cmd):
             editor = 'notepad'
         else:
             for editor in ['gedit', 'kate', 'vim', 'emacs', 'nano', 'pico']:
-                if os.system('which %s' % (editor)):
+                if not os.system('which %s' % (editor)):
                     break
             
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive']
@@ -180,7 +180,7 @@ class Cmd(cmd.Cmd):
     pipeFinder = notAPipe + '|' + pyparsing.SkipTo(pyparsing.StringEnd())
     def findPipe(self, statement):
         try:
-            statement, pipe, destination = pipeFinder.parseString(statement)
+            statement, pipe, destination = self.pipeFinder.parseString(statement)
             return statement, destination
         except pyparsing.ParseException:
             return statement, None
@@ -239,11 +239,13 @@ class Cmd(cmd.Cmd):
             statement = self.finishStatement(statement)
         statekeeper = None
         stop = 0
-        statement, redirect = self.pipeFinder(statement)
+        statement, redirect = self.findPipe(statement)
         if redirect:
+            statekeeper = Statekeeper(self, ('stdout',))            
             redirect = subprocess.Popen(redirect, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            redirect.stdin = self.stdout
+            self.stdout = redirect.stdin
             stop = cmd.Cmd.onecmd(self, statement)            
+            statekeeper.restore()            
             self.stdout.write(redirect.stdout.read())
             return stop # didn't record in history
         else:
