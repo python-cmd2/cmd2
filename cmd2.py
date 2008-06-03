@@ -490,7 +490,7 @@ class Cmd(cmd.Cmd):
             f.close()        
                 
         os.system('%s %s' % (self.editor, filename))
-        self.do_load(filename)
+        self.do__load(filename)
     do_edit = do_ed
     
     def do_save(self, fname=None):
@@ -528,7 +528,8 @@ class Cmd(cmd.Cmd):
         self.stdin.close()
         keepstate.restore()
         self.lastcmd = ''
-        return (stop == self._STOP_AND_EXIT) and self._STOP_AND_EXIT
+        return (stop == self._STOP_AND_EXIT) and self._STOP_AND_EXIT    
+    do__load = do_load  # avoid an unfortunate legacy use of do_load from sqlpython
     
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
