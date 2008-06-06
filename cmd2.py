@@ -244,9 +244,10 @@ class Cmd(cmd.Cmd):
             statekeeper = Statekeeper(self, ('stdout',))            
             redirect = subprocess.Popen(redirect, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             self.stdout = redirect.stdin
-            stop = cmd.Cmd.onecmd(self, statement)            
+            stop = cmd.Cmd.onecmd(self, statement)
             statekeeper.restore()            
-            self.stdout.write(redirect.stdout.read())
+            for result in redirect.communicate():
+                self.stdout.write(result or '')
             return stop # didn't record in history
         else:
             statement, redirect, mode = self.parseRedirectors(statement)
