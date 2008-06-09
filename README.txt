@@ -6,9 +6,12 @@
 - Load commands from file, save to file, edit commands in file
 - Multi-line commands
 - Case-insensitive commands
-- Special-character shortcut commands (beyond cmd's "@" and "!")
+- Special-character shortcut commands (beyond cmd's `@` and `!`)
 - Settable environment parameters
 - Parsing commands with flags
+- Redirection to file with `>`, `>>`; input from file with `<`
+- Bare '>', '>>' with no filename send output to paste buffer
+- Pipe output to shell commands with `|`
 
 Instructions for implementing each feature follow.
 
@@ -166,4 +169,9 @@ Sample session using the above code ::
     set maxrepeats
     -------------------------[6]
     set maxrepeats 5
-    (Cmd)
+    (Cmd) speak a dead parrot > pet.txt
+    (Cmd) speak < pet.txt
+    a dead parrot
+    (Cmd) speak only resting | wc
+      1       2      13
+    (Cmd)                      

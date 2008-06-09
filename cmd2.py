@@ -266,7 +266,10 @@ class Cmd(cmd.Cmd):
                 self.stdout = open(redirect, mode)            
             else:
                 statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
-        stop = cmd.Cmd.onecmd(self, statement)
+        if isinstance(redirect, subprocess.Popen):
+            stop = self.onecmd(statement)
+        else:
+            stop = cmd.Cmd.onecmd(self, statement)
         try:
             if command not in self.excludeFromHistory:
                 self.history.append(originalStatement)
