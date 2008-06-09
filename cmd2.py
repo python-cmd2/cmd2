@@ -234,7 +234,7 @@ class Cmd(cmd.Cmd):
 
         """
         command, args = self.extractCommand(line)
-        statement = ' '.join([command, args])
+        statement = originalStatement = ' '.join([command, args])
         if (not assumeComplete) and (command in self.multilineCommands):
             statement = self.finishStatement(statement)
         statekeeper = None
@@ -246,9 +246,11 @@ class Cmd(cmd.Cmd):
             self.stdout = redirect.stdin
             stop = cmd.Cmd.onecmd(self, statement)
             statekeeper.restore()            
-            for result in redirect.communicate():
+            for result in redirect.communicate():              
                 self.stdout.write(result or '')
-            return stop # didn't record in history
+            if command not in self.excludeFromHistory:
+                self.history.append(originalStatement)                  
+            return stop 
         else:
             statement, redirect, mode = self.parseRedirectors(statement)
             if redirect == self._TO_PASTE_BUFFER:
@@ -273,7 +275,7 @@ class Cmd(cmd.Cmd):
         stop = cmd.Cmd.onecmd(self, statement)
         try:
             if command not in self.excludeFromHistory:
-                self.history.append(statement) # or should we append the unmodified statement?
+                self.history.append(originalStatement)
         finally:
             if statekeeper:
                 if redirect == self._TO_PASTE_BUFFER:
@@ -288,6 +290,7 @@ class Cmd(cmd.Cmd):
         #import pdb; pdb.set_trace()
         return bool(self.statementEndPattern.search(lines)) \
                or lines[-3:] == 'EOF' \
+               or self.findPipe(lines)[1] \
                or self.parseRedirectors(lines)[1]
     
     def finishStatement(self, firstline):
