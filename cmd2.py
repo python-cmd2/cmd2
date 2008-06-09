@@ -178,10 +178,11 @@ class Cmd(cmd.Cmd):
     notAPipe.ignore(pyparsing.sglQuotedString)
     notAPipe.ignore(pyparsing.dblQuotedString)    
     pipeFinder = notAPipe + '|' + pyparsing.SkipTo(pyparsing.StringEnd())
-    def findPipe(self, statement):
+    def parsePipe(self, statement, mustBeTerminated):
         try:
             statement, pipe, destination = self.pipeFinder.parseString(statement)
-            return statement, destination
+            redirect = subprocess.Popen(destination, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            return statement, redirect
         except pyparsing.ParseException:
             return statement, None
     
@@ -212,6 +213,9 @@ class Cmd(cmd.Cmd):
     
     def parseRedirectors(self, statement):
         mustBeTerminated = self.extractCommand(statement)[0] in self.multilineCommands
+        newStatement, redirect = self.parsePipe(statement, mustBeTerminated)
+        if redirect:
+            return newStatement, redirect, 'pipe'
         newStatement, redirect = self.parseRedirector(statement, '>>', mustBeTerminated)
         if redirect:            
             return newStatement, redirect, 'a'        
@@ -239,39 +243,29 @@ class Cmd(cmd.Cmd):
             statement = self.finishStatement(statement)
         statekeeper = None
         stop = 0
-        statement, redirect = self.findPipe(statement)
-        if redirect:
-            statekeeper = Statekeeper(self, ('stdout',))            
-            redirect = subprocess.Popen(redirect, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        statement, redirect, mode = self.parseRedirectors(statement)
+        if isinstance(redirect, subprocess.Popen):
+            statekeeper = Statekeeper(self, ('stdout',))   
             self.stdout = redirect.stdin
-            stop = cmd.Cmd.onecmd(self, statement)
-            statekeeper.restore()            
-            for result in redirect.communicate():              
-                self.stdout.write(result or '')
-            if command not in self.excludeFromHistory:
-                self.history.append(originalStatement)                  
-            return stop 
-        else:
-            statement, redirect, mode = self.parseRedirectors(statement)
-            if redirect == self._TO_PASTE_BUFFER:
-                try:
-                    clipcontents = getPasteBuffer()
-                    if mode in ('w', 'a'):
-                        statekeeper = Statekeeper(self, ('stdout',))
-                        self.stdout = tempfile.TemporaryFile()
-                        if mode == 'a':
-                            self.stdout.write(clipcontents)
-                    else:
-                        statement = '%s %s' % (statement, clipcontents)
-                except OSError, e:
-                    print e
-                    return 0
-            elif redirect:
-                if mode in ('w','a'):
+        elif redirect == self._TO_PASTE_BUFFER:
+            try:
+                clipcontents = getPasteBuffer()
+                if mode in ('w', 'a'):
                     statekeeper = Statekeeper(self, ('stdout',))
-                    self.stdout = open(redirect, mode)            
+                    self.stdout = tempfile.TemporaryFile()
+                    if mode == 'a':
+                        self.stdout.write(clipcontents)
                 else:
-                    statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
+                    statement = '%s %s' % (statement, clipcontents)
+            except OSError, e:
+                print e
+                return 0
+        elif redirect:
+            if mode in ('w','a'):
+                statekeeper = Statekeeper(self, ('stdout',))
+                self.stdout = open(redirect, mode)            
+            else:
+                statement = '%s %s' % (statement, self.fileimport(statement=statement, source=redirect))
         stop = cmd.Cmd.onecmd(self, statement)
         try:
             if command not in self.excludeFromHistory:
@@ -283,6 +277,9 @@ class Cmd(cmd.Cmd):
                     writeToPasteBuffer(self.stdout.read())
                 self.stdout.close()
                 statekeeper.restore()
+                if isinstance(redirect, subprocess.Popen):
+                    for result in redirect.communicate():              
+                        self.stdout.write(result or '')                                     
             return stop        
         
     statementEndPattern = re.compile(r'[%s]\s*$' % terminators)        
