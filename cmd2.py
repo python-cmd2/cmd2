@@ -275,11 +275,12 @@ class Cmd(cmd.Cmd):
                 if redirect == self._TO_PASTE_BUFFER:
                     self.stdout.seek(0)
                     writeToPasteBuffer(self.stdout.read())
+                elif isinstance(redirect, subprocess.Popen):
+                    for result in redirect.communicate():              
+                        statekeeper.stdout.write(result or '')                        
                 self.stdout.close()
                 statekeeper.restore()
-                if isinstance(redirect, subprocess.Popen):
-                    for result in redirect.communicate():              
-                        self.stdout.write(result or '')                                     
+                                 
             return stop        
         
     statementEndPattern = re.compile(r'[%s]\s*$' % terminators)        
