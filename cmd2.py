@@ -285,10 +285,8 @@ class Cmd(cmd.Cmd):
         
     statementEndPattern = re.compile(r'[%s]\s*$' % terminators)        
     def statementHasEnded(self, lines):
-        #import pdb; pdb.set_trace()
         return bool(self.statementEndPattern.search(lines)) \
                or lines[-3:] == 'EOF' \
-               or self.findPipe(lines)[1] \
                or self.parseRedirectors(lines)[1]
     
     def finishStatement(self, firstline):
