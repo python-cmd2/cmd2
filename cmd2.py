@@ -109,7 +109,7 @@ else:
         xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)        
         if xclipproc.stdout.read() == teststring:
             can_clip = True
-    except (subprocess.CalledProcessError, OSError):
+    except (subprocess.CalledProcessError, OSError, IOError):
         pass
     if can_clip:    
         def getPasteBuffer():
