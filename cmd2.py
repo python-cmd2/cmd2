@@ -175,11 +175,6 @@ class Cmd(cmd.Cmd):
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
         self.history = History()
-        self.punctuationPattern = self.terminators ^ self.pipePattern ^ \
-                                  self.redirectInPattern ^ \
-                                  self.redirectOutPattern 
-        self.punctuationPattern.ignore(pyparsing.sglQuotedString)
-        self.punctuationPattern.ignore(pyparsing.dblQuotedString)    
         
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
@@ -197,7 +192,8 @@ class Cmd(cmd.Cmd):
                        + pyparsing.Optional(filenamePattern)('outputTo')
     redirectInPattern = pyparsing.Literal('<')('input') \
                       + pyparsing.Optional(filenamePattern)('inputFrom')    
-    for p in (terminators, pipePattern, redirectInPattern, redirectOutPattern):
+    punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern     
+    for p in (terminators, pipePattern, redirectInPattern, redirectOutPattern, punctuationPattern):
         p.ignore(pyparsing.sglQuotedString)
         p.ignore(pyparsing.dblQuotedString)    
 
@@ -205,18 +201,18 @@ class Cmd(cmd.Cmd):
         '''
         >>> c = Cmd()
         >>> c.parsed('quotes "are > ignored" < inp.txt').asDict()
-        {'args': ' "are > ignored"', 'inputFrom': 'inp.txt', 'command': 'quotes', 'statement': 'quotes "are > ignored"', 'input': '<', 'fullStatement': 'quotes "are > ignored" < inp.txt'}
+        {'args': '"are > ignored"', 'inputFrom': 'inp.txt', 'command': 'quotes', 'statement': 'quotes "are > ignored"', 'input': '<', 'fullStatement': 'quotes "are > ignored" < inp.txt'}
         >>> c.parsed('very complex; < from.txt >> to.txt etc.').asDict()
-        {'args': ' complex', 'inputFrom': 'from.txt', 'command': 'very', 'terminator': ';', 'statement': 'very complex', 'input': '<', 'output': '>>', 'outputTo': 'to.txt', 'fullStatement': 'very complex; < from.txt >> to.txt etc.'}
+        {'args': 'complex;', 'inputFrom': 'from.txt', 'command': 'very', 'statement': 'very complex;', 'input': '<', 'output': '>>', 'outputTo': 'to.txt', 'fullStatement': 'very complex; < from.txt >> to.txt etc.'}
         >>> c.parsed('nothing to parse').asDict()
-        {'args': ' to parse', 'command': 'nothing', 'statement': 'nothing to parse', 'fullStatement': 'nothing to parse'}
+        {'args': 'to parse', 'command': 'nothing', 'statement': 'nothing to parse', 'fullStatement': 'nothing to parse'}
         >>> c.parsed('send it to | sort | wc').asDict()
-        {'args': ' it to', 'pipe': '|', 'pipeTo': ' sort | wc', 'command': 'send', 'statement': 'send it to', 'fullStatement': 'send it to | sort | wc'}
+        {'args': 'it to', 'pipe': '|', 'pipeTo': ' sort | wc', 'command': 'send', 'statement': 'send it to', 'fullStatement': 'send it to | sort | wc'}
         >>> r = c.parsed('got from < thisfile.txt plus blah blah')
         >>> r.asDict()
-        {'args': ' from', 'inputFrom': 'thisfile.txt', 'command': 'got', 'statement': 'got from', 'input': '<', 'fullStatement': 'got from < thisfile.txt plus blah blah'}
+        {'args': 'from', 'inputFrom': 'thisfile.txt', 'command': 'got', 'statement': 'got from', 'input': '<', 'fullStatement': 'got from < thisfile.txt plus blah blah'}
         >>> c.parsed(r).asDict()
-        {'args': ' from', 'inputFrom': 'thisfile.txt', 'command': 'got', 'statement': 'got from', 'input': '<', 'fullStatement': 'got from < thisfile.txt plus blah blah'}
+        {'args': 'from', 'inputFrom': 'thisfile.txt', 'command': 'got', 'statement': 'got from', 'input': '<', 'fullStatement': 'got from < thisfile.txt plus blah blah'}
         '''
         if isinstance(s, pyparsing.ParseResults):
             return s
