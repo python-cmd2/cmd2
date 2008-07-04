@@ -126,10 +126,14 @@ else:
           
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 def parseSearchResults(pattern, s):
+    generator = pattern.scanString(s)
     try:
-        return pattern.searchString(s)[0]
-    except IndexError:
-        return pyparsing.ParseResults('')
+        result, start, stop = generator.next()
+        result['before'], result['after'] = s[:start], s[stop:]
+    except StopIteration:
+        result = pyparsing.ParseResults('')
+        result['before'] = s
+    return result
         
 class Cmd(cmd.Cmd):
     caseInsensitive = True
@@ -150,7 +154,7 @@ class Cmd(cmd.Cmd):
                     break
             
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive']
-    terminators = ';\n'
+    terminators = ';\n' #TODO: strip this
     _TO_PASTE_BUFFER = 1
     def do_cmdenvironment(self, args):
         self.stdout.write("""
@@ -181,7 +185,7 @@ class Cmd(cmd.Cmd):
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
-    terminators = (pyparsing.Literal(';') ^ pyparsing.Literal('\n\n')) \
+    terminatorPattern = (pyparsing.Literal(';') ^ pyparsing.Literal('\n\n')) \
                   ('terminator')
     argSeparatorPattern = pyparsing.Word(pyparsing.printables)('command') \
                           + pyparsing.SkipTo(pyparsing.StringEnd())('args')
@@ -192,8 +196,8 @@ class Cmd(cmd.Cmd):
                        + pyparsing.Optional(filenamePattern)('outputTo')
     redirectInPattern = pyparsing.Literal('<')('input') \
                       + pyparsing.Optional(filenamePattern)('inputFrom')    
-    punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern     
-    for p in (terminators, pipePattern, redirectInPattern, redirectOutPattern, punctuationPattern):
+    punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern
+    for p in (terminatorPattern, pipePattern, redirectInPattern, redirectOutPattern, punctuationPattern):
         p.ignore(pyparsing.sglQuotedString)
         p.ignore(pyparsing.dblQuotedString)    
 
@@ -203,7 +207,7 @@ class Cmd(cmd.Cmd):
         >>> c.parsed('quotes "are > ignored" < inp.txt').asDict()
         {'args': '"are > ignored"', 'inputFrom': 'inp.txt', 'command': 'quotes', 'statement': 'quotes "are > ignored"', 'input': '<', 'fullStatement': 'quotes "are > ignored" < inp.txt'}
         >>> c.parsed('very complex; < from.txt >> to.txt etc.').asDict()
-        {'args': 'complex;', 'inputFrom': 'from.txt', 'command': 'very', 'statement': 'very complex;', 'input': '<', 'output': '>>', 'outputTo': 'to.txt', 'fullStatement': 'very complex; < from.txt >> to.txt etc.'}
+        {'args': 'complex;', 'inputFrom': 'from.txt', 'command': 'very', 'terminator': ';', 'statement': 'very complex;', 'input': '<', 'output': '>>', 'outputTo': 'to.txt', 'fullStatement': 'very complex; < from.txt >> to.txt etc.'}
         >>> c.parsed('nothing to parse').asDict()
         {'args': 'to parse', 'command': 'nothing', 'statement': 'nothing to parse', 'fullStatement': 'nothing to parse'}
         >>> c.parsed('send it to | sort | wc').asDict()
@@ -218,23 +222,25 @@ class Cmd(cmd.Cmd):
             return s
         result = (pyparsing.SkipTo(pyparsing.StringEnd()))('fullStatement').parseString(s)
         result['statement'] = result.fullStatement
-        try:
-            result += (pyparsing.SkipTo(self.punctuationPattern)('statement') \
-                      + self.punctuationPattern).parseString(s)
-            result += parseSearchResults(self.pipePattern, s)
-            result += parseSearchResults(self.redirectInPattern, s)
-            result += parseSearchResults(self.redirectOutPattern, s)            
-        except pyparsing.ParseException:
-            pass
-        finally:
+        result['parseable'] = result.fullStatement
+        result += parseSearchResults(
+            pyparsing.SkipTo(self.terminatorPattern, include=True)('statement') + 
+            pyparsing.SkipTo(pyparsing.StringEnd())('parseable'), s)
+        if result.terminator:
+            result['statement'] = ''.join(result.statement)
+        else:
             try:
-                result += self.argSeparatorPattern.parseString(result.statement)
+                result += pyparsing.SkipTo(self.punctuationPattern)('statement').parseString(s)
             except pyparsing.ParseException:
-                return result
-            if self.caseInsensitive:
-                result['command'] = result.command.lower()
-            result['statement'] = '%s %s' % (result.command, result.args)
-            return result
+                pass
+        result += parseSearchResults(self.pipePattern, result.parseable)
+        result += parseSearchResults(self.redirectInPattern, result.parseable)
+        result += parseSearchResults(self.redirectOutPattern, result.parseable)            
+        result += parseSearchResults(self.argSeparatorPattern, result.statement)
+        if self.caseInsensitive:
+            result['command'] = result.command.lower()
+        result['statement'] = '%s %s' % (result.command, result.args)
+        return result
         
     def extractCommand(self, statement):
         try:
