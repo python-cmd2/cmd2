@@ -130,6 +130,7 @@ def parseSearchResults(pattern, s):
     try:
         result, start, stop = generator.next()
         result['before'], result['after'] = s[:start], s[stop:]
+        result['upToIncluding'] = s[:stop]
     except StopIteration:
         result = pyparsing.ParseResults('')
         result['before'] = s
@@ -204,35 +205,36 @@ class Cmd(cmd.Cmd):
     def parsed(self, s):
         '''
         >>> c = Cmd()
-        >>> c.parsed('quotes "are > ignored" < inp.txt').asDict()
-        {'args': '"are > ignored"', 'inputFrom': 'inp.txt', 'command': 'quotes', 'statement': 'quotes "are > ignored"', 'input': '<', 'fullStatement': 'quotes "are > ignored" < inp.txt'}
-        >>> c.parsed('very complex; < from.txt >> to.txt etc.').asDict()
-        {'args': 'complex;', 'inputFrom': 'from.txt', 'command': 'very', 'terminator': ';', 'statement': 'very complex;', 'input': '<', 'output': '>>', 'outputTo': 'to.txt', 'fullStatement': 'very complex; < from.txt >> to.txt etc.'}
-        >>> c.parsed('nothing to parse').asDict()
-        {'args': 'to parse', 'command': 'nothing', 'statement': 'nothing to parse', 'fullStatement': 'nothing to parse'}
-        >>> c.parsed('send it to | sort | wc').asDict()
-        {'args': 'it to', 'pipe': '|', 'pipeTo': ' sort | wc', 'command': 'send', 'statement': 'send it to', 'fullStatement': 'send it to | sort | wc'}
+        >>> r = c.parsed('quotes "are > ignored" < inp.txt')
+        >>> r.statement, r.input, r.inputFrom, r.output, r.outputFrom
+        ('quotes "are > ignored" ', '<', 'inp.txt', '', '')
+        >>> r = c.parsed('very complex; < from.txt >> to.txt etc.')
+        >>> r.statement, r.terminator, r.input, r.inputFrom, r.output, r.outputTo
+        ('very complex;', ';', '<', 'from.txt', '>>', 'to.txt')
+        >>> c.parsed('nothing to parse').statement
+        'nothing to parse'
+        >>> r = c.parsed('ignore > within a terminated statement; > out.txt')
+        >>> r.statement, r.terminator, r.input, r.inputFrom, r.output, r.outputTo
+        ('ignore > within a terminated statement;', ';', '', '', '>', 'out.txt')
+        >>> r = c.parsed('send it to | sort | wc')
+        >>> r.statement, r.pipe, r.pipeTo
+        ('send it to ', '|', ' sort | wc')
         >>> r = c.parsed('got from < thisfile.txt plus blah blah')
-        >>> r.asDict()
-        {'args': 'from', 'inputFrom': 'thisfile.txt', 'command': 'got', 'statement': 'got from', 'input': '<', 'fullStatement': 'got from < thisfile.txt plus blah blah'}
-        >>> c.parsed(r).asDict()
-        {'args': 'from', 'inputFrom': 'thisfile.txt', 'command': 'got', 'statement': 'got from', 'input': '<', 'fullStatement': 'got from < thisfile.txt plus blah blah'}
+        >>> r.statement, r.input, r.inputFrom
+        ('got from ', '<', 'thisfile.txt')
         '''
         if isinstance(s, pyparsing.ParseResults):
             return s
         result = (pyparsing.SkipTo(pyparsing.StringEnd()))('fullStatement').parseString(s)
         result['statement'] = result.fullStatement
         result['parseable'] = result.fullStatement
-        result += parseSearchResults(
-            pyparsing.SkipTo(self.terminatorPattern, include=True)('statement') + 
-            pyparsing.SkipTo(pyparsing.StringEnd())('parseable'), s)
+        result += parseSearchResults(self.terminatorPattern, s)
         if result.terminator:
-            result['statement'] = ''.join(result.statement)
+            result['statement'] = result.upToIncluding
+            result['parseable'] = result.after
         else:
-            try:
-                result += pyparsing.SkipTo(self.punctuationPattern)('statement').parseString(s)
-            except pyparsing.ParseException:
-                pass
+            result += parseSearchResults(self.punctuationPattern, s)
+            result['statement'] = result.before
         result += parseSearchResults(self.pipePattern, result.parseable)
         result += parseSearchResults(self.redirectInPattern, result.parseable)
         result += parseSearchResults(self.redirectOutPattern, result.parseable)            
