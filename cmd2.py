@@ -119,6 +119,10 @@ else:
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
+            # but we want it in both the "primary" and "mouse" clipboards
+            xclipproc = subprocess.Popen('xclip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc.stdin.write(txt)
+            xclipproc.stdin.close()
     else:
         def getPasteBuffer():
             raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
@@ -155,7 +159,6 @@ class Cmd(cmd.Cmd):
                     break
             
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive']
-    terminators = ';\n' #TODO: strip this
     _TO_PASTE_BUFFER = 1
     def do_cmdenvironment(self, args):
         self.stdout.write("""
@@ -164,7 +167,7 @@ class Cmd(cmd.Cmd):
         Settable parameters: %(settable)s
         """ % 
         { 'casesensitive': ('not ' and self.caseInsensitive) or '',
-          'terminators': ' '.join(self.terminators),
+          'terminators': self.terminatorPattern,
           'settable': ' '.join(self.settable)
         })
         
@@ -226,15 +229,18 @@ class Cmd(cmd.Cmd):
         if isinstance(s, pyparsing.ParseResults):
             return s
         result = (pyparsing.SkipTo(pyparsing.StringEnd()))('fullStatement').parseString(s)
-        result['statement'] = result.fullStatement
-        result['parseable'] = result.fullStatement
+        if s[0] in self.shortcuts:
+            s = self.shortcuts[s[0]] + ' ' + s[1:]
+        result['statement'] = s
+        result['parseable'] = s
         result += parseSearchResults(self.terminatorPattern, s)
         if result.terminator:
             result['statement'] = result.upToIncluding
+            result['unterminated'] = result.before
             result['parseable'] = result.after
         else:
             result += parseSearchResults(self.punctuationPattern, s)
-            result['statement'] = result.before
+            result['statement'] = result['unterminated'] = result.before
         result += parseSearchResults(self.pipePattern, result.parseable)
         result += parseSearchResults(self.redirectInPattern, result.parseable)
         result += parseSearchResults(self.redirectOutPattern, result.parseable)            
@@ -263,6 +269,9 @@ class Cmd(cmd.Cmd):
         commands by the interpreter should stop.
 
         """
+        line = line.strip()
+        if not line:
+            return
         statement = self.parsed(line)
         while (statement.command in self.multilineCommands) and not \
               (statement.terminator or assumeComplete):
