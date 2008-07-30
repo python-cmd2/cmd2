@@ -12,6 +12,10 @@ Settable environment parameters
 Parsing commands with `optparse` options (flags)
 Redirection to file with >, >>; input from file with <
 
+Note that redirection with > and | will only work if `self.stdout.write()`
+is used in place of `print`.  The standard library's `cmd` module is 
+written to use `self.stdout.write()`, 
+
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
 CHANGES:
@@ -427,7 +431,7 @@ class Cmd(cmd.Cmd):
             if paramName not in self.settable:
                 raise NotSettableError                            
             currentVal = getattr(self, paramName)
-            val = cast(currentVal, val.strip(self.terminators))
+            val = cast(currentVal, self.parsed(val).unterminated)
             setattr(self, paramName, val)
             self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
         except (ValueError, AttributeError, NotSettableError), e:
