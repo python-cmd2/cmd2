@@ -197,7 +197,7 @@ class Cmd(cmd.Cmd):
                   ('terminator')
     argSeparatorPattern = pyparsing.Word(pyparsing.printables)('command') \
                           + pyparsing.SkipTo(pyparsing.StringEnd())('args')
-    filenamePattern = pyparsing.Word(pyparsing.alphanums + '#$-_~{},.!')
+    filenamePattern = pyparsing.Word(pyparsing.alphanums + '#$-_~{},.!:\\/')
     integerPattern = pyparsing.Word(pyparsing.nums).setParseAction( lambda s,l,t: [ int(t[0]) ] )
     pipePattern = pyparsing.Literal('|')('pipe') + pyparsing.restOfLine('pipeTo')
     redirectOutPattern = (pyparsing.Literal('>>') ^ '>')('output') \
