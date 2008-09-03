@@ -194,7 +194,7 @@ class Cmd(cmd.Cmd):
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
     terminatorPattern = (pyparsing.Literal(';') ^ pyparsing.Literal('\n\n')) \
-                  ('terminator')
+                  ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd) ('terminator')
     argSeparatorPattern = pyparsing.Word(pyparsing.printables)('command') \
                           + pyparsing.SkipTo(pyparsing.StringEnd())('args')
     filenamePattern = pyparsing.Word(pyparsing.alphanums + '#$-_~{},.!:\\/')
@@ -514,7 +514,7 @@ class Cmd(cmd.Cmd):
     def do_save(self, fname=None):
         """Saves most recent command to a file."""
         
-        if fname is None:
+        if not fname:
             fname = self.defaultFileName
         try:
             f = open(fname, 'w')
