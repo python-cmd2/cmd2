@@ -511,15 +511,32 @@ class Cmd(cmd.Cmd):
         self.do__load(filename)
     do_edit = do_ed
     
-    def do_save(self, fname=None):
-        """Saves most recent command to a file."""
-        
-        if not fname:
-            fname = self.defaultFileName
+    saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums)^'*')("idx") + 
+                  pyparsing.Optional(pyparsing.Word(pyparsing.printables))("fname") +
+                  pyparsing.stringEnd)    
+    def do_save(self, arg):
+        """`save [N] [filename.ext]`
+        Saves command from history to file.
+        N => Number of command (from history), or `*`; 
+             most recent command if omitted"""
+
+        try:
+            args = self.saveparser.parseString(arg)
+        except pyparsing.ParseException:
+            print self.do_save.__doc__
+            return
+        fname = args.fname or self.defaultFileName
+        if args.idx == '*':
+            saveme = '\n\n'.join(self.history[:])
+        elif args.idx:
+            saveme = self.history[int(args.idx)-1]
+        else:
+            saveme = self.history[-1]
         try:
             f = open(fname, 'w')
-            f.write(self.history[-1])
+            f.write(saveme)
             f.close()
+            print 'Saved to %s' % (fname)
         except Exception, e:
             print 'Error saving %s: %s' % (fname, str(e))
             
