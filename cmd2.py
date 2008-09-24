@@ -193,8 +193,8 @@ class Cmd(cmd.Cmd):
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
-    terminatorPattern = (pyparsing.Literal(';') ^ pyparsing.Literal('\n\n')) \
-                  ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd) ('terminator')
+    terminatorPattern = ((pyparsing.Literal(';') ^ pyparsing.Literal('\n\n'))
+                  ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd))('terminator')
     argSeparatorPattern = pyparsing.Word(pyparsing.printables)('command') \
                           + pyparsing.SkipTo(pyparsing.StringEnd())('args')
     filenamePattern = pyparsing.Word(pyparsing.alphanums + '#$-_~{},.!:\\/')
