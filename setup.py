@@ -3,6 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cmd2",
+    packages=["cmd2",],
     version="0.3.7",
     #py_modules = ['cmd2','flagReader','bootstrap'],
     
