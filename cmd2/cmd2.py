@@ -146,6 +146,7 @@ def parseSearchResults(pattern, s):
     return result
         
 class Cmd(cmd.Cmd):
+    echo = False
     caseInsensitive = True
     multilineCommands = []
     continuationPrompt = '> '    
@@ -163,7 +164,7 @@ class Cmd(cmd.Cmd):
                 if not os.system('which %s' % (editor)):
                     break
             
-    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive']
+    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 'echo']
     _TO_PASTE_BUFFER = 1
     def do_cmdenvironment(self, args):
         self.stdout.write("""
@@ -382,6 +383,8 @@ class Cmd(cmd.Cmd):
                     line = self.cmdqueue.pop(0)
                 else:
                     line = self.pseudo_raw_input(self.prompt)
+                if (self.echo) and (isinstance(self.stdin, file)):
+                    self.stdout.write(line + '\n')
                 line = self.precmd(line)
                 stop = self.onecmd(line)
                 stop = self.postcmd(stop, line)
