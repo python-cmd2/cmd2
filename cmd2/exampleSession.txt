@@ -1,0 +1,36 @@
+(Cmd) say goodnight, Gracie
+goodnight, Gracie
+(Cmd) say -p goodnight, Gracie
+oodnight, Graciegay
+(Cmd) say -h
+Usage: speak [options] arg
+
+Options:
+  -h, --help            show this help message and exit
+  -p, --piglatin        atinLay
+  -s, --shout           N00B EMULATION MODE
+  -r REPEAT, --repeat=REPEAT
+                        output [n] times
+(Cmd) say --shout goodnight, Gracie
+GOODNIGHT, GRACIE
+(Cmd) set prompt 'example >>> '
+prompt - was: (Cmd)
+now: example >>>
+example >>> say --repeat 5 spam
+spam
+spam
+spam
+example >>> set
+prompt: example >>>
+editor: gedit
+echo: False
+maxrepeats: 3
+example >>> set maxrepeats 10
+maxrepeats - was: 3
+now: 10
+example >>> say --repeat 5 spam
+spam
+spam
+spam
+spam
+spam
