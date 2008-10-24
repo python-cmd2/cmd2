@@ -688,19 +688,15 @@ class Borg(object):
 class OutputTrap(Borg):
     '''Instantiate an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
     Call `tearDown()` to return to normal output.'''
-    old_stdout = sys.stdout
     def __init__(self):
-        #self.old_stdout = sys.stdout
+        self.old_stdout = sys.stdout
         self.trap = tempfile.TemporaryFile()
         sys.stdout = self.trap
-    def dump(self):
-        'Reads trapped stdout output.'
+    def read(self):
         self.trap.seek(0)
         result = self.trap.read()
-        self.trap.close()
-        self.trap = tempfile.TemporaryFile()
-        sys.stdout = self.trap
-        return result
+        self.trap.truncate(0)
+        return result.strip('\x00')        
     def tearDown(self):
         sys.stdout = self.old_stdout
 
@@ -744,14 +740,14 @@ class Cmd2TestCase(unittest.TestCase):
     transcriptFileName = ''
     def setUp(self):
         if self.CmdApp:
-            self.cmdapp = self.CmdApp()
             self.outputTrap = OutputTrap()
+            self.cmdapp = self.CmdApp()
             self.transcriptReader = TranscriptReader(self.cmdapp, self.transcriptFileName)
     def testall(self):
         if self.CmdApp:            
             for (cmdInput, lineNum) in self.transcriptReader.inputGenerator():
                 self.cmdapp.onecmd(cmdInput)
-                result = self.outputTrap.dump()
+                result = self.outputTrap.read()
                 expected = self.transcriptReader.nextExpected()
                 self.assertEqual(result.strip(), expected.strip(), 
                     '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
