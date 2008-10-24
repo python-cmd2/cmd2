@@ -14,7 +14,7 @@ Options:
 (Cmd) say --shout goodnight, Gracie
 GOODNIGHT, GRACIE
 (Cmd) set prompt 'example >>> '
-prompt - was: (Cmd)
+prompt - was: (Cmd) 
 now: example >>>
 example >>> say --repeat 5 spam
 spam
@@ -34,3 +34,4 @@ spam
 spam
 spam
 spam
+example >>>
