@@ -4,8 +4,10 @@ from setuptools import setup, find_packages
 setup(
     name="cmd2",
     packages=["cmd2",],
+    package_dir={'cmd2': 'cmd2'},
+    package_data={'cmd2': ['example/*.*']},
+    include_package_data=True,
     version="0.4",
-    #py_modules = ['cmd2','flagReader','bootstrap'],
     
     # metadata for upload to PyPI
     author = 'Catherine Devlin',
@@ -14,7 +16,6 @@ setup(
     license = 'MIT',
     keywords = 'command prompt console cmd',
     url = 'http://www.assembla.com/wiki/show/python-cmd2',
-    include_package_data=True,
     
     long_description = """Enhancements for standard library's cmd module.
 
