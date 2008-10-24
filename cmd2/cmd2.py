@@ -22,7 +22,7 @@ CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
-import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
+import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest
 from optparse import make_option
 __version__ = '0.3.7'
 
@@ -676,5 +676,89 @@ class Statekeeper(object):
         for attrib in self.attribs:
             setattr(self.obj, attrib, getattr(self, attrib))        
 
+class Borg(object):
+    '''All instances of any Borg subclass will share state.
+    from Python Cookbook, 2nd Ed., recipe 6.16'''
+    _shared_state = {}
+    def __new__(cls, *a, **k):
+        obj = object.__new__(cls, *a, **k)
+        obj.__dict__ = cls._shared_state
+        return obj
+    
+class OutputTrap(Borg):
+    '''Instantiate an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
+    Call `tearDown()` to return to normal output.'''
+    old_stdout = sys.stdout
+    def __init__(self):
+        #self.old_stdout = sys.stdout
+        self.trap = tempfile.TemporaryFile()
+        sys.stdout = self.trap
+    def dump(self):
+        'Reads trapped stdout output.'
+        self.trap.seek(0)
+        result = self.trap.read()
+        self.trap.close()
+        self.trap = tempfile.TemporaryFile()
+        sys.stdout = self.trap
+        return result
+    def tearDown(self):
+        sys.stdout = self.old_stdout
+
+class TranscriptReader(object):
+    def __init__(self, cmdapp, filename='test_cmd2.txt'):
+        self.cmdapp = cmdapp
+        try:
+            tfile = open(filename)
+            self.transcript = tfile.read()
+            tfile.close()
+        except IOError:
+            self.transcript = ''
+        self.bookmark = 0
+    def refreshCommandFinder(self):
+        prompt = pyparsing.Suppress(pyparsing.lineStart + self.cmdapp.prompt)
+        continuationPrompt = pyparsing.Suppress(pyparsing.lineStart + self.cmdapp.continuationPrompt)
+        self.cmdtxtPattern = (prompt + pyparsing.restOfLine + pyparsing.ZeroOrMore(
+            pyparsing.lineEnd + continuationPrompt + pyparsing.restOfLine))("command")        
+    def inputGenerator(self):
+        while True:
+            self.refreshCommandFinder()
+            (thiscmd, startpos, endpos) = self.cmdtxtPattern.scanString(self.transcript[self.bookmark:], maxMatches=1).next()
+            lineNum = self.transcript.count('\n', 0, self.bookmark+startpos) + 2
+            self.bookmark += endpos
+            yield (''.join(thiscmd.command), lineNum)
+    def nextExpected(self):
+        self.refreshCommandFinder()
+        try:
+            (thiscmd, startpos, endpos) = self.cmdtxtPattern.scanString(self.transcript[self.bookmark:], maxMatches=1).next()
+            result = self.transcript[self.bookmark:self.bookmark+startpos]
+            self.bookmark += startpos
+            return result
+        except StopIteration:
+            return self.transcript[self.bookmark:]
+        
+class Cmd2TestCase(unittest.TestCase):
+    '''Subclass this, setting CmdApp and transcriptFileName, to make a unittest.TestCase class
+       that will execute the commands in transcriptFileName and expect the results shown.'''
+    # problem: this (raw) case gets called by unittest.main - we don't want it to be.  hmm
+    CmdApp = None
+    transcriptFileName = ''
+    def setUp(self):
+        if self.CmdApp:
+            self.cmdapp = self.CmdApp()
+            self.outputTrap = OutputTrap()
+            self.transcriptReader = TranscriptReader(self.cmdapp, self.transcriptFileName)
+    def testall(self):
+        if self.CmdApp:            
+            for (cmdInput, lineNum) in self.transcriptReader.inputGenerator():
+                self.cmdapp.onecmd(cmdInput)
+                result = self.outputTrap.dump()
+                expected = self.transcriptReader.nextExpected()
+                self.assertEqual(result.strip(), expected.strip(), 
+                    '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
+                    (self.transcriptFileName, lineNum, cmdInput, expected, result))
+    def tearDown(self):
+        if self.CmdApp:
+            self.outputTrap.tearDown()
+        
 if __name__ == '__main__':
     doctest.testmod()
