@@ -727,7 +727,9 @@ class TranscriptReader(object):
         prompt = pyparsing.Suppress(pyparsing.lineStart + self.cmdapp.prompt)
         continuationPrompt = pyparsing.Suppress(pyparsing.lineStart + self.cmdapp.continuationPrompt)
         self.cmdtxtPattern = (prompt + pyparsing.restOfLine + pyparsing.ZeroOrMore(
-            pyparsing.lineEnd + continuationPrompt + pyparsing.restOfLine))("command")        
+            pyparsing.lineEnd + continuationPrompt + pyparsing.restOfLine))("command")   
+        
+        pass
     def inputGenerator(self):
         while True:
             self.refreshCommandFinder()
