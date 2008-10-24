@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name="cmd2",
     packages=["cmd2",],
-    version="0.3.7",
+    version="0.4",
     #py_modules = ['cmd2','flagReader','bootstrap'],
     
     # metadata for upload to PyPI
@@ -29,7 +29,8 @@ Drop-in replacement adds several features for command-prompt tools:
     * Parsing commands with flags
     * > (filename), >> (filename) redirect output to file
     * < (filename) gets input from file
-    * bare >, >>, < redirect to/from paste buffer     
+    * bare >, >>, < redirect to/from paste buffer
+    * test apps against sample session transcript (see example.py in source directory)
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 

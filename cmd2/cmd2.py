@@ -24,7 +24,7 @@ flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest
 from optparse import make_option
-__version__ = '0.3.7'
+__version__ = '0.4'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -728,8 +728,6 @@ class TranscriptReader(object):
         continuationPrompt = pyparsing.Suppress(pyparsing.lineStart + self.cmdapp.continuationPrompt)
         self.cmdtxtPattern = (prompt + pyparsing.restOfLine + pyparsing.ZeroOrMore(
             pyparsing.lineEnd + continuationPrompt + pyparsing.restOfLine))("command")   
-        
-        pass
     def inputGenerator(self):
         while True:
             self.refreshCommandFinder()
@@ -749,7 +747,8 @@ class TranscriptReader(object):
         
 class Cmd2TestCase(unittest.TestCase):
     '''Subclass this, setting CmdApp and transcriptFileName, to make a unittest.TestCase class
-       that will execute the commands in transcriptFileName and expect the results shown.'''
+       that will execute the commands in transcriptFileName and expect the results shown.
+       See example.py'''
     # problem: this (raw) case gets called by unittest.main - we don't want it to be.  hmm
     CmdApp = None
     transcriptFileName = ''
