@@ -98,7 +98,7 @@ if subprocess.mswindows:
             win32clipboard.SetClipboardText(txt)
             win32clipboard.CloseClipboard()        
     except ImportError:
-        def getPasteBuffer():
+        def getPasteBuffer(*args):
             raise OSError, pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/')
         setPasteBuffer = getPasteBuffer
 else:
@@ -129,9 +129,10 @@ else:
             xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
     else:
-        def getPasteBuffer():
+        def getPasteBuffer(*args):
             raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
         setPasteBuffer = getPasteBuffer
+        writeToPasteBuffer = getPasteBuffer
           
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 def parseSearchResults(pattern, s):
@@ -151,7 +152,8 @@ class Cmd(cmd.Cmd):
     multilineCommands = []
     continuationPrompt = '> '    
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load'}
-    excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()   
+    excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
+    noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
     defaultFileName = 'command.txt'
     editor = os.environ.get('EDITOR')
@@ -235,6 +237,14 @@ class Cmd(cmd.Cmd):
         if isinstance(s, pyparsing.ParseResults):
             return s
         result = (pyparsing.SkipTo(pyparsing.StringEnd()))('fullStatement').parseString(s)
+        command = s.split()[0]
+        if self.caseInsensitive:
+            command = command.lower()
+        '''if command in self.noSpecialParse:
+            result['statement'] = result['upToIncluding'] = result['unterminated'] = result.fullStatement
+            result['command'] = command
+            result['args'] = ' '.join(result.fullStatement.split()[1:])
+            return result'''
         if s[0] in self.shortcuts:
             s = self.shortcuts[s[0]] + ' ' + s[1:]
         result['statement'] = s
@@ -252,7 +262,7 @@ class Cmd(cmd.Cmd):
         result += parseSearchResults(self.redirectOutPattern, result.parseable)            
         result += parseSearchResults(self.argSeparatorPattern, result.statement)
         if self.caseInsensitive:
-            result['command'] = result.command.lower()
+            result['command'] = result.command.lower()           
         result['statement'] = '%s %s' % (result.command, result.args)
         return result
         
@@ -433,9 +443,12 @@ class Cmd(cmd.Cmd):
             paramName, val = arg.split(None, 1)
             paramName = self.clean(paramName)
             if paramName not in self.settable:
-                raise NotSettableError                            
+                raise NotSettableError
             currentVal = getattr(self, paramName)
-            val = cast(currentVal, self.parsed(val).unterminated)
+            if (val[0] == val[-1]) and val[0] in ("'", '"'):
+                val = val[1:-1]
+            else:                
+                val = cast(currentVal, self.parsed(val).unterminated)
             setattr(self, paramName, val)
             self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
         except (ValueError, AttributeError, NotSettableError), e:
