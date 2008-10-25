@@ -4,9 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name="cmd2",
     version="0.4",
-    packages=["cmd2",],
-    package_dir={'cmd2': 'cmd2'},
-    package_data={'cmd2': ['example/*.txt', 'example/*.py']},
+    py_modules=["cmd2",],
     
     # metadata for upload to PyPI
     author = 'Catherine Devlin',
