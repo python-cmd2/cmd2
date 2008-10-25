@@ -1,3 +1,0 @@
-include cmd2/example/example.py
-include cmd2/example/exampleSession.txt
-include setup.py
