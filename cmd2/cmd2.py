@@ -11,6 +11,7 @@ Special-character shortcut commands (beyond cmd's "@" and "!")
 Settable environment parameters
 Parsing commands with `optparse` options (flags)
 Redirection to file with >, >>; input from file with <
+Easy transcript-based testing of applications (see example/example.py)
 
 Note that redirection with > and | will only work if `self.stdout.write()`
 is used in place of `print`.  The standard library's `cmd` module is 
