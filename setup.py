@@ -3,11 +3,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="cmd2",
+    version="0.4",
     packages=["cmd2",],
     package_dir={'cmd2': 'cmd2'},
-    package_data={'cmd2': ['example/*.*']},
-    include_package_data=True,
-    version="0.4",
+    package_data={'cmd2': ['example/*.txt', 'example/*.py']},
     
     # metadata for upload to PyPI
     author = 'Catherine Devlin',
@@ -31,7 +30,7 @@ Drop-in replacement adds several features for command-prompt tools:
     * > (filename), >> (filename) redirect output to file
     * < (filename) gets input from file
     * bare >, >>, < redirect to/from paste buffer
-    * test apps against sample session transcript (see example.py in source directory)
+    * test apps against sample session transcript (see example/example.py)
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 
