@@ -111,81 +111,97 @@ Example cmd2 application (example/example.py) ::
         app = CmdLineApp()
         app.cmdloop()
 
-Sample session using the above code ::
+The following is a sample session running example.py.
+Thanks to TestMyAppCase(Cmd2TestCase), it also serves as a test 
+suite for example.py when saved as `exampleSession.txt`.  
+Running `python example.py -t` will run all the commands in the
+transcript against example.py, verifying that the output produced
+is as expected.
 
-    c:\cmd2>python cmd2_example.py
-    (Cmd) speak softly
-    softly    
-    (Cmd) speak --piglatin softly
-    oftlysay
-    (Cmd) speak -psr 2 softly
-    OFTLYSAY
-    OFTLYSAY
-    (Cmd) speak --repeat 1000000 softly
-    softly
-    softly
-    softly
-    (Cmd) show maxrepeats
+exampleSession.txt::
+
+    (Cmd) help
+    
+    Documented commands (type help <topic>):
+    ========================================
+    _load  edit  history  li    load   r    save  set    shortcuts  speak
+    ed     hi    l        list  orate  run  say   shell  show     
+    
+    Undocumented commands:
+    ======================
+    EOF  cmdenvironment  eof  exit  help  q  quit
+    
+    (Cmd) help say
+    Repeats what you tell me to.
+    Usage: speak [options] arg
+    
+    Options:
+      -h, --help            show this help message and exit
+      -p, --piglatin        atinLay
+      -s, --shout           N00B EMULATION MODE
+      -r REPEAT, --repeat=REPEAT
+                            output [n] times
+    
+    (Cmd) say goodnight, Gracie
+    goodnight, Gracie
+    (Cmd) say -ps --repeat=5 goodnight, gracie
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    (Cmd) set
+    prompt: (Cmd) 
+    editor: gedit
+    echo: False
     maxrepeats: 3
     (Cmd) set maxrepeats 5
     maxrepeats - was: 3
     now: 5
-    (Cmd) speak --repeat 1000000 softly
-    softly
-    softly
-    softly
-    softly
-    softly
-    (Cmd) orate blah blah
-    > blah
-    > and furthermore
-    > blah
-    >
-    blah blah blah and furthermore blah
-    (Cmd) &greetings
-    greetings 
+    (Cmd) say -ps --repeat=5 goodnight, gracie
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    (Cmd) orate these are the
+    > times that
+    > try mens' souls
+    > 
+    > 
+    these are the times that try mens' souls
+    (Cmd) & we made a shortcut!
+    we made a shortcut!
     (Cmd) history
     -------------------------[1]
-    speak softly
+    help
     -------------------------[2]
-    speak --piglatin softly
+    help say
     -------------------------[3]
-    speak -psr 2 softly
+    say goodnight, Gracie
     -------------------------[4]
-    speak --repeat 1000000 softly
+    say -ps --repeat=5 goodnight, gracie
     -------------------------[5]
-    show maxrepeats
+    set
     -------------------------[6]
     set maxrepeats 5
     -------------------------[7]
-    speak --repeat 1000000 softly
+    say -ps --repeat=5 goodnight, gracie
     -------------------------[8]
-    orate blah blah
-    blah
-    and furthermore
-    blah
+    orate these are the
+    times that
+    try mens' souls
+    
     
     -------------------------[9]
-    &greetings  
-    (Cmd) run
-    orate blah blah
-    blah
-    and furthermore
-    blah
-    
-    blah blah blah and furthermore blah
+    & we made a shortcut!
     (Cmd) run 3
-    speak -psr 2 softly
-    OFTLYSAY
-    OFTLYSAY
-    (Cmd) history maxrepeats
-    -------------------------[5]
-    set maxrepeats
-    -------------------------[6]
-    set maxrepeats 5
-    (Cmd) speak a dead parrot > pet.txt
-    (Cmd) speak < pet.txt
-    a dead parrot
-    (Cmd) speak only resting | wc
-      1       2      13
-    (Cmd)                      
+    say goodnight, Gracie
+    goodnight, Gracie
+    (Cmd) say put this in a file > text.txt
+    (Cmd) say < text.txt
+    put this in a file
+    (Cmd) set prompt "---> "
+    prompt - was: (Cmd) 
+    now: ---> 
+    ---> say goodbye
+    goodbye
+    ---> 
