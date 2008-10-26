@@ -1,3 +1,9 @@
+----
+cmd2
+----
+
+:Author: Catherine Devlin, http://catherinedevlin.blogspot.com
+
 `cmd2` is a tool for writing command-line interactive applications.  It is based on the Python Standard Library's `cmd` module, and can be used anyplace `cmd` is used simply by importing `cmd2` instead.
 
 `cmd2` provides the following features, in addition to those already existing in `cmd`:
@@ -12,6 +18,7 @@
 - Redirection to file with `>`, `>>`; input from file with `<`
 - Bare '>', '>>' with no filename send output to paste buffer
 - Pipe output to shell commands with `|`
+- Simple transcript-based application testing
 
 Instructions for implementing each feature follow.
 
@@ -57,8 +64,6 @@ Instructions for implementing each feature follow.
             
     See Python standard library's `optparse` documentation: http://docs.python.org/lib/optparse-defining-options.html
     
-- Catherine Devlin, http://catherinedevlin.blogspot.com
-
 cmd2 can be installed with `easy_install cmd2`
 
 Cheese Shop page: http://pypi.python.org/pypi/cmd2
@@ -112,13 +117,13 @@ Example cmd2 application (example/example.py) ::
         app.cmdloop()
 
 The following is a sample session running example.py.
-Thanks to TestMyAppCase(Cmd2TestCase), it also serves as a test 
+Thanks to `TestMyAppCase(Cmd2TestCase)`, it also serves as a test 
 suite for example.py when saved as `exampleSession.txt`.  
 Running `python example.py -t` will run all the commands in the
-transcript against example.py, verifying that the output produced
-is as expected.
+transcript against `example.py`, verifying that the output produced
+matches the transcript.
 
-exampleSession.txt::
+example/exampleSession.txt::
 
     (Cmd) help
     
