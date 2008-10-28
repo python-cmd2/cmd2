@@ -130,7 +130,7 @@ example/exampleSession.txt::
     Documented commands (type help <topic>):
     ========================================
     _load  edit  history  li    load   r    save  set    shortcuts  speak
-    ed     hi    l        list  orate  run  say   shell  show     
+    ed     hi    l        list  orate  run  say   shell  show
     
     Undocumented commands:
     ======================
@@ -149,33 +149,25 @@ example/exampleSession.txt::
     
     (Cmd) say goodnight, Gracie
     goodnight, Gracie
-    (Cmd) say -ps --repeat=5 goodnight, gracie
+    (Cmd) say -ps --repeat=5 goodnight, Gracie
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
     (Cmd) set
-    prompt: (Cmd) 
+    prompt: (Cmd)
     editor: gedit
     echo: False
     maxrepeats: 3
     (Cmd) set maxrepeats 5
     maxrepeats - was: 3
     now: 5
-    (Cmd) say -ps --repeat=5 goodnight, gracie
+    (Cmd) say -ps --repeat=5 goodnight, Gracie
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
-    (Cmd) orate these are the
-    > times that
-    > try mens' souls
-    > 
-    > 
-    these are the times that try mens' souls
-    (Cmd) & we made a shortcut!
-    we made a shortcut!
-    (Cmd) history
+    (Cmd) hi
     -------------------------[1]
     help
     -------------------------[2]
@@ -183,30 +175,34 @@ example/exampleSession.txt::
     -------------------------[3]
     say goodnight, Gracie
     -------------------------[4]
-    say -ps --repeat=5 goodnight, gracie
+    say -ps --repeat=5 goodnight, Gracie
     -------------------------[5]
     set
     -------------------------[6]
     set maxrepeats 5
     -------------------------[7]
-    say -ps --repeat=5 goodnight, gracie
-    -------------------------[8]
-    orate these are the
-    times that
-    try mens' souls
-    
-    
-    -------------------------[9]
-    & we made a shortcut!
-    (Cmd) run 3
-    say goodnight, Gracie
-    goodnight, Gracie
-    (Cmd) say put this in a file > text.txt
-    (Cmd) say < text.txt
+    say -ps --repeat=5 goodnight, Gracie
+    (Cmd) run 4
+    say -ps --repeat=5 goodnight, Gracie
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    OODNIGHT, GRACIEGAY
+    (Cmd) orate Four score and
+    > seven releases ago
+    > our BDFL
+    > blah blah blah
+    >
+    >
+    Four score and seven releases ago our BDFL blah blah blah
+    (Cmd) & look, a shortcut!
+    look, a shortcut!
+    (Cmd) say put this in a file > myfile.txt
+    (Cmd) say < myfile.txt
     put this in a file
     (Cmd) set prompt "---> "
-    prompt - was: (Cmd) 
-    now: ---> 
+    prompt - was: (Cmd)
+    now: --->
     ---> say goodbye
     goodbye
-    ---> 
