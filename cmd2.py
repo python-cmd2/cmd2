@@ -761,15 +761,20 @@ class Cmd2TestCase(unittest.TestCase):
     def testall(self):
         if self.CmdApp:            
             for (cmdInput, lineNum) in self.transcriptReader.inputGenerator():
-                self.cmdapp.onecmd(cmdInput)
+                self.cmdapp.onecmd(cmdInput, assumeComplete=True)
                 result = self.outputTrap.read()
                 expected = self.transcriptReader.nextExpected()
                 self.assertEqual(self.stripByLine(result), self.stripByLine(expected), 
                     '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
                     (self.transcriptFileName, lineNum, cmdInput, expected, result))
     def stripByLine(self, s):
-        lines = s.splitlines()
-        return '\n'.join(line.rstrip() for line in lines).strip()
+        bareprompt = self.cmdapp.continuationPrompt.strip()
+        lines = (line.rstrip() for line in s.splitlines())
+        lines = (   line.replace(bareprompt, '', 1) 
+                 if line.startswith(bareprompt)
+                 else line
+                 for line in lines)
+        return '\n'.join(lines).strip()
     def tearDown(self):
         if self.CmdApp:
             self.outputTrap.tearDown()
