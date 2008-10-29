@@ -613,7 +613,7 @@ class Cmd(cmd.Cmd):
             
 class HistoryItem(str):
     def __init__(self, instr):
-        str.__init__(self, instr)
+        str.__init__(self)
         self.lowercase = self.lower()
         self.idx = None
     def pr(self):
