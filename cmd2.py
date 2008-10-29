@@ -745,7 +745,7 @@ class TranscriptReader(object):
             return result
         except StopIteration:
             return self.transcript[self.bookmark:]
-        
+
 class Cmd2TestCase(unittest.TestCase):
     '''Subclass this, setting CmdApp and transcriptFileName, to make a unittest.TestCase class
        that will execute the commands in transcriptFileName and expect the results shown.
@@ -769,11 +769,11 @@ class Cmd2TestCase(unittest.TestCase):
                     (self.transcriptFileName, lineNum, cmdInput, expected, result))
     def stripByLine(self, s):
         bareprompt = self.cmdapp.continuationPrompt.strip()
-        lines = (line.rstrip() for line in s.splitlines())
-        lines = (   line.replace(bareprompt, '', 1) 
-                 if line.startswith(bareprompt)
-                 else line
-                 for line in lines)
+        lines = []
+        for line in s.splitlines():
+            line = line.rstrip()
+            if line.startswith(bareprompt):
+                line = line.replace(bareprompt, '', 1)
         return '\n'.join(lines).strip()
     def tearDown(self):
         if self.CmdApp:
