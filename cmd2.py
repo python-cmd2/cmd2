@@ -25,7 +25,7 @@ flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest
 from optparse import make_option
-__version__ = '0.4'
+__version__ = '0.4.1'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
