@@ -19,13 +19,14 @@ written to use `self.stdout.write()`,
 
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
+mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
 CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest
 from optparse import make_option
-__version__ = '0.4.1'
+__version__ = '0.4.2'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -774,6 +775,7 @@ class Cmd2TestCase(unittest.TestCase):
             line = line.rstrip()
             if line.startswith(bareprompt):
                 line = line.replace(bareprompt, '', 1)
+            lines.append(line)
         return '\n'.join(lines).strip()
     def tearDown(self):
         if self.CmdApp:
