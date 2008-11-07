@@ -330,7 +330,11 @@ class Cmd(cmd.Cmd):
                 self.stdout = tempfile.TemporaryFile()
                 if statement.output == '>>':
                     self.stdout.write(getPasteBuffer())
-        stop = cmd.Cmd.onecmd(self, statement.statement)
+        try:
+            stop = cmd.Cmd.onecmd(self, statement.statement)
+        except Exception, e:
+            print str(e)
+            return False
         try:
             if statement.command not in self.excludeFromHistory:
                 self.history.append(statement.fullStatement)
