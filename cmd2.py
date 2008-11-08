@@ -151,9 +151,9 @@ def parseSearchResults(pattern, s):
 class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
-    multilineCommands = []
+    multilineCommands = ['_multiline_comment']
     continuationPrompt = '> '    
-    shortcuts = {'?': 'help', '!': 'shell', '@': 'load'}
+    shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '/*': '_multiline_comment', '#': '_comment'}
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
@@ -169,7 +169,6 @@ class Cmd(cmd.Cmd):
                     break
             
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 'echo']
-    _TO_PASTE_BUFFER = 1
     def do_cmdenvironment(self, args):
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
@@ -194,11 +193,17 @@ class Cmd(cmd.Cmd):
         cmd.Cmd.__init__(self, *args, **kwargs)
         self.history = History()
         
+    def do__comment(self, arg):
+        pass
+    def do__multiline_comment(self, arg):
+        pass
+    
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
+    specialTerminators = {'/*': pyparsing.Literal('*/')('terminator') }
     terminatorPattern = ((pyparsing.Literal(';') ^ pyparsing.Literal('\n\n'))
                   ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd))('terminator')
     argSeparatorPattern = pyparsing.Word(pyparsing.printables)('command') \
@@ -209,7 +214,7 @@ class Cmd(cmd.Cmd):
     redirectOutPattern = (pyparsing.Literal('>>') ^ '>')('output') \
                        + pyparsing.Optional(filenamePattern)('outputTo')
     redirectInPattern = pyparsing.Literal('<')('input') \
-                      + pyparsing.Optional(filenamePattern)('inputFrom')    
+                      + pyparsing.Optional(filenamePattern)('inputFrom')
     punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern
     for p in (terminatorPattern, pipePattern, redirectInPattern, redirectOutPattern, punctuationPattern):
         p.ignore(pyparsing.sglQuotedString)
@@ -247,11 +252,14 @@ class Cmd(cmd.Cmd):
             result['command'] = command
             result['args'] = ' '.join(result.fullStatement.split()[1:])
             return result'''
-        if s[0] in self.shortcuts:
-            s = self.shortcuts[s[0]] + ' ' + s[1:]
+        for (shortcut, fullCommand) in self.shortcuts.items():
+            if s.startswith(shortcut):
+                s = s.replace(shortcut, fullCommand + ' ', 1)
+                break
         result['statement'] = s
         result['parseable'] = s
-        result += parseSearchResults(self.terminatorPattern, s)
+        terminator = self.specialTerminators.get(command) or self.terminatorPattern
+        result += parseSearchResults(terminator, s)
         if result.terminator:
             result['statement'] = result.upToIncluding
             result['unterminated'] = result.before
@@ -330,7 +338,10 @@ class Cmd(cmd.Cmd):
                 self.stdout = tempfile.TemporaryFile()
                 if statement.output == '>>':
                     self.stdout.write(getPasteBuffer())
-        stop = cmd.Cmd.onecmd(self, statement.statement)
+        try:
+            stop = cmd.Cmd.onecmd(self, statement.statement)
+        except Exception, e:
+            print e
         try:
             if statement.command not in self.excludeFromHistory:
                 self.history.append(statement.fullStatement)
@@ -414,14 +425,8 @@ class Cmd(cmd.Cmd):
         return True
     do_eof = do_EOF
                
-    def clean(self, s):
-        """cleans up a string"""
-        if self.caseInsensitive:
-            return s.strip().lower()
-        return s.strip()
-    
     def showParam(self, param):
-        param = self.clean(param)
+        param = param.strip().lower()
         if param in self.settable:
             val = getattr(self, param)
             self.stdout.write('%s: %s\n' % (param, str(getattr(self, param))))
@@ -443,7 +448,7 @@ class Cmd(cmd.Cmd):
         'Sets a parameter'        
         try:
             paramName, val = arg.split(None, 1)
-            paramName = self.clean(paramName)
+            paramName = paramName.strip().lower()
             if paramName not in self.settable:
                 raise NotSettableError
             currentVal = getattr(self, paramName)
@@ -480,7 +485,7 @@ class Cmd(cmd.Cmd):
                 return self.history.get(arg)[-1]
             else:
                 return self.history[-1]
-        except:
+        except IndexError:
             return None        
     def do_list(self, arg):
         """list [arg]: lists last command issued
@@ -511,15 +516,14 @@ class Cmd(cmd.Cmd):
             print "please use 'set editor' to specify your text editing program of choice."
             return
         filename = self.defaultFileName
-        buffer = ''
-        try:
-            arg = int(arg)
-            buffer = self.last_matching(arg)
-        except:
-            if arg:
+        if arg:
+            try:
+                buffer = self.last_matching(int(arg))
+            except ValueError:
                 filename = arg
-            else:
-                buffer = self.last_matching(arg)
+                buffer = ''
+        else:
+            buffer = self.history[-1]
 
         if buffer:
             f = open(filename, 'w')
