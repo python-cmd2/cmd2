@@ -59,6 +59,17 @@ set
 set maxrepeats 5
 -------------------------[7]
 say -ps --repeat=5 goodnight, Gracie
+(Cmd) hi 3
+-------------------------[3]
+say goodnight, Gracie
+(Cmd) history notappearinginthisfilm
+(Cmd) history goodnight
+-------------------------[3]
+say goodnight, Gracie
+-------------------------[4]
+say -ps --repeat=5 goodnight, Gracie
+-------------------------[7]
+say -ps --repeat=5 goodnight, Gracie
 (Cmd) run 4
 say -ps --repeat=5 goodnight, Gracie
 OODNIGHT, GRACIEGAY
