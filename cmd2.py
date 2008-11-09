@@ -203,6 +203,8 @@ class Cmd(cmd.Cmd):
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
+    commentRemover = (pyparsing.SkipTo(pyparsing.StringEnd()))('fullStatement')
+    commentRemover.suppress(pyparsing.pythonStyleComment)
     specialTerminators = {'/*': pyparsing.Literal('*/')('terminator') }
     terminatorPattern = ((pyparsing.Literal(';') ^ pyparsing.Literal('\n\n'))
                   ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd))('terminator')
@@ -243,19 +245,16 @@ class Cmd(cmd.Cmd):
         '''
         if isinstance(s, pyparsing.ParseResults):
             return s
-        result = (pyparsing.SkipTo(pyparsing.StringEnd()))('fullStatement').parseString(s)
+        result = self.commentRemover.parseString(s)
         command = s.split()[0]
         if self.caseInsensitive:
             command = command.lower()
-        '''if command in self.noSpecialParse:
-            result['statement'] = result['upToIncluding'] = result['unterminated'] = result.fullStatement
+        if command in self.noSpecialParse:
             result['command'] = command
-            result['args'] = ' '.join(result.fullStatement.split()[1:])
-            return result'''
-        for (shortcut, fullCommand) in self.shortcuts.items():
-            if s.startswith(shortcut):
-                s = s.replace(shortcut, fullCommand + ' ', 1)
-                break
+            result['statement'] = result.fullStatement
+            return result
+        if s[0] in self.shortcuts:
+            s = self.shortcuts[s[0]] + ' ' + s[1:]
         result['statement'] = s
         result['parseable'] = s
         terminator = self.specialTerminators.get(command) or self.terminatorPattern
@@ -349,7 +348,10 @@ class Cmd(cmd.Cmd):
             if statekeeper:
                 if statement.output and not statement.outputTo:
                     self.stdout.seek(0)
-                    writeToPasteBuffer(self.stdout.read())
+                    try:
+                        writeToPasteBuffer(self.stdout.read())
+                    except Exception, e:
+                        print str(e)
                 elif statement.pipe:
                     for result in redirect.communicate():              
                         statekeeper.stdout.write(result or '')                        
