@@ -196,6 +196,8 @@ class Cmd(cmd.Cmd):
             p.ignore(pyparsing.dblQuotedString)
             p.ignore(self.commentGrammars)
             p.ignore(self.commentInProgress)
+        self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
+        self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)    
         
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
@@ -203,9 +205,7 @@ class Cmd(cmd.Cmd):
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
-    commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
-    commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)    
     
     specialTerminators = {'/*': pyparsing.Literal('*/')('terminator') }
     terminatorPattern = ((pyparsing.Literal(';') ^ pyparsing.Literal('\n\n'))
