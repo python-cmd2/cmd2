@@ -151,10 +151,8 @@ def parseSearchResults(pattern, s):
 class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
-    multilineCommands = ['_multiline_comment']
-    commentGrammars = [pyparsing.cStyleComment, pyparsing.pythonStyleComment]
     continuationPrompt = '> '    
-    shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '/*': '_multiline_comment', '#': '_comment'}
+    shortcuts = {'?': 'help', '!': 'shell', '@': 'load' }
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
@@ -196,21 +194,16 @@ class Cmd(cmd.Cmd):
         for p in (self.terminatorPattern, self.pipePattern, self.redirectInPattern, self.redirectOutPattern, self.punctuationPattern):
             p.ignore(pyparsing.sglQuotedString)
             p.ignore(pyparsing.dblQuotedString)
-            p.ignore(self.comments)
+            p.ignore(self.commentGrammars)
             p.ignore(self.commentInProgress)
-        
-    def do__comment(self, arg):
-        pass
-    def do__multiline_comment(self, arg):
-        pass
         
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
-    comments = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
-    comments.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
+    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
+    commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
     commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)    
     
@@ -251,7 +244,7 @@ class Cmd(cmd.Cmd):
         '''
         if isinstance(s, pyparsing.ParseResults):
             return s
-        s = self.comments.transformString(s)
+        s = self.commentGrammars.transformString(s)
         result = (pyparsing.SkipTo(pyparsing.StringEnd()))("fullStatement").parseString(s)
         command = s.split()[0]
         if self.caseInsensitive:
