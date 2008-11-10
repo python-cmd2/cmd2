@@ -193,17 +193,27 @@ class Cmd(cmd.Cmd):
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
         self.history = History()
+        for p in (self.terminatorPattern, self.pipePattern, self.redirectInPattern, self.redirectOutPattern, self.punctuationPattern):
+            p.ignore(pyparsing.sglQuotedString)
+            p.ignore(pyparsing.dblQuotedString)
+            p.ignore(self.comments)
+            p.ignore(self.commentInProgress)
         
     def do__comment(self, arg):
         pass
     def do__multiline_comment(self, arg):
         pass
-    
+        
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
+    comments = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
+    comments.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
+    commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
+    commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)    
+    
     specialTerminators = {'/*': pyparsing.Literal('*/')('terminator') }
     terminatorPattern = ((pyparsing.Literal(';') ^ pyparsing.Literal('\n\n'))
                   ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd))('terminator')
@@ -217,10 +227,6 @@ class Cmd(cmd.Cmd):
     redirectInPattern = pyparsing.Literal('<')('input') \
                       + pyparsing.Optional(filenamePattern)('inputFrom')
     punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern
-    for p in (terminatorPattern, pipePattern, redirectInPattern, redirectOutPattern, punctuationPattern):
-        p.ignore(pyparsing.sglQuotedString)
-        p.ignore(pyparsing.dblQuotedString)
-        p.ignore(pyparsing.Or(commentGrammars))
 
     def parsed(self, s):
         '''
@@ -245,12 +251,13 @@ class Cmd(cmd.Cmd):
         '''
         if isinstance(s, pyparsing.ParseResults):
             return s
+        s = self.comments.transformString(s)
         result = (pyparsing.SkipTo(pyparsing.StringEnd()))("fullStatement").parseString(s)
         command = s.split()[0]
         if self.caseInsensitive:
             command = command.lower()
+        result['command'] = command
         if command in self.noSpecialParse:
-            result['command'] = command
             result['statement'] = result.fullStatement
             return result
         
@@ -259,12 +266,15 @@ class Cmd(cmd.Cmd):
         result['statement'] = s
         result['parseable'] = s
 #        terminator = self.specialTerminators.get(command) or self.terminatorPattern
+        self.terminatorPattern.ignore(self.commentInProgress)
         result += parseSearchResults(self.terminatorPattern, s)
         if result.terminator:
             result['statement'] = result.upToIncluding
             result['unterminated'] = result.before
             result['parseable'] = result.after
         else:
+            if command in self.multilineCommands:
+                return result # don't bother with the rest, we're still collecting input
             result += parseSearchResults(self.punctuationPattern, s)
             result['statement'] = result['unterminated'] = result.before
         result += parseSearchResults(self.pipePattern, result.parseable)
