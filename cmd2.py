@@ -152,6 +152,7 @@ class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
     multilineCommands = ['_multiline_comment']
+    commentGrammars = [pyparsing.cStyleComment, pyparsing.pythonStyleComment]
     continuationPrompt = '> '    
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '/*': '_multiline_comment', '#': '_comment'}
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
@@ -203,8 +204,6 @@ class Cmd(cmd.Cmd):
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
-    commentRemover = (pyparsing.SkipTo(pyparsing.StringEnd()))('fullStatement')
-    commentRemover.suppress(pyparsing.pythonStyleComment)
     specialTerminators = {'/*': pyparsing.Literal('*/')('terminator') }
     terminatorPattern = ((pyparsing.Literal(';') ^ pyparsing.Literal('\n\n'))
                   ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd))('terminator')
@@ -220,7 +219,8 @@ class Cmd(cmd.Cmd):
     punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern
     for p in (terminatorPattern, pipePattern, redirectInPattern, redirectOutPattern, punctuationPattern):
         p.ignore(pyparsing.sglQuotedString)
-        p.ignore(pyparsing.dblQuotedString)    
+        p.ignore(pyparsing.dblQuotedString)
+        p.ignore(pyparsing.Or(commentGrammars))
 
     def parsed(self, s):
         '''
@@ -245,7 +245,7 @@ class Cmd(cmd.Cmd):
         '''
         if isinstance(s, pyparsing.ParseResults):
             return s
-        result = self.commentRemover.parseString(s)
+        result = (pyparsing.SkipTo(pyparsing.StringEnd()))("fullStatement").parseString(s)
         command = s.split()[0]
         if self.caseInsensitive:
             command = command.lower()
@@ -253,12 +253,13 @@ class Cmd(cmd.Cmd):
             result['command'] = command
             result['statement'] = result.fullStatement
             return result
+        
         if s[0] in self.shortcuts:
             s = self.shortcuts[s[0]] + ' ' + s[1:]
         result['statement'] = s
         result['parseable'] = s
-        terminator = self.specialTerminators.get(command) or self.terminatorPattern
-        result += parseSearchResults(terminator, s)
+#        terminator = self.specialTerminators.get(command) or self.terminatorPattern
+        result += parseSearchResults(self.terminatorPattern, s)
         if result.terminator:
             result['statement'] = result.upToIncluding
             result['unterminated'] = result.before
@@ -296,6 +297,8 @@ class Cmd(cmd.Cmd):
         """
         line = line.strip()
         if not line:
+            return
+        if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
             return
         statement = self.parsed(line)
         while (statement.command in self.multilineCommands) and not \
