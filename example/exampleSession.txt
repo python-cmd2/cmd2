@@ -89,6 +89,12 @@ look, a shortcut!
 (Cmd) say put this in a file > myfile.txt
 (Cmd) say < myfile.txt
 put this in a file
+(Cmd) # comments do nothing
+(Cmd) /* C-style comments */ say are invisible
+are invisible
+(Cmd) orate and they don't /* interfere;
+> with multiline */ commands;
+and they don't commands;
 (Cmd) set prompt "---> "
 prompt - was: (Cmd)
 now: --->
