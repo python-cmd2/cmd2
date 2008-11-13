@@ -26,7 +26,7 @@ flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest
 from optparse import make_option
-__version__ = '0.4.2'
+__version__ = '0.4.4'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -244,14 +244,14 @@ class Cmd(cmd.Cmd):
         '''
         if isinstance(s, pyparsing.ParseResults):
             return s
-        s = self.commentGrammars.transformString(s)
         result = (pyparsing.SkipTo(pyparsing.StringEnd()))("fullStatement").parseString(s)
+        s = self.commentGrammars.transformString(s)        
         command = s.split()[0]
         if self.caseInsensitive:
             command = command.lower()
         result['command'] = command
         if command in self.noSpecialParse:
-            result['statement'] = result.fullStatement
+            result['statement'] = s
             return result
         
         if s[0] in self.shortcuts:
@@ -266,10 +266,10 @@ class Cmd(cmd.Cmd):
             result['unterminated'] = result.before
             result['parseable'] = result.after
         else:
+            result['statement'] = result['unterminated'] = result.before
             if command in self.multilineCommands:
                 return result # don't bother with the rest, we're still collecting input
             result += parseSearchResults(self.punctuationPattern, s)
-            result['statement'] = result['unterminated'] = result.before
         result += parseSearchResults(self.pipePattern, result.parseable)
         result += parseSearchResults(self.redirectInPattern, result.parseable)
         result += parseSearchResults(self.redirectOutPattern, result.parseable)            
