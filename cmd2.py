@@ -266,7 +266,7 @@ class Cmd(cmd.Cmd):
             result['unterminated'] = result.before
             result['parseable'] = result.after
         else:
-            result['statement'] = result['unterminated'] = result.before
+            result['statement'] = result['unterminated'] = result.before # does not catch output marks
             if command in self.multilineCommands:
                 return result # don't bother with the rest, we're still collecting input
             result += parseSearchResults(self.punctuationPattern, s)
