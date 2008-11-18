@@ -258,8 +258,6 @@ class Cmd(cmd.Cmd):
             s = self.shortcuts[s[0]] + ' ' + s[1:]
         result['statement'] = s
         result['parseable'] = s
-#        terminator = self.specialTerminators.get(command) or self.terminatorPattern
-        self.terminatorPattern.ignore(self.commentInProgress)
         result += parseSearchResults(self.terminatorPattern, s)
         if result.terminator:
             result['statement'] = result.upToIncluding
