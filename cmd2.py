@@ -313,14 +313,14 @@ class Cmd(cmd.Cmd):
         statekeeper = None
         stop = 0
         if statement.input:
-            if statement.inputFrom:
-                try:
+            try:
+                if statement.inputFrom:
                     newinput = open(statement.inputFrom, 'r').read()
-                except OSError, e:
-                    print e
-                    return 0
-            else:
-                newinput = getPasteBuffer()
+                else:
+                    newinput = getPasteBuffer()
+            except (OSError,), e:
+                print e
+                return 0                    
             start, end = self.redirectInPattern.scanString(statement.fullStatement).next()[1:]
             return self.onecmd('%s%s%s' % (statement.fullStatement[:start], 
                                 newinput, statement.fullStatement[end:]))
