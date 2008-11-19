@@ -221,7 +221,7 @@ class Cmd(cmd.Cmd):
                       + pyparsing.Optional(filenamePattern)('inputFrom')
     punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern
 
-    def parsed(self, s):
+    def parsed(self, s, assumeComplete=False):
         '''
         >>> c = Cmd()
         >>> r = c.parsed('quotes "are > ignored" < inp.txt')
@@ -265,10 +265,10 @@ class Cmd(cmd.Cmd):
             result['parseable'] = result.after
         else:
             # does not catch output marks
-            if command in self.multilineCommands:
+            if (not assumeComplete) and (command in self.multilineCommands):
                 return result # don't bother with the rest, we're still collecting input
+            result['statement'] = result['unterminated'] = result.before            
             result += parseSearchResults(self.punctuationPattern, s)
-            result['statement'] = result['unterminated'] = result.before
         result += parseSearchResults(self.pipePattern, result.parseable)
         result += parseSearchResults(self.redirectInPattern, result.parseable)
         result += parseSearchResults(self.redirectOutPattern, result.parseable)            
