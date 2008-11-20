@@ -229,7 +229,8 @@ class Cmd(cmd.Cmd):
         >>> print c.p2('simple | piped').dump()
         >>> print c.p2('output into > afile.txt').dump()
         >>> print c.p2('output into;sufx | pipethrume plz > afile.txt').dump()
-        >>> print c.p2('output to paste buffer >> ').dump()               
+        >>> print c.p2('output to paste buffer >> ').dump()
+        >>> print c.p2('ignore the /* commented | > */ stuff;')
         '''        
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
