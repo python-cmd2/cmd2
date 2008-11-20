@@ -191,6 +191,7 @@ class Cmd(cmd.Cmd):
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
         self.history = History()
+        self.terminatorPattern = (pyparsing.oneOf(self.terminators) ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd))('terminator')
         for p in (self.terminatorPattern, self.pipePattern, self.redirectInPattern, self.redirectOutPattern, self.punctuationPattern):
             p.ignore(pyparsing.sglQuotedString)
             p.ignore(pyparsing.dblQuotedString)
@@ -206,10 +207,7 @@ class Cmd(cmd.Cmd):
 
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
-    
-    specialTerminators = {'/*': pyparsing.Literal('*/')('terminator') }
-    terminatorPattern = ((pyparsing.Literal(';') ^ pyparsing.Literal('\n\n'))
-                  ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd))('terminator')
+    terminators = [';', '\n\n']
     argSeparatorPattern = pyparsing.Word(pyparsing.printables)('command') \
                           + pyparsing.SkipTo(pyparsing.StringEnd())('args')
     filenamePattern = pyparsing.Word(pyparsing.alphanums + '#$-_~{},.!:\\/')
@@ -221,7 +219,36 @@ class Cmd(cmd.Cmd):
                       + pyparsing.Optional(filenamePattern)('inputFrom')
     punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern
 
+    def p2(self, s, assumeComplete=False):
+        '''
+        >>> c = Cmd()
+        >>> print c.p2('barecommand').dump()
+        >>> print c.p2('command with args').dump()
+        >>> print c.p2('command with args and terminator; and suffix').dump()
+        >>> print c.p2('command with args, terminator;sufx | piped').dump()
+        >>> print c.p2('simple | piped').dump()
+        >>> print c.p2('output into > afile.txt').dump()
+        >>> print c.p2('output into;sufx | pipethrume plz > afile.txt').dump()
+        >>> print c.p2('output to paste buffer >> ').dump()               
+        '''        
+        outputParser = pyparsing.oneOf(['>>','>'])('output')
+        terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
+        (pyparsing.stringEnd ^ pyparsing.oneOf(self.terminators) ^ '\nEOF' ^ '|' ^ outputParser)('terminator')
+        statementParser = pyparsing.Combine(pyparsing.Word(pyparsing.printables)('command') +
+                                            pyparsing.SkipTo(terminatorParser ^ '\nEOF' ^ '|' ^ outputParser ^ pyparsing.stringEnd)('args') +
+                                            pyparsing.Optional(terminatorParser)
+                                           )('statement')
+        parser = statementParser + \
+                 pyparsing.SkipTo(outputParser ^ '|' ^ pyparsing.stringEnd)('suffix') + \
+                 pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ pyparsing.stringEnd)('pipeDest')) + \
+                 pyparsing.Optional(outputParser + pyparsing.SkipTo(pyparsing.stringEnd)('outputDest'))
+        self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
+        self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
+        parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
+        return parser.parseString(s)
+        
     def parsed(self, s, assumeComplete=False):
+        pass
         '''
         >>> c = Cmd()
         >>> r = c.parsed('quotes "are > ignored" < inp.txt')
@@ -267,8 +294,8 @@ class Cmd(cmd.Cmd):
             # does not catch output marks
             if (not assumeComplete) and (command in self.multilineCommands):
                 return result # don't bother with the rest, we're still collecting input
-            result['statement'] = result['unterminated'] = result.before            
             result += parseSearchResults(self.punctuationPattern, s)
+            result['statement'] = result['unterminated'] = result.before                        
         result += parseSearchResults(self.pipePattern, result.parseable)
         result += parseSearchResults(self.redirectInPattern, result.parseable)
         result += parseSearchResults(self.redirectOutPattern, result.parseable)            
