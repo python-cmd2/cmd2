@@ -230,7 +230,7 @@ class Cmd(cmd.Cmd):
         >>> print c.p2('output into > afile.txt').dump()
         >>> print c.p2('output into;sufx | pipethrume plz > afile.txt').dump()
         >>> print c.p2('output to paste buffer >> ').dump()
-        >>> print c.p2('ignore the /* commented | > */ stuff;')
+        >>> print c.p2('ignore the /* commented | > */ stuff;').dump()
         '''        
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
@@ -239,13 +239,13 @@ class Cmd(cmd.Cmd):
                                             pyparsing.SkipTo(terminatorParser ^ '\nEOF' ^ '|' ^ outputParser ^ pyparsing.stringEnd)('args') +
                                             pyparsing.Optional(terminatorParser)
                                            )('statement')
+        self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
+        self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
         parser = statementParser + \
                  pyparsing.SkipTo(outputParser ^ '|' ^ pyparsing.stringEnd)('suffix') + \
                  pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ pyparsing.stringEnd)('pipeDest')) + \
                  pyparsing.Optional(outputParser + pyparsing.SkipTo(pyparsing.stringEnd)('outputDest'))
-        self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
-        self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
-        parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
+        parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)        
         return parser.parseString(s)
         
     def parsed(self, s, assumeComplete=False):
