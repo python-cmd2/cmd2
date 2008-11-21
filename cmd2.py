@@ -199,114 +199,167 @@ class Cmd(cmd.Cmd):
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
+    commentGrammars.addParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
     terminators = [';', '\n\n']
-    argSeparatorPattern = pyparsing.Word(pyparsing.printables)('command') \
-                          + pyparsing.SkipTo(pyparsing.StringEnd())('args')
-    filenamePattern = pyparsing.Word(pyparsing.alphanums + '#$-_~{},.!:\\/')
-    integerPattern = pyparsing.Word(pyparsing.nums).setParseAction( lambda s,l,t: [ int(t[0]) ] )
-    pipePattern = pyparsing.Literal('|')('pipe') + pyparsing.restOfLine('pipeTo')
-    redirectOutPattern = (pyparsing.Literal('>>') ^ '>')('output') \
-                       + pyparsing.Optional(filenamePattern)('outputTo')
-    redirectInPattern = pyparsing.Literal('<')('input') \
-                      + pyparsing.Optional(filenamePattern)('inputFrom')
-    punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern
-
+    multilineCommands = []
     
     def _init_parser(self):
         '''
         >>> c = Cmd()
+        >>> c.multilineCommands = ['multiline']
+        >>> c.caseInsensitive = True
+        >>> c._init_parser()
         >>> print c.parser.parseString('barecommand').dump()
-        >>> print c.parser.parseString('command with args').dump()
+        ['barecommand', '']
+        - args:
+        - command: barecommand
+        - statement: ['barecommand', '']
+          - args:
+          - command: barecommand
+        >>> print c.parser.parseString('COMmand with args').dump()
+        ['command', ' with args']
+        - args:  with args
+        - command: command
+        - statement: ['command', ' with args']
+          - args:  with args
+          - command: command
         >>> print c.parser.parseString('command with args and terminator; and suffix').dump()
-        >>> print c.parser.parseString('command with args, terminator;sufx | piped').dump()
+        ['command', 'with args and terminator', ';', ' and suffix']
+        - args: with args and terminator
+        - command: command
+        - statement: ['command', 'with args and terminator', ';']
+          - args: with args and terminator
+          - command: command
+          - terminator: ;
+        - suffix:  and suffix
+        - terminator: ;        
         >>> print c.parser.parseString('simple | piped').dump()
+        ['simple', '', '|', ' piped']
+        - args:
+        - command: simple
+        - pipeDest:  piped
+        - statement: ['simple', '']
+          - args:
+          - command: simple
+        >>> print c.parser.parseString('command with args, terminator;sufx | piped').dump()
+        ['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
+        - args: with args, terminator
+        - command: command
+        - pipeDest:  piped
+        - statement: ['command', 'with args, terminator', ';']
+          - args: with args, terminator
+          - command: command
+          - terminator: ;
+        - suffix: sufx
+        - terminator: ;        
         >>> print c.parser.parseString('output into > afile.txt').dump()
+        ['output', ' into', '>', ' afile.txt']
+        - args:  into
+        - command: output
+        - output: >
+        - outputDest:  afile.txt
+        - statement: ['output', ' into']
+          - args:  into
+          - command: output        
         >>> print c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump()
+        ['output', 'into', ';', 'sufx', '|', ' pipethrume plz', '>', ' afile.txt']
+        - args: into
+        - command: output
+        - output: >
+        - outputDest:  afile.txt
+        - pipeDest:  pipethrume plz
+        - statement: ['output', 'into', ';']
+          - args: into
+          - command: output
+          - terminator: ;
+        - suffix: sufx
+        - terminator: ;
         >>> print c.parser.parseString('output to paste buffer >> ').dump()
+        ['output', ' to paste buffer', '>>', '']
+        - args:  to paste buffer
+        - command: output
+        - output: >>
+        - outputDest:
+        - statement: ['output', ' to paste buffer']
+          - args:  to paste buffer
+          - command: output
         >>> print c.parser.parseString('ignore the /* commented | > */ stuff;').dump()
-        >>> print c.parser.parseString('do not parse > when formally terminated;').dump()
-        >>> print c.parser.parseString('do not parse > when formally terminated;').dump()
-        '''        
+        ['ignore', 'the /* commented | > */ stuff', ';', '']
+        - args: the /* commented | > */ stuff
+        - command: ignore
+        - statement: ['ignore', 'the /* commented | > */ stuff', ';']
+          - args: the /* commented | > */ stuff
+          - command: ignore
+          - terminator: ;
+        - suffix:
+        - terminator: ;
+        >>> print c.parser.parseString('has > inside;').dump()
+        ['has', '> inside', ';', '']
+        - args: > inside
+        - command: has
+        - statement: ['has', '> inside', ';']
+          - args: > inside
+          - command: has
+          - terminator: ;
+        - suffix:
+        - terminator: ;        
+        >>> print c.parser.parseString('multiline has > inside an unfinished command').dump()      
+        ['multiline', 'has > inside an unfinished command']
+        - multilineCommand: multiline        
+        >>> print c.parser.parseString('multiline has > inside;').dump()
+        ['multiline', 'has > inside', ';', '']
+        - args: has > inside
+        - multilineCommand: multiline
+        - statement: ['multiline', 'has > inside', ';']
+          - args: has > inside
+          - multilineCommand: multiline
+          - terminator: ;
+        - suffix:
+        - terminator: ;        
+        >>> print c.parser.parseString('multiline command /* with comment in progress;').dump()
+        ['multiline', 'command /* with comment in progress;']
+        - multilineCommand: multiline        
+        >>> print c.parser.parseString('multiline command /* with comment complete */ is done;').dump()
+        ['multiline', 'command /* with comment complete */ is done', ';', '']
+        - args: command /* with comment complete */ is done
+        - multilineCommand: multiline
+        - statement: ['multiline', 'command /* with comment complete */ is done', ';']
+          - args: command /* with comment complete */ is done
+          - multilineCommand: multiline
+          - terminator: ;
+        - suffix:
+        - terminator: ;        
+        '''
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
-        command = pyparsing.Word(pyparsing.printables)('command')
+        multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
+        oneLineCommand = pyparsing.Word(pyparsing.printables)('command')
+        afterElements = \
+            pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeDest')) + \
+            pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd)('outputDest'))
         if self.caseInsensitive:
-            command.setParseAction(lambda x: x[0].lower())
-        statementParser = \
-        (command +
-                           pyparsing.SkipTo(terminatorParser)('args') +
-                           terminatorParser
-                          )('statement') ^ \
-        (command +
-                           pyparsing.SkipTo(terminatorParser ^ '|' ^ outputParser ^ stringEnd)('args') +
-                           pyparsing.Optional(terminatorParser)
-                          )('statement')
+            multilineCommand.setParseAction(lambda x: x[0].lower())
+            oneLineCommand.setParseAction(lambda x: x[0].lower())
+        self.parser = (
+            (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser)('args') + terminatorParser)('statement') +
+             pyparsing.SkipTo(outputParser ^ '|' ^ stringEnd)('suffix') + afterElements)
+            ^
+            multilineCommand + pyparsing.SkipTo(pyparsing.stringEnd)
+            ^
+            ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ '|' ^ outputParser)('args'))('statement') +
+            afterElements)
+            )
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
         self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
-        self.parser = statementParser + \
-                      pyparsing.SkipTo(outputParser ^ '|' ^ stringEnd)('suffix') + \
-                      pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeDest')) + \
-                      pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd)('outputDest'))
         self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)        
-        
-    def parsed(self, s, assumeComplete=False):
-        pass
-        '''
-        >>> c = Cmd()
-        >>> r = c.parsed('quotes "are > ignored" < inp.txt')
-        >>> r.statement, r.input, r.inputFrom, r.output, r.outputFrom
-        ('quotes "are > ignored" ', '<', 'inp.txt', '', '')
-        >>> r = c.parsed('very complex; < from.txt >> to.txt etc.')
-        >>> r.statement, r.terminator, r.input, r.inputFrom, r.output, r.outputTo
-        ('very complex;', ';', '<', 'from.txt', '>>', 'to.txt')
-        >>> c.parsed('nothing to parse').statement
-        'nothing to parse'
-        >>> r = c.parsed('ignore > within a terminated statement; > out.txt')
-        >>> r.statement, r.terminator, r.input, r.inputFrom, r.output, r.outputTo
-        ('ignore > within a terminated statement;', ';', '', '', '>', 'out.txt')
-        >>> r = c.parsed('send it to | sort | wc')
-        >>> r.statement, r.pipe, r.pipeTo
-        ('send it to ', '|', ' sort | wc')
-        >>> r = c.parsed('got from < thisfile.txt plus blah blah')
-        >>> r.statement, r.input, r.inputFrom
-        ('got from ', '<', 'thisfile.txt')
-        '''
-        if isinstance(s, pyparsing.ParseResults):
-            return s
-        result = (pyparsing.SkipTo(pyparsing.StringEnd()))("fullStatement").parseString(s)
-        s = self.commentGrammars.transformString(s)        
-        command = s.split()[0]
-        if self.caseInsensitive:
-            command = command.lower()
-        result['command'] = command
-        if command in self.noSpecialParse:
-            result['statement'] = s
-            return result
-        
-        if s[0] in self.shortcuts:
-            s = self.shortcuts[s[0]] + ' ' + s[1:]
-        result['statement'] = s
-        result['parseable'] = s
-        result += parseSearchResults(self.terminatorPattern, s)
-        if result.terminator:
-            result['statement'] = result.upToIncluding
-            result['unterminated'] = result.before
-            result['parseable'] = result.after
-        else:
-            # does not catch output marks
-            if (not assumeComplete) and (command in self.multilineCommands):
-                return result # don't bother with the rest, we're still collecting input
-            result += parseSearchResults(self.punctuationPattern, s)
-            result['statement'] = result['unterminated'] = result.before                        
-        result += parseSearchResults(self.pipePattern, result.parseable)
-        result += parseSearchResults(self.redirectInPattern, result.parseable)
-        result += parseSearchResults(self.redirectOutPattern, result.parseable)            
-        result += parseSearchResults(self.argSeparatorPattern, result.statement)
-        if self.caseInsensitive:
-            result['command'] = result.command.lower()           
-        result['statement'] = '%s %s' % (result.command, result.args)
+    
+    def parsed(self, s):
+        result = self.parser.parseString(s)
+        result['command'] = result.multilineCommand or result.command
+        result['cleanArgs'] = self.commentGrammars.transformString(result.args)
+        result['statement'] = ' '.join(result.statement)
         return result
         
     def extractCommand(self, statement):
@@ -824,4 +877,4 @@ class Cmd2TestCase(unittest.TestCase):
             self.outputTrap.tearDown()
         
 if __name__ == '__main__':
-    doctest.testmod()
+    doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
