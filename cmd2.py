@@ -254,40 +254,40 @@ class Cmd(cmd.Cmd):
         - suffix:  and suffix
         - terminator: ;        
         >>> print c.parser.parseString('simple | piped').dump()
-        ['simple', '', '|', ' piped']
+        ['simple', '', '|', 'piped']
         - args:
         - command: simple
-        - pipeDest:  piped
+        - pipeTo: piped
         - statement: ['simple', '']
           - args:
           - command: simple
         >>> print c.parser.parseString('command with args, terminator;sufx | piped').dump()
-        ['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
+        ['command', 'with args, terminator', ';', 'sufx', '|', 'piped']
         - args: with args, terminator
         - command: command
-        - pipeDest:  piped
+        - pipeTo: piped
         - statement: ['command', 'with args, terminator', ';']
           - args: with args, terminator
           - command: command
           - terminator: ;
         - suffix: sufx
-        - terminator: ;        
+        - terminator: ;
         >>> print c.parser.parseString('output into > afile.txt').dump()
-        ['output', ' into', '>', ' afile.txt']
+        ['output', ' into', '>', 'afile.txt']
         - args:  into
         - command: output
         - output: >
-        - outputDest:  afile.txt
+        - outputTo: afile.txt
         - statement: ['output', ' into']
           - args:  into
-          - command: output        
+          - command: output      
         >>> print c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump()
-        ['output', 'into', ';', 'sufx', '|', ' pipethrume plz', '>', ' afile.txt']
+        ['output', 'into', ';', 'sufx', '|', 'pipethrume plz', '>', 'afile.txt']
         - args: into
         - command: output
         - output: >
-        - outputDest:  afile.txt
-        - pipeDest:  pipethrume plz
+        - outputTo: afile.txt
+        - pipeTo: pipethrume plz
         - statement: ['output', 'into', ';']
           - args: into
           - command: output
@@ -299,7 +299,6 @@ class Cmd(cmd.Cmd):
         - args:  to paste buffer
         - command: output
         - output: >>
-        - outputDest:
         - statement: ['output', ' to paste buffer']
           - args:  to paste buffer
           - command: output
@@ -349,7 +348,6 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - suffix:
         - terminator: ;        
-        >>> print c.parsed('hello <').dump()
         '''
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
@@ -357,8 +355,8 @@ class Cmd(cmd.Cmd):
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = pyparsing.Word(pyparsing.printables)('command')
         afterElements = \
-            pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
-            pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd)('outputTo'))
+            pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd).setParseAction(lambda x: [y.strip() for y in x])('pipeTo')) + \
+            pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
         if self.caseInsensitive:
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
@@ -467,7 +465,7 @@ class Cmd(cmd.Cmd):
                         writeToPasteBuffer(self.stdout.read())
                     except Exception, e:
                         print str(e)
-                elif statement.pipe:
+                elif statement.pipeTo:
                     for result in redirect.communicate():              
                         statekeeper.stdout.write(result or '')                        
                 self.stdout.close()
