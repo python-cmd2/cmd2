@@ -147,7 +147,26 @@ def parseSearchResults(pattern, s):
         result = pyparsing.ParseResults('')
         result['before'] = s
     return result
-        
+
+
+def replaceInput(source):
+    if source:
+        newinput = open(source[0], 'r').read()
+    else:
+        newinput = getPasteBuffer()
+    
+        try:
+            if statement.inputFrom:
+                newinput = open(statement.inputFrom, 'r').read()
+            else:
+                newinput = getPasteBuffer()
+        except (OSError,), e:
+            print e
+            return 0                    
+        start, end = self.redirectInPattern.scanString(statement.fullStatement).next()[1:]
+        return self.onecmd('%s%s%s' % (statement.fullStatement[:start], 
+                            newinput, statement.fullStatement[end:]))
+
 class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
@@ -330,6 +349,7 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - suffix:
         - terminator: ;        
+        >>> print c.parsed('hello <').dump()
         '''
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
@@ -337,8 +357,8 @@ class Cmd(cmd.Cmd):
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = pyparsing.Word(pyparsing.printables)('command')
         afterElements = \
-            pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeDest')) + \
-            pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd)('outputDest'))
+            pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
+            pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd)('outputTo'))
         if self.caseInsensitive:
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
@@ -354,12 +374,26 @@ class Cmd(cmd.Cmd):
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
         self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
         self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)        
+        
+        inputMark = pyparsing.Literal('<')
+        inputMark.setParseAction(lambda x: '')
+        inputFrom = pyparsing.Word(pyparsing.printables)('inputFrom')
+        inputFrom.setParseAction(lambda x: (x and open(x[0]).read()) or getPasteBuffer())
+        self.inputParser = inputMark + pyparsing.Optional(inputFrom)
+        self.inputParser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
-    def parsed(self, s):
+    def parsed(self, raw):
+        s = self.inputParser.transformString(raw)
+        for (shortcut, expansion) in self.shortcuts.items():
+            if s.startswith(shortcut):
+                s = s.replace(shortcut, expansion + ' ', 1)
+                break
         result = self.parser.parseString(s)
         result['command'] = result.multilineCommand or result.command
-        result['cleanArgs'] = self.commentGrammars.transformString(result.args)
         result['statement'] = ' '.join(result.statement)
+        result['raw'] = raw
+        result['clean'] = self.commentGrammars.transformString(result.statement)
+        result['cleanArgs'] = self.commentGrammars.transformString(result.args)
         return result
         
     def extractCommand(self, statement):
@@ -386,27 +420,19 @@ class Cmd(cmd.Cmd):
             return
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
             return
-        statement = self.parsed(line)
-        while (statement.command in self.multilineCommands) and not \
-              (statement.terminator or assumeComplete):
-            statement = self.parsed('%s\n%s' % (statement.fullStatement, 
-                                    self.pseudo_raw_input(self.continuationPrompt)))
+        try:
+            statement = self.parsed(line)
+            while statement.multilineCommand and not (statement.terminator or assumeComplete):
+                statement = self.parsed('%s\n%s' % (statement.raw, 
+                                        self.pseudo_raw_input(self.continuationPrompt)))
+        except Exception, e:
+            print e
+            return 0
 
         statekeeper = None
         stop = 0
-        if statement.input:
-            try:
-                if statement.inputFrom:
-                    newinput = open(statement.inputFrom, 'r').read()
-                else:
-                    newinput = getPasteBuffer()
-            except (OSError,), e:
-                print e
-                return 0                    
-            start, end = self.redirectInPattern.scanString(statement.fullStatement).next()[1:]
-            return self.onecmd('%s%s%s' % (statement.fullStatement[:start], 
-                                newinput, statement.fullStatement[end:]))
-        if statement.pipe and statement.pipeTo:
+
+        if statement.pipeTo:
             redirect = subprocess.Popen(statement.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             statekeeper = Statekeeper(self, ('stdout',))   
             self.stdout = redirect.stdin
@@ -427,12 +453,12 @@ class Cmd(cmd.Cmd):
                 if statement.output == '>>':
                     self.stdout.write(getPasteBuffer())
         try:
-            stop = cmd.Cmd.onecmd(self, statement.statement)
+            stop = cmd.Cmd.onecmd(self, statement.clean)
         except Exception, e:
             print e
         try:
             if statement.command not in self.excludeFromHistory:
-                self.history.append(statement.fullStatement)
+                self.history.append(statement.raw)
         finally:
             if statekeeper:
                 if statement.output and not statement.outputTo:
