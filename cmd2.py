@@ -24,7 +24,7 @@ CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
-import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest
+import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest, string
 from optparse import make_option
 __version__ = '0.4.4'
 
@@ -191,14 +191,7 @@ class Cmd(cmd.Cmd):
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
         self.history = History()
-        self.terminatorPattern = (pyparsing.oneOf(self.terminators) ^ (pyparsing.Literal('\nEOF') + pyparsing.lineEnd))('terminator')
-        for p in (self.terminatorPattern, self.pipePattern, self.redirectInPattern, self.redirectOutPattern, self.punctuationPattern):
-            p.ignore(pyparsing.sglQuotedString)
-            p.ignore(pyparsing.dblQuotedString)
-            p.ignore(self.commentGrammars)
-            p.ignore(self.commentInProgress)
-        self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
-        self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)    
+        self._init_parser()
         
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
@@ -219,34 +212,44 @@ class Cmd(cmd.Cmd):
                       + pyparsing.Optional(filenamePattern)('inputFrom')
     punctuationPattern = pipePattern ^ redirectInPattern ^ redirectOutPattern
 
-    def p2(self, s, assumeComplete=False):
+    
+    def _init_parser(self):
         '''
         >>> c = Cmd()
-        >>> print c.p2('barecommand').dump()
-        >>> print c.p2('command with args').dump()
-        >>> print c.p2('command with args and terminator; and suffix').dump()
-        >>> print c.p2('command with args, terminator;sufx | piped').dump()
-        >>> print c.p2('simple | piped').dump()
-        >>> print c.p2('output into > afile.txt').dump()
-        >>> print c.p2('output into;sufx | pipethrume plz > afile.txt').dump()
-        >>> print c.p2('output to paste buffer >> ').dump()
-        >>> print c.p2('ignore the /* commented | > */ stuff;').dump()
+        >>> print c.parser.parseString('barecommand').dump()
+        >>> print c.parser.parseString('command with args').dump()
+        >>> print c.parser.parseString('command with args and terminator; and suffix').dump()
+        >>> print c.parser.parseString('command with args, terminator;sufx | piped').dump()
+        >>> print c.parser.parseString('simple | piped').dump()
+        >>> print c.parser.parseString('output into > afile.txt').dump()
+        >>> print c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump()
+        >>> print c.parser.parseString('output to paste buffer >> ').dump()
+        >>> print c.parser.parseString('ignore the /* commented | > */ stuff;').dump()
+        >>> print c.parser.parseString('do not parse > when formally terminated;').dump()
+        >>> print c.parser.parseString('do not parse > when formally terminated;').dump()
         '''        
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
-        (pyparsing.stringEnd ^ pyparsing.oneOf(self.terminators) ^ '\nEOF' ^ '|' ^ outputParser)('terminator')
-        statementParser = (pyparsing.Word(pyparsing.printables)('command') +
-                           pyparsing.SkipTo(terminatorParser ^ '\nEOF' ^ '|' ^ outputParser ^ pyparsing.stringEnd)('args') +
+        stringEnd = pyparsing.stringEnd ^ '\nEOF'
+        command = pyparsing.Word(pyparsing.printables)('command')
+        if self.caseInsensitive:
+            command.setParseAction(lambda x: x[0].lower())
+        statementParser = \
+        (command +
+                           pyparsing.SkipTo(terminatorParser)('args') +
+                           terminatorParser
+                          )('statement') ^ \
+        (command +
+                           pyparsing.SkipTo(terminatorParser ^ '|' ^ outputParser ^ stringEnd)('args') +
                            pyparsing.Optional(terminatorParser)
                           )('statement')
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
         self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
-        parser = statementParser + \
-                 pyparsing.SkipTo(outputParser ^ '|' ^ pyparsing.stringEnd)('suffix') + \
-                 pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ pyparsing.stringEnd)('pipeDest')) + \
-                 pyparsing.Optional(outputParser + pyparsing.SkipTo(pyparsing.stringEnd)('outputDest'))
-        parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)        
-        return parser.parseString(s)
+        self.parser = statementParser + \
+                      pyparsing.SkipTo(outputParser ^ '|' ^ stringEnd)('suffix') + \
+                      pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeDest')) + \
+                      pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd)('outputDest'))
+        self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)        
         
     def parsed(self, s, assumeComplete=False):
         pass
