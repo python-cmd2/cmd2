@@ -235,10 +235,10 @@ class Cmd(cmd.Cmd):
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
         (pyparsing.stringEnd ^ pyparsing.oneOf(self.terminators) ^ '\nEOF' ^ '|' ^ outputParser)('terminator')
-        statementParser = pyparsing.Combine(pyparsing.Word(pyparsing.printables)('command') +
-                                            pyparsing.SkipTo(terminatorParser ^ '\nEOF' ^ '|' ^ outputParser ^ pyparsing.stringEnd)('args') +
-                                            pyparsing.Optional(terminatorParser)
-                                           )('statement')
+        statementParser = (pyparsing.Word(pyparsing.printables)('command') +
+                           pyparsing.SkipTo(terminatorParser ^ '\nEOF' ^ '|' ^ outputParser ^ pyparsing.stringEnd)('args') +
+                           pyparsing.Optional(terminatorParser)
+                          )('statement')
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
         self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
         parser = statementParser + \
