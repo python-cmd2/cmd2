@@ -355,7 +355,7 @@ class Cmd(cmd.Cmd):
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = pyparsing.Word(pyparsing.printables)('command')
         afterElements = \
-            pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd).setParseAction(lambda x: [y.strip() for y in x])('pipeTo')) + \
+            pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
         if self.caseInsensitive:
             multilineCommand.setParseAction(lambda x: x[0].lower())
@@ -420,9 +420,13 @@ class Cmd(cmd.Cmd):
             return
         try:
             statement = self.parsed(line)
-            while statement.multilineCommand and not (statement.terminator or assumeComplete):
-                statement = self.parsed('%s\n%s' % (statement.raw, 
-                                        self.pseudo_raw_input(self.continuationPrompt)))
+            if assumeComplete:
+                if statement.multilineCommand and not statement.terminator:
+                    statement = self.parsed(statement.raw + self.terminators[0])
+            else:
+                while statement.multilineCommand and not statement.terminator:
+                    statement = self.parsed('%s\n%s' % (statement.raw, 
+                                            self.pseudo_raw_input(self.continuationPrompt)))
         except Exception, e:
             print e
             return 0
@@ -570,7 +574,7 @@ class Cmd(cmd.Cmd):
             if (val[0] == val[-1]) and val[0] in ("'", '"'):
                 val = val[1:-1]
             else:                
-                val = cast(currentVal, self.parsed(val).unterminated)
+                val = cast(currentVal, self.parsed(val).statement)
             setattr(self, paramName, val)
             self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
         except (ValueError, AttributeError, NotSettableError), e:

@@ -77,13 +77,12 @@ OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
-(Cmd) orate Four score and
+(Cmd) orate four score and
 > seven releases ago
 > our BDFL
-> blah blah blah
 >
 >
-Four score and seven releases ago our BDFL blah blah blah
+four score and seven releases ago our BDFL
 (Cmd) & look, a shortcut!
 look, a shortcut!
 (Cmd) say put this in a file > myfile.txt
