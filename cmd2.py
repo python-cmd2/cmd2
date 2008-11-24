@@ -51,8 +51,8 @@ def options(option_list):
         optionParser.set_usage("%s [options] arg" % func.__name__.strip('do_'))
         def newFunc(instance, arg):
             try:
-                opts, arg = optionParser.parse_args(arg.split())
-                arg = ' '.join(arg)
+                opts, newArgs = optionParser.parse_args(arg.split())
+                arg.parsed['args'] = arg[arg.find(newArgs[0]):]
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -167,10 +167,14 @@ def replaceInput(source):
         return self.onecmd('%s%s%s' % (statement.fullStatement[:start], 
                             newinput, statement.fullStatement[end:]))
 
+class ParsedString(str):
+    pass
+
 class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
-    continuationPrompt = '> '    
+    continuationPrompt = '> '  
+    legalChars = '!#$%.:?@_'   # make sure your terminators are not in here!
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load' }
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     noSpecialParse = 'set ed edit exit'.split()
@@ -229,19 +233,19 @@ class Cmd(cmd.Cmd):
         >>> c.multilineCommands = ['multiline']
         >>> c.caseInsensitive = True
         >>> c._init_parser()
+        >>> print c.parser.parseString('termbare;').dump()
+        >>> print c.parser.parseString('termbare; suffx').dump()
         >>> print c.parser.parseString('barecommand').dump()
         ['barecommand', '']
-        - args:
         - command: barecommand
         - statement: ['barecommand', '']
-          - args:
           - command: barecommand
         >>> print c.parser.parseString('COMmand with args').dump()
-        ['command', ' with args']
-        - args:  with args
+        ['command', 'with args']
+        - args: with args
         - command: command
-        - statement: ['command', ' with args']
-          - args:  with args
+        - statement: ['command', 'with args']
+          - args: with args
           - command: command
         >>> print c.parser.parseString('command with args and terminator; and suffix').dump()
         ['command', 'with args and terminator', ';', ' and suffix']
@@ -254,18 +258,16 @@ class Cmd(cmd.Cmd):
         - suffix:  and suffix
         - terminator: ;        
         >>> print c.parser.parseString('simple | piped').dump()
-        ['simple', '', '|', 'piped']
-        - args:
+        ['simple', '', '|', ' piped']
         - command: simple
-        - pipeTo: piped
+        - pipeTo:  piped
         - statement: ['simple', '']
-          - args:
           - command: simple
         >>> print c.parser.parseString('command with args, terminator;sufx | piped').dump()
-        ['command', 'with args, terminator', ';', 'sufx', '|', 'piped']
+        ['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
         - args: with args, terminator
         - command: command
-        - pipeTo: piped
+        - pipeTo:  piped
         - statement: ['command', 'with args, terminator', ';']
           - args: with args, terminator
           - command: command
@@ -273,21 +275,21 @@ class Cmd(cmd.Cmd):
         - suffix: sufx
         - terminator: ;
         >>> print c.parser.parseString('output into > afile.txt').dump()
-        ['output', ' into', '>', 'afile.txt']
-        - args:  into
-        - command: output
-        - output: >
-        - outputTo: afile.txt
-        - statement: ['output', ' into']
-          - args:  into
-          - command: output      
-        >>> print c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump()
-        ['output', 'into', ';', 'sufx', '|', 'pipethrume plz', '>', 'afile.txt']
+        ['output', 'into', '>', 'afile.txt']
         - args: into
         - command: output
         - output: >
         - outputTo: afile.txt
-        - pipeTo: pipethrume plz
+        - statement: ['output', 'into']
+          - args: into
+          - command: output   
+        >>> print c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump()
+        ['output', 'into', ';', 'sufx', '|', ' pipethrume plz', '>', 'afile.txt']
+        - args: into
+        - command: output
+        - output: >
+        - outputTo: afile.txt
+        - pipeTo:  pipethrume plz
         - statement: ['output', 'into', ';']
           - args: into
           - command: output
@@ -295,12 +297,12 @@ class Cmd(cmd.Cmd):
         - suffix: sufx
         - terminator: ;
         >>> print c.parser.parseString('output to paste buffer >> ').dump()
-        ['output', ' to paste buffer', '>>', '']
-        - args:  to paste buffer
+        ['output', 'to paste buffer', '>>', '']
+        - args: to paste buffer
         - command: output
         - output: >>
-        - statement: ['output', ' to paste buffer']
-          - args:  to paste buffer
+        - statement: ['output', 'to paste buffer']
+          - args: to paste buffer
           - command: output
         >>> print c.parser.parseString('ignore the /* commented | > */ stuff;').dump()
         ['ignore', 'the /* commented | > */ stuff', ';', '']
@@ -353,7 +355,7 @@ class Cmd(cmd.Cmd):
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
-        oneLineCommand = pyparsing.Word(pyparsing.printables)('command')
+        oneLineCommand = pyparsing.Word(self.legalChars)('command')
         afterElements = \
             pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
@@ -361,13 +363,13 @@ class Cmd(cmd.Cmd):
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
         self.parser = (
-            (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser)('args') + terminatorParser)('statement') +
+            (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
              pyparsing.SkipTo(outputParser ^ '|' ^ stringEnd)('suffix') + afterElements)
             ^
             multilineCommand + pyparsing.SkipTo(pyparsing.stringEnd)
             ^
-            ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ '|' ^ outputParser)('args'))('statement') +
-            afterElements)
+            ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ '|' ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
+            pyparsing.Optional(terminatorParser) + afterElements)
             )
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
         self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
@@ -375,12 +377,12 @@ class Cmd(cmd.Cmd):
         
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
-        inputFrom = pyparsing.Word(pyparsing.printables)('inputFrom')
+        inputFrom = pyparsing.Word(self.legalChars)('inputFrom')
         inputFrom.setParseAction(lambda x: (x and open(x[0]).read()) or getPasteBuffer())
         self.inputParser = inputMark + pyparsing.Optional(inputFrom)
         self.inputParser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
-    def parsed(self, raw):
+    def parsed(self, raw, useTerminatorFrom=None):
         s = self.inputParser.transformString(raw)
         for (shortcut, expansion) in self.shortcuts.items():
             if s.startswith(shortcut):
@@ -388,21 +390,18 @@ class Cmd(cmd.Cmd):
                 break
         result = self.parser.parseString(s)
         result['command'] = result.multilineCommand or result.command
-        result['statement'] = ' '.join(result.statement)
+        #result['statement'] = ' '.join(result.statement)
         result['raw'] = raw
-        result['clean'] = self.commentGrammars.transformString(result.statement)
-        result['cleanArgs'] = self.commentGrammars.transformString(result.args)
-        return result
-        
-    def extractCommand(self, statement):
-        try:
-            (command, args) = statement.split(None,1)
-        except ValueError:
-            (command, args) = statement, ''
-        if self.caseInsensitive:
-            command = command.lower()
-        return command, args
-       
+        #result['clean'] = self.commentGrammars.transformString(result.statement)
+        result['clean'] = self.commentGrammars.transformString(result.args)
+        result['expanded'] = s
+        if useTerminatorFrom:
+            result['terminator'] = useTerminatorFrom.parsed.terminator
+            result['suffix'] = useTerminatorFrom.parsed.suffix
+        p = ParsedString(result.args)
+        p.parsed = result
+        return p
+              
     def onecmd(self, line, assumeComplete=False):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -411,21 +410,23 @@ class Cmd(cmd.Cmd):
         see the precmd() and postcmd() methods for useful execution hooks.
         The return value is a flag indicating whether interpretation of
         commands by the interpreter should stop.
+        
+        This (`cmd2`) version of `onecmd` already override's `cmd`'s `onecmd`.
 
         """
         line = line.strip()
         if not line:
-            return
+            return self.emptyline()
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
-            return
+            return 0
         try:
             statement = self.parsed(line)
             if assumeComplete:
-                if statement.multilineCommand and not statement.terminator:
-                    statement = self.parsed(statement.raw + self.terminators[0])
+                if statement.parsed.multilineCommand and not statement.parsed.terminator:
+                    statement.parsed.terminator = self.terminators[0]
             else:
-                while statement.multilineCommand and not statement.terminator:
-                    statement = self.parsed('%s\n%s' % (statement.raw, 
+                while statement.parsed.multilineCommand and not statement.parsed.terminator:
+                    statement = self.parsed('%s\n%s' % (statement.parsed.raw, 
                                             self.pseudo_raw_input(self.continuationPrompt)))
         except Exception, e:
             print e
@@ -434,42 +435,48 @@ class Cmd(cmd.Cmd):
         statekeeper = None
         stop = 0
 
-        if statement.pipeTo:
-            redirect = subprocess.Popen(statement.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        if statement.parsed.pipeTo:
+            redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             statekeeper = Statekeeper(self, ('stdout',))   
             self.stdout = redirect.stdin
-        elif statement.output:
+        elif statement.parsed.output:
             statekeeper = Statekeeper(self, ('stdout',))            
-            if statement.outputTo:
+            if statement.parsed.outputTo:
                 mode = 'w'
-                if statement.output == '>>':
+                if statement.parsed.output == '>>':
                     mode = 'a'
                 try:
-                    self.stdout = open(statement.outputTo, mode)                            
+                    self.stdout = open(statement.parsed.outputTo, mode)                            
                 except OSError, e:
                     print e
                     return 0                    
             else:
                 statekeeper = Statekeeper(self, ('stdout',))
                 self.stdout = tempfile.TemporaryFile()
-                if statement.output == '>>':
+                if statement.parsed.output == '>>':
                     self.stdout.write(getPasteBuffer())
         try:
-            stop = cmd.Cmd.onecmd(self, statement.clean)
+            # "heart" of the command, replace's cmd's onecmd()
+            self.lastcmd = statement.parsed.expanded
+            try:
+                func = getattr(self, 'do_' + statement.parsed.command)
+            except AttributeError:
+                return self.default(statement)
+            stop = func(statement)                        
         except Exception, e:
             print e
         try:
-            if statement.command not in self.excludeFromHistory:
-                self.history.append(statement.raw)
+            if statement.parsed.command not in self.excludeFromHistory:
+                self.history.append(statement.parsed.raw)
         finally:
             if statekeeper:
-                if statement.output and not statement.outputTo:
+                if statement.parsed.output and not statement.parsed.outputTo:
                     self.stdout.seek(0)
                     try:
                         writeToPasteBuffer(self.stdout.read())
                     except Exception, e:
                         print str(e)
-                elif statement.pipeTo:
+                elif statement.parsed.pipeTo:
                     for result in redirect.communicate():              
                         statekeeper.stdout.write(result or '')                        
                 self.stdout.close()
@@ -654,7 +661,7 @@ class Cmd(cmd.Cmd):
     do_edit = do_ed
     
     saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums)^'*')("idx") + 
-                  pyparsing.Optional(pyparsing.Word(pyparsing.printables))("fname") +
+                  pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
                   pyparsing.stringEnd)    
     def do_save(self, arg):
         """`save [N] [filename.ext]`
@@ -905,4 +912,5 @@ class Cmd2TestCase(unittest.TestCase):
             self.outputTrap.tearDown()
         
 if __name__ == '__main__':
-    doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
+    #doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
+    c = Cmd()
