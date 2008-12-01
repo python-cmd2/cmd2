@@ -52,7 +52,7 @@ def options(option_list):
         def newFunc(instance, arg):
             try:
                 opts, newArgs = optionParser.parse_args(arg.split())
-                arg.parsed['args'] = arg[arg.find(newArgs[0]):]
+                newArgs = arg[arg.find(newArgs[0]):]
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -61,8 +61,9 @@ def options(option_list):
                 return
             if hasattr(opts, '_exit'):
                 return None
+            arg = arg.parser('%s %s' % (arg.parsed.command, newArgs))
             result = func(instance, arg, opts)                            
-            return result
+            return result        
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
         return newFunc
     return option_setup
@@ -137,6 +138,7 @@ else:
         writeToPasteBuffer = getPasteBuffer
           
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
+'''
 def parseSearchResults(pattern, s):
     generator = pattern.scanString(s)
     try:
@@ -147,7 +149,7 @@ def parseSearchResults(pattern, s):
         result = pyparsing.ParseResults('')
         result['before'] = s
     return result
-
+'''
 
 def replaceInput(source):
     if source:
@@ -420,6 +422,7 @@ class Cmd(cmd.Cmd):
             result['suffix'] = useTerminatorFrom.parsed.suffix
         p = ParsedString(result.args)
         p.parsed = result
+        p.parser = self.parsed
         return p
               
     def onecmd(self, line, assumeComplete=False):
