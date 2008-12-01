@@ -376,8 +376,9 @@ class Cmd(cmd.Cmd):
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = pyparsing.Word(self.legalChars + pyparsing.alphanums + pyparsing.alphas8bit)('command')
+        pipe = pyparsing.Keyword('|', identChars='|')
         afterElements = \
-            pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
+            pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
         if self.caseInsensitive:
             multilineCommand.setParseAction(lambda x: x[0].lower())
@@ -386,11 +387,11 @@ class Cmd(cmd.Cmd):
             pyparsing.stringEnd 
             ^
             (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
-             pyparsing.SkipTo(outputParser ^ '|' ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
+             pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
             ^
             multilineCommand + pyparsing.SkipTo(pyparsing.stringEnd)
             ^
-            ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ '|' ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
+            ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
             pyparsing.Optional(terminatorParser) + afterElements)
             )
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
