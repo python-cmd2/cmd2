@@ -233,8 +233,30 @@ class Cmd(cmd.Cmd):
         >>> c.multilineCommands = ['multiline']
         >>> c.caseInsensitive = True
         >>> c._init_parser()
+        >>> print c.parser.parseString('').dump()        
+        []        
+        >>> print c.parser.parseString('/* empty command */').dump()        
+        []        
+        >>> print c.parser.parseString('plainword').dump()        
+        ['plainword', '']
+        - command: plainword
+        - statement: ['plainword', '']
+          - command: plainword        
         >>> print c.parser.parseString('termbare;').dump()
+        ['termbare', '', ';', '']
+        - command: termbare
+        - statement: ['termbare', '', ';']
+          - command: termbare
+          - terminator: ;
+        - terminator: ;        
         >>> print c.parser.parseString('termbare; suffx').dump()
+        ['termbare', '', ';', 'suffx']
+        - command: termbare
+        - statement: ['termbare', '', ';']
+          - command: termbare
+          - terminator: ;
+        - suffix: suffx
+        - terminator: ;        
         >>> print c.parser.parseString('barecommand').dump()
         ['barecommand', '']
         - command: barecommand
@@ -248,15 +270,15 @@ class Cmd(cmd.Cmd):
           - args: with args
           - command: command
         >>> print c.parser.parseString('command with args and terminator; and suffix').dump()
-        ['command', 'with args and terminator', ';', ' and suffix']
+        ['command', 'with args and terminator', ';', 'and suffix']
         - args: with args and terminator
         - command: command
         - statement: ['command', 'with args and terminator', ';']
           - args: with args and terminator
           - command: command
           - terminator: ;
-        - suffix:  and suffix
-        - terminator: ;        
+        - suffix: and suffix
+        - terminator: ;
         >>> print c.parser.parseString('simple | piped').dump()
         ['simple', '', '|', ' piped']
         - command: simple
@@ -312,7 +334,6 @@ class Cmd(cmd.Cmd):
           - args: the /* commented | > */ stuff
           - command: ignore
           - terminator: ;
-        - suffix:
         - terminator: ;
         >>> print c.parser.parseString('has > inside;').dump()
         ['has', '> inside', ';', '']
@@ -322,7 +343,6 @@ class Cmd(cmd.Cmd):
           - args: > inside
           - command: has
           - terminator: ;
-        - suffix:
         - terminator: ;        
         >>> print c.parser.parseString('multiline has > inside an unfinished command').dump()      
         ['multiline', 'has > inside an unfinished command']
@@ -335,7 +355,6 @@ class Cmd(cmd.Cmd):
           - args: has > inside
           - multilineCommand: multiline
           - terminator: ;
-        - suffix:
         - terminator: ;        
         >>> print c.parser.parseString('multiline command /* with comment in progress;').dump()
         ['multiline', 'command /* with comment in progress;']
@@ -348,14 +367,13 @@ class Cmd(cmd.Cmd):
           - args: command /* with comment complete */ is done
           - multilineCommand: multiline
           - terminator: ;
-        - suffix:
-        - terminator: ;        
+        - terminator: ;
         '''
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
-        oneLineCommand = pyparsing.Word(self.legalChars)('command')
+        oneLineCommand = pyparsing.Word(self.legalChars + pyparsing.alphanums + pyparsing.alphas8bit)('command')
         afterElements = \
             pyparsing.Optional('|' + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
@@ -363,8 +381,10 @@ class Cmd(cmd.Cmd):
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
         self.parser = (
+            pyparsing.stringEnd 
+            ^
             (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
-             pyparsing.SkipTo(outputParser ^ '|' ^ stringEnd)('suffix') + afterElements)
+             pyparsing.SkipTo(outputParser ^ '|' ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
             ^
             multilineCommand + pyparsing.SkipTo(pyparsing.stringEnd)
             ^
@@ -912,5 +932,5 @@ class Cmd2TestCase(unittest.TestCase):
             self.outputTrap.tearDown()
         
 if __name__ == '__main__':
-    #doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
-    c = Cmd()
+    doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
+    #c = Cmd()
