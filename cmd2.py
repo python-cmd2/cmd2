@@ -406,7 +406,7 @@ class Cmd(cmd.Cmd):
         self.inputParser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
     def parsed(self, raw, useTerminatorFrom=None):
-        s = self.inputParser.transformString(raw)
+        s = self.inputParser.transformString(raw.strip())
         for (shortcut, expansion) in self.shortcuts.items():
             if s.startswith(shortcut):
                 s = s.replace(shortcut, expansion + ' ', 1)
