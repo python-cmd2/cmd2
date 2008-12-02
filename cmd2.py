@@ -52,7 +52,7 @@ def options(option_list):
         def newFunc(instance, arg):
             try:
                 opts, newArgs = optionParser.parse_args(arg.split())
-                newArgs = arg[arg.find(newArgs[0]):]
+                newArgs = (newArgs and arg[arg.find(newArgs[0]):]) or ''
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -406,6 +406,11 @@ class Cmd(cmd.Cmd):
         self.inputParser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
     def parsed(self, raw, useTerminatorFrom=None):
+        if isinstance(raw, ParsedString):
+            if useTerminatorFrom:
+                raw['terminator'] = useTerminatorFrom.parsed.terminator
+                raw['suffix'] = useTerminatorFrom.parsed.suffix
+            return raw           
         s = self.inputParser.transformString(raw.strip())
         for (shortcut, expansion) in self.shortcuts.items():
             if s.startswith(shortcut):
@@ -413,9 +418,7 @@ class Cmd(cmd.Cmd):
                 break
         result = self.parser.parseString(s)
         result['command'] = result.multilineCommand or result.command
-        #result['statement'] = ' '.join(result.statement)
         result['raw'] = raw
-        #result['clean'] = self.commentGrammars.transformString(result.statement)
         result['clean'] = self.commentGrammars.transformString(result.args)
         result['expanded'] = s
         if useTerminatorFrom:
