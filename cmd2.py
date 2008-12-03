@@ -417,13 +417,12 @@ class Cmd(cmd.Cmd):
                 s = s.replace(shortcut, expansion + ' ', 1)
                 break
         result = self.parser.parseString(s)
+        if useTerminatorFrom:
+            return self.parsed('%s %s%s%s' % (result.command, result.args, useTerminatorFrom.parsed.terminator, useTerminatorFrom.parsed.suffix))
         result['command'] = result.multilineCommand or result.command
         result['raw'] = raw
         result['clean'] = self.commentGrammars.transformString(result.args)
-        result['expanded'] = s
-        if useTerminatorFrom:
-            result['terminator'] = useTerminatorFrom.parsed.terminator
-            result['suffix'] = useTerminatorFrom.parsed.suffix
+        result['expanded'] = s        
         p = ParsedString(result.args)
         p.parsed = result
         p.parser = self.parsed
@@ -608,7 +607,7 @@ class Cmd(cmd.Cmd):
             if (val[0] == val[-1]) and val[0] in ("'", '"'):
                 val = val[1:-1]
             else:                
-                val = cast(currentVal, self.parsed(val).statement)
+                val = cast(currentVal, val)
             setattr(self, paramName, val)
             self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
         except (ValueError, AttributeError, NotSettableError), e:
