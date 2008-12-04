@@ -61,7 +61,7 @@ def options(option_list):
                 return
             if hasattr(opts, '_exit'):
                 return None
-            arg = arg.parser('%s %s' % (arg.parsed.command, newArgs))
+            arg = arg.parser('%s %s%s%s' % (arg.parsed.command, newArgs, arg.parsed.terminator, arg.parsed.suffix))
             result = func(instance, arg, opts)                            
             return result        
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
@@ -405,27 +405,25 @@ class Cmd(cmd.Cmd):
         self.inputParser = inputMark + pyparsing.Optional(inputFrom)
         self.inputParser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
-    def parsed(self, raw, useTerminatorFrom=None):
+    def parsed(self, raw, **kwargs):
         if isinstance(raw, ParsedString):
-            if useTerminatorFrom:
-                raw['terminator'] = useTerminatorFrom.parsed.terminator
-                raw['suffix'] = useTerminatorFrom.parsed.suffix
-            return raw           
-        s = self.inputParser.transformString(raw.strip())
-        for (shortcut, expansion) in self.shortcuts.items():
-            if s.startswith(shortcut):
-                s = s.replace(shortcut, expansion + ' ', 1)
-                break
-        result = self.parser.parseString(s)
-        result['command'] = result.multilineCommand or result.command        
-        if useTerminatorFrom:
-            return self.parsed('%s %s%s%s' % (result.command, result.args, useTerminatorFrom.parsed.terminator, useTerminatorFrom.parsed.suffix))
-        result['raw'] = raw
-        result['clean'] = self.commentGrammars.transformString(result.args)
-        result['expanded'] = s        
-        p = ParsedString(result.args)
-        p.parsed = result
-        p.parser = self.parsed
+            p = raw
+        else:
+            s = self.inputParser.transformString(raw.strip())
+            for (shortcut, expansion) in self.shortcuts.items():
+                if s.startswith(shortcut):
+                    s = s.replace(shortcut, expansion + ' ', 1)
+                    break
+            result = self.parser.parseString(s)
+            result['command'] = result.multilineCommand or result.command        
+            result['raw'] = raw
+            result['clean'] = self.commentGrammars.transformString(result.args)
+            result['expanded'] = s        
+            p = ParsedString(result.args)
+            p.parsed = result
+            p.parser = self.parsed
+        for (key, val) in kwargs.items():
+            p.parsed[key] = val
         return p
               
     def onecmd(self, line, assumeComplete=False):
