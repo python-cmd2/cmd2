@@ -417,9 +417,9 @@ class Cmd(cmd.Cmd):
                 s = s.replace(shortcut, expansion + ' ', 1)
                 break
         result = self.parser.parseString(s)
+        result['command'] = result.multilineCommand or result.command        
         if useTerminatorFrom:
             return self.parsed('%s %s%s%s' % (result.command, result.args, useTerminatorFrom.parsed.terminator, useTerminatorFrom.parsed.suffix))
-        result['command'] = result.multilineCommand or result.command
         result['raw'] = raw
         result['clean'] = self.commentGrammars.transformString(result.args)
         result['expanded'] = s        
