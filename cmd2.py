@@ -176,7 +176,7 @@ class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
     continuationPrompt = '> '  
-    legalChars = '!#$%.:?@_'   # make sure your terminators are not in here!
+    legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  # make sure your terminators are not in here!
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load' }
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     noSpecialParse = 'set ed edit exit'.split()
@@ -375,7 +375,7 @@ class Cmd(cmd.Cmd):
         terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
-        oneLineCommand = pyparsing.Word(self.legalChars + pyparsing.alphanums + pyparsing.alphas8bit)('command')
+        oneLineCommand = pyparsing.Word(self.legalChars)('command')
         pipe = pyparsing.Keyword('|', identChars='|')
         afterElements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
@@ -400,7 +400,7 @@ class Cmd(cmd.Cmd):
         
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
-        inputFrom = pyparsing.Word(self.legalChars)('inputFrom')
+        inputFrom = pyparsing.Word(self.legalChars + '/\\')('inputFrom')
         inputFrom.setParseAction(lambda x: (x and open(x[0]).read()) or getPasteBuffer())
         self.inputParser = inputMark + pyparsing.Optional(inputFrom)
         self.inputParser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
@@ -409,7 +409,7 @@ class Cmd(cmd.Cmd):
         if isinstance(raw, ParsedString):
             p = raw
         else:
-            s = self.inputParser.transformString(raw.strip())
+            s = self.inputParser.transformString(raw.strip()) # used to be raw.strip()
             for (shortcut, expansion) in self.shortcuts.items():
                 if s.startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
@@ -419,14 +419,14 @@ class Cmd(cmd.Cmd):
             result['raw'] = raw
             result['clean'] = self.commentGrammars.transformString(result.args)
             result['expanded'] = s        
-            p = ParsedString(result.args)
+            p = ParsedString(result.clean)
             p.parsed = result
             p.parser = self.parsed
         for (key, val) in kwargs.items():
             p.parsed[key] = val
         return p
               
-    def onecmd(self, line, assumeComplete=False):
+    def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
 
@@ -445,13 +445,9 @@ class Cmd(cmd.Cmd):
             return 0
         try:
             statement = self.parsed(line)
-            if assumeComplete:
-                if statement.parsed.multilineCommand and not statement.parsed.terminator:
-                    statement.parsed.terminator = self.terminators[0]
-            else:
-                while statement.parsed.multilineCommand and not statement.parsed.terminator:
-                    statement = self.parsed('%s\n%s' % (statement.parsed.raw, 
-                                            self.pseudo_raw_input(self.continuationPrompt)))
+            while statement.parsed.multilineCommand and not statement.parsed.terminator:
+                statement = self.parsed('%s\n%s' % (statement.parsed.raw, 
+                                        self.pseudo_raw_input(self.continuationPrompt)))
         except Exception, e:
             print e
             return 0
@@ -916,12 +912,18 @@ class Cmd2TestCase(unittest.TestCase):
     def testall(self):
         if self.CmdApp:            
             for (cmdInput, lineNum) in self.transcriptReader.inputGenerator():
-                self.cmdapp.onecmd(cmdInput, assumeComplete=True)
+                parsed = self.cmdapp.parsed(cmdInput)
+                if parsed.parsed.multilineCommand and not parsed.parsed.terminator:
+                    cmdInput = cmdInput + self.cmdapp.terminators[0]
+                self.cmdapp.onecmd(cmdInput)
                 result = self.outputTrap.read()
                 expected = self.transcriptReader.nextExpected()
                 self.assertEqual(self.stripByLine(result), self.stripByLine(expected), 
                     '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
-                    (self.transcriptFileName, lineNum, cmdInput, expected, result))
+                    (self.transcriptFileName, lineNum, cmdInput, expected, result))                
+                #self.assertEqual(self.stripByLine(result), self.stripByLine(expected), 
+                #    '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
+                #    (self.transcriptFileName, lineNum, cmdInput, expected, result))
     def stripByLine(self, s):
         bareprompt = self.cmdapp.continuationPrompt.strip()
         lines = []
