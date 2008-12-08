@@ -226,6 +226,7 @@ class Cmd(cmd.Cmd):
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
+    quotedStringInProgress = pyparsing.Literal('"') ^ pyparsing.Literal("'") + pyparsing.SkipTo(pyparsing.stringEnd)
     terminators = [';', '\n\n']
     multilineCommands = []
     
@@ -396,7 +397,8 @@ class Cmd(cmd.Cmd):
             )
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
         self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
-        self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)        
+        self.quotedStringInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString)
+        self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress).ignore(self.quotedStringInProgress)        
         
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
