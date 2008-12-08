@@ -2,6 +2,18 @@ This is cut-and-pasted from an interactive example.py session.
 Calling `example.py -t` runs it as a series of unit tests,
 verifying that the same output is still returned.
 
+(Cmd) speak the /* hidden comment */ text
+the  text
+(Cmd) speak the "unhidden quote" text
+the "unhidden quote" text
+(Cmd) speak "unhidden quote" text
+"unhidden quote" text
+(Cmd) orate "unhidden quote" text;
+"unhidden quote" text
+(Cmd) orate "not ; terminated; just; yet"
+> now I end;
+"not ; terminated; just; yet"
+now I end
 (Cmd) help
 
 Documented commands (type help <topic>):
