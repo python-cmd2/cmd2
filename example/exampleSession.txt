@@ -82,7 +82,9 @@ OODNIGHT, GRACIEGAY
 > our BDFL
 >
 >
-four score and seven releases ago our BDFL
+four score and
+seven releases ago
+our BDFL
 (Cmd) & look, a shortcut!
 look, a shortcut!
 (Cmd) say put this in a file > myfile.txt
