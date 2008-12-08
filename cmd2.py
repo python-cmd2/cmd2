@@ -378,6 +378,11 @@ class Cmd(cmd.Cmd):
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = pyparsing.Word(self.legalChars)('command')
         pipe = pyparsing.Keyword('|', identChars='|')
+        self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
+        self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
+        self.quotedStringInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString)
+        #for element in (terminatorParser, outputParser, pipe):
+        #    element.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress).ignore(self.quotedStringInProgress)        
         afterElements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
@@ -395,11 +400,8 @@ class Cmd(cmd.Cmd):
             ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
             pyparsing.Optional(terminatorParser) + afterElements)
             )
-        self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
-        self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
-        self.quotedStringInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString)
-        self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress).ignore(self.quotedStringInProgress)        
-        
+        self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress).ignore(self.quotedStringInProgress)                
+
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
         inputFrom = pyparsing.Word(self.legalChars + '/\\')('inputFrom')
