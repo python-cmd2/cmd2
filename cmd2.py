@@ -182,8 +182,7 @@ class Cmd(cmd.Cmd):
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
     defaultFileName = 'command.txt'
-    singleQuotedStrings = True
-    doubleQuotedStrings = True
+    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 'echo']
     
     editor = os.environ.get('EDITOR')
     _STOP_AND_EXIT = 2
@@ -195,7 +194,6 @@ class Cmd(cmd.Cmd):
                 if not os.system('which %s' % (editor)):
                     break
             
-    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 'echo']
     def do_cmdenvironment(self, args):
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
@@ -229,7 +227,6 @@ class Cmd(cmd.Cmd):
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
-    #quotedStringInProgress = pyparsing.Literal('"') ^ pyparsing.Literal("'") + pyparsing.SkipTo(pyparsing.lineEnd)
     terminators = [';', '\n\n']
     multilineCommands = []
     
@@ -383,23 +380,24 @@ class Cmd(cmd.Cmd):
         pipe = pyparsing.Keyword('|', identChars='|')
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
         self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
-        #self.quotedStringInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString)
         afterElements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
         if self.caseInsensitive:
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
+        subparser1 = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
+             pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
+        subparser2 = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
+            pyparsing.Optional(terminatorParser) + afterElements)
         self.parser = (
             pyparsing.stringEnd 
-            ^
-            (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
-             pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
-            ^
+            |
+            subparser1
+            |
             multilineCommand + pyparsing.SkipTo(pyparsing.stringEnd)
-            ^
-            ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
-            pyparsing.Optional(terminatorParser) + afterElements)
+            |
+            subparser2
             )
         self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
         
@@ -414,7 +412,7 @@ class Cmd(cmd.Cmd):
         if isinstance(raw, ParsedString):
             p = raw
         else:
-            s = self.inputParser.transformString(raw.strip()) # used to be raw.strip()
+            s = self.inputParser.transformString(raw) # used to be raw.strip()
             for (shortcut, expansion) in self.shortcuts.items():
                 if s.startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
@@ -443,14 +441,14 @@ class Cmd(cmd.Cmd):
         This (`cmd2`) version of `onecmd` already override's `cmd`'s `onecmd`.
 
         """
-        line = line.strip()
+        #line = line.strip()  # trying to allow proper \n\n endings
         if not line:
             return self.emptyline()
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
             return 0
         try:
             statement = self.parsed(line)
-            while statement.parsed.multilineCommand and not statement.parsed.terminator:
+            while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
                 statement = self.parsed('%s\n%s' % (statement.parsed.raw, 
                                         self.pseudo_raw_input(self.continuationPrompt)))
         except Exception, e:
@@ -918,7 +916,7 @@ class Cmd2TestCase(unittest.TestCase):
         if self.CmdApp:            
             for (cmdInput, lineNum) in self.transcriptReader.inputGenerator():
                 parsed = self.cmdapp.parsed(cmdInput)
-                if parsed.parsed.multilineCommand and not parsed.parsed.terminator:
+                if parsed.parsed.multilineCommand and (parsed.parsed.terminator != ''):
                     cmdInput = cmdInput + self.cmdapp.terminators[0]
                 self.cmdapp.onecmd(cmdInput)
                 result = self.outputTrap.read()
