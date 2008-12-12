@@ -390,7 +390,7 @@ class Cmd(cmd.Cmd):
         if self.blankLinesAllowed:
             blankLineTerminationParser = pyparsing.NoMatch
         else:
-            blankLineTerminator = (pyparsing.Literal('\n') + stringEnd)('terminator')        
+            blankLineTerminator = (pyparsing.Literal('\n')('terminator') + stringEnd)
             blankLineTerminationParser = ((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + blankLineTerminator)('statement')
         multilineParser = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
              pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
@@ -398,10 +398,10 @@ class Cmd(cmd.Cmd):
             pyparsing.Optional(terminatorParser) + afterElements)
         self.parser = (
             stringEnd |
-            blankLineTerminationParser |
             multilineParser |
             multilineCommand + pyparsing.SkipTo(stringEnd) |
-            singleLineParser
+            singleLineParser |
+            blankLineTerminationParser
             )
         self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
         
@@ -905,12 +905,14 @@ class Cmd2TestCase(unittest.TestCase):
         continuationPrompt = self.cmdapp.continuationPrompt.rstrip()
         for (lineNum, line) in enumerate(self.transcript):
             if line.startswith(prompt):
+                if commandStart == lineNum - 1:
+                    responseStart = lineNum
                 if responseStart is not None:
-                    self.dialogue.append(commandStart, ''.join(command), ''.join(self.transcript[responseStart:lineNum]))
-                command = [line[len(prompt):]]
+                    self.dialogue.append((commandStart, ''.join(command), ''.join(self.transcript[responseStart:lineNum])))
+                command = [line[len(prompt)+1:]]
                 commandStart = lineNum
             elif line.startswith(continuationPrompt):
-                command.append(line[len(continuationPrompt):])
+                command.append(line[len(continuationPrompt)+1:])
             else:
                 if responseStart < commandStart:
                     responseStart = lineNum
@@ -918,9 +920,9 @@ class Cmd2TestCase(unittest.TestCase):
         if self.CmdApp:            
             self.divideTranscript()        
             for (lineNum, command, expected) in self.dialogue:
-                self.cmdapp.onecmd(commandSlice)
+                self.cmdapp.onecmd(command)
                 result = self.outputTrap.read()
-                self.assertEqual(result, expected, 
+                self.assertEqual(result.strip(), expected.strip(), 
                     '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
                     (self.transcriptFileName, lineNum, command, expected, result))    
     def tearDown(self):
