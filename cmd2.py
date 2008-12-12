@@ -458,7 +458,7 @@ class Cmd(cmd.Cmd):
             print e
             return 0
 
-        if not statement:
+        if not statement.parsed.command:
             return 0
         
         statekeeper = None
