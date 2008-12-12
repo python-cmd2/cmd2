@@ -201,7 +201,7 @@ class Cmd(cmd.Cmd):
         Settable parameters: %(settable)s
         """ % 
         { 'casesensitive': ('not ' and self.caseInsensitive) or '',
-          'terminators': self.terminatorPattern,
+          'terminators': str(self.terminators),
           'settable': ' '.join(self.settable)
         })
         
@@ -227,7 +227,8 @@ class Cmd(cmd.Cmd):
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
-    terminators = [';', '\n\n']
+    terminators = [';']
+    blankLinesAllowed = False
     multilineCommands = []
     
     def _init_parser(self):
@@ -373,7 +374,7 @@ class Cmd(cmd.Cmd):
         - terminator: ;
         '''
         outputParser = pyparsing.oneOf(['>>','>'])('output')
-        terminatorParser = pyparsing.oneOf(self.terminators)('terminator')
+        terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
         multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = pyparsing.Word(self.legalChars)('command')
@@ -386,12 +387,21 @@ class Cmd(cmd.Cmd):
         if self.caseInsensitive:
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
+        blankLineTerminator = (pyparsing.Literal('\n') + pyparsing.stringEnd)('terminator')
+        if self.blankLinesAllowed:
+            subparser0 = pyparsing.NoMatch
+        else:
+            subparser0 = ((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement')
         subparser1 = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
              pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
+        #subparser1 = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
+        #    pyparsing.Optional(pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip()))('suffix') + afterElements)
         subparser2 = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
             pyparsing.Optional(terminatorParser) + afterElements)
         self.parser = (
             pyparsing.stringEnd 
+            |
+            subparser0
             |
             subparser1
             |
@@ -412,7 +422,7 @@ class Cmd(cmd.Cmd):
         if isinstance(raw, ParsedString):
             p = raw
         else:
-            s = self.inputParser.transformString(raw) # used to be raw.strip()
+            s = self.inputParser.transformString(raw.lstrip())
             for (shortcut, expansion) in self.shortcuts.items():
                 if s.startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
@@ -441,7 +451,6 @@ class Cmd(cmd.Cmd):
         This (`cmd2`) version of `onecmd` already override's `cmd`'s `onecmd`.
 
         """
-        #line = line.strip()  # trying to allow proper \n\n endings
         if not line:
             return self.emptyline()
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
