@@ -874,16 +874,6 @@ class OutputTrap(Borg):
     def tearDown(self):
         sys.stdout = self.old_stdout
 
-class Transcript(object):
-    def __init__(self, cmdapp, filename='test_cmd2.txt'):
-        self.cmdapp = cmdapp
-        try:
-            tfile = open(filename)
-            self.transcript = tfile.readlines()
-            tfile.close()
-        except IOError:
-            self.transcript = []
-
 class Cmd2TestCase(unittest.TestCase):
     '''Subclass this, setting CmdApp and transcriptFileName, to make a unittest.TestCase class
        that will execute the commands in transcriptFileName and expect the results shown.
@@ -900,25 +890,6 @@ class Cmd2TestCase(unittest.TestCase):
                 tfile.close()
             except IOError:
                 self.transcript = []
-    def divideTranscript(self):
-        self.dialogue = []
-        commandStart = None
-        responseStart = None
-        prompt = self.cmdapp.prompt.rstrip()
-        continuationPrompt = self.cmdapp.continuationPrompt.rstrip()
-        for (lineNum, line) in enumerate(self.transcript):
-            if line.startswith(prompt):
-                if commandStart == lineNum - 1:
-                    responseStart = lineNum
-                if responseStart is not None:
-                    self.dialogue.append((commandStart, ''.join(command), ''.join(self.transcript[responseStart:lineNum])))
-                command = [line[len(prompt)+1:]]
-                commandStart = lineNum
-            elif line.startswith(continuationPrompt):
-                command.append(line[len(continuationPrompt)+1:])
-            else:
-                if responseStart < commandStart:
-                    responseStart = lineNum
     def divideTranscript(self):
         self.dialogue = []
         commandStart = None
