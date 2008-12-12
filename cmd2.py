@@ -387,11 +387,11 @@ class Cmd(cmd.Cmd):
         if self.caseInsensitive:
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
-        blankLineTerminator = (pyparsing.Literal('\n') + pyparsing.stringEnd)('terminator')
         if self.blankLinesAllowed:
             subparser0 = pyparsing.NoMatch
         else:
-            subparser0 = ((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement')
+            blankLineTerminator = (pyparsing.Literal('\n') + pyparsing.stringEnd)('terminator')        
+            subparser0 = ((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + blankLineTerminator)('statement')
         subparser1 = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
              pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
         #subparser1 = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
