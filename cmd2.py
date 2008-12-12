@@ -349,7 +349,7 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - terminator: ;        
         >>> print c.parser.parseString('multiline has > inside an unfinished command').dump()      
-        ['multiline', 'has > inside an unfinished command']
+        ['multiline', ' has > inside an unfinished command']
         - multilineCommand: multiline        
         >>> print c.parser.parseString('multiline has > inside;').dump()
         ['multiline', 'has > inside', ';', '']
@@ -361,7 +361,7 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - terminator: ;        
         >>> print c.parser.parseString('multiline command /* with comment in progress;').dump()
-        ['multiline', 'command /* with comment in progress;']
+        ['multiline', ' command /* with comment in progress;']
         - multilineCommand: multiline        
         >>> print c.parser.parseString('multiline command /* with comment complete */ is done;').dump()
         ['multiline', 'command /* with comment complete */ is done', ';', '']
@@ -388,26 +388,20 @@ class Cmd(cmd.Cmd):
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
         if self.blankLinesAllowed:
-            subparser0 = pyparsing.NoMatch
+            blankLineTerminationParser = pyparsing.NoMatch
         else:
-            blankLineTerminator = (pyparsing.Literal('\n') + pyparsing.stringEnd)('terminator')        
-            subparser0 = ((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + blankLineTerminator)('statement')
-        subparser1 = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
+            blankLineTerminator = (pyparsing.Literal('\n') + stringEnd)('terminator')        
+            blankLineTerminationParser = ((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + blankLineTerminator)('statement')
+        multilineParser = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
              pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
-        #subparser1 = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
-        #    pyparsing.Optional(pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip()))('suffix') + afterElements)
-        subparser2 = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
+        singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
             pyparsing.Optional(terminatorParser) + afterElements)
         self.parser = (
-            pyparsing.stringEnd 
-            |
-            subparser0
-            |
-            subparser1
-            |
-            multilineCommand + pyparsing.SkipTo(pyparsing.stringEnd)
-            |
-            subparser2
+            stringEnd |
+            blankLineTerminationParser |
+            multilineParser |
+            multilineCommand + pyparsing.SkipTo(stringEnd) |
+            singleLineParser
             )
         self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
         
@@ -877,74 +871,58 @@ class OutputTrap(Borg):
     def tearDown(self):
         sys.stdout = self.old_stdout
 
-class TranscriptReader(object):
+class Transcript(object):
     def __init__(self, cmdapp, filename='test_cmd2.txt'):
         self.cmdapp = cmdapp
         try:
             tfile = open(filename)
-            self.transcript = tfile.read()
+            self.transcript = tfile.readlines()
             tfile.close()
         except IOError:
-            self.transcript = ''
-        self.bookmark = 0
-    def refreshCommandFinder(self):
-        prompt = pyparsing.Suppress(pyparsing.lineStart + self.cmdapp.prompt)
-        continuationPrompt = pyparsing.Suppress(pyparsing.lineStart + self.cmdapp.continuationPrompt)
-        self.cmdtxtPattern = (prompt + pyparsing.restOfLine + pyparsing.ZeroOrMore(
-             pyparsing.lineEnd + continuationPrompt + pyparsing.restOfLine))("command")   
-    def inputGenerator(self):
-        while True:
-            self.refreshCommandFinder()
-            (thiscmd, startpos, endpos) = self.cmdtxtPattern.scanString(self.transcript[self.bookmark:], maxMatches=1).next()
-            lineNum = self.transcript.count('\n', 0, self.bookmark+startpos) + 2
-            self.bookmark += endpos
-            yield (''.join(thiscmd.command), lineNum)
-    def nextExpected(self):
-        self.refreshCommandFinder()
-        try:
-            (thiscmd, startpos, endpos) = self.cmdtxtPattern.scanString(self.transcript[self.bookmark:], maxMatches=1).next()
-            result = self.transcript[self.bookmark:self.bookmark+startpos]
-            self.bookmark += startpos
-            return result
-        except StopIteration:
-            return self.transcript[self.bookmark:]
+            self.transcript = []
 
 class Cmd2TestCase(unittest.TestCase):
     '''Subclass this, setting CmdApp and transcriptFileName, to make a unittest.TestCase class
        that will execute the commands in transcriptFileName and expect the results shown.
        See example.py'''
-    # problem: this (raw) case gets called by unittest.main - we don't want it to be.  hmm
     CmdApp = None
     transcriptFileName = ''
     def setUp(self):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
             self.cmdapp = self.CmdApp()
-            self.transcriptReader = TranscriptReader(self.cmdapp, self.transcriptFileName)
+            try:
+                tfile = open(self.transcriptFileName)
+                self.transcript = tfile.readlines()
+                tfile.close()
+            except IOError:
+                self.transcript = []
+    def divideTranscript(self):
+        self.dialogue = []
+        commandStart = None
+        responseStart = None
+        prompt = self.cmdapp.prompt.rstrip()
+        continuationPrompt = self.cmdapp.continuationPrompt.rstrip()
+        for (lineNum, line) in enumerate(self.transcript):
+            if line.startswith(prompt):
+                if responseStart is not None:
+                    self.dialogue.append(commandStart, ''.join(command), ''.join(self.transcript[responseStart:lineNum]))
+                command = [line[len(prompt):]]
+                commandStart = lineNum
+            elif line.startswith(continuationPrompt):
+                command.append(line[len(continuationPrompt):])
+            else:
+                if responseStart < commandStart:
+                    responseStart = lineNum
     def testall(self):
         if self.CmdApp:            
-            for (cmdInput, lineNum) in self.transcriptReader.inputGenerator():
-                parsed = self.cmdapp.parsed(cmdInput)
-                if parsed.parsed.multilineCommand and (parsed.parsed.terminator != ''):
-                    cmdInput = cmdInput + self.cmdapp.terminators[0]
-                self.cmdapp.onecmd(cmdInput)
+            self.divideTranscript()        
+            for (lineNum, command, expected) in self.dialogue:
+                self.cmdapp.onecmd(commandSlice)
                 result = self.outputTrap.read()
-                expected = self.transcriptReader.nextExpected()
-                self.assertEqual(self.stripByLine(result), self.stripByLine(expected), 
+                self.assertEqual(result, expected, 
                     '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
-                    (self.transcriptFileName, lineNum, cmdInput, expected, result))                
-                #self.assertEqual(self.stripByLine(result), self.stripByLine(expected), 
-                #    '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
-                #    (self.transcriptFileName, lineNum, cmdInput, expected, result))
-    def stripByLine(self, s):
-        bareprompt = self.cmdapp.continuationPrompt.strip()
-        lines = []
-        for line in s.splitlines():
-            line = line.rstrip()
-            if line.startswith(bareprompt):
-                line = line.replace(bareprompt, '', 1)
-            lines.append(line)
-        return '\n'.join(lines).strip()
+                    (self.transcriptFileName, lineNum, command, expected, result))    
     def tearDown(self):
         if self.CmdApp:
             self.outputTrap.tearDown()
