@@ -458,6 +458,9 @@ class Cmd(cmd.Cmd):
             print e
             return 0
 
+        if not statement:
+            return 0
+        
         statekeeper = None
         stop = 0
 
@@ -916,6 +919,24 @@ class Cmd2TestCase(unittest.TestCase):
             else:
                 if responseStart < commandStart:
                     responseStart = lineNum
+    def divideTranscript(self):
+        self.dialogue = []
+        commandStart = None
+        response = []
+        command = []
+        prompt = self.cmdapp.prompt.rstrip()
+        continuationPrompt = self.cmdapp.continuationPrompt.rstrip()
+        for (lineNum, line) in enumerate(self.transcript):
+            if line.startswith(prompt):
+                if command:
+                    self.dialogue.append((commandStart, ''.join(command), ''.join(response)))
+                command = [line[len(prompt)+1:]]
+                commandStart = lineNum
+                response = []
+            elif line.startswith(continuationPrompt):
+                command.append(line[len(continuationPrompt)+1:])
+            else:
+                response.append(line)
     def testall(self):
         if self.CmdApp:            
             self.divideTranscript()        
