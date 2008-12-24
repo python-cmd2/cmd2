@@ -448,7 +448,7 @@ class Cmd(cmd.Cmd):
         if not line:
             return self.emptyline()
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
-            return 0
+            return 0    # command was empty except for comments
         try:
             statement = self.parsed(line)
             while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
@@ -908,13 +908,21 @@ class Cmd2TestCase(unittest.TestCase):
                 command.append(line[len(continuationPrompt)+1:])
             else:
                 response.append(line)
+    def assertEqualWithWildcards(self, got, expected, message):
+        got = got.strip()
+        expected = expected.strip()
+        try:
+            self.assertEqual(got, expected, message)
+        except AssertionError:
+            print 'ooh, this is bad'
+            raise
     def testall(self):
         if self.CmdApp:            
             self.divideTranscript()        
             for (lineNum, command, expected) in self.dialogue:
                 self.cmdapp.onecmd(command)
                 result = self.outputTrap.read()
-                self.assertEqual(result.strip(), expected.strip(), 
+                self.assertEqualWithWildcards(result, expected, 
                     '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
                     (self.transcriptFileName, lineNum, command, expected, result))    
     def tearDown(self):
