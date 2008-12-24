@@ -886,28 +886,10 @@ class Cmd2TestCase(unittest.TestCase):
             self.cmdapp = self.CmdApp()
             try:
                 tfile = open(self.transcriptFileName)
-                self.transcript = tfile.readlines()
+                self.transcript = iter(tfile.readlines())
                 tfile.close()
             except IOError:
                 self.transcript = []
-    def divideTranscript(self):
-        self.dialogue = []
-        commandStart = None
-        response = []
-        command = []
-        prompt = self.cmdapp.prompt.rstrip()
-        continuationPrompt = self.cmdapp.continuationPrompt.rstrip()
-        for (lineNum, line) in enumerate(self.transcript):
-            if line.startswith(prompt):
-                if command:
-                    self.dialogue.append((commandStart, ''.join(command), ''.join(response)))
-                command = [line[len(prompt)+1:]]
-                commandStart = lineNum
-                response = []
-            elif line.startswith(continuationPrompt):
-                command.append(line[len(continuationPrompt)+1:])
-            else:
-                response.append(line)
     def assertEqualWithWildcards(self, got, expected, message):
         got = got.strip()
         expected = expected.strip()
@@ -917,16 +899,41 @@ class Cmd2TestCase(unittest.TestCase):
             print 'ooh, this is bad'
             raise
     def testall(self):
-        if self.CmdApp:            
-            self.divideTranscript()        
-            for (lineNum, command, expected) in self.dialogue:
-                self.cmdapp.onecmd(command)
-                result = self.outputTrap.read()
-                self.assertEqualWithWildcards(result, expected, 
-                    '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
-                    (self.transcriptFileName, lineNum, command, expected, result))    
+        if self.CmdApp:
+            lineNum = 0
+            try:
+                line = self.transcript.next()
+                while True:
+                    while not line.startswith(self.cmdapp.prompt):
+                        line = self.transcript.next()
+                    command = [line[len(self.cmdapp.prompt):]]
+                    line = self.transcript.next()
+                    while line.startswith(self.cmdapp.continuationPrompt):
+                        command.append(line[len(self.cmdapp.continuationPrompt):])
+                        line = self.transcript.next()
+                    command = ''.join(command)
+                    self.cmdapp.onecmd(command)
+                    result = self.outputTrap.read()
+                    if line.startswith(self.cmdapp.prompt):
+                        self.assertEqual(result.strip(), '', 
+                            '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing) \nGot:\n%s\n' % 
+                            (self.transcriptFileName, lineNum, command, result))    
+                        continue
+                    expected = []
+                    while not line.startswith(self.cmdapp.prompt):
+                        expected.append(line)
+                        line = self.transcript.next()
+                    expected = ''.join(expected)
+                    self.assertEqual(expected.strip(), result.strip(), 
+                        '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
+                        (self.transcriptFileName, lineNum, command, expected, result))    
+                    # this needs to account for a line-by-line strip()ping
+            except StopIteration:
+                pass
+                # catch the final output?
     def tearDown(self):
         if self.CmdApp:
+            self.tfile.close()
             self.outputTrap.tearDown()
         
 if __name__ == '__main__':
