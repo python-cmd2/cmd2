@@ -890,14 +890,14 @@ class Cmd2TestCase(unittest.TestCase):
                 tfile.close()
             except IOError:
                 self.transcript = []
-    def assertEqualWithWildcards(self, got, expected, message):
-        got = got.strip()
-        expected = expected.strip()
-        try:
-            self.assertEqual(got, expected, message)
-        except AssertionError:
-            print 'ooh, this is bad'
-            raise
+    def assertEqualEnough(self, got, expected, message):
+        got = got.strip().splitlines()
+        expected = expected.strip().splitlines()
+        self.assertEqual(len(got), len(expected), message)
+        for (linegot, lineexpected) in zip(got, expected):
+            matchme = re.escape(lineexpected.strip()).replace('\\*', '.*').  \
+                      replace('\\ ', ' ')
+            self.assert_(re.match(matchme, linegot.strip()), message)
     def testall(self):
         if self.CmdApp:
             lineNum = 0
@@ -915,7 +915,7 @@ class Cmd2TestCase(unittest.TestCase):
                     self.cmdapp.onecmd(command)
                     result = self.outputTrap.read()
                     if line.startswith(self.cmdapp.prompt):
-                        self.assertEqual(result.strip(), '', 
+                        self.assertEqualEnough(result.strip(), '', 
                             '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing) \nGot:\n%s\n' % 
                             (self.transcriptFileName, lineNum, command, result))    
                         continue
@@ -924,7 +924,7 @@ class Cmd2TestCase(unittest.TestCase):
                         expected.append(line)
                         line = self.transcript.next()
                     expected = ''.join(expected)
-                    self.assertEqual(expected.strip(), result.strip(), 
+                    self.assertEqualEnough(expected.strip(), result.strip(), 
                         '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
                         (self.transcriptFileName, lineNum, command, expected, result))    
                     # this needs to account for a line-by-line strip()ping
@@ -933,7 +933,6 @@ class Cmd2TestCase(unittest.TestCase):
                 # catch the final output?
     def tearDown(self):
         if self.CmdApp:
-            self.tfile.close()
             self.outputTrap.tearDown()
         
 if __name__ == '__main__':
