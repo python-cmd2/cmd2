@@ -390,12 +390,12 @@ class Cmd(cmd.Cmd):
         if self.blankLinesAllowed:
             blankLineTerminationParser = pyparsing.NoMatch
         else:
-            blankLineTerminator = (pyparsing.Literal('\n')('terminator') + stringEnd)
+            blankLineTerminator = (pyparsing.lineEnd('terminator') + stringEnd)
             blankLineTerminationParser = ((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + blankLineTerminator)('statement')
         multilineParser = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
-             pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
+                           pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
         singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
-            pyparsing.Optional(terminatorParser) + afterElements)
+                            pyparsing.Optional(terminatorParser) + afterElements)
         self.parser = (
             stringEnd |
             multilineParser |
@@ -615,7 +615,12 @@ class Cmd(cmd.Cmd):
             self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
         except (ValueError, AttributeError, NotSettableError), e:
             self.do_show(arg)
+    do_set.__doc__ = '%s\nOne of: %s' % (do_set.__doc__, ', '.join(settable))
                 
+    def do_pause(self, arg):
+        'Displays the specified text then waits for the user to press RETURN.'
+        raw_input(arg + '\n')
+        
     def do_shell(self, arg):
         'execute a command as if at the OS prompt.'
         os.system(arg)
