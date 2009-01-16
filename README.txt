@@ -129,13 +129,13 @@ example/exampleSession.txt::
     
     Documented commands (type help <topic>):
     ========================================
-    _load  edit  history  li    load   r    save  set    shortcuts  speak
-    ed     hi    l        list  orate  run  say   shell  show
+    _load  edit  history  li    load   pause  run   say  shell      show 
+    ed     hi    l        list  orate  r      save  set  shortcuts  speak
     
     Undocumented commands:
     ======================
     EOF  cmdenvironment  eof  exit  help  q  quit
-    
+
     (Cmd) help say
     Repeats what you tell me to.
     Usage: speak [options] arg
