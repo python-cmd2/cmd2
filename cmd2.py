@@ -399,9 +399,9 @@ class Cmd(cmd.Cmd):
         self.parser = (
             stringEnd |
             multilineParser |
+            blankLineTerminationParser |
             multilineCommand + pyparsing.SkipTo(stringEnd) |
-            singleLineParser |
-            blankLineTerminationParser
+            singleLineParser
             )
         self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
         
