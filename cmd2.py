@@ -232,11 +232,20 @@ class Cmd(cmd.Cmd):
     multilineCommands = []
     
     def _init_parser(self):
-        '''
+        r'''
         >>> c = Cmd()
         >>> c.multilineCommands = ['multiline']
         >>> c.caseInsensitive = True
         >>> c._init_parser()
+        >>> print c.parser.parseString('multiline command ends\n\n').dump()
+        ['multiline', 'command ends', ';', '']
+        - args: command ends
+        - multilineCommand: multiline
+        - statement: ['multiline', 'command ends', ';']
+          - args: command ends
+          - multilineCommand: multiline
+          - terminator: ;
+        - terminator: ;        
         >>> print c.parser.parseString('').dump()        
         []        
         >>> print c.parser.parseString('/* empty command */').dump()        
@@ -376,7 +385,7 @@ class Cmd(cmd.Cmd):
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
-        multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
+        self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = pyparsing.Word(self.legalChars)('command')
         pipe = pyparsing.Keyword('|', identChars='|')
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
@@ -385,23 +394,24 @@ class Cmd(cmd.Cmd):
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
         if self.caseInsensitive:
-            multilineCommand.setParseAction(lambda x: x[0].lower())
+            self.multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
         if self.blankLinesAllowed:
-            blankLineTerminationParser = pyparsing.NoMatch
+            self.blankLineTerminationParser = pyparsing.NoMatch
         else:
-            blankLineTerminator = (pyparsing.lineEnd('terminator') + stringEnd)
-            blankLineTerminationParser = ((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + blankLineTerminator)('statement')
-        multilineParser = (((multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
-                           pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
-        singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
-                            pyparsing.Optional(terminatorParser) + afterElements)
+            self.blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd + pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
+            self.blankLineTerminator.setResultsName('terminator')
+            self.blankLineTerminationParser = ((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(self.blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + self.blankLineTerminator)('statement')
+        self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
+                                pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
+        self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
+                                 pyparsing.Optional(terminatorParser) + afterElements)
         self.parser = (
             stringEnd |
-            multilineParser |
-            blankLineTerminationParser |
-            multilineCommand + pyparsing.SkipTo(stringEnd) |
-            singleLineParser
+            self.multilineParser |
+            self.singleLineParser |
+            self.blankLineTerminationParser | 
+            self.multilineCommand + pyparsing.SkipTo(stringEnd)
             )
         self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
         
