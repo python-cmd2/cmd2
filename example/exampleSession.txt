@@ -1,3 +1,4 @@
+(Cmd) say put this in a file > myfile.txt
 (Cmd) say < myfile.txt
 put this in a file
 (Cmd) # comments do nothing
