@@ -43,6 +43,15 @@ class OptionParser(optparse.OptionParser):
         """
         raise
         
+def remainingArgs(oldArgs, newArgList):
+    '''
+    >>> remainingArgs('-f bar   bar   cow', ['bar', 'cow'])
+    'bar   cow'
+    '''
+    pattern = '\s+'.join(newArgList) + '\s*$'
+    matchObj = re.search(pattern, oldArgs)
+    return oldArgs[matchObj.start():]
+
 def options(option_list):
     def option_setup(func):
         optionParser = OptionParser()
@@ -51,8 +60,8 @@ def options(option_list):
         optionParser.set_usage("%s [options] arg" % func.__name__.strip('do_'))
         def newFunc(instance, arg):
             try:
-                opts, newArgs = optionParser.parse_args(arg.split())
-                newArgs = (newArgs and arg[arg.find(newArgs[0]):]) or ''
+                opts, newArgList = optionParser.parse_args(arg.split())
+                newArgs = remainingArgs(arg, newArgList)
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -61,7 +70,13 @@ def options(option_list):
                 return
             if hasattr(opts, '_exit'):
                 return None
-            arg = arg.parser('%s %s%s%s' % (arg.parsed.command, newArgs, arg.parsed.terminator, arg.parsed.suffix))
+            terminator = arg.parsed.terminator
+            try:
+                if arg.parsed.terminator[0] == '\n':
+                    terminator = arg.parsed.terminator[0]
+            except IndexError:
+                pass
+            arg = arg.parser('%s %s%s%s' % (arg.parsed.command, newArgs, terminator, arg.parsed.suffix))
             result = func(instance, arg, opts)                            
             return result        
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
