@@ -237,15 +237,6 @@ class Cmd(cmd.Cmd):
         >>> c.multilineCommands = ['multiline']
         >>> c.caseInsensitive = True
         >>> c._init_parser()
-        >>> print c.parser.parseString('multiline command ends\n\n').dump()
-        ['multiline', 'command ends', ';', '']
-        - args: command ends
-        - multilineCommand: multiline
-        - statement: ['multiline', 'command ends', ';']
-          - args: command ends
-          - multilineCommand: multiline
-          - terminator: ;
-        - terminator: ;        
         >>> print c.parser.parseString('').dump()        
         []        
         >>> print c.parser.parseString('/* empty command */').dump()        
@@ -381,12 +372,21 @@ class Cmd(cmd.Cmd):
           - multilineCommand: multiline
           - terminator: ;
         - terminator: ;
+        >>> print c.parser.parseString('multiline command ends\n\n').dump()
+        ['multiline', 'command ends', '\n', '\n']
+        - args: command ends
+        - multilineCommand: multiline
+        - statement: ['multiline', 'command ends', '\n', '\n']
+          - args: command ends
+          - multilineCommand: multiline
+          - terminator: ['\n', '\n']
+        - terminator: ['\n', '\n']
         '''
         outputParser = pyparsing.oneOf(['>>','>'])('output')
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
         self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
-        oneLineCommand = pyparsing.Word(self.legalChars)('command')
+        oneLineCommand = (~self.multilineCommand + pyparsing.Word(self.legalChars))('command')
         pipe = pyparsing.Keyword('|', identChars='|')
         self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
         self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
@@ -399,16 +399,16 @@ class Cmd(cmd.Cmd):
         if self.blankLinesAllowed:
             self.blankLineTerminationParser = pyparsing.NoMatch
         else:
-            self.blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd + pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
+            self.blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
             self.blankLineTerminator.setResultsName('terminator')
             self.blankLineTerminationParser = ((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(self.blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + self.blankLineTerminator)('statement')
         self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
                                 pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
-        self.multilineParser = self.multilineParser.setParseName('multilineParser')
-        self.singleLineParser = self.singleLineParser.setParseName('singleLineParser')
-        self.blankLineTerminationParser = self.blankLineTerminationParser.setParseName('blankLineTerminatorParser')
+        #self.multilineParser = self.multilineParser.setResultsName('multilineParser')
+        #self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
+        #self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
         self.parser = (
             stringEnd |
             self.multilineParser |
