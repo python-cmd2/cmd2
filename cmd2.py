@@ -406,6 +406,9 @@ class Cmd(cmd.Cmd):
                                 pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
+        self.multilineParser = self.multilineParser.setParseName('multilineParser')
+        self.singleLineParser = self.singleLineParser.setParseName('singleLineParser')
+        self.blankLineTerminationParser = self.blankLineTerminationParser.setParseName('blankLineTerminatorParser')
         self.parser = (
             stringEnd |
             self.multilineParser |
