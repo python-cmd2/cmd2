@@ -26,7 +26,7 @@ flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest, string
 from optparse import make_option
-__version__ = '0.4.4'
+__version__ = '0.4.5'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -48,7 +48,7 @@ def remainingArgs(oldArgs, newArgList):
     >>> remainingArgs('-f bar   bar   cow', ['bar', 'cow'])
     'bar   cow'
     '''
-    pattern = '\s+'.join(newArgList) + '\s*$'
+    pattern = '\s+'.join(re.escape(a) for a in newArgList) + '\s*$'
     matchObj = re.search(pattern, oldArgs)
     return oldArgs[matchObj.start():]
 
