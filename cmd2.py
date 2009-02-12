@@ -60,8 +60,8 @@ def options(option_list):
         optionParser.set_usage("%s [options] arg" % func.__name__.strip('do_'))
         def newFunc(instance, arg):
             try:
-                opts, newArgList = optionParser.parse_args(arg.split())
-                newArgs = remainingArgs(arg, newArgList)
+                opts, newArgList = optionParser.parse_args(arg.split()) # doesn't understand quoted strings shouldn't be dissected!
+                newArgs = remainingArgs(arg, newArgList)  # should it permit flags after args?
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
