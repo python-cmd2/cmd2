@@ -153,36 +153,6 @@ else:
         writeToPasteBuffer = getPasteBuffer
           
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
-'''
-def parseSearchResults(pattern, s):
-    generator = pattern.scanString(s)
-    try:
-        result, start, stop = generator.next()
-        result['before'], result['after'] = s[:start], s[stop:]
-        result['upToIncluding'] = s[:stop]
-    except StopIteration:
-        result = pyparsing.ParseResults('')
-        result['before'] = s
-    return result
-'''
-
-def replaceInput(source):
-    if source:
-        newinput = open(source[0], 'r').read()
-    else:
-        newinput = getPasteBuffer()
-    
-        try:
-            if statement.inputFrom:
-                newinput = open(statement.inputFrom, 'r').read()
-            else:
-                newinput = getPasteBuffer()
-        except (OSError,), e:
-            print e
-            return 0                    
-        start, end = self.redirectInPattern.scanString(statement.fullStatement).next()[1:]
-        return self.onecmd('%s%s%s' % (statement.fullStatement[:start], 
-                            newinput, statement.fullStatement[end:]))
 
 class ParsedString(str):
     pass
