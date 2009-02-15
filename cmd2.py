@@ -24,7 +24,8 @@ CHANGES:
 As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
-import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest, unittest, string
+import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
+import unittest, string, datetime
 from optparse import make_option
 __version__ = '0.4.5'
 
@@ -161,13 +162,14 @@ class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
     continuationPrompt = '> '  
+    timing = False
     legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  # make sure your terminators are not in here!
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load' }
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
     defaultFileName = 'command.txt'
-    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 'echo']
+    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 'echo', 'timing']
     
     editor = os.environ.get('EDITOR')
     _STOP_AND_EXIT = 2
@@ -447,11 +449,13 @@ class Cmd(cmd.Cmd):
             return self.emptyline()
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
             return 0    # command was empty except for comments
+        import profile
         try:
             statement = self.parsed(line)
             while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
-                statement = self.parsed('%s\n%s' % (statement.parsed.raw, 
-                                        self.pseudo_raw_input(self.continuationPrompt)))
+                statement = '%s\n%s' % (statement.parsed.raw, 
+                                        self.pseudo_raw_input(self.continuationPrompt))                
+                statement = self.parsed(statement)
         except Exception, e:
             print e
             return 0
@@ -489,7 +493,10 @@ class Cmd(cmd.Cmd):
                 func = getattr(self, 'do_' + statement.parsed.command)
             except AttributeError:
                 return self.default(statement)
-            stop = func(statement)                        
+            timestart = datetime.datetime.now()
+            stop = func(statement) 
+            if self.timing:
+                print 'Elapsed: %s' % str(datetime.datetime.now() - timestart)
         except Exception, e:
             print e
         try:
