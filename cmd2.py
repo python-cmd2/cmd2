@@ -182,12 +182,13 @@ class Cmd(cmd.Cmd):
                     break
             
     def do_cmdenvironment(self, args):
+        '''Summary report of interactive parameters.'''
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
         Commands may be terminated with: %(terminators)s
         Settable parameters: %(settable)s
         """ % 
-        { 'casesensitive': ('not ' and self.caseInsensitive) or '',
+        { 'casesensitive': (self.caseInsensitive and 'not ') or '',
           'terminators': str(self.terminators),
           'settable': ' '.join(self.settable)
         })
