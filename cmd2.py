@@ -450,7 +450,6 @@ class Cmd(cmd.Cmd):
             return self.emptyline()
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
             return 0    # command was empty except for comments
-        import profile
         try:
             statement = self.parsed(line)
             while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
