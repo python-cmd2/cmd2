@@ -27,7 +27,7 @@ flagReader.py options are still supported for backward compatibility
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime
 from optparse import make_option
-__version__ = '0.4.5'
+__version__ = '0.4.6'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -370,7 +370,6 @@ class Cmd(cmd.Cmd):
           - terminator: ['\n', '\n']
         - terminator: ['\n', '\n']
         '''
-        #outputParser = pyparsing.oneOf(['>>','>'])('output')
         outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
         
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
