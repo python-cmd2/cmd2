@@ -13,6 +13,7 @@ setup(
     license = 'MIT',
     keywords = 'command prompt console cmd',
     url = 'http://www.assembla.com/wiki/show/python-cmd2',
+    install_requires=['pyparsing>=1.5.1'],
     
     long_description = """Enhancements for standard library's cmd module.
 
