@@ -370,7 +370,9 @@ class Cmd(cmd.Cmd):
           - terminator: ['\n', '\n']
         - terminator: ['\n', '\n']
         '''
-        outputParser = pyparsing.oneOf(['>>','>'])('output')
+        #outputParser = pyparsing.oneOf(['>>','>'])('output')
+        outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
+        
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
         self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
