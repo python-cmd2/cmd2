@@ -170,6 +170,7 @@ class Cmd(cmd.Cmd):
     defaultExtension = 'txt'
     defaultFileName = 'command.txt'
     settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 'echo', 'timing']
+    settable.sort()
     
     editor = os.environ.get('EDITOR')
     _STOP_AND_EXIT = 2
@@ -277,6 +278,13 @@ class Cmd(cmd.Cmd):
         - pipeTo:  piped
         - statement: ['simple', '']
           - command: simple
+        >>> print c.parser.parseString('double-pipe || is not a pipe').dump()
+        ['double', '-pipe || is not a pipe']
+        - args: -pipe || is not a pipe
+        - command: double
+        - statement: ['double', '-pipe || is not a pipe']
+          - args: -pipe || is not a pipe
+          - command: double
         >>> print c.parser.parseString('command with args, terminator;sufx | piped').dump()
         ['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
         - args: with args, terminator
@@ -588,10 +596,11 @@ class Cmd(cmd.Cmd):
                
     def showParam(self, param):
         param = param.strip().lower()
-        if param in self.settable:
-            val = getattr(self, param)
-            self.stdout.write('%s: %s\n' % (param, str(getattr(self, param))))
-
+        for p in self.settable:
+            if p.startswith(param):
+                val = getattr(self, p)
+                self.stdout.write('%s: %s\n' % (p, str(getattr(self, p))))
+                
     def do_quit(self, arg):
         return self._STOP_AND_EXIT
     do_exit = do_quit
@@ -606,22 +615,25 @@ class Cmd(cmd.Cmd):
                 self.showParam(param)
     
     def do_set(self, arg):
-        'Sets a parameter'        
+        '''Sets a cmd2 parameter.  Accepts abbreviated parameter names so long as there is no ambiguity.
+           Call without arguments for a list of settable parameters with their values.'''
         try:
             paramName, val = arg.split(None, 1)
             paramName = paramName.strip().lower()
-            if paramName not in self.settable:
-                raise NotSettableError
-            currentVal = getattr(self, paramName)
-            if (val[0] == val[-1]) and val[0] in ("'", '"'):
-                val = val[1:-1]
-            else:                
-                val = cast(currentVal, val)
-            setattr(self, paramName, val)
-            self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
+            hits = [paramName in p for p in self.settable]
+            if hits.count(True) == 1:
+                paramName = self.settable[hits.index(True)]
+                currentVal = getattr(self, paramName)
+                if (val[0] == val[-1]) and val[0] in ("'", '"'):
+                    val = val[1:-1]
+                else:                
+                    val = cast(currentVal, val)
+                setattr(self, paramName, val)
+                self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
+            else:
+                self.do_show(paramName)
         except (ValueError, AttributeError, NotSettableError), e:
             self.do_show(arg)
-    do_set.__doc__ = '%s\nOne of: %s' % (do_set.__doc__, ', '.join(settable))
                 
     def do_pause(self, arg):
         'Displays the specified text then waits for the user to press RETURN.'
