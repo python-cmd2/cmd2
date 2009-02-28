@@ -744,7 +744,8 @@ class Cmd(cmd.Cmd):
     def do_load(self, fname=None):
         """Runs command(s) from a file."""
         if fname is None:
-            fname = self.defaultFileName        
+            fname = self.defaultFileName
+        fname = os.path.expanduser(fname)
         keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuationPrompt'))
         if isinstance(fname, file):
             self.stdin = fname
