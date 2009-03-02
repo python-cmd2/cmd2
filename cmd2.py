@@ -428,7 +428,7 @@ class Cmd(cmd.Cmd):
         else:
             s = self.inputParser.transformString(raw.lstrip())
             for (shortcut, expansion) in self.shortcuts.items():
-                if s.startswith(shortcut):
+                if s.lower().startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
             result = self.parser.parseString(s)
