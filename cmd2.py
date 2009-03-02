@@ -27,7 +27,7 @@ flagReader.py options are still supported for backward compatibility
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime
 from optparse import make_option
-__version__ = '0.4.6'
+__version__ = '0.4.7'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -199,6 +199,7 @@ class SkipToLast(pyparsing.SkipTo):
             raise exc    
 
 def replace_with_file_contents(fname):
+    import pdb; pdb.set_trace()
     if fname:
         try:
             result = open(os.path.expanduser(fname[0])).read()
@@ -468,9 +469,13 @@ class Cmd(cmd.Cmd):
         
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
-        inputFrom = pyparsing.Word(self.legalChars + '/\\')('inputFrom')
+        fileName = pyparsing.Word(self.legalChars + '/\\')
+        inputFrom = fileName('inputFrom')
         inputFrom.setParseAction(replace_with_file_contents)
-        self.inputParser = inputMark + pyparsing.Optional(inputFrom)
+        # a not-entirely-satisfactory way of distinguishing < as in "import from" from <
+        # as in "lesser than"
+        self.inputParser = inputMark + pyparsing.Optional(inputFrom) + pyparsing.Optional('>') + \
+                           pyparsing.Optional(fileName) + (pyparsing.stringEnd | '|')
         self.inputParser.ignore(pyparsing.quotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
     def parsed(self, raw, **kwargs):
