@@ -418,7 +418,7 @@ class Cmd(cmd.Cmd):
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
         inputFrom = pyparsing.Word(self.legalChars + '/\\')('inputFrom')
-        inputFrom.setParseAction(lambda x: (x and open(x[0]).read()) or getPasteBuffer())
+        inputFrom.setParseAction(lambda x: (x and open(os.path.expanduser(x[0])).read()) or getPasteBuffer())
         self.inputParser = inputMark + pyparsing.Optional(inputFrom)
         self.inputParser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
@@ -486,7 +486,7 @@ class Cmd(cmd.Cmd):
                 if statement.parsed.output == '>>':
                     mode = 'a'
                 try:
-                    self.stdout = open(statement.parsed.outputTo, mode)                            
+                    self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
                 except OSError, e:
                     print e
                     return 0                    
@@ -704,7 +704,7 @@ class Cmd(cmd.Cmd):
             buffer = self.history[-1]
 
         if buffer:
-            f = open(filename, 'w')
+            f = open(os.path.expanduser(filename), 'w')
             f.write(buffer or '')
             f.close()        
                 
@@ -734,7 +734,7 @@ class Cmd(cmd.Cmd):
         else:
             saveme = self.history[-1]
         try:
-            f = open(fname, 'w')
+            f = open(os.path.expanduser(fname), 'w')
             f.write(saveme)
             f.close()
             print 'Saved to %s' % (fname)
@@ -751,10 +751,10 @@ class Cmd(cmd.Cmd):
             self.stdin = fname
         else:           
             try:
-                self.stdin = open(fname, 'r')
+                self.stdin = open(os.path.expanduser(fname), 'r')
             except IOError, e:
                 try:
-                    self.stdin = open('%s.%s' % (fname, self.defaultExtension), 'r')
+                    self.stdin = open('%s.%s' % (os.path.expanduser(fname), self.defaultExtension), 'r')
                 except IOError:
                     print 'Problem opening file %s: \n%s' % (fname, e)
                     keepstate.restore()
@@ -787,7 +787,7 @@ class Cmd(cmd.Cmd):
             
     def fileimport(self, statement, source):
         try:
-            f = open(source)
+            f = open(os.path.expanduser(source))
         except IOError:
             self.stdout.write("Couldn't read from file %s\n" % source)
             return ''
@@ -909,7 +909,7 @@ class Cmd2TestCase(unittest.TestCase):
             self.outputTrap = OutputTrap()
             self.cmdapp = self.CmdApp()
             try:
-                tfile = open(self.transcriptFileName)
+                tfile = open(os.path.expanduser(self.transcriptFileName))
                 self.transcript = iter(tfile.readlines())
                 tfile.close()
             except IOError:
