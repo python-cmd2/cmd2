@@ -158,6 +158,56 @@ pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 class ParsedString(str):
     pass
 
+class SkipToLast(pyparsing.SkipTo):
+    def parseImpl( self, instring, loc, doActions=True ):
+        resultStore = []
+        startLoc = loc
+        instrlen = len(instring)
+        expr = self.expr
+        failParse = False
+        while loc <= instrlen:
+            try:
+                if self.failOn:
+                    failParse = True
+                    self.failOn.tryParse(instring, loc)
+                    failParse = False
+                loc = expr._skipIgnorables( instring, loc )
+                expr._parse( instring, loc, doActions=False, callPreParse=False )
+                skipText = instring[startLoc:loc]
+                if self.includeMatch:
+                    loc,mat = expr._parse(instring,loc,doActions,callPreParse=False)
+                    if mat:
+                        skipRes = ParseResults( skipText )
+                        skipRes += mat
+                        resultStore.append((loc, [ skipRes ]))
+                    else:
+                        resultStore,append((loc, [ skipText ]))
+                else:
+                    resultStore.append((loc, [ skipText ]))
+                loc += 1
+            except (pyparsing.ParseException,IndexError):
+                if failParse:
+                    raise
+                else:
+                    loc += 1
+        if resultStore:
+            return resultStore[-1]
+        else:
+            exc = self.myException
+            exc.loc = loc
+            exc.pstr = instring
+            raise exc    
+
+def replace_with_file_contents(fname):
+    if fname:
+        try:
+            result = open(os.path.expanduser(fname[0])).read()
+        except IOError:
+            result = '< %s' % fname[0]  # wasn't a file after all
+    else:
+        result = getPasteBuffer()
+    return result
+        
 class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
@@ -169,7 +219,8 @@ class Cmd(cmd.Cmd):
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
     defaultFileName = 'command.txt'
-    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 'echo', 'timing']
+    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 
+                'echo', 'timing']
     settable.sort()
     
     editor = os.environ.get('EDITOR')
@@ -385,8 +436,8 @@ class Cmd(cmd.Cmd):
         self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = (~self.multilineCommand + pyparsing.Word(self.legalChars))('command')
         pipe = pyparsing.Keyword('|', identChars='|')
-        self.commentGrammars.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).setParseAction(lambda x: '')
-        self.commentInProgress.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(pyparsing.cStyleComment)       
+        self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
+        self.commentInProgress.ignore(pyparsing.quotedString).ignore(pyparsing.cStyleComment)       
         afterElements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
@@ -399,7 +450,7 @@ class Cmd(cmd.Cmd):
             self.blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
             self.blankLineTerminator.setResultsName('terminator')
             self.blankLineTerminationParser = ((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(self.blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + self.blankLineTerminator)('statement')
-        self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
+        self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + SkipToLast(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
                                 pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
@@ -413,14 +464,14 @@ class Cmd(cmd.Cmd):
             self.blankLineTerminationParser | 
             self.multilineCommand + pyparsing.SkipTo(stringEnd)
             )
-        self.parser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
+        self.parser.ignore(pyparsing.quotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
         
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
         inputFrom = pyparsing.Word(self.legalChars + '/\\')('inputFrom')
-        inputFrom.setParseAction(lambda x: (x and open(os.path.expanduser(x[0])).read()) or getPasteBuffer())
+        inputFrom.setParseAction(replace_with_file_contents)
         self.inputParser = inputMark + pyparsing.Optional(inputFrom)
-        self.inputParser.ignore(pyparsing.sglQuotedString).ignore(pyparsing.dblQuotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
+        self.inputParser.ignore(pyparsing.quotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
     def parsed(self, raw, **kwargs):
         if isinstance(raw, ParsedString):
