@@ -211,16 +211,16 @@ def replace_with_file_contents(fname):
         
 class Cmd(cmd.Cmd):
     echo = False
-    caseInsensitive = True
-    continuationprompt = '> '  
+    case_insensitive = True
+    continuation_prompt = '> '  
     timing = False
     legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  # make sure your terminators are not in here!
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load' }
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
-    defaultFileName = 'command.txt'
-    settable = ['prompt', 'continuationprompt', 'defaultFileName', 'editor', 'caseInsensitive', 
+    default_file_name = 'command.txt'
+    settable = ['prompt', 'continuation_prompt', 'default_file_name', 'editor', 'case_insensitive', 
                 'echo', 'timing']
     settable.sort()
     
@@ -241,7 +241,7 @@ class Cmd(cmd.Cmd):
         Commands may be terminated with: %(terminators)s
         Settable parameters: %(settable)s
         """ % 
-        { 'casesensitive': (self.caseInsensitive and 'not ') or '',
+        { 'casesensitive': (self.case_insensitive and 'not ') or '',
           'terminators': str(self.terminators),
           'settable': ' '.join(self.settable)
         })
@@ -276,7 +276,7 @@ class Cmd(cmd.Cmd):
         r'''
         >>> c = Cmd()
         >>> c.multilineCommands = ['multiline']
-        >>> c.caseInsensitive = True
+        >>> c.case_insensitive = True
         >>> c._init_parser()
         >>> print c.parser.parseString('').dump()        
         []        
@@ -434,7 +434,7 @@ class Cmd(cmd.Cmd):
         
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
-        self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.caseInsensitive) for c in self.multilineCommands])('multilineCommand')
+        self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.case_insensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = (~self.multilineCommand + pyparsing.Word(self.legalChars))('command')
         pipe = pyparsing.Keyword('|', identChars='|')
         self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
@@ -442,7 +442,7 @@ class Cmd(cmd.Cmd):
         afterElements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
-        if self.caseInsensitive:
+        if self.case_insensitive:
             self.multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
         if self.blankLinesAllowed:
@@ -519,7 +519,7 @@ class Cmd(cmd.Cmd):
             statement = self.parsed(line)
             while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
                 statement = '%s\n%s' % (statement.parsed.raw, 
-                                        self.pseudo_raw_input(self.continuationprompt))                
+                                        self.pseudo_raw_input(self.continuation_prompt))                
                 statement = self.parsed(statement)
         except Exception, e:
             print e
@@ -753,7 +753,7 @@ class Cmd(cmd.Cmd):
         if not self.editor:
             print "please use 'set editor' to specify your text editing program of choice."
             return
-        filename = self.defaultFileName
+        filename = self.default_file_name
         if arg:
             try:
                 buffer = self.last_matching(int(arg))
@@ -786,7 +786,7 @@ class Cmd(cmd.Cmd):
         except pyparsing.ParseException:
             print self.do_save.__doc__
             return
-        fname = args.fname or self.defaultFileName
+        fname = args.fname or self.default_file_name
         if args.idx == '*':
             saveme = '\n\n'.join(self.history[:])
         elif args.idx:
@@ -804,9 +804,9 @@ class Cmd(cmd.Cmd):
     def do_load(self, fname=None):
         """Runs command(s) from a file."""
         if fname is None:
-            fname = self.defaultFileName
+            fname = self.default_file_name
         fname = os.path.expanduser(fname)
-        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuationprompt'))
+        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuation_prompt'))
         if isinstance(fname, file):
             self.stdin = fname
         else:           
@@ -820,7 +820,7 @@ class Cmd(cmd.Cmd):
                     keepstate.restore()
                     return
         self.use_rawinput = False
-        self.prompt = self.continuationprompt = ''
+        self.prompt = self.continuation_prompt = ''
         stop = self.cmdloop()
         self.stdin.close()
         keepstate.restore()
@@ -992,8 +992,8 @@ class Cmd2TestCase(unittest.TestCase):
                         line = self.transcript.next()
                     command = [line[len(self.cmdapp.prompt):]]
                     line = self.transcript.next()
-                    while line.startswith(self.cmdapp.continuationprompt):
-                        command.append(line[len(self.cmdapp.continuationprompt):])
+                    while line.startswith(self.cmdapp.continuation_prompt):
+                        command.append(line[len(self.cmdapp.continuation_prompt):])
                         line = self.transcript.next()
                     command = ''.join(command)
                     self.cmdapp.onecmd(command)
