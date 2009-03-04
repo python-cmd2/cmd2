@@ -212,7 +212,7 @@ def replace_with_file_contents(fname):
 class Cmd(cmd.Cmd):
     echo = False
     caseInsensitive = True
-    continuationPrompt = '> '  
+    continuationprompt = '> '  
     timing = False
     legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  # make sure your terminators are not in here!
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load' }
@@ -220,7 +220,7 @@ class Cmd(cmd.Cmd):
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
     defaultFileName = 'command.txt'
-    settable = ['prompt', 'continuationPrompt', 'defaultFileName', 'editor', 'caseInsensitive', 
+    settable = ['prompt', 'continuationprompt', 'defaultFileName', 'editor', 'caseInsensitive', 
                 'echo', 'timing']
     settable.sort()
     
@@ -519,7 +519,7 @@ class Cmd(cmd.Cmd):
             statement = self.parsed(line)
             while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
                 statement = '%s\n%s' % (statement.parsed.raw, 
-                                        self.pseudo_raw_input(self.continuationPrompt))                
+                                        self.pseudo_raw_input(self.continuationprompt))                
                 statement = self.parsed(statement)
         except Exception, e:
             print e
@@ -651,11 +651,15 @@ class Cmd(cmd.Cmd):
     do_eof = do_EOF
                
     def showParam(self, param):
+        any_shown = False
         param = param.strip().lower()
         for p in self.settable:
             if p.startswith(param):
                 val = getattr(self, p)
                 self.stdout.write('%s: %s\n' % (p, str(getattr(self, p))))
+                any_shown = True
+        if not any_shown:
+            print "Parameter '%s' not supported (type 'show' for list of parameters)." % param
                 
     def do_quit(self, arg):
         return self._STOP_AND_EXIT
@@ -802,7 +806,7 @@ class Cmd(cmd.Cmd):
         if fname is None:
             fname = self.defaultFileName
         fname = os.path.expanduser(fname)
-        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuationPrompt'))
+        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuationprompt'))
         if isinstance(fname, file):
             self.stdin = fname
         else:           
@@ -816,7 +820,7 @@ class Cmd(cmd.Cmd):
                     keepstate.restore()
                     return
         self.use_rawinput = False
-        self.prompt = self.continuationPrompt = ''
+        self.prompt = self.continuationprompt = ''
         stop = self.cmdloop()
         self.stdin.close()
         keepstate.restore()
@@ -988,8 +992,8 @@ class Cmd2TestCase(unittest.TestCase):
                         line = self.transcript.next()
                     command = [line[len(self.cmdapp.prompt):]]
                     line = self.transcript.next()
-                    while line.startswith(self.cmdapp.continuationPrompt):
-                        command.append(line[len(self.cmdapp.continuationPrompt):])
+                    while line.startswith(self.cmdapp.continuationprompt):
+                        command.append(line[len(self.cmdapp.continuationprompt):])
                         line = self.transcript.next()
                     command = ''.join(command)
                     self.cmdapp.onecmd(command)
