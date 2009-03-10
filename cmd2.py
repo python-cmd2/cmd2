@@ -199,7 +199,6 @@ class SkipToLast(pyparsing.SkipTo):
             raise exc    
 
 def replace_with_file_contents(fname):
-    import pdb; pdb.set_trace()
     if fname:
         try:
             result = open(os.path.expanduser(fname[0])).read()
