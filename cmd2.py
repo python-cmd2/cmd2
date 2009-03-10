@@ -482,10 +482,12 @@ class Cmd(cmd.Cmd):
             p = raw
         else:
             s = self.inputParser.transformString(raw.lstrip())
+            '''
             for (shortcut, expansion) in self.shortcuts.items():
                 if s.lower().startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
+            '''
             result = self.parser.parseString(s)
             result['command'] = result.multilineCommand or result.command        
             result['raw'] = raw
@@ -512,6 +514,10 @@ class Cmd(cmd.Cmd):
         """
         if not line:
             return self.emptyline()
+        for (shortcut, expansion) in self.shortcuts.items():
+            if line.lower().lstrip().startswith(shortcut):
+                line = line.replace(shortcut, expansion + ' ', 1)
+                break        
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
             return 0    # command was empty except for comments
         try:
