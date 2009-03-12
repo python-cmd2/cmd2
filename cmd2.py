@@ -27,13 +27,21 @@ flagReader.py options are still supported for backward compatibility
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime
 from optparse import make_option
-__version__ = '0.4.7'
+__version__ = '0.4.8'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
         self.values._exit = True
         if msg:
             print msg
+            
+    def print_help(self, *args, **kwargs):
+        # now, I need to call help of the calling function.  Hmm.
+        try:
+            print self._func.__doc__
+        except AttributeError:
+            pass
+        optparse.OptionParser.print_help(self, *args, **kwargs)
 
     def error(self, msg):
         """error(msg : string)
@@ -59,6 +67,7 @@ def options(option_list):
         for opt in option_list:
             optionParser.add_option(opt)
         optionParser.set_usage("%s [options] arg" % func.__name__.strip('do_'))
+        optionParser._func = func
         def newFunc(instance, arg):
             try:
                 opts, newArgList = optionParser.parse_args(arg.split()) # doesn't understand quoted strings shouldn't be dissected!
@@ -246,13 +255,14 @@ class Cmd(cmd.Cmd):
         })
         
     def do_help(self, arg):
-        cmd.Cmd.do_help(self, arg)
         try:
             fn = getattr(self, 'do_' + arg)
             if fn and fn.optionParser:
                 fn.optionParser.print_help(file=self.stdout)
+                return
         except AttributeError:
             pass
+        cmd.Cmd.do_help(self, arg)
         
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
