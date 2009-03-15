@@ -9,6 +9,7 @@ Multi-line commands
 Case-insensitive commands
 Special-character shortcut commands (beyond cmd's "@" and "!")
 Settable environment parameters
+Optional _onchange_{paramname} called when environment parameter changes
 Parsing commands with `optparse` options (flags)
 Redirection to file with >, >>; input from file with <
 Easy transcript-based testing of applications (see example/example.py)
