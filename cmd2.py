@@ -699,6 +699,12 @@ class Cmd(cmd.Cmd):
                     val = cast(currentVal, val)
                 setattr(self, paramName, val)
                 self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
+                if currentVal != val:
+                    try:
+                        onchange_hook = getattr(self, '_onchange_%s' % paramName)
+                        onchange_hook(old=currentVal, new=val)
+                    except AttributeError:
+                        pass
             else:
                 self.do_show(paramName)
         except (ValueError, AttributeError, NotSettableError), e:
