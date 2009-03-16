@@ -81,13 +81,17 @@ def options(option_list):
                 return
             if hasattr(opts, '_exit'):
                 return None
-            terminator = arg.parsed.terminator
-            try:
-                if arg.parsed.terminator[0] == '\n':
-                    terminator = arg.parsed.terminator[0]
-            except IndexError:
-                pass
-            arg = arg.parser('%s %s%s%s' % (arg.parsed.command, newArgs, terminator, arg.parsed.suffix))
+            if hasattr(arg, 'parser'):
+                terminator = arg.parsed.terminator
+                try:
+                    if arg.parsed.terminator[0] == '\n':
+                        terminator = arg.parsed.terminator[0]
+                except IndexError:
+                    pass
+                arg = arg.parser('%s %s%s%s' % (arg.parsed.command, newArgs, 
+                                                terminator, arg.parsed.suffix))
+            else:
+                arg = newArgs
             result = func(instance, arg, opts)                            
             return result        
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
