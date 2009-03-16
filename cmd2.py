@@ -545,7 +545,11 @@ class Cmd(cmd.Cmd):
             print e
             return 0
 
-        (stop, statement) = self.postparsing_precmd(statement)
+        try:
+            (stop, statement) = self.postparsing_precmd(statement)
+        except Exception, e:
+            print str(e)
+            return 0
         if stop:
             return self.postparsing_postcmd(stop)
         
