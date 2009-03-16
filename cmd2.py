@@ -279,6 +279,7 @@ class Cmd(cmd.Cmd):
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
+    prefixParser = pyparsing.Empty()
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
@@ -474,10 +475,10 @@ class Cmd(cmd.Cmd):
         #self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
         self.parser = (
             stringEnd |
-            self.multilineParser |
-            self.singleLineParser |
-            self.blankLineTerminationParser | 
-            self.multilineCommand + pyparsing.SkipTo(stringEnd)
+            self.prefixParser + self.multilineParser |
+            self.prefixParser + self.singleLineParser |
+            self.prefixParser + self.blankLineTerminationParser | 
+            self.prefixParser + self.multilineCommand + pyparsing.SkipTo(stringEnd)
             )
         self.parser.ignore(pyparsing.quotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
         
@@ -513,6 +514,11 @@ class Cmd(cmd.Cmd):
             p.parsed[key] = val
         return p
               
+    def postparsing_precmd(self, statement):
+        stop = 0
+        return stop, statement
+    def postparsing_postcmd(self, stop):
+        return stop
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -539,11 +545,14 @@ class Cmd(cmd.Cmd):
             print e
             return 0
 
-        if not statement.parsed.command:
-            return 0
+        (stop, statement) = self.postparsing_precmd(statement)
+        if stop:
+            return self.postparsing_postcmd(stop)
         
+        if not statement.parsed.command:
+            return self.postparsing_postcmd(stop=0)
+                
         statekeeper = None
-        stop = 0
 
         if statement.parsed.pipeTo:
             redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
@@ -559,7 +568,7 @@ class Cmd(cmd.Cmd):
                     self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
                 except OSError, e:
                     print e
-                    return 0                    
+                    return self.postparsing_postcmd(stop=0) 
             else:
                 statekeeper = Statekeeper(self, ('stdout',))
                 self.stdout = tempfile.TemporaryFile()
@@ -571,7 +580,7 @@ class Cmd(cmd.Cmd):
             try:
                 func = getattr(self, 'do_' + statement.parsed.command)
             except AttributeError:
-                return self.default(statement)
+                return self.postparsing_postcmd(self.default(statement))
             timestart = datetime.datetime.now()
             stop = func(statement) 
             if self.timing:
@@ -595,7 +604,7 @@ class Cmd(cmd.Cmd):
                 self.stdout.close()
                 statekeeper.restore()
                                  
-            return stop        
+            return self.postparsing_postcmd(stop)        
         
     def pseudo_raw_input(self, prompt):
         """copied from cmd's cmdloop; like raw_input, but accounts for changed stdin, stdout"""
