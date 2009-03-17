@@ -694,7 +694,7 @@ class Cmd(cmd.Cmd):
     do_q = do_quit
     
     def do_show(self, arg):
-        'Shows value of a parameter'
+        '''Shows value of a parameter.'''
         if arg.strip():
             self.showParam(arg)
         else:
