@@ -273,6 +273,7 @@ class Cmd(cmd.Cmd):
         cmd.Cmd.__init__(self, *args, **kwargs)
         self.history = History()
         self._init_parser()
+        self.pyenvironment = {}
         
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
@@ -736,6 +737,23 @@ class Cmd(cmd.Cmd):
         'execute a command as if at the OS prompt.'
         os.system(arg)
         
+    def do_py(self, arg):  
+        '''Executes a python command'''
+        if arg.strip():
+            try:
+                exec(arg, self.pyenvironment)
+            except Exception, e:
+                print e        
+        else:
+            print 'Now accepting python commands; end with `\\py`'
+            buffer = [self.pseudo_raw_input('>>> ')]
+            while not buffer[-1].strip().startswith('\\py'):
+                try:
+                    exec('\n'.join(buffer), self.pyenvironment)
+                    buffer = [self.pseudo_raw_input('>>> ')]
+                except SyntaxError:
+                    buffer.append(self.pseudo_raw_input('... '))
+
     def do_history(self, arg):
         """history [arg]: lists past commands issued
         
