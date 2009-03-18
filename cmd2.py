@@ -742,7 +742,10 @@ class Cmd(cmd.Cmd):
         os.system(arg)
         
     def do_py(self, arg):  
-        '''Executes a python command'''
+        '''
+        py <command>: Executes a Python command.
+        py: Enters interactive Python mode (end with `\py`).
+        '''
         if arg.strip():
             try:
                 result = eval(arg, self.pystate)
@@ -758,11 +761,11 @@ class Cmd(cmd.Cmd):
             while not buffer[-1].strip().startswith('\\py'):
                 try:
                     buf = '\n'.join(buffer)
-                    result = eval(buf, self.pystate)
-                    if result is None:
+                    try:
+                        result = eval(buf, self.pystate)
+                        print repr(result)
+                    except SyntaxError:
                         exec(buf, self.pystate)
-                    else:
-                        print result
                     buffer = [self.pseudo_raw_input('>>> ')]
                 except SyntaxError:
                     buffer.append(self.pseudo_raw_input('... '))
