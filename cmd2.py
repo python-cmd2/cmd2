@@ -273,7 +273,7 @@ class Cmd(cmd.Cmd):
         cmd.Cmd.__init__(self, *args, **kwargs)
         self.history = History()
         self._init_parser()
-        self.pyenvironment = {}
+        self.pystate = {}
         
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
@@ -494,10 +494,14 @@ class Cmd(cmd.Cmd):
                            pyparsing.Optional(fileName) + (pyparsing.stringEnd | '|')
         self.inputParser.ignore(pyparsing.quotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
+    def preparse(self, raw, **kwargs):
+        return raw
+    
     def parsed(self, raw, **kwargs):
         if isinstance(raw, ParsedString):
             p = raw
         else:
+            raw = self.preparse(raw, **kwargs)
             s = self.inputParser.transformString(raw.lstrip())
             for (shortcut, expansion) in self.shortcuts.items():
                 if s.lower().startswith(shortcut):
@@ -741,7 +745,11 @@ class Cmd(cmd.Cmd):
         '''Executes a python command'''
         if arg.strip():
             try:
-                exec(arg, self.pyenvironment)
+                result = eval(arg, self.pystate)
+                if result is None:
+                    exec(arg, self.pystate)
+                else:
+                    print result
             except Exception, e:
                 print e        
         else:
@@ -749,10 +757,18 @@ class Cmd(cmd.Cmd):
             buffer = [self.pseudo_raw_input('>>> ')]
             while not buffer[-1].strip().startswith('\\py'):
                 try:
-                    exec('\n'.join(buffer), self.pyenvironment)
+                    buf = '\n'.join(buffer)
+                    result = eval(buf, self.pystate)
+                    if result is None:
+                        exec(buf, self.pystate)
+                    else:
+                        print result
                     buffer = [self.pseudo_raw_input('>>> ')]
                 except SyntaxError:
                     buffer.append(self.pseudo_raw_input('... '))
+                except Exception, e:
+                    print e
+                    buffer = [self.pseudo_raw_input('>>> ')]
 
     def do_history(self, arg):
         """history [arg]: lists past commands issued
