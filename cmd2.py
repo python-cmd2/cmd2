@@ -875,7 +875,7 @@ class Cmd(cmd.Cmd):
             
     urlre = re.compile('(https?://[-\\w\\./]+)')
     def do_load(self, fname=None):           
-        """Runs command(s) from a file."""
+        """Runs script of command(s) from a file or URL."""
         if fname is None:
             fname = self.default_file_name
         #keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuation_prompt'))
@@ -895,7 +895,7 @@ class Cmd(cmd.Cmd):
                         target = open('%s.%s' % (os.path.expanduser(fname), 
                                                  self.defaultExtension), 'r')
         except IOError, e:
-            print 'Problem opening file %s: \n%s' % (fname, e)
+            print 'Problem accessing script from %s: \n%s' % (fname, e)
             keepstate.restore()
             return
         self.stdin = target    
