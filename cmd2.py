@@ -26,7 +26,7 @@ As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime
+import unittest, string, datetime, urllib
 from optparse import make_option
 __version__ = '0.4.8'
 
@@ -873,24 +873,32 @@ class Cmd(cmd.Cmd):
         except Exception, e:
             print 'Error saving %s: %s' % (fname, str(e))
             
-    def do_load(self, fname=None):
+    urlre = re.compile('(https?://[-\\w\\./]+)')
+    def do_load(self, fname=None):           
         """Runs command(s) from a file."""
         if fname is None:
             fname = self.default_file_name
-        fname = os.path.expanduser(fname)
-        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuation_prompt'))
-        if isinstance(fname, file):
-            self.stdin = fname
-        else:           
-            try:
-                self.stdin = open(os.path.expanduser(fname), 'r')
-            except IOError, e:
-                try:
-                    self.stdin = open('%s.%s' % (os.path.expanduser(fname), self.defaultExtension), 'r')
-                except IOError:
-                    print 'Problem opening file %s: \n%s' % (fname, e)
-                    keepstate.restore()
-                    return
+        #keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuation_prompt'))
+        keepstate = Statekeeper(self, ('stdin','use_rawinput','continuation_prompt'))
+        try:
+            if isinstance(fname, file):
+                target = open(fname, 'r')
+            else:
+                match = self.urlre.match(fname)
+                if match:
+                    target = urllib.urlopen(match.group(1))
+                else:
+                    fname = os.path.expanduser(fname)
+                    try:
+                        target = open(os.path.expanduser(fname), 'r')
+                    except IOError, e:                    
+                        target = open('%s.%s' % (os.path.expanduser(fname), 
+                                                 self.defaultExtension), 'r')
+        except IOError, e:
+            print 'Problem opening file %s: \n%s' % (fname, e)
+            keepstate.restore()
+            return
+        self.stdin = target    
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
         stop = self.cmdloop()
