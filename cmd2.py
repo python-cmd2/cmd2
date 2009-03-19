@@ -744,21 +744,23 @@ class Cmd(cmd.Cmd):
     def do_py(self, arg):  
         '''
         py <command>: Executes a Python command.
-        py: Enters interactive Python mode (end with `\py`).
+        py: Enters interactive Python mode (end with `end py`).
         '''
         if arg.strip():
             try:
                 result = eval(arg, self.pystate)
-                if result is None:
+                print repr(result)
+            except SyntaxError:
+                try:
                     exec(arg, self.pystate)
-                else:
-                    print result
+                except Exception:
+                    raise
             except Exception, e:
                 print e        
         else:
-            print 'Now accepting python commands; end with `\\py`'
+            print 'Now accepting python commands; end with `end py`'
             buffer = [self.pseudo_raw_input('>>> ')]
-            while not buffer[-1].strip().startswith('\\py'):
+            while buffer[-1].lower().split()[:2] != ['end','py']:
                 try:
                     buf = '\n'.join(buffer)
                     try:
