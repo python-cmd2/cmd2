@@ -283,7 +283,9 @@ class Cmd(cmd.Cmd):
     prefixParser = pyparsing.Empty()
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
-    commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
+    commentInProgress  = ((pyparsing.White() | pyparsing.lineStart) + 
+                          pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd))
+                          # `blah/*` means `everything in directory `blah`, not comment
     terminators = [';']
     blankLinesAllowed = False
     multilineCommands = []
