@@ -1,0 +1,17 @@
+(Cmd) say put this in a file > myfile.txt
+(Cmd) say < myfile.txt
+put this in a file
+(Cmd) # comments do nothing
+(Cmd) /* C-style comments */ say are invisible
+are invisible
+(Cmd) orate and they do not /* interfere;
+> with multiline */ commands;
+and they do not  commands
+(Cmd) speak the /* hidden comment */ text
+the  text
+(Cmd) speak the "unhidden quote" text
+the "unhidden quote" text
+(Cmd) # Quoted strings immediately following the command are NOT included in the arguments - 
+(Cmd) # this is due to a bug in pyparsing.  See:
+(Cmd) # https://sourceforge.net/tracker/index.php?func=detail&aid=2412233&group_id=97203&atid=617311
+(Cmd) # Test suite can't test changing prompts.
