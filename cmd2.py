@@ -752,39 +752,38 @@ class Cmd(cmd.Cmd):
         'execute a command as if at the OS prompt.'
         os.system(arg)
         
-    def do_py(self, arg):  
+    def _attempt_py_command(self, arg):
+        try:
+            result = eval(arg, self.pystate)
+            print repr(result)
+        except SyntaxError:
+            exec(arg, self.pystate)       
+        return
+        
+    def do_py(self, arg, escape = 'cmd'):  
         '''
         py <command>: Executes a Python command.
         py: Enters interactive Python mode (end with `end py`).
         '''
         if arg.strip():
-            try:
-                result = eval(arg, self.pystate)
-                print repr(result)
-            except SyntaxError:
-                try:
-                    exec(arg, self.pystate)
-                except Exception:
-                    raise
-            except Exception, e:
-                print e        
+            self._attempt_py_command(arg)
         else:
             print 'Now accepting python commands; end with `end py`'
             buffer = [self.pseudo_raw_input('>>> ')]
             while buffer[-1].lower().split()[:2] != ['end','py']:
-                try:
-                    buf = '\n'.join(buffer)
+                if buffer[-1].lower().split()[:1] == [escape]:
+                    self.onecmd(' '.join(buffer[-1].split()[1:]))
+                    buffer = [self.pseudo_raw_input('>>> ')]
+                    continue
+                else:
                     try:
-                        result = eval(buf, self.pystate)
-                        print repr(result)
+                        self._attempt_py_command('\n'.join(buffer))
+                        buffer = [self.pseudo_raw_input('>>> ')]
                     except SyntaxError:
-                        exec(buf, self.pystate)
-                    buffer = [self.pseudo_raw_input('>>> ')]
-                except SyntaxError:
-                    buffer.append(self.pseudo_raw_input('... '))
-                except Exception, e:
-                    print e
-                    buffer = [self.pseudo_raw_input('>>> ')]
+                        buffer.append(self.pseudo_raw_input('... '))
+                    except Exception, e:
+                        print e
+                        buffer = [self.pseudo_raw_input('>>> ')]
 
     def do_history(self, arg):
         """history [arg]: lists past commands issued
