@@ -26,7 +26,7 @@ As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime, urllib
+import unittest, string, datetime, urllib, inspect
 from optparse import make_option
 __version__ = '0.4.8'
 
@@ -233,8 +233,9 @@ class Cmd(cmd.Cmd):
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
     default_file_name = 'command.txt'
-    settable = ['prompt', 'continuation_prompt', 'default_file_name', 'editor', 'case_insensitive', 
-                'echo', 'timing']
+    abbrev = True
+    settable = ['prompt', 'continuation_prompt', 'default_file_name', 'editor',
+                'case_insensitive', 'echo', 'timing', 'abbrev']
     settable.sort()
     
     editor = os.environ.get('EDITOR')
@@ -588,10 +589,18 @@ class Cmd(cmd.Cmd):
         try:
             # "heart" of the command, replace's cmd's onecmd()
             self.lastcmd = statement.parsed.expanded
-            try:
-                func = getattr(self, 'do_' + statement.parsed.command)
-            except AttributeError:
-                return self.postparsing_postcmd(self.default(statement))
+            if self.abbrev:   # accept shortened versions of commands
+                funcs = [func for (fname, func) in inspect.getmembers(self, inspect.ismethod) 
+                         if fname.startswith('do_' + statement.parsed.command)]
+                if len(funcs) == 1:
+                    func = funcs[0]
+                else:
+                    return self.postparsing_postcmd(self.default(statement))                
+            else:
+                try:
+                    func = getattr(self, 'do_' + statement.parsed.command)
+                except AttributeError:
+                    return self.postparsing_postcmd(self.default(statement))                
             timestart = datetime.datetime.now()
             stop = func(statement) 
             if self.timing:
