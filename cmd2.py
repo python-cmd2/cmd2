@@ -594,8 +594,7 @@ class Cmd(cmd.Cmd):
             except AttributeError:
                 func = None
                 if self.abbrev:   # accept shortened versions of commands
-                    funcs = [func for (fname, func) in inspect.getmembers(
-                                                       self, inspect.ismethod) 
+                    funcs = [f for (fname, function) in inspect.getmembers(self, inspect.ismethod) 
                              if fname.startswith('do_' + statement.parsed.command)]
                     if len(funcs) == 1:
                         func = funcs[0]
