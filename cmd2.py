@@ -588,18 +588,18 @@ class Cmd(cmd.Cmd):
                     self.stdout.write(getPasteBuffer())
         try:
             # "heart" of the command, replace's cmd's onecmd()
-            self.lastcmd = statement.parsed.expanded
-            if self.abbrev:   # accept shortened versions of commands
-                funcs = [func for (fname, func) in inspect.getmembers(self, inspect.ismethod) 
-                         if fname.startswith('do_' + statement.parsed.command)]
-                if len(funcs) == 1:
-                    func = funcs[0]
-                else:
-                    return self.postparsing_postcmd(self.default(statement))                
-            else:
-                try:
-                    func = getattr(self, 'do_' + statement.parsed.command)
-                except AttributeError:
+            self.lastcmd = statement.parsed.expanded   
+            try:
+                func = getattr(self, 'do_' + statement.parsed.command)
+            except AttributeError:
+                func = None
+                if self.abbrev:   # accept shortened versions of commands
+                    funcs = [func for (fname, func) in inspect.getmembers(
+                                                       self, inspect.ismethod) 
+                             if fname.startswith('do_' + statement.parsed.command)]
+                    if len(funcs) == 1:
+                        func = funcs[0]
+                if not func:
                     return self.postparsing_postcmd(self.default(statement))                
             timestart = datetime.datetime.now()
             stop = func(statement) 
