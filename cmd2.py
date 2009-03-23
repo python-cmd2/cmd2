@@ -880,8 +880,7 @@ class Cmd(cmd.Cmd):
         """Runs script of command(s) from a file or URL."""
         if fname is None:
             fname = self.default_file_name
-        #keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuation_prompt'))
-        keepstate = Statekeeper(self, ('stdin','use_rawinput','continuation_prompt'))
+        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuation_prompt'))
         try:
             if isinstance(fname, file):
                 target = open(fname, 'r')
