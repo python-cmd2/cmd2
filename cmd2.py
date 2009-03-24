@@ -29,7 +29,7 @@ import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime, urllib, inspect
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
-__version__ = '0.4.8'
+__version__ = '0.5.0'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
