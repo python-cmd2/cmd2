@@ -807,7 +807,9 @@ class Cmd(cmd.Cmd):
             self.pystate['exit'] = quit
             self.pystate[self.nonpythoncommand] = onecmd
             try:
-                interp.interact()
+                cprt = 'Type "help", "copyright", "credits" or "license" for more information.'        
+                interp.interact(banner= "Python %s on %s\n%s\n(%s)\n%s" %
+                       (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
             except EmbeddedConsoleExit:
                 return
             
