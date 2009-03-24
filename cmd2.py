@@ -792,8 +792,7 @@ class Cmd(cmd.Cmd):
     def do_py(self, arg):  
         '''
         py <command>: Executes a Python command.
-        py: Enters interactive Python mode; end with `Ctrl-D`.
-            Do not end with Ctrl-Z, or it will end your entire cmd2 session!
+        py: Enters interactive Python mode; end with `Ctrl-D`, `quit()`, or 'exit`.
         Non-python commands can be issued with cmd('your non-python command here').
         '''
         if arg.strip():
@@ -803,9 +802,11 @@ class Cmd(cmd.Cmd):
             interp = MyInteractiveConsole(locals=self.pystate)
             def quit():
                 raise EmbeddedConsoleExit
+            def onecmd(arg):
+                return self.onecmd(arg + '\n')
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
-            self.pystate[self.nonpythoncommand] = self.onecmd
+            self.pystate[self.nonpythoncommand] = onecmd
             try:
                 interp.interact()
             except SystemExit:
