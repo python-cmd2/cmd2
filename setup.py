@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cmd2",
-    version="0.4.8",
+    version="0.5.0",
     py_modules=["cmd2",],
     
     # metadata for upload to PyPI
@@ -29,6 +29,8 @@ Drop-in replacement adds several features for command-prompt tools:
     * > (filename), >> (filename) redirect output to file
     * < (filename) gets input from file
     * bare >, >>, < redirect to/from paste buffer
+    * accepts abbreviated commands when unambiguous
+    * `py` enters interactive Python console
     * test apps against sample session transcript (see example/example.py)
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
