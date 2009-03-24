@@ -26,7 +26,7 @@ As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime, urllib, inspect
+import unittest, string, datetime, urllib, inspect, code
 from optparse import make_option
 __version__ = '0.4.8'
 
@@ -220,8 +220,8 @@ def replace_with_file_contents(fname):
             result = '< %s' % fname[0]  # wasn't a file after all
     else:
         result = getPasteBuffer()
-    return result
-        
+    return result      
+
 class Cmd(cmd.Cmd):
     echo = False
     case_insensitive = True
@@ -234,6 +234,7 @@ class Cmd(cmd.Cmd):
     defaultExtension = 'txt'
     default_file_name = 'command.txt'
     abbrev = True
+    nonpythoncommand = 'cmd'
     settable = ['prompt', 'continuation_prompt', 'default_file_name', 'editor',
                 'case_insensitive', 'echo', 'timing', 'abbrev']
     settable.sort()
@@ -759,31 +760,25 @@ class Cmd(cmd.Cmd):
             exec(arg, self.pystate)       
         return
         
-    def do_py(self, arg, escape = 'cmd'):  
+    def do_py(self, arg):  
         '''
         py <command>: Executes a Python command.
-        py: Enters interactive Python mode (end with `end py`).
+        py: Enters interactive Python mode; end with `Ctrl-D`, `quit()`, or `exit()`.
+            Do not end with Ctrl-Z, or it will end your entire cmd2 session!
+        Non-python commands can be issued with cmd('your non-python command here').
         '''
         if arg.strip():
-            self._attempt_py_command(arg)
+            interp = code.InteractiveInterpreter(locals=self.pystate)
+            interp.runcode(arg)
         else:
-            print 'Now accepting python commands; end with `end py`'
-            buffer = [self.pseudo_raw_input('>>> ')]
-            while buffer[-1].lower().split()[:2] != ['end','py']:
-                if buffer[-1].lower().split()[:1] == [escape]:
-                    self.onecmd(' '.join(buffer[-1].split()[1:]))
-                    buffer = [self.pseudo_raw_input('>>> ')]
-                    continue
-                else:
-                    try:
-                        self._attempt_py_command('\n'.join(buffer))
-                        buffer = [self.pseudo_raw_input('>>> ')]
-                    except SyntaxError:
-                        buffer.append(self.pseudo_raw_input('... '))
-                    except Exception, e:
-                        print e
-                        buffer = [self.pseudo_raw_input('>>> ')]
-
+            interp = code.InteractiveConsole(locals=self.pystate)
+            def quit():
+                interp.push(chr(4))
+            self.pystate['quit'] = quit
+            self.pystate['exit'] = quit
+            self.pystate[self.nonpythoncommand] = self.onecmd
+            interp.interact()
+            
     def do_history(self, arg):
         """history [arg]: lists past commands issued
         
