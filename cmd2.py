@@ -791,7 +791,8 @@ class Cmd(cmd.Cmd):
     def do_py(self, arg):  
         '''
         py <command>: Executes a Python command.
-        py: Enters interactive Python mode; `Ctrl-D`, `quit()`, 'exit()` ends.
+        py: Enters interactive Python mode.
+        End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, 'exit()`.
         Non-python commands can be issued with `cmd("your command")`.
         '''
         if arg.strip():
