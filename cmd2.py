@@ -283,8 +283,7 @@ class Cmd(cmd.Cmd):
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
         Commands may be terminated with: %(terminators)s
-        Settable parameters: %(settable)s
-        """ % 
+        Settable parameters: %(settable)s\n""" % \
         { 'casesensitive': (self.case_insensitive and 'not ') or '',
           'terminators': str(self.terminators),
           'settable': ' '.join(self.settable)
@@ -624,10 +623,10 @@ class Cmd(cmd.Cmd):
             except AttributeError:
                 func = None
                 if self.abbrev:   # accept shortened versions of commands
-                    funcs = [f for (fname, function) in inspect.getmembers(self, inspect.ismethod) 
+                    funcs = [(fname, function) for (fname, function) in inspect.getmembers(self, inspect.ismethod) 
                              if fname.startswith('do_' + statement.parsed.command)]
                     if len(funcs) == 1:
-                        func = funcs[0]
+                        func = funcs[0][1]
                 if not func:
                     return self.postparsing_postcmd(self.default(statement))                
             timestart = datetime.datetime.now()
@@ -809,8 +808,6 @@ class Cmd(cmd.Cmd):
             self.pystate[self.nonpythoncommand] = onecmd
             try:
                 interp.interact()
-            except SystemExit:
-                quit()
             except EmbeddedConsoleExit:
                 return
             
