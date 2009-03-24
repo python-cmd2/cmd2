@@ -26,7 +26,8 @@ As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime, urllib, inspect, code
+import unittest, string, datetime, urllib, inspect
+from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 __version__ = '0.4.8'
 
@@ -225,7 +226,7 @@ def replace_with_file_contents(fname):
 class EmbeddedConsoleExit(Exception):
     pass
 
-class InteractiveConsole(code.InteractiveConsole):
+class MyInteractiveConsole(InteractiveConsole):
     def runcode(self, code):
         """Execute a code object.
 
@@ -247,7 +248,7 @@ class InteractiveConsole(code.InteractiveConsole):
         except:
             self.showtraceback()
         else:
-            if code.softspace(sys.stdout, 0):
+            if softspace(sys.stdout, 0):
                 print
 
 class Cmd(cmd.Cmd):
@@ -796,17 +797,20 @@ class Cmd(cmd.Cmd):
         Non-python commands can be issued with cmd('your non-python command here').
         '''
         if arg.strip():
-            interp = code.InteractiveInterpreter(locals=self.pystate)
+            interp = InteractiveInterpreter(locals=self.pystate)
             interp.runcode(arg)
         else:
-            interp = InteractiveConsole(locals=self.pystate)
+            interp = MyInteractiveConsole(locals=self.pystate)
             def quit():
                 raise EmbeddedConsoleExit
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
+            self.pystate[self.nonpythoncommand] = self.onecmd
             try:
                 interp.interact()
-            except (EmbeddedConsoleExit, SystemExit):
+            except SystemExit:
+                quit()
+            except EmbeddedConsoleExit:
                 return
             
     def do_history(self, arg):
