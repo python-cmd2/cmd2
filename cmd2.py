@@ -222,6 +222,34 @@ def replace_with_file_contents(fname):
         result = getPasteBuffer()
     return result      
 
+class EmbeddedConsoleExit(Exception):
+    pass
+
+class InteractiveConsole(code.InteractiveConsole):
+    def runcode(self, code):
+        """Execute a code object.
+
+        When an exception occurs, self.showtraceback() is called to
+        display a traceback.  All exceptions are caught except
+        SystemExit, which is reraised.
+
+        A note about KeyboardInterrupt: this exception may occur
+        elsewhere in this code, and may not always be caught.  The
+        caller should be prepared to deal with it.
+        
+        Copied directly from code.InteractiveInterpreter, except for
+        EmbeddedConsoleExit exceptions.
+        """
+        try:
+            exec code in self.locals
+        except (SystemExit, EmbeddedConsoleExit):
+            raise
+        except:
+            self.showtraceback()
+        else:
+            if code.softspace(sys.stdout, 0):
+                print
+
 class Cmd(cmd.Cmd):
     echo = False
     case_insensitive = True
@@ -763,7 +791,7 @@ class Cmd(cmd.Cmd):
     def do_py(self, arg):  
         '''
         py <command>: Executes a Python command.
-        py: Enters interactive Python mode; end with `Ctrl-D`, `quit()`, or `exit()`.
+        py: Enters interactive Python mode; end with `Ctrl-D`.
             Do not end with Ctrl-Z, or it will end your entire cmd2 session!
         Non-python commands can be issued with cmd('your non-python command here').
         '''
@@ -771,13 +799,15 @@ class Cmd(cmd.Cmd):
             interp = code.InteractiveInterpreter(locals=self.pystate)
             interp.runcode(arg)
         else:
-            interp = code.InteractiveConsole(locals=self.pystate)
+            interp = InteractiveConsole(locals=self.pystate)
             def quit():
-                interp.push(chr(4))
+                raise EmbeddedConsoleExit
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
-            self.pystate[self.nonpythoncommand] = self.onecmd
-            interp.interact()
+            try:
+                interp.interact()
+            except (EmbeddedConsoleExit, SystemExit):
+                return
             
     def do_history(self, arg):
         """history [arg]: lists past commands issued
