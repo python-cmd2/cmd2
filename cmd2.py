@@ -257,13 +257,14 @@ class Cmd(cmd.Cmd):
     continuation_prompt = '> '  
     timing = False
     legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  # make sure your terminators are not in here!
-    shortcuts = {'?': 'help', '!': 'shell', '@': 'load' }
+    shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'
     default_file_name = 'command.txt'
     abbrev = True
     nonpythoncommand = 'cmd'
+    current_script_dir = None
     settable = ['prompt', 'continuation_prompt', 'default_file_name', 'editor',
                 'case_insensitive', 'echo', 'timing', 'abbrev']
     settable.sort()
@@ -304,10 +305,11 @@ class Cmd(cmd.Cmd):
         self.history = History()
         self._init_parser()
         self.pystate = {}
+        self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
         
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
-        result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in self.shortcuts.items())
+        result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
 
     prefixParser = pyparsing.Empty()
@@ -535,7 +537,7 @@ class Cmd(cmd.Cmd):
         else:
             raw = self.preparse(raw, **kwargs)
             s = self.inputParser.transformString(raw.lstrip())
-            for (shortcut, expansion) in self.shortcuts.items():
+            for (shortcut, expansion) in self.shortcuts:
                 if s.lower().startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
@@ -809,8 +811,12 @@ class Cmd(cmd.Cmd):
             self.pystate[self.nonpythoncommand] = onecmd
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'        
+                keepstate = Statekeeper(sys, ('stdin','stdout'))
+                sys.stdout = self.stdout
+                sys.stdin = self.stdin
                 interp.interact(banner= "Python %s on %s\n%s\n(%s)\n%s" %
                        (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
+                keepstate.restore()
             except EmbeddedConsoleExit:
                 return
             
@@ -912,33 +918,52 @@ class Cmd(cmd.Cmd):
         except Exception, e:
             print 'Error saving %s: %s' % (fname, str(e))
             
-    urlre = re.compile('(https?://[-\\w\\./]+)')
-    def do_load(self, fname=None):           
-        """Runs script of command(s) from a file or URL."""
-        if fname is None:
-            fname = self.default_file_name
-        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt','continuation_prompt'))
-        try:
-            if isinstance(fname, file):
-                target = open(fname, 'r')
+    def read_file_or_url(self, fname):
+        if isinstance(fname, file):
+            target = open(fname, 'r')
+        else:
+            match = self.urlre.match(fname)
+            if match:
+                target = urllib.urlopen(match.group(1))
             else:
-                match = self.urlre.match(fname)
-                if match:
-                    target = urllib.urlopen(match.group(1))
-                else:
-                    fname = os.path.expanduser(fname)
-                    try:
-                        target = open(os.path.expanduser(fname), 'r')
-                    except IOError, e:                    
-                        target = open('%s.%s' % (os.path.expanduser(fname), 
-                                                 self.defaultExtension), 'r')
+                fname = os.path.expanduser(fname)
+                try:
+                    result = open(os.path.expanduser(fname), 'r')
+                except IOError, e:                    
+                    result = open('%s.%s' % (os.path.expanduser(fname), 
+                                             self.defaultExtension), 'r')
+        return result
+        
+    def do__relative_load(self, arg=None):
+        '''
+        Runs commands in script at file or URL; if this is called from within an
+        already-running script, the filename will be interpreted relative to the 
+        already-running script's directory.'''
+        if arg:
+            arg = arg.split(None, 1)
+            targetname, args = arg[0], (arg[1:] or [''])[0]
+            targetname = os.path.join(self.current_script_dir or '', targetname)
+            self.do__load('%s %s' % (targetname, args))
+    
+    urlre = re.compile('(https?://[-\\w\\./]+)')
+    def do_load(self, arg=None):           
+        """Runs script of command(s) from a file or URL."""
+        if arg is None:
+            targetname = self.default_file_name
+        else:
+            arg = arg.split(None, 1)
+            targetname, args = arg[0], (arg[1:] or [''])[0].strip()
+        try:
+            target = self.read_file_or_url(targetname)
         except IOError, e:
-            print 'Problem accessing script from %s: \n%s' % (fname, e)
-            keepstate.restore()
+            print 'Problem accessing script from %s: \n%s' % (targetname, e)
             return
+        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt',
+                                       'continuation_prompt','current_script_dir'))
         self.stdin = target    
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
+        self.current_script_dir = os.path.split(targetname)[0]
         stop = self.cmdloop()
         self.stdin.close()
         keepstate.restore()
