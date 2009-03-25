@@ -26,7 +26,7 @@ As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime, urllib, inspect
+import unittest, string, datetime, urllib, inspect, itertools
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 __version__ = '0.5.0'
@@ -265,8 +265,9 @@ class Cmd(cmd.Cmd):
     abbrev = True
     nonpythoncommand = 'cmd'
     current_script_dir = None
+    reserved_words = []
     settable = ['prompt', 'continuation_prompt', 'default_file_name', 'editor',
-                'case_insensitive', 'echo', 'timing', 'abbrev']
+                'case_insensitive', 'echo', 'timing', 'abbrev']   
     settable.sort()
     
     editor = os.environ.get('EDITOR')
@@ -306,6 +307,10 @@ class Cmd(cmd.Cmd):
         self._init_parser()
         self.pystate = {}
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
+        self.keywords = list(itertools.izip(self.reserved_words, itertools.repeat(None))) + \
+                        [(fname[3:], func) for (fname, func) in 
+                         inspect.getmembers(self, inspect.ismethod)
+                         if fname.startswith('do_')]
         
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
@@ -625,8 +630,8 @@ class Cmd(cmd.Cmd):
             except AttributeError:
                 func = None
                 if self.abbrev:   # accept shortened versions of commands
-                    funcs = [(fname, function) for (fname, function) in inspect.getmembers(self, inspect.ismethod) 
-                             if fname.startswith('do_' + statement.parsed.command)]
+                    funcs = [(fname, function) for (fname, function) in self.keywords
+                             if fname.startswith(statement.parsed.command)]
                     if len(funcs) == 1:
                         func = funcs[0][1]
                 if not func:
@@ -816,9 +821,9 @@ class Cmd(cmd.Cmd):
                 sys.stdin = self.stdin
                 interp.interact(banner= "Python %s on %s\n%s\n(%s)\n%s" %
                        (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
-                keepstate.restore()
             except EmbeddedConsoleExit:
-                return
+                pass
+            keepstate.restore()
             
     def do_history(self, arg):
         """history [arg]: lists past commands issued
