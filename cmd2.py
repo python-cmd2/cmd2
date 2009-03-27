@@ -588,7 +588,8 @@ class Cmd(cmd.Cmd):
         except Exception, e:
             print e
             return 0
-
+        if statement.parsed.command not in self.excludeFromHistory:
+            self.history.append(statement.parsed.raw)
         try:
             (stop, statement) = self.postparsing_precmd(statement)
         except Exception, e:
@@ -642,9 +643,6 @@ class Cmd(cmd.Cmd):
                 print 'Elapsed: %s' % str(datetime.datetime.now() - timestart)
         except Exception, e:
             print e
-        try:
-            if statement.parsed.command not in self.excludeFromHistory:
-                self.history.append(statement.parsed.raw)
         finally:
             if statekeeper:
                 if statement.parsed.output and not statement.parsed.outputTo:
