@@ -29,7 +29,7 @@ import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime, urllib
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
-__version__ = '0.5.0'
+__version__ = '0.5.1'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -506,9 +506,9 @@ class Cmd(cmd.Cmd):
                                 pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
-        #self.multilineParser = self.multilineParser.setResultsName('multilineParser')
-        #self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
-        #self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
+        self.multilineParser = self.multilineParser.setResultsName('multilineParser')
+        self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
+        self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
         self.parser = (
             stringEnd |
             self.prefixParser + self.multilineParser |
