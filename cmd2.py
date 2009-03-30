@@ -502,12 +502,12 @@ class Cmd(cmd.Cmd):
             self.blankLineTerminationParser = ((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(self.blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + self.blankLineTerminator)('statement')
         self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + SkipToLast(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
                                 pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
+        self.multilineParser.ignore(self.commentInProgress)
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
-        self.multilineParser = self.multilineParser.setResultsName('multilineParser')
-        self.multilineParser.ignore(self.commentInProgress)
-        self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
-        self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
+        #self.multilineParser = self.multilineParser.setResultsName('multilineParser')
+        #self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
+        #self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
         self.parser = (
             stringEnd |
             self.prefixParser + self.multilineParser |
