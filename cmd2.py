@@ -635,9 +635,13 @@ class Cmd(cmd.Cmd):
             self.lastcmd = statement.parsed.expanded   
             funcname = self.func_named(statement.parsed.command)
             if not funcname:
-                return self.postparsing_postcmd(self.default(statement))                
+                return self.postparsing_postcmd(self.default(statement))  
+            try:
+                func = getattr(self, funcname)
+            except AttributeError:
+                return self.postparsing_postcmd(self.default(statement))                  
             timestart = datetime.datetime.now()
-            stop = getattr(self, funcname)(statement) 
+            stop = func(statement) 
             if self.timing:
                 print 'Elapsed: %s' % str(datetime.datetime.now() - timestart)
         except Exception, e:
