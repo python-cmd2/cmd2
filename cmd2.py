@@ -316,9 +316,7 @@ class Cmd(cmd.Cmd):
     prefixParser = pyparsing.Empty()
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
-    commentInProgress  = ((pyparsing.White() | pyparsing.lineStart) + 
-                          pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd))
-                          # `blah/*` means `everything in directory `blah`, not comment
+    commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
     terminators = [';']
     blankLinesAllowed = False
     multilineCommands = []
@@ -507,6 +505,7 @@ class Cmd(cmd.Cmd):
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
         self.multilineParser = self.multilineParser.setResultsName('multilineParser')
+        self.multilineParser.ignore(self.commentInProgress)
         self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
         self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
         self.parser = (
@@ -516,7 +515,7 @@ class Cmd(cmd.Cmd):
             self.prefixParser + self.blankLineTerminationParser | 
             self.prefixParser + self.multilineCommand + pyparsing.SkipTo(stringEnd)
             )
-        self.parser.ignore(pyparsing.quotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)
+        self.parser.ignore(pyparsing.quotedString).ignore(self.commentGrammars)
         
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
