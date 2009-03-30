@@ -26,7 +26,7 @@ As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime, urllib, inspect, itertools
+import unittest, string, datetime, urllib
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 __version__ = '0.5.0'
@@ -292,14 +292,13 @@ class Cmd(cmd.Cmd):
         })
         
     def do_help(self, arg):
-        try:
-            fn = getattr(self, 'do_' + arg)
-            if fn and fn.optionParser:
+        funcname = self.func_named(arg)
+        if funcname:
+            fn = getattr(self, funcname)
+            try:
                 fn.optionParser.print_help(file=self.stdout)
-                return
-        except AttributeError:
-            pass
-        cmd.Cmd.do_help(self, arg)
+            except AttributeError:
+                cmd.Cmd.do_help(self, funcname[3:])
         
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
@@ -307,11 +306,8 @@ class Cmd(cmd.Cmd):
         self._init_parser()
         self.pystate = {}
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
-        self.keywords = list(itertools.izip(self.reserved_words, itertools.repeat(None))) + \
-                        [(fname[3:], func) for (fname, func) in 
-                         inspect.getmembers(self, inspect.ismethod)
-                         if fname.startswith('do_')]
-        
+        self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) 
+                                               if fname.startswith('do_')]        
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
@@ -561,8 +557,20 @@ class Cmd(cmd.Cmd):
     def postparsing_precmd(self, statement):
         stop = 0
         return stop, statement
+
     def postparsing_postcmd(self, stop):
         return stop
+    def func_named(self, arg):
+        result = None
+        target = 'do_' + arg
+        if target in dir(self):
+            result = target
+        else:
+            if self.abbrev:   # accept shortened versions of commands
+                funcs = [fname for fname in self.keywords if fname.startswith(arg)]
+                if len(funcs) == 1:
+                    result = 'do_' + funcs[0]
+        return result
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -626,19 +634,11 @@ class Cmd(cmd.Cmd):
         try:
             # "heart" of the command, replace's cmd's onecmd()
             self.lastcmd = statement.parsed.expanded   
-            try:
-                func = getattr(self, 'do_' + statement.parsed.command)
-            except AttributeError:
-                func = None
-                if self.abbrev:   # accept shortened versions of commands
-                    funcs = [(fname, function) for (fname, function) in self.keywords
-                             if fname.startswith(statement.parsed.command)]
-                    if len(funcs) == 1:
-                        func = funcs[0][1]
-                if not func:
-                    return self.postparsing_postcmd(self.default(statement))                
+            funcname = self.func_named(statement.parsed.command)
+            if not funcname:
+                return self.postparsing_postcmd(self.default(statement))                
             timestart = datetime.datetime.now()
-            stop = func(statement) 
+            stop = getattr(self, funcname)(statement) 
             if self.timing:
                 print 'Elapsed: %s' % str(datetime.datetime.now() - timestart)
         except Exception, e:
