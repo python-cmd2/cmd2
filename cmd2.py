@@ -26,7 +26,7 @@ As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
 flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime, urllib
+import unittest, string, datetime, urllib, glob
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 __version__ = '0.5.1'
@@ -1113,16 +1113,26 @@ class Cmd2TestCase(unittest.TestCase):
        See example.py'''
     CmdApp = None
     transcriptFileName = ''
+    transcriptExtension = ''
+    def fetchTranscripts(self):
+        self.transcripts = {}
+        if self.transcriptExtension:
+            for fname in glob.glob('*.' + self.transcriptExtension):
+                tfile = open(fname)
+                self.transcripts[fname] = iter(tfile.readlines())
+                tfile.close()
+        elif self.transcriptFileName:
+            tfile = open(os.path.expanduser(self.transcriptFileName))
+            self.transcripts = {'transcript': iter(tfile.readlines())}
+            tfile.close()
+        else:
+            raise AttributeError, 'Cmd2TestCase must define transcriptFileName or transcriptExtension'
+            
     def setUp(self):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
             self.cmdapp = self.CmdApp()
-            try:
-                tfile = open(os.path.expanduser(self.transcriptFileName))
-                self.transcript = iter(tfile.readlines())
-                tfile.close()
-            except IOError:
-                self.transcript = []
+            self.fetchTranscripts()
     def assertEqualEnough(self, got, expected, message):
         got = got.strip().splitlines()
         expected = expected.strip().splitlines()
@@ -1133,37 +1143,48 @@ class Cmd2TestCase(unittest.TestCase):
             self.assert_(re.match(matchme, linegot.strip()), message)
     def testall(self):
         if self.CmdApp:
-            lineNum = 0
-            try:
-                line = self.transcript.next()
-                while True:
-                    while not line.startswith(self.cmdapp.prompt):
-                        line = self.transcript.next()
-                    command = [line[len(self.cmdapp.prompt):]]
-                    line = self.transcript.next()
-                    while line.startswith(self.cmdapp.continuation_prompt):
-                        command.append(line[len(self.cmdapp.continuation_prompt):])
-                        line = self.transcript.next()
-                    command = ''.join(command)
-                    self.cmdapp.onecmd(command)
-                    result = self.outputTrap.read()
-                    if line.startswith(self.cmdapp.prompt):
-                        self.assertEqualEnough(result.strip(), '', 
-                            '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing) \nGot:\n%s\n' % 
-                            (self.transcriptFileName, lineNum, command, result))    
-                        continue
-                    expected = []
-                    while not line.startswith(self.cmdapp.prompt):
-                        expected.append(line)
-                        line = self.transcript.next()
-                    expected = ''.join(expected)
-                    self.assertEqualEnough(expected.strip(), result.strip(), 
-                        '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
-                        (self.transcriptFileName, lineNum, command, expected, result))    
-                    # this needs to account for a line-by-line strip()ping
-            except StopIteration:
-                pass
-                # catch the final output?
+            setup = 'setup.' + self.transcriptExtension
+            teardown = 'teardown.' + self.transcriptExtension
+            transcripts = self.transcripts.copy()
+            transcriptfiles = []
+            if setup in transcripts:
+                transcriptfiles.append((setup, transcripts.pop(setup)))
+            transcriptfiles.extend(sorted((fname, transcripts[fname]) for fname in transcripts if fname != teardown))
+            if teardown in transcripts:
+                transcriptfiles.append((teardown, transcripts[teardown]))
+            for transcript in transcriptfiles:
+                self.testone(transcript)        
+    def testone(self, transcript):
+        lineNum = 0
+        try:
+            line = transcript.next()
+            while True:
+                while not line.startswith(self.cmdapp.prompt):
+                    line = transcript.next()
+                command = [line[len(self.cmdapp.prompt):]]
+                line = transcript.next()
+                while line.startswith(self.cmdapp.continuation_prompt):
+                    command.append(line[len(self.cmdapp.continuation_prompt):])
+                    line = transcript.next()
+                command = ''.join(command)
+                self.cmdapp.onecmd(command)
+                result = self.outputTrap.read()
+                if line.startswith(self.cmdapp.prompt):
+                    self.assertEqualEnough(result.strip(), '', 
+                        '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing) \nGot:\n%s\n' % 
+                        (self.transcriptFileName, lineNum, command, result))    
+                    continue
+                expected = []
+                while not line.startswith(self.cmdapp.prompt):
+                    expected.append(line)
+                    line = transcript.next()
+                expected = ''.join(expected)
+                self.assertEqualEnough(expected.strip(), result.strip(), 
+                    '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
+                    (self.transcriptFileName, lineNum, command, expected, result))    
+                # this needs to account for a line-by-line strip()ping
+        except StopIteration:
+            pass
     def tearDown(self):
         if self.CmdApp:
             self.outputTrap.tearDown()
