@@ -21,9 +21,6 @@ written to use `self.stdout.write()`,
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
 mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
-CHANGES:
-As of 0.3.0, options should be specified as `optparse` options.  See README.txt.
-flagReader.py options are still supported for backward compatibility
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime, urllib, glob
@@ -1115,18 +1112,17 @@ class Cmd2TestCase(unittest.TestCase):
     transcriptFileName = ''
     transcriptExtension = ''
     def fetchTranscripts(self):
-        self.transcripts = {}
-        if self.transcriptExtension:
-            for fname in glob.glob('*.' + self.transcriptExtension):
-                tfile = open(fname)
-                self.transcripts[fname] = iter(tfile.readlines())
-                tfile.close()
+        self.transcripts = []
+        if self.CmdApp.testfile:
+            transcriptfilenames = [self.CmdApp.testfile]
+        elif self.transcriptExtension:
+            transcriptfilenames = glob.glob('*.' + self.transcriptExtension)
         elif self.transcriptFileName:
-            tfile = open(os.path.expanduser(self.transcriptFileName))
-            self.transcripts = {'transcript': iter(tfile.readlines())}
+            transcriptfilenames = [self.transcriptFileName]
+        for fname in transcriptfilenames:
+            tfile = open(fname)
+            self.transcripts.append(iter(tfile.readlines()))
             tfile.close()
-        else:
-            raise AttributeError, 'Cmd2TestCase must define transcriptFileName or transcriptExtension'
             
     def setUp(self):
         if self.CmdApp:
@@ -1143,18 +1139,10 @@ class Cmd2TestCase(unittest.TestCase):
             self.assert_(re.match(matchme, linegot.strip()), message)
     def testall(self):
         if self.CmdApp:
-            setup = 'setup.' + self.transcriptExtension
-            teardown = 'teardown.' + self.transcriptExtension
-            transcripts = self.transcripts.copy()
-            transcriptfiles = []
-            if setup in transcripts:
-                transcriptfiles.append((setup, transcripts.pop(setup)))
-            transcriptfiles.extend(sorted((fname, transcripts[fname]) for fname in transcripts if fname != teardown))
-            if teardown in transcripts:
-                transcriptfiles.append((teardown, transcripts[teardown]))
-            for transcript in transcriptfiles:
-                self.testone(transcript)        
-    def testone(self, transcript):
+            self.fetchTranscripts()
+            for transcript in self.transcripts:
+                self._test_transcript(transcript)
+    def _test_transcript(self, transcript):
         lineNum = 0
         try:
             line = transcript.next()
@@ -1191,4 +1179,3 @@ class Cmd2TestCase(unittest.TestCase):
         
 if __name__ == '__main__':
     doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
-    #c = Cmd()
