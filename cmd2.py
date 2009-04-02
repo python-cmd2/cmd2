@@ -27,6 +27,9 @@ import unittest, string, datetime, urllib, glob
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 __version__ = '0.5.1'
+import logging
+
+logging.basicConfig(filename='log.txt')
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -289,13 +292,16 @@ class Cmd(cmd.Cmd):
         })
         
     def do_help(self, arg):
-        funcname = self.func_named(arg)
-        if funcname:
-            fn = getattr(self, funcname)
-            try:
-                fn.optionParser.print_help(file=self.stdout)
-            except AttributeError:
-                cmd.Cmd.do_help(self, funcname[3:])
+        if arg:
+            funcname = self.func_named(arg)
+            if funcname:
+                fn = getattr(self, funcname)
+                try:
+                    fn.optionParser.print_help(file=self.stdout)
+                except AttributeError:
+                    cmd.Cmd.do_help(self, funcname[3:])
+        else:
+            cmd.Cmd.do_help(self, arg)
         
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
@@ -1105,31 +1111,21 @@ class OutputTrap(Borg):
         sys.stdout = self.old_stdout
 
 class Cmd2TestCase(unittest.TestCase):
-    '''Subclass this, setting CmdApp and transcriptFileName, to make a unittest.TestCase class
-       that will execute the commands in transcriptFileName and expect the results shown.
+    '''Subclass this, setting CmdApp, to make a unittest.TestCase class
+       that will execute the commands in a transcript file and expect the results shown.
        See example.py'''
     CmdApp = None
-    transcriptFileName = ''
-    transcriptExtension = ''
     def fetchTranscripts(self):
-        import pdb; pdb.set_trace()
-        self.transcripts = []
-        #if self.CmdApp.testfile:
-        #    transcriptfilenames = [self.CmdApp.testfile]
-        if self.transcriptExtension:
-            transcriptfilenames = glob.glob('*.' + self.transcriptExtension)
-        elif self.transcriptFileName:
-            transcriptfilenames = [self.transcriptFileName]
-        for fname in transcriptfilenames:
+        self.transcripts = {}
+        for fname in glob.glob(self.CmdApp.testfile):
             tfile = open(fname)
-            self.transcripts.append(iter(tfile.readlines()))
+            self.transcripts[fname] = iter(tfile.readlines())
             tfile.close()
             
     def setUp(self):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
             self.cmdapp = self.CmdApp()
-            import pdb; pdb.set_trace()
             self.fetchTranscripts()
     def assertEqualEnough(self, got, expected, message):
         got = got.strip().splitlines()
@@ -1141,9 +1137,13 @@ class Cmd2TestCase(unittest.TestCase):
             self.assert_(re.match(matchme, linegot.strip()), message)
     def testall(self):
         if self.CmdApp:
-            for transcript in self.transcripts:
-                self._test_transcript(transcript)
-    def _test_transcript(self, transcript):
+            its = sorted(self.transcripts.items())
+            logging.error(str(its))
+            for (fname, transcript) in its:
+                logging.error(fname)
+                self._test_transcript(fname, transcript)
+                logging.error('finished')
+    def _test_transcript(self, fname, transcript):
         lineNum = 0
         try:
             line = transcript.next()
@@ -1161,7 +1161,7 @@ class Cmd2TestCase(unittest.TestCase):
                 if line.startswith(self.cmdapp.prompt):
                     self.assertEqualEnough(result.strip(), '', 
                         '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing) \nGot:\n%s\n' % 
-                        (self.transcriptFileName, lineNum, command, result))    
+                        (fname, lineNum, command, result))    
                     continue
                 expected = []
                 while not line.startswith(self.cmdapp.prompt):
@@ -1170,7 +1170,7 @@ class Cmd2TestCase(unittest.TestCase):
                 expected = ''.join(expected)
                 self.assertEqualEnough(expected.strip(), result.strip(), 
                     '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
-                    (self.transcriptFileName, lineNum, command, expected, result))    
+                    (fname, lineNum, command, expected, result))    
                 # this needs to account for a line-by-line strip()ping
         except StopIteration:
             pass
