@@ -1112,10 +1112,11 @@ class Cmd2TestCase(unittest.TestCase):
     transcriptFileName = ''
     transcriptExtension = ''
     def fetchTranscripts(self):
+        import pdb; pdb.set_trace()
         self.transcripts = []
-        if self.CmdApp.testfile:
-            transcriptfilenames = [self.CmdApp.testfile]
-        elif self.transcriptExtension:
+        #if self.CmdApp.testfile:
+        #    transcriptfilenames = [self.CmdApp.testfile]
+        if self.transcriptExtension:
             transcriptfilenames = glob.glob('*.' + self.transcriptExtension)
         elif self.transcriptFileName:
             transcriptfilenames = [self.transcriptFileName]
@@ -1128,6 +1129,7 @@ class Cmd2TestCase(unittest.TestCase):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
             self.cmdapp = self.CmdApp()
+            import pdb; pdb.set_trace()
             self.fetchTranscripts()
     def assertEqualEnough(self, got, expected, message):
         got = got.strip().splitlines()
@@ -1139,7 +1141,6 @@ class Cmd2TestCase(unittest.TestCase):
             self.assert_(re.match(matchme, linegot.strip()), message)
     def testall(self):
         if self.CmdApp:
-            self.fetchTranscripts()
             for transcript in self.transcripts:
                 self._test_transcript(transcript)
     def _test_transcript(self, transcript):
