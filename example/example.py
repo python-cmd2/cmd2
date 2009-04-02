@@ -32,18 +32,14 @@ class CmdLineApp(Cmd):
 
 class TestMyAppCase(Cmd2TestCase):
     CmdApp = CmdLineApp
-    transcriptExtension = 'test'
 
 parser = optparse.OptionParser()
-parser.add_option('-a', '--alltests', dest='test', action="store_true", 
-                  help='Run all transcript tests')
-parser.add_option('-t', '--testfile', dest='testfile', metavar='FILE',
-                  help='Run a single transcript from file FILE')
+parser.add_option('-t', '--test', dest='test', metavar='FILE', 
+                  help='''Test against transcript(s) in FILE (wildcards OK)''')                  
 (callopts, callargs) = parser.parse_args()
-if callopts.testfile or callopts.test:
-    CmdLineApp.testfile = callopts.testfile
-    sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
+if callopts.test:
+    CmdLineApp.testfile = callopts.test
+    sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
     unittest.main()
 else:
-    app = CmdLineApp()
-    app.cmdloop()
+    CmdLineApp().cmdloop()
