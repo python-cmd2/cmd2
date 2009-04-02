@@ -29,8 +29,6 @@ from optparse import make_option
 __version__ = '0.5.1'
 import logging
 
-logging.basicConfig(filename='log.txt')
-
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
         self.values._exit = True
@@ -1138,11 +1136,8 @@ class Cmd2TestCase(unittest.TestCase):
     def testall(self):
         if self.CmdApp:
             its = sorted(self.transcripts.items())
-            logging.error(str(its))
             for (fname, transcript) in its:
-                logging.error(fname)
                 self._test_transcript(fname, transcript)
-                logging.error('finished')
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         try:
