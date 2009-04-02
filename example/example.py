@@ -32,18 +32,12 @@ class CmdLineApp(Cmd):
 
 class TestMyAppCase(Cmd2TestCase):
     CmdApp = CmdLineApp
-import logging
-logging.basicConfig(level=logging.DEBUG,
-                    filename='exlog.txt',
-                    filemode='w')
 parser = optparse.OptionParser()
-parser.add_option('-t', '--test', dest='test', metavar='FILE', 
-                  help='''Test against transcript(s) in FILE (wildcards OK)''')                  
+parser.add_option('-t', '--test', dest='test', action="store_true", 
+                  help='Test against transcript(s) in FILE (wildcards OK)')
 (callopts, callargs) = parser.parse_args()
-logging.error(callopts)
 if callopts.test:
-    CmdLineApp.testfile = callopts.test
-    logging.error(CmdLineApp.testfile)
+    CmdLineApp.testfiles = callargs
     sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
     unittest.main()
 else:

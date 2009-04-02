@@ -27,7 +27,6 @@ import unittest, string, datetime, urllib, glob
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 __version__ = '0.5.1'
-import logging
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -1115,10 +1114,13 @@ class Cmd2TestCase(unittest.TestCase):
     CmdApp = None
     def fetchTranscripts(self):
         self.transcripts = {}
-        for fname in glob.glob(self.CmdApp.testfile):
-            tfile = open(fname)
-            self.transcripts[fname] = iter(tfile.readlines())
-            tfile.close()
+        if not self.CmdApp.testfiles:
+            raise optparse.OptionError, "No test files named - nothing to test."
+        for fileset in self.CmdApp.testfiles:
+            for fname in glob.glob(fileset):
+                tfile = open(fname)
+                self.transcripts[fname] = iter(tfile.readlines())
+                tfile.close()
             
     def setUp(self):
         if self.CmdApp:
@@ -1175,3 +1177,27 @@ class Cmd2TestCase(unittest.TestCase):
         
 if __name__ == '__main__':
     doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
+    
+'''
+To make your application transcript-testable, add text like this to your .py file
+(replacing CmdLineApp with your own application class's name).  Then, a cut-and-pasted
+version of a successful session with your application, saved as a text file, can serve
+as a test for future 
+
+Invoke the test later with `python myapplication.py --test mytranscripttestfile.ext`
+Wildcards can be used to test against multiple transcript files.
+
+
+class TestMyAppCase(Cmd2TestCase):
+    CmdApp = CmdLineApp
+parser = optparse.OptionParser()
+parser.add_option('-t', '--test', dest='test', action="store_true", 
+                  help='Test against transcript(s) in FILE (wildcards OK)')
+(callopts, callargs) = parser.parse_args()
+if callopts.test:
+    CmdLineApp.testfiles = callargs
+    sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
+    unittest.main()
+else:
+    CmdLineApp().cmdloop()
+'''
