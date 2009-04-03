@@ -1122,20 +1122,11 @@ class Cmd2TestCase(unittest.TestCase):
                 tfile.close()
         if not len(self.transcripts):
             raise StandardError, "No test files found - nothing to test."
-            
     def setUp(self):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
             self.cmdapp = self.CmdApp()
             self.fetchTranscripts()
-    def assertEqualEnough(self, got, expected, message):
-        got = got.strip().splitlines()
-        expected = expected.strip().splitlines()
-        self.assertEqual(len(got), len(expected), message)
-        for (linegot, lineexpected) in zip(got, expected):
-            matchme = re.escape(lineexpected.strip()).replace('\\*', '.*').  \
-                      replace('\\ ', ' ')
-            self.assert_(re.match(matchme, linegot.strip()), message)
     def testall(self):
         if self.CmdApp:
             its = sorted(self.transcripts.items())
@@ -1163,9 +1154,9 @@ class Cmd2TestCase(unittest.TestCase):
                 self.cmdapp.onecmd(command)
                 result = self.outputTrap.read().strip()
                 if line.startswith(self.cmdapp.prompt):
-                    self.assertEqualEnough(result, '', 
-                        '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing) \nGot:\n%s\n' % 
-                        (fname, lineNum, command, result))    
+                    message = '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing)\nGot:\n%s\n'%\
+                        (fname, lineNum, command, result)     
+                    self.assert_(not(result.strip()), message)
                     continue
                 expected = []
                 while not line.startswith(self.cmdapp.prompt):
@@ -1177,7 +1168,6 @@ class Cmd2TestCase(unittest.TestCase):
                 expected = self.expectationParser.transformString(expected)
                 expected = self.endStrippingRegex.sub('\s*\n', expected)
                 self.assert_(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
-                # this needs to account for a line-by-line strip()ping
         except StopIteration:
             pass
     def tearDown(self):
