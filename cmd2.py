@@ -1107,7 +1107,7 @@ class OutputTrap(Borg):
     def tearDown(self):
         sys.stdout = self.old_stdout
 
-        
+       
 class Cmd2TestCase(unittest.TestCase):
     '''Subclass this, setting CmdApp, to make a unittest.TestCase class
        that will execute the commands in a transcript file and expect the results shown.
@@ -1141,6 +1141,12 @@ class Cmd2TestCase(unittest.TestCase):
             its = sorted(self.transcripts.items())
             for (fname, transcript) in its:
                 self._test_transcript(fname, transcript)
+    regexPattern = pyparsing.QuotedString(quoteChar=r'/', escChar='\\', multiline=True, unquoteResults=True)
+    regexPattern.ignore(pyparsing.cStyleComment)
+    notRegexPattern = pyparsing.Word(pyparsing.printables)
+    notRegexPattern.setParseAction(lambda t: re.escape(t[0]))
+    expectationParser = regexPattern | notRegexPattern
+    endStrippingRegex = re.compile(r'[ \t]*\n')
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         try:
@@ -1167,12 +1173,10 @@ class Cmd2TestCase(unittest.TestCase):
                     line = transcript.next()
                 expected = ''.join(expected).strip()
                 message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n'%\
-                    (fname, lineNum, command, expected, result)                
-                if False and ((expected[0] == '/' == expected[-1]) and not expected.startswith('/*')):
-                    self.assert_(re.match(expected[1:-1], result, re.MULTILINE | re.DOTALL),
-                                 message)
-                else:
-                    self.assertEqualEnough(expected, result, message)   
+                    (fname, lineNum, command, expected, result)      
+                expected = self.expectationParser.transformString(expected)
+                expected = self.endStrippingRegex.sub('\s*\n', expected)
+                self.assert_(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
                 # this needs to account for a line-by-line strip()ping
         except StopIteration:
             pass
