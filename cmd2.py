@@ -26,7 +26,7 @@ import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime, urllib, glob
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
-__version__ = '0.5.1'
+__version__ = '0.5.2'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
