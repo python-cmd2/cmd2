@@ -1107,6 +1107,7 @@ class OutputTrap(Borg):
     def tearDown(self):
         sys.stdout = self.old_stdout
 
+        
 class Cmd2TestCase(unittest.TestCase):
     '''Subclass this, setting CmdApp, to make a unittest.TestCase class
        that will execute the commands in a transcript file and expect the results shown.
@@ -1114,13 +1115,13 @@ class Cmd2TestCase(unittest.TestCase):
     CmdApp = None
     def fetchTranscripts(self):
         self.transcripts = {}
-        if not self.CmdApp.testfiles:
-            raise optparse.OptionError, "No test files named - nothing to test."
         for fileset in self.CmdApp.testfiles:
             for fname in glob.glob(fileset):
                 tfile = open(fname)
                 self.transcripts[fname] = iter(tfile.readlines())
                 tfile.close()
+        if not len(self.transcripts):
+            raise StandardError, "No test files found - nothing to test."
             
     def setUp(self):
         if self.CmdApp:
@@ -1154,9 +1155,9 @@ class Cmd2TestCase(unittest.TestCase):
                     line = transcript.next()
                 command = ''.join(command)
                 self.cmdapp.onecmd(command)
-                result = self.outputTrap.read()
+                result = self.outputTrap.read().strip()
                 if line.startswith(self.cmdapp.prompt):
-                    self.assertEqualEnough(result.strip(), '', 
+                    self.assertEqualEnough(result, '', 
                         '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing) \nGot:\n%s\n' % 
                         (fname, lineNum, command, result))    
                     continue
@@ -1164,10 +1165,14 @@ class Cmd2TestCase(unittest.TestCase):
                 while not line.startswith(self.cmdapp.prompt):
                     expected.append(line)
                     line = transcript.next()
-                expected = ''.join(expected)
-                self.assertEqualEnough(expected.strip(), result.strip(), 
-                    '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % 
-                    (fname, lineNum, command, expected, result))    
+                expected = ''.join(expected).strip()
+                message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n'%\
+                    (fname, lineNum, command, expected, result)                
+                if False and ((expected[0] == '/' == expected[-1]) and not expected.startswith('/*')):
+                    self.assert_(re.match(expected[1:-1], result, re.MULTILINE | re.DOTALL),
+                                 message)
+                else:
+                    self.assertEqualEnough(expected, result, message)   
                 # this needs to account for a line-by-line strip()ping
         except StopIteration:
             pass
