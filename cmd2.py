@@ -263,10 +263,27 @@ class Cmd(cmd.Cmd):
     nonpythoncommand = 'cmd'
     current_script_dir = None
     reserved_words = []
+    feedback_to_output = False
+    quiet = False
     settable = ['prompt', 'continuation_prompt', 'default_file_name', 'editor',
-                'case_insensitive', 'echo', 'timing', 'abbrev']   
+                'case_insensitive', 'feedback_to_output', 'quiet', 'echo', 'timing', 
+                'abbrev']   
     settable.sort()
     
+    def poutput(self, msg):
+        self.stdout.write(msg)
+        if msg[-1] != '\n':
+            self.stdout('\n')
+    def perror(self, errmsg):
+        print str(errmsg)
+    def pfeedback(self, msg):
+        """For printing nonessential feedback.  Can be silenced with `quiet`.
+           Inclusion in redirected output is controlled by `feedback_to_output`."""
+        if not self.quiet:
+            if self.feedback_to_output:
+                self.poutput(msg)
+            else:
+                print msg
     editor = os.environ.get('EDITOR')
     _STOP_AND_EXIT = 2
     if not editor:
@@ -593,14 +610,14 @@ class Cmd(cmd.Cmd):
                                         self.pseudo_raw_input(self.continuation_prompt))                
                 statement = self.parsed(statement)
         except Exception, e:
-            print e
+            self.perror(e)
             return 0
         if statement.parsed.command not in self.excludeFromHistory:
             self.history.append(statement.parsed.raw)
         try:
             (stop, statement) = self.postparsing_precmd(statement)
         except Exception, e:
-            print str(e)
+            self.perror(e)
             return 0
         if stop:
             return self.postparsing_postcmd(stop)
@@ -623,7 +640,7 @@ class Cmd(cmd.Cmd):
                 try:
                     self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
                 except OSError, e:
-                    print e
+                    self.perror(e)
                     return self.postparsing_postcmd(stop=0) 
             else:
                 statekeeper = Statekeeper(self, ('stdout',))
@@ -643,9 +660,9 @@ class Cmd(cmd.Cmd):
             timestart = datetime.datetime.now()
             stop = func(statement) 
             if self.timing:
-                print 'Elapsed: %s' % str(datetime.datetime.now() - timestart)
+                self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
         except Exception, e:
-            print e
+            self.perror(e)
         finally:
             if statekeeper:
                 if statement.parsed.output and not statement.parsed.outputTo:
@@ -653,7 +670,7 @@ class Cmd(cmd.Cmd):
                     try:
                         writeToPasteBuffer(self.stdout.read())
                     except Exception, e:
-                        print str(e)
+                        self.perror(e)
                 elif statement.parsed.pipeTo:
                     for result in redirect.communicate():              
                         statekeeper.stdout.write(result or '')                        
@@ -738,7 +755,7 @@ class Cmd(cmd.Cmd):
                 self.stdout.write('%s: %s\n' % (p, str(getattr(self, p))))
                 any_shown = True
         if not any_shown:
-            print "Parameter '%s' not supported (type 'show' for list of parameters)." % param
+            self.perror("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
                 
     def do_quit(self, arg):
         return self._STOP_AND_EXIT
@@ -787,15 +804,7 @@ class Cmd(cmd.Cmd):
     def do_shell(self, arg):
         'execute a command as if at the OS prompt.'
         os.system(arg)
-        
-    def _attempt_py_command(self, arg):
-        try:
-            result = eval(arg, self.pystate)
-            print repr(result)
-        except SyntaxError:
-            exec(arg, self.pystate)       
-        return
-        
+                
     def do_py(self, arg):  
         '''
         py <command>: Executes a Python command.
@@ -874,7 +883,7 @@ class Cmd(cmd.Cmd):
         "set edit (program-name)" or set  EDITOR environment variable
         to control which editing program is used."""
         if not self.editor:
-            print "please use 'set editor' to specify your text editing program of choice."
+            self.perror("Please use 'set editor' to specify your text editing program of choice.")
             return
         filename = self.default_file_name
         if arg:
@@ -907,7 +916,7 @@ class Cmd(cmd.Cmd):
         try:
             args = self.saveparser.parseString(arg)
         except pyparsing.ParseException:
-            print self.do_save.__doc__
+            self.perror(self.do_save.__doc__)
             return
         fname = args.fname or self.default_file_name
         if args.idx == '*':
@@ -920,9 +929,9 @@ class Cmd(cmd.Cmd):
             f = open(os.path.expanduser(fname), 'w')
             f.write(saveme)
             f.close()
-            print 'Saved to %s' % (fname)
+            self.pfeedback('Saved to %s' % (fname))
         except Exception, e:
-            print 'Error saving %s: %s' % (fname, str(e))
+            self.perror('Error saving %s: %s' % (fname, str(e)))
             
     def read_file_or_url(self, fname):
         if isinstance(fname, file):
@@ -962,7 +971,7 @@ class Cmd(cmd.Cmd):
         try:
             target = self.read_file_or_url(targetname)
         except IOError, e:
-            print 'Problem accessing script from %s: \n%s' % (targetname, e)
+            self.perror('Problem accessing script from %s: \n%s' % (targetname, e))
             return
         keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt',
                                        'continuation_prompt','current_script_dir'))
@@ -987,7 +996,7 @@ class Cmd(cmd.Cmd):
         """        
         'run [N]: runs the SQL that was run N commands ago'
         runme = self.last_matching(arg)
-        print runme
+        self.pfeedback(runme)
         if runme:
             runme = self.precmd(runme)
             stop = self.onecmd(runme)
