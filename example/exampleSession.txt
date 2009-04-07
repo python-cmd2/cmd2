@@ -30,11 +30,13 @@ OODNIGHT, GRACIEGAY
 (Cmd) set
 abbrev: True
 case_insensitive: True
-continuation_prompt: >
+continuation_prompt: > 
 default_file_name: command.txt
 echo: False
 editor: gedit
-prompt: (Cmd)
+feedback_to_output: False
+prompt: (Cmd) 
+quiet: False
 timing: False
 maxrepeats: 3
 (Cmd) set maxrepeats 5
