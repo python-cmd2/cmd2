@@ -273,7 +273,7 @@ class Cmd(cmd.Cmd):
     def poutput(self, msg):
         self.stdout.write(msg)
         if msg[-1] != '\n':
-            self.stdout('\n')
+            self.stdout.write('\n')
     def perror(self, errmsg):
         print str(errmsg)
     def pfeedback(self, msg):
