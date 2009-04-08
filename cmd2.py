@@ -525,12 +525,12 @@ class Cmd(cmd.Cmd):
         #self.multilineParser = self.multilineParser.setResultsName('multilineParser')
         #self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
         #self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
-        self.parser = (
+        self.parser = self.prefixParser + (
             stringEnd |
-            self.prefixParser + self.multilineParser |
-            self.prefixParser + self.singleLineParser |
-            self.prefixParser + self.blankLineTerminationParser | 
-            self.prefixParser + self.multilineCommand + pyparsing.SkipTo(stringEnd)
+            self.multilineParser |
+            self.singleLineParser |
+            self.blankLineTerminationParser | 
+            self.multilineCommand + pyparsing.SkipTo(stringEnd)
             )
         self.parser.ignore(pyparsing.quotedString).ignore(self.commentGrammars)
         
