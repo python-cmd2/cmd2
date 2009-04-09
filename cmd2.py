@@ -319,6 +319,7 @@ class Cmd(cmd.Cmd):
         
     def __init__(self, *args, **kwargs):        
         cmd.Cmd.__init__(self, *args, **kwargs)
+        self.initial_stdout = sys.stdout
         self.history = History()
         self._init_parser()
         self.pystate = {}
