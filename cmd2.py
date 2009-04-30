@@ -26,7 +26,7 @@ import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime, urllib, glob
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
-__version__ = '0.5.2'
+__version__ = '0.5.3'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -476,8 +476,8 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - terminator: ;        
         >>> print c.parser.parseString('multiline command /* with comment in progress;').dump()
-        ['multiline', ' command /* with comment in progress;']
-        - multilineCommand: multiline        
+        ['multiline', ' command']
+        - multilineCommand: multiline
         >>> print c.parser.parseString('multiline command /* with comment complete */ is done;').dump()
         ['multiline', 'command /* with comment complete */ is done', ';', '']
         - args: command /* with comment complete */ is done
