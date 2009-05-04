@@ -813,6 +813,7 @@ class Cmd(cmd.Cmd):
         End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, 'exit()`.
         Non-python commands can be issued with `cmd("your command")`.
         '''
+        arg = arg.parsed.raw[2:].strip()
         if arg.strip():
             interp = InteractiveInterpreter(locals=self.pystate)
             interp.runcode(arg)
