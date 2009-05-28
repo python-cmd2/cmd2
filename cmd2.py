@@ -26,7 +26,7 @@ import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime, urllib, glob
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
-__version__ = '0.5.3'
+__version__ = '0.5.4'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -649,21 +649,22 @@ class Cmd(cmd.Cmd):
                 if statement.parsed.output == '>>':
                     self.stdout.write(getPasteBuffer())
         try:
-            # "heart" of the command, replace's cmd's onecmd()
-            self.lastcmd = statement.parsed.expanded   
-            funcname = self.func_named(statement.parsed.command)
-            if not funcname:
-                return self.postparsing_postcmd(self.default(statement))  
             try:
-                func = getattr(self, funcname)
-            except AttributeError:
-                return self.postparsing_postcmd(self.default(statement))                  
-            timestart = datetime.datetime.now()
-            stop = func(statement) 
-            if self.timing:
-                self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
-        except Exception, e:
-            self.perror(e)
+                # "heart" of the command, replace's cmd's onecmd()
+                self.lastcmd = statement.parsed.expanded   
+                funcname = self.func_named(statement.parsed.command)
+                if not funcname:
+                    return self.postparsing_postcmd(self.default(statement))  
+                try:
+                    func = getattr(self, funcname)
+                except AttributeError:
+                    return self.postparsing_postcmd(self.default(statement))                  
+                timestart = datetime.datetime.now()
+                stop = func(statement) 
+                if self.timing:
+                    self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
+            except Exception, e:
+                self.perror(e)
         finally:
             if statekeeper:
                 if statement.parsed.output and not statement.parsed.outputTo:
