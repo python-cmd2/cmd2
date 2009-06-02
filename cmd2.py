@@ -274,7 +274,7 @@ class Cmd(cmd.Cmd):
         self.stdout.write(msg)
         if msg[-1] != '\n':
             self.stdout.write('\n')
-    def perror(self, errmsg):
+    def perror(self, errmsg, statement=None):
         print str(errmsg)
     def pfeedback(self, msg):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -664,7 +664,7 @@ class Cmd(cmd.Cmd):
                 if self.timing:
                     self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
             except Exception, e:
-                self.perror(e)
+                self.perror(e, statement)
         finally:
             if statekeeper:
                 if statement.parsed.output and not statement.parsed.outputTo:
