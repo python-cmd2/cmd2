@@ -335,6 +335,7 @@ class Cmd(cmd.Cmd):
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
+    commentInProgress = pyparsing.NoMatch()
     terminators = [';']
     blankLinesAllowed = False
     multilineCommands = []
@@ -523,9 +524,9 @@ class Cmd(cmd.Cmd):
         self.multilineParser.ignore(self.commentInProgress)
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
-        #self.multilineParser = self.multilineParser.setResultsName('multilineParser')
-        #self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
-        #self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
+        self.multilineParser = self.multilineParser.setResultsName('multilineParser')
+        self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
+        self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
         self.parser = self.prefixParser + (
             stringEnd |
             self.multilineParser |
