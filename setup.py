@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="cmd2",
-    version="0.5.5",
+    version="0.5.6",
     py_modules=["cmd2",],
     
     # metadata for upload to PyPI
