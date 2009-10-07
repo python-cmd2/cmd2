@@ -26,7 +26,7 @@ import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
 import unittest, string, datetime, urllib, glob
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
-__version__ = '0.5.5'
+__version__ = '0.5.6'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -59,6 +59,14 @@ def remainingArgs(oldArgs, newArgList):
     pattern = '\s+'.join(re.escape(a) for a in newArgList) + '\s*$'
     matchObj = re.search(pattern, oldArgs)
     return oldArgs[matchObj.start():]
+   
+def _attr_get_(obj, attr):
+    '''Returns an attribute's value, or None (no error) if undefined.
+       Analagous to .get() for dictionaries.'''
+    try:
+        return getattr(obj, attr)
+    except AttributeError:
+        return None
 
 def options(option_list):
     def option_setup(func):
@@ -70,6 +78,7 @@ def options(option_list):
         def newFunc(instance, arg):
             try:
                 opts, newArgList = optionParser.parse_args(arg.split()) # doesn't understand quoted strings shouldn't be dissected!
+                opts.get = _attr_get_
                 newArgs = remainingArgs(arg, newArgList)  # should it permit flags after args?
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
@@ -563,7 +572,7 @@ class Cmd(cmd.Cmd):
             result = self.parser.parseString(s)
             result['command'] = result.multilineCommand or result.command        
             result['raw'] = raw
-            result['clean'] = self.commentGrammars.transformString(result.args)
+            result['clean'] = self.commentGrammars.transformString(result.args)  # oh no, strips ls box/*
             result['expanded'] = s        
             p = ParsedString(result.clean)
             p.parsed = result
@@ -815,6 +824,7 @@ class Cmd(cmd.Cmd):
         End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, 'exit()`.
         Non-python commands can be issued with `cmd("your command")`.
         '''
+        self.pystate['self'] = self
         arg = arg.parsed.raw[2:].strip()
         if arg.strip():
             interp = InteractiveInterpreter(locals=self.pystate)
