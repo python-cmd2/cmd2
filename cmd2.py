@@ -23,7 +23,7 @@ written to use `self.stdout.write()`,
 mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
 """
 import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime, urllib, glob
+import unittest, string, datetime, urllib, glob, traceback
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 __version__ = '0.5.6'
@@ -274,7 +274,8 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     feedback_to_output = False
     quiet = False
-    settable = ['prompt', 'continuation_prompt', 'default_file_name', 'editor',
+    debug = False
+    settable = ['prompt', 'continuation_prompt', 'debug', 'default_file_name', 'editor',
                 'case_insensitive', 'feedback_to_output', 'quiet', 'echo', 'timing', 
                 'abbrev']   
     settable.sort()
@@ -284,6 +285,8 @@ class Cmd(cmd.Cmd):
         if msg[-1] != '\n':
             self.stdout.write('\n')
     def perror(self, errmsg, statement=None):
+        if self.debug:
+            traceback.print_exc()
         print str(errmsg)
     def pfeedback(self, msg):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -650,7 +653,7 @@ class Cmd(cmd.Cmd):
                     mode = 'a'
                 try:
                     self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
-                except OSError, e:
+                except Exception, e:
                     self.perror(e)
                     return self.postparsing_postcmd(stop=0) 
             else:
@@ -709,7 +712,7 @@ class Cmd(cmd.Cmd):
                 if line[-1] == '\n': # this was always true in Cmd
                     line = line[:-1] 
         return line
-                          
+    
     def cmdloop(self, intro=None):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
@@ -1098,13 +1101,15 @@ class Statekeeper(object):
     def __init__(self, obj, attribs):
         self.obj = obj
         self.attribs = attribs
-        self.save()
+        if self.obj:
+            self.save()
     def save(self):
         for attrib in self.attribs:
             setattr(self, attrib, getattr(self.obj, attrib))
     def restore(self):
-        for attrib in self.attribs:
-            setattr(self.obj, attrib, getattr(self, attrib))        
+        if self.obj:
+            for attrib in self.attribs:
+                setattr(self.obj, attrib, getattr(self, attrib))        
 
 class Borg(object):
     '''All instances of any Borg subclass will share state.
