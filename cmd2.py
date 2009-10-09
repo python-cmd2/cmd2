@@ -67,7 +67,9 @@ def _attr_get_(obj, attr):
         return getattr(obj, attr)
     except AttributeError:
         return None
-
+    
+optparse.Values.get = _attr_get_
+    
 def options(option_list):
     def option_setup(func):
         optionParser = OptionParser()
@@ -78,7 +80,6 @@ def options(option_list):
         def newFunc(instance, arg):
             try:
                 opts, newArgList = optionParser.parse_args(arg.split()) # doesn't understand quoted strings shouldn't be dissected!
-                opts.get = _attr_get_
                 newArgs = remainingArgs(arg, newArgList)  # should it permit flags after args?
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
