@@ -282,9 +282,10 @@ class Cmd(cmd.Cmd):
     settable.sort()
     
     def poutput(self, msg):
-        self.stdout.write(msg)
-        if msg[-1] != '\n':
-            self.stdout.write('\n')
+        if msg:
+            self.stdout.write(msg)
+            if msg[-1] != '\n':
+                self.stdout.write('\n')
     def perror(self, errmsg, statement=None):
         if self.debug:
             traceback.print_exc()
