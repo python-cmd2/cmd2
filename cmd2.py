@@ -53,6 +53,9 @@ class OptionParser(optparse.OptionParser):
         
 def remainingArgs(oldArgs, newArgList):
     '''
+    Preserves the spacing originally in the argument after
+    the removal of options.
+    
     >>> remainingArgs('-f bar   bar   cow', ['bar', 'cow'])
     'bar   cow'
     '''
@@ -79,8 +82,16 @@ def options(option_list):
         optionParser._func = func
         def newFunc(instance, arg):
             try:
-                opts, newArgList = optionParser.parse_args(arg.split()) # doesn't understand quoted strings shouldn't be dissected!
-                newArgs = remainingArgs(arg, newArgList)  # should it permit flags after args?
+                if hasattr(arg, 'parsed'):
+                    args = arg.parsed.raw
+                else:
+                    args = arg
+                opts, newArgList = optionParser.parse_args(args.split()) # doesn't understand quoted strings shouldn't be dissected!
+                # Must find the remaining args in the original argument list, but 
+                # mustn't include the command itself
+                if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
+                    newArgList = newArgList[1:]
+                newArgs = remainingArgs(args, newArgList)  # should it permit flags after args?
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -519,8 +530,7 @@ class Cmd(cmd.Cmd):
         self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.case_insensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = (~self.multilineCommand + pyparsing.Word(self.legalChars))('command')
         pipe = pyparsing.Keyword('|', identChars='|')
-        self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
-        self.commentInProgress.ignore(pyparsing.quotedString).ignore(pyparsing.cStyleComment)       
+        self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')        
         afterElements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
