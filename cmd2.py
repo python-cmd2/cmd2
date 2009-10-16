@@ -35,7 +35,6 @@ class OptionParser(optparse.OptionParser):
             print msg
             
     def print_help(self, *args, **kwargs):
-        # now, I need to call help of the calling function.  Hmm.
         try:
             print self._func.__doc__
         except AttributeError:
@@ -65,7 +64,9 @@ def remainingArgs(oldArgs, newArgList):
    
 def _attr_get_(obj, attr):
     '''Returns an attribute's value, or None (no error) if undefined.
-       Analagous to .get() for dictionaries.'''
+       Analagous to .get() for dictionaries.  Useful when checking for
+       value of options that may not have been defined on a given
+       method.'''
     try:
         return getattr(obj, attr)
     except AttributeError:
@@ -86,12 +87,12 @@ def options(option_list):
                     args = arg.parsed.raw
                 else:
                     args = arg
-                opts, newArgList = optionParser.parse_args(args.split()) # doesn't understand quoted strings shouldn't be dissected!
+                opts, newArgList = optionParser.parse_args(args.split())
                 # Must find the remaining args in the original argument list, but 
                 # mustn't include the command itself
                 if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                     newArgList = newArgList[1:]
-                newArgs = remainingArgs(args, newArgList)  # should it permit flags after args?
+                newArgs = remainingArgs(args, newArgList)
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -129,10 +130,10 @@ On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""
     def __init__(self):
         Exception.__init__(self, self.errmsg)
 
-'''check here if functions exist; otherwise, stub out'''
 pastebufferr = """Redirecting to or from paste buffer requires %s
 to be installed on operating system.
 %s"""
+
 if subprocess.mswindows:
     try:
         import win32clipboard
@@ -271,15 +272,16 @@ class MyInteractiveConsole(InteractiveConsole):
 
 class Cmd(cmd.Cmd):
     echo = False
-    case_insensitive = True
+    case_insensitive = True     # Commands recognized regardless of case
     continuation_prompt = '> '  
-    timing = False
-    legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  # make sure your terminators are not in here!
+    timing = False              # Prints elapsed time for each command
+    # make sure your terminators are not in legalChars!
+    legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     noSpecialParse = 'set ed edit exit'.split()
-    defaultExtension = 'txt'
-    default_file_name = 'command.txt'
+    defaultExtension = 'txt'            # For ``save``, ``load``, etc.
+    default_file_name = 'command.txt'   # For ``save``, ``load``, etc.
     abbrev = True
     nonpythoncommand = 'cmd'
     current_script_dir = None
