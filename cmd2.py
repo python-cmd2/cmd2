@@ -22,10 +22,23 @@ written to use `self.stdout.write()`,
 
 mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
 """
-import cmd, re, os, sys, optparse, subprocess, tempfile, pyparsing, doctest
-import unittest, string, datetime, urllib, glob, traceback
+import cmd
+import re
+import os
+import sys
+import optparse
+import subprocess
+import tempfile
+import doctest
+import unittest
+import datetime
+import urllib
+import glob
+import traceback
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
+
+import pyparsing
 __version__ = '0.5.6'
 
 class OptionParser(optparse.OptionParser):
@@ -50,12 +63,12 @@ class OptionParser(optparse.OptionParser):
         """
         raise
         
-def remainingArgs(oldArgs, newArgList):
+def remaining_args(oldArgs, newArgList):
     '''
     Preserves the spacing originally in the argument after
     the removal of options.
     
-    >>> remainingArgs('-f bar   bar   cow', ['bar', 'cow'])
+    >>> remaining_args('-f bar   bar   cow', ['bar', 'cow'])
     'bar   cow'
     '''
     pattern = '\s+'.join(re.escape(a) for a in newArgList) + '\s*$'
@@ -75,13 +88,27 @@ def _attr_get_(obj, attr):
 optparse.Values.get = _attr_get_
     
 def options(option_list):
+    '''Used as a decorator and passed a list of optparse-style options,
+       alters a cmd2 methodo populate its ``opts`` argument from its
+       raw text argument.
+
+       Example: transform
+       def do_something(self, arg):
+
+       into
+       @options([make_option('-q', '--quick', action="store_true",
+                 help="Makes things fast")])
+       def do_something(self, arg, opts):
+           if opts.quick:
+               self.fast_button = True
+       '''
     def option_setup(func):
         optionParser = OptionParser()
         for opt in option_list:
             optionParser.add_option(opt)
         optionParser.set_usage("%s [options] arg" % func.__name__.strip('do_'))
         optionParser._func = func
-        def newFunc(instance, arg):
+        def new_func(instance, arg):
             try:
                 if hasattr(arg, 'parsed'):
                     args = arg.parsed.raw
@@ -92,7 +119,7 @@ def options(option_list):
                 # mustn't include the command itself
                 if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                     newArgList = newArgList[1:]
-                newArgs = remainingArgs(args, newArgList)
+                newArgs = remaining_args(args, newArgList)
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -115,7 +142,7 @@ def options(option_list):
             result = func(instance, arg, opts)                            
             return result        
         newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
-        return newFunc
+        return new_func
     return option_setup
 
 class PasteBufferError(EnvironmentError):
@@ -137,7 +164,7 @@ to be installed on operating system.
 if subprocess.mswindows:
     try:
         import win32clipboard
-        def getPasteBuffer():
+        def get_paste_buffer():
             win32clipboard.OpenClipboard(0)
             try:
                 result = win32clipboard.GetClipboardData()
@@ -145,15 +172,15 @@ if subprocess.mswindows:
                 result = ''  #non-text
             win32clipboard.CloseClipboard()
             return result            
-        def writeToPasteBuffer(txt):
+        def write_to_paste_buffer(txt):
             win32clipboard.OpenClipboard(0)
             win32clipboard.EmptyClipboard()
             win32clipboard.SetClipboardText(txt)
             win32clipboard.CloseClipboard()        
     except ImportError:
-        def getPasteBuffer(*args):
+        def get_paste_buffer(*args):
             raise OSError, pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/')
-        setPasteBuffer = getPasteBuffer
+        setPasteBuffer = get_paste_buffer
 else:
     can_clip = False
     try:
@@ -170,10 +197,10 @@ else:
     except (subprocess.CalledProcessError, OSError, IOError):
         pass
     if can_clip:    
-        def getPasteBuffer():
+        def get_paste_buffer():
             xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             return xclipproc.stdout.read()
-        def writeToPasteBuffer(txt):
+        def write_to_paste_buffer(txt):
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
@@ -182,10 +209,10 @@ else:
             xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
     else:
-        def getPasteBuffer(*args):
+        def get_paste_buffer(*args):
             raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
-        setPasteBuffer = getPasteBuffer
-        writeToPasteBuffer = getPasteBuffer
+        setPasteBuffer = get_paste_buffer
+        writeToPasteBuffer = get_paste_buffer
           
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
@@ -239,7 +266,7 @@ def replace_with_file_contents(fname):
         except IOError:
             result = '< %s' % fname[0]  # wasn't a file after all
     else:
-        result = getPasteBuffer()
+        result = get_paste_buffer()
     return result      
 
 class EmbeddedConsoleExit(Exception):
@@ -282,12 +309,11 @@ class Cmd(cmd.Cmd):
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'            # For ``save``, ``load``, etc.
     default_file_name = 'command.txt'   # For ``save``, ``load``, etc.
-    abbrev = True
-    nonpythoncommand = 'cmd'
+    abbrev = True                       # Abbreviated commands recognized
     current_script_dir = None
     reserved_words = []
-    feedback_to_output = False
-    quiet = False
+    feedback_to_output = False          # Do include nonessentials in >, | output
+    quiet = False                       # Do not suppress nonessential output
     debug = False
     settable = ['prompt', 'continuation_prompt', 'debug', 'default_file_name', 'editor',
                 'case_insensitive', 'feedback_to_output', 'quiet', 'echo', 'timing', 
@@ -311,8 +337,8 @@ class Cmd(cmd.Cmd):
                 self.poutput(msg)
             else:
                 print msg
-    editor = os.environ.get('EDITOR')
     _STOP_AND_EXIT = 2
+    editor = os.environ.get('EDITOR')
     if not editor:
         if sys.platform[:3] == 'win':
             editor = 'notepad'
@@ -362,7 +388,6 @@ class Cmd(cmd.Cmd):
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
     commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
-    commentInProgress = pyparsing.NoMatch()
     terminators = [';']
     blankLinesAllowed = False
     multilineCommands = []
@@ -674,7 +699,7 @@ class Cmd(cmd.Cmd):
                 statekeeper = Statekeeper(self, ('stdout',))
                 self.stdout = tempfile.TemporaryFile()
                 if statement.parsed.output == '>>':
-                    self.stdout.write(getPasteBuffer())
+                    self.stdout.write(get_paste_buffer())
         try:
             try:
                 # "heart" of the command, replace's cmd's onecmd()
@@ -697,7 +722,7 @@ class Cmd(cmd.Cmd):
                 if statement.parsed.output and not statement.parsed.outputTo:
                     self.stdout.seek(0)
                     try:
-                        writeToPasteBuffer(self.stdout.read())
+                        write_to_paste_buffer(self.stdout.read())
                     except Exception, e:
                         self.perror(e)
                 elif statement.parsed.pipeTo:
@@ -775,12 +800,11 @@ class Cmd(cmd.Cmd):
         return True
     do_eof = do_EOF
                
-    def showParam(self, param):
+    def show_param(self, param):
         any_shown = False
         param = param.strip().lower()
         for p in self.settable:
             if p.startswith(param):
-                val = getattr(self, p)
                 self.stdout.write('%s: %s\n' % (p, str(getattr(self, p))))
                 any_shown = True
         if not any_shown:
@@ -794,10 +818,10 @@ class Cmd(cmd.Cmd):
     def do_show(self, arg):
         '''Shows value of a parameter.'''
         if arg.strip():
-            self.showParam(arg)
+            self.show_param(arg)
         else:
             for param in self.settable:
-                self.showParam(param)
+                self.show_param(param)
     
     def do_set(self, arg):
         '''Sets a cmd2 parameter.  Accepts abbreviated parameter names so long as there is no ambiguity.
@@ -854,7 +878,6 @@ class Cmd(cmd.Cmd):
                 return self.onecmd(arg + '\n')
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
-            self.pystate[self.nonpythoncommand] = onecmd
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'        
                 keepstate = Statekeeper(sys, ('stdin','stdout'))
@@ -966,16 +989,16 @@ class Cmd(cmd.Cmd):
             
     def read_file_or_url(self, fname):
         if isinstance(fname, file):
-            target = open(fname, 'r')
+            result = open(fname, 'r')
         else:
             match = self.urlre.match(fname)
             if match:
-                target = urllib.urlopen(match.group(1))
+                result = urllib.urlopen(match.group(1))
             else:
                 fname = os.path.expanduser(fname)
                 try:
                     result = open(os.path.expanduser(fname), 'r')
-                except IOError, e:                    
+                except IOError:                    
                     result = open('%s.%s' % (os.path.expanduser(fname), 
                                              self.defaultExtension), 'r')
         return result
@@ -1218,6 +1241,7 @@ class Cmd2TestCase(unittest.TestCase):
         
 if __name__ == '__main__':
     doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
+
     
 '''
 To make your application transcript-testable, add text like this to your .py file
