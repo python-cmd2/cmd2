@@ -141,7 +141,7 @@ def options(option_list):
                 arg = newArgs
             result = func(instance, arg, opts)                            
             return result        
-        newFunc.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
+        new_func.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
         return new_func
     return option_setup
 
