@@ -387,7 +387,8 @@ class Cmd(cmd.Cmd):
     prefixParser = pyparsing.Empty()
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
-    commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd)
+    commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(
+        pyparsing.stringEnd ^ '*/')
     terminators = [';']
     blankLinesAllowed = False
     multilineCommands = []
@@ -550,6 +551,7 @@ class Cmd(cmd.Cmd):
           - terminator: ['\n', '\n']
         - terminator: ['\n', '\n']
         '''
+        tstr = 'multiline command /* with comment complete */ is done;'
         outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
         
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
@@ -575,9 +577,9 @@ class Cmd(cmd.Cmd):
         self.multilineParser.ignore(self.commentInProgress)
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
-        self.multilineParser = self.multilineParser.setResultsName('multilineParser')
-        self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
-        self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('blankLineTerminatorParser')
+        #self.multilineParser = self.multilineParser.setResultsName('multilineParser')
+        #self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
+        self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('statement')
         self.parser = self.prefixParser + (
             stringEnd |
             self.multilineParser |
@@ -988,6 +990,7 @@ class Cmd(cmd.Cmd):
             self.perror('Error saving %s: %s' % (fname, str(e)))
             
     def read_file_or_url(self, fname):
+        # TODO: not working on localhost
         if isinstance(fname, file):
             result = open(fname, 'r')
         else:
