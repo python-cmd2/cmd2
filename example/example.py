@@ -7,7 +7,7 @@ class CmdLineApp(Cmd):
     multilineCommands = ['orate']
     Cmd.shortcuts.update({'&': 'speak'})
     maxrepeats = 3
-    Cmd.settable.append('maxrepeats')
+    Cmd.settable.append('maxrepeats   Max number of `--repeat` allowed')
 
     @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
               make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
@@ -43,6 +43,5 @@ if callopts.test:
     sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
     unittest.main()
 else:
-    pass
-    #CmdLineApp().cmdloop()
+    CmdLineApp().cmdloop()
 

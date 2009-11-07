@@ -297,6 +297,15 @@ class MyInteractiveConsole(InteractiveConsole):
             if softspace(sys.stdout, 0):
                 print
 
+def ljust(x, width, fillchar=' '):
+    'analogous to str.ljust, but works for lists'
+    if hasattr(x, 'ljust'):
+        return x.ljust(width, fillchar)
+    else:
+        if len(x) < width:
+            x = (x + [fillchar] * width)[:width]
+        return x
+    
 class Cmd(cmd.Cmd):
     echo = False
     case_insensitive = True     # Commands recognized regardless of case
@@ -315,10 +324,19 @@ class Cmd(cmd.Cmd):
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
     debug = False
-    settable = ['prompt', 'continuation_prompt', 'debug', 'default_file_name', 'editor',
-                'case_insensitive', 'feedback_to_output', 'quiet', 'echo', 'timing', 
-                'abbrev']   
-    settable.sort()
+    settable = '''
+        prompt
+        continuation_prompt
+        debug
+        default_file_name     for `save`, `load`, etc.
+        editor
+        case_insensitive      upper- and lower-case both OK
+        feedback_to_output    include nonessentials in `|`, `>` results 
+        quiet                 
+        echo                  Echo command issued into output
+        timing                Report execution times
+        abbrev                Accept abbreviated commands
+        '''.splitlines()
     
     def poutput(self, msg):
         if msg:
@@ -378,7 +396,10 @@ class Cmd(cmd.Cmd):
         self.pystate = {}
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) 
-                                               if fname.startswith('do_')]        
+                                               if fname.startswith('do_')] 
+        self.settable = (l.strip() for l in self.settable if l.strip())
+        self.settable = dict(ljust(l.split(None,1), 2, '') for l in self.settable)
+            
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
@@ -801,54 +822,59 @@ class Cmd(cmd.Cmd):
     def do_EOF(self, arg):
         return True
     do_eof = do_EOF
-               
-    def show_param(self, param):
-        any_shown = False
-        param = param.strip().lower()
-        for p in self.settable:
-            if p.startswith(param):
-                self.stdout.write('%s: %s\n' % (p, str(getattr(self, p))))
-                any_shown = True
-        if not any_shown:
-            self.perror("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
-                
+                           
     def do_quit(self, arg):
         return self._STOP_AND_EXIT
     do_exit = do_quit
     do_q = do_quit
     
-    def do_show(self, arg):
+    @options([make_option('-l', '--long', action="store_true",
+                 help="describe function of parameter")])    
+    def do_show(self, arg, opts):
         '''Shows value of a parameter.'''
-        if arg.strip():
-            self.show_param(arg)
+        param = arg.strip().lower()
+        result = {}
+        maxlen = 0
+        for p in self.settable:
+            if (not param) or p.startswith(param):
+                result[p] = '%s: %s' % (p, str(getattr(self, p)))
+                maxlen = max(maxlen, len(result[p]))
+        if result:
+            for p in sorted(result):
+                if opts.long:
+                    self.poutput('%s # %s' % (result[p].ljust(maxlen), self.settable[p]))
+                else:
+                    self.poutput(result[p])
         else:
-            for param in self.settable:
-                self.show_param(param)
+            self.perror("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
     
     def do_set(self, arg):
-        '''Sets a cmd2 parameter.  Accepts abbreviated parameter names so long as there is no ambiguity.
-           Call without arguments for a list of settable parameters with their values.'''
+        '''
+        Sets a cmd2 parameter.  Accepts abbreviated parameter names so long
+        as there is no ambiguity.  Call without arguments for a list of 
+        settable parameters with their values.'''
         try:
             paramName, val = arg.split(None, 1)
             paramName = paramName.strip().lower()
-            hits = [paramName in p for p in self.settable]
-            if hits.count(True) == 1:
-                paramName = self.settable[hits.index(True)]
-                currentVal = getattr(self, paramName)
-                if (val[0] == val[-1]) and val[0] in ("'", '"'):
-                    val = val[1:-1]
-                else:                
-                    val = cast(currentVal, val)
-                setattr(self, paramName, val)
-                self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
-                if currentVal != val:
-                    try:
-                        onchange_hook = getattr(self, '_onchange_%s' % paramName)
-                        onchange_hook(old=currentVal, new=val)
-                    except AttributeError:
-                        pass
-            else:
-                self.do_show(paramName)
+            if paramName not in self.settable:
+                hits = [p for p in self.settable if p.startswith(p)]
+                if len(hits) == 1:
+                    paramName = hits[0]
+                else:
+                    return self.do_show(paramName)
+            currentVal = getattr(self, paramName)
+            if (val[0] == val[-1]) and val[0] in ("'", '"'):
+                val = val[1:-1]
+            else:                
+                val = cast(currentVal, val)
+            setattr(self, paramName, val)
+            self.stdout.write('%s - was: %s\nnow: %s\n' % (paramName, currentVal, val))
+            if currentVal != val:
+                try:
+                    onchange_hook = getattr(self, '_onchange_%s' % paramName)
+                    onchange_hook(old=currentVal, new=val)
+                except AttributeError:
+                    pass
         except (ValueError, AttributeError, NotSettableError), e:
             self.do_show(arg)
                 
@@ -1244,7 +1270,6 @@ class Cmd2TestCase(unittest.TestCase):
         
 if __name__ == '__main__':
     doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
-
     
 '''
 To make your application transcript-testable, add text like this to your .py file
