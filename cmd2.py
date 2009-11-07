@@ -854,10 +854,10 @@ class Cmd(cmd.Cmd):
         as there is no ambiguity.  Call without arguments for a list of 
         settable parameters with their values.'''
         try:
-            paramName, val = arg.split(None, 1)
+            statement, paramName, val = arg.parsed.raw.split(None, 2)
             paramName = paramName.strip().lower()
             if paramName not in self.settable:
-                hits = [p for p in self.settable if p.startswith(p)]
+                hits = [p for p in self.settable if p.startswith(paramName)]
                 if len(hits) == 1:
                     paramName = hits[0]
                 else:
