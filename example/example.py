@@ -7,7 +7,7 @@ class CmdLineApp(Cmd):
     multilineCommands = ['orate']
     Cmd.shortcuts.update({'&': 'speak'})
     maxrepeats = 3
-    Cmd.settable.append('maxrepeats   Max number of `--repeat` allowed')
+    Cmd.settable.append('maxrepeats   Max number of `--repeat`s allowed')
 
     @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
               make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
