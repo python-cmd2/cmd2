@@ -642,7 +642,6 @@ class Cmd(cmd.Cmd):
             result['expanded'] = s        
             p = ParsedString(result.clean)
             p.parsed = result
-            p.parser = self.parsed
         for (key, val) in kwargs.items():
             p.parsed[key] = val
         return p
