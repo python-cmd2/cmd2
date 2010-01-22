@@ -728,12 +728,14 @@ class Cmd(cmd.Cmd):
                 # "heart" of the command, replaces cmd's onecmd()
                 self.lastcmd = statement.parsed.expanded   
                 funcname = self.func_named(statement.parsed.command)
+                full_statement = ParsedString(statement.parsed.raw)
+                full_statement.parsed = statement.parsed
                 if not funcname:
-                    return self.postparsing_postcmd(self.default(statement))  
+                    return self.postparsing_postcmd(self.default(full_statement))  
                 try:
                     func = getattr(self, funcname)
                 except AttributeError:
-                    return self.postparsing_postcmd(self.default(statement))                  
+                    return self.postparsing_postcmd(self.default(full_statement))                  
                 timestart = datetime.datetime.now()
                 stop = func(statement) 
                 if self.timing:
