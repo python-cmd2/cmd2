@@ -628,6 +628,7 @@ class Cmd(cmd.Cmd):
         if isinstance(raw, ParsedString):
             p = raw
         else:
+            # preparse is an overridable hook; default makes no changes
             raw = self.preparse(raw, **kwargs)
             s = self.inputParser.transformString(raw.lstrip())
             for (shortcut, expansion) in self.shortcuts:
@@ -725,7 +726,7 @@ class Cmd(cmd.Cmd):
                     self.stdout.write(get_paste_buffer())
         try:
             try:
-                # "heart" of the command, replace's cmd's onecmd()
+                # "heart" of the command, replaces cmd's onecmd()
                 self.lastcmd = statement.parsed.expanded   
                 funcname = self.func_named(statement.parsed.command)
                 if not funcname:
