@@ -102,6 +102,8 @@ def options(option_list):
            if opts.quick:
                self.fast_button = True
        '''
+    if not isinstance(option_list, list):
+        option_list = [option_list]
     def option_setup(func):
         optionParser = OptionParser()
         for opt in option_list:
