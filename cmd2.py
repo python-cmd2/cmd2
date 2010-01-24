@@ -128,7 +128,7 @@ def options(option_list):
                 return
             if hasattr(opts, '_exit'):
                 return None
-            if hasattr(arg, 'parser'):
+            if hasattr(arg, 'parsed'):
                 terminator = arg.parsed.terminator
                 try:
                     if arg.parsed.terminator[0] == '\n':
@@ -323,7 +323,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
-    debug = False
+    debug = True
     settable = '''
         prompt
         continuation_prompt
@@ -642,6 +642,7 @@ class Cmd(cmd.Cmd):
             result['expanded'] = s        
             p = ParsedString(result.clean)
             p.parsed = result
+            p.parser = self.parsed
         for (key, val) in kwargs.items():
             p.parsed[key] = val
         return p
@@ -730,6 +731,7 @@ class Cmd(cmd.Cmd):
                 funcname = self.func_named(statement.parsed.command)
                 full_statement = ParsedString(statement.parsed.raw)
                 full_statement.parsed = statement.parsed
+                full_statement.parser = statement.parser
                 if not funcname:
                     return self.postparsing_postcmd(self.default(full_statement))  
                 try:

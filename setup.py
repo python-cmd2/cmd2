@@ -5,6 +5,7 @@ setup(
     name="cmd2",
     version="0.5.6",
     py_modules=["cmd2",],
+    use2to3=True,
     
     # metadata for upload to PyPI
     author = 'Catherine Devlin',
