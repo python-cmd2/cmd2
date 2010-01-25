@@ -103,7 +103,7 @@ def options(option_list):
                self.fast_button = True
        '''
     if not isinstance(option_list, list):
-        option_list = [option_list]    
+        option_list = [option_list]
     def option_setup(func):
         optionParser = OptionParser()
         for opt in option_list:
@@ -325,7 +325,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
-    debug = False
+    debug = True
     settable = '''
         prompt
         continuation_prompt
