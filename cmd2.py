@@ -112,17 +112,12 @@ def options(option_list):
         optionParser._func = func
         def new_func(instance, arg):
             try:
-                if hasattr(arg, 'parsed'):
-                    args = arg.parsed.raw
-                else:
-                    print 'raw arg passed to new_func!'
-                    args = arg
-                opts, newArgList = optionParser.parse_args(args.split())
+                opts, newArgList = optionParser.parse_args(arg.split())
                 # Must find the remaining args in the original argument list, but 
                 # mustn't include the command itself
-                if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
-                    newArgList = newArgList[1:]
-                newArgs = remaining_args(args, newArgList)
+                #if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
+                #    newArgList = newArgList[1:]
+                newArgs = remaining_args(arg, newArgList)
                 if isinstance(arg, ParsedString):
                     arg = arg.with_args_replaced(newArgs)
                 else:
