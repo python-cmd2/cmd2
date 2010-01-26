@@ -220,7 +220,11 @@ else:
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 class ParsedString(str):
-    pass
+    def full_parsed_statement(self):
+        new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
+        new.parsed = self.parsed
+        new.parser = self.parser
+        return new        
 
 class SkipToLast(pyparsing.SkipTo):
     def parseImpl( self, instring, loc, doActions=True ):
@@ -632,18 +636,17 @@ class Cmd(cmd.Cmd):
             p = raw
         else:
             # preparse is an overridable hook; default makes no changes
-            raw = self.preparse(raw, **kwargs)
-            s = self.inputParser.transformString(raw.lstrip())
+            s = self.preparse(raw, **kwargs)
+            s = self.inputParser.transformString(s.lstrip())
+            s = self.commentGrammars.transformString(s)
             for (shortcut, expansion) in self.shortcuts:
                 if s.lower().startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
             result = self.parser.parseString(s)
+            result['raw'] = raw            
             result['command'] = result.multilineCommand or result.command        
-            result['raw'] = raw
-            result['comments_removed'] = self.commentGrammars.transformString(result.args)  
-            result['expanded'] = s        
-            p = ParsedString(result.comments_removed)
+            p = ParsedString(result.args)
             p.parsed = result
             p.parser = self.parsed
         for (key, val) in kwargs.items():
@@ -730,17 +733,14 @@ class Cmd(cmd.Cmd):
         try:
             try:
                 # "heart" of the command, replaces cmd's onecmd()
-                self.lastcmd = statement.parsed.expanded   
+                self.lastcmd = statement.parsed.raw   
                 funcname = self.func_named(statement.parsed.command)
-                full_statement = ParsedString(statement.parsed.raw)
-                full_statement.parsed = statement.parsed
-                full_statement.parser = statement.parser
                 if not funcname:
-                    return self.postparsing_postcmd(self.default(full_statement))  
+                    return self.postparsing_postcmd(self.default(statement.full_parsed_statement()))  
                 try:
                     func = getattr(self, funcname)
                 except AttributeError:
-                    return self.postparsing_postcmd(self.default(full_statement))                  
+                    return self.postparsing_postcmd(self.default(statement.full_parsed_statement()))                  
                 timestart = datetime.datetime.now()
                 stop = func(statement) 
                 if self.timing:
