@@ -115,6 +115,7 @@ def options(option_list):
                 if hasattr(arg, 'parsed'):
                     args = arg.parsed.raw
                 else:
+                    print 'raw arg passed to new_func!'
                     args = arg
                 opts, newArgList = optionParser.parse_args(args.split())
                 # Must find the remaining args in the original argument list, but 
@@ -122,6 +123,10 @@ def options(option_list):
                 if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                     newArgList = newArgList[1:]
                 newArgs = remaining_args(args, newArgList)
+                if isinstance(arg, ParsedString):
+                    arg = arg.with_args_replaced(newArgs)
+                else:
+                    arg = newArgs
             except (optparse.OptionValueError, optparse.BadOptionError,
                     optparse.OptionError, optparse.AmbiguousOptionError,
                     optparse.OptionConflictError), e:
@@ -130,18 +135,6 @@ def options(option_list):
                 return
             if hasattr(opts, '_exit'):
                 return None
-            if hasattr(arg, 'parsed'):
-                arg.parsed.args = newArgs
-                terminator = arg.parsed.terminator
-                try:
-                    if arg.parsed.terminator[0] == '\n':
-                        terminator = arg.parsed.terminator[0]
-                except IndexError:
-                    pass
-                arg = arg.parser('%s %s%s%s' % (arg.parsed.command, newArgs, 
-                                                terminator, arg.parsed.suffix))
-            else:
-                arg = newArgs
             result = func(instance, arg, opts)                            
             return result        
         new_func.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
@@ -224,7 +217,14 @@ class ParsedString(str):
         new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
         new.parsed = self.parsed
         new.parser = self.parser
-        return new        
+        return new       
+    def with_args_replaced(self, newargs):
+        new = ParsedString(newargs)
+        new.parsed = self.parsed
+        new.parser = self.parser
+        new.parsed['args'] = newargs
+        new.parsed.statement['args'] = newargs
+        return new
 
 class SkipToLast(pyparsing.SkipTo):
     def parseImpl( self, instring, loc, doActions=True ):

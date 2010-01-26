@@ -31,14 +31,15 @@ OODNIGHT, GRACIEGAY
 abbrev: True
 case_insensitive: True
 continuation_prompt: > 
+debug: True
 default_file_name: command.txt
 echo: False
 editor: gedit
 feedback_to_output: False
+maxrepeats: 3
 prompt: (Cmd) 
 quiet: False
 timing: False
-maxrepeats: 3
 (Cmd) set maxrepeats 5
 maxrepeats - was: 3
 now: 5
