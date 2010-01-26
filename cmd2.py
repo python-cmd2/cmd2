@@ -131,6 +131,7 @@ def options(option_list):
             if hasattr(opts, '_exit'):
                 return None
             if hasattr(arg, 'parsed'):
+                arg.parsed.args = newArgs
                 terminator = arg.parsed.terminator
                 try:
                     if arg.parsed.terminator[0] == '\n':
@@ -640,9 +641,9 @@ class Cmd(cmd.Cmd):
             result = self.parser.parseString(s)
             result['command'] = result.multilineCommand or result.command        
             result['raw'] = raw
-            result['clean'] = self.commentGrammars.transformString(result.args)  # oh no, strips ls box/*
+            result['comments_removed'] = self.commentGrammars.transformString(result.args)  
             result['expanded'] = s        
-            p = ParsedString(result.clean)
+            p = ParsedString(result.comments_removed)
             p.parsed = result
             p.parser = self.parsed
         for (key, val) in kwargs.items():
