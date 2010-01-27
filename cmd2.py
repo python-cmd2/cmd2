@@ -1126,7 +1126,7 @@ class History(list):
     >>> h.span('-1')
     ['fourth']    
     >>> h.span('-2..-3')
-    ['third', 'second']        
+    ['third', 'second']      
     '''
     def zero_based_index(self, onebased):
         result = onebased
