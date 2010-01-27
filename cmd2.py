@@ -1237,17 +1237,17 @@ class Cmd2TestCase(unittest.TestCase):
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         try:
-            line = transcript.next().strip()
+            line = transcript.next()
             while True:
                 while not line.startswith(self.cmdapp.prompt):
-                    line = transcript.next().strip()
+                    line = transcript.next()
                 command = [line[len(self.cmdapp.prompt):]]
-                line = transcript.next().strip()
+                line = transcript.next()
                 while line.startswith(self.cmdapp.continuation_prompt):
                     command.append(line[len(self.cmdapp.continuation_prompt):])
-                    line = transcript.next().strip()
+                    line = transcript.next()
                 command = ''.join(command)
-                self.cmdapp.onecmd(command)
+                self.cmdapp.onecmd(command.strip())
                 result = self.outputTrap.read().strip()
                 if line.startswith(self.cmdapp.prompt):
                     message = '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing)\nGot:\n%s\n'%\
