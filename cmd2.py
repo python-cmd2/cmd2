@@ -950,8 +950,11 @@ class Cmd(cmd.Cmd):
         arg is string -> list last command matching string search
         arg is /enclosed in forward-slashes/ -> regular expression search
         """
+        #TODO: totally failing to recognize args
         try:
-            self.stdout.write(self.last_matching(arg).pr())
+            #self.stdout.write(self.last_matching(arg).pr())
+            for hi in self.history.get(arg or -1):
+                self.poutput(hi.pr())
         except:
             pass
     do_hi = do_history
@@ -1099,15 +1102,62 @@ class Cmd(cmd.Cmd):
         return data
             
 class HistoryItem(str):
+    listformat = '-------------------------[%d]\n%s\n'
     def __init__(self, instr):
         str.__init__(self)
         self.lowercase = self.lower()
         self.idx = None
     def pr(self):
-        return '-------------------------[%d]\n%s\n' % (self.idx, str(self))
+        return  listformat % (self.idx, str(self))
         
 class History(list):
-    rangeFrom = re.compile(r'^([\d])+\s*\-$')
+    '''A list of HistoryItems that knows how to respond to user requests.
+    >>> h = History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
+    >>> h.span('-2..')
+    ['third', 'fourth']
+    >>> h.span('2..3')
+    ['second', 'third']
+    >>> h.span('3')
+    ['third']    
+    >>> h.span(':')
+    ['first', 'second', 'third', 'fourth']
+    >>> h.span('2..')
+    ['second', 'third', 'fourth']
+    >>> h.span('-1')
+    ['fourth']    
+    >>> h.span('-2..-3')
+    ['third', 'second']        
+    '''
+    def zero_based_index(self, onebased):
+        result = onebased
+        if result > 0:
+            result -= 1
+        return result
+    def to_index(self, raw):
+        if raw:
+            result = self.zero_based_index(int(raw))
+        else:
+            result = None
+        return result
+    spanpattern = re.compile(r'^\s*(?P<start>\-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>\-?\d+)?\s*$')
+    def span(self, raw):
+        results = self.spanpattern.search(raw)
+        if not results.group('separator'):
+            return [self[self.to_index(results.group('start'))]]
+        start = self.to_index(results.group('start'))
+        end = self.to_index(results.group('end'))
+        reverse = False
+        if end is not None:
+            if end < start:
+                (start, end) = (end, start)
+                reverse = True
+            end += 1
+        result = self[start:end]
+        if reverse:
+            result.reverse()
+        return result
+                
+    rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*\-\s*(?P<end>[\d]+)?\s*$')
     def append(self, new):
         new = HistoryItem(new)
         list.append(self, new)
@@ -1115,7 +1165,11 @@ class History(list):
     def extend(self, new):
         for n in new:
             self.append(n)
-    def get(self, getme):
+
+        
+    def get(self, getme=None, fromEnd=False):
+        if not getme:
+            return self
         try:
             getme = int(getme)
             if getme < 0:
@@ -1124,11 +1178,19 @@ class History(list):
                 return [self[getme-1]]
         except IndexError:
             return []
-        except (ValueError, TypeError):
+        except ValueError:
+            rangeResult = self.rangePattern.search(getme)
+            if rangeResult:
+                start = rangeResult.group('start') or None
+                end = rangeResult.group('start') or None
+                if start:
+                    start = int(start) - 1
+                if end:
+                    end = int(end)
+                return self[start:end]
+                
             getme = getme.strip()
-            mtch = self.rangeFrom.search(getme)
-            if mtch:
-                return self[(int(mtch.group(1))-1):]
+
             if getme.startswith(r'/') and getme.endswith(r'/'):
                 finder = re.compile(getme[1:-1], re.DOTALL | re.MULTILINE | re.IGNORECASE)
                 def isin(hi):
@@ -1246,8 +1308,8 @@ class Cmd2TestCase(unittest.TestCase):
                 while line.startswith(self.cmdapp.continuation_prompt):
                     command.append(line[len(self.cmdapp.continuation_prompt):])
                     line = transcript.next()
-                command = ''.join(command)
-                self.cmdapp.onecmd(command.strip())
+                command = ''.join(command).strip()
+                self.cmdapp.onecmd(command)
                 result = self.outputTrap.read().strip()
                 if line.startswith(self.cmdapp.prompt):
                     message = '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing)\nGot:\n%s\n'%\
