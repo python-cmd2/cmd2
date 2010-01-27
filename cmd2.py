@@ -1237,15 +1237,15 @@ class Cmd2TestCase(unittest.TestCase):
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         try:
-            line = transcript.next()
+            line = transcript.next().strip()
             while True:
                 while not line.startswith(self.cmdapp.prompt):
-                    line = transcript.next()
+                    line = transcript.next().strip()
                 command = [line[len(self.cmdapp.prompt):]]
-                line = transcript.next()
+                line = transcript.next().strip()
                 while line.startswith(self.cmdapp.continuation_prompt):
                     command.append(line[len(self.cmdapp.continuation_prompt):])
-                    line = transcript.next()
+                    line = transcript.next().strip()
                 command = ''.join(command)
                 self.cmdapp.onecmd(command)
                 result = self.outputTrap.read().strip()
