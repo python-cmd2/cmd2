@@ -944,16 +944,16 @@ class Cmd(cmd.Cmd):
     def do_list(self, arg):
         """list [arg]: lists last command issued
         
-        no arg -> list absolute last
+        no arg -> list most recent command
         arg is integer -> list one history item, by index
-        - arg, arg - (integer) -> list up to or after #arg
+        a..b, a:b, a:, ..b -> list spans from a (or start) to b (or end)
         arg is string -> list last command matching string search
         arg is /enclosed in forward-slashes/ -> regular expression search
         """
         #TODO: totally failing to recognize args
         try:
             #self.stdout.write(self.last_matching(arg).pr())
-            for hi in self.history.get(arg or -1):
+            for hi in self.history.span(arg or '-1'):
                 self.poutput(hi.pr())
         except:
             pass
@@ -1108,7 +1108,7 @@ class HistoryItem(str):
         self.lowercase = self.lower()
         self.idx = None
     def pr(self):
-        return  listformat % (self.idx, str(self))
+        return self.listformat % (self.idx, str(self))
         
 class History(list):
     '''A list of HistoryItems that knows how to respond to user requests.
@@ -1128,6 +1128,8 @@ class History(list):
     >>> h.span('-2..-3')
     ['third', 'second']      
     '''
+    def find(self, target):
+        
     def zero_based_index(self, onebased):
         result = onebased
         if result > 0:
@@ -1142,6 +1144,8 @@ class History(list):
     spanpattern = re.compile(r'^\s*(?P<start>\-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>\-?\d+)?\s*$')
     def span(self, raw):
         results = self.spanpattern.search(raw)
+        if not results:
+            raise IndexError
         if not results.group('separator'):
             return [self[self.to_index(results.group('start'))]]
         start = self.to_index(results.group('start'))
