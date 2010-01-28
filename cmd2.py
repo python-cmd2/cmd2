@@ -947,16 +947,16 @@ class Cmd(cmd.Cmd):
         no arg -> list most recent command
         arg is integer -> list one history item, by index
         a..b, a:b, a:, ..b -> list spans from a (or start) to b (or end)
-        arg is string -> list last command matching string search
+        arg is string -> list all commands matching string search
         arg is /enclosed in forward-slashes/ -> regular expression search
         """
-        #TODO: totally failing to recognize args
         try:
-            #self.stdout.write(self.last_matching(arg).pr())
-            for hi in self.history.span(arg or '-1'):
-                self.poutput(hi.pr())
-        except:
-            pass
+            history = self.history.span(arg or '-1')
+        except IndexError:
+            history = self.history.search(arg)
+        for hi in history:
+            self.poutput(hi.pr())
+
     do_hi = do_history
     do_l = do_list
     do_li = do_list
@@ -1127,9 +1127,11 @@ class History(list):
     ['fourth']    
     >>> h.span('-2..-3')
     ['third', 'second']      
+    >>> h.search('o')
+    ['second', 'fourth']
+    >>> h.search('/IR/')
+    ['first', 'third']
     '''
-    def find(self, target):
-        
     def zero_based_index(self, onebased):
         result = onebased
         if result > 0:
@@ -1141,8 +1143,18 @@ class History(list):
         else:
             result = None
         return result
+    def search(self, target):
+        target = target.strip()
+        if target[0] == target[-1] == '/' and len(target) > 1:
+            target = target[1:-1]
+        else:
+            target = re.escape(target)
+        pattern = re.compile(target, re.IGNORECASE)
+        return [s for s in self if pattern.search(s)]
     spanpattern = re.compile(r'^\s*(?P<start>\-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>\-?\d+)?\s*$')
     def span(self, raw):
+        if raw.lower() in ('*', '-', 'all'):
+            raw = ':'
         results = self.spanpattern.search(raw)
         if not results:
             raise IndexError
