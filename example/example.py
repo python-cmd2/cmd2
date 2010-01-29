@@ -26,6 +26,10 @@ class CmdLineApp(Cmd):
             self.stdout.write('\n')
             # self.stdout.write is better than "print", because Cmd can be
             # initialized with a non-standard output destination
+    def do_sel(self, arg):
+        opts = arg.split()
+        result = self.select(opts)
+        self.poutput('yay for %s' % result)
 
     do_say = do_speak     # now "say" is a synonym for "speak"
     do_orate = do_speak   # another synonym, but this one takes multi-line input
