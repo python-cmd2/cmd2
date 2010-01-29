@@ -38,7 +38,11 @@ import traceback
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 
-import pyparsing
+if sys.version_info[0] > 2:
+    import pyparsing_py3 as pyparsing
+else:
+    import pyparsing
+    
 __version__ = '0.5.6'
 
 class OptionParser(optparse.OptionParser):
@@ -829,6 +833,23 @@ class Cmd(cmd.Cmd):
         return self._STOP_AND_EXIT
     do_exit = do_quit
     do_q = do_quit
+    
+    def select(self, options, prompt='Your choice? '):
+        '''Presents a numbered menu to the user.  Modelled after
+           the bash shell's SELECT.  Returns the item chosen.'''
+        if isinstance(options, basestring):
+            options = options.split()
+        for (idx, opt) in enumerate(options):
+            self.poutput('  %2d. %s\n' % (idx+1, opt))
+        while True:
+            response = raw_input(prompt)
+            try:
+                response = int(response)
+                result = options[response - 1]
+                break
+            except ValueError:
+                pass # loop and ask again
+        return result
     
     @options([make_option('-l', '--long', action="store_true",
                  help="describe function of parameter")])    
