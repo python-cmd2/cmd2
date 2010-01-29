@@ -13,6 +13,7 @@ Optional _onchange_{paramname} called when environment parameter changes
 Parsing commands with `optparse` options (flags)
 Redirection to file with >, >>; input from file with <
 Easy transcript-based testing of applications (see example/example.py)
+Bash-style ``select`` available
 
 Note that redirection with > and | will only work if `self.stdout.write()`
 is used in place of `print`.  The standard library's `cmd` module is 
@@ -836,16 +837,32 @@ class Cmd(cmd.Cmd):
     
     def select(self, options, prompt='Your choice? '):
         '''Presents a numbered menu to the user.  Modelled after
-           the bash shell's SELECT.  Returns the item chosen.'''
+           the bash shell's SELECT.  Returns the item chosen.
+           
+           Argument ``options`` can be:
+             a single string -> will be split into one-word options
+             a list of strings -> will be offered as options
+             a list of tuples -> interpreted as (value, text), so 
+                                 that the return value can differ from
+                                 the text advertised to the user '''
         if isinstance(options, basestring):
-            options = options.split()
-        for (idx, opt) in enumerate(options):
-            self.poutput('  %2d. %s\n' % (idx+1, opt))
+            options = zip(options.split(), options.split())
+        fulloptions = []
+        for opt in options:
+            if isinstance(opt, basestring):
+                fulloptions.append((opt, opt))
+            else:
+                try:
+                    fulloptions.append((opt[0], opt[1]))
+                except IndexError:
+                    fulloptions.append((opt[0], opt[0]))
+        for (idx, (value, text)) in enumerate(fulloptions):
+            self.poutput('  %2d. %s\n' % (idx+1, text))
         while True:
             response = raw_input(prompt)
             try:
                 response = int(response)
-                result = options[response - 1]
+                result = fulloptions[response - 1][0]
                 break
             except ValueError:
                 pass # loop and ask again
