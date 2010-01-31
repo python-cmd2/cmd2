@@ -1,11 +1,18 @@
 #!/usr/bin/python
 from setuptools import setup, find_packages
+import sys
 
+python3 = sys.version_info[0] > 2
+if python3:
+    install_requires = [] # will rely on local pyparsing_py3 copy
+else:
+    install_requires = ['pyparsing>=1.5.1']
+    
 setup(
     name="cmd2",
     version="0.5.6",
     py_modules=["cmd2",],
-    use2to3=True,
+    use_2to3=True,
     
     # metadata for upload to PyPI
     author = 'Catherine Devlin',
@@ -14,7 +21,7 @@ setup(
     license = 'MIT',
     keywords = 'command prompt console cmd',
     url = 'http://www.assembla.com/wiki/show/python-cmd2',
-    install_requires=['pyparsing>=1.5.1'],
+    install_requires = install_requires,
     
     long_description = """Enhancements for standard library's cmd module.
 
