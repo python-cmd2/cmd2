@@ -36,6 +36,7 @@ import datetime
 import urllib
 import glob
 import traceback
+import platform
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 
@@ -44,7 +45,7 @@ if sys.version_info[0] > 2:
 else:
     import pyparsing
     
-__version__ = '0.5.6'
+__version__ = '0.6.0'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -337,6 +338,7 @@ class Cmd(cmd.Cmd):
     debug = True
     settable = '''
         prompt
+        colors                Colorized output (*nix only)
         continuation_prompt
         debug
         default_file_name     for `save`, `load`, etc.
@@ -375,7 +377,22 @@ class Cmd(cmd.Cmd):
             for editor in ['gedit', 'kate', 'vim', 'emacs', 'nano', 'pico']:
                 if not os.system('which %s' % (editor)):
                     break
-            
+
+    colorcodes =    {'bold':{True:'\x1b[1m',False:'\x1b[22m'},
+                  'cyan':{True:'\x1b[36m',False:'\x1b[39m'},
+                  'blue':{True:'\x1b[34m',False:'\x1b[39m'},
+                  'red':{True:'\x1b[31m',False:'\x1b[39m'},
+                  'magenta':{True:'\x1b[35m',False:'\x1b[39m'},
+                  'green':{True:'\x1b[32m',False:'\x1b[39m'},
+                  'underline':{True:'\x1b[4m',False:'\x1b[24m'}}
+    colors = (platform.system() != 'Windows')
+    def colorize(self, val, color):
+        '''Wraps `val` in `color` markers (one of: red/blue/green/cyan/magenta, bold, underline),
+           but only if `colors` environment variable is True'''
+        if self.colors and (self.stdout == self.initial_stdout):
+            return self.colorcodes[color][True] + val + self.colorcodes[color][False]
+        return val
+
     def do_cmdenvironment(self, args):
         '''Summary report of interactive parameters.'''
         self.stdout.write("""
