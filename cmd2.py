@@ -984,10 +984,10 @@ class Cmd(cmd.Cmd):
     def do_history(self, arg):
         """history [arg]: lists past commands issued
         
-        no arg -> list all
-        arg is integer -> list one history item, by index
-        arg is string -> string search
-        arg is /enclosed in forward-slashes/ -> regular expression search
+        | no arg:         list all
+        | arg is integer: list one history item, by index
+        | arg is string:  string search
+        | arg is /enclosed in forward-slashes/: regular expression search
         """
         if arg:
             history = self.history.get(arg)
