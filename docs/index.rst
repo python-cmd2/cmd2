@@ -14,6 +14,8 @@ Contents:
    overview
    example
    freefeatures
+   settingchanges
+   unfreefeatures
 
 Indices and tables
 ==================
