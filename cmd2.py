@@ -450,6 +450,8 @@ class Cmd(cmd.Cmd):
         >>> c.case_insensitive = True
         >>> c._init_parser()
         >>> print (c.parser.parseString('').dump())
+        []
+        >>> print (c.parser.parseString('').dump())
         []        
         >>> print (c.parser.parseString('/* empty command */').dump())
         []        
