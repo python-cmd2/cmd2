@@ -5,6 +5,22 @@ Features requiring no modifications
 These features are provided "for free" to a cmd_-based application
 simply by replacing ``import cmd`` with ``import cmd2 as cmd``.
 
+Script files
+============
+
+Commands can be loaded from, run from, and saved to text files.
+
+.. automethod:: cmd2.Cmd.do_load
+
+Output redirection
+==================
+
+Commands at start
+=================
+
+Python
+======
+
 Searchable command history
 ==========================
 
@@ -20,3 +36,5 @@ also provide `bash-like history list editing`_.
 
 .. automethod:: cmd2.Cmd.do_history
 
+Transcript-based testing
+========================
