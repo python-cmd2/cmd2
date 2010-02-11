@@ -6,6 +6,21 @@
 Welcome to cmd2's documentation!
 ================================
 
+The basic use of ``cmd2`` is identical to that of cmd_.
+
+1. Create a subclass of ``cmd2.Cmd``.  Define attributes and
+   ``do_*`` methods to control its behavior.  Throughout this documentation,
+   we will assume that you are naming your subclass ``App``::
+   
+     from cmd2 import Cmd
+     class App(Cmd):
+         # customized attributes and methods here
+         
+2. Instantiate ``App`` and start the command loop::
+
+     app = App()
+     app.cmdloop()
+     
 Contents:
 
 .. toctree::

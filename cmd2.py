@@ -401,7 +401,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
-    debug = True
+    debug = False
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
