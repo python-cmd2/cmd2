@@ -15,6 +15,22 @@ Commands can be loaded from, run from, and saved to text files.
 Output redirection
 ==================
 
+As in a Unix shell, output of a command can be redirected:
+
+  - sent to a file with ``>``, as in ``mycommand args > filename.txt``
+  - piped (``|``) as input to operating-system commands, as in
+    ``mycommand args | wc``
+  - sent to the paste buffer, ready for the next Copy operation, by
+    ending with a bare ``>``, as in ``mycommand args >``..  Redirecting
+    to paste buffer requires software to be installed on the operating
+    system, pywin32_ on Windows or xclip_ on *nix.
+    
+.. _pywin32:: http://sourceforge.net/projects/pywin32/
+.. _xclip:: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
+
+  
+operating-system programs, like 
+
 Commands at start
 =================
 
