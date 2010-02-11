@@ -37,6 +37,7 @@ import urllib
 import glob
 import traceback
 import platform
+import copy
 from code import InteractiveConsole, InteractiveInterpreter, softspace
 from optparse import make_option
 
@@ -291,6 +292,14 @@ class StubbornDict(dict):
     def __iadd__(self, arg):
         self.update(arg)
         return self
+    def __add__(self, arg):
+        selfcopy = copy.copy(self)
+        selfcopy.update(stubbornDict(arg))
+        return selfcopy
+    def __radd__(self, arg):
+        selfcopy = copy.copy(self)
+        selfcopy.update(stubbornDict(arg))
+        return selfcopy    
         
     @classmethod
     def to_dict(cls, arg):
