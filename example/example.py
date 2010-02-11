@@ -1,6 +1,6 @@
 '''A sample application for cmd2.'''
 
-from cmd2 import Cmd, make_option, options, Cmd2TestCase
+from cmd2 import Cmd, make_option, options, Cmd2TestCase, run
 import unittest, optparse, sys
 
 class CmdLineApp(Cmd):
@@ -31,6 +31,7 @@ class CmdLineApp(Cmd):
     do_orate = do_speak   # another synonym, but this one takes multi-line input
 
 c = CmdLineApp()
+#run(c)
 
 class TestMyAppCase(Cmd2TestCase):
     CmdApp = CmdLineApp
@@ -44,4 +45,3 @@ if callopts.test:
     unittest.main()
 else:
     CmdLineApp().cmdloop()
-

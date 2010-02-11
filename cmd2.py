@@ -1476,10 +1476,24 @@ class Cmd2TestCase(unittest.TestCase):
     def tearDown(self):
         if self.CmdApp:
             self.outputTrap.tearDown()
-        
+    
+def run(app):
+    class TestMyAppCase(Cmd2TestCase):
+        CmdApp = app.__class__
+    parser = optparse.OptionParser()
+    parser.add_option('-t', '--test', dest='test', action="store_true", 
+                      help='Test against transcript(s) in FILE (wildcards OK)')
+    (callopts, callargs) = parser.parse_args()
+    if callopts.test:
+        app.testfiles = callargs
+        sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
+        unittest.main()
+    else:
+        app.cmdloop()   
+
 if __name__ == '__main__':
     doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
-    
+        
 '''
 To make your application transcript-testable, add text like this to your .py file
 (replacing CmdLineApp with your own application class's name).  Then, a cut-and-pasted
