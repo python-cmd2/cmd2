@@ -31,8 +31,9 @@ class CmdLineApp(Cmd):
     do_orate = do_speak   # another synonym, but this one takes multi-line input
 
 c = CmdLineApp()
-#run(c)
+run(c)
 
+'''
 class TestMyAppCase(Cmd2TestCase):
     CmdApp = CmdLineApp
 parser = optparse.OptionParser()
@@ -44,4 +45,4 @@ if callopts.test:
     sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
     unittest.main()
 else:
-    CmdLineApp().cmdloop()
+    CmdLineApp().cmdloop()'''

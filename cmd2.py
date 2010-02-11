@@ -1430,7 +1430,7 @@ class Cmd2TestCase(unittest.TestCase):
             self.outputTrap = OutputTrap()
             self.cmdapp = self.CmdApp()
             self.fetchTranscripts()
-    def testall(self):
+    def runTest(self): # was testall
         if self.CmdApp:
             its = sorted(self.transcripts.items())
             for (fname, transcript) in its:
@@ -1485,9 +1485,12 @@ def run(app):
                       help='Test against transcript(s) in FILE (wildcards OK)')
     (callopts, callargs) = parser.parse_args()
     if callopts.test:
-        app.testfiles = callargs
+        app.__class__.testfiles = callargs
         sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
-        unittest.main()
+        testcase = TestMyAppCase()
+        runner = unittest.TextTestRunner()
+        result = runner.run(testcase)
+        result.printErrors()
     else:
         app.cmdloop()   
 
