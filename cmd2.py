@@ -1478,13 +1478,13 @@ class Cmd2TestCase(unittest.TestCase):
             self.outputTrap.tearDown()
     
 def run(app):
-    class TestMyAppCase(Cmd2TestCase):
-        CmdApp = app.__class__
     parser = optparse.OptionParser()
     parser.add_option('-t', '--test', dest='test', action="store_true", 
                       help='Test against transcript(s) in FILE (wildcards OK)')
     (callopts, callargs) = parser.parse_args()
     if callopts.test:
+        class TestMyAppCase(Cmd2TestCase):
+            CmdApp = app.__class__        
         app.__class__.testfiles = callargs
         sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
@@ -1492,31 +1492,37 @@ def run(app):
         result = runner.run(testcase)
         result.printErrors()
     else:
+        # hold onto the args and run .onecmd with them
+        # in sqlpython, first arg has implied \connect
+        for initial_command in callargs:
+            if app.onecmd(initial_command + '\n') == app._STOP_AND_EXIT:
+                return            
         app.cmdloop()   
 
 if __name__ == '__main__':
     doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
         
 '''
-To make your application transcript-testable, add text like this to your .py file
-(replacing CmdLineApp with your own application class's name).  Then, a cut-and-pasted
-version of a successful session with your application, saved as a text file, can serve
-as a test for future 
+To make your application transcript-testable, replace 
 
-Invoke the test later with `python myapplication.py --test mytranscripttestfile.ext`
+::
+
+  app = MyApp()
+  app.cmdloop()
+  
+with
+
+::
+
+  app = MyApp()
+  cmd2.run(app)
+  
+Then run a session of your application and paste the entire screen contents
+into a file, ``transcript.test``, and invoke the test like::
+
+  python myapp.py --test transcript.test
+
 Wildcards can be used to test against multiple transcript files.
-
-
-class TestMyAppCase(Cmd2TestCase):
-    CmdApp = CmdLineApp
-parser = optparse.OptionParser()
-parser.add_option('-t', '--test', dest='test', action="store_true", 
-                  help='Test against transcript(s) in FILE (wildcards OK)')
-(callopts, callargs) = parser.parse_args()
-if callopts.test:
-    CmdLineApp.testfiles = callargs
-    sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
-    unittest.main()
-else:
-    CmdLineApp().cmdloop()
 '''
+
+
