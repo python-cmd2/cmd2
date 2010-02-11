@@ -425,6 +425,10 @@ class Cmd(cmd.Cmd):
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) 
                                                if fname.startswith('do_')] 
+        import pdb; pdb.set_trace()
+        def linelist(arg):
+            result = []
+            
         self.settable = (l.strip() for l in self.settable if l.strip())
         self.settable = dict(ljust(l.split(None,1), 2, '') for l in self.settable)
         self.doubleDashComment = pyparsing.NotAny(pyparsing.Or(options_defined)) + pyparsing.Literal('--') + pyparsing.restOfLine        
