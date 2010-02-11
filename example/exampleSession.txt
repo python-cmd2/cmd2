@@ -75,12 +75,10 @@ OODNIGHT, GRACIEGAY
 (Cmd) orate Four score and
 > seven releases ago
 > our BDFL
-> blah blah blah
-
+> 
 Four score and
 seven releases ago
 our BDFL
-blah blah blah
 (Cmd) & look, a shortcut!
 look, a shortcut!
 (Cmd) say put this in a file > myfile.txt
