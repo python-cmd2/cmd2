@@ -13,3 +13,7 @@ def flatten(texts):
     result = [r.strip() for r in result if r.strip()]
     return result
 doctest.testmod()
+
+class LineList(list):
+    def __add__(self, newmember):
+           
