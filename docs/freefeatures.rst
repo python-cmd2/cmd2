@@ -8,9 +8,11 @@ simply by replacing ``import cmd`` with ``import cmd2 as cmd``.
 Script files
 ============
 
-Commands can be loaded from, run from, and saved to text files.
+Commands can be loaded and run from text files.
 
 .. automethod:: cmd2.Cmd.do_load
+
+.. automethod:: cmd2.Cmd.do_save
 
 Output redirection
 ==================
@@ -29,10 +31,10 @@ As in a Unix shell, output of a command can be redirected:
 .. _xclip:: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
 
   
-operating-system programs, like 
+Commands at invocation
+======================
 
-Commands at start
-=================
+TODO: broken!?
 
 Python
 ======

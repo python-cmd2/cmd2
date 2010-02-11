@@ -31,8 +31,7 @@ of multiline command names (without ``do_``)::
     class App(Cmd):
         multilineCommands = ['lenghtycommand']
         def do_lengthycommand(self, args):
-            # ...
-          
+            # ...          
 
 Shortcuts
 =========

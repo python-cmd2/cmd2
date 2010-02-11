@@ -32,7 +32,7 @@ abbrev: True
 case_insensitive: True
 colors: True
 continuation_prompt: > 
-debug: True
+debug: False
 default_file_name: command.txt
 echo: False
 editor: gedit
