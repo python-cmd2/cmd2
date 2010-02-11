@@ -1,6 +1,6 @@
 '''A sample application for cmd2.'''
 
-from cmd2 import Cmd, make_option, options, Cmd2TestCase, run
+from cmd2 import Cmd, make_option, options, run
 import unittest, optparse, sys
 
 class CmdLineApp(Cmd):
@@ -32,17 +32,3 @@ class CmdLineApp(Cmd):
 
 c = CmdLineApp()
 run(c)
-
-'''
-class TestMyAppCase(Cmd2TestCase):
-    CmdApp = CmdLineApp
-parser = optparse.OptionParser()
-parser.add_option('-t', '--test', dest='test', action="store_true", 
-                  help='Test against transcript(s) in FILE (wildcards OK)')
-(callopts, callargs) = parser.parse_args()
-if callopts.test:
-    CmdLineApp.testfiles = callargs
-    sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
-    unittest.main()
-else:
-    CmdLineApp().cmdloop()'''

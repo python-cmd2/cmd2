@@ -45,7 +45,7 @@ timing: False
 maxrepeats - was: 3
 now: 5
 (Cmd) say -ps --repeat=5 goodnight, Gracie
-OODNIGHT, GRACIEGAYo
+OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
