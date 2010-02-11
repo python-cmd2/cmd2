@@ -30,6 +30,7 @@ OODNIGHT, GRACIEGAY
 (Cmd) set
 abbrev: True
 case_insensitive: True
+colors: True
 continuation_prompt: > 
 debug: True
 default_file_name: command.txt
@@ -52,27 +53,20 @@ OODNIGHT, GRACIEGAY
 (Cmd) hi
 -------------------------[1]
 help
-
 -------------------------[2]
 help say
-
 -------------------------[3]
 say goodnight, Gracie
-
 -------------------------[4]
 say -ps --repeat=5 goodnight, Gracie
-
 -------------------------[5]
 set
-
 -------------------------[6]
 set maxrepeats 5
-
 -------------------------[7]
 say -ps --repeat=5 goodnight, Gracie
 (Cmd) run 4
 say -ps --repeat=5 goodnight, Gracie
-
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY

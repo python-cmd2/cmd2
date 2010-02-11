@@ -271,52 +271,62 @@ class SkipToLast(pyparsing.SkipTo):
             exc.pstr = instring
             raise exc    
 
-class TextLineList(list):
-    '''A list that "wants" to consist of separate lines of text.
-    Splits multi-line strings and flattens nested lists to 
-    achieve that.
-    Also omits blank lines, strips leading/trailing whitespace.
+class StubbornDict(dict):
+    '''Dictionary that tolerates many input formats.
+    Create it with stubbornDict(arg) factory function.
     
-    >>> tll = TextLineList(['my', 'dog\\nhas', '', [' fleas', 'and\\nticks']])
-    >>> tll
-    ['my', 'dog', 'has', 'fleas', 'and', 'ticks']
-    >>> tll.append(['and', ['spiders', 'and']])
-    >>> tll
-    ['my', 'dog', 'has', 'fleas', 'and', 'ticks', 'and', 'spiders', 'and']
-    >>> tll += 'fish'
-    >>> tll
-    ['my', 'dog', 'has', 'fleas', 'and', 'ticks', 'and', 'spiders', 'and', 'fish']
-    '''
-    def flattened(self, texts):
-        result = []
-        if isinstance(texts, basestring):
-            result.extend(texts.splitlines())
-        else:
-            for text in texts:
-                result.extend(self.flattened(text))
-        result = [r.strip() for r in result if r.strip()]
-        return result            
-    def flatten(self):
-        list.__init__(self, self.flattened(self))
-    def __init__(self, values):
-        list.__init__(self, values)
-        self.flatten()
-    def append(self, value):
-        list.append(self, value)
-        self.flatten()
-    def extend(self, values):
-        list.extend(self, values)
-        self.flatten()
-    def __setitem__(self, idx, value):
-        list.__setitem__(self, idx, value)
-        self.flatten()
-    def __iadd__(self, value):
-        if isinstance(value, basestring):
-            self.append(value)
-        else:
-            list.__iadd__(self, value)
-            self.flatten()
+    >>> d = StubbornDict(large='gross', small='klein')
+    >>> sorted(d.items())
+    [('large', 'gross'), ('small', 'klein')]
+    >>> d.append(['plain', '  plaid'])
+    >>> sorted(d.items())
+    [('large', 'gross'), ('plaid', None), ('plain', None), ('small', 'klein')]
+    >>> d += '   girl Frauelein, Maedchen\\n\\n shoe schuh'
+    >>> sorted(d.items())
+    [('girl', 'Frauelein, Maedchen'), ('large', 'gross'), ('plaid', None), ('plain', None), ('shoe', 'schuh'), ('small', 'klein')]
+    '''    
+    def update(self, arg):
+        dict.update(self, StubbornDict.to_dict(arg))
+    append = update
+    def __iadd__(self, arg):
+        self.update(arg)
         return self
+        
+    @classmethod
+    def to_dict(cls, arg):
+        'Generates dictionary from string or list of strings'
+        if hasattr(arg, 'splitlines'):
+            arg = arg.splitlines()
+        if hasattr(arg, '__getslice__'):
+            result = {}    
+            for a in arg:
+                a = a.strip()
+                if a:
+                    key_val = a.split(None, 1)
+                    key = key_val[0]
+                    if len(key_val) > 1:
+                        val = key_val[1]
+                    else:
+                        val = ''
+                    result[key] = val
+        else:
+            result = arg
+        return result
+
+def stubbornDict(*arg, **kwarg):
+    '''
+    >>> sorted(stubbornDict('cow a bovine\\nhorse an equine').items())
+    [('cow', 'a bovine'), ('horse', 'an equine')]
+    >>> sorted(stubbornDict(['badger', 'porcupine a poky creature']).items())
+    [('badger', None), ('porcupine', 'a poky creature')]
+    >>> sorted(stubbornDict(turtle='has shell', frog='jumpy').items())
+    [('frog', 'jumpy'), ('turtle', 'has shell')]
+    '''
+    result = {}
+    for a in arg:
+        result.update(StubbornDict.to_dict(a))
+    result.update(kwarg)                      
+    return StubbornDict(result)
         
 def replace_with_file_contents(fname):
     if fname:
@@ -383,7 +393,7 @@ class Cmd(cmd.Cmd):
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
     debug = True
-    settable = TextLineList('''
+    settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
         continuation_prompt
@@ -472,12 +482,9 @@ class Cmd(cmd.Cmd):
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) 
                                                if fname.startswith('do_')] 
-        import pdb; pdb.set_trace()
         def linelist(arg):
             result = []
             
-        self.settable = (l.strip() for l in self.settable if l.strip())
-        self.settable = dict(ljust(l.split(None,1), 2, '') for l in self.settable)
         self.doubleDashComment = pyparsing.NotAny(pyparsing.Or(options_defined)) + pyparsing.Literal('--') + pyparsing.restOfLine        
             
     def do_shortcuts(self, args):
