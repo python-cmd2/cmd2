@@ -34,10 +34,58 @@ As in a Unix shell, output of a command can be redirected:
 Commands at invocation
 ======================
 
-TODO: broken!?
+You can send commands to your app as you invoke it by
+including them as extra arguments to the program.
+``cmd2`` interprets each argument as a separate 
+command, so you should enclose each command in 
+quotation marks if it is more than a one-word command.
+
+::
+
+  cat@eee:~/proj/cmd2/example$ python example.py "say hello" "say Gracie" quit
+  hello
+  Gracie
+  cat@eee:~/proj/cmd2/example$ 
 
 Python
 ======
+
+::
+
+The ``py`` command will run its arguments as a Python
+command.  Entered without arguments, it enters an
+interactive Python session.  That session can call
+"back" to your application with ``cmd("")``.  Through
+``self``, it also has access to your application
+instance itself.  (If that thought terrifies you,
+you can set the ``locals_in_py`` parameter to ``False``.
+See see :ref:`parameters`)
+
+::
+
+	(Cmd) py print("-".join("spelling"))
+	s-p-e-l-l-i-n-g
+	(Cmd) py
+	Python 2.6.4 (r264:75706, Dec  7 2009, 18:45:15) 
+	[GCC 4.4.1] on linux2
+	Type "help", "copyright", "credits" or "license" for more information.
+	(CmdLineApp)
+
+		py <command>: Executes a Python command.
+		py: Enters interactive Python mode.
+		End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, 'exit()`.
+		Non-python commands can be issued with `cmd("your command")`.
+		
+	>>> import os
+	>>> os.uname()
+	('Linux', 'eee', '2.6.31-19-generic', '#56-Ubuntu SMP Thu Jan 28 01:26:53 UTC 2010', 'i686')
+	>>> cmd("say --piglatin {os}".format(os=os.uname()[0]))
+	inuxLay
+	>>> self.prompt
+	'(Cmd) '
+	>>> self.prompt = 'Python was here > '
+	>>> quit()
+	Python was here > 
 
 Searchable command history
 ==========================

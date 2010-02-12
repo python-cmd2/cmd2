@@ -5,7 +5,7 @@ Features requiring only parameter changes
 Several aspects of a ``cmd2`` application's behavior
 can be controlled simply by setting attributes of ``App``.
 
-(To define your own user-settable parameters, see :ref:`parameters`
+(To define your own user-settable parameters, see :ref:`parameters`)
 
 Case-insensitivity
 ==================
