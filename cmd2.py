@@ -402,6 +402,7 @@ class Cmd(cmd.Cmd):
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
     debug = False
+    locals_in_py = False
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
@@ -1030,13 +1031,16 @@ class Cmd(cmd.Cmd):
             interp = InteractiveInterpreter(locals=self.pystate)
             interp.runcode(arg)
         else:
-            interp = MyInteractiveConsole(locals=self.pystate)
+            localvars = (self.locals_in_py and self.pystate) or {}
+            interp = MyInteractiveConsole(locals=localvars)
             def quit():
+                'blah'
                 raise EmbeddedConsoleExit
             def onecmd(arg):
                 return self.onecmd(arg + '\n')
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
+            self.pystate['cmd'] = onecmd
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'        
                 keepstate = Statekeeper(sys, ('stdin','stdout'))
