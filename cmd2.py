@@ -393,6 +393,7 @@ class Cmd(cmd.Cmd):
     legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
+    default_to_shell = True
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'            # For ``save``, ``load``, etc.
     default_file_name = 'command.txt'   # For ``save``, ``load``, etc.
@@ -828,11 +829,11 @@ class Cmd(cmd.Cmd):
                 self.lastcmd = statement.parsed.raw   
                 funcname = self.func_named(statement.parsed.command)
                 if not funcname:
-                    return self.postparsing_postcmd(self.default(statement.full_parsed_statement()))  
+                    return self._default(statement)
                 try:
                     func = getattr(self, funcname)
                 except AttributeError:
-                    return self.postparsing_postcmd(self.default(statement.full_parsed_statement()))                  
+                    return self._default(statement)
                 timestart = datetime.datetime.now()
                 stop = func(statement) 
                 if self.timing:
@@ -855,6 +856,14 @@ class Cmd(cmd.Cmd):
                                  
             return self.postparsing_postcmd(stop)        
         
+    def _default(self, statement):
+        arg = statement.full_parsed_statement()
+        if self.default_to_shell:
+            result = os.system(arg)
+            if not result:
+                return self.postparsing_postcmd(None)
+        return self.postparsing_postcmd(self.default(arg))
+
     def pseudo_raw_input(self, prompt):
         """copied from cmd's cmdloop; like raw_input, but accounts for changed stdin, stdout"""
         
