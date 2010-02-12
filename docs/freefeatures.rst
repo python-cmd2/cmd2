@@ -102,5 +102,16 @@ also provide `bash-like history list editing`_.
 
 .. automethod:: cmd2.Cmd.do_history
 
+.. automethod:: cmd2.Cmd.do_list
+
+.. automethod:: cmd2.Cmd.do_run
+
+Quitting the application
+========================
+
+``cmd2`` pre-defines a ``quit`` command for you (with 
+synonyms ``exit`` and simply ``q``).
+It's trivial, but it's one less thing for you to remember.
+
 Transcript-based testing
 ========================

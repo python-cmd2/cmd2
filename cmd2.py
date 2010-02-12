@@ -1129,9 +1129,11 @@ class Cmd(cmd.Cmd):
                   pyparsing.stringEnd)    
     def do_save(self, arg):
         """`save [N] [filename.ext]`
+
         Saves command from history to file.
-        N => Number of command (from history), or `*`; 
-             most recent command if omitted"""
+
+        | N => Number of command (from history), or `*`; 
+        |      most recent command if omitted"""
 
         try:
             args = self.saveparser.parseString(arg)
