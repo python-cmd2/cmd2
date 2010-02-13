@@ -941,11 +941,12 @@ class Cmd(cmd.Cmd):
            the bash shell's SELECT.  Returns the item chosen.
            
            Argument ``options`` can be:
-             a single string -> will be split into one-word options
-             a list of strings -> will be offered as options
-             a list of tuples -> interpreted as (value, text), so 
-                                 that the return value can differ from
-                                 the text advertised to the user '''
+
+             | a single string -> will be split into one-word options
+             | a list of strings -> will be offered as options
+             | a list of tuples -> interpreted as (value, text), so 
+                                   that the return value can differ from
+                                   the text advertised to the user '''
         if isinstance(options, basestring):
             options = zip(options.split(), options.split())
         fulloptions = []

@@ -20,6 +20,11 @@ The basic use of ``cmd2`` is identical to that of cmd_.
 
      app = App()
      app.cmdloop()
+
+These docs will refer to ``App`` as your ``cmd2.Cmd``
+subclass, and ``app`` as an instance of ``App``.  Of
+course, in your program, you may name them whatever
+you want.
      
 Contents:
 
