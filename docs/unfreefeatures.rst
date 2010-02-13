@@ -2,10 +2,77 @@
 Features requiring application changes
 ======================================
 
-Command shortcuts
+Multiline commands
+==================
+
+Command input may span multiple lines for the
+commands whose names are listed in the 
+parameter ``app.multilineCommands``.  These
+commands will be executed only
+after the user has entered a *terminator*.
+By default, the command terminators is
+``;``; replacing or appending to the list
+``app.terminators`` allows different 
+terminators.  A blank line
+is *always* considered a command terminator
+(cannot be overridden).
+
+Parsed statements
 =================
 
-.. _parameters:
+``cmd2`` passes ``arg`` to a ``do_`` method (or
+``default`) as a ParsedString, a subclass of 
+string that includes an attribute ``parsed``.
+``parsed`` is a ``pyparsing.ParseResults``_
+object produced by applying a pyparsing_ 
+grammar applied to ``arg``.  It may include:
+
+command
+  Name of the command called
+
+raw
+  Full input exactly as typed.  
+
+terminator
+  Character used to end a multiline command
+
+suffix
+  Remnant of input after terminator
+
+::
+
+    def do_parsereport(self, arg):
+        self.stdout.write(arg.parsed.dump() + '\n')
+
+::
+
+	(Cmd) parsereport A B /* C */ D; E
+	['parsereport', 'A B  D', ';', 'E']
+	- args: A B  D
+	- command: parsereport
+	- raw: parsereport A B /* C */ D; E
+	- statement: ['parsereport', 'A B  D', ';']
+	  - args: A B  D
+	  - command: parsereport
+	  - terminator: ;
+	- suffix: E
+	- terminator: ;
+
+If ``parsed`` does not contain an attribute,
+querying for it will return ``None``.  (This
+is a characteristic of ``pyparsing.ParseResults``_.)
+
+ParsedString was developed to support sqlpython_
+and reflects its needs.  The parsing grammar and
+process are painfully complex and should not be
+considered stable; future ``cmd2`` releases may
+change it somewhat (hopefully reducing complexity).
+   
+(Getting ``arg`` as a ``ParsedString`` is 
+technically "free", in that it requires no application
+changes from the cmd_ standard, but there will 
+be no result unless you change your application
+to *use* ``arg.parsed``.)
 
 Environment parameters
 ======================
@@ -56,6 +123,49 @@ documentation) to ``settable``.
 Commands with flags
 ===================
 
+All ``do_`` methods are responsible for interpreting
+the arguments passed to them.  However, ``cmd2`` lets
+a ``do_`` methods accept Unix-style *flags*.  It uses optparse_
+to parse the flags, and they work the same way as for
+that module.
+
+Flags are defined with the ``options`` decorator, 
+which is passed a list of optparse_-style options,
+each created with ``make_option``.  The method
+should accept a second argument, ``opts``, in
+addition to ``args``; the flags will be stripped
+from ``args``.
+
+::
+
+    @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
+              make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
+              make_option('-r', '--repeat', type="int", help="output [n] times")
+             ])
+    def do_speak(self, arg, opts=None):
+        """Repeats what you tell me to."""
+        arg = ''.join(arg)
+        if opts.piglatin:
+            arg = '%s%say' % (arg[1:].rstrip(), arg[0])
+        if opts.shout:
+            arg = arg.upper()
+        repetitions = opts.repeat or 1
+        for i in range(min(repetitions, self.maxrepeats)):
+            self.stdout.write(arg)
+            self.stdout.write('\n')
+
+::
+
+	(Cmd) say goodnight, gracie
+	goodnight, gracie
+	(Cmd) say -sp goodnight, gracie
+	OODNIGHT, GRACIEGAY
+	(Cmd) say -r 2 --shout goodnight, gracie
+	GOODNIGHT, GRACIE
+	GOODNIGHT, GRACIE
+
+.. _optparse: 
+
 .. _outputters:
 
 poutput, pfeedback, perror
@@ -69,3 +179,13 @@ instead.  These methods have these advantages:
   - More concise
   - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
   
+.. _quiet:
+
+Quiet
+=====
+
+Controls whether ``self.pfeedback('message')`` output is suppressed;
+useful for non-essential feedback that the user may not always want
+to read.  ``quiet`` is only relevant if 
+``app.pfeedback`` is sometimes used.
+
