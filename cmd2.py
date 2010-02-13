@@ -393,7 +393,7 @@ class Cmd(cmd.Cmd):
     legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
-    default_to_shell = True
+    default_to_shell = False
     noSpecialParse = 'set ed edit exit'.split()
     defaultExtension = 'txt'            # For ``save``, ``load``, etc.
     default_file_name = 'command.txt'   # For ``save``, ``load``, etc.
@@ -407,13 +407,13 @@ class Cmd(cmd.Cmd):
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
-        continuation_prompt
-        debug
-        default_file_name     for `save`, `load`, etc.
-        editor
+        continuation_prompt   On 2nd+ line of input
+        debug                 Show full error stack on error
+        default_file_name     for ``save``, ``load``, etc.
+        editor                Program used by ``edit`` 	
         case_insensitive      upper- and lower-case both OK
         feedback_to_output    include nonessentials in `|`, `>` results 
-        quiet                 
+        quiet                 Don't print nonessential feedback
         echo                  Echo command issued into output
         timing                Report execution times
         abbrev                Accept abbreviated commands

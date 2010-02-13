@@ -33,6 +33,7 @@ of multiline command names (without ``do_``)::
         def do_lengthycommand(self, args):
             # ...          
 
+ 
 Shortcuts
 =========
 
@@ -58,6 +59,32 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
   class App(Cmd2):
       Cmd2.shortcuts.update({'*': 'sneeze', '~': 'squirm'})
 
+Default to shell
+================
+
+Every ``cmd2`` application can execute operating-system
+level (shell) commands with ``shell`` or a ``!``
+shortcut::
+
+  (Cmd) shell which python
+  /usr/bin/python
+  (Cmd) !which python
+  /usr/bin/python
+
+However, if the parameter ``default_to_shell`` is 
+``True``, then *every* command will be attempted on
+the operating system.  Only if that attempt fails
+(i.e., produces a nonzero return value) will the
+application's own ``default`` method be called.
+
+::
+
+  (Cmd) which python
+  /usr/bin/python
+  (Cmd) my dog has fleas
+  sh: my: not found
+  *** Unknown syntax: my dog has fleas
+
 Timing
 ======
 
@@ -74,15 +101,6 @@ whenever the application generates an error.  |settable|
                         during application execution.  
                         (See :ref:`parameters`)
 
-.. _quiet:
-
-Quiet
-=====
-
-Controls whether ``self.pfeedback('message')`` output is suppressed;
-useful for non-essential feedback that the user may not always want
-to read.  Only relevant if :ref:`outputters` are used.
-
 Settability
 ===========
 
@@ -91,5 +109,12 @@ application-controlling attributes while the application
 is running, add its name to ``App.settable``.  See
 :ref:`parameters`.
 
-Abbreviated commands
-====================
+Other user-settable parameters
+==============================
+
+A list of all user-settable parameters, with brief
+comments, is viewable from within a running application
+with::
+
+  (Cmd) set --long
+
