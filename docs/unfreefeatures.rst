@@ -212,3 +212,5 @@ to read.  ``quiet`` is only relevant if
 	Sauce? 2
 	wheaties with salty sauce, yum!
 
+``color``
+=========
