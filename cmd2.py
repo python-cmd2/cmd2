@@ -281,10 +281,10 @@ class StubbornDict(dict):
     [('large', 'gross'), ('small', 'klein')]
     >>> d.append(['plain', '  plaid'])
     >>> sorted(d.items())
-    [('large', 'gross'), ('plaid', None), ('plain', None), ('small', 'klein')]
+    [('large', 'gross'), ('plaid', ''), ('plain', ''), ('small', 'klein')]
     >>> d += '   girl Frauelein, Maedchen\\n\\n shoe schuh'
     >>> sorted(d.items())
-    [('girl', 'Frauelein, Maedchen'), ('large', 'gross'), ('plaid', None), ('plain', None), ('shoe', 'schuh'), ('small', 'klein')]
+    [('girl', 'Frauelein, Maedchen'), ('large', 'gross'), ('plaid', ''), ('plain', ''), ('shoe', 'schuh'), ('small', 'klein')]
     '''    
     def update(self, arg):
         dict.update(self, StubbornDict.to_dict(arg))
@@ -327,7 +327,7 @@ def stubbornDict(*arg, **kwarg):
     >>> sorted(stubbornDict('cow a bovine\\nhorse an equine').items())
     [('cow', 'a bovine'), ('horse', 'an equine')]
     >>> sorted(stubbornDict(['badger', 'porcupine a poky creature']).items())
-    [('badger', None), ('porcupine', 'a poky creature')]
+    [('badger', ''), ('porcupine', 'a poky creature')]
     >>> sorted(stubbornDict(turtle='has shell', frog='jumpy').items())
     [('frog', 'jumpy'), ('turtle', 'has shell')]
     '''
