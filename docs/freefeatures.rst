@@ -152,5 +152,21 @@ mental imbalance.
   (Cmd) speak it was /* not */ delicious! # Yuck!
   it was  delicious!
   	
+Misc. pre-defined commands
+==========================
+
+Several generically useful commands are defined
+with automatically included ``do_`` methods.
+
+.. automethod:: cmd2.Cmd.do_quit
+
+.. automethod:: cmd2.Cmd.do_pause
+
+.. automethod:: cmd2.Cmd.do_shell
+
+( ``!`` is a shortcut for ``shell``; thus ``!ls``
+is equivalent to ``shell ls``.)
+
+
 Transcript-based testing
 ========================

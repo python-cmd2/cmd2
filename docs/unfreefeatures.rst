@@ -189,3 +189,26 @@ useful for non-essential feedback that the user may not always want
 to read.  ``quiet`` is only relevant if 
 ``app.pfeedback`` is sometimes used.
 
+``select``
+==========
+
+``app.select`` is called from within a method (not by the user directly; it is ``app.select``, not ``app.do_select``).
+
+.. automethod:: cmd2.Cmd.select
+
+::
+
+    def do_eat(self, arg):
+        sauce = self.select('sweet salty', 'Sauce? ')
+        result = '{food} with {sauce} sauce, yum!'
+        result = result.format(food=arg, sauce=sauce)
+        self.stdout.write(result + '\n')
+
+::
+
+	(Cmd) eat wheaties
+	   1. sweet
+	   2. salty
+	Sauce? 2
+	wheaties with salty sauce, yum!
+
