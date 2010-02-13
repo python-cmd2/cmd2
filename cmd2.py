@@ -883,7 +883,7 @@ class Cmd(cmd.Cmd):
                     line = line[:-1] 
         return line
     
-    def cmdloop(self, intro=None):
+    def _cmdloop(self, intro=None):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
@@ -1212,7 +1212,7 @@ class Cmd(cmd.Cmd):
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
         self.current_script_dir = os.path.split(targetname)[0]
-        stop = self.cmdloop()
+        stop = self._cmdloop()
         self.stdin.close()
         keepstate.restore()
         self.lastcmd = ''
@@ -1245,6 +1245,32 @@ class Cmd(cmd.Cmd):
         data = f.read()
         f.close()
         return data
+
+    def runTranscriptTests(self, callargs):
+        class TestMyAppCase(Cmd2TestCase):
+            CmdApp = self.__class__        
+        self.__class__.testfiles = callargs
+        sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
+        testcase = TestMyAppCase()
+        runner = unittest.TextTestRunner()
+        result = runner.run(testcase)
+        result.printErrors()
+
+    def cmdloop(self):
+        parser = optparse.OptionParser()
+        parser.add_option('-t', '--test', dest='test',
+               action="store_true", 
+               help='Test against transcript(s) in FILE (wildcards OK)')
+        (callopts, callargs) = parser.parse_args()
+        if callopts.test:
+            self.runTranscriptTests(callargs)
+        else:
+            # hold onto the args and run .onecmd with them
+            # in sqlpython, first arg has implied \connect
+            for initial_command in callargs:
+                if self.onecmd(initial_command + '\n') == app._STOP_AND_EXIT:
+                    return            
+            self._cmdloop()   
             
 class HistoryItem(str):
     listformat = '-------------------------[%d]\n%s\n'
@@ -1326,7 +1352,6 @@ class History(list):
     def extend(self, new):
         for n in new:
             self.append(n)
-
         
     def get(self, getme=None, fromEnd=False):
         if not getme:
@@ -1492,28 +1517,6 @@ class Cmd2TestCase(unittest.TestCase):
     def tearDown(self):
         if self.CmdApp:
             self.outputTrap.tearDown()
-    
-def run(app):
-    parser = optparse.OptionParser()
-    parser.add_option('-t', '--test', dest='test', action="store_true", 
-                      help='Test against transcript(s) in FILE (wildcards OK)')
-    (callopts, callargs) = parser.parse_args()
-    if callopts.test:
-        class TestMyAppCase(Cmd2TestCase):
-            CmdApp = app.__class__        
-        app.__class__.testfiles = callargs
-        sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
-        testcase = TestMyAppCase()
-        runner = unittest.TextTestRunner()
-        result = runner.run(testcase)
-        result.printErrors()
-    else:
-        # hold onto the args and run .onecmd with them
-        # in sqlpython, first arg has implied \connect
-        for initial_command in callargs:
-            if app.onecmd(initial_command + '\n') == app._STOP_AND_EXIT:
-                return            
-        app.cmdloop()   
 
 if __name__ == '__main__':
     doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
