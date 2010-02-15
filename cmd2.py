@@ -1256,6 +1256,11 @@ class Cmd(cmd.Cmd):
         result = runner.run(testcase)
         result.printErrors()
 
+    def run_commands_at_invocation(self, callargs):
+        for initial_command in callargs:
+            if self.onecmd(initial_command + '\n') == app._STOP_AND_EXIT:
+                return
+
     def cmdloop(self):
         parser = optparse.OptionParser()
         parser.add_option('-t', '--test', dest='test',
@@ -1265,11 +1270,7 @@ class Cmd(cmd.Cmd):
         if callopts.test:
             self.runTranscriptTests(callargs)
         else:
-            # hold onto the args and run .onecmd with them
-            # in sqlpython, first arg has implied \connect
-            for initial_command in callargs:
-                if self.onecmd(initial_command + '\n') == app._STOP_AND_EXIT:
-                    return            
+            self.run_commands_at_invocation(callargs)
             self._cmdloop()   
             
 class HistoryItem(str):
