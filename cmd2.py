@@ -306,7 +306,7 @@ class StubbornDict(dict):
         'Generates dictionary from string or list of strings'
         if hasattr(arg, 'splitlines'):
             arg = arg.splitlines()
-        if hasattr(arg, '__getslice__'):
+        if hasattr(arg, '__reversed__'):
             result = {}    
             for a in arg:
                 a = a.strip()
