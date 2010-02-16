@@ -412,7 +412,7 @@ class Cmd(cmd.Cmd):
                 self.poutput(msg)
             else:
                 print (msg)
-    _STOP_AND_EXIT = 2
+    _STOP_AND_EXIT = 2  # distinguish end of script file from actual exit
     editor = os.environ.get('EDITOR')
     if not editor:
         if sys.platform[:3] == 'win':
@@ -742,6 +742,11 @@ class Cmd(cmd.Cmd):
                 if len(funcs) == 1:
                     result = 'do_' + funcs[0]
         return result
+    def onecmd_plus_hooks(self, line):
+        line = self.precmd(line)
+        stop = self.onecmd(line)
+        stop = self.postcmd(stop, line)        
+        return stop
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -893,9 +898,7 @@ class Cmd(cmd.Cmd):
                     line = self.pseudo_raw_input(self.prompt)
                 if (self.echo) and (isinstance(self.stdin, file)):
                     self.stdout.write(line + '\n')
-                line = self.precmd(line)
-                stop = self.onecmd(line)
-                stop = self.postcmd(stop, line)
+                stop = self.onecmd_plus_hooks(line)
             self.postloop()
         finally:
             if self.use_rawinput and self.completekey:
@@ -1024,11 +1027,11 @@ class Cmd(cmd.Cmd):
             interp = InteractiveConsole(locals=localvars)
             def quit():
                 raise EmbeddedConsoleExit
-            def onecmd(arg):
-                return self.onecmd(arg + '\n')
+            def onecmd_plus_hooks(arg):
+                return self.onecmd_plus_hooks(arg + '\n')
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
-            self.pystate['cmd'] = onecmd
+            self.pystate['cmd'] = onecmd_plus_hooks
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'        
                 keepstate = Statekeeper(sys, ('stdin','stdout'))
@@ -1209,9 +1212,7 @@ class Cmd(cmd.Cmd):
         runme = self.last_matching(arg)
         self.pfeedback(runme)
         if runme:
-            runme = self.precmd(runme)
-            stop = self.onecmd(runme)
-            stop = self.postcmd(stop, runme)
+            stop = self.onecmd_plus_hooks(runme)
     do_r = do_run        
             
     def fileimport(self, statement, source):
@@ -1236,8 +1237,8 @@ class Cmd(cmd.Cmd):
 
     def run_commands_at_invocation(self, callargs):
         for initial_command in callargs:
-            if self.onecmd(initial_command + '\n') == app._STOP_AND_EXIT:
-                return
+            if self.onecmd_plus_hooks(initial_command + '\n'):
+                return self._STOP_AND_EXIT
 
     def cmdloop(self):
         parser = optparse.OptionParser()
@@ -1248,8 +1249,8 @@ class Cmd(cmd.Cmd):
         if callopts.test:
             self.runTranscriptTests(callargs)
         else:
-            self.run_commands_at_invocation(callargs)
-            self._cmdloop()   
+            if not self.run_commands_at_invocation(callargs):
+                self._cmdloop()   
             
 class HistoryItem(str):
     listformat = '-------------------------[%d]\n%s\n'
@@ -1474,9 +1475,7 @@ class Cmd2TestCase(unittest.TestCase):
                     command.append(line[len(self.cmdapp.continuation_prompt):])
                     line = transcript.next()
                 command = ''.join(command)               
-                command = self.cmdapp.precmd(command)
-                stop = self.cmdapp.onecmd(command)
-                stop = self.cmdapp.postcmd(stop, command)
+                stop = self.cmdapp.onecmd_plus_hooks(command)
                 #TODO: should act on ``stop``
                 result = self.outputTrap.read()
                 if line.startswith(self.cmdapp.prompt):
