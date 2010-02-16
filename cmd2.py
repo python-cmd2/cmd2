@@ -759,6 +759,8 @@ class Cmd(cmd.Cmd):
         This (`cmd2`) version of `onecmd` already override's `cmd`'s `onecmd`.
 
         """
+        # TODO: output from precmd and postcmd goes untrapped... and I don't
+        # know how to fix it...
         if not line:
             return self.emptyline()
         if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
