@@ -5,18 +5,6 @@ Features requiring no modifications
 These features are provided "for free" to a cmd_-based application
 simply by replacing ``import cmd`` with ``import cmd2 as cmd``.
 
-Abbreviated commands
-====================
-
-``cmd2`` apps will accept shortened command names
-so long as there is no ambiguity.  Thus, if 
-``do_divide`` is defined, then ``divid``, ``div``,
-or even ``d`` will suffice, so long as there are
-no other commands defined beginning with *divid*,
-*div*, or *d*.
-
-This behavior can be turned off with ``app.abbrev`` (see :ref:`parameters`)
-
 Script files
 ============
 
@@ -29,6 +17,30 @@ commands.
 .. automethod:: cmd2.Cmd.do_save
 
 .. automethod:: cmd2.Cmd.do_edit
+
+Comments
+========
+
+Comments are omitted from the argument list
+before it is passed to a ``do_`` method.  By
+default, both Python-style and C-style comments
+are recognized; you may change this by overriding
+``app.commentGrammars`` with a different pyparsing_
+grammar.
+
+Comments can be useful in :ref:`script`s.  Used
+in an interactive session, they may indicate
+mental imbalance.
+
+::
+
+    def do_speak(self, arg):
+        self.stdout.write(arg + '\n')
+
+::
+
+  (Cmd) speak it was /* not */ delicious! # Yuck!
+  it was  delicious!
 
 Output redirection
 ==================
@@ -128,30 +140,19 @@ Quitting the application
 synonyms ``exit`` and simply ``q``).
 It's trivial, but it's one less thing for you to remember.
 
-Comments
-========
 
-Comments are omitted from the argument list
-before it is passed to a ``do_`` method.  By
-default, both Python-style and C-style comments
-are recognized; you may change this by overriding
-``app.commentGrammars`` with a different pyparsing_
-grammar.
+Abbreviated commands
+====================
 
-Comments can be useful in :ref:`script`s.  Used
-in an interactive session, they may indicate
-mental imbalance.
+``cmd2`` apps will accept shortened command names
+so long as there is no ambiguity.  Thus, if 
+``do_divide`` is defined, then ``divid``, ``div``,
+or even ``d`` will suffice, so long as there are
+no other commands defined beginning with *divid*,
+*div*, or *d*.
 
-::
-
-    def do_speak(self, arg):
-        self.stdout.write(arg + '\n')
-
-::
-
-  (Cmd) speak it was /* not */ delicious! # Yuck!
-  it was  delicious!
-  	
+This behavior can be turned off with ``app.abbrev`` (see :ref:`parameters`)
+  
 Misc. pre-defined commands
 ==========================
 
@@ -170,3 +171,5 @@ is equivalent to ``shell ls``.)
 
 Transcript-based testing
 ========================
+
+If a ``cmd2``-based application is invoked with --test

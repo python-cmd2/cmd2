@@ -36,9 +36,9 @@ Defining
 - "Command-line interface"
 - "Shell"
 
-* Accepts free text input at prompt
-* Outputs lines of text
-* Persistent CLI environment
+1. Accepts free text input at prompt
+2. Outputs lines of text
+3. (repeat)
 
 Examples
 ========
@@ -55,9 +55,9 @@ Examples
 != Command Line Utilities
 =========================
 
-* Accept arguments at invocation
-* execution
-* terminate
+1. Accepts arguments at invocation
+2. executes
+3. terminates
 
 Examples
 --------
@@ -163,7 +163,8 @@ Arguments: pirate4.py
                 self.gold -= int(arg)
             except:
                 if arg:
-                    print('''What's "{0}"?  I'll take rrrum.'''.format(arg))
+                    print('''What's "{0}"?  I'll take rrrum.'''
+                          .format(arg))
                 self.gold -= 1            
         
 quitting: pirate5.py
@@ -172,7 +173,8 @@ quitting: pirate5.py
 ::
 
     def postcmd(self, stop, line):
-        print('Now we gots {0} doubloons'.format(self.gold))
+        print('Now we gots {0} doubloons'
+              .format(self.gold))
         if self.gold < 0:
             print("Off to debtorrr's prrrison.  Game overrr.")
             return True
@@ -188,4 +190,35 @@ prompts and defaults: pirate6.py
 
     prompt = 'arrr> '
     def default(self, line):
-        print('What mean ye by "{0}"?'.format(line))
+        print('What mean ye by "{0}"?'
+              .format(line))
+        
+cmd2
+====
+
+Third-party module in PyPI
+
+What you get
+============
+
+    * Abbreviated commands
+    * Script files
+    * Output redirection
+    * Commands at invocation
+    * Python
+    
+    * Searchable command history
+    * Quitting the application
+    * Comments
+    * Misc. pre-defined commands
+    * Transcript-based testing
+More
+====
+
+    * Case-insensitivity
+    * Shortcuts
+    * Default to shell
+    * Timing
+    * Echo
+    * Debug
+    * Other user-settable parameters
