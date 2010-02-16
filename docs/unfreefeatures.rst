@@ -181,6 +181,11 @@ instead.  These methods have these advantages:
   
 .. _quiet:
 
+color
+=====
+
+.. automethod:: cmd2.Cmd.do_quit
+
 Quiet
 =====
 
@@ -211,6 +216,3 @@ to read.  ``quiet`` is only relevant if
 	   2. salty
 	Sauce? 2
 	wheaties with salty sauce, yum!
-
-``color``
-=========
