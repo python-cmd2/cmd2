@@ -1,84 +1,89 @@
-py 3
+=====
+Title
+=====
 
 Web 2.0
 =======
 
 .. image:: web-2-0-logos.gif
-   :height: 300 px
+   :height: 300px
    
 But first...
 ============
 
 .. image:: sargon.jpg
-   :height: 300 px
-   
-Sargon the Great founded the Akkadian Empire
-in the twenty-third century BC.
+   :height: 300px
+
+Sargon the Great
+  Founder of Akkadian Empire
+  
+.. twenty-third century BC
 
 In between
 ==========
 
 .. image:: apple.jpg
-   :height: 300 px
+   :height: 300px
  
-Unlike the Akkadian Empire, the CLI will never disappear.
-
-line-oriented command interpreter
-command-line interface
-text user interface
-terminal user interface
-console
-shell
+Command-Line Interface
+  Unlike the Akkadian Empire, 
+  the CLI will never die.
 
 Defining
 ========
+  
+- "Line-oriented command interpreter"
+- "Command-line interface"
+- "Shell"
 
-Prompt accepts free text input
-Outputs lines of text
-CLI environment persists
+* Accepts free text input at prompt
+* Outputs lines of text
+* Persistent CLI environment
 
 Examples
 ========
 
-Bash, Korn, zsh
-Python shell
-screen
-Zork
-ed
-SQL clients: psql, SQL*\Plus, mysql...
+* Bash, Korn, zsh
+* Python shell
+* screen
+* Zork
+* SQL clients: psql, SQL*\Plus, mysql...
+* ed
+
+.. ``ed`` proves that CLI is sometimes the wrong answer.
 
 != Command Line Utilities
 =========================
 
-Accept single set of arguments at 
-invocation, execute, terminate
+* Accept arguments at invocation
+* execution
+* terminate
 
-dir
-grep
-ping
+Examples
+--------
+* ls
+* grep
+* ping
 
-sys.argv
-optparse
+Use ``sys.argv``, ``optparse``
 
-!= Text User Interfaces
-=======================
+!= "Text User Interfaces", "Consoles"
+=====================================
 
-("console")
-
-Use entire (session) screen
-Not line-by-line
+* Use entire (session) screen
+* I/O is *not* line-by-line
 
 .. image:: urwid.png
    :height: 300px
    
-curses
-urwid
+Use ``curses``, ``urwid``
 
+Tradeoff
+========
 
-foo a b c ->
-self.do_foo('a b c')
-self.default('foo a b c')
-
+.. image:: ease.png
+   :height: 300px
+   
 pirate.py
 =========
 
@@ -92,7 +97,95 @@ pirate.py
    pirate = Pirate()
    pirate.cmdloop()
 
-history: cursor
-ctrl-r
-help
+Nothing here... but history and help
 
+.. ctrl-r for bash-style history
+
+Fundamental prrrinciple
+=======================
+
+.. class: huge
+
+   ``foo a b c`` ->
+   
+   ``self.do_foo('a b c')``
+
+``do_``-methods: pirate2.py
+===========================
+
+::
+
+   class Pirate(Cmd):
+       gold = 10
+       def do_loot(self, arg):
+           'Seize booty frrrom a passing ship.'
+           self.gold += 1
+           print('Now we gots {0} doubloons'.format(self.gold))
+       def do_drink(self, arg):
+           'Drown your sorrrows in rrrum.'
+           self.gold -= 1
+           print('Now we gots {0} doubloons'.format(self.gold))
+
+.. do_methods; more help           
+
+Hooks
+=====
+
+.. image:: hook.jpeg
+   :height: 300px
+
+Hooks: pirate3.py
+=================
+
+::
+
+   class Pirate(Cmd):
+       gold = 3
+       def do_loot(self, arg):
+           'Drown your sorrrows in rrrum.'        
+           self.gold += 1
+       def do_drink(self, arg):
+           'Drown your sorrrows in rrrum.'        
+           self.gold -= 1
+       def postcmd(self, stop, line):                         
+           print('Now we gots {0} doubloons'.format(self.gold))
+           
+Arguments: pirate4.py
+=====================
+
+::
+
+        def do_drink(self, arg):
+            '''Drown your sorrrows in rrrum.
+            
+            drink [n] - drink [n] barrel[s] o' rum.'''  
+            try:
+                self.gold -= int(arg)
+            except:
+                if arg:
+                    print('''What's "{0}"?  I'll take rrrum.'''.format(arg))
+                self.gold -= 1            
+        
+quitting: pirate5.py
+====================
+
+::
+
+    def postcmd(self, stop, line):
+        print('Now we gots {0} doubloons'.format(self.gold))
+        if self.gold < 0:
+            print("Off to debtorrr's prrrison.  Game overrr.")
+            return True
+        return stop
+    def do_quit(self, arg):
+        print("Quiterrr!")
+        return True   
+
+prompts and defaults: pirate6.py
+================================
+
+::
+
+    prompt = 'arrr> '
+    def default(self, line):
+        print('What mean ye by "{0}"?'.format(line))
