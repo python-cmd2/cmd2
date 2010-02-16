@@ -14,10 +14,10 @@ class Pirate(Cmd):
             self.gold -= int(arg)
         except:
             if arg:
-                print '''What's "{0}"?  I'll take rrrum.'''.format(arg)
+                print('''What's "{0}"?  I'll take rrrum.'''.format(arg))
             self.gold -= 1            
     def postcmd(self, stop, line):
-        print 'Now we gots {0} doubloons'.format(self.gold)
+        print('Now we gots {0} doubloons'.format(self.gold))
 
 pirate = Pirate()
 pirate.cmdloop()

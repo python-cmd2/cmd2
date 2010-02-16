@@ -4,7 +4,8 @@ Features requiring only parameter changes
 
 Several aspects of a ``cmd2`` application's behavior
 can be controlled simply by setting attributes of ``App``.
-
+A parameter can also be changed at runtime by the user *if* 
+its name is included in the dictionary ``app.settable``.
 (To define your own user-settable parameters, see :ref:`parameters`)
 
 Case-insensitivity
@@ -17,22 +18,6 @@ set ``App.case_insensitive`` to False.
 Whether or not you set ``case_insensitive``, *please do not* define
 command method names with any uppercase letters.  ``cmd2`` will probably
 do something evil if you do.
-
-Multiline commands
-==================
-
-Like cmd_, ``cmd2`` assumes that a line break ends any command.
-However, ``App.multilineCommands`` is a list of commands that are assumed to span
-multiple lines.  For these commands 
-
-``cmd2.Cmd.multilineCommands`` defaults to [], so you may set your own list
-of multiline command names (without ``do_``)::
-
-    class App(Cmd):
-        multilineCommands = ['lenghtycommand']
-        def do_lengthycommand(self, args):
-            # ...          
-
  
 Shortcuts
 =========
@@ -91,6 +76,13 @@ Timing
 Setting ``App.timing`` to ``True`` outputs timing data after
 every application command is executed.  |settable|
 
+Echo
+====
+
+If ``True``, each command the user issues will be repeated
+to the screen before it is executed.  This is particularly
+useful when running scripts.
+
 Debug
 =====
 
@@ -101,13 +93,6 @@ whenever the application generates an error.  |settable|
                         during application execution.  
                         (See :ref:`parameters`)
 
-Settability
-===========
-
-If you wish the user to be able to set one of these
-application-controlling attributes while the application 
-is running, add its name to ``App.settable``.  See
-:ref:`parameters`.
 
 Other user-settable parameters
 ==============================
@@ -117,4 +102,17 @@ comments, is viewable from within a running application
 with::
 
   (Cmd) set --long
+  abbrev: True                   # Accept abbreviated commands
+  case_insensitive: True         # upper- and lower-case both OK
+  colors: True                   # Colorized output (*nix only)
+  continuation_prompt: >         # On 2nd+ line of input
+  debug: False                   # Show full error stack on error
+  default_file_name: command.txt # for ``save``, ``load``, etc.
+  echo: False                    # Echo command issued into output
+  editor: gedit                  # Program used by ``edit``
+  feedback_to_output: False      # include nonessentials in `|`, `>` results
+  prompt: (Cmd)                  # 
+  quiet: False                   # Don't print nonessential feedback
+  timing: False                  # Report execution times
+  
 
