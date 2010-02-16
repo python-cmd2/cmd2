@@ -42,22 +42,6 @@ mental imbalance.
   (Cmd) speak it was /* not */ delicious! # Yuck!
   it was  delicious!
 
-Output redirection
-==================
-
-As in a Unix shell, output of a command can be redirected:
-
-  - sent to a file with ``>``, as in ``mycommand args > filename.txt``
-  - piped (``|``) as input to operating-system commands, as in
-    ``mycommand args | wc``
-  - sent to the paste buffer, ready for the next Copy operation, by
-    ending with a bare ``>``, as in ``mycommand args >``..  Redirecting
-    to paste buffer requires software to be installed on the operating
-    system, pywin32_ on Windows or xclip_ on *nix.
-    
-.. _pywin32:: http://sourceforge.net/projects/pywin32/
-.. _xclip:: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
-  
 Commands at invocation
 ======================
 
@@ -74,6 +58,23 @@ quotation marks if it is more than a one-word command.
   Gracie
   cat@eee:~/proj/cmd2/example$ 
 
+  
+Output redirection
+==================
+
+As in a Unix shell, output of a command can be redirected:
+
+  - sent to a file with ``>``, as in ``mycommand args > filename.txt``
+  - piped (``|``) as input to operating-system commands, as in
+    ``mycommand args | wc``
+  - sent to the paste buffer, ready for the next Copy operation, by
+    ending with a bare ``>``, as in ``mycommand args >``..  Redirecting
+    to paste buffer requires software to be installed on the operating
+    system, pywin32_ on Windows or xclip_ on *nix.
+    
+.. _pywin32:: http://sourceforge.net/projects/pywin32/
+.. _xclip:: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
+  
 Python
 ======
 
@@ -172,4 +173,12 @@ is equivalent to ``shell ls``.)
 Transcript-based testing
 ========================
 
-If a ``cmd2``-based application is invoked with --test
+If the entire transcript (input and output) of a successful session of
+a ``cmd2``-based app is copied from the screen and pasted into a text
+file, ``transcript.txt``, then a transcript test can be run against it::
+
+  python app.py --test transcript.txt
+  
+Any deviations between the output prescribed in ``transcript.txt`` and
+the actual output from a fresh run of the application will be reported
+as a unit test failure.

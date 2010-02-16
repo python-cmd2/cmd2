@@ -201,17 +201,17 @@ Third-party module in PyPI
 What you get
 ============
 
-    * Abbreviated commands
     * Script files
-    * Output redirection
     * Commands at invocation
+    * Output redirection    
     * Python
+    * Transcript-based testing
     
     * Searchable command history
     * Quitting the application
     * Comments
     * Misc. pre-defined commands
-    * Transcript-based testing
+    
 More
 ====
 
