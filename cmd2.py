@@ -38,7 +38,7 @@ import glob
 import traceback
 import platform
 import copy
-from code import InteractiveConsole, InteractiveInterpreter, softspace
+from code import InteractiveConsole, InteractiveInterpreter
 from optparse import make_option
 
 if sys.version_info[0] > 2:
@@ -350,31 +350,6 @@ def replace_with_file_contents(fname):
 class EmbeddedConsoleExit(Exception):
     pass
 
-class MyInteractiveConsole(InteractiveConsole):
-    def runcode(self, code):
-        """Execute a code object.
-
-        When an exception occurs, self.showtraceback() is called to
-        display a traceback.  All exceptions are caught except
-        SystemExit, which is reraised.
-
-        A note about KeyboardInterrupt: this exception may occur
-        elsewhere in this code, and may not always be caught.  The
-        caller should be prepared to deal with it.
-        
-        Copied directly from code.InteractiveInterpreter, except for
-        EmbeddedConsoleExit exceptions.
-        """
-        try:
-            exec code in self.locals
-        except (SystemExit, EmbeddedConsoleExit):
-            raise
-        except:
-            self.showtraceback()
-        else:
-            if softspace(sys.stdout, 0):
-                print ()
-
 def ljust(x, width, fillchar=' '):
     'analogous to str.ljust, but works for lists'
     if hasattr(x, 'ljust'):
@@ -403,7 +378,7 @@ class Cmd(cmd.Cmd):
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
     debug = False
-    locals_in_py = False
+    locals_in_py = True
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
@@ -1045,9 +1020,8 @@ class Cmd(cmd.Cmd):
             interp.runcode(arg)
         else:
             localvars = (self.locals_in_py and self.pystate) or {}
-            interp = MyInteractiveConsole(locals=localvars)
+            interp = InteractiveConsole(locals=localvars)
             def quit():
-                'blah'
                 raise EmbeddedConsoleExit
             def onecmd(arg):
                 return self.onecmd(arg + '\n')
