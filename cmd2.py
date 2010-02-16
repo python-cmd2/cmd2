@@ -43,6 +43,7 @@ from optparse import make_option
 
 if sys.version_info[0] > 2:
     import pyparsing_py3 as pyparsing
+    raw_input = input
 else:
     import pyparsing
     
