@@ -1473,8 +1473,11 @@ class Cmd2TestCase(unittest.TestCase):
                 while line.startswith(self.cmdapp.continuation_prompt):
                     command.append(line[len(self.cmdapp.continuation_prompt):])
                     line = transcript.next()
-                command = ''.join(command)
-                self.cmdapp.onecmd(command)
+                command = ''.join(command)               
+                command = self.cmdapp.precmd(command)
+                stop = self.cmdapp.onecmd(command)
+                stop = self.cmdapp.postcmd(stop, command)
+                #TODO: should act on ``stop``
                 result = self.outputTrap.read()
                 if line.startswith(self.cmdapp.prompt):
                     message = '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing)\nGot:\n%s\n'%\

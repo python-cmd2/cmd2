@@ -1,4 +1,4 @@
-from cmd import Cmd
+from cmd2 import Cmd
 # prompts and defaults
 
 class Pirate(Cmd):
@@ -20,7 +20,7 @@ class Pirate(Cmd):
                 print('''What's "{0}"?  I'll take rrrum.'''.format(arg))
             self.gold -= 1            
     def postcmd(self, stop, line):
-        print('Now we gots {0} doubloons'.format(self.gold)
+        print('Now we gots {0} doubloons'.format(self.gold))
         if self.gold < 0:
             print("Off to debtorrr's prrrison.  Game overrr.")
             return True
