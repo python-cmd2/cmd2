@@ -6,11 +6,11 @@ class Pirate(Cmd):
     def do_loot(self, arg):
         'Seize booty frrrom a passing ship.'
         self.gold += 1
-        print 'Now we gots {0} doubloons'.format(self.gold)
+        print('Now we gots {0} doubloons'.format(self.gold))
     def do_drink(self, arg):
         'Drown your sorrrows in rrrum.'
         self.gold -= 1
-        print 'Now we gots {0} doubloons'.format(self.gold)
+        print('Now we gots {0} doubloons'.format(self.gold))
 
 pirate = Pirate()
 pirate.cmdloop()
