@@ -455,8 +455,11 @@ class Cmd(cmd.Cmd):
                   'underline':{True:'\x1b[4m',False:'\x1b[24m'}}
     colors = (platform.system() != 'Windows')
     def colorize(self, val, color):
-        '''Wraps `val` in `color` markers (one of: red/blue/green/cyan/magenta, bold, underline),
-           but only if `colors` environment variable is True'''
+        '''Given a string (``val``), returns that string wrapped in UNIX-style 
+           special characters that turn on (and then off) text color and style.
+           If the ``colors`` environment paramter is ``False``, or the application
+           is running on Windows, will return ``val`` unchanged.
+           Available colors/styles: red/blue/green/cyan/magenta, bold, underline'''
         if self.colors and (self.stdout == self.initial_stdout):
             return self.colorcodes[color][True] + val + self.colorcodes[color][False]
         return val
