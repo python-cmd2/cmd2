@@ -198,27 +198,48 @@ cmd2
 
 Third-party module in PyPI
 
-What you get
-============
+Absolutely free
+===============
 
     * Script files
     * Commands at invocation
     * Output redirection    
     * Python
     * Transcript-based testing
+
+But wait, there's more
+======================
+
+    * Abbreviated commands
+    * Shell commands
+    * Quitting
+    * Timing
+    * Echo
+    * Debug
     
-    * Searchable command history
-    * Quitting the application
-    * Comments
-    * Misc. pre-defined commands
+For a few keystrokes more...
+============================
+
+    * Default to shell
+    * Color output
+    * Shortcuts
+    
+But wait, there's more
+======================
+
+    * Case-insensitive commands
+    * Abbreviated commands
+    * Quitting
+    * Timing
+    * Echo
+    * Debug
+    * Color output
+
     
 More
 ====
 
     * Case-insensitivity
-    * Shortcuts
+    * One-character shortcuts
     * Default to shell
-    * Timing
-    * Echo
-    * Debug
-    * Other user-settable parameters
+    
