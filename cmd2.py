@@ -351,6 +351,9 @@ def replace_with_file_contents(fname):
 class EmbeddedConsoleExit(Exception):
     pass
 
+class EmptyStatement(Exception):
+    pass
+
 def ljust(x, width, fillchar=' '):
     'analogous to str.ljust, but works for lists'
     if hasattr(x, 'ljust'):
@@ -728,9 +731,9 @@ class Cmd(cmd.Cmd):
     def postparsing_precmd(self, statement):
         stop = 0
         return stop, statement
-
     def postparsing_postcmd(self, stop):
         return stop
+    
     def func_named(self, arg):
         result = None
         target = 'do_' + arg
@@ -747,6 +750,40 @@ class Cmd(cmd.Cmd):
         stop = self.onecmd(line)
         stop = self.postcmd(stop, line)        
         return stop
+    def complete_statement(self, line):
+        if (not line) or (
+            not pyparsing.Or(self.commentGrammars).
+                setParseAction(lambda x: '').transformString(line)):
+            raise EmptyStatement
+        statement = self.parsed(line)
+        while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
+            statement = '%s\n%s' % (statement.parsed.raw, 
+                                    self.pseudo_raw_input(self.continuation_prompt))                
+            statement = self.parsed(statement)
+        if not statement.parsed.command:
+            raise EmptyStatement
+        return statement
+    
+    def output_state(self, statement):
+        statekeeper = None
+        if statement.parsed.pipeTo:
+            redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            statekeeper = Statekeeper(self, ('stdout',))   
+            self.stdout = redirect.stdin
+        elif statement.parsed.output:
+            statekeeper = Statekeeper(self, ('stdout',))            
+            if statement.parsed.outputTo:
+                mode = 'w'
+                if statement.parsed.output == '>>':
+                    mode = 'a'
+                self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
+            else:
+                statekeeper = Statekeeper(self, ('stdout',))
+                self.stdout = tempfile.TemporaryFile()
+                if statement.parsed.output == '>>':
+                    self.stdout.write(get_paste_buffer())
+        return statekeeper
+    
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -761,55 +798,20 @@ class Cmd(cmd.Cmd):
         """
         # TODO: output from precmd and postcmd goes untrapped... and I don't
         # know how to fix it...
-        if not line:
-            return self.emptyline()
-        if not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line):
-            return 0    # command was empty except for comments
+ 
         try:
-            statement = self.parsed(line)
-            while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
-                statement = '%s\n%s' % (statement.parsed.raw, 
-                                        self.pseudo_raw_input(self.continuation_prompt))                
-                statement = self.parsed(statement)
-        except Exception, e:
-            self.perror(e)
+            statement = self.complete_statement(line)
+        except EmptyStatement:
             return 0
-        if statement.parsed.command not in self.excludeFromHistory:
-            self.history.append(statement.parsed.raw)
-        try:
-            (stop, statement) = self.postparsing_precmd(statement)
-        except Exception, e:
-            self.perror(e)
-            return 0
+        
+        (stop, statement) = self.postparsing_precmd(statement)
         if stop:
             return self.postparsing_postcmd(stop)
         
-        if not statement.parsed.command:
-            return self.postparsing_postcmd(stop=0)
-                
-        statekeeper = None
-
-        if statement.parsed.pipeTo:
-            redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            statekeeper = Statekeeper(self, ('stdout',))   
-            self.stdout = redirect.stdin
-        elif statement.parsed.output:
-            statekeeper = Statekeeper(self, ('stdout',))            
-            if statement.parsed.outputTo:
-                mode = 'w'
-                if statement.parsed.output == '>>':
-                    mode = 'a'
-                try:
-                    self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
-                except Exception, e:
-                    self.perror(e)
-                    return self.postparsing_postcmd(stop=0) 
-            else:
-                statekeeper = Statekeeper(self, ('stdout',))
-                self.stdout = tempfile.TemporaryFile()
-                if statement.parsed.output == '>>':
-                    self.stdout.write(get_paste_buffer())
         try:
+            if statement.parsed.command not in self.excludeFromHistory:
+                self.history.append(statement.parsed.raw)        
+            statekeeper = self.output_state(statement)                
             try:
                 # "heart" of the command, replaces cmd's onecmd()
                 self.lastcmd = statement.parsed.raw   
@@ -838,8 +840,7 @@ class Cmd(cmd.Cmd):
                     for result in redirect.communicate():              
                         statekeeper.stdout.write(result or '')                        
                 self.stdout.close()
-                statekeeper.restore()
-                                 
+                statekeeper.restore()                                 
             return self.postparsing_postcmd(stop)        
         
     def _default(self, statement):
