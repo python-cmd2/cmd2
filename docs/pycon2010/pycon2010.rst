@@ -277,5 +277,4 @@ Options: pirate8.py
             separator = ' '
         chant = separator.join(chant)
         print('{0} and a bottle of {1}'.format(chant, arg))
-
         

@@ -749,26 +749,27 @@ class Cmd(cmd.Cmd):
     def onecmd_plus_hooks(self, line):
         stop = 0
         try:
-            try:
-                statement = self.complete_statement(line)
-            except EmptyStatement:
-                return 0            
+            statement = self.complete_statement(line)
             (stop, statement) = self.postparsing_precmd(statement)
             if stop:
                 return self.postparsing_postcmd(stop)
             if statement.parsed.command not in self.excludeFromHistory:
-                self.history.append(statement.parsed.raw)        
-            self.redirect_output(statement)
-            timestart = datetime.datetime.now()
-            statement = self.precmd(statement)
-            stop = self.onecmd(statement)
-            stop = self.postcmd(stop, statement)
-            if self.timing:
-                self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
+                self.history.append(statement.parsed.raw)      
+            try:
+                self.redirect_output(statement)
+                timestart = datetime.datetime.now()
+                statement = self.precmd(statement)
+                stop = self.onecmd(statement)
+                stop = self.postcmd(stop, statement)
+                if self.timing:
+                    self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
+            finally:
+                self.restore_output(statement)
+        except EmptyStatement:
+            return 0
         except Exception, e:
             self.perror(str(e), statement)            
         finally:
-            self.restore_output(statement)
             return self.postparsing_postcmd(stop)        
     def complete_statement(self, line):
         if (not line) or (
