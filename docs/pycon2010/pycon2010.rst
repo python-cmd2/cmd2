@@ -281,3 +281,14 @@ Options: pirate8.py
         chant = separator.join(chant)
         print('{0} and a bottle of {1}'.format(chant, arg))
         
+sqlpython
+=========
+
+Created by Luca Canali @ CERN
+
+``cmd``-based Replacement for Oracle SQL/*Plus
+
+
+
+
+
