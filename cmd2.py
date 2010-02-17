@@ -786,9 +786,9 @@ class Cmd(cmd.Cmd):
     
     def redirect_output(self, statement):
         if statement.parsed.pipeTo:
-            redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            self.kept_state = Statekeeper(self, ('stdout',))   
-            self.stdout = redirect.stdin
+            self.kept_state = Statekeeper(self, ('stdout',))               
+            self.redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            self.stdout = self.redirect.stdin
         elif statement.parsed.output:
             self.kept_state = Statekeeper(self, ('stdout',))            
             if statement.parsed.outputTo:
@@ -797,21 +797,18 @@ class Cmd(cmd.Cmd):
                     mode = 'a'
                 self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
             else:
-                self.kept_state = Statekeeper(self, ('stdout',))
                 self.stdout = tempfile.TemporaryFile()
                 if statement.parsed.output == '>>':
                     self.stdout.write(get_paste_buffer())
-
+                    
     def restore_output(self, statement):
         if self.kept_state:
-            if statement.parsed.output and not statement.parsed.outputTo:
-                self.stdout.seek(0)
-                try:
+            if statement.parsed.output:
+                if not statement.parsed.outputTo:
+                    self.stdout.seek(0)
                     write_to_paste_buffer(self.stdout.read())
-                except Exception, e:
-                    self.perror(e)
             elif statement.parsed.pipeTo:
-                for result in redirect.communicate():              
+                for result in self.redirect.communicate():              
                     self.kept_state.stdout.write(result or '')                        
             self.stdout.close()
             self.kept_state.restore()                                 
