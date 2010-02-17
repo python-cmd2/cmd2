@@ -1,6 +1,15 @@
-=====
-Title
-=====
+================================================
+Easy command-line interpreters with cmd and cmd2
+================================================
+
+:author:  Catherine Devlin
+:date:    2010-02-20
+
+Quit scribbling
+===============
+
+Slides are *already* posted at
+catherinedevlin.pythoneers.com
 
 Web 2.0
 =======
@@ -14,6 +23,9 @@ But first...
 .. image:: sargon.jpg
    :height: 300px
 
+.. image:: akkad.png
+   :height: 300px
+   
 Sargon the Great
   Founder of Akkadian Empire
   
@@ -29,8 +41,8 @@ Command-Line Interface
   Unlike the Akkadian Empire, 
   the CLI will never die.
 
-Defining
-========
+Defining CLI
+============
   
 - "Line-oriented command interpreter"
 - "Command-line interface"
@@ -78,14 +90,14 @@ Use ``sys.argv``, ``optparse``
    
 Use ``curses``, ``urwid``
 
-Tradeoff
-========
+Priorities
+==========
 
-.. image:: ease.png
+.. image:: strategy.png
    :height: 300px
    
-pirate.py
-=========
+A ``cmd`` app: pirate.py
+========================
 
 ::
 
@@ -97,16 +109,18 @@ pirate.py
    pirate = Pirate()
    pirate.cmdloop()
 
-Nothing here... but history and help
+.. Nothing here... but history and help
 
 .. ctrl-r for bash-style history
 
 Fundamental prrrinciple
 =======================
 
-.. class: huge
+.. class:: huge
 
-   ``foo a b c`` ->
+   ::
+     
+     (Cmd) foo a b c  
    
    ``self.do_foo('a b c')``
 
@@ -116,7 +130,7 @@ Fundamental prrrinciple
 ::
 
    class Pirate(Cmd):
-       gold = 10
+       gold = 3
        def do_loot(self, arg):
            'Seize booty frrrom a passing ship.'
            self.gold += 1
@@ -139,16 +153,18 @@ Hooks: pirate3.py
 
 ::
 
-   class Pirate(Cmd):
-       gold = 3
-       def do_loot(self, arg):
-           'Drown your sorrrows in rrrum.'        
-           self.gold += 1
-       def do_drink(self, arg):
-           'Drown your sorrrows in rrrum.'        
-           self.gold -= 1
-       def postcmd(self, stop, line):                         
-           print('Now we gots {0} doubloons'.format(self.gold))
+    def do_loot(self, arg):
+        'Seize booty from a passing ship.'
+        self.gold += 1
+    def do_drink(self, arg):
+        'Drown your sorrrows in rrrum.'        
+        self.gold -= 1
+    def precmd(self, line):
+        self.initial_gold = self.gold
+        return line
+    def postcmd(self, stop, line):   
+        if self.gold != self.initial_gold:
+            print('Now we gots {0} doubloons'.format(self.gold))
            
 Arguments: pirate4.py
 =====================
@@ -172,16 +188,16 @@ quitting: pirate5.py
 
 ::
 
-    def postcmd(self, stop, line):
-        print('Now we gots {0} doubloons'
-              .format(self.gold))
+    def postcmd(self, stop, line):   
+        if self.gold != self.initial_gold:
+            print('Now we gots {0} doubloons'.format(self.gold))
         if self.gold < 0:
-            print("Off to debtorrr's prrrison.  Game overrr.")
+            print("Off to debtorrr's prison.  Game overrr.")
             return True
         return stop
     def do_quit(self, arg):
         print("Quiterrr!")
-        return True   
+        return True    
 
 prompts and defaults: pirate6.py
 ================================
@@ -192,11 +208,12 @@ prompts and defaults: pirate6.py
     def default(self, line):
         print('What mean ye by "{0}"?'
               .format(line))
-        
+                      
 cmd2
 ====
 
-Third-party module in PyPI
+.. image:: schematic.png
+   :height: 300px
 
 Absolutely free
 ===============
@@ -223,23 +240,41 @@ For a few keystrokes more...
     * Default to shell
     * Color output
     * Shortcuts
+    * Multiline commands
+    * Environment variables
     
-But wait, there's more
-======================
+Now how much would you pay?
+===========================
 
-    * Case-insensitive commands
-    * Abbreviated commands
-    * Quitting
-    * Timing
-    * Echo
-    * Debug
-    * Color output
+    * options / flags
+    * Quiet (suppress feedback) 
+    * BASH-style ``select``
+    * Parsing: terminators, suffixes
 
-    
-More
-====
+Minor changes: pirate7.py
+=========================    
 
-    * Case-insensitivity
-    * One-character shortcuts
-    * Default to shell
-    
+::
+
+    default_to_shell = True
+    multilineCommands = ['sing']
+    terminators = Cmd.terminators + ['...']
+    def do_sing(self, arg):
+        print(self.colorize(arg, 'blue'))
+        
+Options: pirate8.py
+===================
+
+::
+
+    @options([make_option('--ho', type='int', help="How often to chant 'ho'", default=2),
+              make_option('-c', '--commas', action="store_true", help="Interspers commas")])
+    def do_yo(self, arg, opts):
+        chant = ['yo'] + ['ho'] * opts.ho
+        if opts.commas:
+            separator = ', '
+        else:
+            separator = ' '
+        print('{0} and a bottle of {1}'.format(separator.join(chant), arg))
+
+        

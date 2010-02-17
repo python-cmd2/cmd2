@@ -1,8 +1,11 @@
-from cmd import Cmd
-# quitting
+from cmd2 import Cmd
+# prompts and defaults
 
 class Pirate(Cmd):
     gold = 3
+    prompt = 'arrr> '
+    def default(self, line):
+        print('What mean ye by "{0}"?'.format(line))
     def do_loot(self, arg):
         'Seize booty from a passing ship.'
         self.gold += 1
@@ -15,7 +18,7 @@ class Pirate(Cmd):
         except:
             if arg:
                 print('''What's "{0}"?  I'll take rrrum.'''.format(arg))
-            self.gold -= 1                  
+            self.gold -= 1            
     def precmd(self, line):
         self.initial_gold = self.gold
         return line
@@ -29,6 +32,11 @@ class Pirate(Cmd):
     def do_quit(self, arg):
         print("Quiterrr!")
         return True    
+    default_to_shell = True
+    multilineCommands = ['sing']
+    terminators = Cmd.terminators + ['...']
+    def do_sing(self, arg):
+        print(self.colorize(arg, 'blue'))
 
 pirate = Pirate()
 pirate.cmdloop()

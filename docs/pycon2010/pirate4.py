@@ -4,7 +4,7 @@ from cmd import Cmd
 class Pirate(Cmd):
     gold = 3
     def do_loot(self, arg):
-        'Drown your sorrrows in rrrum.'               
+        'Seize booty from a passing ship.'
         self.gold += 1
     def do_drink(self, arg):
         '''Drown your sorrrows in rrrum.
@@ -16,8 +16,12 @@ class Pirate(Cmd):
             if arg:
                 print('''What's "{0}"?  I'll take rrrum.'''.format(arg))
             self.gold -= 1            
-    def postcmd(self, stop, line):
-        print('Now we gots {0} doubloons'.format(self.gold))
+    def precmd(self, line):
+        self.initial_gold = self.gold
+        return line
+    def postcmd(self, stop, line):   
+        if self.gold != self.initial_gold:
+            print('Now we gots {0} doubloons'.format(self.gold))
 
 pirate = Pirate()
 pirate.cmdloop()
