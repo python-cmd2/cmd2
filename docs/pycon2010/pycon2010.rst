@@ -275,6 +275,7 @@ Options: pirate8.py
             separator = ', '
         else:
             separator = ' '
-        print('{0} and a bottle of {1}'.format(separator.join(chant), arg))
+        chant = separator.join(chant)
+        print('{0} and a bottle of {1}'.format(chant, arg))
 
         
