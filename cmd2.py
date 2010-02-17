@@ -415,7 +415,8 @@ class Cmd(cmd.Cmd):
                 self.poutput(msg)
             else:
                 print (msg)
-    _STOP_AND_EXIT = 2  # distinguish end of script file from actual exit
+    _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
+    _STOP_SCRIPT_NO_EXIT = -999
     editor = os.environ.get('EDITOR')
     if not editor:
         if sys.platform[:3] == 'win':
@@ -911,7 +912,7 @@ class Cmd(cmd.Cmd):
             return stop
 
     def do_EOF(self, arg):
-        return True
+        return self._STOP_SCRIPT_NO_EXIT # End of script; should not exit app
     do_eof = do_EOF
                            
     def do_quit(self, arg):
@@ -1198,7 +1199,7 @@ class Cmd(cmd.Cmd):
         self.stdin.close()
         keepstate.restore()
         self.lastcmd = ''
-        return (stop == self._STOP_AND_EXIT) and self._STOP_AND_EXIT    
+        return stop and (stop != self._STOP_SCRIPT_NO_EXIT)    
     do__load = do_load  # avoid an unfortunate legacy use of do_load from sqlpython
     
     def do_run(self, arg):
