@@ -183,7 +183,7 @@ if subprocess.mswindows:
     except ImportError:
         def get_paste_buffer(*args):
             raise OSError, pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/')
-        setPasteBuffer = get_paste_buffer
+        write_to_paste_buffer = get_paste_buffer
 else:
     can_clip = False
     try:
@@ -214,8 +214,7 @@ else:
     else:
         def get_paste_buffer(*args):
             raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
-        setPasteBuffer = get_paste_buffer
-        writeToPasteBuffer = get_paste_buffer
+        write_to_paste_buffer = get_paste_buffer
           
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
@@ -787,18 +786,20 @@ class Cmd(cmd.Cmd):
     
     def redirect_output(self, statement):
         if statement.parsed.pipeTo:
-            self.kept_state = Statekeeper(self, ('stdout',))               
+            self.kept_state = Statekeeper(self, ('stdout',))
+            self.kept_sys = Statekeeper(sys, ('stdout',))
             self.redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            self.stdout = self.redirect.stdin
+            sys.stdout = self.stdout = self.redirect.stdin
         elif statement.parsed.output:
             self.kept_state = Statekeeper(self, ('stdout',))            
+            self.kept_sys = Statekeeper(sys, ('stdout',))
             if statement.parsed.outputTo:
                 mode = 'w'
                 if statement.parsed.output == '>>':
                     mode = 'a'
-                self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
+                sys.stdout = self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
             else:
-                self.stdout = tempfile.TemporaryFile()
+                sys.stdout = self.stdout = tempfile.TemporaryFile()
                 if statement.parsed.output == '>>':
                     self.stdout.write(get_paste_buffer())
                     
@@ -812,7 +813,8 @@ class Cmd(cmd.Cmd):
                 for result in self.redirect.communicate():              
                     self.kept_state.stdout.write(result or '')                        
             self.stdout.close()
-            self.kept_state.restore()                                 
+            self.kept_state.restore()  
+            self.kept_sys.restore()
             self.kept_state = None                        
                         
     def onecmd(self, line):
