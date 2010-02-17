@@ -381,8 +381,9 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
-    debug = False
+    debug = True
     locals_in_py = True
+    kept_state = None
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
@@ -746,10 +747,29 @@ class Cmd(cmd.Cmd):
                     result = 'do_' + funcs[0]
         return result
     def onecmd_plus_hooks(self, line):
-        line = self.precmd(line)
-        stop = self.onecmd(line)
-        stop = self.postcmd(stop, line)        
-        return stop
+        stop = 0
+        try:
+            try:
+                statement = self.complete_statement(line)
+            except EmptyStatement:
+                return 0            
+            (stop, statement) = self.postparsing_precmd(statement)
+            if stop:
+                return self.postparsing_postcmd(stop)
+            if statement.parsed.command not in self.excludeFromHistory:
+                self.history.append(statement.parsed.raw)        
+            self.redirect_output(statement)
+            timestart = datetime.datetime.now()
+            statement = self.precmd(statement)
+            stop = self.onecmd(statement)
+            stop = self.postcmd(stop, statement)
+            if self.timing:
+                self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
+        except Exception, e:
+            self.perror(str(e), statement)            
+        finally:
+            self.restore_output(statement)
+            return self.postparsing_postcmd(stop)        
     def complete_statement(self, line):
         if (not line) or (
             not pyparsing.Or(self.commentGrammars).
@@ -764,26 +784,39 @@ class Cmd(cmd.Cmd):
             raise EmptyStatement
         return statement
     
-    def output_state(self, statement):
-        statekeeper = None
+    def redirect_output(self, statement):
         if statement.parsed.pipeTo:
             redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            statekeeper = Statekeeper(self, ('stdout',))   
+            self.kept_state = Statekeeper(self, ('stdout',))   
             self.stdout = redirect.stdin
         elif statement.parsed.output:
-            statekeeper = Statekeeper(self, ('stdout',))            
+            self.kept_state = Statekeeper(self, ('stdout',))            
             if statement.parsed.outputTo:
                 mode = 'w'
                 if statement.parsed.output == '>>':
                     mode = 'a'
                 self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
             else:
-                statekeeper = Statekeeper(self, ('stdout',))
+                self.kept_state = Statekeeper(self, ('stdout',))
                 self.stdout = tempfile.TemporaryFile()
                 if statement.parsed.output == '>>':
                     self.stdout.write(get_paste_buffer())
-        return statekeeper
-    
+
+    def restore_output(self, statement):
+        if self.kept_state:
+            if statement.parsed.output and not statement.parsed.outputTo:
+                self.stdout.seek(0)
+                try:
+                    write_to_paste_buffer(self.stdout.read())
+                except Exception, e:
+                    self.perror(e)
+            elif statement.parsed.pipeTo:
+                for result in redirect.communicate():              
+                    self.kept_state.stdout.write(result or '')                        
+            self.stdout.close()
+            self.kept_state.restore()                                 
+            self.kept_state = None                        
+                        
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
         to the prompt.
@@ -796,52 +829,17 @@ class Cmd(cmd.Cmd):
         This (`cmd2`) version of `onecmd` already override's `cmd`'s `onecmd`.
 
         """
-        # TODO: output from precmd and postcmd goes untrapped... and I don't
-        # know how to fix it...
- 
+        statement = self.parsed(line)
+        self.lastcmd = statement.parsed.raw   
+        funcname = self.func_named(statement.parsed.command)
+        if not funcname:
+            return self._default(statement)
         try:
-            statement = self.complete_statement(line)
-        except EmptyStatement:
-            return 0
-        
-        (stop, statement) = self.postparsing_precmd(statement)
-        if stop:
-            return self.postparsing_postcmd(stop)
-        
-        try:
-            if statement.parsed.command not in self.excludeFromHistory:
-                self.history.append(statement.parsed.raw)        
-            statekeeper = self.output_state(statement)                
-            try:
-                # "heart" of the command, replaces cmd's onecmd()
-                self.lastcmd = statement.parsed.raw   
-                funcname = self.func_named(statement.parsed.command)
-                if not funcname:
-                    return self._default(statement)
-                try:
-                    func = getattr(self, funcname)
-                except AttributeError:
-                    return self._default(statement)
-                timestart = datetime.datetime.now()
-                stop = func(statement) 
-                if self.timing:
-                    self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
-            except Exception, e:
-                self.perror(e, statement)
-        finally:
-            if statekeeper:
-                if statement.parsed.output and not statement.parsed.outputTo:
-                    self.stdout.seek(0)
-                    try:
-                        write_to_paste_buffer(self.stdout.read())
-                    except Exception, e:
-                        self.perror(e)
-                elif statement.parsed.pipeTo:
-                    for result in redirect.communicate():              
-                        statekeeper.stdout.write(result or '')                        
-                self.stdout.close()
-                statekeeper.restore()                                 
-            return self.postparsing_postcmd(stop)        
+            func = getattr(self, funcname)
+        except AttributeError:
+            return self._default(statement)
+        stop = func(statement) 
+        return stop                
         
     def _default(self, statement):
         arg = statement.full_parsed_statement()
