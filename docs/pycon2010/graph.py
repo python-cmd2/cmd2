@@ -4,6 +4,8 @@ goto(-400,-400)
 
 def label(txt):
     write(txt, font=('Arial', 20, 'italic'))
+hideturtle()
+width(6)
 
 def line(len, _label):
     start = pos()
@@ -31,9 +33,9 @@ tech(-360, 160, 'GUI')
 tech(-390, 100, 'AJAX')
 tech(-300, -10, 'webapp')
 tech(190, -380, 'CLU')
-tech(90, -320, 'TUI')
+tech(60, -320, 'TUI')
 tech(100, -210, 'cmd')
-tech(80, -100, 'cmd2')
+tech(80, -80, 'cmd2')
 
 while True:
     pass
