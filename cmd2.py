@@ -120,7 +120,7 @@ def options(option_list):
         optionParser = OptionParser()
         for opt in option_list:
             optionParser.add_option(opt)
-        optionParser.set_usage("%s [options] arg" % func.__name__.strip('do_'))
+        optionParser.set_usage("%s [options] arg" % func.__name__[3:])
         optionParser._func = func
         def new_func(instance, arg):
             try:

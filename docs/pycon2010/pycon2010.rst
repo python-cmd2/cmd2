@@ -242,14 +242,6 @@ For a few keystrokes more...
     * Shortcuts
     * Multiline commands
     * Environment variables
-    
-Now how much would you pay?
-===========================
-
-    * options / flags
-    * Quiet (suppress feedback) 
-    * BASH-style ``select``
-    * Parsing: terminators, suffixes
 
 Minor changes: pirate7.py
 =========================    
@@ -259,8 +251,19 @@ Minor changes: pirate7.py
     default_to_shell = True
     multilineCommands = ['sing']
     terminators = Cmd.terminators + ['...']
+    songcolor = 'blue'
+    settable = Cmd.settable + 'songcolor Color to ``sing`` in (red/blue/green/cyan/magenta, bold, underline)'
+    Cmd.shortcuts.update({'~': 'sing'})
     def do_sing(self, arg):
-        print(self.colorize(arg, 'blue'))
+        print(self.colorize(arg, self.songcolor))
+    
+Now how much would you pay?
+===========================
+
+    * options / flags
+    * Quiet (suppress feedback) 
+    * BASH-style ``select``
+    * Parsing: terminators, suffixes
         
 Options: pirate8.py
 ===================
