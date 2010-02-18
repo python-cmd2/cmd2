@@ -380,7 +380,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     feedback_to_output = False          # Do include nonessentials in >, | output
     quiet = False                       # Do not suppress nonessential output
-    debug = True
+    debug = False
     locals_in_py = True
     kept_state = None
     settable = stubbornDict('''
