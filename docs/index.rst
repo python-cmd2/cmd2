@@ -6,7 +6,12 @@
 cmd2
 ====
 
-`cmd2 project page`_
+A python package for building powerful command-line interpreter (CLI)
+programs.  Extends the Python Standard Library's cmd_ package.
+
+.. _cmd: http://docs.python.org/library/cmd.html#module-cmd
+
+`cmd2 project page`_: http://docs.python.org/library/cmd.html#module-cmd
 
 `project bug tracker`_
 
