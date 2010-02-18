@@ -284,7 +284,7 @@ Serious example: sqlpython
 
 ``cmd``-based app by Luca Canali @ CERN
 
-Replacement for Oracle SQL/*Plus
+Replacement for Oracle SQL\*Plus
 
 Now ``cmd2``-based; postgreSQL; MySQL
 
