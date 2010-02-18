@@ -1,5 +1,3 @@
-set echo on
-py
 import os
 import os.path
 
