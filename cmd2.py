@@ -347,7 +347,7 @@ def replace_with_file_contents(fname):
         result = get_paste_buffer()
     return result      
 
-class EmbeddedConsoleExit(Exception):
+class EmbeddedConsoleExit(SystemExit):
     pass
 
 class EmptyStatement(Exception):
