@@ -1016,24 +1016,33 @@ class Cmd(cmd.Cmd):
         '''
         py <command>: Executes a Python command.
         py: Enters interactive Python mode.
-        End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, 'exit()`.
-        Non-python commands can be issued with `cmd("your command")`.
+        End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
+        Non-python commands can be issued with ``cmd("your command")``.
+        Run python code from external files with ``run("filename.py")``
         '''
         self.pystate['self'] = self
         arg = arg.parsed.raw[2:].strip()
+        localvars = (self.locals_in_py and self.pystate) or {}
+        interp = InteractiveConsole(locals=localvars)
+        interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
         if arg.strip():
-            interp = InteractiveInterpreter(locals=self.pystate)
             interp.runcode(arg)
         else:
-            localvars = (self.locals_in_py and self.pystate) or {}
-            interp = InteractiveConsole(locals=localvars)
             def quit():
                 raise EmbeddedConsoleExit
             def onecmd_plus_hooks(arg):
                 return self.onecmd_plus_hooks(arg + '\n')
+            def run(arg):
+                try:
+                    file = open(arg)
+                    interp.runcode(file.read())
+                    file.close()
+                except IOError, e:
+                    self.perror(e)
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
             self.pystate['cmd'] = onecmd_plus_hooks
+            self.pystate['run'] = run
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'        
                 keepstate = Statekeeper(sys, ('stdin','stdout'))
