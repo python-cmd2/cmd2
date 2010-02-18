@@ -9,14 +9,13 @@ cmd2
 A python package for building powerful command-line interpreter (CLI)
 programs.  Extends the Python Standard Library's cmd_ package.
 
+
+.. _`cmd2 project page`: http://www.assembla.com/wiki/show/python-cmd2
+.. _`project bug tracker`: http://trac-hg.assembla.com/python-cmd2/report/1
+
 .. _cmd: http://docs.python.org/library/cmd.html#module-cmd
 
-`cmd2 project page`_: http://docs.python.org/library/cmd.html#module-cmd
-
-`project bug tracker`_
-
-.. _`cmd2 Project page`: http://www.assembla.com/wiki/show/python-cmd2
-.. _`project bug tracker`: http://trac-hg.assembla.com/python-cmd2/report/1
+.. _`PyCon 2010 presentation`: http://catherinedevlin.pythoneers.com/presentations/cmd_cmd2/pycon2010.html
 
 The basic use of ``cmd2`` is identical to that of cmd_.
 
@@ -32,6 +31,14 @@ The basic use of ``cmd2`` is identical to that of cmd_.
 
      app = App()
      app.cmdloop()
+
+Resources
+---------
+
+* cmd_
+* `project bug tracker`_
+* `cmd2 project page`_
+* `PyCon 2010 presentation`: Easy Command-Line Applications with cmd and cmd2
 
 These docs will refer to ``App`` as your ``cmd2.Cmd``
 subclass, and ``app`` as an instance of ``App``.  Of
