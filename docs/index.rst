@@ -3,8 +3,15 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to cmd2's documentation!
-================================
+cmd2
+====
+
+`cmd2 project page`_
+
+`project bug tracker`_
+
+.. _`cmd2 Project page`: http://www.assembla.com/wiki/show/python-cmd2
+.. _`project bug tracker`: http://trac-hg.assembla.com/python-cmd2/report/1
 
 The basic use of ``cmd2`` is identical to that of cmd_.
 
