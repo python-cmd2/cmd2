@@ -38,7 +38,7 @@ Resources
 * cmd_
 * `project bug tracker`_
 * `cmd2 project page`_
-* `PyCon 2010 presentation`: Easy Command-Line Applications with cmd and cmd2
+* `PyCon 2010 presentation`_: Easy Command-Line Applications with cmd and cmd2
 
 These docs will refer to ``App`` as your ``cmd2.Cmd``
 subclass, and ``app`` as an instance of ``App``.  Of

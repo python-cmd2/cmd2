@@ -9,7 +9,7 @@ Quit scribbling
 ===============
 
 Slides are *already* posted at
-catherinedevlin.pythoneers.com
+homepage: http://pypi.python.org/pypi/cmd2
 
 Web 2.0
 =======
