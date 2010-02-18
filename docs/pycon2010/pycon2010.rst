@@ -141,8 +141,10 @@ Fundamental prrrinciple
 Hooks
 =====
 
-.. image:: hook.jpeg
+.. image:: hook.jpg
    :height: 250px
+
+preloop, postloop, precmd, postcmd
 
 Hooks: pirate3.py
 =================
@@ -290,11 +292,16 @@ sqlpython features
 ==================
 
 Everything in ``cmd2``
+  (scripts, redirection, py)
 
 Multi connections
 
 ls, grep
 
 Output to html, csv, inserts, bar graphs
+
+py session with bind variables
+
+
 
 
