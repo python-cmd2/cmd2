@@ -15,16 +15,16 @@ Web 2.0
 =======
 
 .. image:: web-2-0-logos.gif
-   :height: 300px
+   :height: 250px
    
 But first...
 ============
 
 .. image:: sargon.jpg
-   :height: 300px
+   :height: 250px
 
 .. image:: akkad.png
-   :height: 300px
+   :height: 250px
    
 Sargon the Great
   Founder of Akkadian Empire
@@ -35,7 +35,7 @@ In between
 ==========
 
 .. image:: apple.jpg
-   :height: 300px
+   :height: 250px
  
 Command-Line Interface
   Unlike the Akkadian Empire, 
@@ -67,15 +67,11 @@ Examples
 != Command Line Utilities
 =========================
 
+(``ls``, ``grep``, ``ping``, etc.)
+
 1. Accepts arguments at invocation
 2. executes
 3. terminates
-
-Examples
---------
-* ls
-* grep
-* ping
 
 Use ``sys.argv``, ``optparse``
 
@@ -86,7 +82,7 @@ Use ``sys.argv``, ``optparse``
 * I/O is *not* line-by-line
 
 .. image:: urwid.png
-   :height: 300px
+   :height: 250px
    
 Use ``curses``, ``urwid``
 
@@ -94,7 +90,7 @@ Priorities
 ==========
 
 .. image:: strategy.png
-   :height: 300px
+   :height: 250px
    
 A ``cmd`` app: pirate.py
 ========================
@@ -146,7 +142,7 @@ Hooks
 =====
 
 .. image:: hook.jpeg
-   :height: 300px
+   :height: 250px
 
 Hooks: pirate3.py
 =================
@@ -213,7 +209,7 @@ cmd2
 ====
 
 .. image:: schematic.png
-   :height: 300px
+   :height: 250px
 
 Absolutely free
 ===============
@@ -280,15 +276,25 @@ Options: pirate8.py
             separator = ' '
         chant = separator.join(chant)
         print('{0} and a bottle of {1}'.format(chant, arg))
-        
-sqlpython
-=========
 
-Created by Luca Canali @ CERN
+Serious example: sqlpython
+==========================
 
-``cmd``-based Replacement for Oracle SQL/*Plus
+``cmd``-based app by Luca Canali @ CERN
 
+Replacement for Oracle SQL/*Plus
 
+Now ``cmd2``-based; postgreSQL; MySQL
 
+sqlpython features
+==================
+
+Everything in ``cmd2``
+
+Multi connections
+
+ls, grep
+
+Output to html, csv, inserts, bar graphs
 
 
