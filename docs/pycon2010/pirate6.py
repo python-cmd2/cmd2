@@ -1,4 +1,4 @@
-from cmd2 import Cmd
+from cmd7 import Cmd
 # prompts and defaults
 
 class Pirate(Cmd):
