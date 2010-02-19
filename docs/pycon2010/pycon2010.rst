@@ -224,6 +224,13 @@ cmd2
 .. image:: schematic.png
    :height: 350px
 
+As you wish, Guido
+==================
+
+Python 3 compatible
+
+(um, mostly)
+
 Absolutely free
 ===============
 
@@ -316,7 +323,7 @@ Report: html
 Thank you
 =========
 
-pypi.
+pypi.python.org/pypi/cmd2
 
 catherinedevlin.blogspot.com
 
