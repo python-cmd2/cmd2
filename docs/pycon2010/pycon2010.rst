@@ -15,7 +15,7 @@ Web 2.0
 =======
 
 .. image:: web-2-0-logos.gif
-   :height: 250px
+   :height: 350px
    
 But first...
 ============
@@ -43,6 +43,8 @@ Command-Line Interface
 
 Defining CLI
 ============
+
+Also known as
   
 - "Line-oriented command interpreter"
 - "Command-line interface"
@@ -75,22 +77,22 @@ Examples
 
 Use ``sys.argv``, ``optparse``
 
-!= "Text User Interfaces", "Consoles"
-=====================================
+!="Text User Interface", "Console"
+==================================
 
 * Use entire (session) screen
 * I/O is *not* line-by-line
+* See ``curses``, ``urwid``
 
 .. image:: urwid.png
    :height: 250px
    
-Use ``curses``, ``urwid``
 
-Priorities
-==========
+Decide your priorities
+======================
 
 .. image:: strategy.png
-   :height: 250px
+   :height: 350px
    
 A ``cmd`` app: pirate.py
 ========================
@@ -113,12 +115,10 @@ Fundamental prrrinciple
 =======================
 
 .. class:: huge
-
-   ::
      
-     (Cmd) foo a b c  
+   Transform ``(Cmd) foo a b c``  
    
-   ``self.do_foo('a b c')``
+   to ``self.do_foo('a b c')``
 
 ``do_``-methods: pirate2.py
 ===========================
@@ -206,12 +206,23 @@ prompts and defaults: pirate6.py
     def default(self, line):
         print('What mean ye by "{0}"?'
               .format(line))
-                      
+
+Other CLI packages
+==================
+ 
+ * cmdlin
+ * cmd2                      
+
+Demo
+====
+
+Convert ``cmd`` app to ``cmd2``
+
 cmd2
 ====
 
 .. image:: schematic.png
-   :height: 250px
+   :height: 350px
 
 Absolutely free
 ===============
@@ -268,16 +279,12 @@ Options: pirate8.py
 
 ::
 
-    @options([make_option('--ho', type='int', help="How often to chant 'ho'", default=2),
-              make_option('-c', '--commas', action="store_true", help="Interspers commas")])
     def do_yo(self, arg, opts):
         chant = ['yo'] + ['ho'] * opts.ho
-        if opts.commas:
-            separator = ', '
-        else:
-            separator = ' '
+        separator = ', ' if opts.commas else ' '
         chant = separator.join(chant)
-        print('{0} and a bottle of {1}'.format(chant, arg))
+	        print('{0} and a bottle of {1}'
+                      .format(chant, arg))
 
 Serious example: sqlpython
 ==========================
@@ -291,17 +298,28 @@ Now ``cmd2``-based; postgreSQL; MySQL
 sqlpython features
 ==================
 
-Everything in ``cmd2``
-  (scripts, redirection, py)
+* from ``cmd2``: scripts, redirection,
+  py, etc.
+* multiple connections
+* UNIX: ls, cat, grep
+* Special output
 
-Multi connections
+File reporter
+=============
 
-ls, grep
+Gather info: Python
 
-Output to html, csv, inserts, bar graphs
+Store: postgresql
 
-py session with bind variables
+Report: html
 
+Thank you
+=========
 
+pypi.
+
+catherinedevlin.blogspot.com
+
+catherinedevlin.pythoneers.com
 
 

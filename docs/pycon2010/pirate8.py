@@ -40,16 +40,17 @@ class Pirate(Cmd):
     Cmd.shortcuts.update({'~': 'sing'})
     def do_sing(self, arg):
         print(self.colorize(arg, self.songcolor))
-    @options([make_option('--ho', type='int', help="How often to chant 'ho'", default=2),
-              make_option('-c', '--commas', action="store_true", help="Interspers commas")])
+    @options([make_option('--ho', type='int', default=2,
+                          help="How often to chant 'ho'"),
+              make_option('-c', '--commas',
+                          action="store_true", 
+                          help="Intersperse commas")])
     def do_yo(self, arg, opts):
         chant = ['yo'] + ['ho'] * opts.ho
-        if opts.commas:
-            separator = ', '
-        else:
-            separator = ' '
+        separator = ', ' if opts.commas else ' '
         chant = separator.join(chant)
-        print('{0} and a bottle of {1}'.format(chant, arg))
+        print('{0} and a bottle of {1}'
+              .format(chant, arg))
 
 pirate = Pirate()
 pirate.cmdloop()
