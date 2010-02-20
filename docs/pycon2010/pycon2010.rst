@@ -4,12 +4,7 @@ Easy command-line interpreters with cmd and cmd2
 
 :author:  Catherine Devlin
 :date:    2010-02-20
-
-Quit scribbling
-===============
-
-Slides are *already* posted at
-homepage: http://pypi.python.org/pypi/cmd2
+:slides:  http://pypi.python.org/pypi/cmd2
 
 Web 2.0
 =======
@@ -57,28 +52,32 @@ Also known as
 Examples
 ========
 
-* Bash, Korn, zsh
-* Python shell
-* screen
-* Zork
-* SQL clients: psql, SQL*\Plus, mysql...
-* ed
+.. class:: big
+
+   * Bash, Korn, zsh
+   * Python shell
+   * screen
+   * Zork
+   * SQL clients: psql, SQL*\Plus, mysql...
+   * ed
 
 .. ``ed`` proves that CLI is sometimes the wrong answer.
 
 != Command Line Utilities
 =========================
 
-(``ls``, ``grep``, ``ping``, etc.)
+.. class:: big
 
-1. Accepts arguments at invocation
-2. executes
-3. terminates
+   (``ls``, ``grep``, ``ping``, etc.)
 
-Use ``sys.argv``, ``optparse``
+   1. Accept arguments at invocation
+   2. execute
+   3. terminate
 
-!="Text User Interface", "Console"
-==================================
+   Use ``sys.argv``, ``optparse``
+
+!="Text User Interface"
+=======================
 
 * Use entire (session) screen
 * I/O is *not* line-by-line
@@ -116,9 +115,11 @@ Fundamental prrrinciple
 
 .. class:: huge
      
-   Transform ``(Cmd) foo a b c``  
+   ``(Cmd) foo a b c``  
    
-   to ``self.do_foo('a b c')``
+   becomes
+
+   ``self.do_foo('a b c')``
 
 ``do_``-methods: pirate2.py
 ===========================
@@ -130,11 +131,13 @@ Fundamental prrrinciple
        def do_loot(self, arg):
            'Seize booty frrrom a passing ship.'
            self.gold += 1
-           print('Now we gots {0} doubloons'.format(self.gold))
+           print('Now we gots {0} doubloons'
+                 .format(self.gold))
        def do_drink(self, arg):
            'Drown your sorrrows in rrrum.'
            self.gold -= 1
-           print('Now we gots {0} doubloons'.format(self.gold))
+           print('Now we gots {0} doubloons'
+                 .format(self.gold))
 
 .. do_methods; more help           
 
@@ -144,7 +147,12 @@ Hooks
 .. image:: hook.jpg
    :height: 250px
 
-preloop, postloop, precmd, postcmd
+::
+
+   self.preloop()
+   self.postloop()
+   self.precmd(line)
+   self.postcmd(stop, line)
 
 Hooks: pirate3.py
 =================
@@ -162,7 +170,8 @@ Hooks: pirate3.py
         return line
     def postcmd(self, stop, line):   
         if self.gold != self.initial_gold:
-            print('Now we gots {0} doubloons'.format(self.gold))
+            print('Now we gots {0} doubloons'
+                  .format(self.gold))
            
 Arguments: pirate4.py
 =====================
@@ -188,17 +197,18 @@ quitting: pirate5.py
 
     def postcmd(self, stop, line):   
         if self.gold != self.initial_gold:
-            print('Now we gots {0} doubloons'.format(self.gold))
+            print('Now we gots {0} doubloons'
+                  .format(self.gold))
         if self.gold < 0:
-            print("Off to debtorrr's prison.  Game overrr.")
-            return True
+            print("Off to debtorrr's prison.")
+            stop = True
         return stop
     def do_quit(self, arg):
         print("Quiterrr!")
         return True    
 
-prompts and defaults: pirate6.py
-================================
+prompts, defaults: pirate6.py
+=============================
 
 ::
 
@@ -209,14 +219,22 @@ prompts and defaults: pirate6.py
 
 Other CLI packages
 ==================
- 
- * cmdlin
- * cmd2                      
+
+.. class:: big
+
+   * CmdLoop
+   * cly
+   * CMdO
+   * pycopia
+   * cmdlin
+   * cmd2                      
 
 Demo
 ====
 
-Convert ``cmd`` app to ``cmd2``
+.. class:: huge
+
+   Convert ``cmd`` app to ``cmd2``
 
 cmd2
 ====
@@ -227,18 +245,24 @@ cmd2
 As you wish, Guido
 ==================
 
-Python 3 compatible
+.. class:: huge
+
+   Python 3 compatible
 
 (um, mostly)
 
 Absolutely free
 ===============
 
-    * Script files
-    * Commands at invocation
-    * Output redirection    
-    * Python
-    * Transcript-based testing
+Script files
+
+Commands at invocation
+
+Output redirection    
+
+Python
+
+Transcript testing
 
 But wait, there's more
 ======================
@@ -250,15 +274,6 @@ But wait, there's more
     * Echo
     * Debug
     
-For a few keystrokes more...
-============================
-
-    * Default to shell
-    * Color output
-    * Shortcuts
-    * Multiline commands
-    * Environment variables
-
 Minor changes: pirate7.py
 =========================    
 
@@ -276,10 +291,13 @@ Minor changes: pirate7.py
 Now how much would you pay?
 ===========================
 
-    * options / flags
-    * Quiet (suppress feedback) 
-    * BASH-style ``select``
-    * Parsing: terminators, suffixes
+options / flags
+
+Quiet (suppress feedback) 
+
+BASH-style ``select``
+
+Parsing: terminators, suffixes
         
 Options: pirate8.py
 ===================
@@ -296,37 +314,45 @@ Options: pirate8.py
 Serious example: sqlpython
 ==========================
 
-``cmd``-based app by Luca Canali @ CERN
+.. class:: big
 
-Replacement for Oracle SQL\*Plus
+   ``cmd``-based app by Luca Canali @ CERN
 
-Now ``cmd2``-based; postgreSQL; MySQL
+   Replacement for Oracle SQL\*Plus
+
+   Now ``cmd2``-based; postgreSQL; MySQL
 
 sqlpython features
 ==================
 
-* from ``cmd2``: scripts, redirection,
-  py, etc.
-* multiple connections
-* UNIX: ls, cat, grep
-* Special output
+.. class:: big
+
+   * from ``cmd2``: scripts, redirection,
+     py, etc.
+   * multiple connections
+   * UNIX: ls, cat, grep
+   * Special output
 
 File reporter
 =============
 
-Gather info: Python
+.. class:: huge
 
-Store: postgresql
+   Gather info: Python
 
-Report: html
+   Store: postgresql
+
+   Report: html
 
 Thank you
 =========
 
-pypi.python.org/pypi/cmd2
+.. class:: big
 
-catherinedevlin.blogspot.com
+    http://pypi.python.org/pypi/cmd2
 
-catherinedevlin.pythoneers.com
+    http://catherinedevlin.blogspot.com
+
+    http://catherinedevlin.pythoneers.com
 
 

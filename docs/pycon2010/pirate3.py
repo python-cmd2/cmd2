@@ -14,7 +14,8 @@ class Pirate(Cmd):
         return line
     def postcmd(self, stop, line):   
         if self.gold != self.initial_gold:
-            print('Now we gots {0} doubloons'.format(self.gold))
+            print('Now we gots {0} doubloons'
+                  .format(self.gold))
 
 pirate = Pirate()
 pirate.cmdloop()

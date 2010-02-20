@@ -2,7 +2,7 @@
 /* Following are the presentation styles -- edit away! */
 
 html, body {margin: 0; padding: 0;}
-body {background: white; color: black;}
+body {background: white; color: black; font-family: sans-serif;}
 /* Replace the background style above with the style below (and again for
    div#header) for a graphic: */
 /* background: white url(bodybg.gif) -16px 0 no-repeat; */
@@ -22,8 +22,8 @@ sup {font-size: smaller; line-height: 1px;}
 .slide img.leader {display: block; margin: 0 auto;}
 .slide tt {font-size: 90%;}
 
-div#header, div#footer {background: #005; color: #AAB; font-family: sans-serif;}
-/* background: #005 url(bodybg.gif) -16px 0 no-repeat; */
+div#header, div#footer {background: lightgreen; color: #AAB; font-family: sans-serif;}
+/* background: lightgreen url(bodybg.gif) -16px 0 no-repeat; */
 div#footer {font-size: 0.5em; font-weight: bold; padding: 1em 0;}
 #footer h1 {display: block; padding: 0 1em;}
 #footer h2 {display: block; padding: 0.8em 1em 0;}
@@ -31,7 +31,7 @@ div#footer {font-size: 0.5em; font-weight: bold; padding: 1em 0;}
 .slide {font-size: 1.2em;}
 .slide h1 {position: absolute; top: 0.45em; z-index: 1;
   margin: 0; padding-left: 0.7em; white-space: nowrap;
-  font: bold 150% sans-serif; color: #DDE; background: #005;}
+  font: bold 150% sans-serif; color: #DDE; background: lightgreen;}
 .slide h2 {font: bold 120%/1em sans-serif; padding-top: 0.5em;}
 .slide h3 {font: bold 100% sans-serif; padding-top: 0.5em;}
 h1 abbr {font-variant: small-caps;}
@@ -42,7 +42,7 @@ html>body div#controls {position: fixed; padding: 0 0 1em 0; top: auto;}
 div#controls form {position: absolute; bottom: 0; right: 0; width: 100%;
   margin: 0; padding: 0;}
 #controls #navLinks a {padding: 0; margin: 0 0.5em; 
-  background: #005; border: none; color: #779; cursor: pointer;}
+  background: lightgreen; border: none; color: #779; cursor: pointer;}
 #controls #navList {height: 1em;}
 #controls #navList #jumplist {position: absolute; bottom: 0; right: 0;
   background: #DDD; color: #227;}
@@ -66,7 +66,7 @@ html>body .external {border-bottom: none;}
 .incremental, .incremental *, .incremental *:after {visibility: visible;
   color: white; border: 0;}
 img.incremental {visibility: hidden;}
-.slide .current {color: green;}
+.slide .current {color: lightgreen;}
 
 .slide-display {display: inline ! important;}
 
@@ -85,7 +85,7 @@ img.incremental {visibility: hidden;}
 .orange {color: orange;}
 .yellow {color: yellow;}
 .lime {color: lime;}
-.green {color: green;}
+.lightgreen {color: lightgreen;}
 .olive {color: olive;}
 .teal {color: teal;}
 .cyan {color: cyan;}
