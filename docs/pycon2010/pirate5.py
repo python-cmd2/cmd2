@@ -21,10 +21,11 @@ class Pirate(Cmd):
         return line
     def postcmd(self, stop, line):   
         if self.gold != self.initial_gold:
-            print('Now we gots {0} doubloons'.format(self.gold))
+            print('Now we gots {0} doubloons'
+                  .format(self.gold))
         if self.gold < 0:
-            print("Off to debtorrr's prison.  Game overrr.")
-            return True
+            print("Off to debtorrr's prison.")
+            stop = True
         return stop
     def do_quit(self, arg):
         print("Quiterrr!")
