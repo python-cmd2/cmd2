@@ -304,6 +304,11 @@ Options: pirate8.py
 
 ::
 
+    @options([make_option('--ho', type='int', default=2,
+                          help="How often to chant 'ho'"),
+              make_option('-c', '--commas',
+                          action="store_true", 
+                          help="Intersperse commas")])
     def do_yo(self, arg, opts):
         chant = ['yo'] + ['ho'] * opts.ho
         separator = ', ' if opts.commas else ' '
