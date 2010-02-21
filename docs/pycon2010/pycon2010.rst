@@ -327,6 +327,35 @@ Serious example: sqlpython
 
    Now ``cmd2``-based; postgreSQL; MySQL
 
+File reporter
+=============
+
+.. class:: huge
+
+   Gather info: Python
+
+   Store: postgresql
+
+   Report: html
+
+fileutil.py
+===========
+
+::
+
+    import glob
+    import os.path
+
+    for fullfilename in glob.glob('/home/cat/proj/cmd2/*.py'):
+        (dirpath, fname) = os.path.split(fullfilename)
+        stats = os.stat(fullfilename)
+        binds['path'] = dirpath
+        binds['name'] = fname
+        binds['bytes'] = stats.st_size
+        cmd("""INSERT INTO cat.files (path, name, bytes)
+               VALUES (%(path)s, %(name)s, %(bytes)s)""")
+    quit()
+
 sqlpython features
 ==================
 
@@ -338,16 +367,6 @@ sqlpython features
    * UNIX: ls, cat, grep
    * Special output
 
-File reporter
-=============
-
-.. class:: huge
-
-   Gather info: Python
-
-   Store: postgresql
-
-   Report: html
 
 Thank you
 =========

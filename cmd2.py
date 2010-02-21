@@ -1438,7 +1438,10 @@ class OutputTrap(Borg):
         self.trap.seek(0)
         result = self.trap.read()
         self.trap.truncate(0)
-        return result.strip('\x00')        
+        try:
+            return result.strip('\x00') #TODO: understand this
+        except TypeError:
+            return result
     def tearDown(self):
         sys.stdout = self.old_stdout
 
