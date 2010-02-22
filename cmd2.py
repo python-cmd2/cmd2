@@ -1436,7 +1436,7 @@ class OutputTrap(Borg):
         sys.stdout = self.trap
     def read(self):
         self.trap.seek(0)
-        result = self.trap.read()
+        result = self.trap.read().decode()  # Py3 sends stdout trap as bytes, not strings
         self.trap.truncate(0)
         try:
             return result.strip('\x00') #TODO: understand this
