@@ -1445,7 +1445,21 @@ class OutputTrap(Borg):
     def tearDown(self):
         sys.stdout = self.old_stdout
 
-       
+class OutputTrap(Borg):
+    '''Instantiate an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
+    Call `tearDown()` to return to normal output.'''
+    def __init__(self):
+        self.contents = ''
+        self.old_stdout = sys.stdout
+        sys.stdout = self
+    def write(self, txt):
+        self.contents += txt
+    def read(self):
+        return self.contents
+    def tearDown(self):
+        sys.stdout = self.old_stdout
+        self.contents = ''
+        
 class Cmd2TestCase(unittest.TestCase):
     '''Subclass this, setting CmdApp, to make a unittest.TestCase class
        that will execute the commands in a transcript file and expect the results shown.
