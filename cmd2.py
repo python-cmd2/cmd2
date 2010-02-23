@@ -1446,7 +1446,7 @@ class OutputTrap(Borg):
         sys.stdout = self.old_stdout
 
 class OutputTrap(Borg):
-    '''Instantiate an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
+    '''Instantiate  an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
     Call `tearDown()` to return to normal output.'''
     def __init__(self):
         self.contents = ''
