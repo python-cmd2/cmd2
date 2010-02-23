@@ -1428,24 +1428,6 @@ class Borg(object):
         return obj
     
 class OutputTrap(Borg):
-    '''Instantiate an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
-    Call `tearDown()` to return to normal output.'''
-    def __init__(self):
-        self.old_stdout = sys.stdout
-        self.trap = tempfile.TemporaryFile()
-        sys.stdout = self.trap
-    def read(self):
-        self.trap.seek(0)
-        result = self.trap.read().decode()  # Py3 sends stdout trap as bytes, not strings
-        self.trap.truncate(0)
-        try:
-            return result.strip('\x00') #TODO: understand this
-        except TypeError:
-            return result
-    def tearDown(self):
-        sys.stdout = self.old_stdout
-
-class OutputTrap(Borg):
     '''Instantiate  an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
     Call `tearDown()` to return to normal output.'''
     def __init__(self):
@@ -1455,7 +1437,9 @@ class OutputTrap(Borg):
     def write(self, txt):
         self.contents += txt
     def read(self):
-        return self.contents
+        result = self.contents
+        self.contents = ''
+        return result
     def tearDown(self):
         sys.stdout = self.old_stdout
         self.contents = ''
