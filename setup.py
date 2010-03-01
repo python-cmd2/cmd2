@@ -20,7 +20,7 @@ setup(
     description = "Extra features for standard library's cmd module",
     license = 'MIT',
     keywords = 'command prompt console cmd',
-    url = 'http://www.assembla.com/wiki/show/python-cmd2',
+    url = 'http://packages.python.org/cmd2/',
     install_requires = install_requires,
     
     long_description = """Enhancements for standard library's cmd module.
@@ -43,7 +43,7 @@ Drop-in replacement adds several features for command-prompt tools:
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 
-Usage samples at http://catherine.devlin.googlepages.com/cmd2.html
+See docs at http://packages.python.org/cmd2/
 """,
 
     classifiers=[
