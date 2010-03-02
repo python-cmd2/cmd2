@@ -471,15 +471,11 @@ class Cmd(cmd.Cmd):
         cmd.Cmd.__init__(self, *args, **kwargs)
         self.initial_stdout = sys.stdout
         self.history = History()
-        self._init_parser()
         self.pystate = {}
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) 
-                                               if fname.startswith('do_')] 
-        def linelist(arg):
-            result = []
-            
-        self.doubleDashComment = pyparsing.NotAny(pyparsing.Or(options_defined)) + pyparsing.Literal('--') + pyparsing.restOfLine        
+                                               if fname.startswith('do_')]            
+        self._init_parser()
             
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
