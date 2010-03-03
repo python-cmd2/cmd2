@@ -977,6 +977,7 @@ class Cmd(cmd.Cmd):
         settable parameters with their values.'''
         try:
             statement, paramName, val = arg.parsed.raw.split(None, 2)
+            val = val.strip()
             paramName = paramName.strip().lower()
             if paramName not in self.settable:
                 hits = [p for p in self.settable if p.startswith(paramName)]
