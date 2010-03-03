@@ -10,7 +10,7 @@ else:
     
 setup(
     name="cmd2",
-    version="0.6.0",
+    version="0.6.1",
     py_modules=["cmd2","pyparsing_py3"],
     use_2to3=True,
     
