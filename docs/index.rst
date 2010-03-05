@@ -15,8 +15,6 @@ programs.  Extends the Python Standard Library's cmd_ package.
 
 .. _cmd: http://docs.python.org/library/cmd.html#module-cmd
 
-.. _`PyCon 2010 presentation`: http://catherinedevlin.pythoneers.com/presentations/cmd_cmd2/pycon2010.html
-
 The basic use of ``cmd2`` is identical to that of cmd_.
 
 1. Create a subclass of ``cmd2.Cmd``.  Define attributes and
@@ -38,7 +36,10 @@ Resources
 * cmd_
 * `project bug tracker`_
 * `cmd2 project page`_
-* `PyCon 2010 presentation`_: Easy Command-Line Applications with cmd and cmd2
+* `PyCon 2010 presentation <http://us.pycon.org/2010/conference/talks/#proposal_link_153>`_, 
+  *Easy Command-Line Applications with cmd and cmd2*:
+  `slides <http://packages.python.org/cmd2/>`_, 
+  `video <http://python.mirocommunity.com/video/1533/easy-command-line-applications>`_
 
 These docs will refer to ``App`` as your ``cmd2.Cmd``
 subclass, and ``app`` as an instance of ``App``.  Of
@@ -55,6 +56,7 @@ Contents:
    freefeatures
    settingchanges
    unfreefeatures
+   alternatives
 
 Indices and tables
 ==================
