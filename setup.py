@@ -1,5 +1,10 @@
 #!/usr/bin/python
-from setuptools import setup, find_packages
+try:
+    from setuptools import setup, find_packages
+except ImportError:
+    from distutils.core import setup
+    def find_packages():
+    return ['sqlpython']
 import sys
 
 python3 = sys.version_info[0] > 2
@@ -42,6 +47,9 @@ Drop-in replacement adds several features for command-prompt tools:
     * test apps against sample session transcript (see example/example.py)
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
+
+Running `2to3 <http://docs.python.org/library/2to3.html>` against ``cmd2.py`` 
+generates working, Python3-based code.
 
 See docs at http://packages.python.org/cmd2/
 """,
