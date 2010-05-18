@@ -10,13 +10,14 @@ import sys
 python3 = sys.version_info[0] > 2
 if python3:
     install_requires = [] # will rely on local pyparsing_py3 copy
+    extra_modules = "pyparsing_py3"
 else:
     install_requires = ['pyparsing>=1.5.1']
-    
+    extra_modules = []
 setup(
     name="cmd2",
     version="0.6.1",
-    py_modules=["cmd2","pyparsing_py3"],
+    py_modules=["cmd2"]+extra_modules,
     use_2to3=True,
     
     # metadata for upload to PyPI
