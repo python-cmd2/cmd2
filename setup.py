@@ -4,7 +4,7 @@ try:
 except ImportError:
     from distutils.core import setup
     def find_packages():
-    return ['sqlpython']
+        return ['sqlpython']
 import sys
 
 python3 = sys.version_info[0] > 2
