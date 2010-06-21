@@ -23,7 +23,7 @@ Parsed statements
 ``cmd2`` passes ``arg`` to a ``do_`` method (or
 ``default`) as a ParsedString, a subclass of 
 string that includes an attribute ``parsed``.
-``parsed`` is a ``pyparsing.ParseResults``_
+``parsed`` is a ``pyparsing.ParseResults``
 object produced by applying a pyparsing_ 
 grammar applied to ``arg``.  It may include:
 
@@ -60,7 +60,7 @@ suffix
 
 If ``parsed`` does not contain an attribute,
 querying for it will return ``None``.  (This
-is a characteristic of ``pyparsing.ParseResults``_.)
+is a characteristic of ``pyparsing.ParseResults``.)
 
 ParsedString was developed to support sqlpython_
 and reflects its needs.  The parsing grammar and
@@ -73,6 +73,12 @@ technically "free", in that it requires no application
 changes from the cmd_ standard, but there will 
 be no result unless you change your application
 to *use* ``arg.parsed``.)
+
+.. _sqlpython: http://pypi.python.org/pypi/sqlpython/
+
+.. _cmd: http://docs.python.org/library/cmd.html#module-cmd
+
+.. _pyparsing: http://pyparsing.wikispaces.com/
 
 Environment parameters
 ======================

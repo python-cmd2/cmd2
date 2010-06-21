@@ -38,7 +38,7 @@ Resources
 * `cmd2 project page`_
 * `PyCon 2010 presentation <http://us.pycon.org/2010/conference/talks/#proposal_link_153>`_, 
   *Easy Command-Line Applications with cmd and cmd2*:
-  `slides <http://packages.python.org/cmd2/>`_, 
+  :doc:`slides <pycon2010/pycon2010>`, 
   `video <http://python.mirocommunity.com/video/1533/easy-command-line-applications>`_
 
 These docs will refer to ``App`` as your ``cmd2.Cmd``
