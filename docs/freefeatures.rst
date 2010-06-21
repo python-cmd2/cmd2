@@ -5,6 +5,8 @@ Features requiring no modifications
 These features are provided "for free" to a cmd_-based application
 simply by replacing ``import cmd`` with ``import cmd2 as cmd``.
 
+.. _cmd: http://docs.python.org/library/cmd.html#module-cmd
+
 Script files
 ============
 
@@ -28,7 +30,7 @@ are recognized; you may change this by overriding
 ``app.commentGrammars`` with a different pyparsing_
 grammar.
 
-Comments can be useful in :ref:`script`s.  Used
+Comments can be useful in :ref:`scripts`.  Used
 in an interactive session, they may indicate
 mental imbalance.
 
@@ -41,6 +43,8 @@ mental imbalance.
 
   (Cmd) speak it was /* not */ delicious! # Yuck!
   it was  delicious!
+
+.. _pyparsing: http://pyparsing.wikispaces.com/
 
 Commands at invocation
 ======================
@@ -70,15 +74,13 @@ As in a Unix shell, output of a command can be redirected:
   - sent to the paste buffer, ready for the next Copy operation, by
     ending with a bare ``>``, as in ``mycommand args >``..  Redirecting
     to paste buffer requires software to be installed on the operating
-    system, pywin32_ on Windows or xclip_ on *nix.
+    system, pywin32_ on Windows or xclip_ on \*nix.
     
-.. _pywin32:: http://sourceforge.net/projects/pywin32/
-.. _xclip:: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
+.. _pywin32: http://sourceforge.net/projects/pywin32/
+.. _xclip: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
   
 Python
 ======
-
-::
 
 The ``py`` command will run its arguments as a Python
 command.  Entered without arguments, it enters an

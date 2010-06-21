@@ -36,7 +36,7 @@ cmdln_, another package in PyPI, is an extension to cmd_ and, though it
 doesn't retain full cmd_ compatibility, shares its basic structure with
 cmd_.
 
-.. _cmdln_ http://pypi.python.org/pypi/cmdln
+.. _cmdln: http://pypi.python.org/pypi/cmdln
 
 .. _CmdLoop: http://pypi.python.org/pypi/CmdLoop
 
