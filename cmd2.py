@@ -99,7 +99,7 @@ options_defined = [] # used to distinguish --options from SQL-style --comments
 
 def options(option_list):
     '''Used as a decorator and passed a list of optparse-style options,
-       alters a cmd2 methodo populate its ``opts`` argument from its
+       alters a cmd2 method to populate its ``opts`` argument from its
        raw text argument.
 
        Example: transform
