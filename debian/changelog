@@ -1,0 +1,7 @@
+python-cmd2 (0.6.1) unstable; urgency=low
+
+  * Debian package
+  * Source: http://hg.assembla.com/python-cmd2
+
+ -- Jens Braeuer <jens.braeuer@gmx.net>  Tue, 18 May 2010 20:35:13 +0200
+ 
