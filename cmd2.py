@@ -187,7 +187,7 @@ if subprocess.mswindows:
 else:
     can_clip = False
     try:
-        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         can_clip = True
     except AttributeError:  # check_call not defined, Python < 2.5
         teststring = 'Testing for presence of xclip.'
@@ -651,7 +651,6 @@ class Cmd(cmd.Cmd):
           - terminator: ['\n', '\n']
         - terminator: ['\n', '\n']
         '''
-        tstr = 'multiline command /* with comment complete */ is done;'
         outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
         
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
