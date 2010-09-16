@@ -181,6 +181,11 @@ file, ``transcript.txt``, then a transcript test can be run against it::
 
   python app.py --test transcript.txt
   
-Any deviations between the output prescribed in ``transcript.txt`` and
+Any non-whitespace deviations between the output prescribed in ``transcript.txt`` and
 the actual output from a fresh run of the application will be reported
-as a unit test failure.
+as a unit test failure.  (Whitespace is ignored during the comparison.)
+
+Regular expressions can be embedded in the transcript inside paired ``/`` 
+slashes.  These regular expressions should not include any whitespace
+expressions.
+

@@ -1469,7 +1469,7 @@ class Cmd2TestCase(unittest.TestCase):
     notRegexPattern = pyparsing.Word(pyparsing.printables)
     notRegexPattern.setParseAction(lambda t: re.escape(t[0]))
     expectationParser = regexPattern | notRegexPattern
-    endStrippingRegex = re.compile(r'[ \t]*\n')
+    anyWhitespace = re.compile(r'\s', re.DOTALL | re.MULTILINE)
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         try:
@@ -1499,7 +1499,9 @@ class Cmd2TestCase(unittest.TestCase):
                 message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n'%\
                     (fname, lineNum, command, expected, result)      
                 expected = self.expectationParser.transformString(expected)
-                expected = self.endStrippingRegex.sub('\s*\n', expected)
+                # checking whitespace is a pain - let's skip it
+                expected = self.anyWhitespace.sub('', expected)
+                result = self.anyWhitespace.sub('', result)
                 self.assert_(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
         except StopIteration:
             pass
