@@ -787,6 +787,9 @@ class Cmd(cmd.Cmd):
             self.redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             sys.stdout = self.stdout = self.redirect.stdin
         elif statement.parsed.output:
+            if (not statement.parsed.outputTo) and (not can_clip):
+                self.perror('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
+                return
             self.kept_state = Statekeeper(self, ('stdout',))            
             self.kept_sys = Statekeeper(sys, ('stdout',))
             if statement.parsed.outputTo:
