@@ -1,0 +1,14 @@
+Source: python-cmd2
+Section: contrib/misc
+Priority: standard
+Maintainer: Jens Braeuer <jens.braeuer@gmx.net>
+Build-Depends: debhelper, cdbs, debhelper (>= 5.0.38), python-all-dev (>= 2.3.5-11),
+XS-Python-Version: >= 2.5
+
+Package: python-cmd2
+Section: contrib/misc
+Priority: standard
+Architecture: all
+Depends: ${python:Depends}, python-pyparsing (>= 1.5.1), xclip
+Description: Cmd2
+XB-Python-Version: ${python:Versions}

@@ -1,0 +1,12 @@
+arrr> loot
+Now we gots 4 doubloons
+arrr> loot
+Now we gots 5 doubloons
+arrr> drink 3
+Now we gots 2 doubloons
+arrr> drink chardonnay
+What's "chardonnay"?  I'll take rrrum.
+Now we gots 1 doubloons
+arrr> quit
+Quiterrr!
+
