@@ -7,17 +7,11 @@ except ImportError:
         return ['sqlpython']
 import sys
 
-python3 = sys.version_info[0] > 2
-if python3:
-    install_requires = [] # will rely on local pyparsing_py3 copy
-    extra_modules = ["pyparsing_py3"]
-else:
-    install_requires = ['pyparsing>=1.5.1']
-    extra_modules = []
+install_requires = ['pyparsing>=1.5.5']
 setup(
     name="cmd2",
-    version="0.6.1",
-    py_modules=["cmd2"]+extra_modules,
+    version="0.6.2",
+    py_modules=["cmd2"],
     use_2to3=True,
     
     # metadata for upload to PyPI
@@ -28,7 +22,6 @@ setup(
     keywords = 'command prompt console cmd',
     url = 'http://packages.python.org/cmd2/',
     install_requires = install_requires,
-    
     long_description = """Enhancements for standard library's cmd module.
 
 Drop-in replacement adds several features for command-prompt tools:
