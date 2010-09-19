@@ -47,7 +47,7 @@ if sys.version_info[0] > 2:
 else:
     import pyparsing
 
-_version__ = '0.6.1'
+_version__ = '0.6.2'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):

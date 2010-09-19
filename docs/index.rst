@@ -58,6 +58,11 @@ Contents:
    unfreefeatures
    alternatives
 
+Compatibility
+=============
+
+Tested and working with Python 2.5, 2.6, 2.7, 3.1; Jython 2.5
+
 Indices and tables
 ==================
 
