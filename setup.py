@@ -10,7 +10,7 @@ import sys
 python3 = sys.version_info[0] > 2
 if python3:
     install_requires = [] # will rely on local pyparsing_py3 copy
-    extra_modules = "pyparsing_py3"
+    extra_modules = ["pyparsing_py3"]
 else:
     install_requires = ['pyparsing>=1.5.1']
     extra_modules = []

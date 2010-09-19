@@ -46,8 +46,8 @@ if sys.version_info[0] > 2:
     raw_input = input
 else:
     import pyparsing
-    
-__version__ = '0.6.0'
+
+_version__ = '0.6.1'
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -205,11 +205,11 @@ else:
             return xclipproc.stdout.read()
         def write_to_paste_buffer(txt):
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            xclipproc.stdin.write(txt)
+            xclipproc.stdin.write(txt.encode())
             xclipproc.stdin.close()
             # but we want it in both the "primary" and "mouse" clipboards
             xclipproc = subprocess.Popen('xclip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            xclipproc.stdin.write(txt)
+            xclipproc.stdin.write(txt.encode())
             xclipproc.stdin.close()
     else:
         def get_paste_buffer(*args):
@@ -399,6 +399,7 @@ class Cmd(cmd.Cmd):
         ''')
     
     def poutput(self, msg):
+        '''Convenient shortcut for self.stdout.write(); adds newline if necessary.'''
         if msg:
             self.stdout.write(msg)
             if msg[-1] != '\n':
@@ -767,6 +768,7 @@ class Cmd(cmd.Cmd):
         finally:
             return self.postparsing_postcmd(stop)        
     def complete_statement(self, line):
+        """Keep accepting lines of input until the command is complete."""
         if (not line) or (
             not pyparsing.Or(self.commentGrammars).
                 setParseAction(lambda x: '').transformString(line)):
@@ -798,7 +800,7 @@ class Cmd(cmd.Cmd):
                     mode = 'a'
                 sys.stdout = self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
             else:
-                sys.stdout = self.stdout = tempfile.TemporaryFile()
+                sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
                 if statement.parsed.output == '>>':
                     self.stdout.write(get_paste_buffer())
                     
@@ -1385,7 +1387,7 @@ def cast(current, new):
     if typ == bool:
         try:
             return bool(int(new))
-        except ValueError, TypeError:
+        except (ValueError, TypeError):
             pass
         try:
             new = new.lower()    
@@ -1456,7 +1458,7 @@ class Cmd2TestCase(unittest.TestCase):
                 self.transcripts[fname] = iter(tfile.readlines())
                 tfile.close()
         if not len(self.transcripts):
-            raise StandardError, "No test files found - nothing to test."
+            raise (StandardError,), "No test files found - nothing to test."
     def setUp(self):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
