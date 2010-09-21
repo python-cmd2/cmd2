@@ -702,7 +702,9 @@ class Cmd(cmd.Cmd):
     
     def preparse(self, raw, **kwargs):
         return raw
-    
+    def postparse(self, parseResult):
+        return parseResult
+   
     def parsed(self, raw, **kwargs):
         if isinstance(raw, ParsedString):
             p = raw
@@ -718,6 +720,7 @@ class Cmd(cmd.Cmd):
             result = self.parser.parseString(s)
             result['raw'] = raw            
             result['command'] = result.multilineCommand or result.command        
+            result = self.postparse(result)
             p = ParsedString(result.args)
             p.parsed = result
             p.parser = self.parsed
