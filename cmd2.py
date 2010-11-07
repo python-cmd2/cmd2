@@ -1482,14 +1482,17 @@ class Cmd2TestCase(unittest.TestCase):
         lineNum = 0
         try:
             line = transcript.next()
+            lineNum += 1
             while True:
                 while not line.startswith(self.cmdapp.prompt):
                     line = transcript.next()
+                    lineNum += 1
                 command = [line[len(self.cmdapp.prompt):]]
                 line = transcript.next()
                 while line.startswith(self.cmdapp.continuation_prompt):
                     command.append(line[len(self.cmdapp.continuation_prompt):])
                     line = transcript.next()
+                    lineNum += 1
                 command = ''.join(command)               
                 stop = self.cmdapp.onecmd_plus_hooks(command)
                 #TODO: should act on ``stop``
@@ -1503,6 +1506,7 @@ class Cmd2TestCase(unittest.TestCase):
                 while not line.startswith(self.cmdapp.prompt):
                     expected.append(line)
                     line = transcript.next()
+                    lineNum += 1
                 expected = ''.join(expected)
                 message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n'%\
                     (fname, lineNum, command, expected, result)      
@@ -1512,7 +1516,8 @@ class Cmd2TestCase(unittest.TestCase):
                 result = self.anyWhitespace.sub('', result)
                 self.assert_(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
         except StopIteration:
-            pass
+            message = 'Last %d lines never seen, beginning with\n%s' % (len(expected), expected[0])
+            self.assert_(len(expected) < 3, message)
     def tearDown(self):
         if self.CmdApp:
             self.outputTrap.tearDown()
