@@ -1516,7 +1516,7 @@ class Cmd2TestCase(unittest.TestCase):
                 result = self.anyWhitespace.sub('', result)
                 self.assert_(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
         except StopIteration:
-            message = 'Last %d lines never seen, beginning with\n%s' % (len(expected), expected[0])
+            message = 'Final portion of test not returned, beginning at line %d' % (lineNum)
             self.assert_(len(expected) < 3, message)
     def tearDown(self):
         if self.CmdApp:
