@@ -1480,49 +1480,61 @@ class Cmd2TestCase(unittest.TestCase):
     anyWhitespace = re.compile(r'\s', re.DOTALL | re.MULTILINE)
     def _test_transcript(self, fname, transcript):
         lineNum = 0
-        try:
+        finished = False
+        line = transcript.next()
+        lineNum += 1
+        tests_run = 0
+        while not finished:
+            # Scroll forward to where actual commands begin
+            while not line.startswith(self.cmdapp.prompt):
+                try:
+                    line = transcript.next()
+                except StopIteration:
+                    finished = True
+                    break
+                lineNum += 1
+            command = [line[len(self.cmdapp.prompt):]]
             line = transcript.next()
-            lineNum += 1
-            while True:
-                # Scroll forward to where actual commands begin
-                while not line.startswith(self.cmdapp.prompt):
+            # Read the entirety of a multi-line command
+            while line.startswith(self.cmdapp.continuation_prompt):
+                command.append(line[len(self.cmdapp.continuation_prompt):])
+                try:
                     line = transcript.next()
-                    lineNum += 1
-                command = [line[len(self.cmdapp.prompt):]]
-                line = transcript.next()
-                # Read the entirety of a multi-line command
-                while line.startswith(self.cmdapp.continuation_prompt):
-                    command.append(line[len(self.cmdapp.continuation_prompt):])
+                except StopIteration:
+                    raise (StopIteration, 
+                           'Transcript broke off while reading command beginning at line %d with\n%s' 
+                           % (command[0]))
+                lineNum += 1
+            command = ''.join(command)               
+            # Send the command into the application and capture the resulting output
+            stop = self.cmdapp.onecmd_plus_hooks(command)
+            #TODO: should act on ``stop``
+            result = self.outputTrap.read()
+            # Read the expected result from transcript
+            if line.startswith(self.cmdapp.prompt):
+                message = '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing)\nGot:\n%s\n'%\
+                    (fname, lineNum, command, result)     
+                self.assert_(not(result.strip()), message)
+                continue
+            expected = []
+            while not line.startswith(self.cmdapp.prompt):
+                expected.append(line)
+                try:
                     line = transcript.next()
-                    lineNum += 1
-                command = ''.join(command)               
-                # Send the command into the application and capture the resulting output
-                stop = self.cmdapp.onecmd_plus_hooks(command)
-                #TODO: should act on ``stop``
-                result = self.outputTrap.read()
-                # Read the expected result from transcript
-                if line.startswith(self.cmdapp.prompt):
-                    message = '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing)\nGot:\n%s\n'%\
-                        (fname, lineNum, command, result)     
-                    self.assert_(not(result.strip()), message)
-                    continue
-                expected = []
-                while not line.startswith(self.cmdapp.prompt):
-                    expected.append(line)
-                    line = transcript.next()
-                    lineNum += 1
-                expected = ''.join(expected)
-                # Compare actual result to expected
-                message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n'%\
-                    (fname, lineNum, command, expected, result)      
-                expected = self.expectationParser.transformString(expected)
-                # checking whitespace is a pain - let's skip it
-                expected = self.anyWhitespace.sub('', expected)
-                result = self.anyWhitespace.sub('', result)
-                self.assert_(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
-        except StopIteration:
-            message = 'Final portion of test not returned, beginning at line %d' % (lineNum)
-            self.assert_(len(expected) < 3, message)
+                except StopIteration:
+                    finished = True                       
+                    break
+                lineNum += 1
+            expected = ''.join(expected)
+            # Compare actual result to expected
+            message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n'%\
+                (fname, lineNum, command, expected, result)      
+            expected = self.expectationParser.transformString(expected)
+            # checking whitespace is a pain - let's skip it
+            expected = self.anyWhitespace.sub('', expected)
+            result = self.anyWhitespace.sub('', result)
+            self.assert_(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
+
     def tearDown(self):
         if self.CmdApp:
             self.outputTrap.tearDown()
