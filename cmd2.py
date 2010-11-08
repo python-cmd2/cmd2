@@ -1484,19 +1484,23 @@ class Cmd2TestCase(unittest.TestCase):
             line = transcript.next()
             lineNum += 1
             while True:
+                # Scroll forward to where actual commands begin
                 while not line.startswith(self.cmdapp.prompt):
                     line = transcript.next()
                     lineNum += 1
                 command = [line[len(self.cmdapp.prompt):]]
                 line = transcript.next()
+                # Read the entirety of a multi-line command
                 while line.startswith(self.cmdapp.continuation_prompt):
                     command.append(line[len(self.cmdapp.continuation_prompt):])
                     line = transcript.next()
                     lineNum += 1
                 command = ''.join(command)               
+                # Send the command into the application and capture the resulting output
                 stop = self.cmdapp.onecmd_plus_hooks(command)
                 #TODO: should act on ``stop``
                 result = self.outputTrap.read()
+                # Read the expected result from transcript
                 if line.startswith(self.cmdapp.prompt):
                     message = '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing)\nGot:\n%s\n'%\
                         (fname, lineNum, command, result)     
@@ -1508,6 +1512,7 @@ class Cmd2TestCase(unittest.TestCase):
                     line = transcript.next()
                     lineNum += 1
                 expected = ''.join(expected)
+                # Compare actual result to expected
                 message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n'%\
                     (fname, lineNum, command, expected, result)      
                 expected = self.expectationParser.transformString(expected)
