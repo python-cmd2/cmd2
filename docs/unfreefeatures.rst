@@ -184,15 +184,17 @@ instead.  These methods have these advantages:
 
   - More concise
   - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
-  
-.. _quiet:
-
+ 
 color
 =====
 
-.. automethod:: cmd2.Cmd.do_quit
+Text output can be colored by wrapping it in the ``colorize`` method.  
 
-Quiet
+.. automethod:: cmd2.Cmd.colorize
+
+.. _quiet:
+
+quiet
 =====
 
 Controls whether ``self.pfeedback('message')`` output is suppressed;
@@ -202,6 +204,8 @@ to read.  ``quiet`` is only relevant if
 
 ``select``
 ==========
+
+Presents numbered options to user, as bash ``select``.
 
 ``app.select`` is called from within a method (not by the user directly; it is ``app.select``, not ``app.do_select``).
 
