@@ -28,16 +28,16 @@ object produced by applying a pyparsing_
 grammar applied to ``arg``.  It may include:
 
 command
-  Name of the command called
+    Name of the command called
 
 raw
-  Full input exactly as typed.  
+    Full input exactly as typed.  
 
 terminator
-  Character used to end a multiline command
+    Character used to end a multiline command
 
 suffix
-  Remnant of input after terminator
+    Remnant of input after terminator
 
 ::
 
@@ -46,17 +46,17 @@ suffix
 
 ::
 
-	(Cmd) parsereport A B /* C */ D; E
-	['parsereport', 'A B  D', ';', 'E']
-	- args: A B  D
-	- command: parsereport
-	- raw: parsereport A B /* C */ D; E
-	- statement: ['parsereport', 'A B  D', ';']
-	  - args: A B  D
-	  - command: parsereport
-	  - terminator: ;
-	- suffix: E
-	- terminator: ;
+    (Cmd) parsereport A B /* C */ D; E
+    ['parsereport', 'A B  D', ';', 'E']
+    - args: A B  D
+    - command: parsereport
+    - raw: parsereport A B /* C */ D; E
+    - statement: ['parsereport', 'A B  D', ';']
+        - args: A B  D
+        - command: parsereport
+        - terminator: ;
+    - suffix: E
+    - terminator: ;
 
 If ``parsed`` does not contain an attribute,
 querying for it will return ``None``.  (This
@@ -67,7 +67,7 @@ and reflects its needs.  The parsing grammar and
 process are painfully complex and should not be
 considered stable; future ``cmd2`` releases may
 change it somewhat (hopefully reducing complexity).
-   
+
 (Getting ``arg`` as a ``ParsedString`` is 
 technically "free", in that it requires no application
 changes from the cmd_ standard, but there will 
@@ -95,7 +95,7 @@ documentation) to ``settable``.
         degrees_c = 22
         sunny = False
         settable = Cmd.settable + '''degrees_c temperature in Celsius
-                                     sunny'''
+            sunny'''
         def do_sunbathe(self, arg):
             if self.degrees_c < 20:
                 result = "It's {temp} C - are you a penguin?".format(temp=self.degrees_c)
@@ -106,7 +106,7 @@ documentation) to ``settable``.
             self.stdout.write(result + '\n')
     app = App()
     app.cmdloop()
-        
+
 ::
 
     (Cmd) set --long
@@ -145,9 +145,9 @@ from ``args``.
 ::
 
     @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
-              make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
-              make_option('-r', '--repeat', type="int", help="output [n] times")
-             ])
+        make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
+        make_option('-r', '--repeat', type="int", help="output [n] times")
+    ])
     def do_speak(self, arg, opts=None):
         """Repeats what you tell me to."""
         arg = ''.join(arg)
@@ -162,14 +162,36 @@ from ``args``.
 
 ::
 
-	(Cmd) say goodnight, gracie
-	goodnight, gracie
-	(Cmd) say -sp goodnight, gracie
-	OODNIGHT, GRACIEGAY
-	(Cmd) say -r 2 --shout goodnight, gracie
-	GOODNIGHT, GRACIE
-	GOODNIGHT, GRACIE
+    (Cmd) say goodnight, gracie
+    goodnight, gracie
+    (Cmd) say -sp goodnight, gracie
+    OODNIGHT, GRACIEGAY
+    (Cmd) say -r 2 --shout goodnight, gracie
+    GOODNIGHT, GRACIE
+    GOODNIGHT, GRACIE
 
+``options`` takes an optional additional argument, ``arg_desc``.
+If present, ``arg_desc`` will appear in place of ``arg`` in
+the option's online help.
+
+::
+
+    @options([make_option('-t', '--train', action='store_true', help='by train')],
+             arg_desc='(from city) (to city)')
+    def do_travel(self, arg, opts=None):
+        'Gets you from (from city) to (to city).'
+    
+
+::
+
+    (Cmd) help travel
+    Gets you from (from city) to (to city).
+    Usage: travel [options] (from-city) (to-city)
+        
+    Options:
+      -h, --help   show this help message and exit
+      -t, --train  by train
+        
 .. _optparse: 
 
 .. _outputters:
@@ -182,9 +204,9 @@ but ``print`` decreases output flexibility).  ``cmd2`` applications can use
 ``self.poutput('output')``, ``self.pfeedback('message')``, and ``self.perror('errmsg')``
 instead.  These methods have these advantages:
 
-  - More concise
-  - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
- 
+- More concise
+    - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
+    
 color
 =====
 
@@ -212,17 +234,18 @@ Presents numbered options to user, as bash ``select``.
 .. automethod:: cmd2.Cmd.select
 
 ::
-
+    
     def do_eat(self, arg):
         sauce = self.select('sweet salty', 'Sauce? ')
         result = '{food} with {sauce} sauce, yum!'
         result = result.format(food=arg, sauce=sauce)
         self.stdout.write(result + '\n')
-
+            
 ::
 
-	(Cmd) eat wheaties
-	   1. sweet
-	   2. salty
-	Sauce? 2
-	wheaties with salty sauce, yum!
+    (Cmd) eat wheaties
+        1. sweet
+        2. salty
+    Sauce? 2
+    wheaties with salty sauce, yum!
+    

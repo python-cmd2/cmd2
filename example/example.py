@@ -12,7 +12,7 @@ class CmdLineApp(Cmd):
     @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
               make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
               make_option('-r', '--repeat', type="int", help="output [n] times")
-             ])
+             ], arg_desc = '(text to say)')
     def do_speak(self, arg, opts=None):
         """Repeats what you tell me to."""
         arg = ''.join(arg)
