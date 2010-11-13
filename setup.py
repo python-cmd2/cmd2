@@ -10,7 +10,7 @@ import sys
 install_requires = ['pyparsing>=1.5.5']
 setup(
     name="cmd2",
-    version="0.6.2",
+    version="0.6.3",
     py_modules=["cmd2"],
     use_2to3=True,
     
