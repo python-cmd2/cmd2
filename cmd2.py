@@ -97,7 +97,7 @@ optparse.Values.get = _attr_get_
     
 options_defined = [] # used to distinguish --options from SQL-style --comments
 
-def options(option_list):
+def options(option_list, arg_desc="arg"):
     '''Used as a decorator and passed a list of optparse-style options,
        alters a cmd2 method to populate its ``opts`` argument from its
        raw text argument.
@@ -107,7 +107,8 @@ def options(option_list):
 
        into
        @options([make_option('-q', '--quick', action="store_true",
-                 help="Makes things fast")])
+                 help="Makes things fast")],
+                 "source dest")
        def do_something(self, arg, opts):
            if opts.quick:
                self.fast_button = True
@@ -120,7 +121,7 @@ def options(option_list):
         optionParser = OptionParser()
         for opt in option_list:
             optionParser.add_option(opt)
-        optionParser.set_usage("%s [options] arg" % func.__name__[3:])
+        optionParser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
         optionParser._func = func
         def new_func(instance, arg):
             try:

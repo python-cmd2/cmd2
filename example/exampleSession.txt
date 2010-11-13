@@ -12,7 +12,7 @@ EOF  eof  exit  help  q  quit
 
 (Cmd) help say
 Repeats what you tell me to.
-Usage: speak [options] arg
+Usage: speak [options] (text to say)
 
 Options:
   -h, --help            show this help message and exit
