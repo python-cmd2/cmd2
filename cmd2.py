@@ -795,8 +795,7 @@ class Cmd(cmd.Cmd):
             sys.stdout = self.stdout = self.redirect.stdin
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
-                self.perror('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
-                return
+                raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
             self.kept_state = Statekeeper(self, ('stdout',))            
             self.kept_sys = Statekeeper(sys, ('stdout',))
             if statement.parsed.outputTo:
@@ -977,7 +976,7 @@ class Cmd(cmd.Cmd):
                 else:
                     self.poutput(result[p])
         else:
-            self.perror("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
+            raise NotImplementedError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
     
     def do_set(self, arg):
         '''
@@ -1111,8 +1110,7 @@ class Cmd(cmd.Cmd):
         "set edit (program-name)" or set  EDITOR environment variable
         to control which editing program is used."""
         if not self.editor:
-            self.perror("Please use 'set editor' to specify your text editing program of choice.")
-            return
+            raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
         filename = self.default_file_name
         if arg:
             try:
@@ -1146,8 +1144,8 @@ class Cmd(cmd.Cmd):
         try:
             args = self.saveparser.parseString(arg)
         except pyparsing.ParseException:
-            self.perror(self.do_save.__doc__)
-            return
+            self.perror('Could not understand save target %s' % arg)
+            raise SyntaxError(self.do_save.__doc__)
         fname = args.fname or self.default_file_name
         if args.idx == '*':
             saveme = '\n\n'.join(self.history[:])
@@ -1161,7 +1159,8 @@ class Cmd(cmd.Cmd):
             f.close()
             self.pfeedback('Saved to %s' % (fname))
         except Exception, e:
-            self.perror('Error saving %s: %s' % (fname, str(e)))
+            self.perror('Error saving %s' % (fname))
+            raise
             
     def read_file_or_url(self, fname):
         # TODO: not working on localhost
