@@ -748,28 +748,31 @@ class Cmd(cmd.Cmd):
                     result = 'do_' + funcs[0]
         return result
     def onecmd_plus_hooks(self, line):
+        # The outermost level of try/finally nesting can be condensed once
+        # Python 2.4 support can be dropped.
         stop = 0
         try:
-            statement = self.complete_statement(line)
-            (stop, statement) = self.postparsing_precmd(statement)
-            if stop:
-                return self.postparsing_postcmd(stop)
-            if statement.parsed.command not in self.excludeFromHistory:
-                self.history.append(statement.parsed.raw)      
             try:
-                self.redirect_output(statement)
-                timestart = datetime.datetime.now()
-                statement = self.precmd(statement)
-                stop = self.onecmd(statement)
-                stop = self.postcmd(stop, statement)
-                if self.timing:
-                    self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
-            finally:
-                self.restore_output(statement)
-        except EmptyStatement:
-            return 0
-        except Exception, e:
-            self.perror(str(e), statement)            
+                statement = self.complete_statement(line)
+                (stop, statement) = self.postparsing_precmd(statement)
+                if stop:
+                    return self.postparsing_postcmd(stop)
+                if statement.parsed.command not in self.excludeFromHistory:
+                    self.history.append(statement.parsed.raw)      
+                try:
+                    self.redirect_output(statement)
+                    timestart = datetime.datetime.now()
+                    statement = self.precmd(statement)
+                    stop = self.onecmd(statement)
+                    stop = self.postcmd(stop, statement)
+                    if self.timing:
+                        self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
+                finally:
+                    self.restore_output(statement)
+            except EmptyStatement:
+                return 0
+            except Exception, e:
+                self.perror(str(e), statement)            
         finally:
             return self.postparsing_postcmd(stop)        
     def complete_statement(self, line):
