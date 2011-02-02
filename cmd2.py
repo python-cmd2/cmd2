@@ -197,7 +197,7 @@ else:
             xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)        
             if xclipproc.stdout.read() == teststring:
                 can_clip = True
-        except (subprocess.CalledProcessError, OSError, IOError):
+        except Exception: # hate a bare Exception call, but exception classes vary too much b/t stdlib versions
             pass
     if can_clip:    
         def get_paste_buffer():
