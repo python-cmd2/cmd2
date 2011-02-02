@@ -135,9 +135,7 @@ def options(option_list, arg_desc="arg"):
                     arg = arg.with_args_replaced(newArgs)
                 else:
                     arg = newArgs
-            except (optparse.OptionValueError, optparse.BadOptionError,
-                    optparse.OptionError, optparse.AmbiguousOptionError,
-                    optparse.OptionConflictError), e:
+            except optparse.OptParseError, e:
                 print (e)
                 optionParser.print_help()
                 return
