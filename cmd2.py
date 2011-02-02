@@ -69,7 +69,7 @@ class OptionParser(optparse.OptionParser):
         If you override this in a subclass, it should not return -- it
         should either exit or raise an exception.
         """
-        raise
+        raise optparse.OptParseError(msg)
         
 def remaining_args(oldArgs, newArgList):
     '''
