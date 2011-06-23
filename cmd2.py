@@ -152,6 +152,9 @@ class PasteBufferError(EnvironmentError):
         errmsg = """Redirecting to or from paste buffer requires pywin32
 to be installed on operating system.
 Download from http://sourceforge.net/projects/pywin32/"""
+    elif sys.platform[:3] == 'dar':
+        # Use built in pbcopy on Mac OSX
+        pass
     else:
         errmsg = """Redirecting to or from paste buffer requires xclip 
 to be installed on operating system.
@@ -182,6 +185,25 @@ if subprocess.mswindows:
     except ImportError:
         def get_paste_buffer(*args):
             raise OSError, pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/')
+        write_to_paste_buffer = get_paste_buffer
+elif sys.platform == 'darwin':
+    can_clip = False
+    try:
+        # test for pbcopy - AFAIK, should always be installed on MacOS
+        subprocess.check_call('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        can_clip = True
+    except (subprocess.CalledProcessError, OSError, IOError):
+        pass
+    if can_clip:
+        def get_paste_buffer():
+            pbcopyproc = subprocess.Popen('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            return pbcopyproc.stdout.read()
+        def write_to_paste_buffer(txt):
+            pbcopyproc = subprocess.Popen('pbcopy', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            pbcopyproc.communicate(txt.encode())
+    else:
+        def get_paste_buffer(*args):
+            raise OSError, pastebufferr % ('pbcopy', 'On MacOS X - error should not occur - part of the default installation')
         write_to_paste_buffer = get_paste_buffer
 else:
     can_clip = False
