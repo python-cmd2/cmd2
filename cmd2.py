@@ -221,6 +221,8 @@ else:
                 can_clip = True
         except Exception: # hate a bare Exception call, but exception classes vary too much b/t stdlib versions
             pass
+    except Exception:
+        pass # something went wrong with xclip and we cannot use it
     if can_clip:    
         def get_paste_buffer():
             xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
