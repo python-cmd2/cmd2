@@ -41,6 +41,7 @@ import copy
 from code import InteractiveConsole, InteractiveInterpreter
 from optparse import make_option
 import pyparsing
+pyparsing.ParserElement.enablePackrat()
 
 __version__ = '0.6.3'
 
@@ -251,27 +252,6 @@ class ParsedString(str):
         new.parsed.statement['args'] = newargs
         return new
         
-class SkipToLast(pyparsing.SkipTo):
-    def parseImpl( self, instring, loc, doActions=True ):
-        self.original_includeMatch = self.includeMatch
-        self.includeMatch = True
-        original_loc = loc
-        oldpos = loc
-        accumulated = []
-        while True:
-            try:
-                res = pyparsing.SkipTo.parseImpl(self, instring, loc, False)
-                oldpos = loc
-                accumulated.append(res)
-                loc = res[0]
-            except pyparsing.ParseException:
-                self.includeMatch = self.original_includeMatch
-                res = pyparsing.SkipTo.parseImpl(self, instring, oldpos, doActions)
-                newres = list(res)
-                newres[0] = res[0] + sum([r[0] for r in accumulated[:-1]])
-                newres[1][0] = res[1][0] + ''.join([r[1][0] for r in accumulated[:-1]])
-                return tuple(newres)
-
 class StubbornDict(dict):
     '''Dictionary that tolerates many input formats.
     Create it with stubbornDict(arg) factory function.
