@@ -35,7 +35,7 @@ continuation_prompt: >
 debug: False
 default_file_name: command.txt
 echo: False
-editor: gedit
+editor: /\w*/
 feedback_to_output: False
 maxrepeats: 3
 prompt: (Cmd) 
