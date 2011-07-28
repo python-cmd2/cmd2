@@ -250,46 +250,27 @@ class ParsedString(str):
         new.parsed['args'] = newargs
         new.parsed.statement['args'] = newargs
         return new
-
+        
 class SkipToLast(pyparsing.SkipTo):
     def parseImpl( self, instring, loc, doActions=True ):
-        resultStore = []
-        startLoc = loc
-        instrlen = len(instring)
-        expr = self.expr
-        failParse = False
-        while loc <= instrlen:
+        self.original_includeMatch = self.includeMatch
+        self.includeMatch = True
+        original_loc = loc
+        oldpos = loc
+        accumulated = []
+        while True:
             try:
-                if self.failOn:
-                    failParse = True
-                    self.failOn.tryParse(instring, loc)
-                    failParse = False
-                loc = expr._skipIgnorables( instring, loc )
-                expr._parse( instring, loc, doActions=False, callPreParse=False )
-                skipText = instring[startLoc:loc]
-                if self.includeMatch:
-                    loc,mat = expr._parse(instring,loc,doActions,callPreParse=False)
-                    if mat:
-                        skipRes = ParseResults( skipText )
-                        skipRes += mat
-                        resultStore.append((loc, [ skipRes ]))
-                    else:
-                        resultStore,append((loc, [ skipText ]))
-                else:
-                    resultStore.append((loc, [ skipText ]))
-                loc += 1
-            except (pyparsing.ParseException,IndexError):
-                if failParse:
-                    raise
-                else:
-                    loc += 1
-        if resultStore:
-            return resultStore[-1]
-        else:
-            exc = self.myException
-            exc.loc = loc
-            exc.pstr = instring
-            raise exc    
+                res = pyparsing.SkipTo.parseImpl(self, instring, loc, False)
+                oldpos = loc
+                accumulated.append(res)
+                loc = res[0]
+            except pyparsing.ParseException:
+                self.includeMatch = self.original_includeMatch
+                res = pyparsing.SkipTo.parseImpl(self, instring, oldpos, doActions)
+                newres = list(res)
+                newres[0] = res[0] + sum([r[0] for r in accumulated[:-1]])
+                newres[1][0] = res[1][0] + ''.join([r[1][0] for r in accumulated[:-1]])
+                return tuple(newres)
 
 class StubbornDict(dict):
     '''Dictionary that tolerates many input formats.
@@ -387,7 +368,7 @@ class Cmd(cmd.Cmd):
     continuation_prompt = '> '  
     timing = False              # Prints elapsed time for each command
     # make sure your terminators are not in legalChars!
-    legalChars = '!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit  
+    legalChars = u'!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     default_to_shell = False
@@ -692,7 +673,7 @@ class Cmd(cmd.Cmd):
             self.blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
             self.blankLineTerminator.setResultsName('terminator')
             self.blankLineTerminationParser = ((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(self.blankLineTerminator).setParseAction(lambda x: x[0].strip())('args') + self.blankLineTerminator)('statement')
-        self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + SkipToLast(terminatorParser).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
+        self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser, ignore=self.commentInProgress).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
                                 pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
         self.multilineParser.ignore(self.commentInProgress)
         self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser).setParseAction(lambda x:x[0].strip())('args'))('statement') +
@@ -737,6 +718,7 @@ class Cmd(cmd.Cmd):
                 if s.lower().startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
+            #import pdb; pdb.set_trace()
             result = self.parser.parseString(s)
             result['raw'] = raw            
             result['command'] = result.multilineCommand or result.command        
