@@ -57,6 +57,8 @@ NameError: global name 'exc' is not defined
 
 (Pdb) parseFn
 <bound method Or._parseCache of {Python style comment ^ C style comment}>
+
+Bug report filed: https://sourceforge.net/tracker/?func=detail&atid=617311&aid=3381439&group_id=97203
 """
 
 class OptionParser(optparse.OptionParser):
