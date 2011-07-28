@@ -718,7 +718,6 @@ class Cmd(cmd.Cmd):
                 if s.lower().startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
-            #import pdb; pdb.set_trace()
             result = self.parser.parseString(s)
             result['raw'] = raw            
             result['command'] = result.multilineCommand or result.command        
