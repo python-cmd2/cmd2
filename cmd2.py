@@ -41,9 +41,23 @@ import copy
 from code import InteractiveConsole, InteractiveInterpreter
 from optparse import make_option
 import pyparsing
-pyparsing.ParserElement.enablePackrat()
 
 __version__ = '0.6.3'
+
+if sys.version_info[0] == 2:
+    pyparsing.ParserElement.enablePackrat()
+
+"""
+Packrat is causing Python3 errors that I don't understand.
+
+> /usr/local/Cellar/python3/3.2/lib/python3.2/site-packages/pyparsing-1.5.6-py3.2.egg/pyparsing.py(999)scanString()
+-> nextLoc,tokens = parseFn( instring, preloc, callPreParse=False )
+(Pdb) n
+NameError: global name 'exc' is not defined
+
+(Pdb) parseFn
+<bound method Or._parseCache of {Python style comment ^ C style comment}>
+"""
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):

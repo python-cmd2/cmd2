@@ -19,4 +19,5 @@ The best way to do this is to install ``distribute`` on Python 3 before installi
   sudo python3 distribute_setup.py
 
   sudo python3 setup.py install
-  
+
+2to3 won't run if there's a ``build`` directory that's newer than your source code.  Deleting the ``cmd2/build`` directory before running setup.py ensures that this won't be a problem.  
