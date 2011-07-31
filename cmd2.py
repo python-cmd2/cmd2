@@ -1057,7 +1057,9 @@ class Cmd(cmd.Cmd):
                 pass
             keepstate.restore()
             
-    def do_history(self, arg):
+    @options([make_option('-s', '--script', action="store_true", help="Script format; no separation lines"),
+             ], arg_desc = '(limit on which commands to include)')
+    def do_history(self, arg, opts):
         """history [arg]: lists past commands issued
         
         | no arg:         list all
@@ -1070,7 +1072,10 @@ class Cmd(cmd.Cmd):
         else:
             history = self.history
         for hi in history:
-            self.stdout.write(hi.pr())
+            if opts.script:
+                self.poutput(hi)
+            else:
+                self.stdout.write(hi.pr())
     def last_matching(self, arg):
         try:
             if arg:
