@@ -648,15 +648,40 @@ class Cmd(cmd.Cmd):
           - multilineCommand: multiline
           - terminator: ['\n', '\n']
         - terminator: ['\n', '\n']
+        >>> print (c.parser.parseString('multiline command "with term; ends" now\n\n').dump())
+        ['multiline', 'command ends', '\n', '\n']
+        - args: command "with term; ends" now
+        - multilineCommand: multiline
+        - statement: ['multiline', '"with term; ends" now', '\n', '\n']
+          - args: command "with term; ends" now
+          - multilineCommand: multiline
+          - terminator: ['\n', '\n']
+        - terminator: ['\n', '\n']
+        >>> print (c.parser.parseString('what if  "ending is in quotes" but').dump())
+        ['what', 'if  "ending is in quotes" but']
+        - args: if  "ending is in quotes" but
+        - command: what
+        - statement: ['what', 'if  "ending is in quotes" but']
+          - args: if  "ending is in quotes" but
+          - command: what
+        >>> print (c.parser.parseString('what if  "ending is in quotes"').dump())
+        ['what', 'if  "ending is in quotes"']
+        - args: if  "ending is in quotes"
+        - command: what
+        - statement: ['what', 'if  "ending is in quotes"']
+          - args: if  "ending is in quotes"
+          - command: what
         '''
         outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
         
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
+        terminatorParser.ignore(pyparsing.quotedString) #fail
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
         self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.case_insensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = (~self.multilineCommand + pyparsing.Word(self.legalChars))('command')
         pipe = pyparsing.Keyword('|', identChars='|')
-        self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')        
+        self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
+        doNotParse = self.commentGrammars | commentInProgress 
         afterElements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd)('pipeTo')) + \
             pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd).setParseAction(lambda x: x[0].strip())('outputTo'))
@@ -684,7 +709,8 @@ class Cmd(cmd.Cmd):
             self.blankLineTerminationParser | 
             self.multilineCommand + pyparsing.SkipTo(stringEnd)
             )
-        self.parser.ignore(pyparsing.quotedString).ignore(self.commentGrammars)
+        #self.parser.ignore(pyparsing.quotedString).ignore(self.commentGrammars)
+        self.parser.ignore(self.commentGrammars)
         
         inputMark = pyparsing.Literal('<')
         inputMark.setParseAction(lambda x: '')
@@ -695,7 +721,8 @@ class Cmd(cmd.Cmd):
         # as in "lesser than"
         self.inputParser = inputMark + pyparsing.Optional(inputFrom) + pyparsing.Optional('>') + \
                            pyparsing.Optional(fileName) + (pyparsing.stringEnd | '|')
-        self.inputParser.ignore(pyparsing.quotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
+        #self.inputParser.ignore(pyparsing.quotedString).ignore(self.commentGrammars).ignore(self.commentInProgress)               
+        self.inputParser.ignore(self.commentGrammars).ignore(self.commentInProgress)               
     
     def preparse(self, raw, **kwargs):
         return raw
