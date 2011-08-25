@@ -76,6 +76,22 @@ As in a Unix shell, output of a command can be redirected:
     to paste buffer requires software to be installed on the operating
     system, pywin32_ on Windows or xclip_ on \*nix.
     
+If your application depends on mathematical syntax, ``>`` may be a bad
+choice for redirecting output - it will prevent you from using the
+greater-than sign in your actual user commands.  You can override your
+app's value of ``self.redirector`` to use a different string for output redirection::
+
+    class MyApp(cmd2.Cmd):
+        redirector = '->'
+        
+::
+
+    (Cmd) say line1 -> out.txt
+    (Cmd) say line2 ->-> out.txt
+    (Cmd) !cat out.txt
+    line1
+    line2
+
 .. _pywin32: http://sourceforge.net/projects/pywin32/
 .. _xclip: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
   
