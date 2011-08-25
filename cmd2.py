@@ -379,6 +379,7 @@ class Cmd(cmd.Cmd):
     debug = False
     locals_in_py = True
     kept_state = None
+    redirector = '>'                    # for sending output to file
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
@@ -665,7 +666,10 @@ class Cmd(cmd.Cmd):
           - args: if "quoted strings /* seem to " start comments?
           - command: what
         '''
-        outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
+        #outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
+        outputParser = (pyparsing.Literal(self.redirector *2) | \
+                       (pyparsing.WordStart() + self.redirector) | \
+                        pyparsing.Regex('[^=]' + self.redirector))('output')
         
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
@@ -815,7 +819,7 @@ class Cmd(cmd.Cmd):
             self.kept_sys = Statekeeper(sys, ('stdout',))
             if statement.parsed.outputTo:
                 mode = 'w'
-                if statement.parsed.output == '>>':
+                if statement.parsed.output == 2 * self.redirector:
                     mode = 'a'
                 sys.stdout = self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)                            
             else:
