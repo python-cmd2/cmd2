@@ -1,0 +1,91 @@
+(Cmd) help
+
+Documented commands (type help <topic>):
+========================================
+_load           ed    history  list   pause  run   set        show
+_relative_load  edit  l        load   py     save  shell      speak
+cmdenvironment  hi    li       orate  r      say   shortcuts
+
+Undocumented commands:
+======================
+EOF  eof  exit  help  q  quit
+
+(Cmd) help say
+Repeats what you tell me to.
+Usage: speak [options] (text to say)
+
+Options:
+  -h, --help            show this help message and exit
+  -p, --piglatin        atinLay
+  -s, --shout           N00B EMULATION MODE
+  -r REPEAT, --repeat=REPEAT
+                        output [n] times
+
+(Cmd) say goodnight, Gracie
+goodnight, Gracie
+(Cmd) say -ps --repeat=5 goodnight, Gracie
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+(Cmd) set
+abbrev: True
+case_insensitive: True
+colors: True
+continuation_prompt: > 
+debug: False
+default_file_name: command.txt
+echo: False
+editor: /\w*/
+feedback_to_output: False
+maxrepeats: 3
+prompt: (Cmd) 
+quiet: False
+timing: False
+(Cmd) set maxrepeats 5
+maxrepeats - was: 3
+now: 5
+(Cmd) say -ps --repeat=5 goodnight, Gracie
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+(Cmd) hi
+-------------------------[1]
+help
+-------------------------[2]
+help say
+-------------------------[3]
+say goodnight, Gracie
+-------------------------[4]
+say -ps --repeat=5 goodnight, Gracie
+-------------------------[5]
+set
+-------------------------[6]
+set maxrepeats 5
+-------------------------[7]
+say -ps --repeat=5 goodnight, Gracie
+(Cmd) run 4
+say -ps --repeat=5 goodnight, Gracie
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+OODNIGHT, GRACIEGAY
+(Cmd) orate Four score and
+> seven releases ago
+> our BDFL
+> 
+Four score and
+seven releases ago
+our BDFL
+(Cmd) & look, a shortcut!
+look, a shortcut!
+(Cmd) say put this in a file > myfile.txt
+(Cmd) say < myfile.txt
+put this in a file
+(Cmd) set prompt "---> "
+prompt - was: (Cmd)
+now: --->
+---> say goodbye
+goodbye

@@ -1,0 +1,23 @@
+cmd2 can be installed from PyPI by ``easy_install`` or ``pip``.
+
+Development trunk can be downloaded with mercurial::
+
+  hg clone http://hg.assembla.com/python-cmd2
+
+To install from the trunk, ``cd python-cmd2`` and run ``python setup.py install`` or ``python setup.py develop`` (requires setuptools).  (Use ``root`` account, or ``sudo``, on *nix.)
+
+Python 3
+--------
+
+The Python 3 egg downloaded from PyPI or installed by ``pip`` or ``easy_install`` is ready to go.
+
+To install from source for Python 3, the 2to3 transformations must be applied to ``cmd2.py``.
+The best way to do this is to install ``distribute`` on Python 3 before installing
+``cmd1``::
+
+  curl -O http://python-distribute.org/distribute_setup.py
+  sudo python3 distribute_setup.py
+
+  sudo python3 setup.py install
+
+2to3 won't run if there's a ``build`` directory that's newer than your source code.  Deleting the ``cmd2/build`` directory before running setup.py ensures that this won't be a problem.  
