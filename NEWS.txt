@@ -1,0 +1,12 @@
+News
+====
+
+0.6.5
+-----
+
+*Release date: 2013-02-29*
+
+* Belatedly began a NEWS.txt
+* Changed pyparsing requirement for compatibility with Python version (2 vs 3)
+
+
