@@ -15,3 +15,10 @@ News
 *Release date: 2013-03-18*
 
 * Bugfix for setup.py version check for Python 2.6, contributed by Tomaz Muraus (https://bitbucket.org/kami)
+
+0.6.6
+-----
+
+*Release date: 2013-08-06*
+
+* Added fix by bitbucket.org/desaintmartin to silence the editor check.  bitbucket.org/catherinedevlin/cmd2/issue/1/silent-editor-check
