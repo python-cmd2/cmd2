@@ -14,7 +14,7 @@ else:
 
 setup(
     name="cmd2",
-    version="0.6.6",
+    version="0.6.6.1",
     py_modules=["cmd2"],
     use_2to3=True,
     

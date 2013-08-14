@@ -42,7 +42,7 @@ from code import InteractiveConsole, InteractiveInterpreter
 from optparse import make_option
 import pyparsing
 
-__version__ = '0.6.6'
+__version__ = '0.6.6.1'
 
 if sys.version_info[0] == 2:
     pyparsing.ParserElement.enablePackrat()
