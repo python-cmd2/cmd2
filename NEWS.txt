@@ -22,3 +22,11 @@ News
 *Release date: 2013-08-06*
 
 * Added fix by bitbucket.org/desaintmartin to silence the editor check.  bitbucket.org/catherinedevlin/cmd2/issue/1/silent-editor-check
+
+0.6.6.1
+-------
+
+*Release date: 2013-08-14*
+
+* No changes to code trunk.  Generated sdist from Python 2.7 to avoid 2to3 changes being applied to source.  (Issue https://bitbucket.org/catherinedevlin/cmd2/issue/6/packaging-bug)
+
