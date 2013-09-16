@@ -147,7 +147,7 @@ def options(option_list, arg_desc="arg"):
                     arg = arg.with_args_replaced(newArgs)
                 else:
                     arg = newArgs
-            except optparse.OptParseError, e:
+            except optparse.OptParseError as e:
                 print (e)
                 optionParser.print_help()
                 return
@@ -196,7 +196,7 @@ if subprocess.mswindows:
             win32clipboard.CloseClipboard()        
     except ImportError:
         def get_paste_buffer(*args):
-            raise OSError, pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/')
+            raise OSError(pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/'))
         write_to_paste_buffer = get_paste_buffer
 elif sys.platform == 'darwin':
     can_clip = False
@@ -215,7 +215,7 @@ elif sys.platform == 'darwin':
             pbcopyproc.communicate(txt.encode())
     else:
         def get_paste_buffer(*args):
-            raise OSError, pastebufferr % ('pbcopy', 'On MacOS X - error should not occur - part of the default installation')
+            raise OSError(pastebufferr % ('pbcopy', 'On MacOS X - error should not occur - part of the default installation'))
         write_to_paste_buffer = get_paste_buffer
 else:
     can_clip = False
@@ -249,7 +249,7 @@ else:
             xclipproc.stdin.close()
     else:
         def get_paste_buffer(*args):
-            raise OSError, pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"')
+            raise OSError(pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"'))
         write_to_paste_buffer = get_paste_buffer
           
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
@@ -787,7 +787,7 @@ class Cmd(cmd.Cmd):
                     self.restore_output(statement)
             except EmptyStatement:
                 return 0
-            except Exception, e:
+            except Exception as e:
                 self.perror(str(e), statement)            
         finally:
             return self.postparsing_postcmd(stop)        
@@ -796,14 +796,14 @@ class Cmd(cmd.Cmd):
         if (not line) or (
             not pyparsing.Or(self.commentGrammars).
                 setParseAction(lambda x: '').transformString(line)):
-            raise EmptyStatement
+            raise EmptyStatement()
         statement = self.parsed(line)
         while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
             statement = '%s\n%s' % (statement.parsed.raw, 
                                     self.pseudo_raw_input(self.continuation_prompt))                
             statement = self.parsed(statement)
         if not statement.parsed.command:
-            raise EmptyStatement
+            raise EmptyStatement()
         return statement
     
     def redirect_output(self, statement):
@@ -1025,7 +1025,7 @@ class Cmd(cmd.Cmd):
                     onchange_hook(old=currentVal, new=val)
                 except AttributeError:
                     pass
-        except (ValueError, AttributeError, NotSettableError), e:
+        except (ValueError, AttributeError, NotSettableError) as e:
             self.do_show(arg)
                 
     def do_pause(self, arg):
@@ -1061,7 +1061,7 @@ class Cmd(cmd.Cmd):
                     file = open(arg)
                     interp.runcode(file.read())
                     file.close()
-                except IOError, e:
+                except IOError as e:
                     self.perror(e)
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
@@ -1182,7 +1182,7 @@ class Cmd(cmd.Cmd):
             f.write(saveme)
             f.close()
             self.pfeedback('Saved to %s' % (fname))
-        except Exception, e:
+        except Exception as e:
             self.perror('Error saving %s' % (fname))
             raise
             
@@ -1224,7 +1224,7 @@ class Cmd(cmd.Cmd):
             targetname, args = arg[0], (arg[1:] or [''])[0].strip()
         try:
             target = self.read_file_or_url(targetname)
-        except IOError, e:
+        except IOError as e:
             self.perror('Problem accessing script from %s: \n%s' % (targetname, e))
             return
         keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt',
@@ -1486,7 +1486,7 @@ class Cmd2TestCase(unittest.TestCase):
                 self.transcripts[fname] = iter(tfile.readlines())
                 tfile.close()
         if not len(self.transcripts):
-            raise (StandardError,), "No test files found - nothing to test."
+            raise StandardError("No test files found - nothing to test.")
     def setUp(self):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
@@ -1537,7 +1537,7 @@ class Cmd2TestCase(unittest.TestCase):
             result = self.outputTrap.read()
             # Read the expected result from transcript
             if line.startswith(self.cmdapp.prompt):
-                message = '\nFile %s, line %d\nCommand was:\n%s\nExpected: (nothing)\nGot:\n%s\n'%\
+                message = '\nFile %s, line %d\nCommand was:\n%r\nExpected: (nothing)\nGot:\n%r\n'%\
                     (fname, lineNum, command, result)     
                 self.assert_(not(result.strip()), message)
                 continue
