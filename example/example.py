@@ -5,7 +5,7 @@ import unittest, optparse, sys
 
 class CmdLineApp(Cmd):
     multilineCommands = ['orate']
-    Cmd.shortcuts.update({'&': 'speak'})
+    Cmd.shortcuts.update({'&': 'speak', 'h': 'hello'})
     maxrepeats = 3
     redirector = '->'
     Cmd.settable.append('maxrepeats   Max number of `--repeat`s allowed')
