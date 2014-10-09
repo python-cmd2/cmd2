@@ -104,6 +104,12 @@ def _attr_get_(obj, attr):
         return getattr(obj, attr)
     except AttributeError:
         return None
+
+def _which(editor):
+    try:
+        return subprocess.Popen(['which', editor], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]
+    except OSError:
+        return None
     
 optparse.Values.get = _attr_get_
     
@@ -421,7 +427,7 @@ class Cmd(cmd.Cmd):
             editor = 'notepad'
         else:
             for editor in ['gedit', 'kate', 'vim', 'vi', 'emacs', 'nano', 'pico']:
-                if subprocess.Popen(['which', editor], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]:
+                if _which(editor):
                     break
 
     colorcodes =    {'bold':{True:'\x1b[1m',False:'\x1b[22m'},
