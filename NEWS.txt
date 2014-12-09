@@ -30,3 +30,10 @@ News
 
 * No changes to code trunk.  Generated sdist from Python 2.7 to avoid 2to3 changes being applied to source.  (Issue https://bitbucket.org/catherinedevlin/cmd2/issue/6/packaging-bug)
 
+0.6.8
+-----
+
+*Release date: 2014-12-09*
+
+* better editor checking (by Ian Cordascu)
+
