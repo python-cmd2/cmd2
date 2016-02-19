@@ -184,7 +184,7 @@ pastebufferr = """Redirecting to or from paste buffer requires %s
 to be installed on operating system.
 %s"""
 
-if subprocess.mswindows:
+if sys.platform == "win32":
     try:
         import win32clipboard
         def get_paste_buffer():
