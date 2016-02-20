@@ -1,0 +1,11 @@
+language: python
+env:
+  - TOXENV=py27
+  - TOXENV=py33
+  - TOXENV=py34
+  # - TOXENV=py35 https://github.com/travis-ci/travis-ci/issues/4794
+  - TOXENV=pypy
+install:
+  - pip install tox
+script:
+  - tox
