@@ -1,4 +1,5 @@
 language: python
+sudo: false  # enable container-based build
 env:
   - TOXENV=py27
   - TOXENV=py33
