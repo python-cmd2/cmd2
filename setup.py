@@ -7,17 +7,14 @@ except ImportError:
         return ['sqlpython']
 import sys
 
-if sys.version_info[:2] == (2, 5):
-    install_requires = ['pyparsing == 1.5.7']
-else:
-    install_requires = ['pyparsing >= 2.0.1']
+install_requires = ['pyparsing >= 2.0.1']
 
 setup(
     name="cmd2",
     version="0.6.8",
     py_modules=["cmd2"],
     use_2to3=True,
-    
+
     # metadata for upload to PyPI
     author = 'Catherine Devlin',
     author_email = 'catherine.devlin@gmail.com',
@@ -46,7 +43,7 @@ Drop-in replacement adds several features for command-prompt tools:
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 
-Running `2to3 <http://docs.python.org/library/2to3.html>` against ``cmd2.py`` 
+Running `2to3 <http://docs.python.org/library/2to3.html>` against ``cmd2.py``
 generates working, Python3-based code.
 
 See docs at http://packages.python.org/cmd2/
@@ -61,12 +58,10 @@ See docs at http://packages.python.org/cmd2/
         'Programming Language :: Python',
         'License :: OSI Approved :: MIT License',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.0',
-        'Programming Language :: Python :: 3.1',
-        'Programming Language :: Python :: 3.2',
         'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
 
     ],
     )
