@@ -2,6 +2,22 @@
 cmd2
 ----
 
+.. image:: https://secure.travis-ci.org/python-cmd2/cmd2.png?branch=master
+   :target: http://travis-ci.org/python-cmd2/cmd2
+   :alt: Build status
+
+.. image:: https://img.shields.io/pypi/dm/cmd2.svg?style=plastic
+   :target: https://pypi.python.org/pypi/cmd2/
+   :alt: Downloads
+
+.. image:: https://img.shields.io/pypi/v/cmd2.svg?style=plastic
+   :target: https://pypi.python.org/pypi/cmd2/
+   :alt: Latest Version
+
+.. image:: https://img.shields.io/github/license/python-cmd2/cmd2.svg?style=plastic
+    :target: https://pypi.python.org/pypi/cmd2/
+    :alt: License
+
 :Author: Catherine Devlin, http://catherinedevlin.blogspot.com
 
 `cmd2` is a tool for writing command-line interactive applications.  It is based on the Python Standard Library's `cmd` module, and can be used anyplace `cmd` is used simply by importing `cmd2` instead.
