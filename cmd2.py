@@ -38,11 +38,11 @@ import glob
 import traceback
 import platform
 import copy
-from code import InteractiveConsole, InteractiveInterpreter
+from code import InteractiveConsole
 from optparse import make_option
 import pyparsing
 
-__version__ = '0.6.8'
+__version__ = '0.6.9a'
 
 if sys.version_info[0] == 2:
     pyparsing.ParserElement.enablePackrat()
