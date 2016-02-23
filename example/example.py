@@ -1,7 +1,9 @@
-'''A sample application for cmd2.'''
+
+"""A sample application for cmd2.
+"""
 
 from cmd2 import Cmd, make_option, options
-import unittest, optparse, sys
+
 
 class CmdLineApp(Cmd):
     multilineCommands = ['orate']
@@ -26,7 +28,7 @@ class CmdLineApp(Cmd):
             self.stdout.write(arg)
             self.stdout.write('\n')
             # self.stdout.write is better than "print", because Cmd can be
-            # initialized with a non-standard output destination        
+            # initialized with a non-standard output destination
 
     do_say = do_speak     # now "say" is a synonym for "speak"
     do_orate = do_speak   # another synonym, but this one takes multi-line input
