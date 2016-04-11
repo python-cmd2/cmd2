@@ -232,7 +232,7 @@ elif sys.platform == 'darwin':
 else:
     can_clip = False
     try:
-        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=open('/dev/null'), stdin=subprocess.PIPE, stderr=subprocess.PIPE)
         can_clip = True
     except AttributeError:  # check_call not defined, Python < 2.5
         try:
