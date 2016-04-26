@@ -898,11 +898,14 @@ class Cmd(cmd.Cmd):
         return self.postparsing_postcmd(self.default(arg))
 
     def pseudo_raw_input(self, prompt):
-        """copied from cmd's cmdloop; like raw_input, but accounts for changed stdin, stdout"""
+        """copied from cmd's cmdloop; like raw_input or input, but accounts for changed stdin, stdout"""
 
         if self.use_rawinput:
             try:
-                line = raw_input(prompt)
+                if sys.version[0] > 2:
+                    line = input(prompt)
+                else
+                    line = raw_input(prompt)
             except EOFError:
                 line = 'EOF'
         else:
@@ -992,7 +995,11 @@ class Cmd(cmd.Cmd):
         for (idx, (value, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx+1, text))
         while True:
-            response = raw_input(prompt)
+            if sys.version[0] > 2:
+                response = input(prompt)
+            else
+                response = raw_input(prompt)
+
             try:
                 response = int(response)
                 result = fulloptions[response - 1][0]
@@ -1054,7 +1061,10 @@ class Cmd(cmd.Cmd):
 
     def do_pause(self, arg):
         'Displays the specified text then waits for the user to press RETURN.'
-        raw_input(arg + '\n')
+        if sys.version[0] > 2:
+            input(arg + '\n')
+        else
+            raw_input(arg + '\n')
 
     def do_shell(self, arg):
         'execute a command as if at the OS prompt.'
@@ -1614,5 +1624,3 @@ into a file, ``transcript.test``, and invoke the test like::
 
 Wildcards can be used to test against multiple transcript files.
 '''
-
-
