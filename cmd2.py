@@ -44,6 +44,11 @@ import pyparsing
 
 __version__ = '0.6.9a'
 
+try:
+    raw_input
+except NameError:
+    raw_input = input
+
 if sys.version_info[0] == 2:
     pyparsing.ParserElement.enablePackrat()
 
