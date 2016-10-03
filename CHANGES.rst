@@ -37,3 +37,10 @@ News
 
 * better editor checking (by Ian Cordascu)
 
+0.6.9
+-----
+
+* Support Python 3 input()
+* Fix subprocess.mswindows bug
+* Add Python3.6 support
+* Drop distutils from setup.py

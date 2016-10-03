@@ -6,7 +6,7 @@ install_requires = ['pyparsing >= 2.0.1']
 
 setup(
     name="cmd2",
-    version="0.6.9a",
+    version="0.6.9",
     py_modules=["cmd2"],
     use_2to3=True,
 
