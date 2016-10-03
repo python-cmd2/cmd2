@@ -1,10 +1,5 @@
 #!/usr/bin/python
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from distutils.core import setup
-    def find_packages():
-        return ['sqlpython']
+from setuptools import setup, find_packages
 import sys
 
 install_requires = ['pyparsing >= 2.0.1']
