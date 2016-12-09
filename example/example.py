@@ -1,4 +1,4 @@
-
+# coding=utf-8
 """A sample application for cmd2.
 """
 

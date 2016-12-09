@@ -1,3 +1,4 @@
+# coding=utf-8
 """Variant on standard library's cmd with extra features.
 
 To use, simply import cmd2.Cmd instead of cmd.Cmd; use precisely as though you
@@ -33,7 +34,6 @@ import tempfile
 import doctest
 import unittest
 import datetime
-import urllib
 import glob
 import traceback
 import platform
@@ -42,20 +42,24 @@ from code import InteractiveConsole
 from optparse import make_option
 import pyparsing
 
-__version__ = '0.6.9a'
+# Possible types for text data. This is basestring() in Python 2 and str in Python 3.
+from six import string_types
 
-try:
-    raw_input
-except NameError:
-    raw_input = input
+# raw_input() for Python 2 or input() for Python 3
+from six.moves import input
+
+# Python 2 urllib2.urlopen() or Python3  urllib.request.urlopen()
+from six.moves.urllib.request import urlopen
+
+__version__ = '0.6.9b'
 
 # Python 3 compatability hack due to no built-in file keyword in Python 3
-# Due to two occurences of isinstance(<foo>, file) checking to see if something is of file type
+# Due to one occurence of isinstance(<foo>, file) checking to see if something is of file type
 try:
     import io
     file = io.TextIOWrapper
 except ImportError:
-    pass # Python2
+    pass  # Python2
 
 if sys.version_info[0] == 2:
     pyparsing.ParserElement.enablePackrat()
@@ -704,8 +708,8 @@ class Cmd(cmd.Cmd):
           - command: what
         '''
         #outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
-        outputParser = (pyparsing.Literal(self.redirector *2) | \
-                       (pyparsing.WordStart() + self.redirector) | \
+        outputParser = (pyparsing.Literal(self.redirector *2) |
+                       (pyparsing.WordStart() + self.redirector) |
                         pyparsing.Regex('[^=]' + self.redirector))('output')
 
         terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
@@ -805,6 +809,7 @@ class Cmd(cmd.Cmd):
         # Python 2.4 support can be dropped.
         stop = 0
         try:
+            statement = ''
             try:
                 statement = self.complete_statement(line)
                 (stop, statement) = self.postparsing_precmd(statement)
@@ -915,7 +920,7 @@ class Cmd(cmd.Cmd):
 
         if self.use_rawinput:
             try:
-                line = raw_input(prompt)
+                line = input(prompt)
             except EOFError:
                 line = 'EOF'
         else:
@@ -947,18 +952,18 @@ class Cmd(cmd.Cmd):
                 readline.parse_and_bind(self.completekey+": complete")
             except ImportError:
                 pass
+        stop = None
         try:
             if intro is not None:
                 self.intro = intro
             if self.intro:
                 self.stdout.write(str(self.intro)+"\n")
-            stop = None
             while not stop:
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
                 else:
                     line = self.pseudo_raw_input(self.prompt)
-                if (self.echo) and (isinstance(self.stdin, file)):
+                if self.echo and isinstance(self.stdin, file):
                     self.stdout.write(line + '\n')
                 stop = self.onecmd_plus_hooks(line)
             self.postloop()
@@ -991,11 +996,11 @@ class Cmd(cmd.Cmd):
              | a list of tuples -> interpreted as (value, text), so
                                    that the return value can differ from
                                    the text advertised to the user '''
-        if isinstance(options, basestring):
+        if isinstance(options, string_types):
             options = zip(options.split(), options.split())
         fulloptions = []
         for opt in options:
-            if isinstance(opt, basestring):
+            if isinstance(opt, string_types):
                 fulloptions.append((opt, opt))
             else:
                 try:
@@ -1005,7 +1010,7 @@ class Cmd(cmd.Cmd):
         for (idx, (value, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx+1, text))
         while True:
-            response = raw_input(prompt)
+            response = input(prompt)
             try:
                 response = int(response)
                 result = fulloptions[response - 1][0]
@@ -1067,7 +1072,7 @@ class Cmd(cmd.Cmd):
 
     def do_pause(self, arg):
         'Displays the specified text then waits for the user to press RETURN.'
-        raw_input(arg + '\n')
+        input(arg + '\n')
 
     def do_shell(self, arg):
         'execute a command as if at the OS prompt.'
@@ -1104,6 +1109,7 @@ class Cmd(cmd.Cmd):
             self.pystate['exit'] = quit
             self.pystate['cmd'] = onecmd_plus_hooks
             self.pystate['run'] = run
+            keepstate = None
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                 keepstate = Statekeeper(sys, ('stdin','stdout'))
@@ -1113,7 +1119,8 @@ class Cmd(cmd.Cmd):
                        (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
             except EmbeddedConsoleExit:
                 pass
-            keepstate.restore()
+            if keepstate is not None:
+                keepstate.restore()
 
     @options([make_option('-s', '--script', action="store_true", help="Script format; no separation lines"),
              ], arg_desc = '(limit on which commands to include)')
@@ -1225,12 +1232,12 @@ class Cmd(cmd.Cmd):
 
     def read_file_or_url(self, fname):
         # TODO: not working on localhost
-        if isinstance(fname, file):
+        if os.path.isfile(fname):
             result = open(fname, 'r')
         else:
             match = self.urlre.match(fname)
             if match:
-                result = urllib.urlopen(match.group(1))
+                result = urlopen(match.group(1))
             else:
                 fname = os.path.expanduser(fname)
                 try:
@@ -1317,7 +1324,7 @@ class Cmd(cmd.Cmd):
             if self.onecmd_plus_hooks(initial_command + '\n'):
                 return self._STOP_AND_EXIT
 
-    def cmdloop(self):
+    def cmdloop(self, intro=None):
         parser = optparse.OptionParser()
         parser.add_option('-t', '--test', dest='test',
                action="store_true",
@@ -1565,8 +1572,9 @@ class Cmd2TestCase(unittest.TestCase):
                     line = transcript.next()
                 except StopIteration:
                     raise (StopIteration,
-                           'Transcript broke off while reading command beginning at line %d with\n%s'
-                           % (command[0]))
+                           'Transcript broke off while reading command beginning at line {} with\n{}'.format(lineNum,
+                                                                                                             command[0])
+                           )
                 lineNum += 1
             command = ''.join(command)
             # Send the command into the application and capture the resulting output

@@ -1,3 +1,4 @@
+# coding=utf-8
 from cmd2 import Cmd
 # prompts and defaults
 
@@ -12,18 +13,18 @@ class Pirate(Cmd):
         self.gold += 1
     def do_drink(self, arg):
         '''Drown your sorrrows in rrrum.
-        
-        drink [n] - drink [n] barrel[s] o' rum.'''          
+
+        drink [n] - drink [n] barrel[s] o' rum.'''
         try:
             self.gold -= int(arg)
         except:
             if arg:
                 print('''What's "{0}"?  I'll take rrrum.'''.format(arg))
-            self.gold -= 1            
+            self.gold -= 1
     def precmd(self, line):
         self.initial_gold = self.gold
         return line
-    def postcmd(self, stop, line):   
+    def postcmd(self, stop, line):
         if self.gold != self.initial_gold:
             print('Now we gots {0} doubloons'
                   .format(self.gold))
@@ -33,7 +34,7 @@ class Pirate(Cmd):
         return stop
     def do_quit(self, arg):
         print("Quiterrr!")
-        return True    
+        return True
 
 pirate = Pirate()
 pirate.cmdloop()

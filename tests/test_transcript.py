@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 # Cmd2 functional testing based on transcript
 #
