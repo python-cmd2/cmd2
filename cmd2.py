@@ -49,6 +49,14 @@ try:
 except NameError:
     raw_input = input
 
+# Python 3 compatability hack due to no built-in file keyword in Python 3
+# Due to two occurences of isinstance(<foo>, file) checking to see if something is of file type
+try:
+    import io
+    file = io.TextIOWrapper
+except ImportError:
+    pass # Python2
+
 if sys.version_info[0] == 2:
     pyparsing.ParserElement.enablePackrat()
 
