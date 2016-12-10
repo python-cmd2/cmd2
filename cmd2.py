@@ -70,23 +70,8 @@ except ImportError:
 
 __version__ = '0.7.0'
 
-# Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3
-if six.PY2:
-    pyparsing.ParserElement.enablePackrat()
-
-"""
-Packrat is causing Python3 errors that I don't understand.
-
-> /usr/local/Cellar/python3/3.2/lib/python3.2/site-packages/pyparsing-1.5.6-py3.2.egg/pyparsing.py(999)scanString()
--> nextLoc,tokens = parseFn( instring, preloc, callPreParse=False )
-(Pdb) n
-NameError: global name 'exc' is not defined
-
-(Pdb) parseFn
-<bound method Or._parseCache of {Python style comment ^ C style comment}>
-
-Bug report filed: https://sourceforge.net/tracker/?func=detail&atid=617311&aid=3381439&group_id=97203
-"""
+# Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
+pyparsing.ParserElement.enablePackrat()
 
 
 class OptionParser(optparse.OptionParser):
