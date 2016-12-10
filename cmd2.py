@@ -44,6 +44,9 @@ from optparse import make_option
 import pyparsing
 import six
 
+# next(it) gets next item of iterator it. This is a replacement for calling it.next() in Python 2 and next(it) in Py3
+from six import next
+
 # Possible types for text data. This is basestring() in Python 2 and str in Python 3.
 from six import string_types
 
@@ -66,6 +69,7 @@ except ImportError:
 
 __version__ = '0.7.0'
 
+# Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3
 if six.PY2:
     pyparsing.ParserElement.enablePackrat()
 
@@ -1557,25 +1561,25 @@ class Cmd2TestCase(unittest.TestCase):
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         finished = False
-        line = transcript.next()
+        line = next(transcript)
         lineNum += 1
         tests_run = 0
         while not finished:
             # Scroll forward to where actual commands begin
             while not line.startswith(self.cmdapp.prompt):
                 try:
-                    line = transcript.next()
+                    line = next(transcript)
                 except StopIteration:
                     finished = True
                     break
                 lineNum += 1
             command = [line[len(self.cmdapp.prompt):]]
-            line = transcript.next()
+            line = next(transcript)
             # Read the entirety of a multi-line command
             while line.startswith(self.cmdapp.continuation_prompt):
                 command.append(line[len(self.cmdapp.continuation_prompt):])
                 try:
-                    line = transcript.next()
+                    line = next(transcript)
                 except StopIteration:
                     raise (StopIteration,
                            'Transcript broke off while reading command beginning at line {} with\n{}'.format(lineNum,
@@ -1597,7 +1601,7 @@ class Cmd2TestCase(unittest.TestCase):
             while not line.startswith(self.cmdapp.prompt):
                 expected.append(line)
                 try:
-                    line = transcript.next()
+                    line = next(transcript)
                 except StopIteration:
                     finished = True
                     break
