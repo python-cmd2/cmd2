@@ -63,6 +63,7 @@ from six.moves.urllib.request import urlopen
 # Due to one occurence of isinstance(<foo>, file) checking to see if something is of file type
 try:
     import io
+
     file = io.TextIOWrapper
 except ImportError:
     pass  # Python2
@@ -86,6 +87,7 @@ NameError: global name 'exc' is not defined
 
 Bug report filed: https://sourceforge.net/tracker/?func=detail&atid=617311&aid=3381439&group_id=97203
 """
+
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -140,9 +142,10 @@ def _which(editor):
     except OSError:
         return None
 
+
 optparse.Values.get = _attr_get_
 
-options_defined = [] # used to distinguish --options from SQL-style --comments
+options_defined = []  # used to distinguish --options from SQL-style --comments
 
 
 def options(option_list, arg_desc="arg"):
@@ -165,18 +168,20 @@ def options(option_list, arg_desc="arg"):
         option_list = [option_list]
     for opt in option_list:
         options_defined.append(pyparsing.Literal(opt.get_opt_string()))
+
     def option_setup(func):
         optionParser = OptionParser()
         for opt in option_list:
             optionParser.add_option(opt)
         optionParser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
         optionParser._func = func
+
         def new_func(instance, arg):
             try:
                 opts, newArgList = optionParser.parse_args(arg.split())
                 # Must find the remaining args in the original argument list, but
                 # mustn't include the command itself
-                #if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
+                # if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                 #    newArgList = newArgList[1:]
                 newArgs = remaining_args(arg, newArgList)
                 if isinstance(arg, ParsedString):
@@ -194,6 +199,7 @@ def options(option_list, arg_desc="arg"):
 
         new_func.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
         return new_func
+
     return option_setup
 
 
@@ -209,8 +215,10 @@ Download from http://sourceforge.net/projects/pywin32/"""
         errmsg = """Redirecting to or from paste buffer requires xclip
 to be installed on operating system.
 On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""
+
     def __init__(self):
         Exception.__init__(self, self.errmsg)
+
 
 pastebufferr = """Redirecting to or from paste buffer requires %s
 to be installed on operating system.
@@ -219,14 +227,18 @@ to be installed on operating system.
 if sys.platform == "win32":
     try:
         import win32clipboard
+
+
         def get_paste_buffer():
             win32clipboard.OpenClipboard(0)
             try:
                 result = win32clipboard.GetClipboardData()
             except TypeError:
-                result = ''  #non-text
+                result = ''  # non-text
             win32clipboard.CloseClipboard()
             return result
+
+
         def write_to_paste_buffer(txt):
             win32clipboard.OpenClipboard(0)
             win32clipboard.EmptyClipboard()
@@ -235,30 +247,41 @@ if sys.platform == "win32":
     except ImportError:
         def get_paste_buffer(*args):
             raise OSError(pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/'))
+
+
         write_to_paste_buffer = get_paste_buffer
 elif sys.platform == 'darwin':
     can_clip = False
     try:
         # test for pbcopy - AFAIK, should always be installed on MacOS
-        subprocess.check_call('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.check_call('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
         can_clip = True
     except (subprocess.CalledProcessError, OSError, IOError):
         pass
     if can_clip:
         def get_paste_buffer():
-            pbcopyproc = subprocess.Popen('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            pbcopyproc = subprocess.Popen('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                                          stderr=subprocess.PIPE)
             return pbcopyproc.stdout.read()
+
+
         def write_to_paste_buffer(txt):
-            pbcopyproc = subprocess.Popen('pbcopy', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+            pbcopyproc = subprocess.Popen('pbcopy', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                                          stderr=subprocess.PIPE)
             pbcopyproc.communicate(txt.encode())
     else:
         def get_paste_buffer(*args):
-            raise OSError(pastebufferr % ('pbcopy', 'On MacOS X - error should not occur - part of the default installation'))
+            raise OSError(
+                pastebufferr % ('pbcopy', 'On MacOS X - error should not occur - part of the default installation'))
+
+
         write_to_paste_buffer = get_paste_buffer
 else:
     can_clip = False
     try:
-        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                              stderr=subprocess.PIPE)
         can_clip = True
     except AttributeError:  # check_call not defined, Python < 2.5
         try:
@@ -266,17 +289,21 @@ else:
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             xclipproc.stdin.write(teststring)
             xclipproc.stdin.close()
-            xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE,
+                                         stdin=subprocess.PIPE)
             if xclipproc.stdout.read() == teststring:
                 can_clip = True
-        except Exception: # hate a bare Exception call, but exception classes vary too much b/t stdlib versions
+        except Exception:  # hate a bare Exception call, but exception classes vary too much b/t stdlib versions
             pass
     except Exception:
-        pass # something went wrong with xclip and we cannot use it
+        pass  # something went wrong with xclip and we cannot use it
     if can_clip:
         def get_paste_buffer():
-            xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE,
+                                         stdin=subprocess.PIPE)
             return xclipproc.stdout.read()
+
+
         def write_to_paste_buffer(txt):
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             xclipproc.stdin.write(txt.encode())
@@ -288,6 +315,8 @@ else:
     else:
         def get_paste_buffer(*args):
             raise OSError(pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"'))
+
+
         write_to_paste_buffer = get_paste_buffer
 
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
@@ -308,6 +337,7 @@ class ParsedString(str):
         new.parsed.statement['args'] = newargs
         return new
 
+
 class StubbornDict(dict):
     '''Dictionary that tolerates many input formats.
     Create it with stubbornDict(arg) factory function.
@@ -322,8 +352,10 @@ class StubbornDict(dict):
     >>> sorted(d.items())
     [('girl', 'Frauelein, Maedchen'), ('large', 'gross'), ('plaid', ''), ('plain', ''), ('shoe', 'schuh'), ('small', 'klein')]
     '''
+
     def update(self, arg):
         dict.update(self, StubbornDict.to_dict(arg))
+
     append = update
 
     def __iadd__(self, arg):
@@ -406,28 +438,29 @@ def ljust(x, width, fillchar=' '):
             x = (x + [fillchar] * width)[:width]
         return x
 
+
 class Cmd(cmd.Cmd):
     echo = False
-    case_insensitive = True     # Commands recognized regardless of case
+    case_insensitive = True  # Commands recognized regardless of case
     continuation_prompt = '> '
-    timing = False              # Prints elapsed time for each command
+    timing = False  # Prints elapsed time for each command
     # make sure your terminators are not in legalChars!
     legalChars = u'!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     default_to_shell = False
     noSpecialParse = 'set ed edit exit'.split()
-    defaultExtension = 'txt'            # For ``save``, ``load``, etc.
-    default_file_name = 'command.txt'   # For ``save``, ``load``, etc.
-    abbrev = True                       # Abbreviated commands recognized
+    defaultExtension = 'txt'  # For ``save``, ``load``, etc.
+    default_file_name = 'command.txt'  # For ``save``, ``load``, etc.
+    abbrev = True  # Abbreviated commands recognized
     current_script_dir = None
     reserved_words = []
-    feedback_to_output = False          # Do include nonessentials in >, | output
-    quiet = False                       # Do not suppress nonessential output
+    feedback_to_output = False  # Do include nonessentials in >, | output
+    quiet = False  # Do not suppress nonessential output
     debug = False
     locals_in_py = True
     kept_state = None
-    redirector = '>'                    # for sending output to file
+    redirector = '>'  # for sending output to file
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
@@ -463,6 +496,7 @@ class Cmd(cmd.Cmd):
                 self.poutput(msg)
             else:
                 print(msg)
+
     _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
     _STOP_SCRIPT_NO_EXIT = -999
     editor = os.environ.get('EDITOR')
@@ -474,14 +508,15 @@ class Cmd(cmd.Cmd):
                 if _which(editor):
                     break
 
-    colorcodes =    {'bold':{True:'\x1b[1m',False:'\x1b[22m'},
-                  'cyan':{True:'\x1b[36m',False:'\x1b[39m'},
-                  'blue':{True:'\x1b[34m',False:'\x1b[39m'},
-                  'red':{True:'\x1b[31m',False:'\x1b[39m'},
-                  'magenta':{True:'\x1b[35m',False:'\x1b[39m'},
-                  'green':{True:'\x1b[32m',False:'\x1b[39m'},
-                  'underline':{True:'\x1b[4m',False:'\x1b[24m'}}
+    colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
+                  'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
+                  'blue': {True: '\x1b[34m', False: '\x1b[39m'},
+                  'red': {True: '\x1b[31m', False: '\x1b[39m'},
+                  'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
+                  'green': {True: '\x1b[32m', False: '\x1b[39m'},
+                  'underline': {True: '\x1b[4m', False: '\x1b[24m'}}
     colors = (platform.system() != 'Windows')
+
     def colorize(self, val, color):
         '''Given a string (``val``), returns that string wrapped in UNIX-style
            special characters that turn on (and then off) text color and style.
@@ -498,11 +533,11 @@ class Cmd(cmd.Cmd):
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
         Commands may be terminated with: %(terminators)s
-        Settable parameters: %(settable)s\n""" % \
-        { 'casesensitive': (self.case_insensitive and 'not ') or '',
-          'terminators': str(self.terminators),
-          'settable': ' '.join(self.settable)
-        })
+        Settable parameters: %(settable)s\n""" %
+                          {'casesensitive': (self.case_insensitive and 'not ') or '',
+                           'terminators': str(self.terminators),
+                           'settable': ' '.join(self.settable)
+                           })
 
     def do_help(self, arg):
         if arg:
@@ -529,13 +564,12 @@ class Cmd(cmd.Cmd):
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
-        self.stdout.write("Single-key shortcuts for other commands:\n%s\n" % (result))
+        self.stdout.write("Single-key shortcuts for other commands:\n{}\n".format(result))
 
     prefixParser = pyparsing.Empty()
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
-    commentInProgress  = pyparsing.Literal('/*') + pyparsing.SkipTo(
-        pyparsing.stringEnd ^ '*/')
+    commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
     terminators = [';']
     blankLinesAllowed = False
     multilineCommands = []
@@ -716,21 +750,25 @@ class Cmd(cmd.Cmd):
           - args: if "quoted strings /* seem to " start comments?
           - command: what
         '''
-        #outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
-        outputParser = (pyparsing.Literal(self.redirector *2) |
-                       (pyparsing.WordStart() + self.redirector) |
+        # outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
+        outputParser = (pyparsing.Literal(self.redirector * 2) |
+                        (pyparsing.WordStart() + self.redirector) |
                         pyparsing.Regex('[^=]' + self.redirector))('output')
 
-        terminatorParser = pyparsing.Or([(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
+        terminatorParser = pyparsing.Or(
+            [(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in self.terminators])('terminator')
         stringEnd = pyparsing.stringEnd ^ '\nEOF'
-        self.multilineCommand = pyparsing.Or([pyparsing.Keyword(c, caseless=self.case_insensitive) for c in self.multilineCommands])('multilineCommand')
+        self.multilineCommand = pyparsing.Or(
+            [pyparsing.Keyword(c, caseless=self.case_insensitive) for c in self.multilineCommands])('multilineCommand')
         oneLineCommand = (~self.multilineCommand + pyparsing.Word(self.legalChars))('command')
         pipe = pyparsing.Keyword('|', identChars='|')
         self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
         doNotParse = self.commentGrammars | self.commentInProgress | pyparsing.quotedString
         afterElements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(outputParser ^ stringEnd, ignore=doNotParse)('pipeTo')) + \
-            pyparsing.Optional(outputParser + pyparsing.SkipTo(stringEnd, ignore=doNotParse).setParseAction(lambda x: x[0].strip())('outputTo'))
+            pyparsing.Optional(
+                outputParser + pyparsing.SkipTo(stringEnd, ignore=doNotParse).setParseAction(lambda x: x[0].strip())(
+                    'outputTo'))
         if self.case_insensitive:
             self.multilineCommand.setParseAction(lambda x: x[0].lower())
             oneLineCommand.setParseAction(lambda x: x[0].lower())
@@ -739,14 +777,21 @@ class Cmd(cmd.Cmd):
         else:
             self.blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
             self.blankLineTerminator.setResultsName('terminator')
-            self.blankLineTerminationParser = ((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(self.blankLineTerminator, ignore=doNotParse).setParseAction(lambda x: x[0].strip())('args') + self.blankLineTerminator)('statement')
-        self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser, ignore=doNotParse).setParseAction(lambda x: x[0].strip())('args') + terminatorParser)('statement') +
-                                pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd, ignore=doNotParse).setParseAction(lambda x: x[0].strip())('suffix') + afterElements)
+            self.blankLineTerminationParser = ((self.multilineCommand ^ oneLineCommand) +
+                                               pyparsing.SkipTo(self.blankLineTerminator, ignore=doNotParse).setParseAction(
+                                                   lambda x: x[0].strip())('args') + self.blankLineTerminator)('statement')
+        self.multilineParser = (((self.multilineCommand ^ oneLineCommand) + pyparsing.SkipTo(terminatorParser,
+                                                                                             ignore=doNotParse).setParseAction(
+            lambda x: x[0].strip())('args') + terminatorParser)('statement') +
+                                pyparsing.SkipTo(outputParser ^ pipe ^ stringEnd, ignore=doNotParse).setParseAction(
+                                    lambda x: x[0].strip())('suffix') + afterElements)
         self.multilineParser.ignore(self.commentInProgress)
-        self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser, ignore=doNotParse).setParseAction(lambda x:x[0].strip())('args'))('statement') +
+        self.singleLineParser = ((oneLineCommand + pyparsing.SkipTo(terminatorParser ^ stringEnd ^ pipe ^ outputParser,
+                                                                    ignore=doNotParse).setParseAction(
+            lambda x: x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminatorParser) + afterElements)
-        #self.multilineParser = self.multilineParser.setResultsName('multilineParser')
-        #self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
+        # self.multilineParser = self.multilineParser.setResultsName('multilineParser')
+        # self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
         self.blankLineTerminationParser = self.blankLineTerminationParser.setResultsName('statement')
         self.parser = self.prefixParser + (
             stringEnd |
@@ -754,7 +799,7 @@ class Cmd(cmd.Cmd):
             self.singleLineParser |
             self.blankLineTerminationParser |
             self.multilineCommand + pyparsing.SkipTo(stringEnd, ignore=doNotParse)
-            )
+        )
         self.parser.ignore(self.commentGrammars)
 
         inputMark = pyparsing.Literal('<')
@@ -770,6 +815,7 @@ class Cmd(cmd.Cmd):
 
     def preparse(self, raw, **kwargs):
         return raw
+
     def postparse(self, parseResult):
         return parseResult
 
@@ -799,6 +845,7 @@ class Cmd(cmd.Cmd):
     def postparsing_precmd(self, statement):
         stop = 0
         return stop, statement
+
     def postparsing_postcmd(self, stop):
         return stop
 
@@ -808,11 +855,12 @@ class Cmd(cmd.Cmd):
         if target in dir(self):
             result = target
         else:
-            if self.abbrev:   # accept shortened versions of commands
+            if self.abbrev:  # accept shortened versions of commands
                 funcs = [fname for fname in self.keywords if fname.startswith(arg)]
                 if len(funcs) == 1:
                     result = 'do_' + funcs[0]
         return result
+
     def onecmd_plus_hooks(self, line):
         # The outermost level of try/finally nesting can be condensed once
         # Python 2.4 support can be dropped.
@@ -842,11 +890,10 @@ class Cmd(cmd.Cmd):
                 self.perror(str(e), statement)
         finally:
             return self.postparsing_postcmd(stop)
+
     def complete_statement(self, line):
         """Keep accepting lines of input until the command is complete."""
-        if (not line) or (
-            not pyparsing.Or(self.commentGrammars).
-                setParseAction(lambda x: '').transformString(line)):
+        if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
             raise EmptyStatement()
         statement = self.parsed(line)
         while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
@@ -861,7 +908,8 @@ class Cmd(cmd.Cmd):
         if statement.parsed.pipeTo:
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
-            self.redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            self.redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE,
+                                             stdin=subprocess.PIPE)
             sys.stdout = self.stdout = self.redirect.stdin
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
@@ -939,7 +987,7 @@ class Cmd(cmd.Cmd):
             if not len(line):
                 line = 'EOF'
             else:
-                if line[-1] == '\n': # this was always true in Cmd
+                if line[-1] == '\n':  # this was always true in Cmd
                     line = line[:-1]
         return line
 
@@ -958,7 +1006,7 @@ class Cmd(cmd.Cmd):
                 import readline
                 self.old_completer = readline.get_completer()
                 readline.set_completer(self.complete)
-                readline.parse_and_bind(self.completekey+": complete")
+                readline.parse_and_bind(self.completekey + ": complete")
             except ImportError:
                 pass
         stop = None
@@ -966,7 +1014,7 @@ class Cmd(cmd.Cmd):
             if intro is not None:
                 self.intro = intro
             if self.intro:
-                self.stdout.write(str(self.intro)+"\n")
+                self.stdout.write(str(self.intro) + "\n")
             while not stop:
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
@@ -986,11 +1034,13 @@ class Cmd(cmd.Cmd):
             return stop
 
     def do_EOF(self, arg):
-        return self._STOP_SCRIPT_NO_EXIT # End of script; should not exit app
+        return self._STOP_SCRIPT_NO_EXIT  # End of script; should not exit app
+
     do_eof = do_EOF
 
     def do_quit(self, arg):
         return self._STOP_AND_EXIT
+
     do_exit = do_quit
     do_q = do_quit
 
@@ -1018,7 +1068,7 @@ class Cmd(cmd.Cmd):
                 except IndexError:
                     fulloptions.append((opt[0], opt[0]))
         for (idx, (value, text)) in enumerate(fulloptions):
-            self.poutput('  %2d. %s\n' % (idx+1, text))
+            self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
             response = input(prompt)
             try:
@@ -1026,11 +1076,10 @@ class Cmd(cmd.Cmd):
                 result = fulloptions[response - 1][0]
                 break
             except ValueError:
-                pass # loop and ask again
+                pass  # loop and ask again
         return result
 
-    @options([make_option('-l', '--long', action="store_true",
-                 help="describe function of parameter")])
+    @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
     def do_show(self, arg, opts):
         '''Shows value of a parameter.'''
         param = arg.strip().lower()
@@ -1047,7 +1096,7 @@ class Cmd(cmd.Cmd):
                 else:
                     self.poutput(result[p])
         else:
-            raise NotImplementedError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
+            raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
     def do_set(self, arg):
         '''
@@ -1106,8 +1155,10 @@ class Cmd(cmd.Cmd):
         else:
             def quit():
                 raise EmbeddedConsoleExit
+
             def onecmd_plus_hooks(arg):
                 return self.onecmd_plus_hooks(arg + '\n')
+
             def run(arg):
                 try:
                     file = open(arg)
@@ -1115,6 +1166,7 @@ class Cmd(cmd.Cmd):
                     file.close()
                 except IOError as e:
                     self.perror(e)
+
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
             self.pystate['cmd'] = onecmd_plus_hooks
@@ -1122,18 +1174,18 @@ class Cmd(cmd.Cmd):
             keepstate = None
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
-                keepstate = Statekeeper(sys, ('stdin','stdout'))
+                keepstate = Statekeeper(sys, ('stdin', 'stdout'))
                 sys.stdout = self.stdout
                 sys.stdin = self.stdin
-                interp.interact(banner= "Python %s on %s\n%s\n(%s)\n%s" %
-                       (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
+                interp.interact(banner="Python %s on %s\n%s\n(%s)\n%s" %
+                                       (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
             except EmbeddedConsoleExit:
                 pass
             if keepstate is not None:
                 keepstate.restore()
 
     @options([make_option('-s', '--script', action="store_true", help="Script format; no separation lines"),
-             ], arg_desc = '(limit on which commands to include)')
+              ], arg_desc='(limit on which commands to include)')
     def do_history(self, arg, opts):
         """history [arg]: lists past commands issued
 
@@ -1151,6 +1203,7 @@ class Cmd(cmd.Cmd):
                 self.poutput(hi)
             else:
                 self.stdout.write(hi.pr())
+
     def last_matching(self, arg):
         try:
             if arg:
@@ -1159,6 +1212,7 @@ class Cmd(cmd.Cmd):
                 return self.history[-1]
         except IndexError:
             return None
+
     def do_list(self, arg):
         """list [arg]: lists last command issued
 
@@ -1206,11 +1260,13 @@ class Cmd(cmd.Cmd):
 
         os.system('%s %s' % (self.editor, filename))
         self.do__load(filename)
+
     do_edit = do_ed
 
-    saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums)^'*')("idx") +
+    saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
                   pyparsing.stringEnd)
+
     def do_save(self, arg):
         """`save [N] [filename.ext]`
 
@@ -1228,16 +1284,16 @@ class Cmd(cmd.Cmd):
         if args.idx == '*':
             saveme = '\n\n'.join(self.history[:])
         elif args.idx:
-            saveme = self.history[int(args.idx)-1]
+            saveme = self.history[int(args.idx) - 1]
         else:
             saveme = self.history[-1]
         try:
             f = open(os.path.expanduser(fname), 'w')
             f.write(saveme)
             f.close()
-            self.pfeedback('Saved to %s' % (fname))
+            self.pfeedback('Saved to {}'.format(fname))
         except Exception as e:
-            self.perror('Error saving %s' % (fname))
+            self.perror('Error saving {}'.format(fname))
             raise
 
     def read_file_or_url(self, fname):
@@ -1269,6 +1325,7 @@ class Cmd(cmd.Cmd):
             self.do__load('%s %s' % (targetname, args))
 
     urlre = re.compile('(https?://[-\\w\\./]+)')
+
     def do_load(self, arg=None):
         """Runs script of command(s) from a file or URL."""
         if arg is None:
@@ -1281,8 +1338,8 @@ class Cmd(cmd.Cmd):
         except IOError as e:
             self.perror('Problem accessing script from %s: \n%s' % (targetname, e))
             return
-        keepstate = Statekeeper(self, ('stdin','use_rawinput','prompt',
-                                       'continuation_prompt','current_script_dir'))
+        keepstate = Statekeeper(self, ('stdin', 'use_rawinput', 'prompt',
+                                       'continuation_prompt', 'current_script_dir'))
         self.stdin = target
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
@@ -1292,6 +1349,7 @@ class Cmd(cmd.Cmd):
         keepstate.restore()
         self.lastcmd = ''
         return stop and (stop != self._STOP_SCRIPT_NO_EXIT)
+
     do__load = do_load  # avoid an unfortunate legacy use of do_load from sqlpython
 
     def do_run(self, arg):
@@ -1307,6 +1365,7 @@ class Cmd(cmd.Cmd):
         self.pfeedback(runme)
         if runme:
             stop = self.onecmd_plus_hooks(runme)
+
     do_r = do_run
 
     def fileimport(self, statement, source):
@@ -1322,8 +1381,9 @@ class Cmd(cmd.Cmd):
     def runTranscriptTests(self, callargs):
         class TestMyAppCase(Cmd2TestCase):
             CmdApp = self.__class__
+
         self.__class__.testfiles = callargs
-        sys.argv = [sys.argv[0]] # the --test argument upsets unittest.main()
+        sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
         runner = unittest.TextTestRunner()
         result = runner.run(testcase)
@@ -1337,8 +1397,8 @@ class Cmd(cmd.Cmd):
     def cmdloop(self, intro=None):
         parser = optparse.OptionParser()
         parser.add_option('-t', '--test', dest='test',
-               action="store_true",
-               help='Test against transcript(s) in FILE (wildcards OK)')
+                          action="store_true",
+                          help='Test against transcript(s) in FILE (wildcards OK)')
         (callopts, callargs) = parser.parse_args()
         if callopts.test:
             self.runTranscriptTests(callargs)
@@ -1346,14 +1406,18 @@ class Cmd(cmd.Cmd):
             if not self.run_commands_at_invocation(callargs):
                 self._cmdloop()
 
+
 class HistoryItem(str):
     listformat = '-------------------------[%d]\n%s\n'
+
     def __init__(self, instr):
         str.__init__(self)
         self.lowercase = self.lower()
         self.idx = None
+
     def pr(self):
         return self.listformat % (self.idx, str(self))
+
 
 class History(list):
     '''A list of HistoryItems that knows how to respond to user requests.
@@ -1377,17 +1441,20 @@ class History(list):
     >>> h.search('/IR/')
     ['first', 'third']
     '''
+
     def zero_based_index(self, onebased):
         result = onebased
         if result > 0:
             result -= 1
         return result
+
     def to_index(self, raw):
         if raw:
             result = self.zero_based_index(int(raw))
         else:
             result = None
         return result
+
     def search(self, target):
         target = target.strip()
         if target[0] == target[-1] == '/' and len(target) > 1:
@@ -1396,7 +1463,9 @@ class History(list):
             target = re.escape(target)
         pattern = re.compile(target, re.IGNORECASE)
         return [s for s in self if pattern.search(s)]
+
     spanpattern = re.compile(r'^\s*(?P<start>\-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>\-?\d+)?\s*$')
+
     def span(self, raw):
         if raw.lower() in ('*', '-', 'all'):
             raw = ':'
@@ -1419,10 +1488,12 @@ class History(list):
         return result
 
     rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*\-\s*(?P<end>[\d]+)?\s*$')
+
     def append(self, new):
         new = HistoryItem(new)
         list.append(self, new)
         new.idx = len(self)
+
     def extend(self, new):
         for n in new:
             self.append(n)
@@ -1435,7 +1506,7 @@ class History(list):
             if getme < 0:
                 return self[:(-1 * getme)]
             else:
-                return [self[getme-1]]
+                return [self[getme - 1]]
         except IndexError:
             return []
         except ValueError:
@@ -1453,15 +1524,18 @@ class History(list):
 
             if getme.startswith(r'/') and getme.endswith(r'/'):
                 finder = re.compile(getme[1:-1], re.DOTALL | re.MULTILINE | re.IGNORECASE)
+
                 def isin(hi):
                     return finder.search(hi)
             else:
                 def isin(hi):
-                    return (getme.lower() in hi.lowercase)
+                    return getme.lower() in hi.lowercase
             return [itm for itm in self if isin(itm)]
+
 
 class NotSettableError(Exception):
     pass
+
 
 def cast(current, new):
     """Tries to force a new value into the same type as the current."""
@@ -1475,9 +1549,9 @@ def cast(current, new):
             new = new.lower()
         except:
             pass
-        if (new=='on') or (new[0] in ('y','t')):
+        if (new == 'on') or (new[0] in ('y', 't')):
             return True
-        if (new=='off') or (new[0] in ('n','f')):
+        if (new == 'off') or (new[0] in ('n', 'f')):
             return False
     else:
         try:
@@ -1487,42 +1561,52 @@ def cast(current, new):
     print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
     return current
 
+
 class Statekeeper(object):
     def __init__(self, obj, attribs):
         self.obj = obj
         self.attribs = attribs
         if self.obj:
             self.save()
+
     def save(self):
         for attrib in self.attribs:
             setattr(self, attrib, getattr(self.obj, attrib))
+
     def restore(self):
         if self.obj:
             for attrib in self.attribs:
                 setattr(self.obj, attrib, getattr(self, attrib))
 
+
 class Borg(object):
     '''All instances of any Borg subclass will share state.
     from Python Cookbook, 2nd Ed., recipe 6.16'''
     _shared_state = {}
+
     def __new__(cls, *a, **k):
         obj = object.__new__(cls, *a, **k)
         obj.__dict__ = cls._shared_state
         return obj
 
+
 class OutputTrap(Borg):
     '''Instantiate  an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
     Call `tearDown()` to return to normal output.'''
+
     def __init__(self):
         self.contents = ''
         self.old_stdout = sys.stdout
         sys.stdout = self
+
     def write(self, txt):
         self.contents += txt
+
     def read(self):
         result = self.contents
         self.contents = ''
         return result
+
     def tearDown(self):
         sys.stdout = self.old_stdout
         self.contents = ''
@@ -1533,6 +1617,7 @@ class Cmd2TestCase(unittest.TestCase):
        that will execute the commands in a transcript file and expect the results shown.
        See example.py'''
     CmdApp = None
+
     def fetchTranscripts(self):
         self.transcripts = {}
         for fileset in self.CmdApp.testfiles:
@@ -1542,22 +1627,26 @@ class Cmd2TestCase(unittest.TestCase):
                 tfile.close()
         if not len(self.transcripts):
             raise Exception("No test files found - nothing to test.")
+
     def setUp(self):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
             self.cmdapp = self.CmdApp()
             self.fetchTranscripts()
-    def runTest(self): # was testall
+
+    def runTest(self):  # was testall
         if self.CmdApp:
             its = sorted(self.transcripts.items())
             for (fname, transcript) in its:
                 self._test_transcript(fname, transcript)
+
     regexPattern = pyparsing.QuotedString(quoteChar=r'/', escChar='\\', multiline=True, unquoteResults=True)
     regexPattern.ignore(pyparsing.cStyleComment)
     notRegexPattern = pyparsing.Word(pyparsing.printables)
     notRegexPattern.setParseAction(lambda t: re.escape(t[0]))
     expectationParser = regexPattern | notRegexPattern
     anyWhitespace = re.compile(r'\s', re.DOTALL | re.MULTILINE)
+
     def _test_transcript(self, fname, transcript):
         lineNum = 0
         finished = False
@@ -1589,13 +1678,13 @@ class Cmd2TestCase(unittest.TestCase):
             command = ''.join(command)
             # Send the command into the application and capture the resulting output
             stop = self.cmdapp.onecmd_plus_hooks(command)
-            #TODO: should act on ``stop``
+            # TODO: should act on ``stop``
             result = self.outputTrap.read()
             # Read the expected result from transcript
             if line.startswith(self.cmdapp.prompt):
-                message = '\nFile %s, line %d\nCommand was:\n%r\nExpected: (nothing)\nGot:\n%r\n'%\
-                    (fname, lineNum, command, result)
-                self.assert_(not(result.strip()), message)
+                message = '\nFile %s, line %d\nCommand was:\n%r\nExpected: (nothing)\nGot:\n%r\n' % \
+                          (fname, lineNum, command, result)
+                self.assert_(not (result.strip()), message)
                 continue
             expected = []
             while not line.startswith(self.cmdapp.prompt):
@@ -1608,8 +1697,8 @@ class Cmd2TestCase(unittest.TestCase):
                 lineNum += 1
             expected = ''.join(expected)
             # Compare actual result to expected
-            message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n'%\
-                (fname, lineNum, command, expected, result)
+            message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % \
+                      (fname, lineNum, command, expected, result)
             expected = self.expectationParser.transformString(expected)
             # checking whitespace is a pain - let's skip it
             expected = self.anyWhitespace.sub('', expected)
@@ -1620,8 +1709,9 @@ class Cmd2TestCase(unittest.TestCase):
         if self.CmdApp:
             self.outputTrap.tearDown()
 
+
 if __name__ == '__main__':
-    doctest.testmod(optionflags = doctest.NORMALIZE_WHITESPACE)
+    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
 
 '''
 To make your application transcript-testable, replace
@@ -1645,5 +1735,3 @@ into a file, ``transcript.test``, and invoke the test like::
 
 Wildcards can be used to test against multiple transcript files.
 '''
-
-
