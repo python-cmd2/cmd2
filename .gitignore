@@ -4,3 +4,4 @@ dist
 cmd2.egg-info
 .idea
 *.pyc
+.cache
