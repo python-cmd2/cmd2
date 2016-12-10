@@ -8,9 +8,9 @@ tests_require = ['mock', 'pytest']
 
 setup(
     name="cmd2",
-    version="0.6.9",
+    version="0.7.0",
     py_modules=["cmd2"],
-    use_2to3=True,
+    use_2to3=False,
 
     # metadata for upload to PyPI
     author='Catherine Devlin',
