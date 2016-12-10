@@ -14,7 +14,7 @@ import cmd2
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.6.9a'
+    assert cmd2.__version__ == '0.7.0'
 
 
 def test_base_help(base_app):

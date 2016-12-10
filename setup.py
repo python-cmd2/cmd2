@@ -2,9 +2,9 @@
 # coding=utf-8
 from setuptools import setup
 
-install_requires = ['pyparsing >= 2.0.1']
+install_requires = ['pyparsing >= 2.0.1', 'six']
 
-tests_require = ['mock', 'pytest', 'six']
+tests_require = ['mock', 'pytest']
 
 setup(
     name="cmd2",

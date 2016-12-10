@@ -25,22 +25,24 @@ written to use `self.stdout.write()`,
 mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
 """
 import cmd
-import re
-import os
-import sys
-import optparse
-import subprocess
-import tempfile
-import doctest
-import unittest
-import datetime
-import glob
-import traceback
-import platform
 import copy
+import datetime
+import doctest
+import glob
+import optparse
+import os
+import platform
+import re
+import subprocess
+import sys
+import tempfile
+import traceback
+import unittest
 from code import InteractiveConsole
 from optparse import make_option
+
 import pyparsing
+import six
 
 # Possible types for text data. This is basestring() in Python 2 and str in Python 3.
 from six import string_types
@@ -48,10 +50,11 @@ from six import string_types
 # raw_input() for Python 2 or input() for Python 3
 from six.moves import input
 
+# itertools.zip() for Python 2 or zip() for Python 3 - produces an iterator in both cases
+from six.moves import zip
+
 # Python 2 urllib2.urlopen() or Python3  urllib.request.urlopen()
 from six.moves.urllib.request import urlopen
-
-__version__ = '0.6.9b'
 
 # Python 3 compatability hack due to no built-in file keyword in Python 3
 # Due to one occurence of isinstance(<foo>, file) checking to see if something is of file type
@@ -61,7 +64,9 @@ try:
 except ImportError:
     pass  # Python2
 
-if sys.version_info[0] == 2:
+__version__ = '0.7.0'
+
+if six.PY2:
     pyparsing.ParserElement.enablePackrat()
 
 """
@@ -82,11 +87,11 @@ class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
         self.values._exit = True
         if msg:
-            print (msg)
+            print(msg)
 
     def print_help(self, *args, **kwargs):
         try:
-            print (self._func.__doc__)
+            print(self._func.__doc__)
         except AttributeError:
             pass
         optparse.OptionParser.print_help(self, *args, **kwargs)
@@ -175,7 +180,7 @@ def options(option_list, arg_desc="arg"):
                 else:
                     arg = newArgs
             except optparse.OptParseError as e:
-                print (e)
+                print(e)
                 optionParser.print_help()
                 return
             if hasattr(opts, '_exit'):
@@ -444,7 +449,7 @@ class Cmd(cmd.Cmd):
     def perror(self, errmsg, statement=None):
         if self.debug:
             traceback.print_exc()
-        print (str(errmsg))
+        print(str(errmsg))
 
     def pfeedback(self, msg):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -453,7 +458,7 @@ class Cmd(cmd.Cmd):
             if self.feedback_to_output:
                 self.poutput(msg)
             else:
-                print (msg)
+                print(msg)
     _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
     _STOP_SCRIPT_NO_EXIT = -999
     editor = os.environ.get('EDITOR')
@@ -537,25 +542,25 @@ class Cmd(cmd.Cmd):
         >>> c.multilineCommands = ['multiline']
         >>> c.case_insensitive = True
         >>> c._init_parser()
-        >>> print (c.parser.parseString('').dump())
+        >>> print(c.parser.parseString('').dump())
         []
-        >>> print (c.parser.parseString('').dump())
+        >>> print(c.parser.parseString('').dump())
         []
-        >>> print (c.parser.parseString('/* empty command */').dump())
+        >>> print(c.parser.parseString('/* empty command */').dump())
         []
-        >>> print (c.parser.parseString('plainword').dump())
+        >>> print(c.parser.parseString('plainword').dump())
         ['plainword', '']
         - command: plainword
         - statement: ['plainword', '']
           - command: plainword
-        >>> print (c.parser.parseString('termbare;').dump())
+        >>> print(c.parser.parseString('termbare;').dump())
         ['termbare', '', ';', '']
         - command: termbare
         - statement: ['termbare', '', ';']
           - command: termbare
           - terminator: ;
         - terminator: ;
-        >>> print (c.parser.parseString('termbare; suffx').dump())
+        >>> print(c.parser.parseString('termbare; suffx').dump())
         ['termbare', '', ';', 'suffx']
         - command: termbare
         - statement: ['termbare', '', ';']
@@ -563,19 +568,19 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - suffix: suffx
         - terminator: ;
-        >>> print (c.parser.parseString('barecommand').dump())
+        >>> print(c.parser.parseString('barecommand').dump())
         ['barecommand', '']
         - command: barecommand
         - statement: ['barecommand', '']
           - command: barecommand
-        >>> print (c.parser.parseString('COMmand with args').dump())
+        >>> print(c.parser.parseString('COMmand with args').dump())
         ['command', 'with args']
         - args: with args
         - command: command
         - statement: ['command', 'with args']
           - args: with args
           - command: command
-        >>> print (c.parser.parseString('command with args and terminator; and suffix').dump())
+        >>> print(c.parser.parseString('command with args and terminator; and suffix').dump())
         ['command', 'with args and terminator', ';', 'and suffix']
         - args: with args and terminator
         - command: command
@@ -585,20 +590,20 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - suffix: and suffix
         - terminator: ;
-        >>> print (c.parser.parseString('simple | piped').dump())
+        >>> print(c.parser.parseString('simple | piped').dump())
         ['simple', '', '|', ' piped']
         - command: simple
         - pipeTo:  piped
         - statement: ['simple', '']
           - command: simple
-        >>> print (c.parser.parseString('double-pipe || is not a pipe').dump())
+        >>> print(c.parser.parseString('double-pipe || is not a pipe').dump())
         ['double', '-pipe || is not a pipe']
         - args: -pipe || is not a pipe
         - command: double
         - statement: ['double', '-pipe || is not a pipe']
           - args: -pipe || is not a pipe
           - command: double
-        >>> print (c.parser.parseString('command with args, terminator;sufx | piped').dump())
+        >>> print(c.parser.parseString('command with args, terminator;sufx | piped').dump())
         ['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
         - args: with args, terminator
         - command: command
@@ -609,7 +614,7 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - suffix: sufx
         - terminator: ;
-        >>> print (c.parser.parseString('output into > afile.txt').dump())
+        >>> print(c.parser.parseString('output into > afile.txt').dump())
         ['output', 'into', '>', 'afile.txt']
         - args: into
         - command: output
@@ -618,7 +623,7 @@ class Cmd(cmd.Cmd):
         - statement: ['output', 'into']
           - args: into
           - command: output
-        >>> print (c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump())
+        >>> print(c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump())
         ['output', 'into', ';', 'sufx', '|', ' pipethrume plz', '>', 'afile.txt']
         - args: into
         - command: output
@@ -631,7 +636,7 @@ class Cmd(cmd.Cmd):
           - terminator: ;
         - suffix: sufx
         - terminator: ;
-        >>> print (c.parser.parseString('output to paste buffer >> ').dump())
+        >>> print(c.parser.parseString('output to paste buffer >> ').dump())
         ['output', 'to paste buffer', '>>', '']
         - args: to paste buffer
         - command: output
@@ -639,7 +644,7 @@ class Cmd(cmd.Cmd):
         - statement: ['output', 'to paste buffer']
           - args: to paste buffer
           - command: output
-        >>> print (c.parser.parseString('ignore the /* commented | > */ stuff;').dump())
+        >>> print(c.parser.parseString('ignore the /* commented | > */ stuff;').dump())
         ['ignore', 'the /* commented | > */ stuff', ';', '']
         - args: the /* commented | > */ stuff
         - command: ignore
@@ -648,7 +653,7 @@ class Cmd(cmd.Cmd):
           - command: ignore
           - terminator: ;
         - terminator: ;
-        >>> print (c.parser.parseString('has > inside;').dump())
+        >>> print(c.parser.parseString('has > inside;').dump())
         ['has', '> inside', ';', '']
         - args: > inside
         - command: has
@@ -657,10 +662,10 @@ class Cmd(cmd.Cmd):
           - command: has
           - terminator: ;
         - terminator: ;
-        >>> print (c.parser.parseString('multiline has > inside an unfinished command').dump())
+        >>> print(c.parser.parseString('multiline has > inside an unfinished command').dump())
         ['multiline', ' has > inside an unfinished command']
         - multilineCommand: multiline
-        >>> print (c.parser.parseString('multiline has > inside;').dump())
+        >>> print(c.parser.parseString('multiline has > inside;').dump())
         ['multiline', 'has > inside', ';', '']
         - args: has > inside
         - multilineCommand: multiline
@@ -669,10 +674,10 @@ class Cmd(cmd.Cmd):
           - multilineCommand: multiline
           - terminator: ;
         - terminator: ;
-        >>> print (c.parser.parseString('multiline command /* with comment in progress;').dump())
+        >>> print(c.parser.parseString('multiline command /* with comment in progress;').dump())
         ['multiline', ' command /* with comment in progress;']
         - multilineCommand: multiline
-        >>> print (c.parser.parseString('multiline command /* with comment complete */ is done;').dump())
+        >>> print(c.parser.parseString('multiline command /* with comment complete */ is done;').dump())
         ['multiline', 'command /* with comment complete */ is done', ';', '']
         - args: command /* with comment complete */ is done
         - multilineCommand: multiline
@@ -681,7 +686,7 @@ class Cmd(cmd.Cmd):
           - multilineCommand: multiline
           - terminator: ;
         - terminator: ;
-        >>> print (c.parser.parseString('multiline command ends\n\n').dump())
+        >>> print(c.parser.parseString('multiline command ends\n\n').dump())
         ['multiline', 'command ends', '\n', '\n']
         - args: command ends
         - multilineCommand: multiline
@@ -690,7 +695,7 @@ class Cmd(cmd.Cmd):
           - multilineCommand: multiline
           - terminator: ['\n', '\n']
         - terminator: ['\n', '\n']
-        >>> print (c.parser.parseString('multiline command "with term; ends" now\n\n').dump())
+        >>> print(c.parser.parseString('multiline command "with term; ends" now\n\n').dump())
         ['multiline', 'command "with term; ends" now', '\n', '\n']
         - args: command "with term; ends" now
         - multilineCommand: multiline
@@ -699,7 +704,7 @@ class Cmd(cmd.Cmd):
           - multilineCommand: multiline
           - terminator: ['\n', '\n']
         - terminator: ['\n', '\n']
-        >>> print (c.parser.parseString('what if "quoted strings /* seem to " start comments?').dump())
+        >>> print(c.parser.parseString('what if "quoted strings /* seem to " start comments?').dump())
         ['what', 'if "quoted strings /* seem to " start comments?']
         - args: if "quoted strings /* seem to " start comments?
         - command: what
@@ -996,10 +1001,11 @@ class Cmd(cmd.Cmd):
              | a list of tuples -> interpreted as (value, text), so
                                    that the return value can differ from
                                    the text advertised to the user '''
+        local_opts = options
         if isinstance(options, string_types):
-            options = zip(options.split(), options.split())
+            local_opts = list(zip(options.split(), options.split()))
         fulloptions = []
-        for opt in options:
+        for opt in local_opts:
             if isinstance(opt, string_types):
                 fulloptions.append((opt, opt))
             else:
@@ -1474,7 +1480,7 @@ def cast(current, new):
             return typ(new)
         except:
             pass
-    print ("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
+    print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
     return current
 
 class Statekeeper(object):
@@ -1531,7 +1537,7 @@ class Cmd2TestCase(unittest.TestCase):
                 self.transcripts[fname] = iter(tfile.readlines())
                 tfile.close()
         if not len(self.transcripts):
-            raise StandardError("No test files found - nothing to test.")
+            raise Exception("No test files found - nothing to test.")
     def setUp(self):
         if self.CmdApp:
             self.outputTrap = OutputTrap()
@@ -1604,7 +1610,7 @@ class Cmd2TestCase(unittest.TestCase):
             # checking whitespace is a pain - let's skip it
             expected = self.anyWhitespace.sub('', expected)
             result = self.anyWhitespace.sub('', result)
-            self.assert_(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
+            self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
     def tearDown(self):
         if self.CmdApp:
