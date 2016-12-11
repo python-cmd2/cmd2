@@ -42,7 +42,6 @@ from code import InteractiveConsole
 from optparse import make_option
 
 import pyparsing
-import six
 
 # next(it) gets next item of iterator it. This is a replacement for calling it.next() in Python 2 and next(it) in Py3
 from six import next
@@ -62,11 +61,10 @@ from six.moves.urllib.request import urlopen
 # Python 3 compatability hack due to no built-in file keyword in Python 3
 # Due to one occurence of isinstance(<foo>, file) checking to see if something is of file type
 try:
+    file
+except NameError:
     import io
-
     file = io.TextIOWrapper
-except ImportError:
-    pass  # Python2
 
 __version__ = '0.7.0'
 
