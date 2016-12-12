@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 # Cmd2 unit/functional testing
 #

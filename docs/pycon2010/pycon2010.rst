@@ -11,7 +11,7 @@ Web 2.0
 
 .. image:: web-2-0-logos.gif
    :height: 350px
-   
+
 But first...
 ============
 
@@ -20,10 +20,10 @@ But first...
 
 .. image:: akkad.png
    :height: 250px
-   
+
 Sargon the Great
   Founder of Akkadian Empire
-  
+
 .. twenty-third century BC
 
 In between
@@ -31,16 +31,16 @@ In between
 
 .. image:: apple.jpg
    :height: 250px
- 
+
 Command-Line Interface
-  Unlike the Akkadian Empire, 
+  Unlike the Akkadian Empire,
   the CLI will never die.
 
 Defining CLI
 ============
 
 Also known as
-  
+
 - "Line-oriented command interpreter"
 - "Command-line interface"
 - "Shell"
@@ -85,24 +85,24 @@ Examples
 
 .. image:: urwid.png
    :height: 250px
-   
+
 
 Decide your priorities
 ======================
 
 .. image:: strategy.png
    :height: 350px
-   
+
 A ``cmd`` app: pirate.py
 ========================
 
 ::
 
    from cmd import Cmd
-   
+
    class Pirate(Cmd):
        pass
-   
+
    pirate = Pirate()
    pirate.cmdloop()
 
@@ -114,9 +114,9 @@ Fundamental prrrinciple
 =======================
 
 .. class:: huge
-     
-   ``(Cmd) foo a b c``  
-   
+
+   ``(Cmd) foo a b c``
+
    becomes
 
    ``self.do_foo('a b c')``
@@ -139,7 +139,7 @@ Fundamental prrrinciple
            print('Now we gots {0} doubloons'
                  .format(self.gold))
 
-.. do_methods; more help           
+.. do_methods; more help
 
 Hooks
 =====
@@ -163,16 +163,16 @@ Hooks: pirate3.py
         'Seize booty from a passing ship.'
         self.gold += 1
     def do_drink(self, arg):
-        'Drown your sorrrows in rrrum.'        
+        'Drown your sorrrows in rrrum.'
         self.gold -= 1
     def precmd(self, line):
         self.initial_gold = self.gold
         return line
-    def postcmd(self, stop, line):   
+    def postcmd(self, stop, line):
         if self.gold != self.initial_gold:
             print('Now we gots {0} doubloons'
                   .format(self.gold))
-           
+
 Arguments: pirate4.py
 =====================
 
@@ -180,22 +180,22 @@ Arguments: pirate4.py
 
         def do_drink(self, arg):
             '''Drown your sorrrows in rrrum.
-            
-            drink [n] - drink [n] barrel[s] o' rum.'''  
+
+            drink [n] - drink [n] barrel[s] o' rum.'''
             try:
                 self.gold -= int(arg)
             except:
                 if arg:
                     print('''What's "{0}"?  I'll take rrrum.'''
                           .format(arg))
-                self.gold -= 1            
-        
+                self.gold -= 1
+
 quitting: pirate5.py
 ====================
 
 ::
 
-    def postcmd(self, stop, line):   
+    def postcmd(self, stop, line):
         if self.gold != self.initial_gold:
             print('Now we gots {0} doubloons'
                   .format(self.gold))
@@ -205,7 +205,7 @@ quitting: pirate5.py
         return stop
     def do_quit(self, arg):
         print("Quiterrr!")
-        return True    
+        return True
 
 prompts, defaults: pirate6.py
 =============================
@@ -227,7 +227,7 @@ Other CLI packages
    * CMdO
    * pycopia
    * cmdlin
-   * cmd2                      
+   * cmd2
 
 Demo
 ====
@@ -258,7 +258,7 @@ Script files
 
 Commands at invocation
 
-Output redirection    
+Output redirection
 
 Python
 
@@ -273,9 +273,9 @@ But wait, there's more
     * Timing
     * Echo
     * Debug
-    
+
 Minor changes: pirate7.py
-=========================    
+=========================
 
 ::
 
@@ -287,18 +287,18 @@ Minor changes: pirate7.py
     Cmd.shortcuts.update({'~': 'sing'})
     def do_sing(self, arg):
         print(self.colorize(arg, self.songcolor))
-    
+
 Now how much would you pay?
 ===========================
 
 options / flags
 
-Quiet (suppress feedback) 
+Quiet (suppress feedback)
 
 BASH-style ``select``
 
 Parsing: terminators, suffixes
-        
+
 Options: pirate8.py
 ===================
 
@@ -307,13 +307,13 @@ Options: pirate8.py
     @options([make_option('--ho', type='int', default=2,
                           help="How often to chant 'ho'"),
               make_option('-c', '--commas',
-                          action="store_true", 
+                          action="store_true",
                           help="Intersperse commas")])
     def do_yo(self, arg, opts):
         chant = ['yo'] + ['ho'] * opts.ho
         separator = ', ' if opts.commas else ' '
         chant = separator.join(chant)
-	        print('{0} and a bottle of {1}'
+            print('{0} and a bottle of {1}'
                       .format(chant, arg))
 
 Serious example: sqlpython

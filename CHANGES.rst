@@ -44,3 +44,8 @@ News
 * Fix subprocess.mswindows bug
 * Add Python3.6 support
 * Drop distutils from setup.py
+
+0.7.0
+-----
+
+* Refactor to use six module for a unified codebase which supports both Python 2 and Python 3

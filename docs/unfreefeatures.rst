@@ -6,13 +6,13 @@ Multiline commands
 ==================
 
 Command input may span multiple lines for the
-commands whose names are listed in the 
+commands whose names are listed in the
 parameter ``app.multilineCommands``.  These
 commands will be executed only
 after the user has entered a *terminator*.
 By default, the command terminators is
 ``;``; replacing or appending to the list
-``app.terminators`` allows different 
+``app.terminators`` allows different
 terminators.  A blank line
 is *always* considered a command terminator
 (cannot be overridden).
@@ -21,17 +21,17 @@ Parsed statements
 =================
 
 ``cmd2`` passes ``arg`` to a ``do_`` method (or
-``default`) as a ParsedString, a subclass of 
+``default`) as a ParsedString, a subclass of
 string that includes an attribute ``parsed``.
 ``parsed`` is a ``pyparsing.ParseResults``
-object produced by applying a pyparsing_ 
+object produced by applying a pyparsing_
 grammar applied to ``arg``.  It may include:
 
 command
     Name of the command called
 
 raw
-    Full input exactly as typed.  
+    Full input exactly as typed.
 
 terminator
     Character used to end a multiline command
@@ -68,9 +68,9 @@ process are painfully complex and should not be
 considered stable; future ``cmd2`` releases may
 change it somewhat (hopefully reducing complexity).
 
-(Getting ``arg`` as a ``ParsedString`` is 
+(Getting ``arg`` as a ``ParsedString`` is
 technically "free", in that it requires no application
-changes from the cmd_ standard, but there will 
+changes from the cmd_ standard, but there will
 be no result unless you change your application
 to *use* ``arg.parsed``.)
 
@@ -83,7 +83,7 @@ to *use* ``arg.parsed``.)
 Environment parameters
 ======================
 
-Your application can define user-settable parameters 
+Your application can define user-settable parameters
 which your code can reference.  Create them as class attributes
 with their default values, and add them (with optional
 documentation) to ``settable``.
@@ -111,7 +111,7 @@ documentation) to ``settable``.
 
     (Cmd) set --long
     degrees_c: 22                  # temperature in Celsius
-    sunny: False                   # 
+    sunny: False                   #
     (Cmd) sunbathe
     Too dim.
     (Cmd) set sunny yes
@@ -135,7 +135,7 @@ a ``do_`` methods accept Unix-style *flags*.  It uses optparse_
 to parse the flags, and they work the same way as for
 that module.
 
-Flags are defined with the ``options`` decorator, 
+Flags are defined with the ``options`` decorator,
 which is passed a list of optparse_-style options,
 each created with ``make_option``.  The method
 should accept a second argument, ``opts``, in
@@ -180,19 +180,19 @@ the option's online help.
              arg_desc='(from city) (to city)')
     def do_travel(self, arg, opts=None):
         'Gets you from (from city) to (to city).'
-    
+
 
 ::
 
     (Cmd) help travel
     Gets you from (from city) to (to city).
     Usage: travel [options] (from-city) (to-city)
-        
+
     Options:
       -h, --help   show this help message and exit
       -t, --train  by train
-        
-.. _optparse: 
+
+.. _optparse:
 
 .. _outputters:
 
@@ -200,17 +200,17 @@ poutput, pfeedback, perror
 ==========================
 
 Standard ``cmd`` applications produce their output with ``self.stdout.write('output')`` (or with ``print``,
-but ``print`` decreases output flexibility).  ``cmd2`` applications can use 
+but ``print`` decreases output flexibility).  ``cmd2`` applications can use
 ``self.poutput('output')``, ``self.pfeedback('message')``, and ``self.perror('errmsg')``
 instead.  These methods have these advantages:
 
 - More concise
     - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
-    
+
 color
 =====
 
-Text output can be colored by wrapping it in the ``colorize`` method.  
+Text output can be colored by wrapping it in the ``colorize`` method.
 
 .. automethod:: cmd2.Cmd.colorize
 
@@ -221,7 +221,7 @@ quiet
 
 Controls whether ``self.pfeedback('message')`` output is suppressed;
 useful for non-essential feedback that the user may not always want
-to read.  ``quiet`` is only relevant if 
+to read.  ``quiet`` is only relevant if
 ``app.pfeedback`` is sometimes used.
 
 ``select``
@@ -234,13 +234,13 @@ Presents numbered options to user, as bash ``select``.
 .. automethod:: cmd2.Cmd.select
 
 ::
-    
+
     def do_eat(self, arg):
         sauce = self.select('sweet salty', 'Sauce? ')
         result = '{food} with {sauce} sauce, yum!'
         result = result.format(food=arg, sauce=sauce)
         self.stdout.write(result + '\n')
-            
+
 ::
 
     (Cmd) eat wheaties
@@ -248,4 +248,4 @@ Presents numbered options to user, as bash ``select``.
         2. salty
     Sauce? 2
     wheaties with salty sauce, yum!
-    
+

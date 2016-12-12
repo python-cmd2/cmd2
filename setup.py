@@ -1,24 +1,27 @@
 #!/usr/bin/python
-from setuptools import setup, find_packages
-import sys
+# coding=utf-8
+from setuptools import setup
 
-install_requires = ['pyparsing >= 2.0.1']
+install_requires = ['pyparsing >= 2.0.1', 'six']
+
+tests_require = ['mock', 'pytest']
 
 setup(
     name="cmd2",
-    version="0.6.9",
+    version="0.7.0",
     py_modules=["cmd2"],
-    use_2to3=True,
+    use_2to3=False,
 
     # metadata for upload to PyPI
-    author = 'Catherine Devlin',
-    author_email = 'catherine.devlin@gmail.com',
-    description = "Extra features for standard library's cmd module",
-    license = 'MIT',
-    keywords = 'command prompt console cmd',
-    url = 'http://packages.python.org/cmd2/',
-    install_requires = install_requires,
-    long_description = """Enhancements for standard library's cmd module.
+    author='Catherine Devlin',
+    author_email='catherine.devlin@gmail.com',
+    description="Extra features for standard library's cmd module",
+    license='MIT',
+    keywords='command prompt console cmd',
+    url='http://packages.python.org/cmd2/',
+    install_requires=install_requires,
+    tests_require=tests_require,
+    long_description="""Enhancements for standard library's cmd module.
 
 Drop-in replacement adds several features for command-prompt tools:
 
