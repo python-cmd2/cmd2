@@ -41,9 +41,6 @@ Drop-in replacement adds several features for command-prompt tools:
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 
-Running `2to3 <http://docs.python.org/library/2to3.html>` against ``cmd2.py``
-generates working, Python3-based code.
-
 See docs at http://packages.python.org/cmd2/
 """,
 

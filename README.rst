@@ -80,7 +80,7 @@ Instructions for implementing each feature follow.
 
     See Python standard library's `optparse` documentation: http://docs.python.org/lib/optparse-defining-options.html
 
-cmd2 can be installed with `easy_install cmd2`
+cmd2 can be installed from a Linux distribution or using `pip install cmd2`
 
 Cheese Shop page: http://pypi.python.org/pypi/cmd2
 
