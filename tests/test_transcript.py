@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 # Cmd2 functional testing based on transcript
 #
@@ -37,7 +38,7 @@ class CmdLineApp(Cmd):
             # self.stdout.write is better than "print", because Cmd can be
             # initialized with a non-standard output destination
 
-    do_say = do_speak    # now "say" is a synonym for "speak"
+    do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
 
@@ -45,7 +46,7 @@ class CmdLineApp(Cmd):
 def _cmdline_app():
     c = CmdLineApp()
     c.stdout = StdOut()
-    #c.shortcuts.update({'&': 'speak', 'h': 'hello'})
+    # c.shortcuts.update({'&': 'speak', 'h': 'hello'})
     c.settable.append('maxrepeats   Max number of `--repeat`s allowed')
     return c
 

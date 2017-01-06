@@ -1,3 +1,4 @@
+# coding=utf-8
 #
 # Cmd2 unit/functional testing
 #
@@ -6,18 +7,14 @@
 
 import mock
 import pytest
-
 from conftest import run_cmd, _normalize
-import cmd2
+from six import StringIO
 
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+import cmd2
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.6.9a'
+    assert cmd2.__version__ == '0.7.0'
 
 
 def test_base_help(base_app):

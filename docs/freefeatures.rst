@@ -51,8 +51,8 @@ Commands at invocation
 
 You can send commands to your app as you invoke it by
 including them as extra arguments to the program.
-``cmd2`` interprets each argument as a separate 
-command, so you should enclose each command in 
+``cmd2`` interprets each argument as a separate
+command, so you should enclose each command in
 quotation marks if it is more than a one-word command.
 
 ::
@@ -60,9 +60,9 @@ quotation marks if it is more than a one-word command.
   cat@eee:~/proj/cmd2/example$ python example.py "say hello" "say Gracie" quit
   hello
   Gracie
-  cat@eee:~/proj/cmd2/example$ 
+  cat@eee:~/proj/cmd2/example$
 
-  
+
 Output redirection
 ==================
 
@@ -75,7 +75,7 @@ As in a Unix shell, output of a command can be redirected:
     ending with a bare ``>``, as in ``mycommand args >``..  Redirecting
     to paste buffer requires software to be installed on the operating
     system, pywin32_ on Windows or xclip_ on \*nix.
-    
+
 If your application depends on mathematical syntax, ``>`` may be a bad
 choice for redirecting output - it will prevent you from using the
 greater-than sign in your actual user commands.  You can override your
@@ -83,7 +83,7 @@ app's value of ``self.redirector`` to use a different string for output redirect
 
     class MyApp(cmd2.Cmd):
         redirector = '->'
-        
+
 ::
 
     (Cmd) say line1 -> out.txt
@@ -94,7 +94,7 @@ app's value of ``self.redirector`` to use a different string for output redirect
 
 .. _pywin32: http://sourceforge.net/projects/pywin32/
 .. _xclip: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
-  
+
 Python
 ======
 
@@ -109,34 +109,34 @@ See see :ref:`parameters`)
 
 ::
 
-	(Cmd) py print("-".join("spelling"))
-	s-p-e-l-l-i-n-g
-	(Cmd) py
-	Python 2.6.4 (r264:75706, Dec  7 2009, 18:45:15) 
-	[GCC 4.4.1] on linux2
-	Type "help", "copyright", "credits" or "license" for more information.
-	(CmdLineApp)
+    (Cmd) py print("-".join("spelling"))
+    s-p-e-l-l-i-n-g
+    (Cmd) py
+    Python 2.6.4 (r264:75706, Dec  7 2009, 18:45:15)
+    [GCC 4.4.1] on linux2
+    Type "help", "copyright", "credits" or "license" for more information.
+    (CmdLineApp)
 
-		py <command>: Executes a Python command.
-		py: Enters interactive Python mode.
-		End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, 'exit()`.
-		Non-python commands can be issued with `cmd("your command")`.
-		
-	>>> import os
-	>>> os.uname()
-	('Linux', 'eee', '2.6.31-19-generic', '#56-Ubuntu SMP Thu Jan 28 01:26:53 UTC 2010', 'i686')
-	>>> cmd("say --piglatin {os}".format(os=os.uname()[0]))
-	inuxLay
-	>>> self.prompt
-	'(Cmd) '
-	>>> self.prompt = 'Python was here > '
-	>>> quit()
-	Python was here > 
+        py <command>: Executes a Python command.
+        py: Enters interactive Python mode.
+        End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, 'exit()`.
+        Non-python commands can be issued with `cmd("your command")`.
+
+    >>> import os
+    >>> os.uname()
+    ('Linux', 'eee', '2.6.31-19-generic', '#56-Ubuntu SMP Thu Jan 28 01:26:53 UTC 2010', 'i686')
+    >>> cmd("say --piglatin {os}".format(os=os.uname()[0]))
+    inuxLay
+    >>> self.prompt
+    '(Cmd) '
+    >>> self.prompt = 'Python was here > '
+    >>> quit()
+    Python was here >
 
 Searchable command history
 ==========================
 
-All cmd_-based applications have access to previous commands with 
+All cmd_-based applications have access to previous commands with
 the up- and down- cursor keys.
 
 All cmd_-based applications on systems with the ``readline`` module
@@ -155,7 +155,7 @@ also provide `bash-like history list editing`_.
 Quitting the application
 ========================
 
-``cmd2`` pre-defines a ``quit`` command for you (with 
+``cmd2`` pre-defines a ``quit`` command for you (with
 synonyms ``exit`` and simply ``q``).
 It's trivial, but it's one less thing for you to remember.
 
@@ -164,14 +164,14 @@ Abbreviated commands
 ====================
 
 ``cmd2`` apps will accept shortened command names
-so long as there is no ambiguity.  Thus, if 
+so long as there is no ambiguity.  Thus, if
 ``do_divide`` is defined, then ``divid``, ``div``,
 or even ``d`` will suffice, so long as there are
 no other commands defined beginning with *divid*,
 *div*, or *d*.
 
 This behavior can be turned off with ``app.abbrev`` (see :ref:`parameters`)
-  
+
 Misc. pre-defined commands
 ==========================
 
@@ -196,12 +196,12 @@ a ``cmd2``-based app is copied from the screen and pasted into a text
 file, ``transcript.txt``, then a transcript test can be run against it::
 
   python app.py --test transcript.txt
-  
+
 Any non-whitespace deviations between the output prescribed in ``transcript.txt`` and
 the actual output from a fresh run of the application will be reported
 as a unit test failure.  (Whitespace is ignored during the comparison.)
 
-Regular expressions can be embedded in the transcript inside paired ``/`` 
+Regular expressions can be embedded in the transcript inside paired ``/``
 slashes.  These regular expressions should not include any whitespace
 expressions.
 
