@@ -12,7 +12,7 @@ EOF  eof  exit  help  q  quit
 
 (Cmd) help say
 Repeats what you tell me to.
-Usage: speak [options] (text to say)
+Usage: speak [options] arg
 
 Options:
   -h, --help            show this help message and exit
@@ -31,14 +31,14 @@ OODNIGHT, GRACIEGAY
 abbrev: True
 case_insensitive: True
 colors: True
-continuation_prompt: > 
+continuation_prompt: >
 debug: False
 default_file_name: command.txt
 echo: False
-editor: /\w*/
+editor: gedit
 feedback_to_output: False
 maxrepeats: 3
-prompt: (Cmd) 
+prompt: (Cmd)
 quiet: False
 timing: False
 (Cmd) set maxrepeats 5
@@ -67,6 +67,7 @@ set maxrepeats 5
 say -ps --repeat=5 goodnight, Gracie
 (Cmd) run 4
 say -ps --repeat=5 goodnight, Gracie
+
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
@@ -75,15 +76,13 @@ OODNIGHT, GRACIEGAY
 (Cmd) orate Four score and
 > seven releases ago
 > our BDFL
-> 
+> blah blah blah
 Four score and
 seven releases ago
 our BDFL
+blah blah blah
 (Cmd) & look, a shortcut!
 look, a shortcut!
-(Cmd) say put this in a file > myfile.txt
-(Cmd) say < myfile.txt
-put this in a file
 (Cmd) set prompt "---> "
 prompt - was: (Cmd)
 now: --->
