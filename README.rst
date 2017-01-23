@@ -80,9 +80,11 @@ Instructions for implementing each feature follow.
 
     See Python standard library's `optparse` documentation: http://docs.python.org/lib/optparse-defining-options.html
 
-cmd2 can be installed from a Linux distribution or using `pip install cmd2`
+cmd2 can be installed from a Linux distribution using their default package manager or `pip install cmd2`
 
 Cheese Shop page: http://pypi.python.org/pypi/cmd2
+
+A nice step-by-step tutorial: https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
 
 Example cmd2 application (example/example.py) ::
 
