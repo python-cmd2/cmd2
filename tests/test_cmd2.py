@@ -121,7 +121,7 @@ def test_base_shell(base_app, monkeypatch):
 def test_base_py(base_app):
     out = run_cmd(base_app, 'py qqq=3')
     assert out == []
-    out = run_cmd(base_app, 'py print qqq')
+    out = run_cmd(base_app, 'py print(qqq)')
     assert out == []
     # TODO: check stderr
 
