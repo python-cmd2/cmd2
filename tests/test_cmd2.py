@@ -103,10 +103,8 @@ now: True
     assert out == ['quiet: True']
 
 
-def test_base_set_not_supported(capsys):
-    app = cmd2.Cmd()
-    cmd = 'set qqq True'
-    app.onecmd_plus_hooks(cmd)
+def test_base_set_not_supported(base_app, capsys):
+    run_cmd(base_app, 'set qqq True')
     out, err = capsys.readouterr()
     assert out.rstrip() == "Parameter 'qqq' not supported (type 'show' for list of parameters)."
 
@@ -120,12 +118,13 @@ def test_base_shell(base_app, monkeypatch):
     m.assert_called_with('echo a')
 
 
-def test_base_py(base_app):
-    out = run_cmd(base_app, 'py qqq=3')
-    assert out == []
-    out = run_cmd(base_app, 'py print(qqq)')
-    assert out == []
-    # TODO: check stderr
+def test_base_py(base_app, capsys):
+    run_cmd(base_app, 'py qqq=3')
+    out, err = capsys.readouterr()
+    assert out == ''
+    run_cmd(base_app, 'py print(qqq)')
+    out, err = capsys.readouterr()
+    assert out.rstrip() == '3'
 
 
 def test_base_error(base_app):
