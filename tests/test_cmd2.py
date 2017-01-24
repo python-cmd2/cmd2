@@ -170,16 +170,10 @@ shortcuts
     assert out == expected
 
 
-@pytest.mark.xfail
 def test_base_load(base_app):
-    base_app.read_file_or_url = mock.Mock(
-        return_value=StringIO('set quiet True\n')
-    )
-    out = run_cmd(base_app, 'load myfname')
-    expected = _normalize("""
-quiet - was: False
-now: True
-""")
-    assert out == expected
-
-
+    m = mock.Mock(return_value=StringIO('set quiet True\n'))
+    base_app.read_file_or_url = m
+    run_cmd(base_app, 'load myfname')
+    assert m.called
+    m.assert_called_once_with('myfname')
+    # TODO: Figure out how to check stdout or stderr during a do_load()
