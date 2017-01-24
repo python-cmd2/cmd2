@@ -22,7 +22,7 @@ written to use `self.stdout.write()`,
 
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
-mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
+Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
 import cmd
 import copy

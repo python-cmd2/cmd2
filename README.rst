@@ -82,7 +82,7 @@ Instructions for implementing each feature follow.
 
 cmd2 can be installed from a Linux distribution using their default package manager or `pip install cmd2`
 
-Cheese Shop page: http://pypi.python.org/pypi/cmd2
+PyPI page: http://pypi.python.org/pypi/cmd2
 
 A nice step-by-step tutorial: https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
 
@@ -164,20 +164,6 @@ example/exampleSession.txt::
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
-    (Cmd) set
-    abbrev: True
-    case_insensitive: True
-    colors: True
-    continuation_prompt: >
-    debug: False
-    default_file_name: command.txt
-    echo: False
-    editor: gedit
-    feedback_to_output: False
-    maxrepeats: 3
-    prompt: (Cmd)
-    quiet: False
-    timing: False
     (Cmd) set maxrepeats 5
     maxrepeats - was: 3
     now: 5
@@ -197,10 +183,8 @@ example/exampleSession.txt::
     -------------------------[4]
     say -ps --repeat=5 goodnight, Gracie
     -------------------------[5]
-    set
-    -------------------------[6]
     set maxrepeats 5
-    -------------------------[7]
+    -------------------------[6]
     say -ps --repeat=5 goodnight, Gracie
     (Cmd) run 4
     say -ps --repeat=5 goodnight, Gracie
