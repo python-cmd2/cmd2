@@ -22,7 +22,7 @@ written to use `self.stdout.write()`,
 
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
-mercurial repository at http://www.assembla.com/wiki/show/python-cmd2
+Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
 import cmd
 import copy
@@ -1130,9 +1130,20 @@ class Cmd(cmd.Cmd):
         '''
         self.pystate['self'] = self
         arg = arg.parsed.raw[2:].strip()
+
+        # Support the run command even if called prior to invoking an interactive interpreter
+        def run(arg):
+            try:
+                with open(arg) as f:
+                    interp.runcode(f.read())
+            except IOError as e:
+                self.perror(e)
+        self.pystate['run'] = run
+
         localvars = (self.locals_in_py and self.pystate) or {}
         interp = InteractiveConsole(locals=localvars)
         interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
+
         if arg.strip():
             interp.runcode(arg)
         else:
@@ -1142,18 +1153,9 @@ class Cmd(cmd.Cmd):
             def onecmd_plus_hooks(arg):
                 return self.onecmd_plus_hooks(arg + '\n')
 
-            def run(arg):
-                try:
-                    file = open(arg)
-                    interp.runcode(file.read())
-                    file.close()
-                except IOError as e:
-                    self.perror(e)
-
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
             self.pystate['cmd'] = onecmd_plus_hooks
-            self.pystate['run'] = run
             keepstate = None
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'

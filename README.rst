@@ -82,7 +82,7 @@ Instructions for implementing each feature follow.
 
 cmd2 can be installed from a Linux distribution using their default package manager or `pip install cmd2`
 
-Cheese Shop page: http://pypi.python.org/pypi/cmd2
+PyPI page: http://pypi.python.org/pypi/cmd2
 
 A nice step-by-step tutorial: https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
 
@@ -90,14 +90,16 @@ Example cmd2 application (example/example.py) ::
 
     '''A sample application for cmd2.'''
 
-    from cmd2 import Cmd, make_option, options, Cmd2TestCase
-    import unittest, optparse, sys
+    from cmd2 import Cmd, make_option, options
 
     class CmdLineApp(Cmd):
         multilineCommands = ['orate']
         Cmd.shortcuts.update({'&': 'speak'})
         maxrepeats = 3
         Cmd.settable.append('maxrepeats')
+
+        # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
+        # default_to_shell = True
 
         @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
                   make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
@@ -120,24 +122,14 @@ Example cmd2 application (example/example.py) ::
         do_say = do_speak     # now "say" is a synonym for "speak"
         do_orate = do_speak   # another synonym, but this one takes multi-line input
 
-    class TestMyAppCase(Cmd2TestCase):
-        CmdApp = CmdLineApp
-        transcriptFileName = 'exampleSession.txt'
-
-    parser = optparse.OptionParser()
-    parser.add_option('-t', '--test', dest='unittests', action='store_true', default=False, help='Run unit test suite')
-    (callopts, callargs) = parser.parse_args()
-    if callopts.unittests:
-        sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
-        unittest.main()
-    else:
-        app = CmdLineApp()
-        app.cmdloop()
+    if __name__ == '__main__':
+        c = CmdLineApp()
+        c.cmdloop()
 
 The following is a sample session running example.py.
-Thanks to `TestMyAppCase(Cmd2TestCase)`, it also serves as a test
+Thanks to Cmd2's built-in transcript testing capability, it also serves as a test
 suite for example.py when saved as `exampleSession.txt`.
-Running `python example.py -t` will run all the commands in the
+Running `python example.py -t exampleSession.txt` will run all the commands in the
 transcript against `example.py`, verifying that the output produced
 matches the transcript.
 
@@ -147,12 +139,13 @@ example/exampleSession.txt::
 
     Documented commands (type help <topic>):
     ========================================
-    _load  edit  history  li    load   pause  run   say  shell      show
-    ed     hi    l        list  orate  r      save  set  shortcuts  speak
+    _load           ed    history  list   pause  run   set        show
+    _relative_load  edit  l        load   py     save  shell      speak
+    cmdenvironment  hi    li       orate  r      say   shortcuts
 
     Undocumented commands:
     ======================
-    EOF  cmdenvironment  eof  exit  help  q  quit
+    EOF  eof  exit  help  q  quit
 
     (Cmd) help say
     Repeats what you tell me to.
@@ -171,11 +164,6 @@ example/exampleSession.txt::
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
-    (Cmd) set
-    prompt: (Cmd)
-    editor: gedit
-    echo: False
-    maxrepeats: 3
     (Cmd) set maxrepeats 5
     maxrepeats - was: 3
     now: 5
@@ -195,13 +183,12 @@ example/exampleSession.txt::
     -------------------------[4]
     say -ps --repeat=5 goodnight, Gracie
     -------------------------[5]
-    set
-    -------------------------[6]
     set maxrepeats 5
-    -------------------------[7]
+    -------------------------[6]
     say -ps --repeat=5 goodnight, Gracie
     (Cmd) run 4
     say -ps --repeat=5 goodnight, Gracie
+
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
     OODNIGHT, GRACIEGAY
@@ -211,17 +198,14 @@ example/exampleSession.txt::
     > seven releases ago
     > our BDFL
     > blah blah blah
-    >
-    >
-    Four score and seven releases ago our BDFL blah blah blah
+    Four score and
+    seven releases ago
+    our BDFL
+    blah blah blah
     (Cmd) & look, a shortcut!
     look, a shortcut!
-    (Cmd) say put this in a file > myfile.txt
-    (Cmd) say < myfile.txt
-    put this in a file
     (Cmd) set prompt "---> "
     prompt - was: (Cmd)
     now: --->
     ---> say goodbye
     goodbye
-

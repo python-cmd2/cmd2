@@ -103,10 +103,10 @@ now: True
     assert out == ['quiet: True']
 
 
-def test_base_set_not_supported(base_app):
-    out = run_cmd(base_app, 'set qqq True')
-    assert out == []
-    # TODO: check stderr
+def test_base_set_not_supported(base_app, capsys):
+    run_cmd(base_app, 'set qqq True')
+    out, err = capsys.readouterr()
+    assert out.rstrip() == "Parameter 'qqq' not supported (type 'show' for list of parameters)."
 
 
 def test_base_shell(base_app, monkeypatch):
@@ -118,12 +118,13 @@ def test_base_shell(base_app, monkeypatch):
     m.assert_called_with('echo a')
 
 
-def test_base_py(base_app):
-    out = run_cmd(base_app, 'py qqq=3')
-    assert out == []
-    out = run_cmd(base_app, 'py print qqq')
-    assert out == []
-    # TODO: check stderr
+def test_base_py(base_app, capsys):
+    run_cmd(base_app, 'py qqq=3')
+    out, err = capsys.readouterr()
+    assert out == ''
+    run_cmd(base_app, 'py print(qqq)')
+    out, err = capsys.readouterr()
+    assert out.rstrip() == '3'
 
 
 def test_base_error(base_app):
@@ -169,16 +170,10 @@ shortcuts
     assert out == expected
 
 
-@pytest.mark.xfail
 def test_base_load(base_app):
-    base_app.read_file_or_url = mock.Mock(
-        return_value=StringIO('set quiet True\n')
-    )
-    out = run_cmd(base_app, 'load myfname')
-    expected = _normalize("""
-quiet - was: False
-now: True
-""")
-    assert out == expected
-
-
+    m = mock.Mock(return_value=StringIO('set quiet True\n'))
+    base_app.read_file_or_url = m
+    run_cmd(base_app, 'load myfname')
+    assert m.called
+    m.assert_called_once_with('myfname')
+    # TODO: Figure out how to check stdout or stderr during a do_load()
