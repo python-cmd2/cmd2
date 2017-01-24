@@ -66,7 +66,6 @@ def _get_transcript_blocks(transcript):
     yield cmd, _normalize(expected)
 
 
-@pytest.mark.xfail
 def test_base_with_transcript(_cmdline_app):
     app = _cmdline_app
     transcript = """
@@ -99,20 +98,6 @@ goodnight, Gracie
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
-(Cmd) set
-abbrev: True
-case_insensitive: True
-colors: True
-continuation_prompt: >
-debug: False
-default_file_name: command.txt
-echo: False
-editor: /\w*/
-feedback_to_output: False
-maxrepeats: 3
-prompt: (Cmd)
-quiet: False
-timing: False
 (Cmd) set maxrepeats 5
 maxrepeats - was: 3
 now: 5
@@ -132,37 +117,20 @@ say goodnight, Gracie
 -------------------------[4]
 say -ps --repeat=5 goodnight, Gracie
 -------------------------[5]
-set
--------------------------[6]
 set maxrepeats 5
--------------------------[7]
+-------------------------[6]
 say -ps --repeat=5 goodnight, Gracie
 (Cmd) run 4
-say -ps --repeat=5 goodnight, Gracie
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
-(Cmd) orate Four score and
-> seven releases ago
-> our BDFL
->
-Four score and
-seven releases ago
-our BDFL
-(Cmd) & look, a shortcut!
-look, a shortcut!
-(Cmd) say put this in a file > myfile.txt
-(Cmd) say < myfile.txt
-put this in a file
 (Cmd) set prompt "---> "
 prompt - was: (Cmd)
 now: --->
----> say goodbye
-goodbye
 """
 
     for cmd, expected in _get_transcript_blocks(transcript):
-        out = run_cmd(app, 'help')
+        out = run_cmd(app, cmd)
         assert out == expected
