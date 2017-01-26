@@ -26,10 +26,8 @@ matrix:
           python: pypy
           env: TOXENV=pypy
         - os: osx
-          python: 2.7
+          language: generic
           env: TOXENV=py27
         - os: osx
-          python: 3.5
+          language: generic
           env: TOXENV=py35
-
-
