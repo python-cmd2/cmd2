@@ -6,7 +6,6 @@
 # Released under MIT license, see LICENSE file
 
 import mock
-import pytest
 from conftest import run_cmd, _normalize
 from six import StringIO
 
@@ -72,11 +71,15 @@ def notest_base_(base_app):
 
 
 def test_base_show(base_app):
+    import sys
     out = run_cmd(base_app, 'show')
+    expect_colors = True
+    if sys.platform.startswith('win'):
+        expect_colors = False
     expected = _normalize("""
 abbrev: True
 case_insensitive: True
-colors: True
+colors: {}
 continuation_prompt: >
 debug: False
 default_file_name: command.txt
@@ -85,7 +88,7 @@ feedback_to_output: False
 prompt: (Cmd)
 quiet: False
 timing: False
-""")
+""".format(expect_colors))
     # ignore "editor: vi" (could be others)
     out = [l for l in out if not l.startswith('editor: ')]
     assert out == expected
