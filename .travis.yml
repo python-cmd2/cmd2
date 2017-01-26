@@ -26,10 +26,12 @@ matrix:
           python: pypy
           env: TOXENV=pypy
         - os: osx
-          sudo: true
-          python: 2.7
-          env: TOXENV=py27
+          language: objective-c
+          env:
+            - TOXENV=py27
+            - PYENV_VERSION=2.7.12
         - os: osx
-          sudo: true
-          python: 3.5
-          env: TOXENV=py35
+          language: objective-c
+          env:
+            - TOXENV=py35
+            - PYENV_VERSION=3.5.2
