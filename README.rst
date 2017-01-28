@@ -6,6 +6,10 @@ cmd2
    :target: http://travis-ci.org/python-cmd2/cmd2
    :alt: Build status
 
+.. image:: https://ci.appveyor.com/api/projects/status/github/python-cmd2/cmd2
+   :target: http://travis-ci.org/python-cmd2/cmd2
+   :alt: Appveyor build status
+
 .. image:: https://img.shields.io/pypi/dm/cmd2.svg?style=plastic
    :target: https://pypi.python.org/pypi/cmd2/
    :alt: Downloads
