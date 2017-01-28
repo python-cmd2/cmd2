@@ -3,11 +3,11 @@ cmd2
 ----
 
 .. image:: https://secure.travis-ci.org/python-cmd2/cmd2.png?branch=master
-   :target: http://travis-ci.org/python-cmd2/cmd2
+   :target: https://travis-ci.org/python-cmd2/cmd2
    :alt: Build status
 
 .. image:: https://ci.appveyor.com/api/projects/status/github/python-cmd2/cmd2
-   :target: http://travis-ci.org/python-cmd2/cmd2
+   :target: https://ci.appveyor.com/project/FedericoCeratto/cmd2
    :alt: Appveyor build status
 
 .. image:: https://img.shields.io/pypi/dm/cmd2.svg?style=plastic
