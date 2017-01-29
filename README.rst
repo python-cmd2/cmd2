@@ -10,6 +10,9 @@ cmd2
    :target: https://ci.appveyor.com/project/FedericoCeratto/cmd2
    :alt: Appveyor build status
 
+.. image:: https://readthedocs.org/projects/cmd2/badge/?version=latest
+    :target: https://cmd2.readthedocs.io
+
 .. image:: https://img.shields.io/pypi/dm/cmd2.svg?style=plastic
    :target: https://pypi.python.org/pypi/cmd2/
    :alt: Downloads

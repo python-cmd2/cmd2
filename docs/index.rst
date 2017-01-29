@@ -10,8 +10,8 @@ A python package for building powerful command-line interpreter (CLI)
 programs.  Extends the Python Standard Library's cmd_ package.
 
 
-.. _`cmd2 project page`: https://bitbucket.org/catherinedevlin/cmd2
-.. _`project bug tracker`: https://bitbucket.org/catherinedevlin/cmd2/issues
+.. _`cmd2 project page`: https://github.com/python-cmd2/cmd2
+.. _`project bug tracker`: https://github.com/python-cmd2/cmd2/issues
 
 .. _cmd: http://docs.python.org/library/cmd.html#module-cmd
 
@@ -60,7 +60,7 @@ Contents:
 Compatibility
 =============
 
-Tested and working with Python 2.7, 3.5, 3.6
+Tested and working with Python 2.7 and 3.3+.
 
 Indices and tables
 ==================
