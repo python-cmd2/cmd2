@@ -86,7 +86,7 @@ Instructions for implementing each feature follow.
 
 cmd2 can be installed from a Linux distribution using their default package manager or `pip install cmd2`
 
-**Official documentation** for the  `latest release <http://cmd2.readthedocs.io/en/stable/>`_ and `development <http://cmd2.readthedocs.io/en/latest/>`_
+**Official documentation** for the  `latest release <http://cmd2.readthedocs.io/en/stable/>`_, `development <http://cmd2.readthedocs.io/en/latest/>`_ and `0.6.9 <http://cmd2.readthedocs.io/en/0.6.9/>`_
 
 PyPI page: http://pypi.python.org/pypi/cmd2
 
