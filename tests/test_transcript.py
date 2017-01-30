@@ -155,7 +155,8 @@ Options:
   -s, --shout           N00B EMULATION MODE
   -r REPEAT, --repeat=REPEAT
                         output [n] times""")
-    assert _normalize(out) == expected
+    # NOTE: For some reason this extra cast to str is required for Python 2.7 but not 3.x
+    assert _normalize(str(out)) == expected
 
 
 def test_optparser_nosuchoption(_cmdline_app, capsys):
@@ -172,7 +173,7 @@ Options:
   -s, --shout           N00B EMULATION MODE
   -r REPEAT, --repeat=REPEAT
                         output [n] times""")
-    assert _normalize(out) == expected
+    assert _normalize(str(out)) == expected
 
 
 def test_comment_stripping(_cmdline_app):
