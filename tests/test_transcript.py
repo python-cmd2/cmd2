@@ -1,13 +1,14 @@
 # coding=utf-8
-#
-# Cmd2 functional testing based on transcript
-#
-# Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
-# Released under MIT license, see LICENSE file
+"""
+Cmd2 functional testing based on transcript
+
+Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
+Released under MIT license, see LICENSE file
+"""
 
 import pytest
 
-from cmd2 import Cmd, make_option, options
+from cmd2 import Cmd, make_option, options, Cmd2TestCase
 from conftest import run_cmd, StdOut, _normalize
 
 
@@ -134,3 +135,51 @@ now: --->
     for cmd, expected in _get_transcript_blocks(transcript):
         out = run_cmd(app, cmd)
         assert out == expected
+
+
+class TestMyAppCase(Cmd2TestCase):
+    CmdApp = CmdLineApp
+    CmdApp.testfiles = ['tests/transcript.txt']
+
+
+def test_optparser(_cmdline_app, capsys):
+    run_cmd(_cmdline_app, 'say -h')
+    out, err = capsys.readouterr()
+    expected = _normalize("""
+Repeats what you tell me to.
+Usage: speak [options] (text to say)
+
+Options:
+  -h, --help            show this help message and exit
+  -p, --piglatin        atinLay
+  -s, --shout           N00B EMULATION MODE
+  -r REPEAT, --repeat=REPEAT
+                        output [n] times""")
+    # NOTE: For some reason this extra cast to str is required for Python 2.7 but not 3.x
+    assert _normalize(str(out)) == expected
+
+
+def test_optparser_nosuchoption(_cmdline_app, capsys):
+    run_cmd(_cmdline_app, 'say -a')
+    out, err = capsys.readouterr()
+    expected = _normalize("""
+no such option: -a
+Repeats what you tell me to.
+Usage: speak [options] (text to say)
+
+Options:
+  -h, --help            show this help message and exit
+  -p, --piglatin        atinLay
+  -s, --shout           N00B EMULATION MODE
+  -r REPEAT, --repeat=REPEAT
+                        output [n] times""")
+    assert _normalize(str(out)) == expected
+
+
+def test_comment_stripping(_cmdline_app):
+    out = run_cmd(_cmdline_app, 'speak it was /* not */ delicious! # Yuck!')
+    expected = _normalize("""it was  delicious!""")
+    assert out == expected
+
+
+

@@ -1,10 +1,11 @@
 # coding=utf-8
-#
-# Cmd2 unit/functional testing
-#
-# Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
-# Released under MIT license, see LICENSE file
+"""
+Cmd2 unit/functional testing
 
+Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
+Released under MIT license, see LICENSE file
+"""
+import os
 import mock
 from conftest import run_cmd, _normalize
 from six import StringIO
@@ -180,3 +181,73 @@ def test_base_load(base_app):
     assert m.called
     m.assert_called_once_with('myfname')
     # TODO: Figure out how to check stdout or stderr during a do_load()
+
+
+def test_base_cmdenvironment(base_app):
+    out = run_cmd(base_app, 'cmdenvironment')
+    expected = _normalize("""
+
+        Commands are not case-sensitive.
+        Commands may be terminated with: [';']
+""")
+    assert out[:2] == expected[:2]
+    assert out[2].strip().startswith('Settable parameters: ')
+
+    # Settable parameters can be listed in any order, so need to validate carefully using unordered sets
+    settable_params = set(['continuation_prompt', 'default_file_name', 'prompt', 'abbrev', 'quiet',
+                           'case_insensitive', 'colors', 'echo',  'timing', 'editor',
+                           'feedback_to_output', 'debug'])
+    out_params = set(out[2].split("Settable parameters: ")[1].split())
+
+    assert settable_params == out_params
+
+
+def test_base_save(base_app, capsys):
+    # TODO: Use a temporary directory for the file
+    filename = 'deleteme.txt'
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'help save')
+    run_cmd(base_app, 'save * {}'.format(filename))
+    out, err = capsys.readouterr()
+    assert out == 'Saved to {}\n'.format(filename)
+
+    expected = _normalize("""
+help
+
+help save
+
+save * deleteme.txt
+""")
+
+    with open(filename) as f:
+        content = _normalize(f.read())
+
+    assert content == expected
+
+    # Delete file that was created
+    os.remove(filename)
+
+
+def test_output_redirection(base_app):
+    # TODO: Use a temporary directory/file for this file
+    filename = 'out.txt'
+    run_cmd(base_app, 'help > {}'.format(filename))
+    expected = _normalize("""
+Documented commands (type help <topic>):
+========================================
+_load           ed    history  list   py   save   shortcuts
+_relative_load  edit  l        load   r    set    show
+cmdenvironment  hi    li       pause  run  shell
+
+Undocumented commands:
+======================
+EOF  eof  exit  help  q  quit
+""")
+
+    with open(filename) as f:
+        content = _normalize(f.read())
+
+    assert content == expected
+
+    # Delete file that was created
+    os.remove(filename)
