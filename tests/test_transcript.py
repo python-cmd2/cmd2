@@ -137,6 +137,39 @@ now: --->
         assert out == expected
 
 
+def test_optparser(_cmdline_app, capsys):
+    run_cmd(_cmdline_app, 'say -h')
+    out, err = capsys.readouterr()
+    expected = _normalize("""
+Repeats what you tell me to.
+Usage: speak [options] (text to say)
+
+Options:
+  -h, --help            show this help message and exit
+  -p, --piglatin        atinLay
+  -s, --shout           N00B EMULATION MODE
+  -r REPEAT, --repeat=REPEAT
+                        output [n] times""")
+    assert _normalize(out) == expected
+
+
+def test_optparser_nosuchoption(_cmdline_app, capsys):
+    run_cmd(_cmdline_app, 'say -a')
+    out, err = capsys.readouterr()
+    expected = _normalize("""
+no such option: -a
+Repeats what you tell me to.
+Usage: speak [options] (text to say)
+
+Options:
+  -h, --help            show this help message and exit
+  -p, --piglatin        atinLay
+  -s, --shout           N00B EMULATION MODE
+  -r REPEAT, --repeat=REPEAT
+                        output [n] times""")
+    assert _normalize(out) == expected
+
+
 class TestMyAppCase(Cmd2TestCase):
     CmdApp = CmdLineApp
     CmdApp.testfiles = ['tests/transcript.txt']

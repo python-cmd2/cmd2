@@ -209,7 +209,7 @@ def test_base_save(base_app, capsys):
     run_cmd(base_app, 'help save')
     run_cmd(base_app, 'save * {}'.format(filename))
     out, err = capsys.readouterr()
-    assert out == 'Saved to deleteme.txt\n'
+    assert out == 'Saved to {}\n'.format(filename)
 
     with open(filename) as f:
         content = [line.strip() for line in f.readlines()]
