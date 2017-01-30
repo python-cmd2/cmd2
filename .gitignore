@@ -5,3 +5,5 @@ cmd2.egg-info
 .idea
 .cache
 *.pyc
+.coverage
+htmlcov

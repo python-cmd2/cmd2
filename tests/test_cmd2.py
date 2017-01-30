@@ -1,9 +1,10 @@
 # coding=utf-8
-#
-# Cmd2 unit/functional testing
-#
-# Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
-# Released under MIT license, see LICENSE file
+"""
+Cmd2 unit/functional testing
+
+Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
+Released under MIT license, see LICENSE file
+"""
 
 import mock
 from conftest import run_cmd, _normalize

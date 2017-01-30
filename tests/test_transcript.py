@@ -1,13 +1,14 @@
 # coding=utf-8
-#
-# Cmd2 functional testing based on transcript
-#
-# Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
-# Released under MIT license, see LICENSE file
+"""
+Cmd2 functional testing based on transcript
+
+Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
+Released under MIT license, see LICENSE file
+"""
 
 import pytest
 
-from cmd2 import Cmd, make_option, options
+from cmd2 import Cmd, make_option, options, Cmd2TestCase
 from conftest import run_cmd, StdOut, _normalize
 
 
@@ -134,3 +135,8 @@ now: --->
     for cmd, expected in _get_transcript_blocks(transcript):
         out = run_cmd(app, cmd)
         assert out == expected
+
+
+class TestMyAppCase(Cmd2TestCase):
+    CmdApp = CmdLineApp
+    CmdApp.testfiles = ['tests/transcript.txt']
