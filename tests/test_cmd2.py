@@ -5,7 +5,7 @@ Cmd2 unit/functional testing
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
-
+import os
 import mock
 from conftest import run_cmd, _normalize
 from six import StringIO
@@ -200,3 +200,28 @@ def test_base_cmdenvironment(base_app):
     out_params = set(out[2].split("Settable parameters: ")[1].split())
 
     assert settable_params == out_params
+
+
+def test_base_save(base_app, capsys):
+    # TODO: Use a temporary directory for the file
+    filename = 'deleteme.txt'
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'help save')
+    run_cmd(base_app, 'save * {}'.format(filename))
+    out, err = capsys.readouterr()
+    assert out == 'Saved to deleteme.txt\n'
+
+    with open(filename) as f:
+        content = [line.strip() for line in f.readlines()]
+    expected = _normalize("""
+help
+
+help save
+
+save * deleteme.txt
+""")
+
+    assert content == expected
+
+    # Delete file that was created
+    os.remove(filename)
