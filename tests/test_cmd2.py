@@ -211,8 +211,6 @@ def test_base_save(base_app, capsys):
     out, err = capsys.readouterr()
     assert out == 'Saved to {}\n'.format(filename)
 
-    with open(filename) as f:
-        content = [line.strip() for line in f.readlines()]
     expected = _normalize("""
 help
 
@@ -220,6 +218,34 @@ help save
 
 save * deleteme.txt
 """)
+
+    with open(filename) as f:
+        content = _normalize(f.read())
+
+    assert content == expected
+
+    # Delete file that was created
+    os.remove(filename)
+
+
+def test_output_redirection(base_app):
+    # TODO: Use a temporary directory/file for this file
+    filename = 'out.txt'
+    run_cmd(base_app, 'help > {}'.format(filename))
+    expected = _normalize("""
+Documented commands (type help <topic>):
+========================================
+_load           ed    history  list   py   save   shortcuts
+_relative_load  edit  l        load   r    set    show
+cmdenvironment  hi    li       pause  run  shell
+
+Undocumented commands:
+======================
+EOF  eof  exit  help  q  quit
+""")
+
+    with open(filename) as f:
+        content = _normalize(f.read())
 
     assert content == expected
 
