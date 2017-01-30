@@ -137,6 +137,11 @@ now: --->
         assert out == expected
 
 
+class TestMyAppCase(Cmd2TestCase):
+    CmdApp = CmdLineApp
+    CmdApp.testfiles = ['tests/transcript.txt']
+
+
 def test_optparser(_cmdline_app, capsys):
     run_cmd(_cmdline_app, 'say -h')
     out, err = capsys.readouterr()
@@ -170,6 +175,10 @@ Options:
     assert _normalize(out) == expected
 
 
-class TestMyAppCase(Cmd2TestCase):
-    CmdApp = CmdLineApp
-    CmdApp.testfiles = ['tests/transcript.txt']
+def test_comment_stripping(_cmdline_app):
+    out = run_cmd(_cmdline_app, 'speak it was /* not */ delicious! # Yuck!')
+    expected = _normalize("""it was  delicious!""")
+    assert out == expected
+
+
+
