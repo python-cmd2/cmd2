@@ -181,3 +181,22 @@ def test_base_load(base_app):
     assert m.called
     m.assert_called_once_with('myfname')
     # TODO: Figure out how to check stdout or stderr during a do_load()
+
+
+def test_base_cmdenvironment(base_app):
+    out = run_cmd(base_app, 'cmdenvironment')
+    expected = _normalize("""
+
+        Commands are not case-sensitive.
+        Commands may be terminated with: [';']
+""")
+    assert out[:2] == expected[:2]
+    assert out[2].strip().startswith('Settable parameters: ')
+
+    # Settable parameters can be listed in any order, so need to validate carefully using unordered sets
+    settable_params = set(['continuation_prompt', 'default_file_name', 'prompt', 'abbrev', 'quiet',
+                           'case_insensitive', 'colors', 'echo',  'timing', 'editor',
+                           'feedback_to_output', 'debug'])
+    out_params = set(out[2].split("Settable parameters: ")[1].split())
+
+    assert settable_params == out_params
