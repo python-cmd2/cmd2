@@ -17,6 +17,8 @@ programs.  Extends the Python Standard Library's cmd_ package.
 
 The basic use of ``cmd2`` is identical to that of cmd_.
 
+.. highlight:: python
+
 1. Create a subclass of ``cmd2.Cmd``.  Define attributes and
    ``do_*`` methods to control its behavior.  Throughout this documentation,
    we will assume that you are naming your subclass ``App``::
