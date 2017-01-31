@@ -30,6 +30,13 @@ The basic use of ``cmd2`` is identical to that of cmd_.
      app = App()
      app.cmdloop()
 
+.. note::
+
+   The tab-completion capability provided by cmd_ relies on underlying capability provided by GNU readline or an
+   equivalent library.  Linux distros will almost always come with the required library installed.
+   For Mac OS X, we recommend installing the `gnureadline <https://pypi.python.org/pypi/gnureadline>`_ Python module.
+   For Windows, we recommend installing the `pyreadline <https://pypi.python.org/pypi/pyreadline>`_ Python module.
+
 Resources
 ---------
 
