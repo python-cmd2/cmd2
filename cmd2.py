@@ -208,6 +208,7 @@ to be installed on operating system.
 %s"""
 
 if sys.platform == "win32":
+    # Running on Windows
     try:
         import win32clipboard
 
@@ -234,11 +235,15 @@ if sys.platform == "win32":
 
         write_to_paste_buffer = get_paste_buffer
 elif sys.platform == 'darwin':
+    # Running on Mac OS X
     can_clip = False
     try:
+        # Warning: subprocess.call() and subprocess.check_call() should never be called with stdout=PIPE or stderr=PIPE
+        # because the child process will block if it generates enough output to a pipe to fill up the OS pipe buffer.
+        # Starting with Python 3.5 there is a newer, safer API based on the run() function.
+
         # test for pbcopy - AFAIK, should always be installed on MacOS
-        subprocess.check_call('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
+        subprocess.check_call('pbcopy -help', shell=True, stdin=subprocess.PIPE, stdout=None, stderr=None)
         can_clip = True
     except (subprocess.CalledProcessError, OSError, IOError):
         pass
@@ -261,10 +266,10 @@ elif sys.platform == 'darwin':
 
         write_to_paste_buffer = get_paste_buffer
 else:
+    # Running on Linux
     can_clip = False
     try:
-        subprocess.check_call('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                              stderr=subprocess.PIPE)
+        subprocess.check_call('xclip -o -sel clip', shell=True, stdin=subprocess.PIPE, stdout=None, stderr=None)
         can_clip = True
     except AttributeError:  # check_call not defined, Python < 2.5
         try:
