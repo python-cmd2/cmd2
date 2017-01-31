@@ -242,8 +242,10 @@ elif sys.platform == 'darwin':
         # because the child process will block if it generates enough output to a pipe to fill up the OS pipe buffer.
         # Starting with Python 3.5 there is a newer, safer API based on the run() function.
 
-        # test for pbcopy - AFAIK, should always be installed on MacOS
-        subprocess.check_call('pbcopy -help', shell=True, stdin=subprocess.PIPE, stdout=None, stderr=None)
+        # Python 3.3+ supports subprocess.DEVNULL, but that isn't defined for Python 2.7
+        with open(os.devnull, 'w') as DEVNULL:
+            # test for pbcopy - AFAIK, should always be installed on MacOS
+            subprocess.check_call('pbcopy -help', shell=True, stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
         can_clip = True
     except (subprocess.CalledProcessError, OSError, IOError):
         pass
@@ -269,7 +271,8 @@ else:
     # Running on Linux
     can_clip = False
     try:
-        subprocess.check_call('xclip -o -sel clip', shell=True, stdin=subprocess.PIPE, stdout=None, stderr=None)
+        with open(os.devnull, 'w') as DEVNULL:
+            subprocess.check_call('xclip -o -sel clip', shell=True, stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
         can_clip = True
     except AttributeError:  # check_call not defined, Python < 2.5
         try:
