@@ -826,7 +826,11 @@ class Cmd(cmd.Cmd):
                 if s.lower().startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
-            result = self.parser.parseString(s)
+            try:
+                result = self.parser.parseString(s)
+            except pyparsing.ParseException:
+                # If we have a parsing failure, treat it is an empty command and move to next prompt
+                result = self.parser.parseString('')
             result['raw'] = raw
             result['command'] = result.multilineCommand or result.command
             result = self.postparse(result)
