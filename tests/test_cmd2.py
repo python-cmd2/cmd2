@@ -6,6 +6,7 @@ Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import os
+import sys
 
 import mock
 from six import StringIO
@@ -257,5 +258,10 @@ EOF  eof  exit  help  q  quit
 def test_pipe_to_shell(base_app):
     # Get help on help and pipe it's output to the input of the word count shell command
     out = run_cmd(base_app, 'help help | wc')
-    expected = _normalize("       1       5      20")
-    assert out == expected
+
+    if sys.platform == "win32":
+        expected = _normalize("1       5      24")
+    else:
+        expected = _normalize("1       5      20")
+
+    assert out[0].strip() == expected[0].strip()
