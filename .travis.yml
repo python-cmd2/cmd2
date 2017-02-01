@@ -20,9 +20,9 @@ matrix:
         - os: linux
           python: pypy
           env: TOXENV=pypy
-        - os: osx
-          language: generic
-          env: TOXENV=py27
+#        - os: osx
+#          language: generic
+#          env: TOXENV=py27
 install:
   - pip install tox
 script:
