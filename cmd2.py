@@ -33,6 +33,7 @@ import optparse
 import os
 import platform
 import re
+import six
 import subprocess
 import sys
 import tempfile
@@ -57,6 +58,9 @@ from six.moves import zip
 
 # Python 2 urllib2.urlopen() or Python3  urllib.request.urlopen()
 from six.moves.urllib.request import urlopen
+
+# This is a fake file object for textual data. It’s an alias for StringIO.StringIO in Py 2 and io.StringIO in Py 3
+from six import StringIO
 
 # Python 3 compatability hack due to no built-in file keyword in Python 3
 # Due to one occurence of isinstance(<foo>, file) checking to see if something is of file type
@@ -899,9 +903,9 @@ class Cmd(cmd.Cmd):
         if statement.parsed.pipeTo:
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
-            self.redirect = subprocess.Popen(statement.parsed.pipeTo, shell=True, stdout=subprocess.PIPE,
-                                             stdin=subprocess.PIPE)
-            sys.stdout = self.stdout = self.redirect.stdin
+            sys.stdout = self.stdout
+            # Redirect stdout to a fake file object which is an in-memory text stream
+            self.stdout = StringIO()
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
@@ -919,17 +923,28 @@ class Cmd(cmd.Cmd):
 
     def restore_output(self, statement):
         if self.kept_state:
-            if statement.parsed.output:
-                if not statement.parsed.outputTo:
-                    self.stdout.seek(0)
-                    write_to_paste_buffer(self.stdout.read())
-            elif statement.parsed.pipeTo:
-                for result in self.redirect.communicate():
-                    self.kept_state.stdout.write(result or '')
-            self.stdout.close()
-            self.kept_state.restore()
-            self.kept_sys.restore()
-            self.kept_state = None
+            try:
+                if statement.parsed.output:
+                    if not statement.parsed.outputTo:
+                        self.stdout.seek(0)
+                        write_to_paste_buffer(self.stdout.read())
+                elif statement.parsed.pipeTo:
+                    # Retreive the output from our internal command
+                    command_output = self.stdout.getvalue()
+            finally:
+                self.stdout.close()
+                self.kept_state.restore()
+                self.kept_sys.restore()
+                self.kept_state = None
+
+                if statement.parsed.pipeTo:
+                    # Pipe output from the command to the shell command via echo
+                    command_line = 'echo "{}" | {}'.format(command_output.rstrip(), statement.parsed.pipeTo)
+                    result = subprocess.check_output(command_line, shell=True)
+                    if six.PY3:
+                        self.stdout.write(result.decode())
+                    else:
+                        self.stdout.write(result)
 
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response

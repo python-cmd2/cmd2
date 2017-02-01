@@ -6,11 +6,12 @@ Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import os
+
 import mock
-from conftest import run_cmd, _normalize
 from six import StringIO
 
 import cmd2
+from conftest import run_cmd, _normalize
 
 
 def test_ver():
@@ -251,3 +252,10 @@ EOF  eof  exit  help  q  quit
 
     # Delete file that was created
     os.remove(filename)
+
+
+def test_pipe_to_shell(base_app):
+    # Get help on help and pipe it's output to the input of the word count shell command
+    out = run_cmd(base_app, 'help help | wc')
+    expected = _normalize("       1       5      20")
+    assert out == expected
