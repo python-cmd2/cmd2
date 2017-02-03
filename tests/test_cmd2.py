@@ -112,7 +112,11 @@ now: True
 def test_base_set_not_supported(base_app, capsys):
     run_cmd(base_app, 'set qqq True')
     out, err = capsys.readouterr()
-    assert out.rstrip() == "Parameter 'qqq' not supported (type 'show' for list of parameters)."
+    expected = _normalize("""
+EXCEPTION of type 'LookupError' occured with message: 'Parameter 'qqq' not supported (type 'show' for list of parameters).'
+To enable full traceback, run the following command:  'set debug true'
+""")
+    assert _normalize(str(err)) == expected
 
 
 def test_base_shell(base_app, monkeypatch):

@@ -495,10 +495,19 @@ class Cmd(cmd.Cmd):
             if msg[-1] != '\n':
                 self.stdout.write('\n')
 
-    def perror(self, errmsg, statement=None):
+    def perror(self, errmsg, exception_type=None):
         if self.debug:
             traceback.print_exc()
-        print(str(errmsg))
+
+        if exception_type is None:
+            err = self.colorize("ERROR: {}'\n".format(errmsg), 'red')
+            sys.stderr.write(err)
+        else:
+            err = "EXCEPTION of type '{}' occured with message: '{}'\n".format(exception_type, errmsg)
+            sys.stderr.write(self.colorize(err, 'red'))
+
+        war = "To enable full traceback, run the following command:  'set debug true'\n"
+        sys.stderr.write(self.colorize(war, 'yellow'))
 
     def pfeedback(self, msg):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -526,7 +535,9 @@ class Cmd(cmd.Cmd):
                   'red': {True: '\x1b[31m', False: '\x1b[39m'},
                   'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
                   'green': {True: '\x1b[32m', False: '\x1b[39m'},
-                  'underline': {True: '\x1b[4m', False: '\x1b[24m'}}
+                  'underline': {True: '\x1b[4m', False: '\x1b[24m'},
+                  'yellow': {True: '\x1b[33m', False: '\x1b[39m'},
+                  }
     colors = (platform.system() != 'Windows')
 
     def colorize(self, val, color):
@@ -902,8 +913,8 @@ class Cmd(cmd.Cmd):
                     self.restore_output(statement)
             except EmptyStatement:
                 return 0
-            except Exception as e:
-                self.perror(str(e), statement)
+            except Exception as ex:
+                self.perror(ex, type(ex).__name__)
         finally:
             return self.postparsing_postcmd(stop)
 
