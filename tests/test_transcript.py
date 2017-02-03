@@ -43,12 +43,30 @@ class CmdLineApp(Cmd):
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
 
+class DemoApp(Cmd):
+    @options([make_option('-n', '--name', action="store", help="your name"),
+              ])
+    def do_hello(self, arg, opts):
+        """Says hello."""
+        if opts.name:
+            self.stdout.write('Hello {}\n'.format(opts.name))
+        else:
+            self.stdout.write('Hello Nobody\n')
+
+
 @pytest.fixture
 def _cmdline_app():
     c = CmdLineApp()
     c.stdout = StdOut()
     # c.shortcuts.update({'&': 'speak', 'h': 'hello'})
     c.settable.append('maxrepeats   Max number of `--repeat`s allowed')
+    return c
+
+
+@pytest.fixture
+def _demo_app():
+    c = DemoApp()
+    c.stdout = StdOut()
     return c
 
 
@@ -176,15 +194,20 @@ Options:
     assert _normalize(str(out)) == expected
 
 
-def test_comment_stripping(_cmdline_app, capsys):
+def test_comment_stripping(_cmdline_app):
     out = run_cmd(_cmdline_app, 'speak it was /* not */ delicious! # Yuck!')
     expected = _normalize("""it was  delicious!""")
     assert out == expected
 
 
-def test_optarser_correct_args_with_quotes_and_midline_options(_cmdline_app, capsys):
+def test_optarser_correct_args_with_quotes_and_midline_options(_cmdline_app):
     out = run_cmd(_cmdline_app, "speak 'This is a' -s test of the emergency broadcast system!")
     expected = _normalize("""THIS IS A TEST OF THE EMERGENCY BROADCAST SYSTEM!""")
+    assert out == expected
+
+def test_optarser_options_with_spaces_in_quotes(_demo_app):
+    out = run_cmd(_demo_app, "hello foo -n 'Bugs Bunny' bar baz")
+    expected = _normalize("""Hello Bugs Bunny""")
     assert out == expected
 
 
