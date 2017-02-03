@@ -33,6 +33,7 @@ import optparse
 import os
 import platform
 import re
+import shlex
 import six
 import subprocess
 import sys
@@ -76,6 +77,13 @@ __version__ = '0.7.0'
 pyparsing.ParserElement.enablePackrat()
 
 
+# If this is False (default), then non-option arguments are passed to the "do" methods using @options as one big string.
+# If this is True, then non-option arguments are passed to the "do" methods using @options as a list of strings (shlex).
+# TODO: Figure out a good way to make this configurable by the user in cmd2.Cmd __init__ or something
+#       But it needs to remain False by default for reasons of backwards compatibility.
+USE_ARGUMENT_LISTS_INSTEAD_OF_STRINGS = False
+
+
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
         self.values._exit = True
@@ -109,7 +117,13 @@ def remaining_args(oldArgs, newArgList):
     '''
     pattern = '\s+'.join(re.escape(a) for a in newArgList) + '\s*$'
     matchObj = re.search(pattern, oldArgs)
-    return oldArgs[matchObj.start():]
+    try:
+        remaining = oldArgs[matchObj.start():]
+    except:
+        # Don't preserve spacing, but at least we don't crash and we do preserve args and their order
+        remaining = ' '.join(newArgList)
+
+    return remaining
 
 
 def _attr_get_(obj, attr):
@@ -135,7 +149,7 @@ optparse.Values.get = _attr_get_
 options_defined = []  # used to distinguish --options from SQL-style --comments
 
 
-def options(option_list, arg_desc="arg"):
+def options(option_list, arg_desc="arg", arg_list=USE_ARGUMENT_LISTS_INSTEAD_OF_STRINGS):
     '''Used as a decorator and passed a list of optparse-style options,
        alters a cmd2 method to populate its ``opts`` argument from its
        raw text argument.
@@ -165,12 +179,15 @@ def options(option_list, arg_desc="arg"):
 
         def new_func(instance, arg):
             try:
-                opts, newArgList = optionParser.parse_args(arg.split())
+                opts, newArgList = optionParser.parse_args(shlex.split(arg))
                 # Must find the remaining args in the original argument list, but
                 # mustn't include the command itself
                 # if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                 #    newArgList = newArgList[1:]
-                newArgs = remaining_args(arg, newArgList)
+                if arg_list:
+                    newArgs = newArgList
+                else:
+                    newArgs = remaining_args(arg, newArgList)
                 if isinstance(arg, ParsedString):
                     arg = arg.with_args_replaced(newArgs)
                 else:

@@ -176,9 +176,15 @@ Options:
     assert _normalize(str(out)) == expected
 
 
-def test_comment_stripping(_cmdline_app):
+def test_comment_stripping(_cmdline_app, capsys):
     out = run_cmd(_cmdline_app, 'speak it was /* not */ delicious! # Yuck!')
     expected = _normalize("""it was  delicious!""")
+    assert out == expected
+
+
+def test_optarser_correct_args_with_quotes_and_midline_options(_cmdline_app, capsys):
+    out = run_cmd(_cmdline_app, "speak 'This is a' -s test of the emergency broadcast system!")
+    expected = _normalize("""THIS IS A TEST OF THE EMERGENCY BROADCAST SYSTEM!""")
     assert out == expected
 
 
