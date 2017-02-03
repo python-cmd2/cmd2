@@ -119,7 +119,7 @@ def remaining_args(oldArgs, newArgList):
     matchObj = re.search(pattern, oldArgs)
     try:
         remaining = oldArgs[matchObj.start():]
-    except:
+    except AttributeError:
         # Don't preserve spacing, but at least we don't crash and we do preserve args and their order
         remaining = ' '.join(newArgList)
 
