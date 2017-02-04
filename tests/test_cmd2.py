@@ -10,6 +10,7 @@ import sys
 
 import mock
 import pytest
+import six
 
 import cmd2
 from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT
@@ -357,4 +358,87 @@ def test_base_colorize(base_app):
         assert color_test == 'Test'
     else:
         assert color_test == '\x1b[31mTest\x1b[39m'
+
+
+def _expected_no_editor_error():
+    expected_exception = 'OSError'
+    if six.PY2:
+        expected_exception = 'EnvironmentError'
+
+    expected_text = normalize("""
+EXCEPTION of type '{}' occured with message: 'Please use 'set editor' to specify your text editing program of choice.'
+To enable full traceback, run the following command:  'set debug true'
+""".format(expected_exception))
+
+    return expected_text
+
+
+def test_edit_no_editor(base_app, capsys):
+    # Purposely set the editor to None
+    base_app.editor = None
+
+    # Make sure we get an exception, but cmd2 handles it
+    run_cmd(base_app, 'ed')
+    out, err = capsys.readouterr()
+
+    expected = _expected_no_editor_error()
+    assert normalize(str(err)) == expected
+
+
+def test_edit_file(base_app, request):
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    os.system = m
+
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'script.txt')
+
+    run_cmd(base_app, 'edit {}'.format(filename))
+
+    # We think we have an editor, so should expect a system call
+    m.assert_called_once_with('{} {}'.format(base_app.editor, filename))
+
+
+def test_edit_number(base_app):
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    os.system = m
+
+    # Run help command just so we have a command in history
+    run_cmd(base_app, 'help')
+
+    run_cmd(base_app, 'edit 1')
+
+    # We have an editor, so should expect a system call
+    m.assert_called_once_with('{} {}'.format(base_app.editor, base_app.default_file_name))
+
+    # Editing history item causes a file of default name to get created, remove it so we have a clean slate
+    os.remove(base_app.default_file_name)
+
+
+def test_edit_blank(base_app):
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    os.system = m
+
+    # Run help command just so we have a command in history
+    run_cmd(base_app, 'help')
+
+    run_cmd(base_app, 'edit')
+
+    # We have an editor, so should expect a system call
+    m.assert_called_once_with('{} {}'.format(base_app.editor, base_app.default_file_name))
+
+    # Editing history item causes a file of default name to get created, remove it so we have a clean slate
+    os.remove(base_app.default_file_name)
+
 
