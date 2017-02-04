@@ -317,4 +317,7 @@ now: True
 """)
     assert out == expected
     out, err = capsys.readouterr()
-    assert out.startswith('Elapsed: 0:00:00.0')
+    if sys.platform == 'win32':
+        assert out.startswith('Elapsed: 0:00:00')
+    else:
+        assert out.startswith('Elapsed: 0:00:00.0')
