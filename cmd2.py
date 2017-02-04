@@ -76,6 +76,13 @@ __version__ = '0.7.0'
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
 
+# If true, it attempts to be as backward compatible as possible by falling back to str.split() argument splititng if
+# shlex.split() throws an exception.
+# Advantages of setting it True:  More "permissiive" and backward compatible argument parsing
+# Advantages of setting it False: Stricter parsing which requires escaping certain characters (more similar to shell)
+# TODO: Figure out how to make this a settable parameter in Cmd class, but accessible in options decorator
+BACKWARD_COMPATIBLE_PARSING = True
+
 
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
@@ -172,12 +179,20 @@ def options(option_list, arg_desc="arg"):
 
         def new_func(instance, arg):
             try:
-                opts, newArgList = optionParser.parse_args(shlex.split(arg))
+                if BACKWARD_COMPATIBLE_PARSING:
+                    # For backwads compatibility, fall back to str.split() if shlex.split throws an Exception
+                    try:
+                        opts, newArgList = optionParser.parse_args(shlex.split(arg))
+                    except Exception:
+                        opts, newArgList = optionParser.parse_args(arg.split())
+                else:
+                    # Enforce a stricter syntax, requiring users to quote or escape certain characters
+                    opts, newArgList = optionParser.parse_args(shlex.split(arg))
+
                 # Must find the remaining args in the original argument list, but
                 # mustn't include the command itself
                 # if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                 #    newArgList = newArgList[1:]
-
                 newArgs = remaining_args(arg, newArgList)
                 if isinstance(arg, ParsedString):
                     arg = arg.with_args_replaced(newArgs)
