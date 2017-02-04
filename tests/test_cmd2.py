@@ -309,3 +309,12 @@ def test_send_to_paste_buffer(base_app):
         c = root.clipboard_get()
 
         assert normalize(c) == expected
+
+def test_base_timing(base_app, capsys):
+    out = run_cmd(base_app, 'set timing True')
+    expected = normalize("""timing - was: False
+now: True
+""")
+    assert out == expected
+    out, err = capsys.readouterr()
+    assert out.startswith('Elapsed: 0:00:00.0')
