@@ -352,5 +352,9 @@ def test_base_colorize(base_app):
     # But if we create a fresh Cmd() instance, it will
     fresh_app = cmd2.Cmd()
     color_test = fresh_app.colorize('Test', 'red')
-    assert color_test == '\x1b[31mTest\x1b[39m'
+    # Actually, colorization only ANSI escape codes is only applied on non-Windows systems
+    if sys.platform == 'win32':
+        assert out.startswith('Elapsed: 0:00:00')
+    else:
+        assert color_test == '\x1b[31mTest\x1b[39m'
 
