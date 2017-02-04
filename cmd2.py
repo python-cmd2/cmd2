@@ -236,6 +236,7 @@ to be installed on operating system.
 
 if sys.platform == "win32":
     # Running on Windows
+    can_clip = False
     try:
         import win32clipboard
 
@@ -255,10 +256,11 @@ if sys.platform == "win32":
             win32clipboard.EmptyClipboard()
             win32clipboard.SetClipboardText(txt)
             win32clipboard.CloseClipboard()
+
+        can_clip = True
     except ImportError:
         def get_paste_buffer(*args):
             raise OSError(pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/'))
-
 
         write_to_paste_buffer = get_paste_buffer
 elif sys.platform == 'darwin':

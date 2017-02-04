@@ -84,6 +84,16 @@ def test_base_py(base_app, capsys):
     assert out.rstrip() == '3'
 
 
+def test_base_run_python_script(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'script.py')
+    expected = 'This is a python script running ...\n'
+
+    run_cmd(base_app, "py run('{}')".format(python_script))
+    out, err = capsys.readouterr()
+    assert out == expected
+
+
 def test_base_error(base_app):
     out = run_cmd(base_app, 'meow')
     assert out == ["*** Unknown syntax: meow"]
