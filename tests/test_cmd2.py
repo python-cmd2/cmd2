@@ -354,7 +354,7 @@ def test_base_colorize(base_app):
     color_test = fresh_app.colorize('Test', 'red')
     # Actually, colorization only ANSI escape codes is only applied on non-Windows systems
     if sys.platform == 'win32':
-        assert out.startswith('Elapsed: 0:00:00')
+        assert color_test == 'Test'
     else:
         assert color_test == '\x1b[31mTest\x1b[39m'
 
