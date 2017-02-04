@@ -241,12 +241,19 @@ save * deleteme.txt
 def test_output_redirection(base_app):
     # TODO: Use a temporary directory/file for this file
     filename = 'out.txt'
+
+    # Verify that writing to a file works
     run_cmd(base_app, 'help > {}'.format(filename))
     expected = normalize(BASE_HELP)
-
     with open(filename) as f:
         content = normalize(f.read())
+    assert content == expected
 
+    # Verify that appending to a file also works
+    run_cmd(base_app, 'help history >> {}'.format(filename))
+    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
+    with open(filename) as f:
+        content = normalize(f.read())
     assert content == expected
 
     # Delete file that was created
@@ -263,3 +270,29 @@ def test_pipe_to_shell(base_app):
         expected = normalize("1       5      20")
 
     assert out[0].strip() == expected[0].strip()
+
+
+def test_send_to_paste_buffer(base_app):
+    from cmd2 import can_clip
+
+    run_cmd(base_app, 'help >')
+    expected = normalize(BASE_HELP)
+
+    # If an appropriate tool is installed for reading the contents of the clipboard, then do so
+    if can_clip:
+        # Read from the clipboard
+        try:
+            # Python2
+            import Tkinter as tk
+        except ImportError:
+            # Python3
+            import tkinter as tk
+
+        root = tk.Tk()
+        # keep the window from showing
+        root.withdraw()
+
+        # read the clipboard
+        c = root.clipboard_get()
+
+        assert normalize(c) == expected
