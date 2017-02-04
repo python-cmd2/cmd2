@@ -77,13 +77,6 @@ __version__ = '0.7.0'
 pyparsing.ParserElement.enablePackrat()
 
 
-# If this is False (default), then non-option arguments are passed to the "do" methods using @options as one big string.
-# If this is True, then non-option arguments are passed to the "do" methods using @options as a list of strings (shlex).
-# TODO: Figure out a good way to make this configurable by the user in cmd2.Cmd __init__ or something
-#       But it needs to remain False by default for reasons of backwards compatibility.
-USE_ARGUMENT_LISTS_INSTEAD_OF_STRINGS = False
-
-
 class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
         self.values._exit = True
@@ -149,7 +142,7 @@ optparse.Values.get = _attr_get_
 options_defined = []  # used to distinguish --options from SQL-style --comments
 
 
-def options(option_list, arg_desc="arg", arg_list=USE_ARGUMENT_LISTS_INSTEAD_OF_STRINGS):
+def options(option_list, arg_desc="arg"):
     '''Used as a decorator and passed a list of optparse-style options,
        alters a cmd2 method to populate its ``opts`` argument from its
        raw text argument.
@@ -184,10 +177,8 @@ def options(option_list, arg_desc="arg", arg_list=USE_ARGUMENT_LISTS_INSTEAD_OF_
                 # mustn't include the command itself
                 # if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                 #    newArgList = newArgList[1:]
-                if arg_list:
-                    newArgs = newArgList
-                else:
-                    newArgs = remaining_args(arg, newArgList)
+
+                newArgs = remaining_args(arg, newArgList)
                 if isinstance(arg, ParsedString):
                     arg = arg.with_args_replaced(newArgs)
                 else:
