@@ -9,6 +9,7 @@ import os
 import sys
 
 import mock
+import pytest
 
 import cmd2
 from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT
@@ -84,6 +85,8 @@ def test_base_py(base_app, capsys):
     assert out.rstrip() == '3'
 
 
+@pytest.mark.skipif(sys.platform == 'win32',
+                    reason="Unit test doesn't work on win32, but feature does")
 def test_base_run_python_script(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'script.py')
