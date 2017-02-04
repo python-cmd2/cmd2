@@ -5,8 +5,10 @@ Cmd2 functional testing based on transcript
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import sys
 
 import pytest
+from mock import patch
 
 from cmd2 import Cmd, make_option, options, Cmd2TestCase
 from conftest import run_cmd, StdOut, normalize
@@ -211,5 +213,15 @@ def test_optarser_options_with_spaces_in_quotes(_demo_app):
     expected = normalize("""Hello Bugs Bunny""")
     assert out == expected
 
+
+def test_commands_at_invocation(_cmdline_app):
+    testargs = ["prog", "say hello", "say Gracie", "quit"]
+    expected = "hello\nGracie\n"
+    with patch.object(sys, 'argv', testargs):
+        app = CmdLineApp()
+        app.stdout = StdOut()
+        app.cmdloop()
+        out = app.stdout.buffer
+        assert out == expected
 
 
