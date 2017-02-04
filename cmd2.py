@@ -531,7 +531,8 @@ class Cmd(cmd.Cmd):
         if sys.platform[:3] == 'win':
             editor = 'notepad'
         else:
-            for editor in ['gedit', 'kate', 'vim', 'vi', 'emacs', 'nano', 'pico']:
+            # Favor command-line editors first so we don't leave the terminal to edit
+            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
                 if _which(editor):
                     break
 
@@ -1332,7 +1333,8 @@ class Cmd(cmd.Cmd):
         elif args.idx:
             saveme = self.history[int(args.idx) - 1]
         else:
-            saveme = self.history[-1]
+            # Since this save command has already been added to history, need to go one more back for previous
+            saveme = self.history[-2]
         try:
             f = open(os.path.expanduser(fname), 'w')
             f.write(saveme)
@@ -1374,7 +1376,8 @@ class Cmd(cmd.Cmd):
 
     def do_load(self, arg=None):
         """Runs script of command(s) from a file or URL."""
-        if arg is None:
+        # If arg is None or arg is an empty string, use the default filename
+        if not arg:
             targetname = self.default_file_name
         else:
             arg = arg.split(None, 1)

@@ -9,10 +9,9 @@ import os
 import sys
 
 import mock
-from six import StringIO
 
 import cmd2
-from conftest import run_cmd, _normalize
+from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT
 
 
 def test_ver():
@@ -21,77 +20,25 @@ def test_ver():
 
 def test_base_help(base_app):
     out = run_cmd(base_app, 'help')
-    expected = _normalize("""
-Documented commands (type help <topic>):
-========================================
-_load           ed    history  list   py   save   shortcuts
-_relative_load  edit  l        load   r    set    show
-cmdenvironment  hi    li       pause  run  shell
-
-Undocumented commands:
-======================
-EOF  eof  exit  help  q  quit
-""")
+    expected = normalize(BASE_HELP)
     assert out == expected
 
 
 def test_base_help_history(base_app):
     out = run_cmd(base_app, 'help history')
-    expected = _normalize("""
-history [arg]: lists past commands issued
-
-        | no arg:         list all
-        | arg is integer: list one history item, by index
-        | arg is string:  string search
-        | arg is /enclosed in forward-slashes/: regular expression search
-
-Usage: history [options] (limit on which commands to include)
-
-Options:
-  -h, --help    show this help message and exit
-  -s, --script  Script format; no separation lines
-""")
+    expected = normalize(HELP_HISTORY)
     assert out == expected
 
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')
-    expected = _normalize("""
-Single-key shortcuts for other commands:
-!: shell
-?: help
-@: load
-@@: _relative_load
-""")
-    assert out == expected
-
-
-def notest_base_(base_app):
-    out = run_cmd(base_app, 'shortcuts')
-    expected = _normalize("""
-""")
+    expected = normalize(SHORTCUTS_TXT)
     assert out == expected
 
 
 def test_base_show(base_app):
-    import sys
     out = run_cmd(base_app, 'show')
-    expect_colors = True
-    if sys.platform.startswith('win'):
-        expect_colors = False
-    expected = _normalize("""
-abbrev: True
-case_insensitive: True
-colors: {}
-continuation_prompt: >
-debug: False
-default_file_name: command.txt
-echo: False
-feedback_to_output: False
-prompt: (Cmd)
-quiet: False
-timing: False
-""".format(expect_colors))
+    expected = normalize(SHOW_TXT)
     # ignore "editor: vi" (could be others)
     out = [l for l in out if not l.startswith('editor: ')]
     assert out == expected
@@ -99,7 +46,7 @@ timing: False
 
 def test_base_set(base_app):
     out = run_cmd(base_app, 'set quiet True')
-    expected = _normalize("""
+    expected = normalize("""
 quiet - was: False
 now: True
 """)
@@ -112,11 +59,11 @@ now: True
 def test_base_set_not_supported(base_app, capsys):
     run_cmd(base_app, 'set qqq True')
     out, err = capsys.readouterr()
-    expected = _normalize("""
+    expected = normalize("""
 EXCEPTION of type 'LookupError' occured with message: 'Parameter 'qqq' not supported (type 'show' for list of parameters).'
 To enable full traceback, run the following command:  'set debug true'
 """)
-    assert _normalize(str(err)) == expected
+    assert normalize(str(err)) == expected
 
 
 def test_base_shell(base_app, monkeypatch):
@@ -146,7 +93,7 @@ def test_base_history(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     out = run_cmd(base_app, 'history')
-    expected = _normalize("""
+    expected = normalize("""
 -------------------------[1]
 help
 -------------------------[2]
@@ -155,14 +102,14 @@ shortcuts
     assert out == expected
 
     out = run_cmd(base_app, 'history he')
-    expected = _normalize("""
+    expected = normalize("""
 -------------------------[1]
 help
 """)
     assert out == expected
 
     out = run_cmd(base_app, 'history sh')
-    expected = _normalize("""
+    expected = normalize("""
 -------------------------[2]
 shortcuts
 """)
@@ -173,25 +120,16 @@ def test_base_list(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     out = run_cmd(base_app, 'list')
-    expected = _normalize("""
+    expected = normalize("""
 -------------------------[2]
 shortcuts
 """)
     assert out == expected
 
 
-def test_base_load(base_app):
-    m = mock.Mock(return_value=StringIO('set quiet True\n'))
-    base_app.read_file_or_url = m
-    run_cmd(base_app, 'load myfname')
-    assert m.called
-    m.assert_called_once_with('myfname')
-    # TODO: Figure out how to check stdout or stderr during a do_load()
-
-
 def test_base_cmdenvironment(base_app):
     out = run_cmd(base_app, 'cmdenvironment')
-    expected = _normalize("""
+    expected = normalize("""
 
         Commands are not case-sensitive.
         Commands may be terminated with: [';']
@@ -200,12 +138,61 @@ def test_base_cmdenvironment(base_app):
     assert out[2].strip().startswith('Settable parameters: ')
 
     # Settable parameters can be listed in any order, so need to validate carefully using unordered sets
-    settable_params = set(['continuation_prompt', 'default_file_name', 'prompt', 'abbrev', 'quiet',
-                           'case_insensitive', 'colors', 'echo',  'timing', 'editor',
-                           'feedback_to_output', 'debug'])
+    settable_params = {'continuation_prompt', 'default_file_name', 'prompt', 'abbrev', 'quiet', 'case_insensitive',
+                       'colors', 'echo', 'timing', 'editor', 'feedback_to_output', 'debug'}
     out_params = set(out[2].split("Settable parameters: ")[1].split())
-
     assert settable_params == out_params
+
+
+def test_base_load(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'script.txt')
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load {}'.format(filename))
+
+    # But what we can do is check the history to see what commands have been run ...
+    out = run_cmd(base_app, 'history')
+
+    # TODO: Figure out why when we unit test the command this way the commands from the script aren't shown in history
+    # NOTE: It works correctly when we run it at the command line
+    expected = normalize("""
+-------------------------[1]
+load {}
+""".format(filename))
+    assert out == expected
+
+
+def test_base_load_default_file(base_app, capsys):
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load')
+    out, err = capsys.readouterr()
+
+    # The default file 'command.txt' doesn't exist, so we should get an error message
+    expected = normalize("""ERROR: Problem accessing script from command.txt:
+[Errno 2] No such file or directory: 'command.txt.txt''
+To enable full traceback, run the following command:  'set debug true'
+""")
+    assert normalize(str(err)) == expected
+
+
+def test_base_relative_load(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'script.txt')
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, '_relative_load {}'.format(filename))
+
+    # But what we can do is check the history to see what commands have been run ...
+    out = run_cmd(base_app, 'history')
+
+    # TODO: Figure out why when we unit test the command this way the commands from the script aren't shown in history
+    # NOTE: It works correctly when we run it at the command line
+    expected = normalize("""
+-------------------------[1]
+_relative_load {}
+""".format(filename))
+    assert out == expected
 
 
 def test_base_save(base_app, capsys):
@@ -213,21 +200,38 @@ def test_base_save(base_app, capsys):
     filename = 'deleteme.txt'
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help save')
+
+    # Test the * form of save which saves all commands from history
     run_cmd(base_app, 'save * {}'.format(filename))
     out, err = capsys.readouterr()
     assert out == 'Saved to {}\n'.format(filename)
-
-    expected = _normalize("""
+    expected = normalize("""
 help
 
 help save
 
 save * deleteme.txt
 """)
-
     with open(filename) as f:
-        content = _normalize(f.read())
+        content = normalize(f.read())
+    assert content == expected
 
+    # Test the N form of save which saves a numbered command from history
+    run_cmd(base_app, 'save 1 {}'.format(filename))
+    out, err = capsys.readouterr()
+    assert out == 'Saved to {}\n'.format(filename)
+    expected = normalize('help')
+    with open(filename) as f:
+        content = normalize(f.read())
+    assert content == expected
+
+    # Test the blank form of save which saves the most recent command from history
+    run_cmd(base_app, 'save {}'.format(filename))
+    out, err = capsys.readouterr()
+    assert out == 'Saved to {}\n'.format(filename)
+    expected = normalize('save 1 {}'.format(filename))
+    with open(filename) as f:
+        content = normalize(f.read())
     assert content == expected
 
     # Delete file that was created
@@ -238,20 +242,10 @@ def test_output_redirection(base_app):
     # TODO: Use a temporary directory/file for this file
     filename = 'out.txt'
     run_cmd(base_app, 'help > {}'.format(filename))
-    expected = _normalize("""
-Documented commands (type help <topic>):
-========================================
-_load           ed    history  list   py   save   shortcuts
-_relative_load  edit  l        load   r    set    show
-cmdenvironment  hi    li       pause  run  shell
-
-Undocumented commands:
-======================
-EOF  eof  exit  help  q  quit
-""")
+    expected = normalize(BASE_HELP)
 
     with open(filename) as f:
-        content = _normalize(f.read())
+        content = normalize(f.read())
 
     assert content == expected
 
@@ -264,8 +258,8 @@ def test_pipe_to_shell(base_app):
     out = run_cmd(base_app, 'help help | wc')
 
     if sys.platform == "win32":
-        expected = _normalize("1       5      24")
+        expected = normalize("1       5      24")
     else:
-        expected = _normalize("1       5      20")
+        expected = normalize("1       5      20")
 
     assert out[0].strip() == expected[0].strip()

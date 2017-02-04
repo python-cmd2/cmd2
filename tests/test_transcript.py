@@ -9,7 +9,7 @@ Released under MIT license, see LICENSE file
 import pytest
 
 from cmd2 import Cmd, make_option, options, Cmd2TestCase
-from conftest import run_cmd, StdOut, _normalize
+from conftest import run_cmd, StdOut, normalize
 
 
 class CmdLineApp(Cmd):
@@ -76,13 +76,13 @@ def _get_transcript_blocks(transcript):
     for line in transcript.splitlines():
         if line.startswith('(Cmd) '):
             if cmd is not None:
-                yield cmd, _normalize(expected)
+                yield cmd, normalize(expected)
 
             cmd = line[6:]
             expected = ''
         else:
             expected += line + '\n'
-    yield cmd, _normalize(expected)
+    yield cmd, normalize(expected)
 
 
 def test_base_with_transcript(_cmdline_app):
@@ -163,7 +163,7 @@ class TestMyAppCase(Cmd2TestCase):
 def test_optparser(_cmdline_app, capsys):
     run_cmd(_cmdline_app, 'say -h')
     out, err = capsys.readouterr()
-    expected = _normalize("""
+    expected = normalize("""
 Repeats what you tell me to.
 Usage: speak [options] (text to say)
 
@@ -174,13 +174,13 @@ Options:
   -r REPEAT, --repeat=REPEAT
                         output [n] times""")
     # NOTE: For some reason this extra cast to str is required for Python 2.7 but not 3.x
-    assert _normalize(str(out)) == expected
+    assert normalize(str(out)) == expected
 
 
 def test_optparser_nosuchoption(_cmdline_app, capsys):
     run_cmd(_cmdline_app, 'say -a')
     out, err = capsys.readouterr()
-    expected = _normalize("""
+    expected = normalize("""
 no such option: -a
 Repeats what you tell me to.
 Usage: speak [options] (text to say)
@@ -191,23 +191,24 @@ Options:
   -s, --shout           N00B EMULATION MODE
   -r REPEAT, --repeat=REPEAT
                         output [n] times""")
-    assert _normalize(str(out)) == expected
+    assert normalize(str(out)) == expected
 
 
 def test_comment_stripping(_cmdline_app):
     out = run_cmd(_cmdline_app, 'speak it was /* not */ delicious! # Yuck!')
-    expected = _normalize("""it was  delicious!""")
+    expected = normalize("""it was  delicious!""")
     assert out == expected
 
 
 def test_optarser_correct_args_with_quotes_and_midline_options(_cmdline_app):
     out = run_cmd(_cmdline_app, "speak 'This is a' -s test of the emergency broadcast system!")
-    expected = _normalize("""THIS IS A TEST OF THE EMERGENCY BROADCAST SYSTEM!""")
+    expected = normalize("""THIS IS A TEST OF THE EMERGENCY BROADCAST SYSTEM!""")
     assert out == expected
+
 
 def test_optarser_options_with_spaces_in_quotes(_demo_app):
     out = run_cmd(_demo_app, "hello foo -n 'Bugs Bunny' bar baz")
-    expected = _normalize("""Hello Bugs Bunny""")
+    expected = normalize("""Hello Bugs Bunny""")
     assert out == expected
 
 
