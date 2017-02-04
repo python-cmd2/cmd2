@@ -310,6 +310,7 @@ def test_send_to_paste_buffer(base_app):
 
         assert normalize(c) == expected
 
+
 def test_base_timing(base_app, capsys):
     out = run_cmd(base_app, 'set timing True')
     expected = normalize("""timing - was: False
@@ -321,3 +322,23 @@ now: True
         assert out.startswith('Elapsed: 0:00:00')
     else:
         assert out.startswith('Elapsed: 0:00:00.0')
+
+
+def test_base_debug(base_app, capsys):
+    # Try to load a non-existent file with debug set to False by default
+    run_cmd(base_app, 'load does_not_exist.txt')
+    out, err = capsys.readouterr()
+    assert err.startswith('ERROR')
+
+    # Set debug true
+    out = run_cmd(base_app, 'set debug True')
+    expected = normalize("""
+debug - was: False
+now: True
+""")
+    assert out == expected
+
+    # Verify that we now see the exception traceback
+    run_cmd(base_app, 'load does_not_exist.txt')
+    out, err = capsys.readouterr()
+    assert str(err).startswith('Traceback (most recent call last):')
