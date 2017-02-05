@@ -463,7 +463,7 @@ def test_base_py_interactive(base_app):
     m.assert_called_once()
 
 
-def test_base_cmdloop_with_queue(capsys):
+def test_base_cmdloop_with_queue():
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = cmd2.Cmd()
     app.use_rawinput = True
@@ -478,4 +478,16 @@ def test_base_cmdloop_with_queue(capsys):
         # Run the command loop
         app.cmdloop()
     out = app.stdout.buffer
+    assert out == expected
+
+
+def test_input_redirection(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'redirect.txt')
+
+    # NOTE: File 'redirect.txt" contains 1 word "history"
+
+    # Verify that redirecting input from a file works
+    out = run_cmd(base_app, 'help < {}'.format(filename))
+    expected = normalize(HELP_HISTORY)
     assert out == expected
