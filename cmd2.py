@@ -435,16 +435,6 @@ class EmptyStatement(Exception):
     pass
 
 
-def ljust(x, width, fillchar=' '):
-    'analogous to str.ljust, but works for lists'
-    if hasattr(x, 'ljust'):
-        return x.ljust(width, fillchar)
-    else:
-        if len(x) < width:
-            x = (x + [fillchar] * width)[:width]
-        return x
-
-
 class Cmd(cmd.Cmd):
     echo = False
     case_insensitive = True  # Commands recognized regardless of case
