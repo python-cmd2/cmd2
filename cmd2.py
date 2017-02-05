@@ -51,8 +51,8 @@ from six import next
 # Possible types for text data. This is basestring() in Python 2 and str in Python 3.
 from six import string_types
 
-# raw_input() for Python 2 or input() for Python 3
-from six.moves import input
+# Used for sm.input: raw_input() for Python 2 or input() for Python 3
+import six.moves as sm
 
 # itertools.zip() for Python 2 or zip() for Python 3 - produces an iterator in both cases
 from six.moves import zip
@@ -1010,7 +1010,7 @@ class Cmd(cmd.Cmd):
 
         if self.use_rawinput:
             try:
-                line = input(prompt)
+                line = sm.input(prompt)
             except EOFError:
                 line = 'EOF'
         else:
@@ -1103,7 +1103,7 @@ class Cmd(cmd.Cmd):
         for (idx, (value, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
-            response = input(prompt)
+            response = sm.input(prompt)
             try:
                 response = int(response)
                 result = fulloptions[response - 1][0]
@@ -1164,7 +1164,7 @@ class Cmd(cmd.Cmd):
 
     def do_pause(self, arg):
         'Displays the specified text then waits for the user to press RETURN.'
-        input(arg + '\n')
+        sm.input(arg + '\n')
 
     def do_shell(self, arg):
         'execute a command as if at the OS prompt.'

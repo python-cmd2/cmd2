@@ -7,8 +7,11 @@ Released under MIT license, see LICENSE file
 """
 import sys
 
+import mock
 import pytest
-from mock import patch
+
+# Used for sm.input: raw_input() for Python 2 or input() for Python 3
+import six.moves as sm
 
 from cmd2 import Cmd, make_option, options, Cmd2TestCase
 from conftest import run_cmd, StdOut, normalize
@@ -54,6 +57,13 @@ class DemoApp(Cmd):
             self.stdout.write('Hello {}\n'.format(opts.name))
         else:
             self.stdout.write('Hello Nobody\n')
+
+    def do_eat(self, arg):
+        """Eat something, with a selection of sauces to choose from."""
+        sauce = self.select('sweet salty', 'Sauce? ')
+        result = '{food} with {sauce} sauce, yum!'
+        result = result.format(food=arg, sauce=sauce)
+        self.stdout.write(result + '\n')
 
 
 @pytest.fixture
@@ -217,7 +227,7 @@ def test_optarser_options_with_spaces_in_quotes(_demo_app):
 def test_commands_at_invocation(_cmdline_app):
     testargs = ["prog", "say hello", "say Gracie", "quit"]
     expected = "hello\nGracie\n"
-    with patch.object(sys, 'argv', testargs):
+    with mock.patch.object(sys, 'argv', testargs):
         app = CmdLineApp()
         app.stdout = StdOut()
         app.cmdloop()
@@ -225,3 +235,22 @@ def test_commands_at_invocation(_cmdline_app):
         assert out == expected
 
 
+def test_select_options(_demo_app):
+    # Mock out the input call so we don't actually wait for a user's `response on stdin
+    m = mock.MagicMock(name='input', return_value='2')
+    sm.input = m
+
+    food = 'bacon'
+    out = run_cmd(_demo_app, "set debug true")
+    out = run_cmd(_demo_app, "eat {}".format(food))
+    expected = normalize("""
+   1. sweet
+   2. salty
+{} with salty sauce, yum!
+""".format(food))
+
+    # Make sure our mock was called with the expected arguments
+    m.assert_called_once_with('Sauce? ')
+
+    # And verify the expected output to stdout
+    assert out == expected

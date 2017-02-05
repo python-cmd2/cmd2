@@ -55,6 +55,7 @@ CLASSIFIERS = filter(None, map(str.strip,
                                """.splitlines()))
 
 INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'six']
+# unitest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
 TESTS_REQUIRE = ['mock', 'pytest']
 
 setup(
