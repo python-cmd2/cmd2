@@ -1059,13 +1059,8 @@ class Cmd(cmd.Cmd):
     def do_EOF(self, arg):
         return self._STOP_SCRIPT_NO_EXIT  # End of script; should not exit app
 
-    do_eof = do_EOF
-
     def do_quit(self, arg):
         return self._STOP_AND_EXIT
-
-    do_exit = do_quit
-    do_q = do_quit
 
     def select(self, options, prompt='Your choice? '):
         '''Presents a numbered menu to the user.  Modelled after
@@ -1254,10 +1249,6 @@ class Cmd(cmd.Cmd):
         for hi in history:
             self.poutput(hi.pr())
 
-    do_hi = do_history
-    do_l = do_list
-    do_li = do_list
-
     def do_ed(self, arg):
         """ed: edit most recent command in text editor
         ed [N]: edit numbered command from history
@@ -1285,8 +1276,6 @@ class Cmd(cmd.Cmd):
 
         os.system('%s %s' % (self.editor, filename))
         self.do__load(filename)
-
-    do_edit = do_ed
 
     saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
@@ -1377,8 +1366,6 @@ class Cmd(cmd.Cmd):
         self.lastcmd = ''
         return stop and (stop != self._STOP_SCRIPT_NO_EXIT)
 
-    do__load = do_load  # avoid an unfortunate legacy use of do_load from sqlpython
-
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
 
@@ -1392,8 +1379,6 @@ class Cmd(cmd.Cmd):
         self.pfeedback(runme)
         if runme:
             stop = self.onecmd_plus_hooks(runme)
-
-    do_r = do_run
 
     def runTranscriptTests(self, callargs):
         class TestMyAppCase(Cmd2TestCase):
@@ -1422,6 +1407,17 @@ class Cmd(cmd.Cmd):
         else:
             if not self.run_commands_at_invocation(callargs):
                 self._cmdloop()
+
+    # Command Aliases
+    do_eof = do_EOF
+    do_exit = do_quit
+    do_q = do_quit
+    do_hi = do_history
+    do_l = do_list
+    do_li = do_list
+    do_edit = do_ed
+    do__load = do_load  # avoid an unfortunate legacy use of do_load from sqlpython
+    do_r = do_run
 
 
 class HistoryItem(str):
