@@ -1,0 +1,22 @@
+# .coveragerc to control coverage.py
+[run]
+# (boolean, default False): whether to measure branch coverage in addition to statement coverage.
+branch = False
+
+
+[report]
+# A list of regular expressions. Any line that matches one of these regexes is excluded from being reported as missing
+exclude_lines =
+    # Have to re-enable the standard pragma
+    pragma: no cover
+
+    # Don't complain if non-runnable code isn't run:
+    if __name__ == .__main__.:
+
+    # Don't complain about OS-specific code for other OSes (excludes Windows and Mac, includes Linux)
+    if sys\.platform
+
+
+[html]
+# (string, default “htmlcov”): where to write the HTML report files.
+directory = htmlcov
