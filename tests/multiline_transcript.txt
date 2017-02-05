@@ -1,0 +1,10 @@
+# cmd2 will skip any lines
+# which occur before a valid
+# command prompt
+
+(Cmd) orate This is a test
+> of the
+> emergency broadcast system
+This is a test
+of the
+emergency broadcast system

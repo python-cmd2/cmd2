@@ -559,4 +559,25 @@ def test_base_cmdloop_without_queue():
     assert out == expected
 
 
+def test_cmdloop_without_rawinput():
+    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+    app = cmd2.Cmd()
+    app.use_rawinput = False
+    app.intro = 'Hello World, this is an intro ...'
+    app.stdout = StdOut()
+
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='quit')
+    sm.input = m
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog"]
+    expected = app.intro + '\n{}'.format(app.prompt)
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        app.cmdloop()
+    out = app.stdout.buffer
+    assert out == expected
+
+
 
