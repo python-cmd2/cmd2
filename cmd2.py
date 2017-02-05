@@ -1405,16 +1405,6 @@ class Cmd(cmd.Cmd):
 
     do_r = do_run
 
-    def fileimport(self, statement, source):
-        try:
-            f = open(os.path.expanduser(source))
-        except IOError:
-            self.stdout.write("Couldn't read from file %s\n" % source)
-            return ''
-        data = f.read()
-        f.close()
-        return data
-
     def runTranscriptTests(self, callargs):
         class TestMyAppCase(Cmd2TestCase):
             CmdApp = self.__class__
