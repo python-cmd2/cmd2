@@ -14,6 +14,9 @@ import six
 
 from code import InteractiveConsole
 
+# Used for sm.input: raw_input() for Python 2 or input() for Python 3
+import six.moves as sm
+
 import cmd2
 from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
@@ -284,6 +287,18 @@ def test_output_redirection(base_app):
     os.remove(filename)
 
 
+def test_input_redirection(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'redirect.txt')
+
+    # NOTE: File 'redirect.txt" contains 1 word "history"
+
+    # Verify that redirecting input from a file works
+    out = run_cmd(base_app, 'help < {}'.format(filename))
+    expected = normalize(HELP_HISTORY)
+    assert out == expected
+
+
 def test_pipe_to_shell(base_app):
     # Get help on help and pipe it's output to the input of the word count shell command
     out = run_cmd(base_app, 'help help | wc')
@@ -471,7 +486,7 @@ def test_base_cmdloop_with_queue():
     app.cmdqueue.append('quit\n')
     app.stdout = StdOut()
 
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
     expected = app.intro + '\n'
     with mock.patch.object(sys, 'argv', testargs):
@@ -481,13 +496,25 @@ def test_base_cmdloop_with_queue():
     assert out == expected
 
 
-def test_input_redirection(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    filename = os.path.join(test_dir, 'redirect.txt')
+def test_base_cmdloop_without_queue():
+    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+    app = cmd2.Cmd()
+    app.use_rawinput = True
+    app.intro = 'Hello World, this is an intro ...'
+    app.stdout = StdOut()
 
-    # NOTE: File 'redirect.txt" contains 1 word "history"
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='quit')
+    sm.input = m
 
-    # Verify that redirecting input from a file works
-    out = run_cmd(base_app, 'help < {}'.format(filename))
-    expected = normalize(HELP_HISTORY)
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog"]
+    expected = app.intro + '\n'
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        app.cmdloop()
+    out = app.stdout.buffer
     assert out == expected
+
+
+
