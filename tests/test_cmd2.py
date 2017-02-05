@@ -15,7 +15,7 @@ import six
 from code import InteractiveConsole
 
 import cmd2
-from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
+from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
 
 def test_ver():
@@ -461,3 +461,21 @@ def test_base_py_interactive(base_app):
 
     # Make sure our mock was called once and only once
     m.assert_called_once()
+
+
+def test_base_cmdloop_with_queue(capsys):
+    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+    app = cmd2.Cmd()
+    app.use_rawinput = True
+    app.intro = 'Hello World, this is an intro ...'
+    app.cmdqueue.append('quit\n')
+    app.stdout = StdOut()
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments
+    testargs = ["prog"]
+    expected = app.intro + '\n'
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        app.cmdloop()
+    out = app.stdout.buffer
+    assert out == expected
