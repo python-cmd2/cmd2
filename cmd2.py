@@ -234,9 +234,10 @@ pastebufferr = """Redirecting to or from paste buffer requires %s
 to be installed on operating system.
 %s"""
 
+# Can we access the clipboard?
+can_clip = False
 if sys.platform == "win32":
     # Running on Windows
-    can_clip = False
     try:
         import win32clipboard
 
@@ -265,7 +266,6 @@ if sys.platform == "win32":
         write_to_paste_buffer = get_paste_buffer
 elif sys.platform == 'darwin':
     # Running on Mac OS X
-    can_clip = False
     try:
         # Warning: subprocess.call() and subprocess.check_call() should never be called with stdout=PIPE or stderr=PIPE
         # because the child process will block if it generates enough output to a pipe to fill up the OS pipe buffer.
@@ -298,23 +298,10 @@ elif sys.platform == 'darwin':
         write_to_paste_buffer = get_paste_buffer
 else:
     # Running on Linux
-    can_clip = False
     try:
         with open(os.devnull, 'w') as DEVNULL:
             subprocess.check_call('xclip -o -sel clip', shell=True, stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
         can_clip = True
-    except AttributeError:  # check_call not defined, Python < 2.5
-        try:
-            teststring = 'Testing for presence of xclip.'
-            xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            xclipproc.stdin.write(teststring)
-            xclipproc.stdin.close()
-            xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE,
-                                         stdin=subprocess.PIPE)
-            if xclipproc.stdout.read() == teststring:
-                can_clip = True
-        except Exception:  # hate a bare Exception call, but exception classes vary too much b/t stdlib versions
-            pass
     except Exception:
         pass  # something went wrong with xclip and we cannot use it
     if can_clip:
@@ -335,7 +322,6 @@ else:
     else:
         def get_paste_buffer(*args):
             raise OSError(pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"'))
-
 
         write_to_paste_buffer = get_paste_buffer
 
