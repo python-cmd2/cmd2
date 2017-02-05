@@ -57,11 +57,27 @@ continuation_prompt: >
 debug: False
 default_file_name: command.txt
 echo: False
+editor: vim
 feedback_to_output: False
 prompt: (Cmd)
 quiet: False
 timing: False
 """.format(expect_colors)
+
+
+SHOW_LONG = """abbrev: True                   # Accept abbreviated commands
+case_insensitive: True         # upper- and lower-case both OK
+colors: True                   # Colorized output (*nix only)
+continuation_prompt: >         # On 2nd+ line of input
+debug: False                   # Show full error stack on error
+default_file_name: command.txt # for ``save``, ``load``, etc.
+echo: False                    # Echo command issued into output
+editor: vim                    # Program used by ``edit``
+feedback_to_output: False      # include nonessentials in `|`, `>` results
+prompt: (Cmd)                  #
+quiet: False                   # Don't print nonessential feedback
+timing: False                  # Report execution times
+"""
 
 
 class StdOut(object):

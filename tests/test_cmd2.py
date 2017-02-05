@@ -13,7 +13,7 @@ import pytest
 import six
 
 import cmd2
-from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT
+from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
 
 def test_ver():
@@ -39,10 +39,18 @@ def test_base_shortcuts(base_app):
 
 
 def test_base_show(base_app):
+    # force editor to be 'vim' so test is repeatable across platforms
+    base_app.editor = 'vim'
     out = run_cmd(base_app, 'show')
     expected = normalize(SHOW_TXT)
-    # ignore "editor: vi" (could be others)
-    out = [l for l in out if not l.startswith('editor: ')]
+    assert out == expected
+
+
+def test_base_show_long(base_app):
+    # force editor to be 'vim' so test is repeatable across platforms
+    base_app.editor = 'vim'
+    out = run_cmd(base_app, 'show -l')
+    expected = normalize(SHOW_LONG)
     assert out == expected
 
 
