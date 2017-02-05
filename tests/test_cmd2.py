@@ -155,6 +155,45 @@ shortcuts
     assert out == expected
 
 
+def test_list_with_string_argument(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    run_cmd(base_app, 'help list')
+    out = run_cmd(base_app, 'list help')
+    expected = normalize("""
+-------------------------[1]
+help
+-------------------------[3]
+help list
+""")
+    assert out == expected
+
+
+def test_list_with_integer_argument(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    out = run_cmd(base_app, 'list 1')
+    expected = normalize("""
+-------------------------[1]
+help
+""")
+    assert out == expected
+
+
+def test_list_with_integer_span(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    run_cmd(base_app, 'help list')
+    out = run_cmd(base_app, 'list 1..2')
+    expected = normalize("""
+-------------------------[1]
+help
+-------------------------[2]
+shortcuts
+""")
+    assert out == expected
+
+
 def test_base_cmdenvironment(base_app):
     out = run_cmd(base_app, 'cmdenvironment')
     expected = normalize("""
