@@ -288,7 +288,7 @@ def test_output_redirection(base_app):
     os.remove(filename)
 
 
-@pytest.mark.skipif(getpass.getuser() == 'travis' and sys.platform.startswith('linux'),
+@pytest.mark.skipif(sys.platform.startswith('linux') and getpass.getuser() == 'travis',
                     reason="Unit test passes on Ubuntu 16.04 and Debian 8.7, but fails on TravisCI Linux containers")
 def test_input_redirection(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
