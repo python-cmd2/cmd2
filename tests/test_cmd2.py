@@ -5,6 +5,7 @@ Cmd2 unit/functional testing
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import getpass
 import os
 import sys
 
@@ -287,7 +288,7 @@ def test_output_redirection(base_app):
     os.remove(filename)
 
 
-@pytest.mark.skipif(sys.platform == 'linux',
+@pytest.mark.skipif(getpass.getuser() == 'travis' and sys.platform.startswith('linux'),
                     reason="Unit test passes on Ubuntu 16.04 and Debian 8.7, but fails on TravisCI Linux containers")
 def test_input_redirection(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
