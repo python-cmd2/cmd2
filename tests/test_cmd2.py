@@ -12,6 +12,8 @@ import mock
 import pytest
 import six
 
+from code import InteractiveConsole
+
 import cmd2
 from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
@@ -450,3 +452,12 @@ def test_edit_blank(base_app):
     os.remove(base_app.default_file_name)
 
 
+def test_base_py_interactive(base_app):
+    # Mock out the InteractiveConsole.interact() call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='interact')
+    InteractiveConsole.interact = m
+
+    run_cmd(base_app, "py")
+
+    # Make sure our mock was called once and only once
+    m.assert_called_once()

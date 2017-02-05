@@ -236,7 +236,7 @@ def test_commands_at_invocation(_cmdline_app):
 
 
 def test_select_options(_demo_app):
-    # Mock out the input call so we don't actually wait for a user's `response on stdin
+    # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
     sm.input = m
 
