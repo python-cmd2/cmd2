@@ -5,10 +5,12 @@ Cmd2 functional testing based on transcript
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import os
 import sys
 
 import mock
 import pytest
+import six
 
 # Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
@@ -224,7 +226,7 @@ def test_optarser_options_with_spaces_in_quotes(_demo_app):
     assert out == expected
 
 
-def test_commands_at_invocation(_cmdline_app):
+def test_commands_at_invocation():
     testargs = ["prog", "say hello", "say Gracie", "quit"]
     expected = "hello\nGracie\n"
     with mock.patch.object(sys, 'argv', testargs):
@@ -241,7 +243,7 @@ def test_select_options(_demo_app):
     sm.input = m
 
     food = 'bacon'
-    out = run_cmd(_demo_app, "set debug true")
+    run_cmd(_demo_app, "set debug true")
     out = run_cmd(_demo_app, "eat {}".format(food))
     expected = normalize("""
    1. sweet
@@ -254,3 +256,30 @@ def test_select_options(_demo_app):
 
     # And verify the expected output to stdout
     assert out == expected
+
+
+def test_transcript_from_cmdloop(request, capsys):
+    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+    app = CmdLineApp()
+    app.settable.append('maxrepeats   Max number of `--repeat`s allowed')
+
+    # Get location of the transcript
+    test_dir = os.path.dirname(request.module.__file__)
+    transcript_file = os.path.join(test_dir, 'transcript.txt')
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ['prog', '-t', transcript_file]
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        app.cmdloop()
+
+    # Check for the unittest "OK" condition for the 1 test which ran
+    expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
+    expected_end = "s\n\nOK\n\n"
+    out, err = capsys.readouterr()
+    if six.PY3:
+        assert err.startswith(expected_start)
+        assert err.endswith(expected_end)
+    else:
+        assert err == ''
+        assert out == ''
