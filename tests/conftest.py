@@ -64,10 +64,13 @@ quiet: False
 timing: False
 """.format(expect_colors)
 
-
+if expect_colors:
+    color_str = 'True '
+else:
+    color_str = 'False'
 SHOW_LONG = """abbrev: True                   # Accept abbreviated commands
 case_insensitive: True         # upper- and lower-case both OK
-colors: True                   # Colorized output (*nix only)
+colors: {}                  # Colorized output (*nix only)
 continuation_prompt: >         # On 2nd+ line of input
 debug: False                   # Show full error stack on error
 default_file_name: command.txt # for ``save``, ``load``, etc.
@@ -77,7 +80,7 @@ feedback_to_output: False      # include nonessentials in `|`, `>` results
 prompt: (Cmd)                  #
 quiet: False                   # Don't print nonessential feedback
 timing: False                  # Report execution times
-"""
+""".format(color_str)
 
 
 class StdOut(object):
