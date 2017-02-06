@@ -6,22 +6,18 @@ cmd2
    :target: https://travis-ci.org/python-cmd2/cmd2
    :alt: Build status
 
-.. image:: https://ci.appveyor.com/api/projects/status/github/python-cmd2/cmd2
+.. image:: https://ci.appveyor.com/api/projects/status/github/python-cmd2/cmd2?branch=master
    :target: https://ci.appveyor.com/project/FedericoCeratto/cmd2
    :alt: Appveyor build status
 
 .. image:: https://readthedocs.org/projects/cmd2/badge/?version=latest
     :target: https://cmd2.readthedocs.io
 
-.. image:: https://img.shields.io/pypi/dm/cmd2.svg?style=plastic
-   :target: https://pypi.python.org/pypi/cmd2/
-   :alt: Downloads
-
-.. image:: https://img.shields.io/pypi/v/cmd2.svg?style=plastic
+.. image:: https://img.shields.io/pypi/v/cmd2.svg
    :target: https://pypi.python.org/pypi/cmd2/
    :alt: Latest Version
 
-.. image:: https://img.shields.io/github/license/python-cmd2/cmd2.svg?style=plastic
+.. image:: https://img.shields.io/pypi/l/cmd2.svg
     :target: https://pypi.python.org/pypi/cmd2/
     :alt: License
 
