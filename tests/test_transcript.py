@@ -25,7 +25,8 @@ class CmdLineApp(Cmd):
     redirector = '->'
 
     def __init__(self, *args, **kwargs):
-        super(CmdLineApp, self).__init__(*args, **kwargs)
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        Cmd.__init__(self, *args, **kwargs)
         self.settable.append('maxrepeats   Max number of `--repeat`s allowed')
 
     opts = [make_option('-p', '--piglatin', action="store_true", help="atinLay"),
