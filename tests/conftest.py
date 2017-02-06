@@ -14,13 +14,8 @@ import cmd2
 # Help text for base cmd2.Cmd application
 BASE_HELP = """Documented commands (type help <topic>):
 ========================================
-_load           ed    history  list   py   save   shortcuts
-_relative_load  edit  l        load   r    set    show
-cmdenvironment  hi    li       pause  run  shell
-
-Undocumented commands:
-======================
-EOF  eof  exit  help  q  quit
+_relative_load  edit  help     list  pause  quit  save  shell      show
+cmdenvironment  eof   history  load  py     run   set   shortcuts
 """
 
 # Help text for the history command
