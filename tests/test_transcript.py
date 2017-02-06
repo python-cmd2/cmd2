@@ -24,13 +24,13 @@ class CmdLineApp(Cmd):
     maxrepeats = 3
     redirector = '->'
 
-    opts = [
-        make_option('-p', '--piglatin', action="store_true", help="atinLay"),
-        make_option('-s', '--shout', action="store_true",
-                    help="N00B EMULATION MODE"),
-        make_option('-r', '--repeat', type="int", help="output [n] times")
-    ]
+    def __init__(self, *args, **kwargs):
+        super(CmdLineApp, self).__init__(*args, **kwargs)
+        self.settable.append('maxrepeats   Max number of `--repeat`s allowed')
 
+    opts = [make_option('-p', '--piglatin', action="store_true", help="atinLay"),
+            make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
+            make_option('-r', '--repeat', type="int", help="output [n] times")]
     @options(opts, arg_desc='(text to say)')
     def do_speak(self, arg, opts=None):
         """Repeats what you tell me to."""
@@ -72,8 +72,6 @@ class DemoApp(Cmd):
 def _cmdline_app():
     c = CmdLineApp()
     c.stdout = StdOut()
-    # c.shortcuts.update({'&': 'speak', 'h': 'hello'})
-    c.settable.append('maxrepeats   Max number of `--repeat`s allowed')
     return c
 
 
@@ -261,7 +259,6 @@ def test_select_options(_demo_app):
 def test_transcript_from_cmdloop(request, capsys):
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = CmdLineApp()
-    app.settable.append('maxrepeats   Max number of `--repeat`s allowed')
 
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
