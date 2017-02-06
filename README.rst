@@ -148,13 +148,8 @@ example/exampleSession.txt::
 
     Documented commands (type help <topic>):
     ========================================
-    _load           ed    history  list   pause  run   set        show
-    _relative_load  edit  l        load   py     save  shell      speak
-    cmdenvironment  hi    li       orate  r      say   shortcuts
-
-    Undocumented commands:
-    ======================
-    EOF  eof  exit  help  q  quit
+    _relative_load  edit  help     list  orate  py    run   say  shell      show
+    cmdenvironment  eof   history  load  pause  quit  save  set  shortcuts  speak
 
     (Cmd) help say
     Repeats what you tell me to.

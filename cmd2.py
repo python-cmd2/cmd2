@@ -4,7 +4,7 @@
 To use, simply import cmd2.Cmd instead of cmd.Cmd; use precisely as though you
 were using the standard library's cmd, while enjoying the extra features.
 
-Searchable command history (commands: "hi", "li", "run")
+Searchable command history (commands: "history", "list", "run")
 Load commands from file, save to file, edit commands in file
 Multi-line commands
 Case-insensitive commands
@@ -548,6 +548,7 @@ class Cmd(cmd.Cmd):
                            })
 
     def do_help(self, arg):
+        '''List available commands with "help" or detailed help with "help cmd".'''
         if arg:
             funcname = self.func_named(arg)
             if funcname:
@@ -1056,10 +1057,12 @@ class Cmd(cmd.Cmd):
                     pass
             return stop
 
-    def do_EOF(self, arg):
+    def do_eof(self, arg):
+        """Automatically called at end of loading a script."""
         return self._STOP_SCRIPT_NO_EXIT  # End of script; should not exit app
 
     def do_quit(self, arg):
+        """Exits this application."""
         return self._STOP_AND_EXIT
 
     def select(self, options, prompt='Your choice? '):
@@ -1249,8 +1252,8 @@ class Cmd(cmd.Cmd):
         for hi in history:
             self.poutput(hi.pr())
 
-    def do_ed(self, arg):
-        """ed: edit most recent command in text editor
+    def do_edit(self, arg):
+        """edit: edit most recent command in text editor
         ed [N]: edit numbered command from history
         ed [filename]: edit specified file name
 
@@ -1275,7 +1278,7 @@ class Cmd(cmd.Cmd):
             f.close()
 
         os.system('%s %s' % (self.editor, filename))
-        self.do__load(filename)
+        self.do_load(filename)
 
     saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
@@ -1337,7 +1340,7 @@ class Cmd(cmd.Cmd):
             arg = arg.split(None, 1)
             targetname, args = arg[0], (arg[1:] or [''])[0]
             targetname = os.path.join(self.current_script_dir or '', targetname)
-            self.do__load('%s %s' % (targetname, args))
+            self.do_load('%s %s' % (targetname, args))
 
     urlre = re.compile('(https?://[-\\w\\./]+)')
 
@@ -1407,17 +1410,6 @@ class Cmd(cmd.Cmd):
         else:
             if not self.run_commands_at_invocation(callargs):
                 self._cmdloop()
-
-    # Command Aliases
-    do_eof = do_EOF
-    do_exit = do_quit
-    do_q = do_quit
-    do_hi = do_history
-    do_l = do_list
-    do_li = do_list
-    do_edit = do_ed
-    do__load = do_load  # avoid an unfortunate legacy use of do_load from sqlpython
-    do_r = do_run
 
 
 class HistoryItem(str):
