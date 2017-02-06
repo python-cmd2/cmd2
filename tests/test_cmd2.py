@@ -346,7 +346,7 @@ def test_pipe_to_shell(base_app):
     out = run_cmd(base_app, 'help help | wc')
 
     if sys.platform == "win32":
-        expected = normalize("1      11      70")
+        expected = normalize("1      11      74")
     else:
         expected = normalize("1      11      66")
 
