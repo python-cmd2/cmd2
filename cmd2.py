@@ -76,13 +76,13 @@ __version__ = '0.7.0'
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
 
-# If true, it attempts to be as backward compatible as possible by falling back to str.split() argument splititng if
-BACKWARD_COMPATIBLE_PARSING = False
-
-# Use POSIX or Non-POSIX (Windows) rules for shlex.split
+# Use POSIX or Non-POSIX (Windows) rules for splititng a command-line string into a list of arguments via shlex.split()
 POSIX_SHLEX = False
 
-# For option commands pass a list of argument strings instead of a single argument string
+# Strip outer quotes for convenience if POSIX_SHLEX = False
+STRIP_QUOTES_FOR_NON_POSIX = True
+
+# For option commandsm, pass a list of argument strings instead of a single argument string to the do_* methods
 USE_ARG_LIST = False
 
 
@@ -199,27 +199,20 @@ def options(option_list, arg_desc="arg"):
 
         def new_func(instance, arg):
             try:
-                if BACKWARD_COMPATIBLE_PARSING:
-                    # For backwads compatibility, fall back to str.split() if shlex.split throws an Exception
-                    try:
-                        opts, newArgList = optionParser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
-                    except Exception:
-                        opts, newArgList = optionParser.parse_args(arg.split())
-                else:
-                    # Enforce a stricter syntax
-                    opts, newArgList = optionParser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
+                # Use shlex to split the command line into a list of arguments based on shell rules
+                opts, newArgList = optionParser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
 
-                    # If not POSIX, make sure to strip off outer quotes
-                    if not POSIX_SHLEX:
-                        new_arg_list = []
-                        for arg in newArgList:
-                            new_arg_list.append(strip_quotes(arg))
-                        newArgList = new_arg_list
+                # If not using POSIX shlex, make sure to strip off outer quotes for convenience
+                if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
+                    new_arg_list = []
+                    for arg in newArgList:
+                        new_arg_list.append(strip_quotes(arg))
+                    newArgList = new_arg_list
 
-                        # Also strip off outer quotes on string option values
-                        for key, val in opts.__dict__.items():
-                            if isinstance(val, str):
-                                opts.__dict__[key] = strip_quotes(val)
+                    # Also strip off outer quotes on string option values
+                    for key, val in opts.__dict__.items():
+                        if isinstance(val, str):
+                            opts.__dict__[key] = strip_quotes(val)
 
                 # Must find the remaining args in the original argument list, but
                 # mustn't include the command itself
