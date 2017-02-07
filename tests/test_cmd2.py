@@ -206,7 +206,7 @@ def test_base_cmdenvironment(base_app):
 
     # Settable parameters can be listed in any order, so need to validate carefully using unordered sets
     settable_params = {'continuation_prompt', 'default_file_name', 'prompt', 'abbrev', 'quiet', 'case_insensitive',
-                       'colors', 'echo', 'timing', 'editor', 'feedback_to_output', 'debug'}
+                       'colors', 'echo', 'timing', 'editor', 'feedback_to_output', 'debug', 'autorun_on_edit'}
     out_params = set(out[2].split("Settable parameters: ")[1].split())
     assert settable_params == out_params
 
@@ -346,9 +346,9 @@ def test_pipe_to_shell(base_app):
     out = run_cmd(base_app, 'help help | wc')
 
     if sys.platform == "win32":
-        expected = normalize("1      11      74")
+        expected = normalize("1      11      71")
     else:
-        expected = normalize("1      11      66")
+        expected = normalize("1      11      70")
 
     assert out[0].strip() == expected[0].strip()
 

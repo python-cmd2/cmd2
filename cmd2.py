@@ -76,6 +76,9 @@ __version__ = '0.7.0'
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
 
+# TODO: Devise a way to make these next 3 parameters settable upon instantiating a cmd2.Cmd instance.
+# They all strongly effect how parsing occurs for commands using the @options decorator.
+
 # Use POSIX or Non-POSIX (Windows) rules for splititng a command-line string into a list of arguments via shlex.split()
 POSIX_SHLEX = False
 
@@ -219,13 +222,13 @@ def options(option_list, arg_desc="arg"):
                 # if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                 #    newArgList = newArgList[1:]
                 if USE_ARG_LIST:
-                    newArgs = newArgList
+                    arg = newArgList
                 else:
                     newArgs = remaining_args(arg, newArgList)
-                if isinstance(arg, ParsedString):
-                    arg = arg.with_args_replaced(newArgs)
-                else:
-                    arg = newArgs
+                    if isinstance(arg, ParsedString):
+                        arg = arg.with_args_replaced(newArgs)
+                    else:
+                        arg = newArgs
             except optparse.OptParseError as e:
                 print(e)
                 optionParser.print_help()
@@ -485,6 +488,8 @@ class Cmd(cmd.Cmd):
     locals_in_py = True
     kept_state = None
     redirector = '>'  # for sending output to file
+    autorun_on_edit = True   # Should files automatically run after editing (doesn't apply to commands)
+
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
@@ -498,6 +503,7 @@ class Cmd(cmd.Cmd):
         echo                  Echo command issued into output
         timing                Report execution times
         abbrev                Accept abbreviated commands
+        autorun_on_edit       Automatically run files after editing
         ''')
 
     def poutput(self, msg):
@@ -597,6 +603,7 @@ class Cmd(cmd.Cmd):
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self)
                                                if fname.startswith('do_')]
         self._init_parser()
+        self._temp_filename = None
 
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
@@ -950,8 +957,9 @@ class Cmd(cmd.Cmd):
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
             sys.stdout = self.stdout
-            # Redirect stdout to a fake file object which is an in-memory text stream
-            self.stdout = StringIO()
+            # Redirect stdout to a temporary file
+            _, self._temp_filename = tempfile.mkstemp()
+            self.stdout = open(self._temp_filename, 'w')
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
@@ -974,9 +982,6 @@ class Cmd(cmd.Cmd):
                     if not statement.parsed.outputTo:
                         self.stdout.seek(0)
                         write_to_paste_buffer(self.stdout.read())
-                elif statement.parsed.pipeTo:
-                    # Retreive the output from our internal command
-                    command_output = self.stdout.getvalue()
             finally:
                 self.stdout.close()
                 self.kept_state.restore()
@@ -985,12 +990,14 @@ class Cmd(cmd.Cmd):
 
                 if statement.parsed.pipeTo:
                     # Pipe output from the command to the shell command via echo
-                    command_line = r'echo "{}" | {}'.format(command_output.rstrip(), statement.parsed.pipeTo)
+                    command_line = r'cat {} | {}'.format(self._temp_filename, statement.parsed.pipeTo)
                     result = subprocess.check_output(command_line, shell=True)
                     if six.PY3:
                         self.stdout.write(result.decode())
                     else:
                         self.stdout.write(result)
+                    os.remove(self._temp_filename)
+                    self._temp_filename = None
 
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
@@ -1131,6 +1138,13 @@ class Cmd(cmd.Cmd):
     @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
     def do_show(self, arg, opts):
         '''Shows value of a parameter.'''
+        # If arguments are being passed as a list instead of as a string
+        if USE_ARG_LIST:
+            if arg and len(arg) > 0:
+                arg = arg[0]
+            else:
+                arg = ''
+
         param = arg.strip().lower()
         result = {}
         maxlen = 0
@@ -1245,6 +1259,13 @@ class Cmd(cmd.Cmd):
         | arg is string:  string search
         | arg is /enclosed in forward-slashes/: regular expression search
         """
+        # If arguments are being passed as a list instead of as a string
+        if USE_ARG_LIST:
+            if arg and len(arg) > 0:
+                arg = arg[0]
+            else:
+                arg = ''
+
         if arg:
             history = self.history.get(arg)
         else:
@@ -1306,7 +1327,9 @@ class Cmd(cmd.Cmd):
             f.close()
 
         os.system('%s %s' % (self.editor, filename))
-        self.do_load(filename)
+
+        if self.autorun_on_edit or buffer:
+            self.do_load(filename)
 
     saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
