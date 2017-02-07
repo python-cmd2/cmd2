@@ -1055,11 +1055,8 @@ class Cmd(cmd.Cmd):
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
         """
-
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
-
-        self.preloop()
         if self.use_rawinput and self.completekey:
             try:
                 import readline
@@ -1071,8 +1068,6 @@ class Cmd(cmd.Cmd):
         stop = None
         try:
             if intro is not None:
-                self.intro = intro
-            if self.intro:
                 self.stdout.write(str(self.intro) + "\n")
             while not stop:
                 if self.cmdqueue:
@@ -1082,7 +1077,6 @@ class Cmd(cmd.Cmd):
                 if self.echo and isinstance(self.stdin, file):
                     self.stdout.write(line + '\n')
                 stop = self.onecmd_plus_hooks(line)
-            self.postloop()
         finally:
             if self.use_rawinput and self.completekey:
                 try:
@@ -1414,7 +1408,7 @@ class Cmd(cmd.Cmd):
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
         self.current_script_dir = os.path.split(targetname)[0]
-        stop = self._cmdloop()
+        stop = self._cmdloop(None)
         self.stdin.close()
         keepstate.restore()
         self.lastcmd = ''
@@ -1460,7 +1454,9 @@ class Cmd(cmd.Cmd):
             self.runTranscriptTests(callargs)
         else:
             if not self.run_commands_at_invocation(callargs):
-                self._cmdloop()
+                self.preloop()
+                self._cmdloop(self.intro)
+                self.postloop()
 
 
 class HistoryItem(str):
