@@ -77,11 +77,13 @@ __version__ = '0.7.0'
 pyparsing.ParserElement.enablePackrat()
 
 # If true, it attempts to be as backward compatible as possible by falling back to str.split() argument splititng if
-# shlex.split() throws an exception.
-# Advantages of setting it True:  More "permissiive" and backward compatible argument parsing
-# Advantages of setting it False: Stricter parsing which requires escaping certain characters (more similar to shell)
-# TODO: Figure out how to make this a settable parameter in Cmd class, but accessible in options decorator
-BACKWARD_COMPATIBLE_PARSING = True
+BACKWARD_COMPATIBLE_PARSING = False
+
+# Use POSIX or Non-POSIX (Windows) rules for shlex.split
+POSIX_SHLEX = False
+
+# For option commands pass a list of argument strings instead of a single argument string
+USE_ARG_LIST = False
 
 
 class OptionParser(optparse.OptionParser):
@@ -144,8 +146,22 @@ def _which(editor):
         return None
 
 
-optparse.Values.get = _attr_get_
+def strip_quotes(arg):
+    """ Strip outer quotes from a string.
 
+     Applies to both single and doulbe quotes.
+
+    :param arg: str - string to strip outer quotes from
+    :return str - same string with potentially outer quotes stripped
+    """
+    quote_chars = '"' + "'"
+
+    if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in quote_chars:
+        arg = arg[1:-1]
+    return arg
+
+
+optparse.Values.get = _attr_get_
 options_defined = []  # used to distinguish --options from SQL-style --comments
 
 
@@ -174,7 +190,11 @@ def options(option_list, arg_desc="arg"):
         optionParser = OptionParser()
         for opt in option_list:
             optionParser.add_option(opt)
-        optionParser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
+        # Allow reasonable help for commands defined with @options and an empty list of options
+        if len(option_list) > 0:
+            optionParser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
+        else:
+            optionParser.set_usage("%s %s" % (func.__name__[3:], arg_desc))
         optionParser._func = func
 
         def new_func(instance, arg):
@@ -182,18 +202,33 @@ def options(option_list, arg_desc="arg"):
                 if BACKWARD_COMPATIBLE_PARSING:
                     # For backwads compatibility, fall back to str.split() if shlex.split throws an Exception
                     try:
-                        opts, newArgList = optionParser.parse_args(shlex.split(arg))
+                        opts, newArgList = optionParser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
                     except Exception:
                         opts, newArgList = optionParser.parse_args(arg.split())
                 else:
-                    # Enforce a stricter syntax, requiring users to quote or escape certain characters
-                    opts, newArgList = optionParser.parse_args(shlex.split(arg))
+                    # Enforce a stricter syntax
+                    opts, newArgList = optionParser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
+
+                    # If not POSIX, make sure to strip off outer quotes
+                    if not POSIX_SHLEX:
+                        new_arg_list = []
+                        for arg in newArgList:
+                            new_arg_list.append(strip_quotes(arg))
+                        newArgList = new_arg_list
+
+                        # Also strip off outer quotes on string option values
+                        for key, val in opts.__dict__.items():
+                            if isinstance(val, str):
+                                opts.__dict__[key] = strip_quotes(val)
 
                 # Must find the remaining args in the original argument list, but
                 # mustn't include the command itself
                 # if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                 #    newArgList = newArgList[1:]
-                newArgs = remaining_args(arg, newArgList)
+                if USE_ARG_LIST:
+                    newArgs = newArgList
+                else:
+                    newArgs = remaining_args(arg, newArgList)
                 if isinstance(arg, ParsedString):
                     arg = arg.with_args_replaced(newArgs)
                 else:
@@ -957,7 +992,7 @@ class Cmd(cmd.Cmd):
 
                 if statement.parsed.pipeTo:
                     # Pipe output from the command to the shell command via echo
-                    command_line = 'echo "{}" | {}'.format(command_output.rstrip(), statement.parsed.pipeTo)
+                    command_line = r'echo "{}" | {}'.format(command_output.rstrip(), statement.parsed.pipeTo)
                     result = subprocess.check_output(command_line, shell=True)
                     if six.PY3:
                         self.stdout.write(result.decode())
