@@ -1134,7 +1134,7 @@ class Cmd(cmd.Cmd):
         '''Shows value of a parameter.'''
         # If arguments are being passed as a list instead of as a string
         if USE_ARG_LIST:
-            if arg and len(arg) > 0:
+            if arg:
                 arg = arg[0]
             else:
                 arg = ''
@@ -1255,7 +1255,7 @@ class Cmd(cmd.Cmd):
         """
         # If arguments are being passed as a list instead of as a string
         if USE_ARG_LIST:
-            if arg and len(arg) > 0:
+            if arg:
                 arg = arg[0]
             else:
                 arg = ''
