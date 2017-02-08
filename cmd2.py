@@ -76,12 +76,46 @@ __version__ = '0.7.0'
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
 
-# If true, it attempts to be as backward compatible as possible by falling back to str.split() argument splititng if
-# shlex.split() throws an exception.
-# Advantages of setting it True:  More "permissiive" and backward compatible argument parsing
-# Advantages of setting it False: Stricter parsing which requires escaping certain characters (more similar to shell)
-# TODO: Figure out how to make this a settable parameter in Cmd class, but accessible in options decorator
-BACKWARD_COMPATIBLE_PARSING = True
+
+# The next 3 variables and associated setter funtions effect how arguments are parsed for commands using @options.
+# The defaults are "sane" and maximize backward compatibility with cmd and previous versions of cmd2.
+# But depending on your particular application, you may wish to tweak them so you get the desired parsing behavior.
+
+# Use POSIX or Non-POSIX (Windows) rules for splititng a command-line string into a list of arguments via shlex.split()
+POSIX_SHLEX = False
+
+# Strip outer quotes for convenience if POSIX_SHLEX = False
+STRIP_QUOTES_FOR_NON_POSIX = True
+
+# For option commandsm, pass a list of argument strings instead of a single argument string to the do_* methods
+USE_ARG_LIST = False
+
+
+def set_posix_shlex(val):
+    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for @options commands.
+
+    :param val: bool - True => POSIX,  False => Non-POSIX
+    """
+    global POSIX_SHLEX
+    POSIX_SHLEX = val
+
+
+def set_strip_quotes(val):
+    """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
+
+    :param val: bool - True => strip quotes on args and option args for @option commands if POSIX_SHLEX is False.
+    """
+    global STRIP_QUOTES_FOR_NON_POSIX
+    STRIP_QUOTES_FOR_NON_POSIX = val
+
+
+def set_use_arg_list(val):
+    """ Allows user of cmd2 to choose between passing @options commands an argument string or list or arg strings.
+
+    :param val: bool - True => arg is a list of strings,  False => arg is a string (for @options commands)
+    """
+    global USE_ARG_LIST
+    USE_ARG_LIST = val
 
 
 class OptionParser(optparse.OptionParser):
@@ -144,8 +178,22 @@ def _which(editor):
         return None
 
 
-optparse.Values.get = _attr_get_
+def strip_quotes(arg):
+    """ Strip outer quotes from a string.
 
+     Applies to both single and doulbe quotes.
+
+    :param arg: str - string to strip outer quotes from
+    :return str - same string with potentially outer quotes stripped
+    """
+    quote_chars = '"' + "'"
+
+    if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in quote_chars:
+        arg = arg[1:-1]
+    return arg
+
+
+optparse.Values.get = _attr_get_
 options_defined = []  # used to distinguish --options from SQL-style --comments
 
 
@@ -174,30 +222,42 @@ def options(option_list, arg_desc="arg"):
         optionParser = OptionParser()
         for opt in option_list:
             optionParser.add_option(opt)
-        optionParser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
+        # Allow reasonable help for commands defined with @options and an empty list of options
+        if len(option_list) > 0:
+            optionParser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
+        else:
+            optionParser.set_usage("%s %s" % (func.__name__[3:], arg_desc))
         optionParser._func = func
 
         def new_func(instance, arg):
             try:
-                if BACKWARD_COMPATIBLE_PARSING:
-                    # For backwads compatibility, fall back to str.split() if shlex.split throws an Exception
-                    try:
-                        opts, newArgList = optionParser.parse_args(shlex.split(arg))
-                    except Exception:
-                        opts, newArgList = optionParser.parse_args(arg.split())
-                else:
-                    # Enforce a stricter syntax, requiring users to quote or escape certain characters
-                    opts, newArgList = optionParser.parse_args(shlex.split(arg))
+                # Use shlex to split the command line into a list of arguments based on shell rules
+                opts, newArgList = optionParser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
+
+                # If not using POSIX shlex, make sure to strip off outer quotes for convenience
+                if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
+                    new_arg_list = []
+                    for arg in newArgList:
+                        new_arg_list.append(strip_quotes(arg))
+                    newArgList = new_arg_list
+
+                    # Also strip off outer quotes on string option values
+                    for key, val in opts.__dict__.items():
+                        if isinstance(val, str):
+                            opts.__dict__[key] = strip_quotes(val)
 
                 # Must find the remaining args in the original argument list, but
                 # mustn't include the command itself
                 # if hasattr(arg, 'parsed') and newArgList[0] == arg.parsed.command:
                 #    newArgList = newArgList[1:]
-                newArgs = remaining_args(arg, newArgList)
-                if isinstance(arg, ParsedString):
-                    arg = arg.with_args_replaced(newArgs)
+                if USE_ARG_LIST:
+                    arg = newArgList
                 else:
-                    arg = newArgs
+                    newArgs = remaining_args(arg, newArgList)
+                    if isinstance(arg, ParsedString):
+                        arg = arg.with_args_replaced(newArgs)
+                    else:
+                        arg = newArgs
             except optparse.OptParseError as e:
                 print(e)
                 optionParser.print_help()
@@ -457,6 +517,8 @@ class Cmd(cmd.Cmd):
     locals_in_py = True
     kept_state = None
     redirector = '>'  # for sending output to file
+    autorun_on_edit = True   # Should files automatically run after editing (doesn't apply to commands)
+
     settable = stubbornDict('''
         prompt
         colors                Colorized output (*nix only)
@@ -470,6 +532,7 @@ class Cmd(cmd.Cmd):
         echo                  Echo command issued into output
         timing                Report execution times
         abbrev                Accept abbreviated commands
+        autorun_on_edit       Automatically run files after editing
         ''')
 
     def poutput(self, msg):
@@ -569,6 +632,7 @@ class Cmd(cmd.Cmd):
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self)
                                                if fname.startswith('do_')]
         self._init_parser()
+        self._temp_filename = None
 
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
@@ -922,8 +986,9 @@ class Cmd(cmd.Cmd):
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
             sys.stdout = self.stdout
-            # Redirect stdout to a fake file object which is an in-memory text stream
-            self.stdout = StringIO()
+            # Redirect stdout to a temporary file
+            _, self._temp_filename = tempfile.mkstemp()
+            self.stdout = open(self._temp_filename, 'w')
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
@@ -946,9 +1011,6 @@ class Cmd(cmd.Cmd):
                     if not statement.parsed.outputTo:
                         self.stdout.seek(0)
                         write_to_paste_buffer(self.stdout.read())
-                elif statement.parsed.pipeTo:
-                    # Retreive the output from our internal command
-                    command_output = self.stdout.getvalue()
             finally:
                 self.stdout.close()
                 self.kept_state.restore()
@@ -957,12 +1019,14 @@ class Cmd(cmd.Cmd):
 
                 if statement.parsed.pipeTo:
                     # Pipe output from the command to the shell command via echo
-                    command_line = 'echo "{}" | {}'.format(command_output.rstrip(), statement.parsed.pipeTo)
+                    command_line = r'cat {} | {}'.format(self._temp_filename, statement.parsed.pipeTo)
                     result = subprocess.check_output(command_line, shell=True)
                     if six.PY3:
                         self.stdout.write(result.decode())
                     else:
                         self.stdout.write(result)
+                    os.remove(self._temp_filename)
+                    self._temp_filename = None
 
     def onecmd(self, line):
         """Interpret the argument as though it had been typed in response
@@ -1020,11 +1084,8 @@ class Cmd(cmd.Cmd):
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
         """
-
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
-
-        self.preloop()
         if self.use_rawinput and self.completekey:
             try:
                 import readline
@@ -1036,8 +1097,6 @@ class Cmd(cmd.Cmd):
         stop = None
         try:
             if intro is not None:
-                self.intro = intro
-            if self.intro:
                 self.stdout.write(str(self.intro) + "\n")
             while not stop:
                 if self.cmdqueue:
@@ -1047,7 +1106,6 @@ class Cmd(cmd.Cmd):
                 if self.echo and isinstance(self.stdin, file):
                     self.stdout.write(line + '\n')
                 stop = self.onecmd_plus_hooks(line)
-            self.postloop()
         finally:
             if self.use_rawinput and self.completekey:
                 try:
@@ -1103,6 +1161,13 @@ class Cmd(cmd.Cmd):
     @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
     def do_show(self, arg, opts):
         '''Shows value of a parameter.'''
+        # If arguments are being passed as a list instead of as a string
+        if USE_ARG_LIST:
+            if arg:
+                arg = arg[0]
+            else:
+                arg = ''
+
         param = arg.strip().lower()
         result = {}
         maxlen = 0
@@ -1217,6 +1282,13 @@ class Cmd(cmd.Cmd):
         | arg is string:  string search
         | arg is /enclosed in forward-slashes/: regular expression search
         """
+        # If arguments are being passed as a list instead of as a string
+        if USE_ARG_LIST:
+            if arg:
+                arg = arg[0]
+            else:
+                arg = ''
+
         if arg:
             history = self.history.get(arg)
         else:
@@ -1278,7 +1350,9 @@ class Cmd(cmd.Cmd):
             f.close()
 
         os.system('%s %s' % (self.editor, filename))
-        self.do_load(filename)
+
+        if self.autorun_on_edit or buffer:
+            self.do_load(filename)
 
     saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
@@ -1363,7 +1437,7 @@ class Cmd(cmd.Cmd):
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
         self.current_script_dir = os.path.split(targetname)[0]
-        stop = self._cmdloop()
+        stop = self._cmdloop(None)
         self.stdin.close()
         keepstate.restore()
         self.lastcmd = ''
@@ -1409,7 +1483,9 @@ class Cmd(cmd.Cmd):
             self.runTranscriptTests(callargs)
         else:
             if not self.run_commands_at_invocation(callargs):
-                self._cmdloop()
+                self.preloop()
+                self._cmdloop(self.intro)
+                self.postloop()
 
 
 class HistoryItem(str):

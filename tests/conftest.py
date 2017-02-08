@@ -46,6 +46,7 @@ if sys.platform.startswith('win'):
     expect_colors = False
 # Output from the show command with default settings
 SHOW_TXT = """abbrev: True
+autorun_on_edit: True
 case_insensitive: True
 colors: {}
 continuation_prompt: >
@@ -64,6 +65,7 @@ if expect_colors:
 else:
     color_str = 'False'
 SHOW_LONG = """abbrev: True                   # Accept abbreviated commands
+autorun_on_edit: True          # Automatically run files after editing
 case_insensitive: True         # upper- and lower-case both OK
 colors: {}                  # Colorized output (*nix only)
 continuation_prompt: >         # On 2nd+ line of input

@@ -204,7 +204,7 @@ Options:
 
 def test_comment_stripping(_cmdline_app):
     out = run_cmd(_cmdline_app, 'speak it was /* not */ delicious! # Yuck!')
-    expected = normalize("""it was  delicious!""")
+    expected = normalize("""it was delicious!""")
     assert out == expected
 
 
