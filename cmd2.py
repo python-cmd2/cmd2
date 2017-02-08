@@ -76,8 +76,10 @@ __version__ = '0.7.0'
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
 
-# TODO: Devise a way to make these next 3 parameters settable upon instantiating a cmd2.Cmd instance.
-# They all strongly effect how parsing occurs for commands using the @options decorator.
+
+# The next 3 variables and associated setter funtions effect how arguments are parsed for commands using @options.
+# The defaults are "sane" and maximize backward compatibility with cmd and previous versions of cmd2.
+# But depending on your particular application, you may wish to tweak them so you get the desired parsing behavior.
 
 # Use POSIX or Non-POSIX (Windows) rules for splititng a command-line string into a list of arguments via shlex.split()
 POSIX_SHLEX = False
@@ -87,6 +89,33 @@ STRIP_QUOTES_FOR_NON_POSIX = True
 
 # For option commandsm, pass a list of argument strings instead of a single argument string to the do_* methods
 USE_ARG_LIST = False
+
+
+def set_posix_shlex(val):
+    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for @options commands.
+
+    :param val: bool - True => POSIX,  False => Non-POSIX
+    """
+    global POSIX_SHLEX
+    POSIX_SHLEX = val
+
+
+def set_strip_quotes(val):
+    """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
+
+    :param val: bool - True => strip quotes on args and option args for @option commands if POSIX_SHLEX is False.
+    """
+    global STRIP_QUOTES_FOR_NON_POSIX
+    STRIP_QUOTES_FOR_NON_POSIX = val
+
+
+def set_use_arg_list(val):
+    """ Allows user of cmd2 to choose between passing @options commands an argument string or list or arg strings.
+
+    :param val: bool - True => arg is a list of strings,  False => arg is a string (for @options commands)
+    """
+    global USE_ARG_LIST
+    USE_ARG_LIST = val
 
 
 class OptionParser(optparse.OptionParser):
