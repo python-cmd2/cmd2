@@ -554,7 +554,7 @@ class Cmd(cmd.Cmd):
             traceback.print_exc()
 
         if exception_type is None:
-            err = self.colorize("ERROR: {}'\n".format(errmsg), 'red')
+            err = self.colorize("ERROR: {}\n".format(errmsg), 'red')
             sys.stderr.write(err)
         else:
             err = "EXCEPTION of type '{}' occured with message: '{}'\n".format(exception_type, errmsg)

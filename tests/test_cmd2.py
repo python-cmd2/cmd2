@@ -231,13 +231,15 @@ load {}
 
 
 def test_base_load_default_file(base_app, capsys):
+    # TODO: Make sure to remove the 'command.txt' file in case it exists
+
     # The way the load command works, we can't directly capture its stdout or stderr
     run_cmd(base_app, 'load')
     out, err = capsys.readouterr()
 
     # The default file 'command.txt' doesn't exist, so we should get an error message
     expected = normalize("""ERROR: Problem accessing script from command.txt:
-[Errno 2] No such file or directory: 'command.txt.txt''
+[Errno 2] No such file or directory: 'command.txt.txt'
 To enable full traceback, run the following command:  'set debug true'
 """)
     assert normalize(str(err)) == expected

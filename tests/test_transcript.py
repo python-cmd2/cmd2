@@ -302,3 +302,10 @@ def test_multiline_command_transcript_with_comments_at_beginning(request, capsys
     else:
         assert err == ''
         assert out == ''
+
+
+def test_invalid_syntax(_cmdline_app, capsys):
+    run_cmd(_cmdline_app, 'speak "')
+    out, err = capsys.readouterr()
+    expected = normalize("""ERROR: Invalid syntax: No closing quotation""")
+    assert normalize(str(err)) == expected
