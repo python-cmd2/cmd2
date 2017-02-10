@@ -542,7 +542,14 @@ class Cmd(cmd.Cmd):
             if msg[-1] != '\n':
                 self.stdout.write('\n')
 
-    def perror(self, errmsg, exception_type=None):
+    def perror(self, errmsg, exception_type=None, traceback_war=True):
+        """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
+        
+        :param errmsg: str - error message to print out
+        :param exception_type: str - (optional) type of exception which precipitated this error message
+        :param traceback_war: bool - (optional) if True, print a message to let user know they can enable debug
+        :return: 
+        """
         if self.debug:
             traceback.print_exc()
 
@@ -553,8 +560,9 @@ class Cmd(cmd.Cmd):
             err = "EXCEPTION of type '{}' occured with message: '{}'\n".format(exception_type, errmsg)
             sys.stderr.write(self.colorize(err, 'red'))
 
-        war = "To enable full traceback, run the following command:  'set debug true'\n"
-        sys.stderr.write(self.colorize(war, 'yellow'))
+        if traceback_war:
+            war = "To enable full traceback, run the following command:  'set debug true'\n"
+            sys.stderr.write(self.colorize(war, 'yellow'))
 
     def pfeedback(self, msg):
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -920,10 +928,28 @@ class Cmd(cmd.Cmd):
         return p
 
     def postparsing_precmd(self, statement):
-        stop = 0
+        """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
+        
+        NOTE: This runs before precmd() and prior to any potential output redirection or piping.
+        
+        If you wish to fatally fail this command and exit the application entirely, set stop = True.
+        
+        If you wish to just fail this command you can do so by raising an exception:
+            raise EmptyStatement - will silently fail and do nothing
+            raise <AnyOtherException> - will fail and print an error message
+        
+        :param statement: - the parsed command-line statement
+        :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement
+        """
+        stop = False
         return stop, statement
 
     def postparsing_postcmd(self, stop):
+        """This runs after everything else, including after postcmd().
+        
+        :param stop: bool - True implies the entire application should exit.
+        :return: bool - True implies the entire application should exit.
+        """
         return stop
 
     def func_named(self, arg):
@@ -939,6 +965,11 @@ class Cmd(cmd.Cmd):
         return result
 
     def onecmd_plus_hooks(self, line):
+        """
+        
+        :param line: 
+        :return: 
+        """
         # The outermost level of try/finally nesting can be condensed once
         # Python 2.4 support can be dropped.
         stop = 0
@@ -963,6 +994,9 @@ class Cmd(cmd.Cmd):
                     self.restore_output(statement)
             except EmptyStatement:
                 return 0
+            except ValueError as ex:
+                # If shlex.split failed on syntax, let user know whats going on
+                self.perror("Invalid syntax: {}".format(ex), traceback_war=False)
             except Exception as ex:
                 self.perror(ex, type(ex).__name__)
         finally:
