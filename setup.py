@@ -57,6 +57,7 @@ CLASSIFIERS = filter(None, map(str.strip,
 INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'six']
 # unitest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
 TESTS_REQUIRE = ['mock', 'pytest']
+DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme']
 
 setup(
     name="cmd2",
@@ -73,4 +74,5 @@ setup(
     keywords='command prompt console cmd',
     install_requires=INSTALL_REQUIRES,
     tests_require=TESTS_REQUIRE,
+    docs_require=DOCS_REQUIRE,
 )

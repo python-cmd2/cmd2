@@ -49,6 +49,7 @@ Resources
   *Easy Command-Line Applications with cmd and cmd2*:
   :doc:`slides <pycon2010/pycon2010>`,
   `video <http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html>`_
+
 These docs will refer to ``App`` as your ``cmd2.Cmd``
 subclass, and ``app`` as an instance of ``App``.  Of
 course, in your program, you may name them whatever
@@ -60,7 +61,6 @@ Contents:
    :maxdepth: 2
 
    overview
-   example
    freefeatures
    settingchanges
    unfreefeatures
