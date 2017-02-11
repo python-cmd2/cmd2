@@ -9,11 +9,10 @@ cmd2
 A python package for building powerful command-line interpreter (CLI)
 programs.  Extends the Python Standard Library's cmd_ package.
 
-
+.. _cmd: https://docs.python.org/3/library/cmd.html
 .. _`cmd2 project page`: https://github.com/python-cmd2/cmd2
 .. _`project bug tracker`: https://github.com/python-cmd2/cmd2/issues
 
-.. _cmd: http://docs.python.org/library/cmd.html#module-cmd
 
 The basic use of ``cmd2`` is identical to that of cmd_.
 
@@ -43,8 +42,8 @@ Resources
 ---------
 
 * cmd_
-* `project bug tracker`_
 * `cmd2 project page`_
+* `project bug tracker`_
 * `PyCon 2010 presentation <https://github.com/python-cmd2/cmd2/blob/master/docs/pycon2010/pycon2010.rst>`_,
   *Easy Command-Line Applications with cmd and cmd2*:
   :doc:`slides <pycon2010/pycon2010>`,

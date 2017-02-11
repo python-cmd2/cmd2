@@ -14,7 +14,7 @@ you need are sys_\ .argv (the command-line arguments) and optparse_
 
 .. _curses: http://docs.python.org/library/curses.html#module-curses
 
-.. _cmd: http://docs.python.org/library/cmd.html#module-cmd
+.. _cmd: https://docs.python.org/3/library/cmd.html
 
 The curses_ module produces applications that interact via a plaintext
 terminal window, but are not limited to simple text input and output;

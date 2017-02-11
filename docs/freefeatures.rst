@@ -5,7 +5,9 @@ Features requiring no modifications
 These features are provided "for free" to a cmd_-based application
 simply by replacing ``import cmd`` with ``import cmd2 as cmd``.
 
-.. _cmd: http://docs.python.org/library/cmd.html#module-cmd
+.. _cmd: https://docs.python.org/3/library/cmd.html
+
+.. _scripts:
 
 Script files
 ============

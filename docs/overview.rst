@@ -24,4 +24,4 @@ differs from cmd_.
    and issue the prompt again.  At this time, cmd2 completely ignores empty lines and the base class cmd.emptyline()
    method never gets called and thus the emptyline() behavior cannot be overriden.
 
-.. _cmd: http://docs.python.org/library/cmd.html
+.. _cmd: https://docs.python.org/3/library/cmd.html

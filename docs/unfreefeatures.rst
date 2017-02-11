@@ -76,7 +76,7 @@ to *use* ``arg.parsed``.)
 
 .. _sqlpython: http://pypi.python.org/pypi/sqlpython/
 
-.. _cmd: http://docs.python.org/library/cmd.html#module-cmd
+.. _cmd: https://docs.python.org/3/library/cmd.html
 
 .. _pyparsing: http://pyparsing.wikispaces.com/
 
