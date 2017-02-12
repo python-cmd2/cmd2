@@ -496,44 +496,94 @@ class EmptyStatement(Exception):
 
 
 class Cmd(cmd.Cmd):
-    echo = False
-    case_insensitive = True  # Commands recognized regardless of case
-    continuation_prompt = '> '
-    timing = False  # Prints elapsed time for each command
+    # TODO: Move all instance member initializations inside __init__()
+
+    # Attributes which are NOT dynamically settable at runtime
+    _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
+    _STOP_SCRIPT_NO_EXIT = -999
+    blankLinesAllowed = False
+    colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
+                  'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
+                  'blue': {True: '\x1b[34m', False: '\x1b[39m'},
+                  'red': {True: '\x1b[31m', False: '\x1b[39m'},
+                  'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
+                  'green': {True: '\x1b[32m', False: '\x1b[39m'},
+                  'underline': {True: '\x1b[4m', False: '\x1b[24m'},
+                  'yellow': {True: '\x1b[33m', False: '\x1b[39m'},
+                  }
+    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
+    commentGrammars.addParseAction(lambda x: '')
+    commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
+    current_script_dir = None
+    default_to_shell = False
+    defaultExtension = 'txt'  # For ``save``, ``load``, etc.
+    excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
+    kept_state = None
     # make sure your terminators are not in legalChars!
     legalChars = u'!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit
-    shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
-    default_to_shell = False
+    multilineCommands = []
     noSpecialParse = 'set ed edit exit'.split()
-    defaultExtension = 'txt'  # For ``save``, ``load``, etc.
-    default_file_name = 'command.txt'  # For ``save``, ``load``, etc.
-    abbrev = True  # Abbreviated commands recognized
-    current_script_dir = None
-    reserved_words = []
-    feedback_to_output = False  # Do include nonessentials in >, | output
-    quiet = False  # Do not suppress nonessential output
-    debug = False
-    locals_in_py = True
-    kept_state = None
+    prefixParser = pyparsing.Empty()
     redirector = '>'  # for sending output to file
-    autorun_on_edit = True   # Should files automatically run after editing (doesn't apply to commands)
+    reserved_words = []
+    saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
+                  pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
+                  pyparsing.stringEnd)
+    shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
+    terminators = [';']
+    urlre = re.compile('(https?://[-\\w\\./]+)')
 
+    # Attributes which ARE dynamicaly settable at runtime
+    abbrev = True  # Abbreviated commands recognized
+    autorun_on_edit = True  # Should files automatically run after editing (doesn't apply to commands)
+    case_insensitive = True  # Commands recognized regardless of case
+    colors = (platform.system() != 'Windows')
+    continuation_prompt = '> '
+    debug = False
+    default_file_name = 'command.txt'  # For ``save``, ``load``, etc.
+    echo = False
+    editor = os.environ.get('EDITOR')
+    if not editor:
+        if sys.platform[:3] == 'win':
+            editor = 'notepad'
+        else:
+            # Favor command-line editors first so we don't leave the terminal to edit
+            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
+                if _which(editor):
+                    break
+    feedback_to_output = False  # Do include nonessentials in >, | output
+    locals_in_py = True
+    quiet = False  # Do not suppress nonessential output
+    timing = False  # Prints elapsed time for each command
+
+    # To make an attribute settable with the "do_set" command, add it to this ...
     settable = stubbornDict('''
-        prompt
+        abbrev                Accept abbreviated commands
+        autorun_on_edit       Automatically run files after editing
+        case_insensitive      upper- and lower-case both OK
         colors                Colorized output (*nix only)
         continuation_prompt   On 2nd+ line of input
         debug                 Show full error stack on error
         default_file_name     for ``save``, ``load``, etc.
-        editor                Program used by ``edit``
-        case_insensitive      upper- and lower-case both OK
-        feedback_to_output    include nonessentials in `|`, `>` results
-        quiet                 Don't print nonessential feedback
         echo                  Echo command issued into output
+        editor                Program used by ``edit``
+        feedback_to_output    include nonessentials in `|`, `>` results
+        locals_in_py          Allow access to your application in py via self
+        prompt                The prompt issued to solicit input
+        quiet                 Don't print nonessential feedback
         timing                Report execution times
-        abbrev                Accept abbreviated commands
-        autorun_on_edit       Automatically run files after editing
         ''')
+
+    def __init__(self, *args, **kwargs):
+        cmd.Cmd.__init__(self, *args, **kwargs)
+        self.initial_stdout = sys.stdout
+        self.history = History()
+        self.pystate = {}
+        self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
+        self.keywords = self.reserved_words + [fname[3:] for fname in dir(self)
+                                               if fname.startswith('do_')]
+        self._init_parser()
+        self._temp_filename = None
 
     def poutput(self, msg):
         '''Convenient shortcut for self.stdout.write(); adds newline if necessary.'''
@@ -573,29 +623,6 @@ class Cmd(cmd.Cmd):
             else:
                 print(msg)
 
-    _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
-    _STOP_SCRIPT_NO_EXIT = -999
-    editor = os.environ.get('EDITOR')
-    if not editor:
-        if sys.platform[:3] == 'win':
-            editor = 'notepad'
-        else:
-            # Favor command-line editors first so we don't leave the terminal to edit
-            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
-                if _which(editor):
-                    break
-
-    colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
-                  'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
-                  'blue': {True: '\x1b[34m', False: '\x1b[39m'},
-                  'red': {True: '\x1b[31m', False: '\x1b[39m'},
-                  'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
-                  'green': {True: '\x1b[32m', False: '\x1b[39m'},
-                  'underline': {True: '\x1b[4m', False: '\x1b[24m'},
-                  'yellow': {True: '\x1b[33m', False: '\x1b[39m'},
-                  }
-    colors = (platform.system() != 'Windows')
-
     def colorize(self, val, color):
         '''Given a string (``val``), returns that string wrapped in UNIX-style
            special characters that turn on (and then off) text color and style.
@@ -631,29 +658,10 @@ class Cmd(cmd.Cmd):
         else:
             cmd.Cmd.do_help(self, arg)
 
-    def __init__(self, *args, **kwargs):
-        cmd.Cmd.__init__(self, *args, **kwargs)
-        self.initial_stdout = sys.stdout
-        self.history = History()
-        self.pystate = {}
-        self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
-        self.keywords = self.reserved_words + [fname[3:] for fname in dir(self)
-                                               if fname.startswith('do_')]
-        self._init_parser()
-        self._temp_filename = None
-
     def do_shortcuts(self, args):
         """Lists single-key shortcuts available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.stdout.write("Single-key shortcuts for other commands:\n{}\n".format(result))
-
-    prefixParser = pyparsing.Empty()
-    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
-    commentGrammars.addParseAction(lambda x: '')
-    commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
-    terminators = [';']
-    blankLinesAllowed = False
-    multilineCommands = []
 
     def _init_parser(self):
         r'''
@@ -1388,10 +1396,6 @@ class Cmd(cmd.Cmd):
         if self.autorun_on_edit or buffer:
             self.do_load(filename)
 
-    saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
-                  pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
-                  pyparsing.stringEnd)
-
     def do_save(self, arg):
         """`save [N] [filename.ext]`
 
@@ -1449,8 +1453,6 @@ class Cmd(cmd.Cmd):
             targetname, args = arg[0], (arg[1:] or [''])[0]
             targetname = os.path.join(self.current_script_dir or '', targetname)
             self.do_load('%s %s' % (targetname, args))
-
-    urlre = re.compile('(https?://[-\\w\\./]+)')
 
     def do_load(self, arg=None):
         """Runs script of command(s) from a file or URL."""
