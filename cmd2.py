@@ -1455,7 +1455,13 @@ class Cmd(cmd.Cmd):
             self.do_load('%s %s' % (targetname, args))
 
     def do_load(self, arg=None):
-        """Runs script of command(s) from a file or URL."""
+        """Runs script of command(s) from a file or URL.
+        
+        Script should contain one command per line, just like command would be typed in console.
+        
+        :param arg: str - Path of file to load and run commands from.
+        :return: bool - True if application should stop (script contained 'quit', typically False to continue running.
+        """
         # If arg is None or arg is an empty string, use the default filename
         if not arg:
             targetname = self.default_file_name
