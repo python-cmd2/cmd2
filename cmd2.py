@@ -586,7 +586,7 @@ class Cmd(cmd.Cmd):
         self._temp_filename = None
 
     def poutput(self, msg):
-        '''Convenient shortcut for self.stdout.write(); adds newline if necessary.'''
+        """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
         if msg:
             self.stdout.write(msg)
             if msg[-1] != '\n':
@@ -624,18 +624,18 @@ class Cmd(cmd.Cmd):
                 print(msg)
 
     def colorize(self, val, color):
-        '''Given a string (``val``), returns that string wrapped in UNIX-style
+        """Given a string (``val``), returns that string wrapped in UNIX-style
            special characters that turn on (and then off) text color and style.
            If the ``colors`` environment paramter is ``False``, or the application
            is running on Windows, will return ``val`` unchanged.
            ``color`` should be one of the supported strings (or styles):
-           red/blue/green/cyan/magenta, bold, underline'''
+           red/blue/green/cyan/magenta, bold, underline"""
         if self.colors and (self.stdout == self.initial_stdout):
             return self.colorcodes[color][True] + val + self.colorcodes[color][False]
         return val
 
     def do_cmdenvironment(self, args):
-        '''Summary report of interactive parameters.'''
+        """Summary report of interactive parameters."""
         self.stdout.write("""
         Commands are %(casesensitive)scase-sensitive.
         Commands may be terminated with: %(terminators)s
@@ -646,7 +646,7 @@ class Cmd(cmd.Cmd):
                            })
 
     def do_help(self, arg):
-        '''List available commands with "help" or detailed help with "help cmd".'''
+        """List available commands with "help" or detailed help with "help cmd"."""
         if arg:
             funcname = self.func_named(arg)
             if funcname:
@@ -1166,7 +1166,7 @@ class Cmd(cmd.Cmd):
         return self._STOP_AND_EXIT
 
     def select(self, options, prompt='Your choice? '):
-        '''Presents a numbered menu to the user.  Modelled after
+        """Presents a numbered menu to the user.  Modelled after
            the bash shell's SELECT.  Returns the item chosen.
 
            Argument ``options`` can be:
@@ -1175,7 +1175,7 @@ class Cmd(cmd.Cmd):
              | a list of strings -> will be offered as options
              | a list of tuples -> interpreted as (value, text), so
                                    that the return value can differ from
-                                   the text advertised to the user '''
+                                   the text advertised to the user """
         local_opts = options
         if isinstance(options, string_types):
             local_opts = list(zip(options.split(), options.split()))
@@ -1257,13 +1257,28 @@ class Cmd(cmd.Cmd):
         except (ValueError, AttributeError, NotSettableError) as e:
             self.do_show(arg)
 
-    def do_pause(self, arg):
-        'Displays the specified text then waits for the user to press RETURN.'
-        sm.input(arg + '\n')
+    def do_pause(self, text):
+        """Displays the specified text then waits for the user to press <Enter>.
+        
+    Usage:  pause [text]
+    
+    optional arguments:
+    text        Text to display to the user
+                default: blank line
+        """
+        sm.input(text + '\n')
 
-    def do_shell(self, arg):
-        'execute a command as if at the OS prompt.'
-        os.system(arg)
+    def do_shell(self, cmd):
+        """Execute a command as if at the OS prompt.
+        
+    Usage:  shell cmd
+    
+    positional argument:
+    cmd     shell command to execute
+    
+NOTE: `!` is a shortcut for this command.
+        """
+        os.system(cmd)
 
     def do_py(self, arg):
         '''
@@ -1353,11 +1368,11 @@ class Cmd(cmd.Cmd):
     def do_list(self, arg):
         """list [arg]: lists last command issued
 
-        no arg -> list most recent command
-        arg is integer -> list one history item, by index
-        a..b, a:b, a:, ..b -> list spans from a (or start) to b (or end)
-        arg is string -> list all commands matching string search
-        arg is /enclosed in forward-slashes/ -> regular expression search
+    no arg -> list most recent command
+    arg is integer -> list one history item, by index
+    a..b, a:b, a:, ..b -> list spans from a (or start) to b (or end)
+    arg is string -> list all commands matching string search
+    arg is /enclosed in forward-slashes/ -> regular expression search
         """
         try:
             history = self.history.span(arg or '-1')
@@ -1367,13 +1382,25 @@ class Cmd(cmd.Cmd):
             self.poutput(hi.pr())
 
     def do_edit(self, arg):
-        """edit: edit most recent command in text editor
-        ed [N]: edit numbered command from history
-        ed [filename]: edit specified file name
+        """Edit a file or command in a text editor.
+    
+    Usage:  edit [N]|[file_path]
+    
+    optional arguments:
+    N           Number of command (from history), or `*` for all commands in history
+                default: most recent command
+    file_path   path to a file to open in editor
+                
+The editor used is determined by the `editor` settable parameter.
+"set editor (program-name" to change or set the EDITOR environment variable.
 
-        commands are run after editor is closed.
-        "set edit (program-name)" or set  EDITOR environment variable
-        to control which editing program is used."""
+The optional arguments are mutually exclusive.  Either a command number OR a file name can be supplied.
+If neither is supplied, the most recent command in the history is edited.
+
+Edited commands are always run after the editor is closed.
+
+Edited files are run on close if the `autorun_on_edit` settable parameter is True.
+        """
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
         filename = self.default_file_name
@@ -1397,12 +1424,16 @@ class Cmd(cmd.Cmd):
             self.do_load(filename)
 
     def do_save(self, arg):
-        """`save [N] [filename.ext]`
-
-        Saves command from history to file.
-
-        | N => Number of command (from history), or `*`;
-        |      most recent command if omitted"""
+        """Saves command(s) from history to file.
+        
+    Usage:  save [N] [file_path]
+    
+    optional arguments:
+    N           Number of command (from history), or `*` for all commands in history
+                default: most recent command
+    file_path   location to save script of command(s) to
+                default: value stored in `default_file_name` settable param
+        """
 
         try:
             args = self.saveparser.parseString(arg)
@@ -1444,30 +1475,46 @@ class Cmd(cmd.Cmd):
         return result
 
     def do__relative_load(self, arg=None):
-        '''
-        Runs commands in script at file or URL; if this is called from within an
-        already-running script, the filename will be interpreted relative to the
-        already-running script's directory.'''
+        """Runs commands in script at file or URL.
+        
+    Usage:  load [file_path]
+    
+    optional argument:
+    file_path   a file path or URL pointing to a script
+                default: value stored in `default_file_name` settable param
+
+Script should contain one command per line, just like command would be typed in console.
+        
+If this is called from within an already-running script, the filename will be interpreted 
+relative to the already-running script's directory.
+
+NOTE: `@@` is a shortcut for this command.
+        """
         if arg:
             arg = arg.split(None, 1)
             targetname, args = arg[0], (arg[1:] or [''])[0]
             targetname = os.path.join(self.current_script_dir or '', targetname)
             self.do_load('%s %s' % (targetname, args))
 
-    def do_load(self, arg=None):
-        """Runs script of command(s) from a file or URL.
+    def do_load(self, file_path=None):
+        """Runs commands in script at file or URL.
         
-        Script should contain one command per line, just like command would be typed in console.
-        
-        :param arg: str - Path of file to load and run commands from.
-        :return: bool - True if application should stop (script contained 'quit', typically False to continue running.
+    Usage:  load [file_path]
+    
+    optional argument:
+    file_path   a file path or URL pointing to a script
+                default: value stored in `default_file_name` settable param
+
+Script should contain one command per line, just like command would be typed in console.
+
+NOTE: `@` is a shortcut for this command.
         """
         # If arg is None or arg is an empty string, use the default filename
-        if not arg:
+        if not file_path:
             targetname = self.default_file_name
         else:
-            arg = arg.split(None, 1)
-            targetname, args = arg[0], (arg[1:] or [''])[0].strip()
+            file_path = file_path.split(None, 1)
+            targetname, args = file_path[0], (file_path[1:] or [''])[0].strip()
         try:
             target = self.read_file_or_url(targetname)
         except IOError as e:
@@ -1488,10 +1535,10 @@ class Cmd(cmd.Cmd):
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
 
-        no arg -> run most recent command
-        arg is integer -> run one history item, by index
-        arg is string -> run most recent command by string search
-        arg is /enclosed in forward-slashes/ -> run most recent by regex
+    no arg -> run most recent command
+    arg is integer -> run one history item, by index
+    arg is string -> run most recent command by string search
+    arg is /enclosed in forward-slashes/ -> run most recent by regex
         """
         'run [N]: runs the SQL that was run N commands ago'
         runme = self.last_matching(arg)
