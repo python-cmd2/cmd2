@@ -32,9 +32,8 @@ are recognized; you may change this by overriding
 ``app.commentGrammars`` with a different pyparsing_
 grammar.
 
-Comments can be useful in :ref:`scripts`.  Used
-in an interactive session, they may indicate
-mental imbalance.
+Comments can be useful in :ref:`scripts`, but would
+be pointless within an interactive session.
 
 ::
 
@@ -105,9 +104,10 @@ command.  Entered without arguments, it enters an
 interactive Python session.  That session can call
 "back" to your application with ``cmd("")``.  Through
 ``self``, it also has access to your application
-instance itself.  (If that thought terrifies you,
-you can set the ``locals_in_py`` parameter to ``False``.
-See see :ref:`parameters`)
+instance itself which can be extremely useful for debugging.
+(If giving end-users this level of introspection is inappropriate,
+the ``locals_in_py`` parameter can be set to ``False`` and removed
+from the settable dictionary. See see :ref:`parameters`)
 
 ::
 
@@ -157,8 +157,7 @@ also provide `bash-like history list editing`_.
 Quitting the application
 ========================
 
-``cmd2`` pre-defines a ``quit`` command for you (with
-synonyms ``exit`` and simply ``q``).
+``cmd2`` pre-defines a ``quit`` command for you.
 It's trivial, but it's one less thing for you to remember.
 
 

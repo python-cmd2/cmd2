@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # coding=utf-8
 """Variant on standard library's cmd with extra features.
 
@@ -1955,6 +1956,8 @@ class Cmd2TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
+
+    # NOTE: The doctest expected values work with Python 2.7, but are a bit off for Python 3.x.
 
 '''
 To make your application transcript-testable, replace

@@ -17,7 +17,7 @@ differs from cmd_.
 .. note::
 
    ``cmd2`` is not quite a drop-in replacement for cmd_.
-   The `cmd.emptyline() function <https://docs.python.org/3/library/cmd.html#cmd.Cmd.emptyline>`_ is called
+   The `cmd.emptyline() <https://docs.python.org/3/library/cmd.html#cmd.Cmd.emptyline>`_ function is called
    when an empty line is entered in response to the prompt. By default, in cmd_ if this method is not overridden, it
    repeats and executes the last nonempty command entered.  However, no end user we have encountered views this as
    expected or desirable default behavior.  Thus, the default behvior in ``cmd2`` is to simply go to the next line

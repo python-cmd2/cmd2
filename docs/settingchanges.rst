@@ -16,8 +16,8 @@ By default, all ``cmd2`` command names are case-insensitive;
 set ``App.case_insensitive`` to False.
 
 Whether or not you set ``case_insensitive``, *please do not* define
-command method names with any uppercase letters.  ``cmd2`` will probably
-do something evil if you do.
+command method names with any uppercase letters.  ``cmd2`` expects all command methods
+to be lowercase.
 
 Shortcuts
 =========
@@ -117,4 +117,8 @@ with::
     prompt: (Cmd)                  # The prompt issued to solicit input
     quiet: False                   # Don't print nonessential feedback
     timing: False                  # Report execution times
+
+Any of these user-settable parameters can be set while running your app with the ``set`` command like so::
+
+    set abbrev False
 

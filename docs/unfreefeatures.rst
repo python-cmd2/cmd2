@@ -21,7 +21,7 @@ Parsed statements
 =================
 
 ``cmd2`` passes ``arg`` to a ``do_`` method (or
-``default`) as a ParsedString, a subclass of
+``default``) as a ParsedString, a subclass of
 string that includes an attribute ``parsed``.
 ``parsed`` is a ``pyparsing.ParseResults``
 object produced by applying a pyparsing_
@@ -62,10 +62,9 @@ If ``parsed`` does not contain an attribute,
 querying for it will return ``None``.  (This
 is a characteristic of ``pyparsing.ParseResults``.)
 
-ParsedString was developed to support sqlpython_
-and reflects its needs.  The parsing grammar and
-process are painfully complex and should not be
-considered stable; future ``cmd2`` releases may
+The parsing grammar and process currently employed
+by cmd2 is stable, but is likely significantly more
+complex than it needs to be.  Future ``cmd2`` releases may
 change it somewhat (hopefully reducing complexity).
 
 (Getting ``arg`` as a ``ParsedString`` is
@@ -73,8 +72,6 @@ technically "free", in that it requires no application
 changes from the cmd_ standard, but there will
 be no result unless you change your application
 to *use* ``arg.parsed``.)
-
-.. _sqlpython: http://pypi.python.org/pypi/sqlpython/
 
 .. _cmd: https://docs.python.org/3/library/cmd.html
 
@@ -224,8 +221,8 @@ useful for non-essential feedback that the user may not always want
 to read.  ``quiet`` is only relevant if
 ``app.pfeedback`` is sometimes used.
 
-``select``
-==========
+select
+======
 
 Presents numbered options to user, as bash ``select``.
 
