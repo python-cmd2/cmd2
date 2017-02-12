@@ -17,6 +17,7 @@ terminators.  A blank line
 is *always* considered a command terminator
 (cannot be overridden).
 
+
 Parsed statements
 =================
 
@@ -76,6 +77,7 @@ to *use* ``arg.parsed``.)
 .. _cmd: https://docs.python.org/3/library/cmd.html
 
 .. _pyparsing: http://pyparsing.wikispaces.com/
+
 
 Environment parameters
 ======================
@@ -189,9 +191,25 @@ the option's online help.
       -h, --help   show this help message and exit
       -t, --train  by train
 
-.. _optparse:
+Controlling how arguments are parsed for commands with flags
+------------------------------------------------------------
+There are three functions which can globally effect how arguments are parsed for commands with flags:
 
-.. _outputters:
+.. autofunction:: cmd2.set_posix_shlex
+
+.. autofunction:: cmd2.set_strip_quotes
+
+.. autofunction:: cmd2.set_use_arg_list
+
+.. note::
+
+   Since optparse_ has been deprecated since Python 3.2, the ``cmd2`` developers plan to replace optparse_ with
+   argparse_ in the next version of ``cmd2``.  We will endeavor to keep the API as identical as possible when this
+   change occurs.
+
+.. _optparse: https://docs.python.org/3/library/optparse.html
+.. _argparse: https://docs.python.org/3/library/argparse.html
+
 
 poutput, pfeedback, perror
 ==========================
@@ -204,6 +222,7 @@ instead.  These methods have these advantages:
 - More concise
     - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
 
+
 color
 =====
 
@@ -213,6 +232,7 @@ Text output can be colored by wrapping it in the ``colorize`` method.
 
 .. _quiet:
 
+
 quiet
 =====
 
@@ -220,6 +240,7 @@ Controls whether ``self.pfeedback('message')`` output is suppressed;
 useful for non-essential feedback that the user may not always want
 to read.  ``quiet`` is only relevant if
 ``app.pfeedback`` is sometimes used.
+
 
 select
 ======
