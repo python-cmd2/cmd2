@@ -163,6 +163,3 @@ texinfo_documents = [
 # -- Options for Extensions  -------------------------------------------
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None}
-
-# Mock 3rd-party dependencies so they don't need to be installed for building docs
-autodoc_mock_imports = ['six']
