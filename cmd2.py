@@ -111,7 +111,7 @@ def set_strip_quotes(val):
 
 
 def set_use_arg_list(val):
-    """ Allows user of cmd2 to choose between passing @options commands an argument string or list or arg strings.
+    """ Allows user of cmd2 to choose between passing @options commands an argument string or list of arg strings.
 
     :param val: bool - True => arg is a list of strings,  False => arg is a string (for @options commands)
     """
@@ -592,11 +592,11 @@ class Cmd(cmd.Cmd):
 
     def perror(self, errmsg, exception_type=None, traceback_war=True):
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
-        
+
         :param errmsg: str - error message to print out
         :param exception_type: str - (optional) type of exception which precipitated this error message
         :param traceback_war: bool - (optional) if True, print a message to let user know they can enable debug
-        :return: 
+        :return:
         """
         if self.debug:
             traceback.print_exc()
@@ -935,15 +935,15 @@ class Cmd(cmd.Cmd):
 
     def postparsing_precmd(self, statement):
         """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
-        
+
         NOTE: This runs before precmd() and prior to any potential output redirection or piping.
-        
+
         If you wish to fatally fail this command and exit the application entirely, set stop = True.
-        
+
         If you wish to just fail this command you can do so by raising an exception:
             raise EmptyStatement - will silently fail and do nothing
             raise <AnyOtherException> - will fail and print an error message
-        
+
         :param statement: - the parsed command-line statement
         :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement
         """
@@ -952,7 +952,7 @@ class Cmd(cmd.Cmd):
 
     def postparsing_postcmd(self, stop):
         """This runs after everything else, including after postcmd().
-        
+
         :param stop: bool - True implies the entire application should exit.
         :return: bool - True implies the entire application should exit.
         """
@@ -972,9 +972,9 @@ class Cmd(cmd.Cmd):
 
     def onecmd_plus_hooks(self, line):
         """
-        
-        :param line: 
-        :return: 
+
+        :param line:
+        :return:
         """
         # The outermost level of try/finally nesting can be condensed once
         # Python 2.4 support can be dropped.
@@ -1257,9 +1257,9 @@ class Cmd(cmd.Cmd):
 
     def do_pause(self, text):
         """Displays the specified text then waits for the user to press <Enter>.
-        
+
         Usage:  pause [text]
-        
+
         :param text: str - Text to display to the user (default: blank line)
         """
         sm.input(text + '\n')
@@ -1267,15 +1267,15 @@ class Cmd(cmd.Cmd):
     def help_pause(self):
         """Print help for do_pause()."""
         help_str = """Displays the specified text then waits for the user to press <Enter>.
-        
+
     Usage:  pause [text]"""
         self.stdout.write("{}\n".format(help_str))
 
     def do_shell(self, command):
         """Execute a command as if at the OS prompt.
-        
+
         Usage:  shell command
-        
+
         :param command: str - shell command to execute
         """
         os.system(command)
@@ -1283,7 +1283,7 @@ class Cmd(cmd.Cmd):
     def help_shell(self):
         """Print help for do_shell()."""
         help_str = """Execute a command as if at the OS prompt.
-        
+
     Usage:  shell cmd"""
         self.stdout.write("{}\n".format(help_str))
 
@@ -1374,9 +1374,9 @@ class Cmd(cmd.Cmd):
 
     def do_list(self, arg):
         """list [arg]: lists command(s) from history in a flexible/searchable way.
-        
+
         :param arg: str - behavior varies as follows:
-                
+
         * no arg -> list most recent command
         * arg is integer -> list one history item, by index
         * a..b, a:b, a:, ..b -> list spans from a (or start) to b (or end)
@@ -1403,20 +1403,20 @@ class Cmd(cmd.Cmd):
 
     def do_edit(self, arg):
         """Edit a file or command in a text editor.
-    
+
         Usage:  edit [N]|[file_path]
-        
+
         :param arg: str - [N]|[file_path]
 
         * **N** - Number of command (from history), or `*` for all commands in history (default: most recent command)
         * **file_path** - path to a file to open in editor
-                
+
         The editor used is determined by the ``editor`` settable parameter.
         "set editor (program-name)" to change or set the EDITOR environment variable.
-        
+
         The optional arguments are mutually exclusive.  Either a command number OR a file name can be supplied.
         If neither is supplied, the most recent command in the history is edited.
-        
+
         Edited commands are always run after the editor is closed.
 
         Edited files are run on close if the ``autorun_on_edit`` settable parameter is True.
@@ -1448,11 +1448,11 @@ class Cmd(cmd.Cmd):
         help_str = """Edit a file or command in a text editor.
 
     Usage:  edit [N]|[file_path]
-    
+
     optional arguments:
     N           Number of command (from history), or `*` for all commands in history (default: most recent command)
     file_path   path to a file to open in editor
-                
+
 The editor used is determined by the `editor` settable parameter.
 "set editor (program-name" to change or set the EDITOR environment variable.
 
@@ -1472,9 +1472,9 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
         """Saves command(s) from history to file.
 
         Usage:  save [N] [file_path]
-        
+
         :param arg: str - [N] [filepath]
-        
+
         * **N** - Number of command (from history), or `*` for all commands in history (default: most recent command)
         * **file_path** - location to save script of command(s) to (default: value stored in ``default_file_name``)
         """
@@ -1505,7 +1505,7 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
         help_str = """Saves command(s) from history to file.
 
     Usage:  save [N] [file_path]
-    
+
     optional arguments:
     N           - Number of command (from history), or `*` for all commands in history (default: most recent command)
     file_path   - location to save script of command(s) to (default: value stored in `default_file_name` parameter)"""
@@ -1531,16 +1531,16 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
 
     def do__relative_load(self, arg=None):
         """Runs commands in script at file or URL.
-        
+
     Usage:  load [file_path]
-    
+
     optional argument:
     file_path   a file path or URL pointing to a script
                 default: value stored in `default_file_name` settable param
 
 Script should contain one command per line, just like command would be typed in console.
-        
-If this is called from within an already-running script, the filename will be interpreted 
+
+If this is called from within an already-running script, the filename will be interpreted
 relative to the already-running script's directory.
         """
         if arg:
@@ -1551,9 +1551,9 @@ relative to the already-running script's directory.
 
     def do_load(self, file_path=None):
         """Runs commands in script at file or URL.
-        
+
         Usage:  load [file_path]
-        
+
         :param file_path: str - a file path or URL pointing to a script (default: value stored in ``default_file_name``)
         :return: bool - True implies application should stop, False to continue like normal
 
@@ -1585,9 +1585,9 @@ relative to the already-running script's directory.
     def help_load(self):
         """Print help for do_load()."""
         help_str = """Runs commands in script at file or URL.
-        
+
     Usage:  load [file_path]
-    
+
     optional argument:
     file_path   -   a file path or URL pointing to a script (default: value stored in `default_file_name` parameter)
 
@@ -1597,7 +1597,7 @@ Script should contain one command per line, just like command would be typed in 
 
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
-        
+
         :param arg: str - determines which command is re-run, as follows:
 
         * no arg -> run most recent command
