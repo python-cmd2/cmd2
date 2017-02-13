@@ -20,13 +20,14 @@ cmd2
     :target: https://pypi.python.org/pypi/cmd2/
     :alt: License
 
+
 cmd2 is a tool for writing command-line interactive applications for Python 2.7 and Python 3.3+.  It is based on the
-    Python Standard Library's cmd_ module, and can be used anyplace cmd is used simply by importing cmd2 instead.  It is
-    pure Python code with the only 3rd-party dependencies being on six_ and pyparsing_
+Python Standard Library's cmd_ module, and can be used any place cmd is used simply by importing cmd2 instead.  It is
+pure Python code with the only 3rd-party dependencies being on six_ and pyparsing_
 
 .. _cmd: https://docs.python.org/3/library/cmd.html
 .. _six: https://pypi.python.org/pypi/six
-.. _pyparsing:: http://pyparsing.wikispaces.com
+.. _pyparsing: http://pyparsing.wikispaces.com
 
 The latest documentation for cmd2 can be read online here: https://cmd2.readthedocs.io/en/latest/
 
@@ -45,18 +46,19 @@ requests, especially ones with pytest_ unit tests are welcome.
 
 Feature Support
 ---------------
-cmd2 provides the following features, in addition to those already existing in `cmd`:
+
+cmd2 provides the following features, in addition to those already existing in cmd_:
 
 - Searchable command history
 - Load commands from file, save to file, edit commands in file
 - Multi-line commands
 - Case-insensitive commands
-- Special-character shortcut commands (beyond cmd's `@` and `!`)
+- Special-character shortcut commands (beyond cmd's ``@`` and ``!``)
 - Settable environment parameters
 - Parsing commands with flags
-- Redirection to file with `>`, `>>`; input from file with `<`
-- Bare '>', '>>' with no filename send output to paste buffer
-- Pipe output to shell commands with `|`
+- Redirection to file with ``>``, ``>>``; input from file with ``<``
+- Bare ``>``, ``>>`` with no filename send output to paste buffer
+- Pipe output to shell commands with ``|``
 - Simple transcript-based application testing
 
 Instructions for implementing each feature follow.
@@ -64,35 +66,35 @@ Instructions for implementing each feature follow.
 - Searchable command history
 
     All commands will automatically be tracked in the session's history, unless the command is listed in Cmd's excludeFromHistory attribute.
-    The history is accessed through the `history`, `list`, and `run` commands
+    The history is accessed through the ``history``, ``list``, and ``run`` commands
     (and their abbreviations: `hi`, `li`, `l`, `r`).
     If you wish to exclude some of your custom commands from the history, append their names
     to the list at Cmd.ExcludeFromHistory.
 
 - Load commands from file, save to file, edit commands in file
 
-    Type `help load`, `help save`, `help edit` for details.
+    Type ``help load``, ``help save``, ``help edit`` for details.
 
 - Multi-line commands
 
-    Any command accepts multi-line input when its name is listed in `Cmd.multilineCommands`.
+    Any command accepts multi-line input when its name is listed in ``Cmd.multilineCommands``.
     The program will keep expecting input until a line ends with any of the characters
-    in `Cmd.terminators` .  The default terminators are `;` and `/n` (empty newline).
+    in ``Cmd.terminators`` .  The default terminators are ``;`` and ``/n`` (empty newline).
 
 - Case-insensitive commands
 
-    All commands are case-insensitive, unless `Cmd.caseInsensitive` is set to `False`.
+    All commands are case-insensitive, unless ``Cmd.caseInsensitive`` is set to ``False``.
 
 - Special-character shortcut commands (beyond cmd's "@" and "!")
 
-    To create a single-character shortcut for a command, update `Cmd.shortcuts`.
+    To create a single-character shortcut for a command, update ``Cmd.shortcuts``.
 
 - Settable environment parameters
 
     To allow a user to change an environment parameter during program execution,
-    append the parameter's name to `Cmd.settable`.
+    append the parameter's name to ``Cmd.settable``.
 
-- Parsing commands with `optparse` options (flags)
+- Parsing commands with ``optparse`` options (flags)
 
     ::
 
@@ -101,12 +103,14 @@ Instructions for implementing each feature follow.
             if opts.myoption:
                 ...
 
-    See Python standard library's `optparse` documentation: http://docs.python.org/lib/optparse-defining-options.html
+    See Python standard library's ``optparse`` documentation: http://docs.python.org/lib/optparse-defining-options.html
 
 
 Tutorials
 ---------
+
 A couple tutorials on using cmd2 exist:
+
     * A detailed PyCon 2010 talk by `Catherine Devlin`_, the original author
         * http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html
     * A nice brief step-by-step tutorial
@@ -117,7 +121,8 @@ A couple tutorials on using cmd2 exist:
 
 Example Application
 -------------------
-Example cmd2 application (example/example.py) ::
+
+Example cmd2 application (**example/example.py**) ::
 
     '''A sample application for cmd2.'''
 
@@ -159,9 +164,12 @@ Example cmd2 application (example/example.py) ::
 
 The following is a sample session running example.py.
 Thanks to Cmd2's built-in transcript testing capability, it also serves as a test
-suite for example.py when saved as `exampleSession.txt`.
-Running `python example.py -t exampleSession.txt` will run all the commands in the
-transcript against `example.py`, verifying that the output produced
+suite for example.py when saved as *exampleSession.txt*.
+Running::
+
+    python example.py -t exampleSession.txt
+
+will run all the commands in the transcript against `example.py`, verifying that the output produced
 matches the transcript.
 
 example/exampleSession.txt::
