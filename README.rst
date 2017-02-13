@@ -1,6 +1,5 @@
-----
 cmd2
-----
+====
 
 .. image:: https://secure.travis-ci.org/python-cmd2/cmd2.png?branch=master
    :target: https://travis-ci.org/python-cmd2/cmd2
@@ -21,11 +20,32 @@ cmd2
     :target: https://pypi.python.org/pypi/cmd2/
     :alt: License
 
-:Author: Catherine Devlin, http://catherinedevlin.blogspot.com
+cmd2 is a tool for writing command-line interactive applications for Python 2.7 and Python 3.3+.  It is based on the
+    Python Standard Library's cmd_ module, and can be used anyplace cmd is used simply by importing cmd2 instead.  It is
+    pure Python code with the only 3rd-party dependencies being on six_ and pyparsing_
 
-`cmd2` is a tool for writing command-line interactive applications.  It is based on the Python Standard Library's `cmd` module, and can be used anyplace `cmd` is used simply by importing `cmd2` instead.
+.. _cmd: https://docs.python.org/3/library/cmd.html
+.. _six: https://pypi.python.org/pypi/six
+.. _pyparsing:: http://pyparsing.wikispaces.com
 
-`cmd2` provides the following features, in addition to those already existing in `cmd`:
+The latest documentation for cmd2 can be read online here: https://cmd2.readthedocs.io/en/latest/
+
+See the `Installation Instructions`_ in the cmd2 documentation for instructions on installing, upgrading, and
+uninstalling cmd2.
+
+.. _`Installation Instructions`: https://cmd2.readthedocs.io/en/latest/install.html
+
+The project is `maintained at GitHub`_.  Bug reports may be submitted directly to the `issue tracker`_.  Tested pull
+requests, especially ones with pytest_ unit tests are welcome.
+
+.. _`maintained at GitHub`: https://github.com/python-cmd2/cmd2
+.. _`issue tracker`: https://github.com/python-cmd2/cmd2/issues
+.. _pytest: http://docs.pytest.org
+
+
+Feature Support
+---------------
+cmd2 provides the following features, in addition to those already existing in `cmd`:
 
 - Searchable command history
 - Load commands from file, save to file, edit commands in file
@@ -83,14 +103,20 @@ Instructions for implementing each feature follow.
 
     See Python standard library's `optparse` documentation: http://docs.python.org/lib/optparse-defining-options.html
 
-cmd2 can be installed from a Linux distribution using their default package manager or `pip install cmd2`
 
-**Official documentation** for the  `latest release <http://cmd2.readthedocs.io/en/stable/>`_, `development <http://cmd2.readthedocs.io/en/latest/>`_ and `0.6.9 <http://cmd2.readthedocs.io/en/0.6.9/>`_
+Tutorials
+---------
+A couple tutorials on using cmd2 exist:
+    * A detailed PyCon 2010 talk by `Catherine Devlin`_, the original author
+        * http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html
+    * A nice brief step-by-step tutorial
+        * https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
 
-PyPI page: http://pypi.python.org/pypi/cmd2
+.. _Catherine Devlin: https://github.com/catherinedevlin
 
-A nice step-by-step tutorial: https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
 
+Example Application
+-------------------
 Example cmd2 application (example/example.py) ::
 
     '''A sample application for cmd2.'''

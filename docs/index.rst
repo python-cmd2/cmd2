@@ -59,6 +59,7 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   install
    overview
    freefeatures
    settingchanges
