@@ -1202,7 +1202,7 @@ class Cmd(cmd.Cmd):
 
     @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
     def do_show(self, arg, opts):
-        '''Shows value of a parameter.'''
+        """Shows value of a parameter."""
         # If arguments are being passed as a list instead of as a string
         if USE_ARG_LIST:
             if arg:
@@ -1227,10 +1227,11 @@ class Cmd(cmd.Cmd):
             raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
     def do_set(self, arg):
-        '''
-        Sets a cmd2 parameter.  Accepts abbreviated parameter names so long
-        as there is no ambiguity.  Call without arguments for a list of
-        settable parameters with their values.'''
+        """Sets a settable parameter.
+
+        Accepts abbreviated parameter names so long as there is no ambiguity.
+        Call without arguments for a list of settable parameters with their values.
+        """
         try:
             statement, paramName, val = arg.parsed.raw.split(None, 2)
             val = val.strip()
@@ -1394,8 +1395,11 @@ class Cmd(cmd.Cmd):
 
     def help_list(self):
         """Print help for do_list()."""
-        help_str = """list [arg]: lcommand(s) from history in a flexible/searchable way.
+        help_str = """Lists command(s) from history in a flexible/searchable way.
 
+    Usage:  list [arg]
+
+    Where arg is:
     no arg                               -> list most recent command
     arg is integer                       -> list one history item, by index
     a..b, a:b, a:, ..b                   -> list spans from a (or start) to b (or end)
