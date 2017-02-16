@@ -1119,7 +1119,7 @@ class Cmd(cmd.Cmd):
                     line = line[:-1]
         return line
 
-    def _cmdloop(self, intro=None):
+    def _cmdloop(self):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
@@ -1136,8 +1136,6 @@ class Cmd(cmd.Cmd):
                 pass
         stop = None
         try:
-            if intro is not None:
-                self.stdout.write(str(self.intro) + "\n")
             while not stop:
                 if self.cmdqueue:
                     line = self.cmdqueue.pop(0)
@@ -1576,7 +1574,7 @@ relative to the already-running script's directory.
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
         self.current_script_dir = os.path.split(targetname)[0]
-        stop = self._cmdloop(None)
+        stop = self._cmdloop()
         self.stdin.close()
         keepstate.restore()
         self.lastcmd = ''
@@ -1645,10 +1643,24 @@ Script should contain one command per line, just like command would be typed in 
         if callopts.test:
             self.runTranscriptTests(callargs)
         else:
+            # Always run the preloop first
+            self.preloop()
+
+            # If an intro was supplied in the method call, allow it to override the default
+            if intro is not None:
+                self.intro = intro
+
+            # Print the intro, if there is one, right after the preloop
+            if self.intro is not None:
+                self.stdout.write(str(self.intro) + "\n")
+
+            # Process any commands present as arguments on the command-line
             if not self.run_commands_at_invocation(callargs):
-                self.preloop()
-                self._cmdloop(self.intro)
-                self.postloop()
+                # And then call _cmdloop() if there wasn't something in those causing us to quit
+                self._cmdloop()
+
+            # Run the postloop() no matter what
+            self.postloop()
 
 
 class HistoryItem(str):
