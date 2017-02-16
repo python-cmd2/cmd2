@@ -502,6 +502,7 @@ class Cmd(cmd.Cmd):
     # Attributes which are NOT dynamically settable at runtime
     _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
     _STOP_SCRIPT_NO_EXIT = -999
+    allow_cli_args = True
     blankLinesAllowed = False
     colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
                   'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
@@ -1654,9 +1655,13 @@ Script should contain one command per line, just like command would be typed in 
             if self.intro is not None:
                 self.stdout.write(str(self.intro) + "\n")
 
-            # Process any commands present as arguments on the command-line
-            if not self.run_commands_at_invocation(callargs):
-                # And then call _cmdloop() if there wasn't something in those causing us to quit
+            stop = False
+            # If allowed, process any commands present as arguments on the command-line, if allowed
+            if self.allow_cli_args:
+                stop = self.run_commands_at_invocation(callargs)
+
+            # And then call _cmdloop() if there wasn't something in those causing us to quit
+            if not stop:
                 self._cmdloop()
 
             # Run the postloop() no matter what
