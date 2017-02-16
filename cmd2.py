@@ -1195,8 +1195,9 @@ class Cmd(cmd.Cmd):
                 response = int(response)
                 result = fulloptions[response - 1][0]
                 break
-            except ValueError:
-                pass  # loop and ask again
+            except (ValueError, IndexError):
+                self.stdout.write("{!r} isn't a valid choice. Pick a number between 1 and {}:\n".format(response,
+                                                                                                      len(fulloptions)))
         return result
 
     @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
