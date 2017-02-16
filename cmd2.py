@@ -502,7 +502,8 @@ class Cmd(cmd.Cmd):
     # Attributes which are NOT dynamically settable at runtime
     _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
     _STOP_SCRIPT_NO_EXIT = -999
-    allow_cli_args = True
+    allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
+    allow_redirection = True    # Should output redirection and pipes be allowed
     blankLinesAllowed = False
     colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
                   'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
@@ -636,13 +637,12 @@ class Cmd(cmd.Cmd):
     def do_cmdenvironment(self, args):
         """Summary report of interactive parameters."""
         self.stdout.write("""
-        Commands are %(casesensitive)scase-sensitive.
-        Commands may be terminated with: %(terminators)s
-        Settable parameters: %(settable)s\n""" %
-                          {'casesensitive': (self.case_insensitive and 'not ') or '',
-                           'terminators': str(self.terminators),
-                           'settable': ' '.join(self.settable)
-                           })
+        Commands are case-sensitive: {}
+        Commands may be terminated with: {}
+        Command-line arguments allowed: {}
+        Output redirection and pipes allowed: {}
+        Settable parameters: {}\n""".format(not self.case_insensitive, str(self.terminators), self.allow_cli_args,
+                                            self.allow_redirection, ' '.join(self.settable)))
 
     def do_help(self, arg):
         """List available commands with "help" or detailed help with "help cmd"."""
@@ -990,7 +990,8 @@ class Cmd(cmd.Cmd):
                 if statement.parsed.command not in self.excludeFromHistory:
                     self.history.append(statement.parsed.raw)
                 try:
-                    self.redirect_output(statement)
+                    if self.allow_redirection:
+                        self.redirect_output(statement)
                     timestart = datetime.datetime.now()
                     statement = self.precmd(statement)
                     stop = self.onecmd(statement)
@@ -998,7 +999,8 @@ class Cmd(cmd.Cmd):
                     if self.timing:
                         self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
                 finally:
-                    self.restore_output(statement)
+                    if self.allow_redirection:
+                        self.restore_output(statement)
             except EmptyStatement:
                 return 0
             except ValueError as ex:

@@ -198,17 +198,19 @@ def test_base_cmdenvironment(base_app):
     out = run_cmd(base_app, 'cmdenvironment')
     expected = normalize("""
 
-        Commands are not case-sensitive.
+        Commands are case-sensitive: False
         Commands may be terminated with: [';']
+        Command-line arguments allowed: True
+        Output redirection and pipes allowed: True
 """)
-    assert out[:2] == expected[:2]
-    assert out[2].strip().startswith('Settable parameters: ')
+    assert out[:4] == expected[:4]
+    assert out[4].strip().startswith('Settable parameters: ')
 
     # Settable parameters can be listed in any order, so need to validate carefully using unordered sets
     settable_params = {'continuation_prompt', 'default_file_name', 'prompt', 'abbrev', 'quiet', 'case_insensitive',
                        'colors', 'echo', 'timing', 'editor', 'feedback_to_output', 'debug', 'autorun_on_edit',
                        'locals_in_py'}
-    out_params = set(out[2].split("Settable parameters: ")[1].split())
+    out_params = set(out[4].split("Settable parameters: ")[1].split())
     assert settable_params == out_params
 
 
@@ -328,6 +330,21 @@ def test_output_redirection(base_app):
 
     # Delete file that was created
     os.remove(filename)
+
+
+def test_allow_redirection(base_app):
+    # Set allow_redirection to False
+    base_app.allow_redirection = False
+
+    filename = 'test_allow_redirect.txt'
+
+    # Verify output wasn't redirected
+    out = run_cmd(base_app, 'help > {}'.format(filename))
+    expected = normalize(BASE_HELP)
+    assert out == expected
+
+    # Verify that no file got created
+    assert not os.path.exists(filename)
 
 
 @pytest.mark.skipif(sys.platform.startswith('linux') and getpass.getuser() == 'travis',
