@@ -9,7 +9,7 @@ cmd2
    :target: https://ci.appveyor.com/project/FedericoCeratto/cmd2
    :alt: Appveyor build status
 
-.. image:: https://readthedocs.org/projects/cmd2/badge/?version=latest
+.. image:: http://cmd2.readthedocs.io/en/latest/?badge=latest
     :target: https://cmd2.readthedocs.io
 
 .. image:: https://img.shields.io/pypi/v/cmd2.svg
