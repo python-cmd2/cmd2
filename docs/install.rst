@@ -18,7 +18,8 @@ install from PyPI_.
 
   Depending on how and where you have installed Python on your system and on what OS you are using, you may need to
   have administrator or root privileges to install Python packages.  If this is the case, take the necessary steps
-  required to run the commands in this section as root/admin, e.g.: on Linux or Mac preceded them with ``sudo``::
+  required to run the commands in this section as root/admin, e.g.: on most Linux or Mac systems, you can precede them
+  with ``sudo``::
 
     sudo pip install <package_name>
 
