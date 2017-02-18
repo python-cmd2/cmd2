@@ -145,64 +145,130 @@ def test_parse_command_with_args(parser):
   - command: {0}""".format(command, args)
     assert parser.parseString('COMmand with args').dump() == expected
 
+def test_parse_command_with_args_terminator_and_suffix(parser):
+    command = "command"
+    args = "with args and terminator"
+    terminator = ";"
+    suffix = "and suffix"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        terminator = repr(terminator)
+        suffix = repr(suffix)
+    expected = """['command', 'with args and terminator', ';', 'and suffix']
+- args: {1}
+- command: {0}
+- statement: ['command', 'with args and terminator', ';']
+  - args: {1}
+  - command: {0}
+  - terminator: {2}
+- suffix: {3}
+- terminator: {2}""".format(command, args, terminator, suffix)
+    assert parser.parseString('command with args and terminator; and suffix').dump() == expected
+
+def test_parse_simple_piped(parser):
+    command = "simple"
+    pipe = " piped"
+    if new_pyparsing:
+        command = repr(command)
+        pipe = repr(pipe)
+    expected = """['simple', '', '|', ' piped']
+- command: {0}
+- pipeTo: {1}
+- statement: ['simple', '']
+  - command: {0}""".format(command, pipe)
+    assert parser.parseString('simple | piped').dump() == expected
+
+def test_parse_doulbe_pipe_is_not_a_pipe(parser):
+    command = "double"
+    args = "-pipe || is not a pipe"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+    expected = """['double', '-pipe || is not a pipe']
+- args: {1}
+- command: {0}
+- statement: ['double', '-pipe || is not a pipe']
+  - args: {1}
+  - command: {0}""".format(command, args)
+    assert parser.parseString('double-pipe || is not a pipe').dump() == expected
+
+def test_parse_complex_pipe(parser):
+    command = "command"
+    args = "with args, terminator"
+    terminator = ";"
+    suffix = "sufx"
+    pipe = " piped"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        terminator = repr(terminator)
+        suffix = repr(suffix)
+        pipe = repr(pipe)
+    expected = """['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
+- args: {1}
+- command: {0}
+- pipeTo: {4}
+- statement: ['command', 'with args, terminator', ';']
+  - args: {1}
+  - command: {0}
+  - terminator: {2}
+- suffix: {3}
+- terminator: {2}""".format(command, args, terminator, suffix, pipe)
+    assert parser.parseString('command with args, terminator;sufx | piped').dump() == expected
+
+def test_parse_output_redirect(parser):
+    command = "output"
+    args = "into"
+    redirect = ">"
+    output = "afile.txt"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        redirect = repr(redirect)
+        output = repr(output)
+    expected = """['output', 'into', '>', 'afile.txt']
+- args: {1}
+- command: {0}
+- output: {2}
+- outputTo: {3}
+- statement: ['output', 'into']
+  - args: {1}
+  - command: {0}""".format(command, args, redirect, output)
+    assert parser.parseString('output into > afile.txt').dump() == expected
+
+def test_parse_pipe_and_redirect(parser):
+    command = "output"
+    args = "into"
+    terminator = ";"
+    suffix = "sufx"
+    pipe = " pipethrume plz"
+    redirect = ">"
+    output = "afile.txt"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        terminator = repr(terminator)
+        pipe = repr(pipe)
+        suffix = repr(suffix)
+        redirect = repr(redirect)
+        output = repr(output)
+    expected = """['output', 'into', ';', 'sufx', '|', ' pipethrume plz', '>', 'afile.txt']
+- args: {1}
+- command: {0}
+- output: {5}
+- outputTo: {6}
+- pipeTo: {4}
+- statement: ['output', 'into', ';']
+  - args: {1}
+  - command: {0}
+  - terminator: {2}
+- suffix: {3}
+- terminator: {2}""".format(command, args, terminator, suffix, pipe, redirect, output)
+    assert parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump() == expected
+
 # TODO: Finsih converting all of the old doctest tests below to pytest unit tests
     '''
-    >>> print(c.parser.parseString('command with args and terminator; and suffix').dump())
-    ['command', 'with args and terminator', ';', 'and suffix']
-    - args: with args and terminator
-    - command: command
-    - statement: ['command', 'with args and terminator', ';']
-      - args: with args and terminator
-      - command: command
-      - terminator: ;
-    - suffix: and suffix
-    - terminator: ;
-    >>> print(c.parser.parseString('simple | piped').dump())
-    ['simple', '', '|', ' piped']
-    - command: simple
-    - pipeTo:  piped
-    - statement: ['simple', '']
-      - command: simple
-    >>> print(c.parser.parseString('double-pipe || is not a pipe').dump())
-    ['double', '-pipe || is not a pipe']
-    - args: -pipe || is not a pipe
-    - command: double
-    - statement: ['double', '-pipe || is not a pipe']
-      - args: -pipe || is not a pipe
-      - command: double
-    >>> print(c.parser.parseString('command with args, terminator;sufx | piped').dump())
-    ['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
-    - args: with args, terminator
-    - command: command
-    - pipeTo:  piped
-    - statement: ['command', 'with args, terminator', ';']
-      - args: with args, terminator
-      - command: command
-      - terminator: ;
-    - suffix: sufx
-    - terminator: ;
-    >>> print(c.parser.parseString('output into > afile.txt').dump())
-    ['output', 'into', '>', 'afile.txt']
-    - args: into
-    - command: output
-    - output: >
-    - outputTo: afile.txt
-    - statement: ['output', 'into']
-      - args: into
-      - command: output
-    >>> print(c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump())
-    ['output', 'into', ';', 'sufx', '|', ' pipethrume plz', '>', 'afile.txt']
-    - args: into
-    - command: output
-    - output: >
-    - outputTo: afile.txt
-    - pipeTo:  pipethrume plz
-    - statement: ['output', 'into', ';']
-      - args: into
-      - command: output
-      - terminator: ;
-    - suffix: sufx
-    - terminator: ;
     >>> print(c.parser.parseString('output to paste buffer >> ').dump())
     ['output', 'to paste buffer', '>>', '']
     - args: to paste buffer
