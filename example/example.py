@@ -22,6 +22,10 @@ class CmdLineApp(Cmd):
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
     # default_to_shell = True
 
+    def __init__(self):
+        # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
+        Cmd.__init__(self, use_ipython=False)
+
     @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
               make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
               make_option('-r', '--repeat', type="int", help="output [n] times")

@@ -72,6 +72,13 @@ except NameError:
     import io
     file = io.TextIOWrapper
 
+# Detect whether IPython is installed to determine if the built-in "ipy" command should be included
+ipython_available = True
+try:
+    from IPython import embed
+except ModuleNotFoundError:
+    ipython_available = False
+
 __version__ = '0.7.0'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
@@ -484,7 +491,14 @@ class EmptyStatement(Exception):
 
 
 class Cmd(cmd.Cmd):
-    # TODO: Move all instance member initializations inside __init__()
+    """An easy but powerful framework for writing line-oriented command interpreters.
+
+    Extends the Python Standard Library’s cmd package by adding a lot of useful features
+    to the out of the box configuration.
+    
+    Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
+    """
+    #  TODO: Move all instance member initializations inside __init__()
 
     # Attributes which are NOT dynamically settable at runtime
     _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
@@ -561,8 +575,24 @@ class Cmd(cmd.Cmd):
         timing                Report execution times
         ''')
 
-    def __init__(self, *args, **kwargs):
-        cmd.Cmd.__init__(self, *args, **kwargs)
+    def __init__(self, completekey='tab', stdin=None, stdout=None, use_ipython=False):
+        """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
+        
+        :param completekey: str - (optional) readline name of a completion key, default to Tab
+        :param stdin: (optional) alternate input file object, if not specified, sys.stdin is used
+        :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
+        :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
+        """
+        # If use_ipython is False, make sure the do_ipy() method doesn't exit
+        if not use_ipython:
+            try:
+                del Cmd.do_ipy
+            except Exception:
+                pass
+
+        # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
+        cmd.Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
+
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
@@ -1151,6 +1181,18 @@ class Cmd(cmd.Cmd):
                 pass
             if keepstate is not None:
                 keepstate.restore()
+
+    # Only include the do_ipy() method if IPython is available on the system
+    if ipython_available:
+        def do_ipy(self, arg):
+            """Enters an interactive IPython shell.
+    
+            Run python code from external files with ``run filename.py``
+            End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
+            """
+            banner = 'Entering an embedded IPython shell type quit() or <Ctrl>-d to exit ...'
+            exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
+            embed(banner1=banner, exit_msg=exit_msg)
 
     @options([make_option('-s', '--script', action="store_true", help="Script format; no separation lines"),
               ], arg_desc='(limit on which commands to include)')
