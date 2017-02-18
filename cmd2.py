@@ -142,21 +142,20 @@ class OptionParser(optparse.OptionParser):
         raise optparse.OptParseError(msg)
 
 
-def remaining_args(oldArgs, newArgList):
-    '''
-    Preserves the spacing originally in the argument after
-    the removal of options.
-
-    >>> remaining_args('-f bar   bar   cow', ['bar', 'cow'])
-    'bar   cow'
-    '''
-    pattern = '\s+'.join(re.escape(a) for a in newArgList) + '\s*$'
-    matchObj = re.search(pattern, oldArgs)
+def remaining_args(opts_plus_args, arg_list):
+    """ Preserves the spacing originally in the arguments after the removal of options.
+    
+    :param opts_plus_args: str - original argument string, including options
+    :param arg_list:  List[str] - list of strings containing the non-option arguments 
+    :return: str - non-option arguments as a single string, with original spacing preserved
+    """
+    pattern = '\s+'.join(re.escape(a) for a in arg_list) + '\s*$'
+    matchObj = re.search(pattern, opts_plus_args)
     try:
-        remaining = oldArgs[matchObj.start():]
+        remaining = opts_plus_args[matchObj.start():]
     except AttributeError:
         # Don't preserve spacing, but at least we don't crash and we do preserve args and their order
-        remaining = ' '.join(newArgList)
+        remaining = ' '.join(arg_list)
 
     return remaining
 
@@ -406,20 +405,10 @@ class ParsedString(str):
 
 
 class StubbornDict(dict):
-    '''Dictionary that tolerates many input formats.
-    Create it with stubbornDict(arg) factory function.
-
-    >>> d = StubbornDict(large='gross', small='klein')
-    >>> sorted(d.items())
-    [('large', 'gross'), ('small', 'klein')]
-    >>> d.append(['plain', '  plaid'])
-    >>> sorted(d.items())
-    [('large', 'gross'), ('plaid', ''), ('plain', ''), ('small', 'klein')]
-    >>> d += '   girl Frauelein, Maedchen\\n\\n shoe schuh'
-    >>> sorted(d.items())
-    [('girl', 'Frauelein, Maedchen'), ('large', 'gross'), ('plaid', ''), ('plain', ''), ('shoe', 'schuh'), ('small', 'klein')]
-    '''
-
+    """ Dictionary that tolerates many input formats.
+    
+    Create it with the stubbornDict(arg) factory function.
+    """
     def update(self, arg):
         dict.update(self, StubbornDict.to_dict(arg))
 
@@ -462,14 +451,12 @@ class StubbornDict(dict):
 
 
 def stubbornDict(*arg, **kwarg):
-    '''
-    >>> sorted(stubbornDict('cow a bovine\\nhorse an equine').items())
-    [('cow', 'a bovine'), ('horse', 'an equine')]
-    >>> sorted(stubbornDict(['badger', 'porcupine a poky creature']).items())
-    [('badger', ''), ('porcupine', 'a poky creature')]
-    >>> sorted(stubbornDict(turtle='has shell', frog='jumpy').items())
-    [('frog', 'jumpy'), ('turtle', 'has shell')]
-    '''
+    """ Factory function which creates instances of the StubornDict class.
+    
+    :param arg: an argument which could be used to construct a built-in dict dictionary
+    :param kwarg: a variable number of key/value pairs
+    :return: StubbornDict - a StubbornDict containing everything in both arg and kwarg
+    """
     result = {}
     for a in arg:
         result.update(StubbornDict.to_dict(a))
@@ -663,181 +650,7 @@ class Cmd(cmd.Cmd):
         self.stdout.write("Single-key shortcuts for other commands:\n{}\n".format(result))
 
     def _init_parser(self):
-        r'''
-        >>> c = Cmd()
-        >>> c.multilineCommands = ['multiline']
-        >>> c.case_insensitive = True
-        >>> c._init_parser()
-        >>> print(c.parser.parseString('').dump())
-        []
-        >>> print(c.parser.parseString('').dump())
-        []
-        >>> print(c.parser.parseString('/* empty command */').dump())
-        []
-        >>> print(c.parser.parseString('plainword').dump())
-        ['plainword', '']
-        - command: plainword
-        - statement: ['plainword', '']
-          - command: plainword
-        >>> print(c.parser.parseString('termbare;').dump())
-        ['termbare', '', ';', '']
-        - command: termbare
-        - statement: ['termbare', '', ';']
-          - command: termbare
-          - terminator: ;
-        - terminator: ;
-        >>> print(c.parser.parseString('termbare; suffx').dump())
-        ['termbare', '', ';', 'suffx']
-        - command: termbare
-        - statement: ['termbare', '', ';']
-          - command: termbare
-          - terminator: ;
-        - suffix: suffx
-        - terminator: ;
-        >>> print(c.parser.parseString('barecommand').dump())
-        ['barecommand', '']
-        - command: barecommand
-        - statement: ['barecommand', '']
-          - command: barecommand
-        >>> print(c.parser.parseString('COMmand with args').dump())
-        ['command', 'with args']
-        - args: with args
-        - command: command
-        - statement: ['command', 'with args']
-          - args: with args
-          - command: command
-        >>> print(c.parser.parseString('command with args and terminator; and suffix').dump())
-        ['command', 'with args and terminator', ';', 'and suffix']
-        - args: with args and terminator
-        - command: command
-        - statement: ['command', 'with args and terminator', ';']
-          - args: with args and terminator
-          - command: command
-          - terminator: ;
-        - suffix: and suffix
-        - terminator: ;
-        >>> print(c.parser.parseString('simple | piped').dump())
-        ['simple', '', '|', ' piped']
-        - command: simple
-        - pipeTo:  piped
-        - statement: ['simple', '']
-          - command: simple
-        >>> print(c.parser.parseString('double-pipe || is not a pipe').dump())
-        ['double', '-pipe || is not a pipe']
-        - args: -pipe || is not a pipe
-        - command: double
-        - statement: ['double', '-pipe || is not a pipe']
-          - args: -pipe || is not a pipe
-          - command: double
-        >>> print(c.parser.parseString('command with args, terminator;sufx | piped').dump())
-        ['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
-        - args: with args, terminator
-        - command: command
-        - pipeTo:  piped
-        - statement: ['command', 'with args, terminator', ';']
-          - args: with args, terminator
-          - command: command
-          - terminator: ;
-        - suffix: sufx
-        - terminator: ;
-        >>> print(c.parser.parseString('output into > afile.txt').dump())
-        ['output', 'into', '>', 'afile.txt']
-        - args: into
-        - command: output
-        - output: >
-        - outputTo: afile.txt
-        - statement: ['output', 'into']
-          - args: into
-          - command: output
-        >>> print(c.parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump())
-        ['output', 'into', ';', 'sufx', '|', ' pipethrume plz', '>', 'afile.txt']
-        - args: into
-        - command: output
-        - output: >
-        - outputTo: afile.txt
-        - pipeTo:  pipethrume plz
-        - statement: ['output', 'into', ';']
-          - args: into
-          - command: output
-          - terminator: ;
-        - suffix: sufx
-        - terminator: ;
-        >>> print(c.parser.parseString('output to paste buffer >> ').dump())
-        ['output', 'to paste buffer', '>>', '']
-        - args: to paste buffer
-        - command: output
-        - output: >>
-        - statement: ['output', 'to paste buffer']
-          - args: to paste buffer
-          - command: output
-        >>> print(c.parser.parseString('ignore the /* commented | > */ stuff;').dump())
-        ['ignore', 'the /* commented | > */ stuff', ';', '']
-        - args: the /* commented | > */ stuff
-        - command: ignore
-        - statement: ['ignore', 'the /* commented | > */ stuff', ';']
-          - args: the /* commented | > */ stuff
-          - command: ignore
-          - terminator: ;
-        - terminator: ;
-        >>> print(c.parser.parseString('has > inside;').dump())
-        ['has', '> inside', ';', '']
-        - args: > inside
-        - command: has
-        - statement: ['has', '> inside', ';']
-          - args: > inside
-          - command: has
-          - terminator: ;
-        - terminator: ;
-        >>> print(c.parser.parseString('multiline has > inside an unfinished command').dump())
-        ['multiline', ' has > inside an unfinished command']
-        - multilineCommand: multiline
-        >>> print(c.parser.parseString('multiline has > inside;').dump())
-        ['multiline', 'has > inside', ';', '']
-        - args: has > inside
-        - multilineCommand: multiline
-        - statement: ['multiline', 'has > inside', ';']
-          - args: has > inside
-          - multilineCommand: multiline
-          - terminator: ;
-        - terminator: ;
-        >>> print(c.parser.parseString('multiline command /* with comment in progress;').dump())
-        ['multiline', ' command /* with comment in progress;']
-        - multilineCommand: multiline
-        >>> print(c.parser.parseString('multiline command /* with comment complete */ is done;').dump())
-        ['multiline', 'command /* with comment complete */ is done', ';', '']
-        - args: command /* with comment complete */ is done
-        - multilineCommand: multiline
-        - statement: ['multiline', 'command /* with comment complete */ is done', ';']
-          - args: command /* with comment complete */ is done
-          - multilineCommand: multiline
-          - terminator: ;
-        - terminator: ;
-        >>> print(c.parser.parseString('multiline command ends\n\n').dump())
-        ['multiline', 'command ends', '\n', '\n']
-        - args: command ends
-        - multilineCommand: multiline
-        - statement: ['multiline', 'command ends', '\n', '\n']
-          - args: command ends
-          - multilineCommand: multiline
-          - terminator: ['\n', '\n']
-        - terminator: ['\n', '\n']
-        >>> print(c.parser.parseString('multiline command "with term; ends" now\n\n').dump())
-        ['multiline', 'command "with term; ends" now', '\n', '\n']
-        - args: command "with term; ends" now
-        - multilineCommand: multiline
-        - statement: ['multiline', 'command "with term; ends" now', '\n', '\n']
-          - args: command "with term; ends" now
-          - multilineCommand: multiline
-          - terminator: ['\n', '\n']
-        - terminator: ['\n', '\n']
-        >>> print(c.parser.parseString('what if "quoted strings /* seem to " start comments?').dump())
-        ['what', 'if "quoted strings /* seem to " start comments?']
-        - args: if "quoted strings /* seem to " start comments?
-        - command: what
-        - statement: ['what', 'if "quoted strings /* seem to " start comments?']
-          - args: if "quoted strings /* seem to " start comments?
-          - command: what
-        '''
+        """ Initializes everything related to pyparsing. """
         # outputParser = (pyparsing.Literal('>>') | (pyparsing.WordStart() + '>') | pyparsing.Regex('[^=]>'))('output')
         outputParser = (pyparsing.Literal(self.redirector * 2) |
                         (pyparsing.WordStart() + self.redirector) |
@@ -1688,28 +1501,7 @@ class HistoryItem(str):
 
 
 class History(list):
-    '''A list of HistoryItems that knows how to respond to user requests.
-    >>> h = History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
-    >>> h.span('-2..')
-    ['third', 'fourth']
-    >>> h.span('2..3')
-    ['second', 'third']
-    >>> h.span('3')
-    ['third']
-    >>> h.span(':')
-    ['first', 'second', 'third', 'fourth']
-    >>> h.span('2..')
-    ['second', 'third', 'fourth']
-    >>> h.span('-1')
-    ['fourth']
-    >>> h.span('-2..-3')
-    ['third', 'second']
-    >>> h.search('o')
-    ['second', 'fourth']
-    >>> h.search('/IR/')
-    ['first', 'third']
-    '''
-
+    """ A list of HistoryItems that knows how to respond to user requests. """
     def zero_based_index(self, onebased):
         result = onebased
         if result > 0:
