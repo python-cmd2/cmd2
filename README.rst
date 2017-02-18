@@ -10,7 +10,8 @@ cmd2
    :alt: Appveyor build status
 
 .. image:: https://readthedocs.org/projects/cmd2/badge/?version=latest
-    :target: https://cmd2.readthedocs.io
+    :target: http://cmd2.readthedocs.io/en/latest/?badge=latest
+    :alt: Documentation Status
 
 .. image:: https://img.shields.io/pypi/v/cmd2.svg
    :target: https://pypi.python.org/pypi/cmd2/
