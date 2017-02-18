@@ -76,7 +76,7 @@ except NameError:
 ipython_available = True
 try:
     from IPython import embed
-except ModuleNotFoundError:
+except ImportError:
     ipython_available = False
 
 __version__ = '0.7.0'
