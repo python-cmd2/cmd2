@@ -61,7 +61,7 @@ def test_stubborn_dict_class():
 
 def test_stubborn_dict_factory():
     assert sorted(cmd2.stubbornDict('cow a bovine\nhorse an equine').items()) == [('cow', 'a bovine'),
-                                                                                   ('horse', 'an equine')]
+                                                                                  ('horse', 'an equine')]
     assert sorted(cmd2.stubbornDict(['badger', 'porcupine a poky creature']).items()) == [('badger', ''),
                                                                                           ('porcupine',
                                                                                            'a poky creature')]
@@ -87,7 +87,7 @@ def test_history_search(hist):
 def test_parse_empty_string(parser):
     assert parser.parseString('').dump() == '[]'
 
-def test_parse_comment(parser):
+def test_parse_only_comment(parser):
     assert parser.parseString('/* empty command */').dump() == '[]'
 
 def test_parse_single_word(parser):
@@ -267,81 +267,159 @@ def test_parse_pipe_and_redirect(parser):
 - terminator: {2}""".format(command, args, terminator, suffix, pipe, redirect, output)
     assert parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump() == expected
 
-# TODO: Finsih converting all of the old doctest tests below to pytest unit tests
-    '''
-    >>> print(c.parser.parseString('output to paste buffer >> ').dump())
-    ['output', 'to paste buffer', '>>', '']
-    - args: to paste buffer
-    - command: output
-    - output: >>
-    - statement: ['output', 'to paste buffer']
-      - args: to paste buffer
-      - command: output
-    >>> print(c.parser.parseString('ignore the /* commented | > */ stuff;').dump())
-    ['ignore', 'the /* commented | > */ stuff', ';', '']
-    - args: the /* commented | > */ stuff
-    - command: ignore
-    - statement: ['ignore', 'the /* commented | > */ stuff', ';']
-      - args: the /* commented | > */ stuff
-      - command: ignore
-      - terminator: ;
-    - terminator: ;
-    >>> print(c.parser.parseString('has > inside;').dump())
-    ['has', '> inside', ';', '']
-    - args: > inside
-    - command: has
-    - statement: ['has', '> inside', ';']
-      - args: > inside
-      - command: has
-      - terminator: ;
-    - terminator: ;
-    >>> print(c.parser.parseString('multiline has > inside an unfinished command').dump())
-    ['multiline', ' has > inside an unfinished command']
-    - multilineCommand: multiline
-    >>> print(c.parser.parseString('multiline has > inside;').dump())
-    ['multiline', 'has > inside', ';', '']
-    - args: has > inside
-    - multilineCommand: multiline
-    - statement: ['multiline', 'has > inside', ';']
-      - args: has > inside
-      - multilineCommand: multiline
-      - terminator: ;
-    - terminator: ;
-    >>> print(c.parser.parseString('multiline command /* with comment in progress;').dump())
-    ['multiline', ' command /* with comment in progress;']
-    - multilineCommand: multiline
-    >>> print(c.parser.parseString('multiline command /* with comment complete */ is done;').dump())
-    ['multiline', 'command /* with comment complete */ is done', ';', '']
-    - args: command /* with comment complete */ is done
-    - multilineCommand: multiline
-    - statement: ['multiline', 'command /* with comment complete */ is done', ';']
-      - args: command /* with comment complete */ is done
-      - multilineCommand: multiline
-      - terminator: ;
-    - terminator: ;
-    >>> print(c.parser.parseString('multiline command ends\n\n').dump())
-    ['multiline', 'command ends', '\n', '\n']
-    - args: command ends
-    - multilineCommand: multiline
-    - statement: ['multiline', 'command ends', '\n', '\n']
-      - args: command ends
-      - multilineCommand: multiline
-      - terminator: ['\n', '\n']
-    - terminator: ['\n', '\n']
-    >>> print(c.parser.parseString('multiline command "with term; ends" now\n\n').dump())
-    ['multiline', 'command "with term; ends" now', '\n', '\n']
-    - args: command "with term; ends" now
-    - multilineCommand: multiline
-    - statement: ['multiline', 'command "with term; ends" now', '\n', '\n']
-      - args: command "with term; ends" now
-      - multilineCommand: multiline
-      - terminator: ['\n', '\n']
-    - terminator: ['\n', '\n']
-    >>> print(c.parser.parseString('what if "quoted strings /* seem to " start comments?').dump())
-    ['what', 'if "quoted strings /* seem to " start comments?']
-    - args: if "quoted strings /* seem to " start comments?
-    - command: what
-    - statement: ['what', 'if "quoted strings /* seem to " start comments?']
-      - args: if "quoted strings /* seem to " start comments?
-      - command: what
-    '''
+def test_parse_output_to_paste_buffer(parser):
+    command = "output"
+    args = "to paste buffer"
+    redirect = ">>"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        redirect = repr(redirect)
+    expected = """['output', 'to paste buffer', '>>', '']
+- args: {1}
+- command: {0}
+- output: {2}
+- statement: ['output', 'to paste buffer']
+  - args: {1}
+  - command: {0}""".format(command, args, redirect)
+    assert parser.parseString('output to paste buffer >> ').dump() == expected
+
+def test_parse_ignore_commented_redirectors(parser):
+    command = "ignore"
+    args = "the /* commented | > */ stuff"
+    terminator = ";"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        terminator = repr(terminator)
+    expected = """['ignore', 'the /* commented | > */ stuff', ';', '']
+- args: {1}
+- command: {0}
+- statement: ['ignore', 'the /* commented | > */ stuff', ';']
+  - args: {1}
+  - command: {0}
+  - terminator: {2}
+- terminator: {2}""".format(command, args, terminator)
+    assert parser.parseString('ignore the /* commented | > */ stuff;').dump() == expected
+
+def test_parse_has_redirect_inside_terminator(parser):
+    """The terminator designates the end of the commmand/arguments portion.  If a redirector
+    occurs before a terminator, then it will be treated as part of the arguments and not as a redirector."""
+    command = "has"
+    args = "> inside"
+    terminator = ";"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        terminator = repr(terminator)
+    expected = """['has', '> inside', ';', '']
+- args: {1}
+- command: {0}
+- statement: ['has', '> inside', ';']
+  - args: {1}
+  - command: {0}
+  - terminator: {2}
+- terminator: {2}""".format(command, args, terminator)
+    assert parser.parseString('has > inside;').dump() == expected
+
+def test_parse_what_if_quoted_strings_seem_to_start_comments(parser):
+    command = "what"
+    args = 'if "quoted strings /* seem to " start comments?'
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+    expected = """['what', 'if "quoted strings /* seem to " start comments?']
+- args: {1}
+- command: {0}
+- statement: ['what', 'if "quoted strings /* seem to " start comments?']
+  - args: {1}
+  - command: {0}""".format(command, args)
+    assert parser.parseString('what if "quoted strings /* seem to " start comments?').dump() == expected
+
+def test_parse_unfinished_multiliine_command(parser):
+    multiline = 'multiline'
+    if new_pyparsing:
+        multiline = repr(multiline)
+    expected = """['multiline', ' has > inside an unfinished command']
+- multilineCommand: {0}""".format(multiline)
+    assert parser.parseString('multiline has > inside an unfinished command').dump() == expected
+
+def test_parse_multiline_command_ignores_redirectors_within_it(parser):
+    multiline = "multiline"
+    args = "has > inside"
+    terminator = ";"
+    if new_pyparsing:
+        multiline = repr(multiline)
+        args = repr(args)
+        terminator = repr(terminator)
+    expected = """['multiline', 'has > inside', ';', '']
+- args: {1}
+- multilineCommand: {0}
+- statement: ['multiline', 'has > inside', ';']
+  - args: {1}
+  - multilineCommand: {0}
+  - terminator: {2}
+- terminator: {2}""".format(multiline, args, terminator)
+    assert parser.parseString('multiline has > inside;').dump() == expected
+
+def test_parse_multiline_with_incomplete_comment(parser):
+    """A terminator within a comment will be ignored and won't terminate a multiline command.
+    Un-closed comments effectively comment out everything after the start."""
+    multiline = 'multiline'
+    if new_pyparsing:
+        multiline = repr(multiline)
+    expected = """['multiline', ' command /* with comment in progress;']
+- multilineCommand: {0}""".format(multiline)
+    assert parser.parseString('multiline command /* with comment in progress;').dump() == expected
+
+def test_parse_multiline_with_complete_comment(parser):
+    multiline = "multiline"
+    args = "command /* with comment complete */ is done"
+    terminator = ";"
+    if new_pyparsing:
+        multiline = repr(multiline)
+        args = repr(args)
+        terminator = repr(terminator)
+    expected = """['multiline', 'command /* with comment complete */ is done', ';', '']
+- args: {1}
+- multilineCommand: {0}
+- statement: ['multiline', 'command /* with comment complete */ is done', ';']
+  - args: {1}
+  - multilineCommand: {0}
+  - terminator: {2}
+- terminator: {2}""".format(multiline, args, terminator)
+    assert parser.parseString('multiline command /* with comment complete */ is done;').dump() == expected
+
+def test_parse_multiline_termninated_by_empty_line(parser):
+    multiline = "multiline"
+    args = "command ends"
+    terminator = r"['\n', '\n']"
+    if new_pyparsing:
+        multiline = repr(multiline)
+        args = repr(args)
+    expected = r"""['multiline', 'command ends', '\n', '\n']
+- args: {1}
+- multilineCommand: {0}
+- statement: ['multiline', 'command ends', '\n', '\n']
+  - args: {1}
+  - multilineCommand: {0}
+  - terminator: {2}
+- terminator: {2}""".format(multiline, args, terminator)
+    assert parser.parseString('multiline command ends\n\n').dump() == expected
+
+def test_parse_multiline_ignores_terminators_in_comments(parser):
+    multiline = "multiline"
+    args = 'command "with term; ends" now'
+    terminator = r"['\n', '\n']"
+    if new_pyparsing:
+        multiline = repr(multiline)
+        args = repr(args)
+    expected = r"""['multiline', 'command "with term; ends" now', '\n', '\n']
+- args: {1}
+- multilineCommand: {0}
+- statement: ['multiline', 'command "with term; ends" now', '\n', '\n']
+  - args: {1}
+  - multilineCommand: {0}
+  - terminator: {2}
+- terminator: {2}""".format(multiline, args, terminator)
+    assert parser.parseString('multiline command "with term; ends" now\n\n').dump() == expected
