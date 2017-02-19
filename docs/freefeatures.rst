@@ -135,6 +135,42 @@ from the settable dictionary. See see :ref:`parameters`)
     >>> quit()
     Python was here >
 
+Using the ``py`` command is tightly integrated with your main ``cmd2`` application
+and any variables created or changed will persist for the life of the application::
+
+    (Cmd) py x = 5
+    (Cmd) py print(x)
+    5
+
+IPython (optional)
+==================
+
+**If** IPython_ is installed on the system **and** the ``cmd2.Cmd`` class
+is instantiated with ``use_ipython=True``, then the optional ``ipy`` command will
+be present::
+
+    from cmd2 import Cmd
+    class App(Cmd):
+        def __init__(self):
+            Cmd.__init__(self, use_ipython=True)
+
+The ``ipy`` command enters an interactive IPython_ session.  Similar to an
+interactive Python session, this shell can access your application instance via ``self``.
+However, the ``ipy`` shell cannot call "back" to your application with ``cmd("")`` and
+any changes made will not persist between sessions or back in the main application.
+
+IPython_ provides many advantages, including:
+
+    * Comprehensive object introspection
+    * Input history, persistent across sessions
+    * Caching of output results during a session with automatically generated references
+    * Extensible tab completion, with support by default for completion of python variables and keywords
+
+The object introspection and tab completion make IPython particularly efficient for debugging as well as for interactive
+experimentation and data analysis.
+
+.. _IPython: http://ipython.readthedocs.io
+
 Searchable command history
 ==========================
 
