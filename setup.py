@@ -33,26 +33,26 @@ Drop-in replacement adds several features for command-prompt tools:
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 """
 
-CLASSIFIERS = filter(None, map(str.strip,
-                               """
-                               Development Status :: 5 - Production/Stable
-                               Environment :: Console
-                               Operating System :: OS Independent
-                               Intended Audience :: Developers
-                               Intended Audience :: System Administrators
-                               License :: OSI Approved :: MIT License
-                               Programming Language :: Python
-                               Programming Language :: Python :: 2
-                               Programming Language :: Python :: 2.7
-                               Programming Language :: Python :: 3
-                               Programming Language :: Python :: 3.3
-                               Programming Language :: Python :: 3.4
-                               Programming Language :: Python :: 3.5
-                               Programming Language :: Python :: 3.6
-                               Programming Language :: Python :: Implementation :: CPython
-                               Programming Language :: Python :: Implementation :: PyPy
-                               Topic :: Software Development :: Libraries :: Python Modules
-                               """.splitlines()))
+CLASSIFIERS = list(filter(None, map(str.strip,
+"""
+Development Status :: 5 - Production/Stable
+Environment :: Console
+Operating System :: OS Independent
+Intended Audience :: Developers
+Intended Audience :: System Administrators
+License :: OSI Approved :: MIT License
+Programming Language :: Python
+Programming Language :: Python :: 2
+Programming Language :: Python :: 2.7
+Programming Language :: Python :: 3
+Programming Language :: Python :: 3.3
+Programming Language :: Python :: 3.4
+Programming Language :: Python :: 3.5
+Programming Language :: Python :: 3.6
+Programming Language :: Python :: Implementation :: CPython
+Programming Language :: Python :: Implementation :: PyPy
+Topic :: Software Development :: Libraries :: Python Modules
+""".splitlines())))
 
 INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'six']
 # unitest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
