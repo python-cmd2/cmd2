@@ -151,9 +151,9 @@ class OptionParser(optparse.OptionParser):
 
 def remaining_args(opts_plus_args, arg_list):
     """ Preserves the spacing originally in the arguments after the removal of options.
-    
+
     :param opts_plus_args: str - original argument string, including options
-    :param arg_list:  List[str] - list of strings containing the non-option arguments 
+    :param arg_list:  List[str] - list of strings containing the non-option arguments
     :return: str - non-option arguments as a single string, with original spacing preserved
     """
     pattern = '\s+'.join(re.escape(a) for a in arg_list) + '\s*$'
@@ -413,7 +413,7 @@ class ParsedString(str):
 
 class StubbornDict(dict):
     """ Dictionary that tolerates many input formats.
-    
+
     Create it with the stubbornDict(arg) factory function.
     """
     def update(self, arg):
@@ -459,7 +459,7 @@ class StubbornDict(dict):
 
 def stubbornDict(*arg, **kwarg):
     """ Factory function which creates instances of the StubornDict class.
-    
+
     :param arg: an argument which could be used to construct a built-in dict dictionary
     :param kwarg: a variable number of key/value pairs
     :return: StubbornDict - a StubbornDict containing everything in both arg and kwarg
@@ -495,7 +495,7 @@ class Cmd(cmd.Cmd):
 
     Extends the Python Standard Library’s cmd package by adding a lot of useful features
     to the out of the box configuration.
-    
+
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
     #  TODO: Move all instance member initializations inside __init__()
@@ -577,7 +577,7 @@ class Cmd(cmd.Cmd):
 
     def __init__(self, completekey='tab', stdin=None, stdout=None, use_ipython=False):
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
-        
+
         :param completekey: str - (optional) readline name of a completion key, default to Tab
         :param stdin: (optional) alternate input file object, if not specified, sys.stdin is used
         :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
@@ -797,6 +797,9 @@ class Cmd(cmd.Cmd):
     def postparsing_postcmd(self, stop):
         """This runs after everything else, including after postcmd().
 
+        It even runs when an empty line is entered.  Thus, if you need to do something like update the prompt due
+        to notifications from a background thread, then this is the method you want to override to do it.
+
         :param stop: bool - True implies the entire application should exit.
         :return: bool - True implies the entire application should exit.
         """
@@ -845,7 +848,7 @@ class Cmd(cmd.Cmd):
                     if self.allow_redirection:
                         self.restore_output(statement)
             except EmptyStatement:
-                return 0
+                pass
             except ValueError as ex:
                 # If shlex.split failed on syntax, let user know whats going on
                 self.perror("Invalid syntax: {}".format(ex), traceback_war=False)
@@ -1186,7 +1189,7 @@ class Cmd(cmd.Cmd):
     if ipython_available:
         def do_ipy(self, arg):
             """Enters an interactive IPython shell.
-    
+
             Run python code from external files with ``run filename.py``
             End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
             """
