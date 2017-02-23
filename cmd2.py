@@ -60,9 +60,6 @@ from six.moves import zip
 # Python 2 urllib2.urlopen() or Python3  urllib.request.urlopen()
 from six.moves.urllib.request import urlopen
 
-# This is a fake file object for textual data. It’s an alias for StringIO.StringIO in Py 2 and io.StringIO in Py 3
-from six import StringIO
-
 # Python 3 compatability hack due to no built-in file keyword in Python 3
 # Due to one occurence of isinstance(<foo>, file) checking to see if something is of file type
 try:
@@ -307,7 +304,6 @@ if sys.platform == "win32":
     try:
         import win32clipboard
 
-
         def get_paste_buffer():
             win32clipboard.OpenClipboard(0)
             try:
@@ -316,7 +312,6 @@ if sys.platform == "win32":
                 result = ''  # non-text
             win32clipboard.CloseClipboard()
             return result
-
 
         def write_to_paste_buffer(txt):
             win32clipboard.OpenClipboard(0)
@@ -350,7 +345,6 @@ elif sys.platform == 'darwin':
                                           stderr=subprocess.PIPE)
             return pbcopyproc.stdout.read()
 
-
         def write_to_paste_buffer(txt):
             pbcopyproc = subprocess.Popen('pbcopy', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
@@ -359,7 +353,6 @@ elif sys.platform == 'darwin':
         def get_paste_buffer(*args):
             raise OSError(
                 pastebufferr % ('pbcopy', 'On MacOS X - error should not occur - part of the default installation'))
-
 
         write_to_paste_buffer = get_paste_buffer
 else:
@@ -375,7 +368,6 @@ else:
             xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE,
                                          stdin=subprocess.PIPE)
             return xclipproc.stdout.read()
-
 
         def write_to_paste_buffer(txt):
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
@@ -740,7 +732,7 @@ class Cmd(cmd.Cmd):
         # a not-entirely-satisfactory way of distinguishing < as in "import from" from <
         # as in "lesser than"
         self.inputParser = inputMark + pyparsing.Optional(inputFrom) + pyparsing.Optional('>') + \
-                           pyparsing.Optional(fileName) + (pyparsing.stringEnd | '|')
+            pyparsing.Optional(fileName) + (pyparsing.stringEnd | '|')
         self.inputParser.ignore(self.commentInProgress)
 
     def preparse(self, raw, **kwargs):
@@ -1041,8 +1033,9 @@ class Cmd(cmd.Cmd):
                 result = fulloptions[response - 1][0]
                 break
             except (ValueError, IndexError):
-                self.stdout.write("{!r} isn't a valid choice. Pick a number between 1 and {}:\n".format(response,
-                                                                                                      len(fulloptions)))
+                self.stdout.write("{!r} isn't a valid choice. Pick a number "
+                                  "between 1 and {}:\n".format(
+                                      response, len(fulloptions)))
         return result
 
     @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
@@ -1100,7 +1093,7 @@ class Cmd(cmd.Cmd):
                     onchange_hook(old=currentVal, new=val)
                 except AttributeError:
                     pass
-        except (ValueError, AttributeError, NotSettableError) as e:
+        except (ValueError, AttributeError, NotSettableError):
             self.do_show(arg)
 
     def do_pause(self, text):
@@ -1359,7 +1352,7 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
             f.write(saveme)
             f.close()
             self.pfeedback('Saved to {}'.format(fname))
-        except Exception as e:
+        except Exception:
             self.perror('Error saving {}'.format(fname))
             raise
 
@@ -1373,7 +1366,6 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
     N           - Number of command (from history), or `*` for all commands in history (default: most recent command)
     file_path   - location to save script of command(s) to (default: value stored in `default_file_name` parameter)"""
         self.stdout.write("{}\n".format(help_str))
-
 
     def read_file_or_url(self, fname):
         # TODO: not working on localhost
@@ -1456,7 +1448,6 @@ relative to the already-running script's directory.
 
 Script should contain one command per line, just like command would be typed in console."""
         self.stdout.write("{}\n".format(help_str))
-
 
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
@@ -1756,7 +1747,6 @@ class Cmd2TestCase(unittest.TestCase):
         finished = False
         line = next(transcript)
         lineNum += 1
-        tests_run = 0
         while not finished:
             # Scroll forward to where actual commands begin
             while not line.startswith(self.cmdapp.prompt):
