@@ -75,7 +75,7 @@ try:
 except ImportError:
     ipython_available = False
 
-__version__ = '0.7.0'
+__version__ = '0.7.1a'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()

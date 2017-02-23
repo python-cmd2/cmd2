@@ -23,7 +23,7 @@ from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT,
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.7.0'
+    assert cmd2.__version__ == '0.7.1a'
 
 
 def test_base_help(base_app):
