@@ -4,7 +4,7 @@ News
 0.7.0
 -----
 
-*Release date: 2017-TBD*
+*Release date: 2017-02-23*
 
 * Refactored to use six module for a unified codebase which supports both Python 2 and Python 3
 * Stabilized on all platforms (Windows, Mac, Linux) and all supported Python versions (2.7, 3.3, 3.4, 3.5, 3.6, PyPy)
