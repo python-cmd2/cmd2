@@ -28,7 +28,6 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 import cmd
 import copy
 import datetime
-import doctest
 import glob
 import optparse
 import os
@@ -1816,29 +1815,6 @@ class Cmd2TestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
-
-    # NOTE: The doctest expected values work with Python 2.7, but are a bit off for Python 3.x.
-
-'''
-To make your application transcript-testable, replace
-
-::
-
-  app = MyApp()
-  app.cmdloop()
-
-with
-
-::
-
-  app = MyApp()
-  cmd2.run(app)
-
-Then run a session of your application and paste the entire screen contents
-into a file, ``transcript.test``, and invoke the test like::
-
-  python myapp.py --test transcript.test
-
-Wildcards can be used to test against multiple transcript files.
-'''
+    # If run as the main application, simply start a bare-bones cmd2 application with only built-in functionality.
+    app = Cmd()
+    app.cmdloop()
