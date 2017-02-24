@@ -43,6 +43,12 @@ def parser():
     c._init_parser()
     return c.parser
 
+@fixture
+def input_parser():
+    c = cmd2.Cmd()
+    c._init_parser()
+    return c.inputParser
+
 
 def test_remaining_args():
     assert cmd2.remaining_args('-f bar   bar   cow', ['bar', 'cow']) == 'bar   cow'
@@ -236,6 +242,22 @@ def test_parse_output_redirect(parser):
   - args: {1}
   - command: {0}""".format(command, args, redirect, output)
     assert parser.parseString('output into > afile.txt').dump() == expected
+
+def test_parse_input_redirect(input_parser):
+    input_from = "< afile.txt"
+    if new_pyparsing:
+        input_from = repr(input_from)
+    expected = """['', {0}]
+- inputFrom: {0}""".format(input_from)
+    assert input_parser.parseString('< afile.txt').dump() == expected
+
+def test_parse_input_redirect_with_dash_in_path(input_parser):
+    input_from = "< python-cmd2/afile.txt"
+    if new_pyparsing:
+        input_from = repr(input_from)
+    expected = """['', {0}]
+- inputFrom: {0}""".format(input_from)
+    assert input_parser.parseString('< python-cmd2/afile.txt').dump() == expected
 
 def test_parse_pipe_and_redirect(parser):
     command = "output"
