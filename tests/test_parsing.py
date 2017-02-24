@@ -3,14 +3,16 @@
 Unit/functional testing for helper functions/classes in the cmd2.py module.
 
 These are primarily tests related to parsing.  Moreover, they are mostly a port of the old doctest tests which were 
-problematic because they worked properly in Python 2, but not in Python 3.
+problematic because they worked properly for some versions of pyparsing but not for others.
 
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import sys
+
 import cmd2
 import pyparsing
-from pytest import fixture
+import pytest
 
 # NOTE: pyparsing's ParseResults.dump() function behaves differently in versions >= 2.1.10
 # In version 2.1.10, changed display of string values to show them in quotes
@@ -28,14 +30,14 @@ elif major == 2:
             new_pyparsing = False
 
 
-@fixture
+@pytest.fixture
 def hist():
     from cmd2 import HistoryItem
     h = cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
     return h
 
 
-@fixture
+@pytest.fixture
 def parser():
     c = cmd2.Cmd()
     c.multilineCommands = ['multiline']
@@ -43,7 +45,7 @@ def parser():
     c._init_parser()
     return c.parser
 
-@fixture
+@pytest.fixture
 def input_parser():
     c = cmd2.Cmd()
     c._init_parser()
@@ -465,3 +467,65 @@ def test_parse_multiline_ignores_terminators_in_comments(parser):
   - terminator: {2}
 - terminator: {2}""".format(multiline, args, terminator)
     assert parser.parseString('multiline command "with term; ends" now\n\n').dump() == expected
+
+
+# Unicode support is only present in cmd2 for Python 3
+@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
+def test_parse_command_with_unicode_args(parser):
+    command = "drink"
+    args = "café"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+    expected = """['drink', 'café']
+- args: {1}
+- command: {0}
+- statement: ['drink', 'café']
+  - args: {1}
+  - command: {0}""".format(command, args)
+    assert parser.parseString('drink café').dump() == expected
+
+@pytest.mark.skipif(sys.version_info < (3, 0), reason="cmd2 unicode support requires python3")
+def test_parse_unicode_command(parser):
+    command = "café"
+    args = "au lait"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+    expected = """['café', 'au lait']
+- args: {1}
+- command: {0}
+- statement: ['café', 'au lait']
+  - args: {1}
+  - command: {0}""".format(command, args)
+    assert parser.parseString('café au lait').dump() == expected
+
+@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
+def test_parse_redirect_to_unicode_filename(parser):
+    command = "dir"
+    args = "home"
+    redirect = ">"
+    output = "café"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        redirect = repr(redirect)
+        output = repr(output)
+    expected = """['dir', 'home', '>', 'café']
+- args: {1}
+- command: {0}
+- output: {2}
+- outputTo: {3}
+- statement: ['dir', 'home']
+  - args: {1}
+  - command: {0}""".format(command, args, redirect, output)
+    assert parser.parseString('dir home > café').dump() == expected
+
+@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
+def test_parse_input_redirect_from_unicode_filename(input_parser):
+    input_from = "< café"
+    if new_pyparsing:
+        input_from = repr(input_from)
+    expected = """['', '< café']
+- inputFrom: {0}""".format(input_from)
+    assert input_parser.parseString('< café').dump() == expected
