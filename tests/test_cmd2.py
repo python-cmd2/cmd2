@@ -347,8 +347,6 @@ def test_allow_redirection(base_app):
     assert not os.path.exists(filename)
 
 
-@pytest.mark.skipif(sys.platform.startswith('linux') and getpass.getuser() == 'travis',
-                    reason="Unit test passes on Ubuntu 16.04 and Debian 8.7, but fails on TravisCI Linux containers")
 def test_input_redirection(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'redirect.txt')
