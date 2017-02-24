@@ -61,6 +61,7 @@ cmd2 provides the following features, in addition to those already existing in c
 - Bare ``>``, ``>>`` with no filename send output to paste buffer
 - Pipe output to shell commands with ``|``
 - Simple transcript-based application testing
+- Unicode character support (*Python 3 only*)
 
 Instructions for implementing each feature follow.
 
