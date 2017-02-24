@@ -515,7 +515,7 @@ class Cmd(cmd.Cmd):
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     kept_state = None
     # make sure your terminators are not in legalChars!
-    legalChars = u'!#$%.:?@_' + pyparsing.alphanums + pyparsing.alphas8bit
+    legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
     multilineCommands = []
     noSpecialParse = 'set ed edit exit'.split()
     prefixParser = pyparsing.Empty()

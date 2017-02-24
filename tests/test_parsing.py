@@ -185,16 +185,16 @@ def test_parse_simple_piped(parser):
   - command: {0}""".format(command, pipe)
     assert parser.parseString('simple | piped').dump() == expected
 
-def test_parse_doulbe_pipe_is_not_a_pipe(parser):
-    command = "double"
-    args = "-pipe || is not a pipe"
+def test_parse_double_pipe_is_not_a_pipe(parser):
+    command = "double-pipe"
+    args = "|| is not a pipe"
     if new_pyparsing:
         command = repr(command)
         args = repr(args)
-    expected = """['double', '-pipe || is not a pipe']
+    expected = """['double-pipe', '|| is not a pipe']
 - args: {1}
 - command: {0}
-- statement: ['double', '-pipe || is not a pipe']
+- statement: ['double-pipe', '|| is not a pipe']
   - args: {1}
   - command: {0}""".format(command, args)
     assert parser.parseString('double-pipe || is not a pipe').dump() == expected
@@ -243,11 +243,31 @@ def test_parse_output_redirect(parser):
   - command: {0}""".format(command, args, redirect, output)
     assert parser.parseString('output into > afile.txt').dump() == expected
 
+def test_parse_output_redirect_with_dash_in_path(parser):
+    command = "output"
+    args = "into"
+    redirect = ">"
+    output = "python-cmd2/afile.txt"
+    if new_pyparsing:
+        command = repr(command)
+        args = repr(args)
+        redirect = repr(redirect)
+        output = repr(output)
+    expected = """['output', 'into', '>', 'python-cmd2/afile.txt']
+- args: {1}
+- command: {0}
+- output: {2}
+- outputTo: {3}
+- statement: ['output', 'into']
+  - args: {1}
+  - command: {0}""".format(command, args, redirect, output)
+    assert parser.parseString('output into > python-cmd2/afile.txt').dump() == expected
+
 def test_parse_input_redirect(input_parser):
     input_from = "< afile.txt"
     if new_pyparsing:
         input_from = repr(input_from)
-    expected = """['', {0}]
+    expected = """['', '< afile.txt']
 - inputFrom: {0}""".format(input_from)
     assert input_parser.parseString('< afile.txt').dump() == expected
 
@@ -255,7 +275,7 @@ def test_parse_input_redirect_with_dash_in_path(input_parser):
     input_from = "< python-cmd2/afile.txt"
     if new_pyparsing:
         input_from = repr(input_from)
-    expected = """['', {0}]
+    expected = """['', '< python-cmd2/afile.txt']
 - inputFrom: {0}""".format(input_from)
     assert input_parser.parseString('< python-cmd2/afile.txt').dump() == expected
 
