@@ -11,23 +11,7 @@ Released under MIT license, see LICENSE file
 import sys
 
 import cmd2
-import pyparsing
 import pytest
-
-# NOTE: pyparsing's ParseResults.dump() function behaves differently in versions >= 2.1.10
-# In version 2.1.10, changed display of string values to show them in quotes
-
-# Extract pyparsing version and figure out if it has a new or old version of ParseResults.dump() behavior
-(major, minor, release) = (int(v) for v in pyparsing.__version__.split('.'))
-new_pyparsing = True
-if major < 2:
-    new_pyparsing = False
-elif major == 2:
-    if minor < 1:
-        new_pyparsing = False
-    elif minor == 1:
-        if release < 10:
-            new_pyparsing = False
 
 
 @pytest.fixture
@@ -48,7 +32,6 @@ def parser():
 @pytest.fixture
 def input_parser():
     c = cmd2.Cmd()
-    c._init_parser()
     return c.inputParser
 
 
@@ -99,433 +82,197 @@ def test_parse_only_comment(parser):
     assert parser.parseString('/* empty command */').dump() == '[]'
 
 def test_parse_single_word(parser):
-    command = "plainword"
-    if new_pyparsing:
-        command = repr(command)
-    expected = """['plainword', '']
-- command: {0}
-- statement: ['plainword', '']
-  - command: {0}""".format(command)
-    assert parser.parseString('plainword').dump() == expected
+    line = 'plainword'
+    results = parser.parseString(line)
+    assert results.command == line
 
 def test_parse_word_plus_terminator(parser):
-    command = "termbare"
-    terminator = ";"
-    if new_pyparsing:
-        command = repr(command)
-        terminator = repr(terminator)
-    expected = """['termbare', '', ';', '']
-- command: {0}
-- statement: ['termbare', '', ';']
-  - command: {0}
-  - terminator: {1}
-- terminator: {1}""".format(command, terminator)
-    assert parser.parseString('termbare;').dump() == expected
+    line = 'termbare;'
+    results = parser.parseString(line)
+    assert results.command == 'termbare'
+    assert results.terminator == ';'
 
 def test_parse_suffix_after_terminator(parser):
-    command = "termbare"
-    terminator = ";"
-    suffix = "suffx"
-    if new_pyparsing:
-        command = repr(command)
-        terminator = repr(terminator)
-        suffix = repr(suffix)
-    expected = """['termbare', '', ';', 'suffx']
-- command: {0}
-- statement: ['termbare', '', ';']
-  - command: {0}
-  - terminator: {1}
-- suffix: {2}
-- terminator: {1}""".format(command, terminator, suffix)
-    assert parser.parseString('termbare; suffx').dump() == expected
+    line = 'termbare; suffx'
+    results = parser.parseString(line)
+    assert results.command == 'termbare'
+    assert results.terminator == ';'
+    assert results.suffix == 'suffx'
 
 def test_parse_command_with_args(parser):
-    command = "command"
-    args = "with args"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-    expected = """['command', 'with args']
-- args: {1}
-- command: {0}
-- statement: ['command', 'with args']
-  - args: {1}
-  - command: {0}""".format(command, args)
-    assert parser.parseString('COMmand with args').dump() == expected
+    line = 'COMmand with args'
+    results = parser.parseString(line)
+    assert results.command == 'command'
+    assert results.args == 'with args'
 
 def test_parse_command_with_args_terminator_and_suffix(parser):
-    command = "command"
-    args = "with args and terminator"
-    terminator = ";"
-    suffix = "and suffix"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        terminator = repr(terminator)
-        suffix = repr(suffix)
-    expected = """['command', 'with args and terminator', ';', 'and suffix']
-- args: {1}
-- command: {0}
-- statement: ['command', 'with args and terminator', ';']
-  - args: {1}
-  - command: {0}
-  - terminator: {2}
-- suffix: {3}
-- terminator: {2}""".format(command, args, terminator, suffix)
-    assert parser.parseString('command with args and terminator; and suffix').dump() == expected
+    line = 'command with args and terminator; and suffix'
+    results = parser.parseString(line)
+    assert results.command == 'command'
+    assert results.args == "with args and terminator"
+    assert results.terminator == ';'
+    assert results.suffix == 'and suffix'
 
 def test_parse_simple_piped(parser):
-    command = "simple"
-    pipe = " piped"
-    if new_pyparsing:
-        command = repr(command)
-        pipe = repr(pipe)
-    expected = """['simple', '', '|', ' piped']
-- command: {0}
-- pipeTo: {1}
-- statement: ['simple', '']
-  - command: {0}""".format(command, pipe)
-    assert parser.parseString('simple | piped').dump() == expected
+    line = 'simple | piped'
+    results = parser.parseString(line)
+    assert results.command == 'simple'
+    assert results.pipeTo == " piped"
 
 def test_parse_double_pipe_is_not_a_pipe(parser):
-    command = "double-pipe"
-    args = "|| is not a pipe"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-    expected = """['double-pipe', '|| is not a pipe']
-- args: {1}
-- command: {0}
-- statement: ['double-pipe', '|| is not a pipe']
-  - args: {1}
-  - command: {0}""".format(command, args)
-    assert parser.parseString('double-pipe || is not a pipe').dump() == expected
+    line = 'double-pipe || is not a pipe'
+    results = parser.parseString(line)
+    assert results.command == 'double-pipe'
+    assert results.args == '|| is not a pipe'
+    assert not 'pipeTo' in results
 
 def test_parse_complex_pipe(parser):
-    command = "command"
-    args = "with args, terminator"
-    terminator = ";"
-    suffix = "sufx"
-    pipe = " piped"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        terminator = repr(terminator)
-        suffix = repr(suffix)
-        pipe = repr(pipe)
-    expected = """['command', 'with args, terminator', ';', 'sufx', '|', ' piped']
-- args: {1}
-- command: {0}
-- pipeTo: {4}
-- statement: ['command', 'with args, terminator', ';']
-  - args: {1}
-  - command: {0}
-  - terminator: {2}
-- suffix: {3}
-- terminator: {2}""".format(command, args, terminator, suffix, pipe)
-    assert parser.parseString('command with args, terminator;sufx | piped').dump() == expected
+    line = 'command with args, terminator;sufx | piped'
+    results = parser.parseString(line)
+    assert results.command == 'command'
+    assert results.args == "with args, terminator"
+    assert results.terminator == ';'
+    assert results.suffix == 'sufx'
+    assert results.pipeTo == ' piped'
 
 def test_parse_output_redirect(parser):
-    command = "output"
-    args = "into"
-    redirect = ">"
-    output = "afile.txt"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        redirect = repr(redirect)
-        output = repr(output)
-    expected = """['output', 'into', '>', 'afile.txt']
-- args: {1}
-- command: {0}
-- output: {2}
-- outputTo: {3}
-- statement: ['output', 'into']
-  - args: {1}
-  - command: {0}""".format(command, args, redirect, output)
-    assert parser.parseString('output into > afile.txt').dump() == expected
+    line = 'output into > afile.txt'
+    results = parser.parseString(line)
+    assert results.command == 'output'
+    assert results.args == 'into'
+    assert results.output == '>'
+    assert results.outputTo == 'afile.txt'
 
 def test_parse_output_redirect_with_dash_in_path(parser):
-    command = "output"
-    args = "into"
-    redirect = ">"
-    output = "python-cmd2/afile.txt"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        redirect = repr(redirect)
-        output = repr(output)
-    expected = """['output', 'into', '>', 'python-cmd2/afile.txt']
-- args: {1}
-- command: {0}
-- output: {2}
-- outputTo: {3}
-- statement: ['output', 'into']
-  - args: {1}
-  - command: {0}""".format(command, args, redirect, output)
-    assert parser.parseString('output into > python-cmd2/afile.txt').dump() == expected
+    line = 'output into > python-cmd2/afile.txt'
+    results = parser.parseString(line)
+    assert results.command == 'output'
+    assert results.args == 'into'
+    assert results.output == '>'
+    assert results.outputTo == 'python-cmd2/afile.txt'
 
 def test_parse_input_redirect(input_parser):
-    input_from = "< afile.txt"
-    if new_pyparsing:
-        input_from = repr(input_from)
-    expected = """['', '< afile.txt']
-- inputFrom: {0}""".format(input_from)
-    assert input_parser.parseString('< afile.txt').dump() == expected
+    line = '< afile.txt'
+    results = input_parser.parseString(line)
+    assert results.inputFrom == line
 
 def test_parse_input_redirect_with_dash_in_path(input_parser):
-    input_from = "< python-cmd2/afile.txt"
-    if new_pyparsing:
-        input_from = repr(input_from)
-    expected = """['', '< python-cmd2/afile.txt']
-- inputFrom: {0}""".format(input_from)
-    assert input_parser.parseString('< python-cmd2/afile.txt').dump() == expected
+    line = "< python-cmd2/afile.txt"
+    results = input_parser.parseString(line)
+    assert results.inputFrom == line
 
 def test_parse_pipe_and_redirect(parser):
-    command = "output"
-    args = "into"
-    terminator = ";"
-    suffix = "sufx"
-    pipe = " pipethrume plz"
-    redirect = ">"
-    output = "afile.txt"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        terminator = repr(terminator)
-        pipe = repr(pipe)
-        suffix = repr(suffix)
-        redirect = repr(redirect)
-        output = repr(output)
-    expected = """['output', 'into', ';', 'sufx', '|', ' pipethrume plz', '>', 'afile.txt']
-- args: {1}
-- command: {0}
-- output: {5}
-- outputTo: {6}
-- pipeTo: {4}
-- statement: ['output', 'into', ';']
-  - args: {1}
-  - command: {0}
-  - terminator: {2}
-- suffix: {3}
-- terminator: {2}""".format(command, args, terminator, suffix, pipe, redirect, output)
-    assert parser.parseString('output into;sufx | pipethrume plz > afile.txt').dump() == expected
+    line = 'output into;sufx | pipethrume plz > afile.txt'
+    results = parser.parseString(line)
+    assert results.command == 'output'
+    assert results.args == 'into'
+    assert results.terminator == ';'
+    assert results.suffix == 'sufx'
+    assert results.pipeTo == ' pipethrume plz'
+    assert results.output == '>'
+    assert results.outputTo == 'afile.txt'
 
 def test_parse_output_to_paste_buffer(parser):
-    command = "output"
-    args = "to paste buffer"
-    redirect = ">>"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        redirect = repr(redirect)
-    expected = """['output', 'to paste buffer', '>>', '']
-- args: {1}
-- command: {0}
-- output: {2}
-- statement: ['output', 'to paste buffer']
-  - args: {1}
-  - command: {0}""".format(command, args, redirect)
-    assert parser.parseString('output to paste buffer >> ').dump() == expected
+    line = 'output to paste buffer >> '
+    results = parser.parseString(line)
+    assert results.command == 'output'
+    assert results.args == 'to paste buffer'
+    assert results.output == '>>'
 
 def test_parse_ignore_commented_redirectors(parser):
-    command = "ignore"
-    args = "the /* commented | > */ stuff"
-    terminator = ";"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        terminator = repr(terminator)
-    expected = """['ignore', 'the /* commented | > */ stuff', ';', '']
-- args: {1}
-- command: {0}
-- statement: ['ignore', 'the /* commented | > */ stuff', ';']
-  - args: {1}
-  - command: {0}
-  - terminator: {2}
-- terminator: {2}""".format(command, args, terminator)
-    assert parser.parseString('ignore the /* commented | > */ stuff;').dump() == expected
+    line = 'ignore the /* commented | > */ stuff;'
+    results = parser.parseString(line)
+    assert results.command == 'ignore'
+    assert results.args == 'the /* commented | > */ stuff'
+    assert results.terminator == ';'
 
 def test_parse_has_redirect_inside_terminator(parser):
     """The terminator designates the end of the commmand/arguments portion.  If a redirector
     occurs before a terminator, then it will be treated as part of the arguments and not as a redirector."""
-    command = "has"
-    args = "> inside"
-    terminator = ";"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        terminator = repr(terminator)
-    expected = """['has', '> inside', ';', '']
-- args: {1}
-- command: {0}
-- statement: ['has', '> inside', ';']
-  - args: {1}
-  - command: {0}
-  - terminator: {2}
-- terminator: {2}""".format(command, args, terminator)
-    assert parser.parseString('has > inside;').dump() == expected
+    line = 'has > inside;'
+    results = parser.parseString(line)
+    assert results.command == 'has'
+    assert results.args == '> inside'
+    assert results.terminator == ';'
 
 def test_parse_what_if_quoted_strings_seem_to_start_comments(parser):
-    command = "what"
-    args = 'if "quoted strings /* seem to " start comments?'
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-    expected = """['what', 'if "quoted strings /* seem to " start comments?']
-- args: {1}
-- command: {0}
-- statement: ['what', 'if "quoted strings /* seem to " start comments?']
-  - args: {1}
-  - command: {0}""".format(command, args)
-    assert parser.parseString('what if "quoted strings /* seem to " start comments?').dump() == expected
+    line = 'what if "quoted strings /* seem to " start comments?'
+    results = parser.parseString(line)
+    assert results.command == 'what'
+    assert results.args == 'if "quoted strings /* seem to " start comments?'
 
 def test_parse_unfinished_multiliine_command(parser):
-    multiline = 'multiline'
-    if new_pyparsing:
-        multiline = repr(multiline)
-    expected = """['multiline', ' has > inside an unfinished command']
-- multilineCommand: {0}""".format(multiline)
-    assert parser.parseString('multiline has > inside an unfinished command').dump() == expected
+    line = 'multiline has > inside an unfinished command'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert not 'args' in results
 
 def test_parse_multiline_command_ignores_redirectors_within_it(parser):
-    multiline = "multiline"
-    args = "has > inside"
-    terminator = ";"
-    if new_pyparsing:
-        multiline = repr(multiline)
-        args = repr(args)
-        terminator = repr(terminator)
-    expected = """['multiline', 'has > inside', ';', '']
-- args: {1}
-- multilineCommand: {0}
-- statement: ['multiline', 'has > inside', ';']
-  - args: {1}
-  - multilineCommand: {0}
-  - terminator: {2}
-- terminator: {2}""".format(multiline, args, terminator)
-    assert parser.parseString('multiline has > inside;').dump() == expected
+    line = 'multiline has > inside;'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'has > inside'
+    assert results.terminator == ';'
 
 def test_parse_multiline_with_incomplete_comment(parser):
     """A terminator within a comment will be ignored and won't terminate a multiline command.
     Un-closed comments effectively comment out everything after the start."""
-    multiline = 'multiline'
-    if new_pyparsing:
-        multiline = repr(multiline)
-    expected = """['multiline', ' command /* with comment in progress;']
-- multilineCommand: {0}""".format(multiline)
-    assert parser.parseString('multiline command /* with comment in progress;').dump() == expected
+    line = 'multiline command /* with comment in progress;'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert not 'args' in results
 
 def test_parse_multiline_with_complete_comment(parser):
-    multiline = "multiline"
-    args = "command /* with comment complete */ is done"
-    terminator = ";"
-    if new_pyparsing:
-        multiline = repr(multiline)
-        args = repr(args)
-        terminator = repr(terminator)
-    expected = """['multiline', 'command /* with comment complete */ is done', ';', '']
-- args: {1}
-- multilineCommand: {0}
-- statement: ['multiline', 'command /* with comment complete */ is done', ';']
-  - args: {1}
-  - multilineCommand: {0}
-  - terminator: {2}
-- terminator: {2}""".format(multiline, args, terminator)
-    assert parser.parseString('multiline command /* with comment complete */ is done;').dump() == expected
+    line = 'multiline command /* with comment complete */ is done;'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'command /* with comment complete */ is done'
+    assert results.terminator == ';'
 
 def test_parse_multiline_termninated_by_empty_line(parser):
-    multiline = "multiline"
-    args = "command ends"
-    terminator = r"['\n', '\n']"
-    if new_pyparsing:
-        multiline = repr(multiline)
-        args = repr(args)
-    expected = r"""['multiline', 'command ends', '\n', '\n']
-- args: {1}
-- multilineCommand: {0}
-- statement: ['multiline', 'command ends', '\n', '\n']
-  - args: {1}
-  - multilineCommand: {0}
-  - terminator: {2}
-- terminator: {2}""".format(multiline, args, terminator)
-    assert parser.parseString('multiline command ends\n\n').dump() == expected
+    line = 'multiline command ends\n\n'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'command ends'
+    assert len(results.terminator) == 2
+    assert results.terminator[0] == '\n'
+    assert results.terminator[1] == '\n'
 
 def test_parse_multiline_ignores_terminators_in_comments(parser):
-    multiline = "multiline"
-    args = 'command "with term; ends" now'
-    terminator = r"['\n', '\n']"
-    if new_pyparsing:
-        multiline = repr(multiline)
-        args = repr(args)
-    expected = r"""['multiline', 'command "with term; ends" now', '\n', '\n']
-- args: {1}
-- multilineCommand: {0}
-- statement: ['multiline', 'command "with term; ends" now', '\n', '\n']
-  - args: {1}
-  - multilineCommand: {0}
-  - terminator: {2}
-- terminator: {2}""".format(multiline, args, terminator)
-    assert parser.parseString('multiline command "with term; ends" now\n\n').dump() == expected
-
+    line = 'multiline command "with term; ends" now\n\n'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'command "with term; ends" now'
+    assert len(results.terminator) == 2
+    assert results.terminator[0] == '\n'
+    assert results.terminator[1] == '\n'
 
 # Unicode support is only present in cmd2 for Python 3
 @pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_command_with_unicode_args(parser):
-    command = "drink"
-    args = "café"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-    expected = """['drink', 'café']
-- args: {1}
-- command: {0}
-- statement: ['drink', 'café']
-  - args: {1}
-  - command: {0}""".format(command, args)
-    assert parser.parseString('drink café').dump() == expected
+    line = 'drink café'
+    results = parser.parseString(line)
+    assert results.command == 'drink'
+    assert results.args == 'café'
 
 @pytest.mark.skipif(sys.version_info < (3, 0), reason="cmd2 unicode support requires python3")
 def test_parse_unicode_command(parser):
-    command = "café"
-    args = "au lait"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-    expected = """['café', 'au lait']
-- args: {1}
-- command: {0}
-- statement: ['café', 'au lait']
-  - args: {1}
-  - command: {0}""".format(command, args)
-    assert parser.parseString('café au lait').dump() == expected
+    line = 'café au lait'
+    results = parser.parseString(line)
+    assert results.command == 'café'
+    assert results.args == 'au lait'
 
 @pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_redirect_to_unicode_filename(parser):
-    command = "dir"
-    args = "home"
-    redirect = ">"
-    output = "café"
-    if new_pyparsing:
-        command = repr(command)
-        args = repr(args)
-        redirect = repr(redirect)
-        output = repr(output)
-    expected = """['dir', 'home', '>', 'café']
-- args: {1}
-- command: {0}
-- output: {2}
-- outputTo: {3}
-- statement: ['dir', 'home']
-  - args: {1}
-  - command: {0}""".format(command, args, redirect, output)
-    assert parser.parseString('dir home > café').dump() == expected
+    line = 'dir home > café'
+    results = parser.parseString(line)
+    assert results.command == 'dir'
+    assert results.args == 'home'
+    assert results.output == '>'
+    assert results.outputTo == 'café'
 
 @pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_input_redirect_from_unicode_filename(input_parser):
-    input_from = "< café"
-    if new_pyparsing:
-        input_from = repr(input_from)
-    expected = """['', '< café']
-- inputFrom: {0}""".format(input_from)
-    assert input_parser.parseString('< café').dump() == expected
+    line = '< café'
+    results = input_parser.parseString(line)
+    assert results.inputFrom == line
