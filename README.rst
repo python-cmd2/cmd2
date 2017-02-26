@@ -37,12 +37,13 @@ uninstalling cmd2.
 
 .. _`Installation Instructions`: https://cmd2.readthedocs.io/en/latest/install.html
 
-The project is `maintained at GitHub`_.  Bug reports may be submitted directly to the `issue tracker`_.  Tested pull
-requests, especially ones with pytest_ unit tests are welcome.
+The project is `maintained at GitHub`_.  Bug reports may be submitted directly to the `issue tracker`_.  Contributions
+are welcome, see the `Contributor's Guide`_ for more inforamation.
 
 .. _`maintained at GitHub`: https://github.com/python-cmd2/cmd2
 .. _`issue tracker`: https://github.com/python-cmd2/cmd2/issues
 .. _pytest: http://docs.pytest.org
+.. _Contributor's Guide: https://github.com/python-cmd2/cmd2/CONTRIBUTING.md
 
 
 Feature Support
