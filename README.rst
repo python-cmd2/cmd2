@@ -124,7 +124,7 @@ A couple tutorials on using cmd2 exist:
 Example Application
 -------------------
 
-Example cmd2 application (**example/example.py**) ::
+Example cmd2 application (**examples/example.py**) ::
 
     '''A sample application for cmd2.'''
 
