@@ -14,7 +14,7 @@ Settable environment parameters
 Optional _onchange_{paramname} called when environment parameter changes
 Parsing commands with `optparse` options (flags)
 Redirection to file with >, >>; input from file with <
-Easy transcript-based testing of applications (see example/example.py)
+Easy transcript-based testing of applications (see examples/example.py)
 Bash-style ``select`` available
 
 Note that redirection with > and | will only work if `self.stdout.write()`

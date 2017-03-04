@@ -28,7 +28,7 @@ Drop-in replacement adds several features for command-prompt tools:
     * bare >, >>, < redirect to/from paste buffer
     * accepts abbreviated commands when unambiguous
     * `py` enters interactive Python console
-    * test apps against sample session transcript (see example/example.py)
+    * test apps against sample session transcript (see examples/example.py)
 
 Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 """
