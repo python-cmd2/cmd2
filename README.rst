@@ -43,7 +43,7 @@ are welcome, see the `Contributor's Guide`_ for more inforamation.
 .. _`maintained at GitHub`: https://github.com/python-cmd2/cmd2
 .. _`issue tracker`: https://github.com/python-cmd2/cmd2/issues
 .. _pytest: http://docs.pytest.org
-.. _Contributor's Guide: https://github.com/python-cmd2/cmd2/CONTRIBUTING.md
+.. _Contributor's Guide: https://github.com/python-cmd2/cmd2/blob/master/CONTRIBUTING.md
 
 
 Feature Support
