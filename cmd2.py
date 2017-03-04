@@ -566,13 +566,14 @@ class Cmd(cmd.Cmd):
         timing                Report execution times
         ''')
 
-    def __init__(self, completekey='tab', stdin=None, stdout=None, use_ipython=False):
+    def __init__(self, completekey='tab', stdin=None, stdout=None, use_ipython=False, transcript_files=None):
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
         :param completekey: str - (optional) readline name of a completion key, default to Tab
         :param stdin: (optional) alternate input file object, if not specified, sys.stdin is used
         :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
+        :param transcript_files: str - (optional) allows running transcript tests when allow_cli_args is False
         """
         # If use_ipython is False, make sure the do_ipy() method doesn't exit
         if not use_ipython:
@@ -592,6 +593,7 @@ class Cmd(cmd.Cmd):
                                                if fname.startswith('do_')]
         self._init_parser()
         self._temp_filename = None
+        self._transcript_files = transcript_files
 
     def poutput(self, msg):
         """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
@@ -1491,13 +1493,17 @@ Script should contain one command per line, just like command would be typed in 
                 return self._STOP_AND_EXIT
 
     def cmdloop(self, intro=None):
-        parser = optparse.OptionParser()
-        parser.add_option('-t', '--test', dest='test',
-                          action="store_true",
-                          help='Test against transcript(s) in FILE (wildcards OK)')
-        (callopts, callargs) = parser.parse_args()
-        if callopts.test:
-            self.runTranscriptTests(callargs)
+        if self.allow_cli_args:
+            parser = optparse.OptionParser()
+            parser.add_option('-t', '--test', dest='test',
+                              action="store_true",
+                              help='Test against transcript(s) in FILE (wildcards OK)')
+            (callopts, callargs) = parser.parse_args()
+            if callopts.test:
+                self._transcript_files = callargs
+
+        if self._transcript_files is not None:
+            self.runTranscriptTests(self._transcript_files)
         else:
             # Always run the preloop first
             self.preloop()
