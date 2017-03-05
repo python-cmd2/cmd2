@@ -69,8 +69,7 @@ Instructions for implementing each feature follow.
 - Searchable command history
 
     All commands will automatically be tracked in the session's history, unless the command is listed in Cmd's excludeFromHistory attribute.
-    The history is accessed through the ``history``, ``list``, and ``run`` commands
-    (and their abbreviations: `hi`, `li`, `l`, `r`).
+    The history is accessed through the ``history``, ``list``, and ``run`` commands.
     If you wish to exclude some of your custom commands from the history, append their names
     to the list at Cmd.ExcludeFromHistory.
 

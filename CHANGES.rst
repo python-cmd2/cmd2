@@ -1,10 +1,14 @@
 News
 ====
 
-0.7.1a
+0.7.1
 ------
 
-Placeholder
+*Release date: TBD
+
+* Fixed a bug where ``-`` wasn't being treated as a legal character
+* Added CONTRIBUTING.md and CODE_OF_CONDUCT.md files
+* Fixed a bug where the allow_cli_args attribute wasn't properly disabling parsing of args at invocation when False
 
 0.7.0
 -----
