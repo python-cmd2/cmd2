@@ -266,5 +266,5 @@ expressions.
          # customized attributes and methods here
 
        if __name__ == '__main__':
-           app = App(transcript_files='exampleSession.txt')
+           app = App(transcript_files=['exampleSession.txt'])
            app.cmdloop()
