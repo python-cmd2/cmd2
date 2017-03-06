@@ -64,6 +64,7 @@ Contents:
    freefeatures
    settingchanges
    unfreefeatures
+   integrating
    alternatives
 
 Compatibility
