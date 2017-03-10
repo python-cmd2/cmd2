@@ -595,6 +595,9 @@ class Cmd(cmd.Cmd):
         self._temp_filename = None
         self._transcript_files = transcript_files
 
+        self._should_quit = False
+        self._in_py = False
+
     def poutput(self, msg):
         """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
         if msg:
@@ -1001,6 +1004,7 @@ class Cmd(cmd.Cmd):
 
     def do_quit(self, arg):
         """Exits this application."""
+        self._should_quit = True
         return self._STOP_AND_EXIT
 
     def select(self, options, prompt='Your choice? '):
@@ -1131,13 +1135,18 @@ class Cmd(cmd.Cmd):
         self.stdout.write("{}\n".format(help_str))
 
     def do_py(self, arg):
-        '''
+        """
         py <command>: Executes a Python command.
         py: Enters interactive Python mode.
         End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
         Non-python commands can be issued with ``cmd("your command")``.
         Run python code from external files with ``run("filename.py")``
-        '''
+        """
+        if self._in_py:
+            self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
+            return
+        self._in_py = True
+
         self.pystate['self'] = self
         arg = arg.parsed.raw[2:].strip()
 
@@ -1148,7 +1157,12 @@ class Cmd(cmd.Cmd):
                     interp.runcode(f.read())
             except IOError as e:
                 self.perror(e)
+
+        def onecmd_plus_hooks(arg):
+            return self.onecmd_plus_hooks(arg + '\n')
+
         self.pystate['run'] = run
+        self.pystate['cmd'] = onecmd_plus_hooks
 
         localvars = (self.locals_in_py and self.pystate) or {}
         interp = InteractiveConsole(locals=localvars)
@@ -1160,12 +1174,9 @@ class Cmd(cmd.Cmd):
             def quit():
                 raise EmbeddedConsoleExit
 
-            def onecmd_plus_hooks(arg):
-                return self.onecmd_plus_hooks(arg + '\n')
-
             self.pystate['quit'] = quit
             self.pystate['exit'] = quit
-            self.pystate['cmd'] = onecmd_plus_hooks
+
             keepstate = None
             try:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
@@ -1178,6 +1189,8 @@ class Cmd(cmd.Cmd):
                 pass
             if keepstate is not None:
                 keepstate.restore()
+        self._in_py = False
+        return self._should_quit
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:
