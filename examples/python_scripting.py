@@ -26,14 +26,23 @@ class CmdLineApp(Cmd):
     """ Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 aps. """
 
     def __init__(self):
-        Cmd.__init__(self)
+        # Enable the optional ipy command if IPython is installed by setting use_ipython=True
+        Cmd.__init__(self, use_ipython=True)
         self._set_prompt()
 
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
-        self.prompt = '{!r} $ '.format(os.getcwd())
+        self.cwd = os.getcwd()
+        self.subdirs = [d for d in os.listdir(self.cwd) if os.path.isdir(d)]
+        self.prompt = '{!r} $ '.format(self.cwd)
 
     def postcmd(self, stop, line):
+        """Hook method executed just after a command dispatch is finished.
+        
+        :param stop: bool - if True, the command has indicated the application should exit
+        :param line: str - the command line text for this command
+        :return: bool - if this is True, the application will exit after this command and the postloop() will run
+        """
         """Override this so prompt always displays cwd."""
         self._set_prompt()
         return stop
@@ -73,6 +82,17 @@ class CmdLineApp(Cmd):
             self.perror(err, traceback_war=False)
         self._last_result = CmdResult(out, err, war)
 
+    def complete_cd(self, text, line, begidx, endidx):
+        """Handles completion of arguments for the cd command.
+        
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: str - the beginning indexe of the prefix text
+        :param endidx: str - the ending index of the prefix text
+        :return: List[str] - a list of possible tab completions
+        """
+        return [d for d in self.subdirs if d.startswith(text)]
+
     @options([make_option('-l', '--long', action="store_true", help="display in long format with one item per line")],
              arg_desc='')
     def do_dir(self, arg, opts=None):
@@ -85,7 +105,7 @@ class CmdLineApp(Cmd):
             return
 
         # Get the contents as a list
-        contents = os.listdir(os.getcwd())
+        contents = os.listdir(self.cwd)
 
         fmt = '{} '
         if opts.long:
