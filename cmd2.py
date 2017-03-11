@@ -41,6 +41,7 @@ import tempfile
 import traceback
 import unittest
 from code import InteractiveConsole
+from collections import namedtuple
 from optparse import make_option
 
 import pyparsing
@@ -91,7 +92,7 @@ POSIX_SHLEX = False
 # Strip outer quotes for convenience if POSIX_SHLEX = False
 STRIP_QUOTES_FOR_NON_POSIX = True
 
-# For option commandsm, pass a list of argument strings instead of a single argument string to the do_* methods
+# For option commands, pass a list of argument strings instead of a single argument string to the do_* methods
 USE_ARG_LIST = False
 
 
@@ -595,8 +596,15 @@ class Cmd(cmd.Cmd):
         self._temp_filename = None
         self._transcript_files = transcript_files
 
+        # Used to enable the ability for a Python script to quit the application
         self._should_quit = False
+
+        # True if running inside a Python script or interactive console, False otherwise
         self._in_py = False
+
+        # Stores results from the last command run to enable usage of results in a Python script or interactive console
+        # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
+        self._last_result = None
 
     def poutput(self, msg):
         """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
@@ -1821,6 +1829,27 @@ class Cmd2TestCase(unittest.TestCase):
     def tearDown(self):
         if self.CmdApp:
             self.outputTrap.tearDown()
+
+
+#noinspection PyClassHasNoInit
+class CmdResult(namedtuple('CmdResult', ['out', 'err', 'war'])):
+    """Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
+    
+    This is provided as a convenience and an example for one possible way for end users to store results in
+    the self._last_result attribute of cmd2.Cmd class instances.  See the "python_scripting.py" example for how it can 
+    be used to enable conditional control flow.
+    
+    Named tuple attribues
+    ---------------------
+    out - this is intended to store normal output data from the command and can be of any type that makes sense
+    err: str - this is intended to store an error message and it being non-empty indicates there was an error
+    war: str - this is intended to store a warning message which isn't quite an error, but of note
+    
+    NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
+    """
+    def __bool__(self):
+        """If err is an empty string, treat the result as a success; otherwise treat it as  a failure."""
+        return not self.err
 
 
 if __name__ == '__main__':

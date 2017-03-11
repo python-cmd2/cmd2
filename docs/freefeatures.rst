@@ -154,6 +154,13 @@ and any variables created or changed will persist for the life of the applicatio
     (Cmd) py print(x)
     5
 
+The ``py`` command also allows you to run Python scripts via ``py run('myscript.py')``.
+This provides a more complicated and more powerful scripting capability than that
+provided by the simple text file scripts discussed in :ref:`scripts`.  Python scripts can include
+conditional control flow logic.  See the **python_scripting.py** ``cmd2`` application and
+the **script_conditional.py** script in the ``examples`` source code directory for an
+example of how to achieve this in your own applications.
+
 IPython (optional)
 ==================
 
