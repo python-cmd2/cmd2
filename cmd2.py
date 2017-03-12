@@ -524,7 +524,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     terminators = [';']
-    urlre = re.compile('(https?://[-\\w\\./]+)')
+    urlre = re.compile('(https?://[-\\w./]+)')
 
     # Attributes which ARE dynamicaly settable at runtime
     abbrev = True  # Abbreviated commands recognized
@@ -748,18 +748,23 @@ class Cmd(cmd.Cmd):
             pyparsing.Optional(fileName) + (pyparsing.stringEnd | '|')
         self.inputParser.ignore(self.commentInProgress)
 
-    def preparse(self, raw, **kwargs):
+    def preparse(self, raw):
         return raw
 
     def postparse(self, parseResult):
         return parseResult
 
-    def parsed(self, raw, **kwargs):
+    def parsed(self, raw):
+        """ This function is where the actual parsing of each line occurs.
+        
+        :param raw: str - the line of text as it was entered
+        :return: ParsedString - custom subclass of str with extra attributes
+        """
         if isinstance(raw, ParsedString):
             p = raw
         else:
             # preparse is an overridable hook; default makes no changes
-            s = self.preparse(raw, **kwargs)
+            s = self.preparse(raw)
             s = self.inputParser.transformString(s.lstrip())
             s = self.commentGrammars.transformString(s)
             for (shortcut, expansion) in self.shortcuts:
@@ -777,8 +782,6 @@ class Cmd(cmd.Cmd):
             p = ParsedString(result.args)
             p.parsed = result
             p.parser = self.parsed
-        for (key, val) in kwargs.items():
-            p.parsed[key] = val
         return p
 
     def postparsing_precmd(self, statement):
@@ -1586,7 +1589,7 @@ class History(list):
         pattern = re.compile(target, re.IGNORECASE)
         return [s for s in self if pattern.search(s)]
 
-    spanpattern = re.compile(r'^\s*(?P<start>\-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>\-?\d+)?\s*$')
+    spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>-?\d+)?\s*$')
 
     def span(self, raw):
         if raw.lower() in ('*', '-', 'all'):
@@ -1609,7 +1612,7 @@ class History(list):
             result.reverse()
         return result
 
-    rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*\-\s*(?P<end>[\d]+)?\s*$')
+    rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*-\s*(?P<end>[\d]+)?\s*$')
 
     def append(self, new):
         new = HistoryItem(new)
