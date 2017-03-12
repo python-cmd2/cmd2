@@ -84,6 +84,9 @@ __version__ = '0.7.1a'
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
 
+# Override the default whitespace chars in Pyparsing so that newlines are not treated as whitespace
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
+
 
 # The next 3 variables and associated setter funtions effect how arguments are parsed for commands using @options.
 # The defaults are "sane" and maximize backward compatibility with cmd and previous versions of cmd2.
@@ -127,7 +130,7 @@ def set_use_arg_list(val):
 
 
 class OptionParser(optparse.OptionParser):
-    """Subclase of optparse.OptionParser which stores a reference to the function/method it is parsing options for.
+    """Subclass of optparse.OptionParser which stores a reference to the do_* method it is parsing options for.
     
     Used mostly for getting access to the do_* method's docstring when printing help.
     """
@@ -138,11 +141,19 @@ class OptionParser(optparse.OptionParser):
         self._func = None
 
     def exit(self, status=0, msg=None):
+        """Called at the end of showing help when either -h is used to show help or when bad arguments are provided.
+        
+        We override exit so it doesn't automatically exit the applicaiton.
+        """
         self.values._exit = True
         if msg:
             print(msg)
 
     def print_help(self, *args, **kwargs):
+        """Called when optparse encounters either -h or --help or bad arguments.  It prints help for options.
+        
+        We override it so that before the standard optparse help, it prints the do_* method docstring, if available.
+        """
         try:
             print(self._func.__doc__)
         except AttributeError:
@@ -215,7 +226,7 @@ options_defined = []  # used to distinguish --options from SQL-style --comments
 
 
 def options(option_list, arg_desc="arg"):
-    '''Used as a decorator and passed a list of optparse-style options,
+    """Used as a decorator and passed a list of optparse-style options,
        alters a cmd2 method to populate its ``opts`` argument from its
        raw text argument.
 
@@ -229,13 +240,18 @@ def options(option_list, arg_desc="arg"):
        def do_something(self, arg, opts):
            if opts.quick:
                self.fast_button = True
-       '''
+       """
     if not isinstance(option_list, list):
         option_list = [option_list]
     for opt in option_list:
         options_defined.append(pyparsing.Literal(opt.get_opt_string()))
 
     def option_setup(func):
+        """Decorator function which modifies on of the do_* methods that use the @options decorator.
+        
+        :param func: do_* method which uses the @options decorator
+        :return: modified version of the do_* method
+        """
         optionParser = OptionParser()
         for opt in option_list:
             optionParser.add_option(opt)
@@ -247,6 +263,14 @@ def options(option_list, arg_desc="arg"):
         optionParser._func = func
 
         def new_func(instance, arg):
+            """For @options commands this replaces the actual do_* methods in the instance __dict__.
+            
+            First it does all of the option/argument parsing.  Then it calls the underlying do_* method.
+            
+            :param instance: cmd2.Cmd2 derived class application instance
+            :param arg: str - command-line arguments provided to the comman
+            :return: bool - returns whatever the result of calling the underlying do_* method would be
+            """
             try:
                 # Use shlex to split the command line into a list of arguments based on shell rules
                 opts, newArgList = optionParser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
@@ -290,23 +314,7 @@ def options(option_list, arg_desc="arg"):
     return option_setup
 
 
-class PasteBufferError(EnvironmentError):
-    if sys.platform[:3] == 'win':
-        errmsg = """Redirecting to or from paste buffer requires pywin32
-to be installed on operating system.
-Download from http://sourceforge.net/projects/pywin32/"""
-    elif sys.platform[:3] == 'dar':
-        # Use built in pbcopy on Mac OSX
-        pass
-    else:
-        errmsg = """Redirecting to or from paste buffer requires xclip
-to be installed on operating system.
-On Debian/Ubuntu, 'sudo apt-get install xclip' will install it."""
-
-    def __init__(self):
-        Exception.__init__(self, self.errmsg)
-
-
+# Prefix to use on all OSes when the appropriate library or CLI tool isn't installed for getting access to paste buffer
 pastebufferr = """Redirecting to or from paste buffer requires %s
 to be installed on operating system.
 %s"""
@@ -320,6 +328,10 @@ if sys.platform == "win32":
         import win32clipboard
 
         def get_paste_buffer():
+            """Get the contents of the clipboard for Windows OSes.
+            
+            :return: str - contents of the clipboard
+            """
             win32clipboard.OpenClipboard(0)
             try:
                 result = win32clipboard.GetClipboardData()
@@ -329,6 +341,10 @@ if sys.platform == "win32":
             return result
 
         def write_to_paste_buffer(txt):
+            """Paste text to the clipboard for Windows OSes.
+            
+            :param txt: str - text to paste to the clipboard
+            """
             win32clipboard.OpenClipboard(0)
             win32clipboard.EmptyClipboard()
             win32clipboard.SetClipboardText(txt)
@@ -337,6 +353,8 @@ if sys.platform == "win32":
         can_clip = True
     except ImportError:
         def get_paste_buffer(*args):
+            """For Windows OSes without the appropriate libary installed to get text from clipboard, raise an exception.
+            """
             raise OSError(pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/'))
 
         write_to_paste_buffer = get_paste_buffer
@@ -356,18 +374,27 @@ elif sys.platform == 'darwin':
         pass
     if can_clip:
         def get_paste_buffer():
+            """Get the contents of the clipboard for Mac OS X.
+
+            :return: str - contents of the clipboard
+            """
             pbcopyproc = subprocess.Popen('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
             return pbcopyproc.stdout.read()
 
         def write_to_paste_buffer(txt):
+            """Paste text to the clipboard for Mac OS X.
+
+            :param txt: str - text to paste to the clipboard
+            """
             pbcopyproc = subprocess.Popen('pbcopy', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
             pbcopyproc.communicate(txt.encode())
     else:
         def get_paste_buffer(*args):
-            raise OSError(
-                pastebufferr % ('pbcopy', 'On MacOS X - error should not occur - part of the default installation'))
+            """For Mac OS X without the appropriate tool installed to get text from clipboard, raise an exception."""
+            raise OSError(pastebufferr % ('pbcopy',
+                                          'On MacOS X - error should not occur - part of the default installation'))
 
         write_to_paste_buffer = get_paste_buffer
 else:
@@ -380,11 +407,19 @@ else:
         pass  # something went wrong with xclip and we cannot use it
     if can_clip:
         def get_paste_buffer():
+            """Get the contents of the clipboard for Linux OSes.
+
+            :return: str - contents of the clipboard
+            """
             xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE,
                                          stdin=subprocess.PIPE)
             return xclipproc.stdout.read()
 
         def write_to_paste_buffer(txt):
+            """Paste text to the clipboard for Linux OSes.
+
+            :param txt: str - text to paste to the clipboard
+            """
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             xclipproc.stdin.write(txt.encode())
             xclipproc.stdin.close()
@@ -394,11 +429,10 @@ else:
             xclipproc.stdin.close()
     else:
         def get_paste_buffer(*args):
+            """For Linux without the appropriate tool installed to get text from clipboard, raise an exception."""
             raise OSError(pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"'))
 
         write_to_paste_buffer = get_paste_buffer
-
-pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
 class ParsedString(str):
@@ -410,6 +444,7 @@ class ParsedString(str):
     parser = None
 
     def full_parsed_statement(self):
+        """Used to reconstruct the full parsed statement when a command isn't recognized."""
         new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
         new.parsed = self.parsed
         new.parser = self.parser
@@ -775,11 +810,23 @@ class Cmd(cmd.Cmd):
             pyparsing.Optional(fileName) + (pyparsing.stringEnd | '|')
         self.inputParser.ignore(self.commentInProgress)
 
+    # noinspection PyMethodMayBeStatic
     def preparse(self, raw):
+        """Hook that runs before parsing the command-line and as the very first hook for a command.
+        
+        :param raw: str - raw command line input
+        :return: str - potentially modified raw command line input
+        """
         return raw
 
-    def postparse(self, parseResult):
-        return parseResult
+    # noinspection PyMethodMayBeStatic
+    def postparse(self, parse_result):
+        """Hook that runs immediately after parsing the command-line but before parsed() returns a ParsedString.
+        
+        :param parse_result: pyparsing.ParseResults - parsing results output by the pyparsing parser
+        :return: pyparsing.ParseResults - potentially modified ParseResults object
+        """
+        return parse_result
 
     def parsed(self, raw):
         """ This function is where the actual parsing of each line occurs.
@@ -811,6 +858,7 @@ class Cmd(cmd.Cmd):
             p.parser = self.parsed
         return p
 
+    # noinspection PyMethodMayBeStatic
     def postparsing_precmd(self, statement):
         """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
 
@@ -828,6 +876,7 @@ class Cmd(cmd.Cmd):
         stop = False
         return stop, statement
 
+    # noinspection PyMethodMayBeStatic
     def postparsing_postcmd(self, stop):
         """This runs after everything else, including after postcmd().
 
@@ -952,16 +1001,12 @@ class Cmd(cmd.Cmd):
                     self._temp_filename = None
 
     def onecmd(self, line):
-        """Interpret the argument as though it had been typed in response
-        to the prompt.
-
-        This may be overridden, but should not normally need to be;
-        see the precmd() and postcmd() methods for useful execution hooks.
-        The return value is a flag indicating whether interpretation of
-        commands by the interpreter should stop.
-
-        This (`cmd2`) version of `onecmd` already override's `cmd`'s `onecmd`.
-
+        """ This executes the actual do_* method for a command.
+        
+        If the command provided doesn't exist, then it executes _default() instead.
+        
+        :param line: ParsedString - subclass of string inclding the pyparsing ParseResults
+        :return: bool - a flag indicating whether the interpretatoin of commands should stop
         """
         statement = self.parsed(line)
         self.lastcmd = statement.parsed.raw
@@ -976,12 +1021,22 @@ class Cmd(cmd.Cmd):
         return stop
 
     def _default(self, statement):
+        """Executed when the command given isn't a recognized command implemented by a do_* method.
+        
+        :param statement: ParsedString - subclass of string inclding the pyparsing ParseResults
+        :return: 
+        """
         arg = statement.full_parsed_statement()
         if self.default_to_shell:
             result = os.system(arg)
+            # If os.system() succeeded, then don't print warning about unknown command
             if not result:
-                return self.postparsing_postcmd(None)
-        return self.postparsing_postcmd(self.default(arg))
+                return False
+
+        # Print out a message stating this is an unknown command
+        self.default(arg)
+
+        return False
 
     def pseudo_raw_input(self, prompt):
         """copied from cmd's cmdloop; like raw_input, but accounts for changed stdin, stdout"""
@@ -1142,6 +1197,7 @@ class Cmd(cmd.Cmd):
         except (ValueError, AttributeError, NotSettableError):
             self.do_show(arg)
 
+    # noinspection PyMethodMayBeStatic
     def do_pause(self, text):
         """Displays the specified text then waits for the user to press <Enter>.
 
@@ -1158,6 +1214,7 @@ class Cmd(cmd.Cmd):
     Usage:  pause [text]"""
         self.stdout.write("{}\n".format(help_str))
 
+    # noinspection PyMethodMayBeStatic
     def do_shell(self, command):
         """Execute a command as if at the OS prompt.
 
@@ -1234,6 +1291,7 @@ class Cmd(cmd.Cmd):
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:
+        # noinspection PyMethodMayBeStatic
         def do_ipy(self, arg):
             """Enters an interactive IPython shell.
 
@@ -1597,15 +1655,17 @@ class HistoryItem(str):
 
 class History(list):
     """ A list of HistoryItems that knows how to respond to user requests. """
-    def zero_based_index(self, onebased):
+
+    # noinspection PyMethodMayBeStatic
+    def _zero_based_index(self, onebased):
         result = onebased
         if result > 0:
             result -= 1
         return result
 
-    def to_index(self, raw):
+    def _to_index(self, raw):
         if raw:
-            result = self.zero_based_index(int(raw))
+            result = self._zero_based_index(int(raw))
         else:
             result = None
         return result
@@ -1637,9 +1697,9 @@ class History(list):
         if not results:
             raise IndexError
         if not results.group('separator'):
-            return [self[self.to_index(results.group('start'))]]
-        start = self.to_index(results.group('start'))
-        end = self.to_index(results.group('end'))
+            return [self[self._to_index(results.group('start'))]]
+        start = self._to_index(results.group('start'))
+        end = self._to_index(results.group('end'))
         reverse = False
         if end is not None:
             if end < start:
