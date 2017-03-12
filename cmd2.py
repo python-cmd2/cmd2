@@ -451,6 +451,10 @@ class ParsedString(str):
         return new
 
     def with_args_replaced(self, newargs):
+        """Used for @options commands when USE_ARG_LIST is False.
+        
+        It helps figure out what the args are after removing options.
+        """
         new = ParsedString(newargs)
         new.parsed = self.parsed
         new.parser = self.parser
@@ -465,6 +469,10 @@ class StubbornDict(dict):
     Create it with the stubbornDict(arg) factory function.
     """
     def update(self, arg):
+        """Adds dictionary arg's key-values pairs in to dict
+        
+        :param arg: an object convertable to a StubbornDict
+        """
         dict.update(self, StubbornDict.to_dict(arg))
 
     append = update
@@ -520,6 +528,11 @@ def stubbornDict(*arg, **kwarg):
 
 
 def replace_with_file_contents(fname):
+    """Action to perform when successfully matching parse element definition for inputFrom parser.
+    
+    :param fname: str - filename
+    :return: str - contents of file "fname" or contents of the clipboard if fname is None or an empty string
+    """
     if fname:
         try:
             result = open(os.path.expanduser(fname[0])).read()
@@ -531,10 +544,12 @@ def replace_with_file_contents(fname):
 
 
 class EmbeddedConsoleExit(SystemExit):
+    """Custom exception class for use with the py command."""
     pass
 
 
 class EmptyStatement(Exception):
+    """Custom exception class for handling behavior when the user just presses <Enter>."""
     pass
 
 
@@ -889,6 +904,14 @@ class Cmd(cmd.Cmd):
         return stop
 
     def func_named(self, arg):
+        """Gets the method name associated with a given command.
+        
+        If self.abbrev is False, it is always just looks for do_arg.  However, if self.abbrev is True,
+        it allows abbreivated command names and looks for any commands which start with do_arg.
+        
+        :param arg: str - command to look up method name which implements it
+        :return: str - method name which implements the given command
+        """
         result = None
         target = 'do_' + arg
         if target in dir(self):
@@ -901,10 +924,10 @@ class Cmd(cmd.Cmd):
         return result
 
     def onecmd_plus_hooks(self, line):
-        """
+        """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
-        :param line:
-        :return:
+        :param line: str - line of text read from inp
+        :return: bool - True if cmdloop() should exit, False otherwise
         """
         # The outermost level of try/finally nesting can be condensed once
         # Python 2.4 support can be dropped.
@@ -954,10 +977,20 @@ class Cmd(cmd.Cmd):
         return statement
 
     def redirect_output(self, statement):
+        """Handles output redirection for >, >>, and |.
+        
+        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
+        """
         if statement.parsed.pipeTo:
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
             sys.stdout = self.stdout
+
+            # NOTE: We couldn't get a real pipe working via subprocess for Python 3.x prior to 3.5.
+            # So to allow compatibility with Python 2.7 and 3.3+ we are redirecting output to a temporary file.
+            # And once command is complete we are using the "cat" shell command to pipe to whatever.
+            # TODO: Once support for Python 3.x prior to 3.5 is no longer necessary, replace with a real subprocess pipe
+
             # Redirect stdout to a temporary file
             _, self._temp_filename = tempfile.mkstemp()
             self.stdout = open(self._temp_filename, 'w')
@@ -977,6 +1010,10 @@ class Cmd(cmd.Cmd):
                     self.stdout.write(get_paste_buffer())
 
     def restore_output(self, statement):
+        """Handles restoring state after output redirection as well as the actual pipe operation if present.
+        
+        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
+        """
         if self.kept_state:
             try:
                 if statement.parsed.output:
@@ -1249,6 +1286,10 @@ class Cmd(cmd.Cmd):
 
         # Support the run command even if called prior to invoking an interactive interpreter
         def run(arg):
+            """Run a Python script file in the interactive console.
+            
+            :param arg: str - filename of *.py script file to run
+            """
             try:
                 with open(arg) as f:
                     interp.runcode(f.read())
@@ -1256,6 +1297,11 @@ class Cmd(cmd.Cmd):
                 self.perror(e)
 
         def onecmd_plus_hooks(arg):
+            """Run a cmd2.Cmd command from a Python script or the interactive Python console.
+            
+            :param arg: str - command line including command and arguments to run
+            :return: bool - True if cmdloop() should exit once leaving the interactive Python console, False otherwise.
+            """
             return self.onecmd_plus_hooks(arg + '\n')
 
         self.pystate['run'] = run
@@ -1269,6 +1315,7 @@ class Cmd(cmd.Cmd):
             interp.runcode(arg)
         else:
             def quit():
+                """Function callable from the interactive Python console to exit that environment and return to cmd2."""
                 raise EmbeddedConsoleExit
 
             self.pystate['quit'] = quit
@@ -1330,6 +1377,13 @@ class Cmd(cmd.Cmd):
                 self.stdout.write(hi.pr())
 
     def last_matching(self, arg):
+        """Return the last item from the history list that matches arg.  Or if arg not provided, retern last item.
+        
+        If not match is found, return None.
+        
+        :param arg: str - text to search for in history
+        :return: str - last match, last item, or None, depending on arg.
+        """
         try:
             if arg:
                 return self.history.get(arg)[-1]
@@ -1481,6 +1535,18 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
         self.stdout.write("{}\n".format(help_str))
 
     def read_file_or_url(self, fname):
+        """Open a file or URL for reading by the do_load() method.
+        
+        This method methodically proceeds in the following path until it succeeds (or fails in the end):
+        1) Try to open the file
+        2) Try to open the URL if it looks like one
+        3) Try to expand the ~ to create an absolute path for the filename
+        4) Try to add the default extension to the expanded path
+        5) Raise an error
+        
+        :param fname: str - filename or URL
+        :return: stream  or a file-like object pointing to the file or URL (or raise an exception if it couldn't open)
+        """
         # TODO: not working on localhost
         if os.path.isfile(fname):
             result = open(fname, 'r')
