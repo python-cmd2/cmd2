@@ -59,11 +59,13 @@ import six.moves as sm
 from six.moves import zip
 
 # Python 2 urllib2.urlopen() or Python3  urllib.request.urlopen()
+# noinspection PyUnresolvedReferences
 from six.moves.urllib.request import urlopen
 
 # Python 3 compatability hack due to no built-in file keyword in Python 3
 # Due to one occurence of isinstance(<foo>, file) checking to see if something is of file type
 try:
+    # noinspection PyUnboundLocalVariable,PyUnresolvedReferences
     file
 except NameError:
     import io
@@ -72,6 +74,7 @@ except NameError:
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
 try:
+    # noinspection PyUnresolvedReferences
     from IPython import embed
 except ImportError:
     ipython_available = False
@@ -124,6 +127,16 @@ def set_use_arg_list(val):
 
 
 class OptionParser(optparse.OptionParser):
+    """Subclase of optparse.OptionParser which stores a reference to the function/method it is parsing options for.
+    
+    Used mostly for getting access to the do_* method's docstring when printing help.
+    """
+    def __init__(self):
+        # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
+        optparse.OptionParser.__init__(self)
+        # The do_* method this class is parsing options for.  Used for accessing docstring help.
+        self._func = None
+
     def exit(self, status=0, msg=None):
         self.values._exit = True
         if msg:
@@ -303,6 +316,7 @@ can_clip = False
 if sys.platform == "win32":
     # Running on Windows
     try:
+        # noinspection PyUnresolvedReferences
         import win32clipboard
 
         def get_paste_buffer():
@@ -388,6 +402,13 @@ pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
 class ParsedString(str):
+    """Subclass of str which also stores a pyparsing.ParseResults object containing structured parse results."""
+    # pyarsing.ParseResults - structured parse results, to provide multiple means of access to the parsed data
+    parsed = None
+
+    # Function which did the parsing
+    parser = None
+
     def full_parsed_statement(self):
         new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
         new.parsed = self.parsed
@@ -514,7 +535,6 @@ class Cmd(cmd.Cmd):
     default_to_shell = False
     defaultExtension = 'txt'  # For ``save``, ``load``, etc.
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
-    kept_state = None
     # make sure your terminators are not in legalChars!
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
     multilineCommands = []
@@ -589,11 +609,11 @@ class Cmd(cmd.Cmd):
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
+        # noinspection PyUnresolvedReferences
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self)
                                                if fname.startswith('do_')]
         self._init_parser()
-        self._temp_filename = None
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -605,6 +625,13 @@ class Cmd(cmd.Cmd):
         # Stores results from the last command run to enable usage of results in a Python script or interactive console
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
         self._last_result = None
+
+        # Used to save state during a redirection
+        self.kept_state = None
+        self.kept_sys = None
+
+        # Used for a temp file during a pipe (needed tempfile instead of real pipe for Python 3.x prior to 3.5)
+        self._temp_filename = None
 
     def poutput(self, msg):
         """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
@@ -984,6 +1011,7 @@ class Cmd(cmd.Cmd):
         # has been split out so that it can be called separately
         if self.use_rawinput and self.completekey:
             try:
+                # noinspection PyUnresolvedReferences
                 import readline
                 self.old_completer = readline.get_completer()
                 readline.set_completer(self.complete)
@@ -1003,6 +1031,7 @@ class Cmd(cmd.Cmd):
         finally:
             if self.use_rawinput and self.completekey:
                 try:
+                    # noinspection PyUnresolvedReferences
                     import readline
                     readline.set_completer(self.old_completer)
                 except ImportError:
@@ -1517,6 +1546,7 @@ Script should contain one command per line, just like command would be typed in 
                 return self._STOP_AND_EXIT
 
     def cmdloop(self, intro=None):
+        callargs = None
         if self.allow_cli_args:
             parser = optparse.OptionParser()
             parser.add_option('-t', '--test', dest='test',
@@ -1654,6 +1684,7 @@ class History(list):
                     end = int(end)
                 return self[start:end]
 
+            # noinspection PyUnresolvedReferences
             getme = getme.strip()
 
             if getme.startswith(r'/') and getme.endswith(r'/'):
@@ -1714,19 +1745,19 @@ class Statekeeper(object):
 
 
 class Borg(object):
-    '''All instances of any Borg subclass will share state.
-    from Python Cookbook, 2nd Ed., recipe 6.16'''
+    """All instances of any Borg subclass will share state.
+    from Python Cookbook, 2nd Ed., recipe 6.16"""
     _shared_state = {}
 
     def __new__(cls, *a, **k):
-        obj = object.__new__(cls, *a, **k)
+        obj = object.__new__(cls)
         obj.__dict__ = cls._shared_state
         return obj
 
 
 class OutputTrap(Borg):
-    '''Instantiate  an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
-    Call `tearDown()` to return to normal output.'''
+    """Instantiate  an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
+    Call `tearDown()` to return to normal output."""
 
     def __init__(self):
         self.contents = ''
