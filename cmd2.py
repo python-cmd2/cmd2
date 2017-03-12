@@ -1581,6 +1581,15 @@ class History(list):
         return result
 
     def search(self, target):
+        """ Search the history for a particular term.
+        
+        :param target: str - term to search for
+        :return: List[str] - list of matches
+        """
+        # If there is no history yet, don't try to search through a non-existent list, just return an empty list
+        if len(self) < 1:
+            return []
+
         target = target.strip()
         if target[0] == target[-1] == '/' and len(target) > 1:
             target = target[1:-1]
@@ -1858,4 +1867,5 @@ class CmdResult(namedtuple('CmdResult', ['out', 'err', 'war'])):
 if __name__ == '__main__':
     # If run as the main application, simply start a bare-bones cmd2 application with only built-in functionality.
     app = Cmd()
+    app.debug = True
     app.cmdloop()
