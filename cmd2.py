@@ -1098,6 +1098,10 @@ class Cmd(cmd.Cmd):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
+        
+        This serves the same role as cmd.cmdloop().
+        
+        :return: bool - True implies the entire application should exit.
         """
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
@@ -1654,6 +1658,13 @@ Script should contain one command per line, just like command would be typed in 
         self.stdout.write("{}\n".format(help_str))
 
     def runTranscriptTests(self, callargs):
+        """Runs transcript tests for provided file(s).
+        
+        This is called when either -t is provided on the command line or the transcript_files argument is provided 
+        during construction of the cmd2.Cmd instance.
+        
+        :param callargs: List[str] - list of transcript test file names
+        """
         class TestMyAppCase(Cmd2TestCase):
             CmdApp = self.__class__
 
@@ -1665,11 +1676,26 @@ Script should contain one command per line, just like command would be typed in 
         result.printErrors()
 
     def run_commands_at_invocation(self, callargs):
+        """Runs commands provided as arguments on the command line when the application is started.
+        
+        :param callargs: List[str] - list of strings where each string is a command plus its arguments
+        :return: bool - True implies the entire application should exit
+        """
         for initial_command in callargs:
             if self.onecmd_plus_hooks(initial_command + '\n'):
                 return self._STOP_AND_EXIT
 
     def cmdloop(self, intro=None):
+        """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
+        
+        _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
+        the following extra feactures provided by cmd2:
+        - commands at invocation
+        - transcript testing
+        - intro banner
+        
+        :param intro: str - if provided this overrides self.intro and serves as the intro banner printed once at start
+        """
         callargs = None
         if self.allow_cli_args:
             parser = optparse.OptionParser()
@@ -1708,6 +1734,11 @@ Script should contain one command per line, just like command would be typed in 
 
 
 class HistoryItem(str):
+    """Class used to represent an item in the History list.
+    
+    Thing wrapper around str class which adds a custom format for printing.  It also keeps track of its index in the 
+    list as well as a lowercase representation of itself for convenience/efficiency.
+    """
     listformat = '-------------------------[%d]\n%s\n'
 
     def __init__(self, instr):
@@ -1716,6 +1747,10 @@ class HistoryItem(str):
         self.idx = None
 
     def pr(self):
+        """Represent a HistoryItem in a pretty fashion suitable for printing.
+        
+        :return: str - pretty print string version of a HistoryItem
+        """
         return self.listformat % (self.idx, str(self))
 
 
@@ -1757,6 +1792,11 @@ class History(list):
     spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>-?\d+)?\s*$')
 
     def span(self, raw):
+        """Parses the input string search for a span pattern and if if found, returns a slice from the History list.
+        
+        :param raw: str - string potentially containing a span of the forms a..b, a:b, a:, ..b
+        :return: List[HistoryItem] - slice from the History list
+        """
         if raw.lower() in ('*', '-', 'all'):
             raw = ':'
         results = self.spanpattern.search(raw)
@@ -1780,13 +1820,13 @@ class History(list):
     rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*-\s*(?P<end>[\d]+)?\s*$')
 
     def append(self, new):
+        """Append a HistoryItem to end of the History list
+        
+        :param new: str - command line to convert to HistoryItem and add to the end of the History list
+        """
         new = HistoryItem(new)
         list.append(self, new)
         new.idx = len(self)
-
-    def extend(self, new):
-        for n in new:
-            self.append(n)
 
     def get(self, getme=None, fromEnd=False):
         if not getme:
