@@ -24,13 +24,6 @@ install from PyPI_.
     sudo pip install <package_name>
 
 
-.. warning::
-
-  Versions of ``cmd2`` before 0.7.0 should be considered to be of unstable "beta" quality and should not be relied upon
-  for production use.  If you cannot get a version >= 0.7 from either pip or your OS repository, then we recommend
-  installing from GitHub - see :ref:`github`.
-
-
 Requirements for Installing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 * If you have Python 2 >=2.7.9 or Python 3 >=3.4 installed from `python.org
@@ -50,6 +43,8 @@ Requirements for Installing
 
     python -m pip install -U pip setuptools
 
+
+.. _`pip_install`:
 
 Use pip for Installing
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -87,6 +82,12 @@ For Python 3::
     sudo apt-get install python3-cmd2
 
 This will also install the required 3rd-party dependencies.
+
+.. warning::
+
+  Versions of ``cmd2`` before 0.7.0 should be considered to be of unstable "beta" quality and should not be relied upon
+  for production use.  If you cannot get a version >= 0.7 from your OS repository, then we recommend
+  installing from either pip or GitHub - see :ref:`pip_install` or :ref:`github`.
 
 
 Deploy cmd2.py with your project

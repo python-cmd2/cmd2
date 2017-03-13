@@ -833,7 +833,7 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyMethodMayBeStatic
     def preparse(self, raw):
-        """Hook that runs before parsing the command-line and as the very first hook for a command.
+        """Hook method executed just before the command line is interpreted, but after the input prompt is generated.
         
         :param raw: str - raw command line input
         :return: str - potentially modified raw command line input
@@ -842,7 +842,7 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyMethodMayBeStatic
     def postparse(self, parse_result):
-        """Hook that runs immediately after parsing the command-line but before parsed() returns a ParsedString.
+        """Hook that runs immediately after parsing the command-line but before ``parsed()`` returns a ParsedString.
         
         :param parse_result: pyparsing.ParseResults - parsing results output by the pyparsing parser
         :return: pyparsing.ParseResults - potentially modified ParseResults object
@@ -888,8 +888,9 @@ class Cmd(cmd.Cmd):
         If you wish to fatally fail this command and exit the application entirely, set stop = True.
 
         If you wish to just fail this command you can do so by raising an exception:
-            raise EmptyStatement - will silently fail and do nothing
-            raise <AnyOtherException> - will fail and print an error message
+        
+        - raise EmptyStatement - will silently fail and do nothing
+        - raise <AnyOtherException> - will fail and print an error message
 
         :param statement: - the parsed command-line statement
         :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement
@@ -909,25 +910,13 @@ class Cmd(cmd.Cmd):
         """
         return stop
 
-    def func_named(self, arg):
-        """Gets the method name associated with a given command.
+    def precmd(self, statement):
+        """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
         
-        If self.abbrev is False, it is always just looks for do_arg.  However, if self.abbrev is True,
-        it allows abbreivated command names and looks for any commands which start with do_arg.
-        
-        :param arg: str - command to look up method name which implements it
-        :return: str - method name which implements the given command
+        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
+        :return: ParsedString - a potentially modified version of the input ParsedString statement
         """
-        result = None
-        target = 'do_' + arg
-        if target in dir(self):
-            result = target
-        else:
-            if self.abbrev:  # accept shortened versions of commands
-                funcs = [fname for fname in self.keywords if fname.startswith(arg)]
-                if len(funcs) == 1:
-                    result = 'do_' + funcs[0]
-        return result
+        return statement
 
     def onecmd_plus_hooks(self, line):
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
@@ -1038,6 +1027,26 @@ class Cmd(cmd.Cmd):
                         self.stdout.write(result)
                     os.remove(self._temp_filename)
                     self._temp_filename = None
+
+    def func_named(self, arg):
+        """Gets the method name associated with a given command.
+
+        If self.abbrev is False, it is always just looks for do_arg.  However, if self.abbrev is True,
+        it allows abbreivated command names and looks for any commands which start with do_arg.
+
+        :param arg: str - command to look up method name which implements it
+        :return: str - method name which implements the given command
+        """
+        result = None
+        target = 'do_' + arg
+        if target in dir(self):
+            result = target
+        else:
+            if self.abbrev:  # accept shortened versions of commands
+                funcs = [fname for fname in self.keywords if fname.startswith(arg)]
+                if len(funcs) == 1:
+                    result = 'do_' + funcs[0]
+        return result
 
     def onecmd(self, line):
         """ This executes the actual do_* method for a command.

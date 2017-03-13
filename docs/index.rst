@@ -65,6 +65,7 @@ Contents:
    settingchanges
    unfreefeatures
    integrating
+   hooks
    alternatives
 
 Compatibility
