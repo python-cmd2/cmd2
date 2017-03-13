@@ -51,13 +51,13 @@ def test_stubborn_dict_class():
                                  ('shoe', 'schuh'), ('small', 'klein')]
 
 def test_stubborn_dict_factory():
-    assert sorted(cmd2.stubbornDict('cow a bovine\nhorse an equine').items()) == [('cow', 'a bovine'),
-                                                                                  ('horse', 'an equine')]
-    assert sorted(cmd2.stubbornDict(['badger', 'porcupine a poky creature']).items()) == [('badger', ''),
-                                                                                          ('porcupine',
+    assert sorted(cmd2.stubborn_dict('cow a bovine\nhorse an equine').items()) == [('cow', 'a bovine'),
+                                                                                   ('horse', 'an equine')]
+    assert sorted(cmd2.stubborn_dict(['badger', 'porcupine a poky creature']).items()) == [('badger', ''),
+                                                                                           ('porcupine',
                                                                                            'a poky creature')]
-    assert sorted(cmd2.stubbornDict(turtle='has shell', frog='jumpy').items()) == [('frog', 'jumpy'),
-                                                                                   ('turtle', 'has shell')]
+    assert sorted(cmd2.stubborn_dict(turtle='has shell', frog='jumpy').items()) == [('frog', 'jumpy'),
+                                                                                    ('turtle', 'has shell')]
 
 
 def test_history_span(hist):
