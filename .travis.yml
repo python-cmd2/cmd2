@@ -3,8 +3,14 @@ sudo: false  # enable container-based build for fast boot times on Linux
 matrix:
     include:
         - os: linux
+          python: 2.6
+          env: TOXENV=py26
+        - os: linux
           python: 2.7
           env: TOXENV=py27
+        - os: linux
+          python: 3.2
+          env: TOXENV=py32
         - os: linux
           python: 3.3
           env: TOXENV=py33
@@ -18,11 +24,18 @@ matrix:
           python: 3.6
           env: TOXENV=py36
         - os: linux
+          python: 3.7-dev
+          env: TOXENV=py37
+        - os: linux
           python: pypy
           env: TOXENV=pypy
-#        - os: osx
-#          language: generic
-#          env: TOXENV=py27
+        - os: linux
+          python: pypy3
+          env: TOXENV=pypy3
+        # Stock OSX Python
+        - os: osx
+          language: generic
+          env: TOXENV=py27
 install:
   - pip install tox
 script:
