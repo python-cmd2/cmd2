@@ -65,7 +65,7 @@ quotation marks if it is more than a one-word command.
 
 .. note::
 
-   if you wish to disable cmd2's consumption of command-line arguments, you can do so by setting the  ``allow_cli_args``
+   If you wish to disable cmd2's consumption of command-line arguments, you can do so by setting the  ``allow_cli_args``
    attribute of your ``cmd2.Cmd`` class instance to ``False``.  This would be useful, for example, if you wish to use
    someting like Argparse_ to parse the overall command line arguments for your application::
 
@@ -104,6 +104,21 @@ app's value of ``self.redirector`` to use a different string for output redirect
     (Cmd) !cat out.txt
     line1
     line2
+
+.. note::
+
+   If you wish to disable cmd2's output redirection and pipes features, you can do so by setting the ``allow_redirection``
+   attribute of your ``cmd2.Cmd`` class instance to ``False``.  This would be useful, for example, if you want to restrict
+   the ability for an end user to write to disk or interact with shell commands for security reasons::
+
+       from cmd2 import Cmd
+       class App(Cmd):
+           def __init__(self):
+               self.allow_redirection = False
+
+   cmd2's parser will still treat the ``>``, ``>>``, and `|` symbols as output redirection and pipe symbols and will strip
+   arguments after them from the command line arguments accordingly.  But output from a command will not be redirected
+   to a file or piped to a shell command.
 
 .. _pywin32: http://sourceforge.net/projects/pywin32/
 .. _xclip: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
