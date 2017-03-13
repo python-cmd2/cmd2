@@ -178,9 +178,9 @@ def remaining_args(opts_plus_args, arg_list):
     :return: str - non-option arguments as a single string, with original spacing preserved
     """
     pattern = '\s+'.join(re.escape(a) for a in arg_list) + '\s*$'
-    matchObj = re.search(pattern, opts_plus_args)
+    match_obj = re.search(pattern, opts_plus_args)
     try:
-        remaining = opts_plus_args[matchObj.start():]
+        remaining = opts_plus_args[match_obj.start():]
     except AttributeError:
         # Don't preserve spacing, but at least we don't crash and we do preserve args and their order
         remaining = ' '.join(arg_list)
@@ -252,15 +252,15 @@ def options(option_list, arg_desc="arg"):
         :param func: do_* method which uses the @options decorator
         :return: modified version of the do_* method
         """
-        optionParser = OptionParser()
+        option_parser = OptionParser()
         for opt in option_list:
-            optionParser.add_option(opt)
+            option_parser.add_option(opt)
         # Allow reasonable help for commands defined with @options and an empty list of options
         if len(option_list) > 0:
-            optionParser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
+            option_parser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
         else:
-            optionParser.set_usage("%s %s" % (func.__name__[3:], arg_desc))
-        optionParser._func = func
+            option_parser.set_usage("%s %s" % (func.__name__[3:], arg_desc))
+        option_parser._func = func
 
         def new_func(instance, arg):
             """For @options commands this replaces the actual do_* methods in the instance __dict__.
@@ -273,7 +273,7 @@ def options(option_list, arg_desc="arg"):
             """
             try:
                 # Use shlex to split the command line into a list of arguments based on shell rules
-                opts, newArgList = optionParser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
+                opts, newArgList = option_parser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
 
                 # If not using POSIX shlex, make sure to strip off outer quotes for convenience
                 if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
@@ -301,14 +301,14 @@ def options(option_list, arg_desc="arg"):
                         arg = newArgs
             except optparse.OptParseError as e:
                 print(e)
-                optionParser.print_help()
+                option_parser.print_help()
                 return
             if hasattr(opts, '_exit'):
                 return None
             result = func(instance, arg, opts)
             return result
 
-        new_func.__doc__ = '%s\n%s' % (func.__doc__, optionParser.format_help())
+        new_func.__doc__ = '%s\n%s' % (func.__doc__, option_parser.format_help())
         return new_func
 
     return option_setup
@@ -401,7 +401,8 @@ else:
     # Running on Linux
     try:
         with open(os.devnull, 'w') as DEVNULL:
-            subprocess.check_call('xclip -o -sel clip', shell=True, stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
+            subprocess.check_call('xclip -o -sel clip', shell=True, stdin=subprocess.PIPE, stdout=DEVNULL,
+                                  stderr=DEVNULL)
         can_clip = True
     except Exception:
         pass  # something went wrong with xclip and we cannot use it
@@ -1235,7 +1236,7 @@ class Cmd(cmd.Cmd):
                     onchange_hook(old=currentVal, new=val)
                 except AttributeError:
                     pass
-        except (ValueError, AttributeError, NotSettableError):
+        except (ValueError, AttributeError):
             self.do_show(arg)
 
     # noinspection PyMethodMayBeStatic
@@ -1828,7 +1829,12 @@ class History(list):
         list.append(self, new)
         new.idx = len(self)
 
-    def get(self, getme=None, fromEnd=False):
+    def get(self, getme=None):
+        """Get an item or items from the History list using 1-based indexing.
+        
+        :param getme: int or str - item(s) to get - either an integer index or string to search for
+        :return: List[str] - list of HistoryItems matching the retrieval criteria
+        """
         if not getme:
             return self
         try:
@@ -1857,15 +1863,21 @@ class History(list):
                 finder = re.compile(getme[1:-1], re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
                 def isin(hi):
+                    """Listcomp filter function for doing a regular expression search of History.
+                    
+                    :param hi: HistoryItem
+                    :return: bool - True if search matches
+                    """
                     return finder.search(hi)
             else:
                 def isin(hi):
+                    """Listcomp filter function for doing a case-insensitive string search of History.
+                    
+                    :param hi: HistoryItem
+                    :return: bool - True if search matches
+                    """
                     return getme.lower() in hi.lowercase
             return [itm for itm in self if isin(itm)]
-
-
-class NotSettableError(Exception):
-    pass
 
 
 def cast(current, new):
@@ -1894,17 +1906,25 @@ def cast(current, new):
 
 
 class Statekeeper(object):
+    """Class used to save and restore state during load and py commands as well as when redirecting output or pipes."""
     def __init__(self, obj, attribs):
+        """Use the instance attributes as a generic key-value store to copy instance attributes from outer object.
+        
+        :param obj: instance of cmd2.Cmd derived class (your application instance)
+        :param attribs: Tuple[str] - tuple of strings listing attributes of obj to save a copy of
+        """
         self.obj = obj
         self.attribs = attribs
         if self.obj:
-            self.save()
+            self._save()
 
-    def save(self):
+    def _save(self):
+        """Create copies of attributes from self.obj inside this Statekeeper instance."""
         for attrib in self.attribs:
             setattr(self, attrib, getattr(self.obj, attrib))
 
     def restore(self):
+        """Overwrite attributes in self.obj with the saved values stored in this Statekeeper instance."""
         if self.obj:
             for attrib in self.attribs:
                 setattr(self.obj, attrib, getattr(self, attrib))
@@ -1931,14 +1951,23 @@ class OutputTrap(Borg):
         sys.stdout = self
 
     def write(self, txt):
+        """Add text to the internal contents.
+        
+        :param txt: str
+        """
         self.contents += txt
 
     def read(self):
+        """Read from the internal contents and then clear them out.
+        
+        :return: str - text from the internal contents
+        """
         result = self.contents
         self.contents = ''
         return result
 
     def tearDown(self):
+        """Restores normal output."""
         sys.stdout = self.old_stdout
         self.contents = ''
 
