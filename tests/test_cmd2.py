@@ -447,7 +447,7 @@ def test_base_colorize(base_app):
 def _expected_no_editor_error():
     expected_exception = 'OSError'
     # If using Python 2 or PyPy (either 2 or 3), expect a differen excpetion than with Python 3
-    if six.PY2 or hasattr(sys, "pypy_translation_info")`:
+    if six.PY2 or hasattr(sys, "pypy_translation_info"):
         expected_exception = 'EnvironmentError'
 
     expected_text = normalize("""
