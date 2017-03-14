@@ -784,9 +784,9 @@ class Cmd(cmd.Cmd):
         do_not_parse = self.commentGrammars | self.commentInProgress | pyparsing.quotedString
         after_elements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(output_parser ^ string_end, ignore=do_not_parse)('pipeTo')) + \
-            pyparsing.Optional(
-                output_parser + pyparsing.SkipTo(string_end, ignore=do_not_parse).setParseAction(lambda x: x[0].strip())(
-                    'outputTo'))
+            pyparsing.Optional(output_parser +
+                               pyparsing.SkipTo(string_end,
+                                                ignore=do_not_parse).setParseAction(lambda x: x[0].strip())('outputTo'))
         if self.case_insensitive:
             self.multilineCommand.setParseAction(lambda x: x[0].lower())
             oneline_command.setParseAction(lambda x: x[0].lower())
@@ -796,17 +796,21 @@ class Cmd(cmd.Cmd):
             self.blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
             self.blankLineTerminator.setResultsName('terminator')
             self.blankLineTerminationParser = ((self.multilineCommand ^ oneline_command) +
-                                               pyparsing.SkipTo(self.blankLineTerminator, ignore=do_not_parse).setParseAction(
-                                                   lambda x: x[0].strip())('args') + self.blankLineTerminator)('statement')
-        self.multilineParser = (((self.multilineCommand ^ oneline_command) + pyparsing.SkipTo(terminator_parser,
-                                                                                              ignore=do_not_parse).setParseAction(
-            lambda x: x[0].strip())('args') + terminator_parser)('statement') +
+                                               pyparsing.SkipTo(self.blankLineTerminator,
+                                                                ignore=do_not_parse).setParseAction(
+                                                   lambda x: x[0].strip())('args') +
+                                               self.blankLineTerminator)('statement')
+        self.multilineParser = (((self.multilineCommand ^ oneline_command) +
+                                 pyparsing.SkipTo(terminator_parser,
+                                                  ignore=do_not_parse).setParseAction(
+                                     lambda x: x[0].strip())('args') + terminator_parser)('statement') +
                                 pyparsing.SkipTo(output_parser ^ pipe ^ string_end, ignore=do_not_parse).setParseAction(
                                     lambda x: x[0].strip())('suffix') + after_elements)
         self.multilineParser.ignore(self.commentInProgress)
-        self.singleLineParser = ((oneline_command + pyparsing.SkipTo(terminator_parser ^ string_end ^ pipe ^ output_parser,
-                                                                     ignore=do_not_parse).setParseAction(
-            lambda x: x[0].strip())('args'))('statement') +
+        self.singleLineParser = ((oneline_command +
+                                  pyparsing.SkipTo(terminator_parser ^ string_end ^ pipe ^ output_parser,
+                                                   ignore=do_not_parse).setParseAction(
+                                      lambda x: x[0].strip())('args'))('statement') +
                                  pyparsing.Optional(terminator_parser) + after_elements)
         # self.multilineParser = self.multilineParser.setResultsName('multilineParser')
         # self.singleLineParser = self.singleLineParser.setResultsName('singleLineParser')
@@ -2056,8 +2060,8 @@ class Cmd2TestCase(unittest.TestCase):
                 line_num += 1
             command = ''.join(command)
             # Send the command into the application and capture the resulting output
-            stop = self.cmdapp.onecmd_plus_hooks(command)
-            # TODO: should act on ``stop``
+            # TODO: Should we get the return value and act if stop == True?
+            self.cmdapp.onecmd_plus_hooks(command)
             result = self.outputTrap.read()
             # Read the expected result from transcript
             if line.startswith(self.cmdapp.prompt):
@@ -2089,7 +2093,6 @@ class Cmd2TestCase(unittest.TestCase):
             self.outputTrap.tear_down()
 
 
-#noinspection PyClassHasNoInit
 class CmdResult(namedtuple('CmdResult', ['out', 'err', 'war'])):
     """Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
     
