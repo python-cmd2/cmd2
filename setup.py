@@ -30,7 +30,7 @@ Drop-in replacement adds several features for command-prompt tools:
     * `py` enters interactive Python console
     * test apps against sample session transcript (see examples/example.py)
 
-Useable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
+Usable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 """
 
 CLASSIFIERS = list(filter(None, map(str.strip,

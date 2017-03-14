@@ -122,3 +122,4 @@ Uninstalling cmd2
 If you wish to permanently uninstall ``cmd2``, this can also easily be done with pip_::
 
     pip uninstall cmd2
+

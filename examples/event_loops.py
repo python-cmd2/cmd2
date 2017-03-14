@@ -10,6 +10,7 @@ import cmd2
 
 
 class Cmd2EventBased(cmd2.Cmd):
+    """Basic example of how to run cmd2 without it controlling the main loop."""
     def __init__(self):
         cmd2.Cmd.__init__(self)
 
@@ -20,7 +21,8 @@ if __name__ == '__main__':
     app = Cmd2EventBased()
     app.preloop()
 
-    # Do this within whatever event loop mechanism you wish to run a single command
+    # Do this within whatever event loop mechanism you wish to run a single command.
+    # In this case, no prompt is generated, so you need to provide one and read the user's input.
     app.onecmd_plus_hooks("help history")
 
     app.postloop()

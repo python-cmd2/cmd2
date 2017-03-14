@@ -3,7 +3,7 @@
 """A sample application for cmd2 showing how to use Argparse to process command line arguments for your application.
 It doubles as an example of how you can still do transcript testing even if allow_cli_args is false.
 
-Thanks to cmd2's built-in transtript testing capability, it also serves as a test suite for argparse_example.py when 
+Thanks to cmd2's built-in transcript testing capability, it also serves as a test suite for argparse_example.py when 
 used with the exampleSession.txt transcript.
 
 Running `python argparse_example.py -t exampleSession.txt` will run all the commands in the transcript against 
@@ -77,11 +77,11 @@ if __name__ == '__main__':
     if args.ip:
         ip_addr = args.ip
 
-    transcript = None
+    transcripts = None
     if args.test:
         transcripts = [args.test]
 
-    # Instantiate your cmd2 applicaiton
+    # Instantiate your cmd2 application
     c = CmdLineApp(transcript_files=transcripts)
 
     # And run your cmd2 application

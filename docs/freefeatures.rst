@@ -67,7 +67,7 @@ quotation marks if it is more than a one-word command.
 
    If you wish to disable cmd2's consumption of command-line arguments, you can do so by setting the  ``allow_cli_args``
    attribute of your ``cmd2.Cmd`` class instance to ``False``.  This would be useful, for example, if you wish to use
-   someting like Argparse_ to parse the overall command line arguments for your application::
+   something like Argparse_ to parse the overall command line arguments for your application::
 
        from cmd2 import Cmd
        class App(Cmd):
@@ -278,7 +278,7 @@ expressions.
 
 .. note::
 
-   If you have set ``allow_cli_args`` to False in order to disable parsing of command line arguments at invocaiton,
+   If you have set ``allow_cli_args`` to False in order to disable parsing of command line arguments at invocation,
    then the use of ``-t`` or ``--test`` to run transcript testing is automatically disabled.  In this case, you can
    alternatively provide a value for the optional ``transcript_files`` when constructing the instance of your
    ``cmd2.Cmd`` derived class in order to cause a transcript test to run::
@@ -290,3 +290,4 @@ expressions.
        if __name__ == '__main__':
            app = App(transcript_files=['exampleSession.txt'])
            app.cmdloop()
+

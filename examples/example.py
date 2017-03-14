@@ -2,7 +2,7 @@
 # coding=utf-8
 """A sample application for cmd2.
 
-Thanks to cmd2's built-in transtript testing capability, it also serves as a test suite for example.py when used with
+Thanks to cmd2's built-in transcript testing capability, it also serves as a test suite for example.py when used with
  the exampleSession.txt transcript.
 
 Running `python example.py -t exampleSession.txt` will run all the commands in the transcript against example.py,

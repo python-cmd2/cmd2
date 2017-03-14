@@ -1,7 +1,7 @@
 .. cmd2 documentation for application and command lifecycle and the hooks which are available
 
-cmd2 Application Lifecyle and Hooks
-===================================
+cmd2 Application Lifecycle and Hooks
+====================================
 
 The typical way of starting a cmd2 application is as follows::
 
@@ -25,14 +25,14 @@ The ``preloop`` and ``postloop`` methods run before and after the main loop, res
 Application Lifecycle Attributes
 --------------------------------
 
-There are numerous attributes (member variables of the ``cmd2.Cmd``) which have a signficiant effect on the applicaiton
+There are numerous attributes (member variables of the ``cmd2.Cmd``) which have a significant effect on the application
 behavior upon entering or during the main loop.  A partial list of some of the more important ones is presented here:
 
 - **intro**: *str* - if provided this serves as the intro banner printed once at start of application, after ``preloop`` runs
 - **allow_cli_args**: *bool* - if True (default), then searches for -t or --test at command line to invoke transcript testing mode instead of a normal main loop
     and also processes any commands provided as arguments on the command line just prior to entering the main loop
 - **echo**: *bool* - if True, then the command line entered is echoed to the screen (most useful when running scripts)
-- **prompt**: *str* - sets the prompt which is displayed, can be dynamically changed based on applicatoin state and/or
+- **prompt**: *str* - sets the prompt which is displayed, can be dynamically changed based on application state and/or
     command results
 
 
@@ -44,7 +44,7 @@ Inside the main loop, every time the user hits <Enter> the line is processed by 
 .. automethod:: cmd2.Cmd.onecmd_plus_hooks
 
 As the ``onecmd_plus_hooks`` name implies, there are a number of *hook* methods that can be defined in order to inject
-applicaiton-specific behavior at various points during the processing of a line of text entered by the user.  ``cmd2``
+application-specific behavior at various points during the processing of a line of text entered by the user.  ``cmd2``
 increases the 2 hooks provided by ``cmd`` (**precmd** and **postcmd**) to 6 for greater flexibility.  Here are
 the various hook methods, presented in chronological order starting with the ones called earliest in the process.
 

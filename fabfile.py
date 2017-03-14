@@ -1,3 +1,4 @@
+# coding=utf-8
 from fabric.api import env, task, local
 import os
 import errno
@@ -93,7 +94,7 @@ def release():
     release_check()
     clean()
     build()
-    print "Releasing", env.projname, "version", env.version
+    print("Releasing", env.projname, "version", env.version)
     local("git tag %s" % env.version)
     local("python setup.py sdist upload")
     local("git push --tags")
