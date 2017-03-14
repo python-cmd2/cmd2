@@ -26,6 +26,7 @@ written to use `self.stdout.write()`,
 Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
 import cmd
+import collections
 import copy
 import datetime
 import glob
@@ -41,7 +42,6 @@ import tempfile
 import traceback
 import unittest
 from code import InteractiveConsole
-from collections import namedtuple
 from optparse import make_option
 
 import pyparsing
@@ -131,7 +131,7 @@ def set_use_arg_list(val):
 
 class OptionParser(optparse.OptionParser):
     """Subclass of optparse.OptionParser which stores a reference to the do_* method it is parsing options for.
-    
+
     Used mostly for getting access to the do_* method's docstring when printing help.
     """
     def __init__(self):
@@ -142,7 +142,7 @@ class OptionParser(optparse.OptionParser):
 
     def exit(self, status=0, msg=None):
         """Called at the end of showing help when either -h is used to show help or when bad arguments are provided.
-        
+
         We override exit so it doesn't automatically exit the application.
         """
         self.values._exit = True
@@ -151,7 +151,7 @@ class OptionParser(optparse.OptionParser):
 
     def print_help(self, *args, **kwargs):
         """Called when optparse encounters either -h or --help or bad arguments.  It prints help for options.
-        
+
         We override it so that before the standard optparse help, it prints the do_* method docstring, if available.
         """
         try:
@@ -248,7 +248,7 @@ def options(option_list, arg_desc="arg"):
 
     def option_setup(func):
         """Decorator function which modifies on of the do_* methods that use the @options decorator.
-        
+
         :param func: do_* method which uses the @options decorator
         :return: modified version of the do_* method
         """
@@ -264,9 +264,9 @@ def options(option_list, arg_desc="arg"):
 
         def new_func(instance, arg):
             """For @options commands this replaces the actual do_* methods in the instance __dict__.
-            
+
             First it does all of the option/argument parsing.  Then it calls the underlying do_* method.
-            
+
             :param instance: cmd2.Cmd2 derived class application instance
             :param arg: str - command-line arguments provided to the command
             :return: bool - returns whatever the result of calling the underlying do_* method would be
@@ -329,7 +329,7 @@ if sys.platform == "win32":
 
         def get_paste_buffer():
             """Get the contents of the clipboard for Windows OSes.
-            
+
             :return: str - contents of the clipboard
             """
             win32clipboard.OpenClipboard(0)
@@ -342,7 +342,7 @@ if sys.platform == "win32":
 
         def write_to_paste_buffer(txt):
             """Paste text to the clipboard for Windows OSes.
-            
+
             :param txt: str - text to paste to the clipboard
             """
             win32clipboard.OpenClipboard(0)
@@ -456,7 +456,7 @@ class ParsedString(str):
 
     def with_args_replaced(self, newargs):
         """Used for @options commands when USE_ARG_LIST is False.
-        
+
         It helps figure out what the args are after removing options.
         """
         new = ParsedString(newargs)
@@ -474,7 +474,7 @@ class StubbornDict(dict):
     """
     def update(self, arg):
         """Adds dictionary arg's key-values pairs in to dict
-        
+
         :param arg: an object convertible to a StubbornDict
         """
         dict.update(self, StubbornDict.to_dict(arg))
@@ -533,7 +533,7 @@ def stubborn_dict(*arg, **kwarg):
 
 def replace_with_file_contents(fname):
     """Action to perform when successfully matching parse element definition for inputFrom parser.
-    
+
     :param fname: str - filename
     :return: str - contents of file "fname" or contents of the clipboard if fname is None or an empty string
     """
@@ -838,7 +838,7 @@ class Cmd(cmd.Cmd):
     # noinspection PyMethodMayBeStatic
     def preparse(self, raw):
         """Hook method executed just before the command line is interpreted, but after the input prompt is generated.
-        
+
         :param raw: str - raw command line input
         :return: str - potentially modified raw command line input
         """
@@ -847,7 +847,7 @@ class Cmd(cmd.Cmd):
     # noinspection PyMethodMayBeStatic
     def postparse(self, parse_result):
         """Hook that runs immediately after parsing the command-line but before ``parsed()`` returns a ParsedString.
-        
+
         :param parse_result: pyparsing.ParseResults - parsing results output by the pyparsing parser
         :return: pyparsing.ParseResults - potentially modified ParseResults object
         """
@@ -855,7 +855,7 @@ class Cmd(cmd.Cmd):
 
     def parsed(self, raw):
         """ This function is where the actual parsing of each line occurs.
-        
+
         :param raw: str - the line of text as it was entered
         :return: ParsedString - custom subclass of str with extra attributes
         """
@@ -892,7 +892,7 @@ class Cmd(cmd.Cmd):
         If you wish to fatally fail this command and exit the application entirely, set stop = True.
 
         If you wish to just fail this command you can do so by raising an exception:
-        
+
         - raise EmptyStatement - will silently fail and do nothing
         - raise <AnyOtherException> - will fail and print an error message
 
@@ -916,7 +916,7 @@ class Cmd(cmd.Cmd):
 
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
-        
+
         :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
         :return: ParsedString - a potentially modified version of the input ParsedString statement
         """
@@ -973,7 +973,7 @@ class Cmd(cmd.Cmd):
 
     def redirect_output(self, statement):
         """Handles output redirection for >, >>, and |.
-        
+
         :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
         """
         if statement.parsed.pipeTo:
@@ -1006,7 +1006,7 @@ class Cmd(cmd.Cmd):
 
     def restore_output(self, statement):
         """Handles restoring state after output redirection as well as the actual pipe operation if present.
-        
+
         :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
         """
         if self.kept_state:
@@ -1054,9 +1054,9 @@ class Cmd(cmd.Cmd):
 
     def onecmd(self, line):
         """ This executes the actual do_* method for a command.
-        
+
         If the command provided doesn't exist, then it executes _default() instead.
-        
+
         :param line: ParsedString - subclass of string including the pyparsing ParseResults
         :return: bool - a flag indicating whether the interpretation of commands should stop
         """
@@ -1074,9 +1074,9 @@ class Cmd(cmd.Cmd):
 
     def _default(self, statement):
         """Executed when the command given isn't a recognized command implemented by a do_* method.
-        
+
         :param statement: ParsedString - subclass of string including the pyparsing ParseResults
-        :return: 
+        :return:
         """
         arg = statement.full_parsed_statement()
         if self.default_to_shell:
@@ -1113,9 +1113,9 @@ class Cmd(cmd.Cmd):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
-        
+
         This serves the same role as cmd.cmdloop().
-        
+
         :return: bool - True implies the entire application should exit.
         """
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
@@ -1309,7 +1309,7 @@ class Cmd(cmd.Cmd):
         # Support the run command even if called prior to invoking an interactive interpreter
         def run(filename):
             """Run a Python script file in the interactive console.
-            
+
             :param filename: str - filename of *.py script file to run
             """
             try:
@@ -1320,7 +1320,7 @@ class Cmd(cmd.Cmd):
 
         def onecmd_plus_hooks(cmd_plus_args):
             """Run a cmd2.Cmd command from a Python script or the interactive Python console.
-            
+
             :param cmd_plus_args: str - command line including command and arguments to run
             :return: bool - True if cmdloop() should exit once leaving the interactive Python console, False otherwise.
             """
@@ -1401,9 +1401,9 @@ class Cmd(cmd.Cmd):
 
     def last_matching(self, arg):
         """Return the last item from the history list that matches arg.  Or if arg not provided, retern last item.
-        
+
         If not match is found, return None.
-        
+
         :param arg: str - text to search for in history
         :return: str - last match, last item, or None, depending on arg.
         """
@@ -1559,14 +1559,14 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
 
     def read_file_or_url(self, fname):
         """Open a file or URL for reading by the do_load() method.
-        
+
         This method methodically proceeds in the following path until it succeeds (or fails in the end):
         1) Try to open the file
         2) Try to open the URL if it looks like one
         3) Try to expand the ~ to create an absolute path for the filename
         4) Try to add the default extension to the expanded path
         5) Raise an error
-        
+
         :param fname: str - filename or URL
         :return: stream  or a file-like object pointing to the file or URL (or raise an exception if it couldn't open)
         """
@@ -1678,10 +1678,10 @@ Script should contain one command per line, just like command would be typed in 
 
     def run_transcript_tests(self, callargs):
         """Runs transcript tests for provided file(s).
-        
-        This is called when either -t is provided on the command line or the transcript_files argument is provided 
+
+        This is called when either -t is provided on the command line or the transcript_files argument is provided
         during construction of the cmd2.Cmd instance.
-        
+
         :param callargs: List[str] - list of transcript test file names
         """
         class TestMyAppCase(Cmd2TestCase):
@@ -1696,7 +1696,7 @@ Script should contain one command per line, just like command would be typed in 
 
     def run_commands_at_invocation(self, callargs):
         """Runs commands provided as arguments on the command line when the application is started.
-        
+
         :param callargs: List[str] - list of strings where each string is a command plus its arguments
         :return: bool - True implies the entire application should exit
         """
@@ -1706,13 +1706,13 @@ Script should contain one command per line, just like command would be typed in 
 
     def cmdloop(self, intro=None):
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
-        
+
         _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
         the following extra feactures provided by cmd2:
         - commands at invocation
         - transcript testing
         - intro banner
-        
+
         :param intro: str - if provided this overrides self.intro and serves as the intro banner printed once at start
         """
         callargs = None
@@ -1754,8 +1754,8 @@ Script should contain one command per line, just like command would be typed in 
 
 class HistoryItem(str):
     """Class used to represent an item in the History list.
-    
-    Thing wrapper around str class which adds a custom format for printing.  It also keeps track of its index in the 
+
+    Thing wrapper around str class which adds a custom format for printing.  It also keeps track of its index in the
     list as well as a lowercase representation of itself for convenience/efficiency.
     """
     listformat = '-------------------------[%d]\n%s\n'
@@ -1768,7 +1768,7 @@ class HistoryItem(str):
 
     def pr(self):
         """Represent a HistoryItem in a pretty fashion suitable for printing.
-        
+
         :return: str - pretty print string version of a HistoryItem
         """
         return self.listformat % (self.idx, str(self))
@@ -1793,7 +1793,7 @@ class History(list):
 
     def search(self, target):
         """ Search the history for a particular term.
-        
+
         :param target: str - term to search for
         :return: List[str] - list of matches
         """
@@ -1813,7 +1813,7 @@ class History(list):
 
     def span(self, raw):
         """Parses the input string search for a span pattern and if if found, returns a slice from the History list.
-        
+
         :param raw: str - string potentially containing a span of the forms a..b, a:b, a:, ..b
         :return: List[HistoryItem] - slice from the History list
         """
@@ -1841,7 +1841,7 @@ class History(list):
 
     def append(self, new):
         """Append a HistoryItem to end of the History list
-        
+
         :param new: str - command line to convert to HistoryItem and add to the end of the History list
         """
         new = HistoryItem(new)
@@ -1850,7 +1850,7 @@ class History(list):
 
     def get(self, getme=None):
         """Get an item or items from the History list using 1-based indexing.
-        
+
         :param getme: int or str - item(s) to get - either an integer index or string to search for
         :return: List[str] - list of HistoryItems matching the retrieval criteria
         """
@@ -1883,7 +1883,7 @@ class History(list):
 
                 def isin(hi):
                     """Listcomp filter function for doing a regular expression search of History.
-                    
+
                     :param hi: HistoryItem
                     :return: bool - True if search matches
                     """
@@ -1891,7 +1891,7 @@ class History(list):
             else:
                 def isin(hi):
                     """Listcomp filter function for doing a case-insensitive string search of History.
-                    
+
                     :param hi: HistoryItem
                     :return: bool - True if search matches
                     """
@@ -1901,7 +1901,7 @@ class History(list):
 
 def cast(current, new):
     """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
-    
+
     :param current: current value for the parameter, type varies
     :param new: str - new value
     :return: new value with same type as current, or the current value if there was an error casting
@@ -1933,7 +1933,7 @@ class Statekeeper(object):
     """Class used to save and restore state during load and py commands as well as when redirecting output or pipes."""
     def __init__(self, obj, attribs):
         """Use the instance attributes as a generic key-value store to copy instance attributes from outer object.
-        
+
         :param obj: instance of cmd2.Cmd derived class (your application instance)
         :param attribs: Tuple[str] - tuple of strings listing attributes of obj to save a copy of
         """
@@ -1976,14 +1976,14 @@ class OutputTrap(Borg):
 
     def write(self, txt):
         """Add text to the internal contents.
-        
+
         :param txt: str
         """
         self.contents += txt
 
     def read(self):
         """Read from the internal contents and then clear them out.
-        
+
         :return: str - text from the internal contents
         """
         result = self.contents
@@ -2093,23 +2093,39 @@ class Cmd2TestCase(unittest.TestCase):
             self.outputTrap.tear_down()
 
 
-class CmdResult(namedtuple('CmdResult', ['out', 'err', 'war'])):
+def namedtuple_with_two_defaults(typename, field_names, default_values=('', '')):
+    """Wrapper around namedtuple which lets you treat the last value as optional.
+
+    :param typename: str - type name for the Named tuple
+    :param field_names: List[str] or space-separated string of field names
+    :param default_values: (optional) 2-element tuple containing the default values for last 2 parameters in named tuple
+                            Defaults to an empty string for both of them
+    :return: namedtuple type
+    """
+    T = collections.namedtuple(typename, field_names)
+    T.__new__.__defaults__ = default_values
+    return T
+
+
+class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
     """Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
-    
+
     This is provided as a convenience and an example for one possible way for end users to store results in
-    the self._last_result attribute of cmd2.Cmd class instances.  See the "python_scripting.py" example for how it can 
+    the self._last_result attribute of cmd2.Cmd class instances.  See the "python_scripting.py" example for how it can
     be used to enable conditional control flow.
-    
-    Named tuple attribues
-    ---------------------
+
+    Named tuple attributes
+    ----------------------
     out - this is intended to store normal output data from the command and can be of any type that makes sense
-    err: str - this is intended to store an error message and it being non-empty indicates there was an error
-    war: str - this is intended to store a warning message which isn't quite an error, but of note
-    
+    err: str - (optional) this is intended to store an error message and it being non-empty indicates there was an error
+                Defaults to an empty string
+    war: str - (optional) this is intended to store a warning message which isn't quite an error, but of note
+               Defaults to an empty string.
+
     NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
     """
     def __bool__(self):
-        """If err is an empty string, treat the result as a success; otherwise treat it as  a failure."""
+        """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
         return not self.err
 
 

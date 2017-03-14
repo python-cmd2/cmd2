@@ -57,7 +57,7 @@ class CmdLineApp(Cmd):
         if not arg or len(arg) != 1:
             self.perror("cd requires exactly 1 argument:", traceback_war=False)
             self.do_help('cd')
-            self._last_result = CmdResult('', 'Bad arguments', '')
+            self._last_result = CmdResult('', 'Bad arguments')
             return
 
         # Convert relative paths to absolute paths
@@ -66,7 +66,6 @@ class CmdLineApp(Cmd):
         # Make sure the directory exists, is a directory, and we have read access
         out = ''
         err = ''
-        war = ''
         if not os.path.isdir(path):
             err = '{!r} is not a directory'.format(path)
         elif not os.access(path, os.R_OK):
@@ -82,8 +81,9 @@ class CmdLineApp(Cmd):
 
         if err:
             self.perror(err, traceback_war=False)
-        self._last_result = CmdResult(out, err, war)
+        self._last_result = CmdResult(out, err)
 
+    # noinspection PyUnusedLocal
     def complete_cd(self, text, line, begidx, endidx):
         """Handles completion of arguments for the cd command.
 
@@ -103,7 +103,7 @@ class CmdLineApp(Cmd):
         if arg:
             self.perror("dir does not take any arguments:", traceback_war=False)
             self.do_help('dir')
-            self._last_result = CmdResult('', 'Bad arguments', '')
+            self._last_result = CmdResult('', 'Bad arguments')
             return
 
         # Get the contents as a list
@@ -116,7 +116,7 @@ class CmdLineApp(Cmd):
             self.stdout.write(fmt.format(f))
         self.stdout.write('\n')
 
-        self._last_result = CmdResult(contents, '', '')
+        self._last_result = CmdResult(contents)
 
 
 if __name__ == '__main__':
