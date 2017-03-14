@@ -2,7 +2,7 @@
 # coding=utf-8
 """A sample application for how Python scripting can provide conditional control flow of a cmd2 application.
 
-cmd2's built-in scripting capability which can be invoked via the "@" shortcut or "load" command and uses basic ASCII 
+cmd2's built-in scripting capability which can be invoked via the "@" shortcut or "load" command and uses basic ASCII
 text scripts is very easy to use.  Moreover, the trivial syntax of the script files where there is one command per line
 and the line is exactly what the user would type inside the application makes it so non-technical end users can quickly
 learn to create scripts.
@@ -29,6 +29,8 @@ class CmdLineApp(Cmd):
         # Enable the optional ipy command if IPython is installed by setting use_ipython=True
         Cmd.__init__(self, use_ipython=True)
         self._set_prompt()
+        self.autorun_on_edit = False
+        self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇  (Python 3 only)  💩'
 
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
@@ -38,7 +40,7 @@ class CmdLineApp(Cmd):
 
     def postcmd(self, stop, line):
         """Hook method executed just after a command dispatch is finished.
-        
+
         :param stop: bool - if True, the command has indicated the application should exit
         :param line: str - the command line text for this command
         :return: bool - if this is True, the application will exit after this command and the postloop() will run
@@ -84,7 +86,7 @@ class CmdLineApp(Cmd):
 
     def complete_cd(self, text, line, begidx, endidx):
         """Handles completion of arguments for the cd command.
-        
+
         :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: str - the current input line with leading whitespace removed
         :param begidx: str - the beginning indexe of the prefix text
