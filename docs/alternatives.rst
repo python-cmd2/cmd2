@@ -50,4 +50,4 @@ allowing a good experience for end users.  If you are seeking a visually richer 
 mind investing more development time, we would recommend checking out `Python Prompt Toolkit`_.
 
 In the future, we may investigate options for incorporating the usage of `Python Prompt Toolkit`_ and/or Click_ into
-``cmd2`` applicaitons.
+``cmd2`` applications.

@@ -75,7 +75,7 @@ def test_base_set_not_supported(base_app, capsys):
     run_cmd(base_app, 'set qqq True')
     out, err = capsys.readouterr()
     expected = normalize("""
-EXCEPTION of type 'LookupError' occured with message: 'Parameter 'qqq' not supported (type 'show' for list of parameters).'
+EXCEPTION of type 'LookupError' occurred with message: 'Parameter 'qqq' not supported (type 'show' for list of parameters).'
 To enable full traceback, run the following command:  'set debug true'
 """)
     assert normalize(str(err)) == expected
@@ -446,12 +446,12 @@ def test_base_colorize(base_app):
 
 def _expected_no_editor_error():
     expected_exception = 'OSError'
-    # If using Python 2 or PyPy (either 2 or 3), expect a differen excpetion than with Python 3
+    # If using Python 2 or PyPy (either 2 or 3), expect a different exception than with Python 3
     if six.PY2 or hasattr(sys, "pypy_translation_info"):
         expected_exception = 'EnvironmentError'
 
     expected_text = normalize("""
-EXCEPTION of type '{}' occured with message: 'Please use 'set editor' to specify your text editing program of choice.'
+EXCEPTION of type '{}' occurred with message: 'Please use 'set editor' to specify your text editing program of choice.'
 To enable full traceback, run the following command:  'set debug true'
 """.format(expected_exception))
 

@@ -6,6 +6,7 @@ from cmd import Cmd
 
 class Pirate(Cmd):
     gold = 3
+    initial_gold = gold
 
     def do_loot(self, arg):
         'Seize booty from a passing ship.'

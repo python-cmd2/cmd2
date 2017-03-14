@@ -62,7 +62,7 @@ class Pirate(Cmd):
             self.gold -= 1
 
     def do_quit(self, arg):
-        """Quit the applicaiton gracefully."""
+        """Quit the application gracefully."""
         print("Quiterrr!")
         return True
 

@@ -2,7 +2,7 @@ News
 ====
 
 0.7.1
-------
+-----
 
 *Release date: TBD
 

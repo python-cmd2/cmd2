@@ -62,8 +62,8 @@ from six.moves import zip
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.request import urlopen
 
-# Python 3 compatability hack due to no built-in file keyword in Python 3
-# Due to one occurence of isinstance(<foo>, file) checking to see if something is of file type
+# Python 3 compatibility hack due to no built-in file keyword in Python 3
+# Due to one occurrence of isinstance(<foo>, file) checking to see if something is of file type
 try:
     # noinspection PyUnboundLocalVariable,PyUnresolvedReferences
     file
@@ -88,11 +88,11 @@ pyparsing.ParserElement.enablePackrat()
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
-# The next 3 variables and associated setter funtions effect how arguments are parsed for commands using @options.
+# The next 3 variables and associated setter functions effect how arguments are parsed for commands using @options.
 # The defaults are "sane" and maximize backward compatibility with cmd and previous versions of cmd2.
 # But depending on your particular application, you may wish to tweak them so you get the desired parsing behavior.
 
-# Use POSIX or Non-POSIX (Windows) rules for splititng a command-line string into a list of arguments via shlex.split()
+# Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
 POSIX_SHLEX = False
 
 # Strip outer quotes for convenience if POSIX_SHLEX = False
@@ -143,7 +143,7 @@ class OptionParser(optparse.OptionParser):
     def exit(self, status=0, msg=None):
         """Called at the end of showing help when either -h is used to show help or when bad arguments are provided.
         
-        We override exit so it doesn't automatically exit the applicaiton.
+        We override exit so it doesn't automatically exit the application.
         """
         self.values._exit = True
         if msg:
@@ -190,7 +190,7 @@ def remaining_args(opts_plus_args, arg_list):
 
 def _attr_get_(obj, attr):
     """Returns an attribute's value, or None (no error) if undefined.
-       Analagous to .get() for dictionaries.  Useful when checking for
+       Analogous to .get() for dictionaries.  Useful when checking for
        value of options that may not have been defined on a given
        method."""
     try:
@@ -209,7 +209,7 @@ def _which(editor):
 def strip_quotes(arg):
     """ Strip outer quotes from a string.
 
-     Applies to both single and doulbe quotes.
+     Applies to both single and double quotes.
 
     :param arg: str - string to strip outer quotes from
     :return str - same string with potentially outer quotes stripped
@@ -268,7 +268,7 @@ def options(option_list, arg_desc="arg"):
             First it does all of the option/argument parsing.  Then it calls the underlying do_* method.
             
             :param instance: cmd2.Cmd2 derived class application instance
-            :param arg: str - command-line arguments provided to the comman
+            :param arg: str - command-line arguments provided to the command
             :return: bool - returns whatever the result of calling the underlying do_* method would be
             """
             try:
@@ -354,7 +354,7 @@ if sys.platform == "win32":
     except ImportError:
         # noinspection PyUnusedLocal
         def get_paste_buffer(*args):
-            """For Windows OSes without the appropriate libary installed to get text from clipboard, raise an exception.
+            """For Windows OSes without the appropriate library installed to get text from clipboard, raise an exception.
             """
             raise OSError(pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/'))
 
@@ -475,7 +475,7 @@ class StubbornDict(dict):
     def update(self, arg):
         """Adds dictionary arg's key-values pairs in to dict
         
-        :param arg: an object convertable to a StubbornDict
+        :param arg: an object convertible to a StubbornDict
         """
         dict.update(self, StubbornDict.to_dict(arg))
 
@@ -518,7 +518,7 @@ class StubbornDict(dict):
 
 
 def stubborn_dict(*arg, **kwarg):
-    """ Factory function which creates instances of the StubornDict class.
+    """ Factory function which creates instances of the StubbornDict class.
 
     :param arg: an argument which could be used to construct a built-in dict dictionary
     :param kwarg: a variable number of key/value pairs
@@ -600,7 +600,7 @@ class Cmd(cmd.Cmd):
     terminators = [';']
     urlre = re.compile('(https?://[-\\w./]+)')
 
-    # Attributes which ARE dynamicaly settable at runtime
+    # Attributes which ARE dynamically settable at runtime
     abbrev = True  # Abbreviated commands recognized
     autorun_on_edit = True  # Should files automatically run after editing (doesn't apply to commands)
     case_insensitive = True  # Commands recognized regardless of case
@@ -709,7 +709,7 @@ class Cmd(cmd.Cmd):
             err = self.colorize("ERROR: {}\n".format(errmsg), 'red')
             sys.stderr.write(err)
         else:
-            err = "EXCEPTION of type '{}' occured with message: '{}'\n".format(exception_type, errmsg)
+            err = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(exception_type, errmsg)
             sys.stderr.write(self.colorize(err, 'red'))
 
         if traceback_war:
@@ -728,7 +728,7 @@ class Cmd(cmd.Cmd):
     def colorize(self, val, color):
         """Given a string (``val``), returns that string wrapped in UNIX-style
            special characters that turn on (and then off) text color and style.
-           If the ``colors`` environment paramter is ``False``, or the application
+           If the ``colors`` environment parameter is ``False``, or the application
            is running on Windows, will return ``val`` unchanged.
            ``color`` should be one of the supported strings (or styles):
            red/blue/green/cyan/magenta, bold, underline"""
@@ -1032,7 +1032,7 @@ class Cmd(cmd.Cmd):
         """Gets the method name associated with a given command.
 
         If self.abbrev is False, it is always just looks for do_arg.  However, if self.abbrev is True,
-        it allows abbreivated command names and looks for any commands which start with do_arg.
+        it allows abbreviated command names and looks for any commands which start with do_arg.
 
         :param arg: str - command to look up method name which implements it
         :return: str - method name which implements the given command
@@ -1053,8 +1053,8 @@ class Cmd(cmd.Cmd):
         
         If the command provided doesn't exist, then it executes _default() instead.
         
-        :param line: ParsedString - subclass of string inclding the pyparsing ParseResults
-        :return: bool - a flag indicating whether the interpretatoin of commands should stop
+        :param line: ParsedString - subclass of string including the pyparsing ParseResults
+        :return: bool - a flag indicating whether the interpretation of commands should stop
         """
         statement = self.parsed(line)
         self.lastcmd = statement.parsed.raw
@@ -1071,7 +1071,7 @@ class Cmd(cmd.Cmd):
     def _default(self, statement):
         """Executed when the command given isn't a recognized command implemented by a do_* method.
         
-        :param statement: ParsedString - subclass of string inclding the pyparsing ParseResults
+        :param statement: ParsedString - subclass of string including the pyparsing ParseResults
         :return: 
         """
         arg = statement.full_parsed_statement()

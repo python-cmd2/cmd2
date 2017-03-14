@@ -6,6 +6,7 @@ from cmd2 import Cmd, options, make_option
 
 class Pirate(Cmd):
     gold = 3
+    initial_gold = gold
     prompt = 'arrr> '
 
     def default(self, line):
