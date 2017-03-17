@@ -174,6 +174,10 @@ Running::
 will run all the commands in the transcript against `example.py`, verifying that the output produced
 matches the transcript.
 
+Take note of how a regular expression is used near the end for output of the **show color** command below since
+colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
+transcript file simply by embedding them within two forward slashes, ``/``.
+
 example/exampleSession.txt::
 
     (Cmd) help
@@ -247,8 +251,3 @@ example/exampleSession.txt::
     now: --->
     ---> say goodbye
     goodbye
-
-
-Note how a regular expression ``/(True|False)/`` is used near the end for output of the **show color** command since
-colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
-transcript file simply by embedding them within two forward slashes, ``/``.
