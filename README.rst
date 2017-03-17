@@ -248,6 +248,7 @@ example/exampleSession.txt::
     ---> say goodbye
     goodbye
 
-Note how a regular expression ``/True|False/`` is used near the end for output of the **show color** command since
+
+Note how a regular expression ``/(True|False)/`` is used near the end for output of the **show color** command since
 colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
 transcript file simply by embedding them within two forward slashes, ``/``.
