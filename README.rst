@@ -240,9 +240,14 @@ example/exampleSession.txt::
     blah blah blah
     (Cmd) & look, a shortcut!
     look, a shortcut!
+    (Cmd) show color
+    colors: /(True|False)/
     (Cmd) set prompt "---> "
     prompt - was: (Cmd)
     now: --->
     ---> say goodbye
     goodbye
 
+Note how a regular expression ``/True|False/`` is used near the end for output of the **show color** command since
+colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
+transcript file simply by embedding them within two forward slashes, ``/``.

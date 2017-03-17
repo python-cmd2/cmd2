@@ -1,3 +1,4 @@
+# Run this transcript with "python example.py -t exampleSession.txt"
 (Cmd) help
 
 Documented commands (type help <topic>):
@@ -62,6 +63,8 @@ our BDFL
 blah blah blah
 (Cmd) & look, a shortcut!
 look, a shortcut!
+(Cmd) show color
+colors: /(True|False)/
 (Cmd) set prompt "---> "
 prompt - was: (Cmd)
 now: --->

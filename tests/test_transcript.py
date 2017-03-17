@@ -310,3 +310,29 @@ def test_invalid_syntax(_cmdline_app, capsys):
     out, err = capsys.readouterr()
     expected = normalize("""ERROR: Invalid syntax: No closing quotation""")
     assert normalize(str(err)) == expected
+
+
+def test_regex_transcript(request, capsys):
+    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+    app = CmdLineApp()
+
+    # Get location of the transcript
+    test_dir = os.path.dirname(request.module.__file__)
+    transcript_file = os.path.join(test_dir, 'transcript_regex.txt')
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ['prog', '-t', transcript_file]
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        app.cmdloop()
+
+    # Check for the unittest "OK" condition for the 1 test which ran
+    expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
+    expected_end = "s\n\nOK\n\n"
+    out, err = capsys.readouterr()
+    if six.PY3:
+        assert err.startswith(expected_start)
+        assert err.endswith(expected_end)
+    else:
+        assert err == ''
+        assert out == ''
