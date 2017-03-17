@@ -2001,6 +2001,12 @@ class Cmd2TestCase(unittest.TestCase):
        that will execute the commands in a transcript file and expect the results shown.
        See example.py"""
     CmdApp = None
+    regexPattern = pyparsing.QuotedString(quoteChar=r'/', escChar='\\', multiline=True, unquoteResults=True)
+    regexPattern.ignore(pyparsing.cStyleComment)
+    notRegexPattern = pyparsing.Word(pyparsing.printables)
+    notRegexPattern.setParseAction(lambda t: re.escape(t[0]))
+    expectationParser = regexPattern | notRegexPattern
+    anyWhitespace = re.compile(r'\s', re.DOTALL | re.MULTILINE)
 
     def fetchTranscripts(self):
         self.transcripts = {}
@@ -2023,13 +2029,6 @@ class Cmd2TestCase(unittest.TestCase):
             its = sorted(self.transcripts.items())
             for (fname, transcript) in its:
                 self._test_transcript(fname, transcript)
-
-    regexPattern = pyparsing.QuotedString(quoteChar=r'/', escChar='\\', multiline=True, unquoteResults=True)
-    regexPattern.ignore(pyparsing.cStyleComment)
-    notRegexPattern = pyparsing.Word(pyparsing.printables)
-    notRegexPattern.setParseAction(lambda t: re.escape(t[0]))
-    expectationParser = regexPattern | notRegexPattern
-    anyWhitespace = re.compile(r'\s', re.DOTALL | re.MULTILINE)
 
     def _test_transcript(self, fname, transcript):
         line_num = 0

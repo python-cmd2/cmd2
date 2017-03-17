@@ -1,3 +1,4 @@
+# Run this transcript with "python example.py -t exampleSession.txt"
 (Cmd) help
 
 Documented commands (type help <topic>):
