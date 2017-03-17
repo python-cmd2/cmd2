@@ -4,7 +4,7 @@
 abbrev: True
 autorun_on_edit: True
 case_insensitive: True
-colors: /True|False/
+colors: /(True|False)/
 continuation_prompt: >
 debug: False
 default_file_name: command.txt
