@@ -78,7 +78,7 @@ Instructions for implementing each feature follow.
             pass
     ```
 
-    See Python standard library's ``optparse`` documentation: http://docs.python.org/lib/optparse-defining-options.html
+    See Python standard library's `optparse` documentation: https://docs.python.org/3/library/optparse.html
 
 
 Tutorials
