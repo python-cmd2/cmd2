@@ -41,19 +41,19 @@ Instructions for implementing each feature follow.
 - Searchable command history
 
     All commands will automatically be tracked in the session's history, unless the command is listed in Cmd's excludeFromHistory attribute.
-    The history is accessed through the ``history``, ``list``, and ``run`` commands.
+    The history is accessed through the `history`, `list`, and `run` commands.
     If you wish to exclude some of your custom commands from the history, append their names
-    to the list at Cmd.ExcludeFromHistory.
+    to the list at `Cmd.ExcludeFromHistory`.
 
 - Load commands from file, save to file, edit commands in file
 
-    Type ``help load``, ``help save``, ``help edit`` for details.
+    Type `help load`, `help save`, `help edit` for details.
 
 - Multi-line commands
 
-    Any command accepts multi-line input when its name is listed in ``Cmd.multilineCommands``.
+    Any command accepts multi-line input when its name is listed in `Cmd.multilineCommands`.
     The program will keep expecting input until a line ends with any of the characters
-    in ``Cmd.terminators`` .  The default terminators are ``;`` and ``/n`` (empty newline).
+    in `Cmd.terminators` .  The default terminators are `;` and `/n` (empty newline).
 
 - Case-insensitive commands
 
@@ -61,16 +61,14 @@ Instructions for implementing each feature follow.
 
 - Special-character shortcut commands (beyond cmd's "@" and "!")
 
-    To create a single-character shortcut for a command, update ``Cmd.shortcuts``.
+    To create a single-character shortcut for a command, update `Cmd.shortcuts`.
 
 - Settable environment parameters
 
     To allow a user to change an environment parameter during program execution,
-    append the parameter's name to ``Cmd.settable``.
+    append the parameter's name to `Cmd.settable``
 
-- Parsing commands with ``optparse`` options (flags)
-
-    ::
+- Parsing commands with `optparse` options (flags)
 
         @options([make_option('-m', '--myoption', action="store_true", help="all about my option")])
         def do_myfunc(self, arg, opts):
@@ -85,13 +83,10 @@ Tutorials
 
 A couple tutorials on using cmd2 exist:
 
-    * A detailed PyCon 2010 talk by `Catherine Devlin`_, the original author
-        * http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html
-    * A nice brief step-by-step tutorial
-        * https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
-
-.. _Catherine Devlin: https://github.com/catherinedevlin
-
+* A detailed PyCon 2010 talk by [Catherine Devlin](https://github.com/catherinedevlin), the original author
+    * http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html
+* A nice brief step-by-step tutorial
+    * https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
 
 Example Application
 -------------------
