@@ -1024,11 +1024,17 @@ class Cmd(cmd.Cmd):
                 if statement.parsed.pipeTo:
                     # Pipe output from the command to the shell command via echo
                     command_line = r'cat {} | {}'.format(self._temp_filename, statement.parsed.pipeTo)
-                    result = subprocess.check_output(command_line, shell=True)
-                    if six.PY3:
-                        self.stdout.write(result.decode())
-                    else:
-                        self.stdout.write(result)
+
+                    # Get the output and display it.  Ignore non-zero return codes and print nothing.
+                    try:
+                        result = subprocess.check_output(command_line, shell=True)
+                        if six.PY3:
+                            self.stdout.write(result.decode())
+                        else:
+                            self.stdout.write(result)
+                    except subprocess.CalledProcessError:
+                        pass
+
                     os.remove(self._temp_filename)
                     self._temp_filename = None
 
