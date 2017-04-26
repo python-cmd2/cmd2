@@ -10,7 +10,7 @@ debug: False
 default_file_name: command.txt
 echo: False
 editor: /([^\s]+)/
-feedback_to_output: False
+feedback_to_output: True
 locals_in_py: True
 maxrepeats: 3
 prompt: (Cmd)

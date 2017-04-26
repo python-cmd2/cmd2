@@ -266,16 +266,15 @@ _relative_load {}
     assert out == expected
 
 
-def test_base_save(base_app, capsys):
+def test_base_save(base_app):
     # TODO: Use a temporary directory for the file
     filename = 'deleteme.txt'
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help save')
 
     # Test the * form of save which saves all commands from history
-    run_cmd(base_app, 'save * {}'.format(filename))
-    out, err = capsys.readouterr()
-    assert out == 'Saved to {}\n'.format(filename)
+    out = run_cmd(base_app, 'save * {}'.format(filename))
+    assert out == normalize('Saved to {}\n'.format(filename))
     expected = normalize("""
 help
 
@@ -288,18 +287,16 @@ save * deleteme.txt
     assert content == expected
 
     # Test the N form of save which saves a numbered command from history
-    run_cmd(base_app, 'save 1 {}'.format(filename))
-    out, err = capsys.readouterr()
-    assert out == 'Saved to {}\n'.format(filename)
+    out = run_cmd(base_app, 'save 1 {}'.format(filename))
+    assert out == normalize('Saved to {}\n'.format(filename))
     expected = normalize('help')
     with open(filename) as f:
         content = normalize(f.read())
     assert content == expected
 
     # Test the blank form of save which saves the most recent command from history
-    run_cmd(base_app, 'save {}'.format(filename))
-    out, err = capsys.readouterr()
-    assert out == 'Saved to {}\n'.format(filename)
+    out = run_cmd(base_app, 'save {}'.format(filename))
+    assert out == normalize('Saved to {}\n'.format(filename))
     expected = normalize('save 1 {}'.format(filename))
     with open(filename) as f:
         content = normalize(f.read())
@@ -397,6 +394,7 @@ def test_send_to_paste_buffer(base_app):
 
 
 def test_base_timing(base_app, capsys):
+    base_app.feedback_to_output = False
     out = run_cmd(base_app, 'set timing True')
     expected = normalize("""timing - was: False
 now: True
