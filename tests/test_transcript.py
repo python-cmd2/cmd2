@@ -149,6 +149,7 @@ set maxrepeats 5
 -------------------------[6]
 say -ps --repeat=5 goodnight, Gracie
 (Cmd) run 4
+say -ps --repeat=5 goodnight, Gracie
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY

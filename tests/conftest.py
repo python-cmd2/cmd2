@@ -55,7 +55,7 @@ debug: False
 default_file_name: command.txt
 echo: False
 editor: vim
-feedback_to_output: False
+feedback_to_output: True
 locals_in_py: True
 prompt: (Cmd)
 quiet: False
@@ -75,7 +75,7 @@ debug: False                   # Show full error stack on error
 default_file_name: command.txt # for ``save``, ``load``, etc.
 echo: False                    # Echo command issued into output
 editor: vim                    # Program used by ``edit``
-feedback_to_output: False      # include nonessentials in `|`, `>` results
+feedback_to_output: True       # include nonessentials in `|`, `>` results
 locals_in_py: True             # Allow access to your application in py via self
 prompt: (Cmd)                  # The prompt issued to solicit input
 quiet: False                   # Don't print nonessential feedback

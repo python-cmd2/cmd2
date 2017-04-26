@@ -618,7 +618,7 @@ class Cmd(cmd.Cmd):
             for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
                 if _which(editor):
                     break
-    feedback_to_output = False  # Do include nonessentials in >, | output
+    feedback_to_output = True  # Do include nonessentials in >, | output
     locals_in_py = True
     quiet = False  # Do not suppress nonessential output
     timing = False  # Prints elapsed time for each command
@@ -1691,7 +1691,7 @@ Script should contain one command per line, just like command would be typed in 
         :param callargs: List[str] - list of transcript test file names
         """
         class TestMyAppCase(Cmd2TestCase):
-            CmdApp = self.__class__
+            cmdapp = self
 
         self.__class__.testfiles = callargs
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -1731,12 +1731,12 @@ Script should contain one command per line, just like command would be typed in 
             if callopts.test:
                 self._transcript_files = callargs
 
+        # Always run the preloop first
+        self.preloop()
+
         if self._transcript_files is not None:
             self.run_transcript_tests(self._transcript_files)
         else:
-            # Always run the preloop first
-            self.preloop()
-
             # If an intro was supplied in the method call, allow it to override the default
             if intro is not None:
                 self.intro = intro
@@ -1754,8 +1754,8 @@ Script should contain one command per line, just like command would be typed in 
             if not stop:
                 self._cmdloop()
 
-            # Run the postloop() no matter what
-            self.postloop()
+        # Run the postloop() no matter what
+        self.postloop()
 
 
 class HistoryItem(str):
@@ -1960,25 +1960,11 @@ class Statekeeper(object):
                 setattr(self.obj, attrib, getattr(self, attrib))
 
 
-class Borg(object):
-    """All instances of any Borg subclass will share state.
-    from Python Cookbook, 2nd Ed., recipe 6.16"""
-    _shared_state = {}
-
-    def __new__(cls, *a, **k):
-        obj = object.__new__(cls)
-        obj.__dict__ = cls._shared_state
-        return obj
-
-
-class OutputTrap(Borg):
-    """Instantiate  an OutputTrap to divert/capture ALL stdout output.  For use in unit testing.
-    Call `tearDown()` to return to normal output."""
+class OutputTrap(object):
+    """Instantiate an OutputTrap to divert/capture ALL stdout output.  For use in transcript testing."""
 
     def __init__(self):
         self.contents = ''
-        self.old_stdout = sys.stdout
-        sys.stdout = self
 
     def write(self, txt):
         """Add text to the internal contents.
@@ -1996,17 +1982,12 @@ class OutputTrap(Borg):
         self.contents = ''
         return result
 
-    def tear_down(self):
-        """Restores normal output."""
-        sys.stdout = self.old_stdout
-        self.contents = ''
-
 
 class Cmd2TestCase(unittest.TestCase):
     """Subclass this, setting CmdApp, to make a unittest.TestCase class
        that will execute the commands in a transcript file and expect the results shown.
        See example.py"""
-    CmdApp = None
+    cmdapp = None
     regexPattern = pyparsing.QuotedString(quoteChar=r'/', escChar='\\', multiline=True, unquoteResults=True)
     regexPattern.ignore(pyparsing.cStyleComment)
     notRegexPattern = pyparsing.Word(pyparsing.printables)
@@ -2016,7 +1997,7 @@ class Cmd2TestCase(unittest.TestCase):
 
     def fetchTranscripts(self):
         self.transcripts = {}
-        for fileset in self.CmdApp.testfiles:
+        for fileset in self.cmdapp.testfiles:
             for fname in glob.glob(fileset):
                 tfile = open(fname)
                 self.transcripts[fname] = iter(tfile.readlines())
@@ -2025,17 +2006,15 @@ class Cmd2TestCase(unittest.TestCase):
             raise Exception("No test files found - nothing to test.")
 
     def setUp(self):
-        if self.CmdApp:
-            self.outputTrap = OutputTrap()
-            self.cmdapp = self.CmdApp()
+        if self.cmdapp:
             self.fetchTranscripts()
 
-            # Make sure any required initialization gets done and flush the output buffer
-            self.cmdapp.preloop()
-            self.outputTrap.read()
+            # Trap stdout
+            self._orig_stdout = self.cmdapp.stdout
+            self.cmdapp.stdout = OutputTrap()
 
     def runTest(self):  # was testall
-        if self.CmdApp:
+        if self.cmdapp:
             its = sorted(self.transcripts.items())
             for (fname, transcript) in its:
                 self._test_transcript(fname, transcript)
@@ -2071,7 +2050,7 @@ class Cmd2TestCase(unittest.TestCase):
             # Send the command into the application and capture the resulting output
             # TODO: Should we get the return value and act if stop == True?
             self.cmdapp.onecmd_plus_hooks(command)
-            result = self.outputTrap.read()
+            result = self.cmdapp.stdout.read()
             # Read the expected result from transcript
             if line.startswith(self.cmdapp.prompt):
                 message = '\nFile %s, line %d\nCommand was:\n%r\nExpected: (nothing)\nGot:\n%r\n' % \
@@ -2098,11 +2077,9 @@ class Cmd2TestCase(unittest.TestCase):
             self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
     def tearDown(self):
-        if self.CmdApp:
-            # Make sure any required cleanup gets done
-            self.cmdapp.postloop()
-
-            self.outputTrap.tear_down()
+        if self.cmdapp:
+            # Restore stdout
+            self.cmdapp.stdout = self._orig_stdout
 
 
 def namedtuple_with_two_defaults(typename, field_names, default_values=('', '')):
