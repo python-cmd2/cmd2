@@ -2030,6 +2030,10 @@ class Cmd2TestCase(unittest.TestCase):
             self.cmdapp = self.CmdApp()
             self.fetchTranscripts()
 
+            # Make sure any required initialization gets done and flush the output buffer
+            self.cmdapp.preloop()
+            self.outputTrap.read()
+
     def runTest(self):  # was testall
         if self.CmdApp:
             its = sorted(self.transcripts.items())
@@ -2095,6 +2099,9 @@ class Cmd2TestCase(unittest.TestCase):
 
     def tearDown(self):
         if self.CmdApp:
+            # Make sure any required cleanup gets done
+            self.cmdapp.postloop()
+
             self.outputTrap.tear_down()
 
 
