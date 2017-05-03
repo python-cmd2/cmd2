@@ -62,6 +62,15 @@ from six.moves import zip
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.request import urlopen
 
+# Prefer statically linked gnureadline if available (for Mac OS X compatibility due to issues with libedit)
+try:
+    import gnureadline as readline
+except ImportError:
+    try:
+        import readline
+    except ImportError:
+        pass
+
 # Python 3 compatibility hack due to no built-in file keyword in Python 3
 # Due to one occurrence of isinstance(<foo>, file) checking to see if something is of file type
 try:
@@ -1111,9 +1120,8 @@ class Cmd(cmd.Cmd):
             if not len(line):
                 line = 'EOF'
             else:
-                if line[-1] == '\n':  # this was always true in Cmd
-                    line = line[:-1]
-        return line
+                line = line.rstrip('\r\n')
+        return line.strip()
 
     def _cmdloop(self):
         """Repeatedly issue a prompt, accept input, parse an initial prefix
@@ -1128,12 +1136,10 @@ class Cmd(cmd.Cmd):
         # has been split out so that it can be called separately
         if self.use_rawinput and self.completekey:
             try:
-                # noinspection PyUnresolvedReferences
-                import readline
                 self.old_completer = readline.get_completer()
                 readline.set_completer(self.complete)
                 readline.parse_and_bind(self.completekey + ": complete")
-            except ImportError:
+            except NameError:
                 pass
         stop = None
         try:
@@ -1149,10 +1155,8 @@ class Cmd(cmd.Cmd):
         finally:
             if self.use_rawinput and self.completekey:
                 try:
-                    # noinspection PyUnresolvedReferences
-                    import readline
                     readline.set_completer(self.old_completer)
-                except ImportError:
+                except NameError:
                     pass
             return stop
 
