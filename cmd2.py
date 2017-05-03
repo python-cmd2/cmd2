@@ -64,9 +64,12 @@ from six.moves.urllib.request import urlopen
 
 # Prefer statically linked gnureadline if available (for Mac OS X compatibility due to issues with libedit)
 try:
-    import gnureadline
+    import gnureadline as readline
 except ImportError:
-    import readline
+    try:
+        import readline
+    except ImportError:
+        pass
 
 # Python 3 compatibility hack due to no built-in file keyword in Python 3
 # Due to one occurrence of isinstance(<foo>, file) checking to see if something is of file type
@@ -1132,9 +1135,12 @@ class Cmd(cmd.Cmd):
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
         if self.use_rawinput and self.completekey:
-            self.old_completer = readline.get_completer()
-            readline.set_completer(self.complete)
-            readline.parse_and_bind(self.completekey + ": complete")
+            try:
+                self.old_completer = readline.get_completer()
+                readline.set_completer(self.complete)
+                readline.parse_and_bind(self.completekey + ": complete")
+            except NameError:
+                pass
         stop = None
         try:
             while not stop:
@@ -1148,7 +1154,10 @@ class Cmd(cmd.Cmd):
                 stop = self.onecmd_plus_hooks(line)
         finally:
             if self.use_rawinput and self.completekey:
-                readline.set_completer(self.old_completer)
+                try:
+                    readline.set_completer(self.old_completer)
+                except NameError:
+                    pass
             return stop
 
     # noinspection PyUnusedLocal
