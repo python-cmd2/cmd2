@@ -405,7 +405,7 @@ pull request unless it can merge without conflicts and all unit tests pass on al
 2. If a Maintainer QA's a pull request and confirms that the new code does what it is supposed to do without seeming to introduce any new bugs,
 and doesn't present any backward compatibility issues, they will merge the pull request.
 
-If you would like to apply to join our Maintainer team, message [@FedericoCeratto](https://github.com/FedericoCeratto) with links to 5 of your pull requests that have been accepted.
+If you would like to apply to join our Maintainer team, message [@tleonhardt](https://github.com/tleonhardt) with links to 5 of your pull requests that have been accepted.
 
 
 ### How We Close Stale Issues
