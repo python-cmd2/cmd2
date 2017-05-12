@@ -1106,6 +1106,10 @@ class Cmd(cmd.Cmd):
         :param end: str - end code to tell GNU Readline about end of invisible characters
         :return: str - prompt safe to pass to GNU Readline
         """
+        # Windows terminals don't use ANSI escape codes and Windows readline isn't based on GNU Readline
+        if sys.platform == "win32":
+            return prompt
+
         escaped = False
         result = ""
 
