@@ -62,15 +62,6 @@ from six.moves import zip
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.request import urlopen
 
-# Prefer statically linked gnureadline if available (for Mac OS X compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    try:
-        import readline
-    except ImportError:
-        pass
-
 # Python 3 compatibility hack due to no built-in file keyword in Python 3
 # Due to one occurrence of isinstance(<foo>, file) checking to see if something is of file type
 try:
