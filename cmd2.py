@@ -62,15 +62,6 @@ from six.moves import zip
 # noinspection PyUnresolvedReferences
 from six.moves.urllib.request import urlopen
 
-# Prefer statically linked gnureadline if available (for Mac OS X compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    try:
-        import readline
-    except ImportError:
-        pass
-
 # Python 3 compatibility hack due to no built-in file keyword in Python 3
 # Due to one occurrence of isinstance(<foo>, file) checking to see if something is of file type
 try:
@@ -87,6 +78,13 @@ try:
     from IPython import embed
 except ImportError:
     ipython_available = False
+
+# Try to import readline, but allow failure for convenience in Windows unit testing
+# Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
+try:
+    import readline
+except ImportError:
+    pass
 
 __version__ = '0.7.1a'
 
@@ -1105,12 +1103,41 @@ class Cmd(cmd.Cmd):
 
         return False
 
+    @staticmethod
+    def _surround_ansi_escapes(prompt, start="\x01", end="\x02"):
+        """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ASNI escape codes.
+
+        :param prompt: str - original prompt
+        :param start: str - start code to tell GNU Readline about beginning of invisible characters
+        :param end: str - end code to tell GNU Readline about end of invisible characters
+        :return: str - prompt safe to pass to GNU Readline
+        """
+        # Windows terminals don't use ANSI escape codes and Windows readline isn't based on GNU Readline
+        if sys.platform == "win32":
+            return prompt
+
+        escaped = False
+        result = ""
+
+        for c in prompt:
+            if c == "\x1b" and not escaped:
+                result += start + c
+                escaped = True
+            elif c.isalpha() and escaped:
+                result += c + end
+                escaped = False
+            else:
+                result += c
+
+        return result
+
     def pseudo_raw_input(self, prompt):
         """copied from cmd's cmdloop; like raw_input, but accounts for changed stdin, stdout"""
 
         if self.use_rawinput:
+            safe_prompt = self._surround_ansi_escapes(prompt)
             try:
-                line = sm.input(prompt)
+                line = sm.input(safe_prompt)
             except EOFError:
                 line = 'EOF'
         else:

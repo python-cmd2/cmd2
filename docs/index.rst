@@ -35,7 +35,7 @@ The basic use of ``cmd2`` is identical to that of cmd_.
 
    The tab-completion feature provided by cmd_ relies on underlying capability provided by GNU readline or an
    equivalent library.  Linux distros will almost always come with the required library installed.
-   For Mac OS X, we recommend installing the `gnureadline <https://pypi.python.org/pypi/gnureadline>`_ Python module.
+   For Mac OS X, we recommend using the `Homebrew <https://brew.sh>`_ package manager to install the ``readline`` package.
    For Windows, we recommend installing the `pyreadline <https://pypi.python.org/pypi/pyreadline>`_ Python module.
 
 Resources
