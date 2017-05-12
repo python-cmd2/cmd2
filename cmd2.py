@@ -34,7 +34,6 @@ import optparse
 import os
 import platform
 import re
-import readline
 import shlex
 import six
 import subprocess
@@ -79,6 +78,13 @@ try:
     from IPython import embed
 except ImportError:
     ipython_available = False
+
+# Try to import readline, but allow failure for convenience in Windows unit testing
+# Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
+try:
+    import readline
+except ImportError:
+    pass
 
 __version__ = '0.7.1a'
 
