@@ -1327,6 +1327,38 @@ class Cmd(cmd.Cmd):
     Usage:  shell cmd"""
         self.stdout.write("{}\n".format(help_str))
 
+    @staticmethod
+    def path_complete(line):
+        """Method called to complete an input line by local file system path completion.
+
+        :param line: str - the current input line with leading whitespace removed
+        :return: List[str] - a list of possible tab completions
+        """
+        path = line.split()[-1]
+        if not path:
+            path = '.'
+
+        dirname, rest = os.path.split(path)
+        real_dir = os.path.expanduser(dirname)
+
+        path_completions = glob.glob(os.path.join(real_dir, rest) + '*')
+
+        # Strip off everything but the final part of the completion
+        completions = [os.path.basename(c) for c in path_completions]
+        return completions
+
+    # noinspection PyUnusedLocal
+    def complete_shell(self, text, line, begidx, endidx):
+        """Handles completion of arguments for the shell command.
+
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: str - the beginning indexe of the prefix text
+        :param endidx: str - the ending index of the prefix text
+        :return: List[str] - a list of possible tab completions
+        """
+        return self.path_complete(line)
+
     def do_py(self, arg):
         """
         py <command>: Executes a Python command.
@@ -1551,6 +1583,18 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
                   pyparsing.stringEnd)
 
+    # noinspection PyUnusedLocal
+    def complete_edit(self, text, line, begidx, endidx):
+        """Handles completion of arguments for the edit command.
+
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: str - the beginning indexe of the prefix text
+        :param endidx: str - the ending index of the prefix text
+        :return: List[str] - a list of possible tab completions
+        """
+        return self.path_complete(line)
+
     def do_save(self, arg):
         """Saves command(s) from history to file.
 
@@ -1687,6 +1731,18 @@ relative to the already-running script's directory.
 
 Script should contain one command per line, just like command would be typed in console."""
         self.stdout.write("{}\n".format(help_str))
+
+    # noinspection PyUnusedLocal
+    def complete_load(self, text, line, begidx, endidx):
+        """Handles completion of arguments for the load command.
+
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: str - the beginning indexe of the prefix text
+        :param endidx: str - the ending index of the prefix text
+        :return: List[str] - a list of possible tab completions
+        """
+        return self.path_complete(line)
 
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
