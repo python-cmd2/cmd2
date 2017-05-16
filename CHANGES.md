@@ -4,18 +4,24 @@ News
 0.7.1
 -----
 
-*Release date: TBD
+*Release date: TBD*
 
 * Bug fixes
     * ``-`` wasn't being treated as a legal character
     * The allow_cli_args attribute wasn't properly disabling parsing of args at invocation when False
     * py command wasn't allowing scripts which used *cmd* function prior to entering an interactive Python session
+    * Don't throw exception when piping output to a shell command
+    * Transcript testing now properly calls ``preloop`` before and ``postloop`` after
+    * Fixed readline bug related to ANSI color escape codes in the prompt
 * Added CONTRIBUTING.md and CODE_OF_CONDUCT.md files
 * Added unicode parsing unit tests and listed unicode support as a feature when using Python 3
 * Added more examples and improved documentation
     * Example for how use cmd2 in a way where it doesn't own the main loop so it can integrate with external event loops
     * Example for how to use argparse for parsing command-line args at invocation
     * Example for how to use the **py** command to run Python scripts which use conditional control flow
+    * Example of how to use regular expressions in a transcript test
+* Added CmdResult namedtumple for returning and storing results
+* Added local file system path completion for ``edit``, ``load``, ``save``, and ``shell`` commands
 
 0.7.0
 -----
@@ -78,10 +84,3 @@ News
 
 * Belatedly began a NEWS.txt
 * Changed pyparsing requirement for compatibility with Python version (2 vs 3)
-
-
-
-
-
-
-
