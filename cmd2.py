@@ -952,7 +952,7 @@ class Cmd(cmd.Cmd):
 
         i, n = 0, len(line)
         while i < n and line[i] in self.identchars:
-            i = i+1
+            i += 1
         command, arg = line[:i], line[i:].strip()
         return command, arg, line
 
@@ -1381,7 +1381,7 @@ class Cmd(cmd.Cmd):
             add_trailing_sep_if_dir = True
 
         add_sep_after_tilde = False
-        # If not path and no search text has been entered, then search in the CWD for *
+        # If no path and no search text has been entered, then search in the CWD for *
         if not text and line[begidx - 1] == ' ' and (begidx >= len(line) or line[begidx] == ' '):
             search_str = os.path.join(os.getcwd(), '*')
         else:
