@@ -35,6 +35,7 @@ cmd2 provides the following features, in addition to those already existing in c
 - Pipe output to shell commands with `|`
 - Simple transcript-based application testing
 - Unicode character support (*Python 3 only*)
+- Path completion for ``edit``, ``load``, ``save``, and ``shell`` commands
 
 Instructions for implementing each feature follow.
 

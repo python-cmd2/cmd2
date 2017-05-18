@@ -82,6 +82,7 @@ except ImportError:
 # Try to import readline, but allow failure for convenience in Windows unit testing
 # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
 try:
+    # noinspection PyUnresolvedReferences
     import readline
 except ImportError:
     pass
@@ -479,6 +480,7 @@ class StubbornDict(dict):
 
     Create it with the stubbornDict(arg) factory function.
     """
+    # noinspection PyMethodOverriding
     def update(self, arg):
         """Adds dictionary arg's key-values pairs in to dict
 
@@ -930,11 +932,11 @@ class Cmd(cmd.Cmd):
         return statement
 
     def parseline(self, line):
-        """Parse the line into a command name and a string containing the arguments.  
-        
+        """Parse the line into a command name and a string containing the arguments.
+
         Used for command tab completion.  Returns a tuple containing (command, args, line).
         'command' and 'args' may be None if the line couldn't be parsed.
-        
+
         :param line: str - line read by readline
         :return: (str, str, str) - tuple containing (command, args, line)
         """
@@ -1354,7 +1356,7 @@ class Cmd(cmd.Cmd):
     Usage:  shell cmd"""
         self.stdout.write("{}\n".format(help_str))
 
-    def path_complete(self, text, line, begidx, endidx, dir_exe_only=False):
+    def path_complete(self, text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
         """Method called to complete an input line by local file system path completion.
 
         :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
@@ -1362,6 +1364,7 @@ class Cmd(cmd.Cmd):
         :param begidx: int - the beginning indexe of the prefix text
         :param endidx: int - the ending index of the prefix text
         :param dir_exe_only: bool - only return directories and executables, not non-executable files
+        :param dir_only: bool - only return directories
         :return: List[str] - a list of possible tab completions
         """
         # Deal with cases like load command and @ key when path completion is immediately after a shortcut
@@ -1413,6 +1416,8 @@ class Cmd(cmd.Cmd):
         # If we only want directories and executables, filter everything else out first
         if dir_exe_only:
             path_completions = [c for c in path_completions if os.path.isdir(c) or os.access(c, os.X_OK)]
+        elif dir_only:
+            path_completions = [c for c in path_completions if os.path.isdir(c)]
 
         # Get the basename of the paths
         completions = []
@@ -1446,7 +1451,7 @@ class Cmd(cmd.Cmd):
         """Method called to complete an input line by environment PATH executable completion.
 
         :param search_text: str - the search text used to find a shell command
-        :return: List[str] - a list of possible tab completions 
+        :return: List[str] - a list of possible tab completions
         """
 
         # Purposely don't match any executable containing wildcards
@@ -1478,7 +1483,7 @@ class Cmd(cmd.Cmd):
     def complete_shell(self, text, line, begidx, endidx):
         """Handles tab completion of executable commands and local file system paths.
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it) 
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: str - the current input line with leading whitespace removed
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
