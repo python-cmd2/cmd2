@@ -87,7 +87,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.7.1a'
+__version__ = '0.7.1'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -1461,7 +1461,7 @@ class Cmd(cmd.Cmd):
                 return []
 
         # Get a list of every directory in the PATH environment variable and ignore symbolic links
-        paths = [p for p in os.getenv('PATH').split(':') if not os.path.islink(p)]
+        paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
 
         # Find every executable file in the PATH that matches the pattern
         exes = []
