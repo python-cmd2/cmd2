@@ -82,6 +82,7 @@ except ImportError:
 # Try to import readline, but allow failure for convenience in Windows unit testing
 # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
 try:
+    # noinspection PyUnresolvedReferences
     import readline
 except ImportError:
     pass
@@ -479,6 +480,7 @@ class StubbornDict(dict):
 
     Create it with the stubbornDict(arg) factory function.
     """
+    # noinspection PyMethodOverriding
     def update(self, arg):
         """Adds dictionary arg's key-values pairs in to dict
 
@@ -929,6 +931,33 @@ class Cmd(cmd.Cmd):
         """
         return statement
 
+    def parseline(self, line):
+        """Parse the line into a command name and a string containing the arguments.
+
+        Used for command tab completion.  Returns a tuple containing (command, args, line).
+        'command' and 'args' may be None if the line couldn't be parsed.
+
+        :param line: str - line read by readline
+        :return: (str, str, str) - tuple containing (command, args, line)
+        """
+        line = line.strip()
+
+        if not line:
+            # Deal with empty line or all whitespace line
+            return None, None, line
+
+        # Expand command shortcuts to the full command name
+        for (shortcut, expansion) in self.shortcuts:
+            if line.startswith(shortcut):
+                line = line.replace(shortcut, expansion + ' ', 1)
+                break
+
+        i, n = 0, len(line)
+        while i < n and line[i] in self.identchars:
+            i += 1
+        command, arg = line[:i], line[i:].strip()
+        return command, arg, line
+
     def onecmd_plus_hooks(self, line):
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
@@ -1327,48 +1356,183 @@ class Cmd(cmd.Cmd):
     Usage:  shell cmd"""
         self.stdout.write("{}\n".format(help_str))
 
-    @staticmethod
-    def path_complete(line):
+    def path_complete(self, text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
         """Method called to complete an input line by local file system path completion.
-
-        :param line: str - the current input line with leading whitespace removed
-        :return: List[str] - a list of possible tab completions
-        """
-        path = line.split()[-1]
-        if not path:
-            path = '.'
-
-        dirname, rest = os.path.split(path)
-        real_dir = os.path.expanduser(dirname)
-
-        # Find all matching path completions
-        path_completions = glob.glob(os.path.join(real_dir, rest) + '*')
-
-        # Strip off everything but the final part of the completion because that's the way readline works
-        completions = [os.path.basename(c) for c in path_completions]
-
-        # If there is a single completion and it is a directory, add the final separator for convenience
-        if len(completions) == 1 and os.path.isdir(path_completions[0]):
-            completions[0] += os.path.sep
-
-        return completions
-
-    # noinspection PyUnusedLocal
-    def complete_shell(self, text, line, begidx, endidx):
-        """Handles tab completion of local file system paths.
 
         :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: str - the current input line with leading whitespace removed
-        :param begidx: str - the beginning indexe of the prefix text
-        :param endidx: str - the ending index of the prefix text
+        :param begidx: int - the beginning indexe of the prefix text
+        :param endidx: int - the ending index of the prefix text
+        :param dir_exe_only: bool - only return directories and executables, not non-executable files
+        :param dir_only: bool - only return directories
         :return: List[str] - a list of possible tab completions
         """
-        return self.path_complete(line)
+        # Deal with cases like load command and @ key when path completion is immediately after a shortcut
+        for (shortcut, expansion) in self.shortcuts:
+            if line.startswith(shortcut):
+                # If the next character after the shortcut isn't a space, then insert one and adjust indices
+                shortcut_len = len(shortcut)
+                if len(line) == shortcut_len or line[shortcut_len] != ' ':
+                    line = line.replace(shortcut, shortcut + ' ', 1)
+                    begidx += 1
+                    endidx += 1
+                break
 
-    # Enable tab completion of paths for other commands in an identical fashion
-    complete_edit = complete_shell
-    complete_load = complete_shell
-    complete_save = complete_shell
+        # Determine if a trailing separator should be appended to directory completions
+        add_trailing_sep_if_dir = False
+        if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
+            add_trailing_sep_if_dir = True
+
+        add_sep_after_tilde = False
+        # If no path and no search text has been entered, then search in the CWD for *
+        if not text and line[begidx - 1] == ' ' and (begidx >= len(line) or line[begidx] == ' '):
+            search_str = os.path.join(os.getcwd(), '*')
+        else:
+            # Parse out the path being searched
+            prev_space_index = line.rfind(' ', 0, begidx)
+            dirname = line[prev_space_index + 1:begidx]
+
+            # Purposely don't match any path containing wildcards - what we are doing is complicated enough!
+            wildcards = ['*', '?']
+            for wildcard in wildcards:
+                if wildcard in dirname or wildcard in text:
+                    return []
+
+            if not dirname:
+                dirname = os.getcwd()
+            elif dirname == '~':
+                # If tilde was used without separator, add a separator after the tilde in the completions
+                add_sep_after_tilde = True
+
+            # Build the search string
+            search_str = os.path.join(dirname, text + '*')
+
+        # Expand "~" to the real user directory
+        search_str = os.path.expanduser(search_str)
+
+        # Find all matching path completions
+        path_completions = glob.glob(search_str)
+
+        # If we only want directories and executables, filter everything else out first
+        if dir_exe_only:
+            path_completions = [c for c in path_completions if os.path.isdir(c) or os.access(c, os.X_OK)]
+        elif dir_only:
+            path_completions = [c for c in path_completions if os.path.isdir(c)]
+
+        # Get the basename of the paths
+        completions = []
+        for c in path_completions:
+            basename = os.path.basename(c)
+
+            # Add a separator after directories if the next character isn't already a separator
+            if os.path.isdir(c) and add_trailing_sep_if_dir:
+                basename += os.path.sep
+
+            completions.append(basename)
+
+        # If there is a single completion
+        if len(completions) == 1:
+            # If it is a file and we are at the end of the line, then add a space for convenience
+            if os.path.isfile(path_completions[0]) and endidx == len(line):
+                completions[0] += ' '
+            # If tilde was expanded without a separator, prepend one
+            elif os.path.isdir(path_completions[0]) and add_sep_after_tilde:
+                completions[0] = os.path.sep + completions[0]
+
+        return completions
+
+    # Enable tab completion of paths for relevant commands
+    complete_edit = path_complete
+    complete_load = path_complete
+    complete_save = path_complete
+
+    @staticmethod
+    def _shell_command_complete(search_text):
+        """Method called to complete an input line by environment PATH executable completion.
+
+        :param search_text: str - the search text used to find a shell command
+        :return: List[str] - a list of possible tab completions
+        """
+
+        # Purposely don't match any executable containing wildcards
+        wildcards = ['*', '?']
+        for wildcard in wildcards:
+            if wildcard in search_text:
+                return []
+
+        # Get a list of every directory in the PATH environment variable and ignore symbolic links
+        paths = [p for p in os.getenv('PATH').split(':') if not os.path.islink(p)]
+
+        # Find every executable file in the PATH that matches the pattern
+        exes = []
+        for path in paths:
+            full_path = os.path.join(path, search_text)
+            matches = [f for f in glob.glob(full_path + '*') if os.path.isfile(f) and os.access(f, os.X_OK)]
+
+            for match in matches:
+                exes.append(os.path.basename(match))
+
+        # If there is a single completion, then add a space at the end for convenience since
+        # this will be printed to the command line the user is typing
+        if len(exes) == 1:
+            exes[0] += ' '
+
+        return exes
+
+    # noinspection PyUnusedLocal
+    def complete_shell(self, text, line, begidx, endidx):
+        """Handles tab completion of executable commands and local file system paths.
+
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: int - the beginning index of the prefix text
+        :param endidx: int - the ending index of the prefix text
+        :return: List[str] - a list of possible tab completions
+        """
+
+        # First we strip off the shell command or shortcut key
+        if line.startswith('!'):
+            stripped_line = line.lstrip('!')
+            initial_length = len('!')
+        else:
+            stripped_line = line[len('shell'):]
+            initial_length = len('shell')
+
+        line_parts = stripped_line.split()
+
+        # Don't tab complete anything if user only typed shell or !
+        if not line_parts:
+            return []
+
+        # Find the start index of the first thing after the shell or !
+        cmd_start = line.find(line_parts[0], initial_length)
+        cmd_end = cmd_start + len(line_parts[0])
+
+        # Check if we are in the command token
+        if cmd_start <= begidx <= cmd_end:
+
+            # See if text is part of a path
+            possible_path = line[cmd_start:begidx]
+
+            # There is nothing to search
+            if len(possible_path) == 0 and not text:
+                return []
+
+            if os.path.sep not in possible_path:
+                # The text before the search text is not a directory path.
+                # It is OK to try shell command completion.
+                command_completions = self._shell_command_complete(text)
+
+                if command_completions:
+                    return command_completions
+
+            # If we have no results, try path completion
+            return self.path_complete(text, line, begidx, endidx, dir_exe_only=True)
+
+        # Past command token
+        else:
+            # Do path completion
+            return self.path_complete(text, line, begidx, endidx)
 
     def do_py(self, arg):
         """

@@ -14,6 +14,7 @@ and the "py run('myscript.py')" syntax comes into play.
 
 This application and the "script_conditional.py" script serve as an example for one way in which this can be done.
 """
+import functools
 import os
 
 from cmd2 import Cmd, options, make_option, CmdResult, set_use_arg_list
@@ -35,7 +36,6 @@ class CmdLineApp(Cmd):
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.subdirs = [d for d in os.listdir(self.cwd) if os.path.isdir(d)]
         self.prompt = '{!r} $ '.format(self.cwd)
 
     def postcmd(self, stop, line):
@@ -83,17 +83,8 @@ class CmdLineApp(Cmd):
             self.perror(err, traceback_war=False)
         self._last_result = CmdResult(out, err)
 
-    # noinspection PyUnusedLocal
-    def complete_cd(self, text, line, begidx, endidx):
-        """Handles completion of arguments for the cd command.
-
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: str - the beginning indexe of the prefix text
-        :param endidx: str - the ending index of the prefix text
-        :return: List[str] - a list of possible tab completions
-        """
-        return [d for d in self.subdirs if d.startswith(text)]
+    # Enable directory completion for cd command by freezing an argument to path_complete() with functools.partialmethod
+    complete_cd = functools.partialmethod(Cmd.path_complete, dir_only=True)
 
     @options([make_option('-l', '--long', action="store_true", help="display in long format with one item per line")],
              arg_desc='')

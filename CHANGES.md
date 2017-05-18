@@ -22,6 +22,7 @@ News
     * Example of how to use regular expressions in a transcript test
 * Added CmdResult namedtumple for returning and storing results
 * Added local file system path completion for ``edit``, ``load``, ``save``, and ``shell`` commands
+* Add shell command completion for ``shell`` command or ``!`` shortcut
 
 0.7.0
 -----
