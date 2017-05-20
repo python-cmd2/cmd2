@@ -243,6 +243,11 @@ no other commands defined beginning with *divid*,
 
 This behavior can be turned off with ``app.abbrev`` (see :ref:`parameters`)
 
+.. warning::
+
+    Due to the way the parsing logic works for multiline commands, abbreviations
+    will not be accepted for multiline commands.
+
 Misc. pre-defined commands
 ==========================
 
