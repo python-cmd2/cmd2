@@ -2,7 +2,7 @@
 """
 Unit/functional testing for helper functions/classes in the cmd2.py module.
 
-These are primarily tests related to parsing.  Moreover, they are mostly a port of the old doctest tests which were 
+These are primarily tests related to parsing.  Moreover, they are mostly a port of the old doctest tests which were
 problematic because they worked properly for some versions of pyparsing but not for others.
 
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
@@ -246,6 +246,12 @@ def test_parse_multiline_ignores_terminators_in_comments(parser):
     assert len(results.terminator) == 2
     assert results.terminator[0] == '\n'
     assert results.terminator[1] == '\n'
+
+def test_parse_abbreviated_multiline_not_allowed(parser):
+    line = 'multilin command\n'
+    results = parser.parseString(line)
+    assert results.command == 'multilin'
+    assert results.multilineCommand == ''
 
 # Unicode support is only present in cmd2 for Python 3
 @pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
