@@ -697,6 +697,8 @@ class Cmd(cmd.Cmd):
         # Used by load and _relative_load commands
         self._current_script_dir = None
 
+    # -----  Methods related to presenting output to the user -----
+
     def poutput(self, msg):
         """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
         if msg:
@@ -746,35 +748,7 @@ class Cmd(cmd.Cmd):
             return self._colorcodes[color][True] + val + self._colorcodes[color][False]
         return val
 
-    # noinspection PyUnusedLocal
-    def do_cmdenvironment(self, args):
-        """Summary report of interactive parameters."""
-        self.stdout.write("""
-        Commands are case-sensitive: {}
-        Commands may be terminated with: {}
-        Command-line arguments allowed: {}
-        Output redirection and pipes allowed: {}
-        Settable parameters: {}\n""".format(not self.case_insensitive, str(self.terminators), self.allow_cli_args,
-                                            self.allow_redirection, ' '.join(self.settable)))
-
-    def do_help(self, arg):
-        """List available commands with "help" or detailed help with "help cmd"."""
-        if arg:
-            funcname = self._func_named(arg)
-            if funcname:
-                fn = getattr(self, funcname)
-                try:
-                    fn.optionParser.print_help(file=self.stdout)
-                except AttributeError:
-                    cmd.Cmd.do_help(self, funcname[3:])
-        else:
-            cmd.Cmd.do_help(self, arg)
-
-    # noinspection PyUnusedLocal
-    def do_shortcuts(self, args):
-        """Lists single-key shortcuts available."""
-        result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
-        self.stdout.write("Single-key shortcuts for other commands:\n{}\n".format(result))
+    # -----  Methods related to pyparsing parsing logic -----
 
     def _init_parser(self):
         """ Initializes everything related to pyparsing. """
@@ -845,6 +819,18 @@ class Cmd(cmd.Cmd):
             pyparsing.Optional(file_name) + (pyparsing.stringEnd | '|')
         self.inputParser.ignore(self.commentInProgress)
 
+    # -----  Methods which override stuff in cmd -----
+
+    def precmd(self, statement):
+        """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
+
+        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
+        :return: ParsedString - a potentially modified version of the input ParsedString statement
+        """
+        return statement
+
+    # -----  Methods which are cmd2-specific lifecycle hooks which are not present in cmd -----
+
     # noinspection PyMethodMayBeStatic
     def preparse(self, raw):
         """Hook method executed just before the command line is interpreted, but after the input prompt is generated.
@@ -862,36 +848,6 @@ class Cmd(cmd.Cmd):
         :return: pyparsing.ParseResults - potentially modified ParseResults object
         """
         return parse_result
-
-    def parsed(self, raw):
-        """ This function is where the actual parsing of each line occurs.
-
-        :param raw: str - the line of text as it was entered
-        :return: ParsedString - custom subclass of str with extra attributes
-        """
-        if isinstance(raw, ParsedString):
-            p = raw
-        else:
-            # preparse is an overridable hook; default makes no changes
-            s = self.preparse(raw)
-            s = self.inputParser.transformString(s.lstrip())
-            s = self.commentGrammars.transformString(s)
-            for (shortcut, expansion) in self.shortcuts:
-                if s.lower().startswith(shortcut):
-                    s = s.replace(shortcut, expansion + ' ', 1)
-                    break
-            try:
-                result = self.parser.parseString(s)
-            except pyparsing.ParseException:
-                # If we have a parsing failure, treat it is an empty command and move to next prompt
-                result = self.parser.parseString('')
-            result['raw'] = raw
-            result['command'] = result.multilineCommand or result.command
-            result = self.postparse(result)
-            p = ParsedString(result.args)
-            p.parsed = result
-            p.parser = self.parsed
-        return p
 
     # noinspection PyMethodMayBeStatic
     def postparsing_precmd(self, statement):
@@ -923,14 +879,6 @@ class Cmd(cmd.Cmd):
         :return: bool - True implies the entire application should exit.
         """
         return stop
-
-    def precmd(self, statement):
-        """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
-
-        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
-        :return: ParsedString - a potentially modified version of the input ParsedString statement
-        """
-        return statement
 
     def parseline(self, line):
         """Parse the line into a command name and a string containing the arguments.
@@ -999,14 +947,44 @@ class Cmd(cmd.Cmd):
         """Keep accepting lines of input until the command is complete."""
         if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
             raise EmptyStatement()
-        statement = self.parsed(line)
+        statement = self._parsed(line)
         while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
             statement = '%s\n%s' % (statement.parsed.raw,
                                     self.pseudo_raw_input(self.continuation_prompt))
-            statement = self.parsed(statement)
+            statement = self._parsed(statement)
         if not statement.parsed.command:
             raise EmptyStatement()
         return statement
+
+    def _parsed(self, raw):
+        """ This function is where the actual parsing of each line occurs.
+
+        :param raw: str - the line of text as it was entered
+        :return: ParsedString - custom subclass of str with extra attributes
+        """
+        if isinstance(raw, ParsedString):
+            p = raw
+        else:
+            # preparse is an overridable hook; default makes no changes
+            s = self.preparse(raw)
+            s = self.inputParser.transformString(s.lstrip())
+            s = self.commentGrammars.transformString(s)
+            for (shortcut, expansion) in self.shortcuts:
+                if s.lower().startswith(shortcut):
+                    s = s.replace(shortcut, expansion + ' ', 1)
+                    break
+            try:
+                result = self.parser.parseString(s)
+            except pyparsing.ParseException:
+                # If we have a parsing failure, treat it is an empty command and move to next prompt
+                result = self.parser.parseString('')
+            result['raw'] = raw
+            result['command'] = result.multilineCommand or result.command
+            result = self.postparse(result)
+            p = ParsedString(result.args)
+            p.parsed = result
+            p.parser = self._parsed
+        return p
 
     def _redirect_output(self, statement):
         """Handles output redirection for >, >>, and |.
@@ -1103,7 +1081,7 @@ class Cmd(cmd.Cmd):
         :param line: ParsedString - subclass of string including the pyparsing ParseResults
         :return: bool - a flag indicating whether the interpretation of commands should stop
         """
-        statement = self.parsed(line)
+        statement = self._parsed(line)
         self.lastcmd = statement.parsed.raw
         funcname = self._func_named(statement.parsed.command)
         if not funcname:
@@ -1216,6 +1194,37 @@ class Cmd(cmd.Cmd):
                 except NameError:
                     pass
             return stop
+
+    # noinspection PyUnusedLocal
+    def do_cmdenvironment(self, args):
+        """Summary report of interactive parameters."""
+        self.stdout.write("""
+        Commands are case-sensitive: {}
+        Commands may be terminated with: {}
+        Command-line arguments allowed: {}
+        Output redirection and pipes allowed: {}
+        Settable parameters: {}\n""".format(not self.case_insensitive, str(self.terminators),
+                                            self.allow_cli_args,
+                                            self.allow_redirection, ' '.join(self.settable)))
+
+    def do_help(self, arg):
+        """List available commands with "help" or detailed help with "help cmd"."""
+        if arg:
+            funcname = self._func_named(arg)
+            if funcname:
+                fn = getattr(self, funcname)
+                try:
+                    fn.optionParser.print_help(file=self.stdout)
+                except AttributeError:
+                    cmd.Cmd.do_help(self, funcname[3:])
+        else:
+            cmd.Cmd.do_help(self, arg)
+
+    # noinspection PyUnusedLocal
+    def do_shortcuts(self, args):
+        """Lists single-key shortcuts available."""
+        result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
+        self.stdout.write("Single-key shortcuts for other commands:\n{}\n".format(result))
 
     # noinspection PyUnusedLocal
     def do_eof(self, arg):
