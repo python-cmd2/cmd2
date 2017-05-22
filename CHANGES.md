@@ -23,6 +23,7 @@ News
 * Added CmdResult namedtumple for returning and storing results
 * Added local file system path completion for ``edit``, ``load``, ``save``, and ``shell`` commands
 * Add shell command completion for ``shell`` command or ``!`` shortcut
+* Abbreviated multiline commands are no longer allowed (they never worked correctly anyways)
 
 0.7.0
 -----

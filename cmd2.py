@@ -600,7 +600,7 @@ class Cmd(cmd.Cmd):
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     # make sure your terminators are not in legalChars!
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
-    multilineCommands = []
+    multilineCommands = []  # NOTE: Multiline commands can never be abbreviated, even if abbrev is True
     noSpecialParse = 'set ed edit exit'.split()
     prefixParser = pyparsing.Empty()
     redirector = '>'  # for sending output to file
@@ -1089,7 +1089,7 @@ class Cmd(cmd.Cmd):
             result = target
         else:
             if self.abbrev:  # accept shortened versions of commands
-                funcs = [fname for fname in self.keywords if fname.startswith(arg)]
+                funcs = [func for func in self.keywords if func.startswith(arg) and func not in self.multilineCommands]
                 if len(funcs) == 1:
                     result = 'do_' + funcs[0]
         return result
