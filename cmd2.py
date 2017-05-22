@@ -574,34 +574,19 @@ class Cmd(cmd.Cmd):
 
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
-    #  TODO: Move all instance member initializations inside __init__()
-
     # Attributes which are NOT dynamically settable at runtime
-    _STOP_AND_EXIT = True  # distinguish end of script file from actual exit
-    _STOP_SCRIPT_NO_EXIT = -999
-    allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
-    allow_redirection = True    # Should output redirection and pipes be allowed
+    allow_cli_args = True  # Should arguments passed on the command-line be processed as commands?
+    allow_redirection = True  # Should output redirection and pipes be allowed
     blankLinesAllowed = False
-    colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
-                  'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
-                  'blue': {True: '\x1b[34m', False: '\x1b[39m'},
-                  'red': {True: '\x1b[31m', False: '\x1b[39m'},
-                  'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
-                  'green': {True: '\x1b[32m', False: '\x1b[39m'},
-                  'underline': {True: '\x1b[4m', False: '\x1b[24m'},
-                  'yellow': {True: '\x1b[33m', False: '\x1b[39m'},
-                  }
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentGrammars.addParseAction(lambda x: '')
     commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
-    current_script_dir = None
     default_to_shell = False
     defaultExtension = 'txt'  # For ``save``, ``load``, etc.
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     # make sure your terminators are not in legalChars!
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
     multilineCommands = []  # NOTE: Multiline commands can never be abbreviated, even if abbrev is True
-    noSpecialParse = 'set ed edit exit'.split()
     prefixParser = pyparsing.Empty()
     redirector = '>'  # for sending output to file
     reserved_words = []
@@ -696,6 +681,22 @@ class Cmd(cmd.Cmd):
         # Used for a temp file during a pipe (needed tempfile instead of real pipe for Python 3.x prior to 3.5)
         self._temp_filename = None
 
+        # Codes used for exit conditions
+        self._STOP_AND_EXIT = True  # distinguish end of script file from actual exit
+        self._STOP_SCRIPT_NO_EXIT = -999
+
+        self._colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
+                            'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
+                            'blue': {True: '\x1b[34m', False: '\x1b[39m'},
+                            'red': {True: '\x1b[31m', False: '\x1b[39m'},
+                            'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
+                            'green': {True: '\x1b[32m', False: '\x1b[39m'},
+                            'underline': {True: '\x1b[4m', False: '\x1b[24m'},
+                            'yellow': {True: '\x1b[33m', False: '\x1b[39m'}}
+
+        # Used by load and _relative_load commands
+        self._current_script_dir = None
+
     def poutput(self, msg):
         """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
         if msg:
@@ -742,7 +743,7 @@ class Cmd(cmd.Cmd):
            ``color`` should be one of the supported strings (or styles):
            red/blue/green/cyan/magenta, bold, underline"""
         if self.colors and (self.stdout == self.initial_stdout):
-            return self.colorcodes[color][True] + val + self.colorcodes[color][False]
+            return self._colorcodes[color][True] + val + self._colorcodes[color][False]
         return val
 
     # noinspection PyUnusedLocal
@@ -759,7 +760,7 @@ class Cmd(cmd.Cmd):
     def do_help(self, arg):
         """List available commands with "help" or detailed help with "help cmd"."""
         if arg:
-            funcname = self.func_named(arg)
+            funcname = self._func_named(arg)
             if funcname:
                 fn = getattr(self, funcname)
                 try:
@@ -966,7 +967,7 @@ class Cmd(cmd.Cmd):
         """
         stop = 0
         try:
-            statement = self.complete_statement(line)
+            statement = self._complete_statement(line)
             (stop, statement) = self.postparsing_precmd(statement)
             if stop:
                 return self.postparsing_postcmd(stop)
@@ -974,7 +975,7 @@ class Cmd(cmd.Cmd):
                 self.history.append(statement.parsed.raw)
             try:
                 if self.allow_redirection:
-                    self.redirect_output(statement)
+                    self._redirect_output(statement)
                 timestart = datetime.datetime.now()
                 statement = self.precmd(statement)
                 stop = self.onecmd(statement)
@@ -983,7 +984,7 @@ class Cmd(cmd.Cmd):
                     self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
             finally:
                 if self.allow_redirection:
-                    self.restore_output(statement)
+                    self._restore_output(statement)
         except EmptyStatement:
             pass
         except ValueError as ex:
@@ -994,7 +995,7 @@ class Cmd(cmd.Cmd):
         finally:
             return self.postparsing_postcmd(stop)
 
-    def complete_statement(self, line):
+    def _complete_statement(self, line):
         """Keep accepting lines of input until the command is complete."""
         if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
             raise EmptyStatement()
@@ -1007,7 +1008,7 @@ class Cmd(cmd.Cmd):
             raise EmptyStatement()
         return statement
 
-    def redirect_output(self, statement):
+    def _redirect_output(self, statement):
         """Handles output redirection for >, >>, and |.
 
         :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
@@ -1040,7 +1041,7 @@ class Cmd(cmd.Cmd):
                 if statement.parsed.output == '>>':
                     self.stdout.write(get_paste_buffer())
 
-    def restore_output(self, statement):
+    def _restore_output(self, statement):
         """Handles restoring state after output redirection as well as the actual pipe operation if present.
 
         :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
@@ -1074,7 +1075,7 @@ class Cmd(cmd.Cmd):
                     os.remove(self._temp_filename)
                     self._temp_filename = None
 
-    def func_named(self, arg):
+    def _func_named(self, arg):
         """Gets the method name associated with a given command.
 
         If self.abbrev is False, it is always just looks for do_arg.  However, if self.abbrev is True,
@@ -1104,7 +1105,7 @@ class Cmd(cmd.Cmd):
         """
         statement = self.parsed(line)
         self.lastcmd = statement.parsed.raw
-        funcname = self.func_named(statement.parsed.command)
+        funcname = self._func_named(statement.parsed.command)
         if not funcname:
             return self._default(statement)
         try:
@@ -1643,7 +1644,7 @@ class Cmd(cmd.Cmd):
             else:
                 self.stdout.write(hi.pr())
 
-    def last_matching(self, arg):
+    def _last_matching(self, arg):
         """Return the last item from the history list that matches arg.  Or if arg not provided, retern last item.
 
         If not match is found, return None.
@@ -1716,7 +1717,7 @@ class Cmd(cmd.Cmd):
         filename = self.default_file_name
         if arg:
             try:
-                buffer = self.last_matching(int(arg))
+                buffer = self._last_matching(int(arg))
             except ValueError:
                 filename = arg
                 buffer = ''
@@ -1801,7 +1802,7 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
     file_path   - location to save script of command(s) to (default: value stored in `default_file_name` parameter)"""
         self.stdout.write("{}\n".format(help_str))
 
-    def read_file_or_url(self, fname):
+    def _read_file_or_url(self, fname):
         """Open a file or URL for reading by the do_load() method.
 
         This method methodically proceeds in the following path until it succeeds (or fails in the end):
@@ -1847,7 +1848,7 @@ relative to the already-running script's directory.
         if arg:
             arg = arg.split(None, 1)
             targetname, args = arg[0], (arg[1:] or [''])[0]
-            targetname = os.path.join(self.current_script_dir or '', targetname)
+            targetname = os.path.join(self._current_script_dir or '', targetname)
             self.do_load('%s %s' % (targetname, args))
 
     def do_load(self, file_path=None):
@@ -1867,7 +1868,7 @@ relative to the already-running script's directory.
             file_path = file_path.split(None, 1)
             targetname, args = file_path[0], (file_path[1:] or [''])[0].strip()
         try:
-            target = self.read_file_or_url(targetname)
+            target = self._read_file_or_url(targetname)
         except IOError as e:
             self.perror('Problem accessing script from %s: \n%s' % (targetname, e))
             return
@@ -1876,7 +1877,7 @@ relative to the already-running script's directory.
         self.stdin = target
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
-        self.current_script_dir = os.path.split(targetname)[0]
+        self._current_script_dir = os.path.split(targetname)[0]
         stop = self._cmdloop()
         self.stdin.close()
         keepstate.restore()
@@ -1905,7 +1906,7 @@ Script should contain one command per line, just like command would be typed in 
         * arg is string -> run most recent command by string search
         * arg is /enclosed in forward-slashes/ -> run most recent by regex
         """
-        runme = self.last_matching(arg)
+        runme = self._last_matching(arg)
         self.pfeedback(runme)
         if runme:
             return self.onecmd_plus_hooks(runme)
@@ -1938,7 +1939,7 @@ Script should contain one command per line, just like command would be typed in 
         result = runner.run(testcase)
         result.printErrors()
 
-    def run_commands_at_invocation(self, callargs):
+    def _run_commands_at_invocation(self, callargs):
         """Runs commands provided as arguments on the command line when the application is started.
 
         :param callargs: List[str] - list of strings where each string is a command plus its arguments
@@ -1986,7 +1987,7 @@ Script should contain one command per line, just like command would be typed in 
             stop = False
             # If allowed, process any commands present as arguments on the command-line, if allowed
             if self.allow_cli_args:
-                stop = self.run_commands_at_invocation(callargs)
+                stop = self._run_commands_at_invocation(callargs)
 
             # And then call _cmdloop() if there wasn't something in those causing us to quit
             if not stop:
