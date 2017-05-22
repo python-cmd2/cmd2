@@ -1,10 +1,17 @@
 News
 ====
 
+0.7.2
+-----
+
+*Release date: 2017-05-22*
+
+* Added a MANIFEST.ini file to make sure a few extra files get included in the PyPI source distribution
+
 0.7.1
 -----
 
-*Release date: TBD*
+*Release date: 2017-05-22*
 
 * Bug fixes
     * ``-`` wasn't being treated as a legal character
