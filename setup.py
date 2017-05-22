@@ -5,7 +5,7 @@ Setuptools setup file, used to install or test 'cmd2'
 """
 from setuptools import setup
 
-VERSION = '0.7.2'
+VERSION = '0.7.3a'
 DESCRIPTION = "Extra features for standard library's cmd module"
 
 LONG_DESCRIPTION = """cmd2 is an enhancement to the standard library's cmd module for Python 2.7
