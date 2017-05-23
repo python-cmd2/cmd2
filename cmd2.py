@@ -1528,7 +1528,7 @@ class Cmd(cmd.Cmd):
             if len(possible_path) == 0 and not text:
                 return []
 
-            if os.path.sep not in possible_path:
+            if os.path.sep not in possible_path and possible_path != '~':
                 # The text before the search text is not a directory path.
                 # It is OK to try shell command completion.
                 command_completions = self._shell_command_complete(text)
