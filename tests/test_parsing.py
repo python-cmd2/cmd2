@@ -26,13 +26,16 @@ def parser():
     c = cmd2.Cmd()
     c.multilineCommands = ['multiline']
     c.case_insensitive = True
-    c._init_parser()
-    return c.parser
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
+                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser)
+    return c.parser_manager.main_parser
 
 @pytest.fixture
 def input_parser():
     c = cmd2.Cmd()
-    return c.inputParser
+    return c.parser_manager.input_source_parser
 
 
 def test_remaining_args():
