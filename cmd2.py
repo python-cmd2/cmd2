@@ -576,23 +576,23 @@ class Cmd(cmd.Cmd):
     """
     # Attributes which are NOT dynamically settable at runtime
 
-
-    allow_cli_args = True  # Should arguments passed on the command-line be processed as commands?
-    allow_redirection = True  # Should output redirection and pipes be allowed
+    allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
+    allow_redirection = True    # Should output redirection and pipes be allowed
     blankLinesAllowed = False
-    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
-    commentGrammars.addParseAction(lambda x: '')
+    commentGrammars = pyparsing.Or(
+         [pyparsing.pythonStyleComment, pyparsing.cStyleComment]
+         )
     commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
 
-    default_to_shell = False
-    defaultExtension = 'txt'  # For ``save``, ``load``, etc.
+    default_to_shell = False    # Attempt to run unrecognized commands as shell commands
+    defaultExtension = 'txt'    # For ``save``, ``load``, etc.
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
 
     # make sure your terminators are not in legalChars!
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
     multilineCommands = []  # NOTE: Multiline commands can never be abbreviated, even if abbrev is True
     prefixParser = pyparsing.Empty()
-    redirector = '>'  # for sending output to file
+    redirector = '>'            # for sending output to file
     reserved_words = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     terminators = [';']
@@ -658,17 +658,18 @@ class Cmd(cmd.Cmd):
         # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
         cmd.Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
 
+        self._finalize_app_parameters()
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
         # noinspection PyUnresolvedReferences
-        self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self)
                                                if fname.startswith('do_')]
         self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators, multilineCommands=self.multilineCommands,
                           legalChars=self.legalChars, commentGrammars=self.commentGrammars,
                           commentInProgress=self.commentInProgress, case_insensitive=self.case_insensitive,
-                          blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser)
+                          blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
+                          preparse=self.preparse, postparse=self.postparse, shortcuts=self.shortcuts)
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -705,6 +706,10 @@ class Cmd(cmd.Cmd):
         self._current_script_dir = None
 
     # -----  Methods related to presenting output to the user -----
+
+    def _finalize_app_parameters(self):
+        self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
+        self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
 
     def poutput(self, msg):
         """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
@@ -883,44 +888,14 @@ class Cmd(cmd.Cmd):
         """Keep accepting lines of input until the command is complete."""
         if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
             raise EmptyStatement()
-        statement = self._parsed(line)
+        statement = self.parser_manager.parsed(line)
         while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
             statement = '%s\n%s' % (statement.parsed.raw,
                                     self.pseudo_raw_input(self.continuation_prompt))
-            statement = self._parsed(statement)
+            statement = self.parser_manager.parsed(statement)
         if not statement.parsed.command:
             raise EmptyStatement()
         return statement
-
-    def _parsed(self, raw):
-        """ This function is where the actual parsing of each line occurs.
-
-        :param raw: str - the line of text as it was entered
-        :return: ParsedString - custom subclass of str with extra attributes
-        """
-        if isinstance(raw, ParsedString):
-            p = raw
-        else:
-            # preparse is an overridable hook; default makes no changes
-            s = self.preparse(raw)
-            s = self.parser_manager.input_source_parser.transformString(s.lstrip())
-            s = self.commentGrammars.transformString(s)
-            for (shortcut, expansion) in self.shortcuts:
-                if s.lower().startswith(shortcut):
-                    s = s.replace(shortcut, expansion + ' ', 1)
-                    break
-            try:
-                result = self.parser_manager.main_parser.parseString(s)
-            except pyparsing.ParseException:
-                # If we have a parsing failure, treat it is an empty command and move to next prompt
-                result = self.parser_manager.main_parser.parseString('')
-            result['raw'] = raw
-            result['command'] = result.multilineCommand or result.command
-            result = self.postparse(result)
-            p = ParsedString(result.args)
-            p.parsed = result
-            p.parser = self._parsed
-        return p
 
     def _redirect_output(self, statement):
         """Handles output redirection for >, >>, and |.
@@ -1017,7 +992,7 @@ class Cmd(cmd.Cmd):
         :param line: ParsedString - subclass of string including the pyparsing ParseResults
         :return: bool - a flag indicating whether the interpretation of commands should stop
         """
-        statement = self._parsed(line)
+        statement = self.parser_manager.parsed(line)
         self.lastcmd = statement.parsed.raw
         funcname = self._func_named(statement.parsed.command)
         if not funcname:
@@ -1945,17 +1920,23 @@ Script should contain one command per line, just like command would be typed in 
 class ParserManager:
 
     def __init__(self, redirector, terminators, multilineCommands, legalChars, commentGrammars,
-                     commentInProgress, case_insensitive, blankLinesAllowed, prefixParser):
+                     commentInProgress, case_insensitive, blankLinesAllowed, prefixParser,
+                     preparse, postparse, shortcuts):
         "Creates and uses parsers for user input according to app's paramters."
+
+        self.commentGrammars = commentGrammars
+        self.preparse = preparse
+        self.postparse = postparse
+        self.shortcuts = shortcuts
 
         self.main_parser = self._build_main_parser(
             redirector=redirector, terminators=terminators, multilineCommands=multilineCommands,
-            legalChars=legalChars, commentGrammars=commentGrammars,
+            legalChars=legalChars,
             commentInProgress=commentInProgress, case_insensitive=case_insensitive,
             blankLinesAllowed=blankLinesAllowed, prefixParser=prefixParser)
         self.input_source_parser = self._build_input_source_parser(legalChars=legalChars, commentInProgress=commentInProgress)
 
-    def _build_main_parser(self, redirector, terminators, multilineCommands, legalChars, commentGrammars,
+    def _build_main_parser(self, redirector, terminators, multilineCommands, legalChars,
                            commentInProgress, case_insensitive, blankLinesAllowed, prefixParser):
         "Builds a PyParsing parser for interpreting user commands."
 
@@ -1971,8 +1952,7 @@ class ParserManager:
             [pyparsing.Keyword(c, caseless=case_insensitive) for c in multilineCommands])('multilineCommand')
         oneline_command = (~multilineCommand + pyparsing.Word(legalChars))('command')
         pipe = pyparsing.Keyword('|', identChars='|')
-        commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
-        do_not_parse = commentGrammars | commentInProgress | pyparsing.quotedString
+        do_not_parse = self.commentGrammars | commentInProgress | pyparsing.quotedString
         after_elements = \
             pyparsing.Optional(pipe + pyparsing.SkipTo(output_destination_parser ^ string_end, ignore=do_not_parse)('pipeTo')) + \
             pyparsing.Optional(output_destination_parser +
@@ -2015,7 +1995,7 @@ class ParserManager:
             blankLineTerminationParser |
             multilineCommand + pyparsing.SkipTo(string_end, ignore=do_not_parse)
         )
-        parser.ignore(commentGrammars)
+        parser.ignore(self.commentGrammars)
         return parser
 
     def _build_input_source_parser(self, legalChars, commentInProgress):
@@ -2032,6 +2012,36 @@ class ParserManager:
             pyparsing.Optional(file_name) + (pyparsing.stringEnd | '|')
         inputParser.ignore(commentInProgress)
         return inputParser
+
+    def parsed(self, raw):
+        """ This function is where the actual parsing of each line occurs.
+
+        :param raw: str - the line of text as it was entered
+        :return: ParsedString - custom subclass of str with extra attributes
+        """
+        if isinstance(raw, ParsedString):
+            p = raw
+        else:
+            # preparse is an overridable hook; default makes no changes
+            s = self.preparse(raw)
+            s = self.input_source_parser.transformString(s.lstrip())
+            s = self.commentGrammars.transformString(s)
+            for (shortcut, expansion) in self.shortcuts:
+                if s.lower().startswith(shortcut):
+                    s = s.replace(shortcut, expansion + ' ', 1)
+                    break
+            try:
+                result = self.main_parser.parseString(s)
+            except pyparsing.ParseException:
+                # If we have a parsing failure, treat it is an empty command and move to next prompt
+                result = self.main_parser.parseString('')
+            result['raw'] = raw
+            result['command'] = result.multilineCommand or result.command
+            result = self.postparse(result)
+            p = ParsedString(result.args)
+            p.parsed = result
+            p.parser = self.parsed
+        return p
 
 
 
