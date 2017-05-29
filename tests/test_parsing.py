@@ -29,7 +29,8 @@ def parser():
     c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
                           legalChars=c.legalChars, commentGrammars=c.commentGrammars,
                           commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
-                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser)
+                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager.main_parser
 
 @pytest.fixture
