@@ -881,6 +881,37 @@ class Cmd(cmd.Cmd):
         """
         return stop
 
+    def parseline(self, line):
+        """Parse the line into a command name and a string containing the arguments.
+
+        NOTE: This is an override of a parent class method.  It is only used by other parent class methods.  But
+        we do need to override it here so that the additional shortcuts present in cmd2 get properly expanded for
+        purposes of tab completion.
+
+        Used for command tab completion.  Returns a tuple containing (command, args, line).
+        'command' and 'args' may be None if the line couldn't be parsed.
+
+        :param line: str - line read by readline
+        :return: (str, str, str) - tuple containing (command, args, line)
+        """
+        line = line.strip()
+
+        if not line:
+            # Deal with empty line or all whitespace line
+            return None, None, line
+
+        # Expand command shortcuts to the full command name
+        for (shortcut, expansion) in self.shortcuts:
+            if line.startswith(shortcut):
+                line = line.replace(shortcut, expansion + ' ', 1)
+                break
+
+        i, n = 0, len(line)
+        while i < n and line[i] in self.identchars:
+            i += 1
+        command, arg = line[:i], line[i:].strip()
+        return command, arg, line
+
     def onecmd_plus_hooks(self, line):
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
