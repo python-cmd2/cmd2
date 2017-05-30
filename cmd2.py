@@ -548,7 +548,8 @@ def replace_with_file_contents(fname):
     """
     if fname:
         try:
-            result = open(os.path.expanduser(fname[0])).read()
+            with open(os.path.expanduser(fname[0])) as source_file:
+                result = source_file.read()
         except IOError:
             result = '< %s' % fname[0]  # wasn't a file after all
     else:
@@ -882,6 +883,10 @@ class Cmd(cmd.Cmd):
 
     def parseline(self, line):
         """Parse the line into a command name and a string containing the arguments.
+
+        NOTE: This is an override of a parent class method.  It is only used by other parent class methods.  But
+        we do need to override it here so that the additional shortcuts present in cmd2 get properly expanded for
+        purposes of tab completion.
 
         Used for command tab completion.  Returns a tuple containing (command, args, line).
         'command' and 'args' may be None if the line couldn't be parsed.
@@ -1882,7 +1887,7 @@ relative to the already-running script's directory.
             self.perror('Problem accessing script from %s: \n%s' % (targetname, e))
             return
         keepstate = Statekeeper(self, ('stdin', 'use_rawinput', 'prompt',
-                                       'continuation_prompt', 'current_script_dir'))
+                                       'continuation_prompt', '_current_script_dir'))
         self.stdin = target
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
