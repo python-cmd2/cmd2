@@ -87,7 +87,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.7.2'
+__version__ = '0.7.3a'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -1502,7 +1502,7 @@ class Cmd(cmd.Cmd):
             if len(possible_path) == 0 and not text:
                 return []
 
-            if os.path.sep not in possible_path:
+            if os.path.sep not in possible_path and possible_path != '~':
                 # The text before the search text is not a directory path.
                 # It is OK to try shell command completion.
                 command_completions = self._shell_command_complete(text)
