@@ -87,7 +87,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.7.2'
+__version__ = '0.7.3a'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -548,7 +548,8 @@ def replace_with_file_contents(fname):
     """
     if fname:
         try:
-            result = open(os.path.expanduser(fname[0])).read()
+            with open(os.path.expanduser(fname[0])) as source_file:
+                result = source_file.read()
         except IOError:
             result = '< %s' % fname[0]  # wasn't a file after all
     else:
@@ -820,33 +821,6 @@ class Cmd(cmd.Cmd):
         :return: bool - True implies the entire application should exit.
         """
         return stop
-
-    def parseline(self, line):
-        """Parse the line into a command name and a string containing the arguments.
-
-        Used for command tab completion.  Returns a tuple containing (command, args, line).
-        'command' and 'args' may be None if the line couldn't be parsed.
-
-        :param line: str - line read by readline
-        :return: (str, str, str) - tuple containing (command, args, line)
-        """
-        line = line.strip()
-
-        if not line:
-            # Deal with empty line or all whitespace line
-            return None, None, line
-
-        # Expand command shortcuts to the full command name
-        for (shortcut, expansion) in self.shortcuts:
-            if line.startswith(shortcut):
-                line = line.replace(shortcut, expansion + ' ', 1)
-                break
-
-        i, n = 0, len(line)
-        while i < n and line[i] in self.identchars:
-            i += 1
-        command, arg = line[:i], line[i:].strip()
-        return command, arg, line
 
     def onecmd_plus_hooks(self, line):
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
@@ -1439,7 +1413,7 @@ class Cmd(cmd.Cmd):
             if len(possible_path) == 0 and not text:
                 return []
 
-            if os.path.sep not in possible_path:
+            if os.path.sep not in possible_path and possible_path != '~':
                 # The text before the search text is not a directory path.
                 # It is OK to try shell command completion.
                 command_completions = self._shell_command_complete(text)
