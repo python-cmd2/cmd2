@@ -548,7 +548,8 @@ def replace_with_file_contents(fname):
     """
     if fname:
         try:
-            result = open(os.path.expanduser(fname[0])).read()
+            with open(os.path.expanduser(fname[0])) as source_file:
+                result = source_file.read()
         except IOError:
             result = '< %s' % fname[0]  # wasn't a file after all
     else:
@@ -879,33 +880,6 @@ class Cmd(cmd.Cmd):
         :return: bool - True implies the entire application should exit.
         """
         return stop
-
-    def parseline(self, line):
-        """Parse the line into a command name and a string containing the arguments.
-
-        Used for command tab completion.  Returns a tuple containing (command, args, line).
-        'command' and 'args' may be None if the line couldn't be parsed.
-
-        :param line: str - line read by readline
-        :return: (str, str, str) - tuple containing (command, args, line)
-        """
-        line = line.strip()
-
-        if not line:
-            # Deal with empty line or all whitespace line
-            return None, None, line
-
-        # Expand command shortcuts to the full command name
-        for (shortcut, expansion) in self.shortcuts:
-            if line.startswith(shortcut):
-                line = line.replace(shortcut, expansion + ' ', 1)
-                break
-
-        i, n = 0, len(line)
-        while i < n and line[i] in self.identchars:
-            i += 1
-        command, arg = line[:i], line[i:].strip()
-        return command, arg, line
 
     def onecmd_plus_hooks(self, line):
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
@@ -1882,7 +1856,7 @@ relative to the already-running script's directory.
             self.perror('Problem accessing script from %s: \n%s' % (targetname, e))
             return
         keepstate = Statekeeper(self, ('stdin', 'use_rawinput', 'prompt',
-                                       'continuation_prompt', 'current_script_dir'))
+                                       'continuation_prompt', '_current_script_dir'))
         self.stdin = target
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
