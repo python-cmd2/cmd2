@@ -587,6 +587,7 @@ class Cmd(cmd.Cmd):
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
     defaultExtension = 'txt'    # For ``save``, ``load``, etc.
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
+    exclude_from_help = ['do_eof']  # Commands to exclude from the help menu
 
     # make sure your terminators are not in legalChars!
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
@@ -1127,15 +1128,56 @@ class Cmd(cmd.Cmd):
     def do_help(self, arg):
         """List available commands with "help" or detailed help with "help cmd"."""
         if arg:
+            # Getting help for a specific command
             funcname = self._func_named(arg)
             if funcname:
                 fn = getattr(self, funcname)
                 try:
+                    # Use Optparse help for @options commands
                     fn.optionParser.print_help(file=self.stdout)
                 except AttributeError:
+                    # No special behavior needed, delegate to cmd base class do_help()
                     cmd.Cmd.do_help(self, funcname[3:])
         else:
-            cmd.Cmd.do_help(self, arg)
+            # Show a menu of what commands help can be gotten for
+            self._help_menu()
+
+    def _help_menu(self):
+        """Show a list of commands which help can be displayed for.
+        """
+        # Get a list of all method names
+        names = self.get_names()
+
+        # Remove any command names which are explicitly excluded from the help menu
+        for name in self.exclude_from_help:
+            names.remove(name)
+
+        cmds_doc = []
+        cmds_undoc = []
+        help_dict = {}
+        for name in names:
+            if name[:5] == 'help_':
+                help_dict[name[5:]] = 1
+        names.sort()
+        # There can be duplicates if routines overridden
+        prevname = ''
+        for name in names:
+            if name[:3] == 'do_':
+                if name == prevname:
+                    continue
+                prevname = name
+                command = name[3:]
+                if command in help_dict:
+                    cmds_doc.append(command)
+                    del help_dict[command]
+                elif getattr(self, name).__doc__:
+                    cmds_doc.append(command)
+                else:
+                    cmds_undoc.append(command)
+        self.stdout.write("%s\n" % str(self.doc_leader))
+        self.print_topics(self.doc_header, cmds_doc, 15, 80)
+        self.print_topics(self.misc_header, list(help_dict.keys()), 15, 80)
+        self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
     # noinspection PyUnusedLocal
     def do_shortcuts(self, args):
