@@ -1181,7 +1181,7 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyUnusedLocal
     def do_shortcuts(self, args):
-        """Lists single-key shortcuts available."""
+        """Lists shortcuts (aliases) available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.stdout.write("Single-key shortcuts for other commands:\n{}\n".format(result))
 
@@ -1509,7 +1509,7 @@ class Cmd(cmd.Cmd):
         py: Enters interactive Python mode.
         End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
         Non-python commands can be issued with ``cmd("your command")``.
-        Run python code from external files with ``run("filename.py")``
+        Run python code from external script files with ``run("filename.py")``
         """
         if self._in_py:
             self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
@@ -1802,7 +1802,7 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
     def do__relative_load(self, arg=None):
         """Runs commands in script at file or URL.
 
-    Usage:  load [file_path]
+    Usage:  _relative_load [file_path]
 
     optional argument:
     file_path   a file path or URL pointing to a script
@@ -1812,6 +1812,8 @@ Script should contain one command per line, just like command would be typed in 
 
 If this is called from within an already-running script, the filename will be interpreted
 relative to the already-running script's directory.
+
+NOTE: This command is intended to only be used within text file scripts.
         """
         if arg:
             arg = arg.split(None, 1)
