@@ -576,7 +576,6 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
     # Attributes which are NOT dynamically settable at runtime
-
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
     allow_redirection = True    # Should output redirection and pipes be allowed
     blankLinesAllowed = False
@@ -666,11 +665,13 @@ class Cmd(cmd.Cmd):
         # noinspection PyUnresolvedReferences
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self)
                                                if fname.startswith('do_')]
-        self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators, multilineCommands=self.multilineCommands,
-                          legalChars=self.legalChars, commentGrammars=self.commentGrammars,
-                          commentInProgress=self.commentInProgress, case_insensitive=self.case_insensitive,
-                          blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
-                          preparse=self.preparse, postparse=self.postparse, shortcuts=self.shortcuts)
+        self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
+                                            multilineCommands=self.multilineCommands,
+                                            legalChars=self.legalChars, commentGrammars=self.commentGrammars,
+                                            commentInProgress=self.commentInProgress,
+                                            case_insensitive=self.case_insensitive,
+                                            blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
+                                            preparse=self.preparse, postparse=self.postparse, shortcuts=self.shortcuts)
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -1922,28 +1923,31 @@ Script should contain one command per line, just like command would be typed in 
         self.postloop()
 
 
+# noinspection PyPep8Naming
 class ParserManager:
-
-    def __init__(self, redirector, terminators, multilineCommands, legalChars, commentGrammars,
-                     commentInProgress, case_insensitive, blankLinesAllowed, prefixParser,
-                     preparse, postparse, shortcuts):
-        "Creates and uses parsers for user input according to app's paramters."
+    """
+    Class which encapsulates all of the pyparsing parser functionality for cmd2 in a single location.
+    """
+    def __init__(self, redirector, terminators, multilineCommands, legalChars, commentGrammars, commentInProgress,
+                 case_insensitive, blankLinesAllowed, prefixParser, preparse, postparse, shortcuts):
+        """Creates and uses parsers for user input according to app's paramters."""
 
         self.commentGrammars = commentGrammars
         self.preparse = preparse
         self.postparse = postparse
         self.shortcuts = shortcuts
 
-        self.main_parser = self._build_main_parser(
-            redirector=redirector, terminators=terminators, multilineCommands=multilineCommands,
-            legalChars=legalChars,
-            commentInProgress=commentInProgress, case_insensitive=case_insensitive,
-            blankLinesAllowed=blankLinesAllowed, prefixParser=prefixParser)
-        self.input_source_parser = self._build_input_source_parser(legalChars=legalChars, commentInProgress=commentInProgress)
+        self.main_parser = self._build_main_parser(redirector=redirector, terminators=terminators,
+                                                   multilineCommands=multilineCommands, legalChars=legalChars,
+                                                   commentInProgress=commentInProgress,
+                                                   case_insensitive=case_insensitive,
+                                                   blankLinesAllowed=blankLinesAllowed, prefixParser=prefixParser)
+        self.input_source_parser = self._build_input_source_parser(legalChars=legalChars,
+                                                                   commentInProgress=commentInProgress)
 
     def _build_main_parser(self, redirector, terminators, multilineCommands, legalChars,
                            commentInProgress, case_insensitive, blankLinesAllowed, prefixParser):
-        "Builds a PyParsing parser for interpreting user commands."
+        """Builds a PyParsing parser for interpreting user commands."""
 
         # Build several parsing components that are eventually compiled into overall parser
         output_destination_parser = (pyparsing.Literal(redirector * 2) |
@@ -1959,7 +1963,8 @@ class ParserManager:
         pipe = pyparsing.Keyword('|', identChars='|')
         do_not_parse = self.commentGrammars | commentInProgress | pyparsing.quotedString
         after_elements = \
-            pyparsing.Optional(pipe + pyparsing.SkipTo(output_destination_parser ^ string_end, ignore=do_not_parse)('pipeTo')) + \
+            pyparsing.Optional(pipe + pyparsing.SkipTo(output_destination_parser ^ string_end,
+                                                       ignore=do_not_parse)('pipeTo')) + \
             pyparsing.Optional(output_destination_parser +
                                pyparsing.SkipTo(string_end,
                                                 ignore=do_not_parse).setParseAction(lambda x: x[0].strip())('outputTo'))
@@ -1972,24 +1977,23 @@ class ParserManager:
             blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
             blankLineTerminator.setResultsName('terminator')
             blankLineTerminationParser = ((multilineCommand ^ oneline_command) +
-                                               pyparsing.SkipTo(blankLineTerminator,
-                                                                ignore=do_not_parse).setParseAction(
-                                                   lambda x: x[0].strip())('args') +
-                                               blankLineTerminator)('statement')
+                                          pyparsing.SkipTo(blankLineTerminator, ignore=do_not_parse).setParseAction(
+                                                   lambda x: x[0].strip())('args') + blankLineTerminator)('statement')
 
         multilineParser = (((multilineCommand ^ oneline_command) +
-                                 pyparsing.SkipTo(terminator_parser,
-                                                  ignore=do_not_parse).setParseAction(
-                                     lambda x: x[0].strip())('args') + terminator_parser)('statement') +
-                                pyparsing.SkipTo(output_destination_parser ^ pipe ^ string_end, ignore=do_not_parse).setParseAction(
-                                    lambda x: x[0].strip())('suffix') + after_elements)
+                            pyparsing.SkipTo(terminator_parser,
+                                             ignore=do_not_parse).setParseAction(lambda x: x[0].strip())('args') +
+                            terminator_parser)('statement') +
+                           pyparsing.SkipTo(output_destination_parser ^ pipe ^ string_end,
+                                            ignore=do_not_parse).setParseAction(lambda x: x[0].strip())('suffix') +
+                           after_elements)
         multilineParser.ignore(commentInProgress)
 
         singleLineParser = ((oneline_command +
-                                  pyparsing.SkipTo(terminator_parser ^ string_end ^ pipe ^ output_destination_parser,
-                                                   ignore=do_not_parse).setParseAction(
-                                      lambda x: x[0].strip())('args'))('statement') +
-                                 pyparsing.Optional(terminator_parser) + after_elements)
+                             pyparsing.SkipTo(terminator_parser ^ string_end ^ pipe ^ output_destination_parser,
+                                              ignore=do_not_parse).setParseAction(
+                                 lambda x: x[0].strip())('args'))('statement') +
+                            pyparsing.Optional(terminator_parser) + after_elements)
 
         blankLineTerminationParser = blankLineTerminationParser.setResultsName('statement')
 
@@ -2003,8 +2007,9 @@ class ParserManager:
         parser.ignore(self.commentGrammars)
         return parser
 
-    def _build_input_source_parser(self, legalChars, commentInProgress):
-        "Builds a PyParsing parser for alternate user input sources (from file, pipe, etc.)"
+    @staticmethod
+    def _build_input_source_parser(legalChars, commentInProgress):
+        """Builds a PyParsing parser for alternate user input sources (from file, pipe, etc.)"""
 
         input_mark = pyparsing.Literal('<')
         input_mark.setParseAction(lambda x: '')
@@ -2047,8 +2052,6 @@ class ParserManager:
             p.parsed = result
             p.parser = self.parsed
         return p
-
-
 
 
 class HistoryItem(str):
