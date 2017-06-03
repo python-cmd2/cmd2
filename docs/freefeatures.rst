@@ -220,8 +220,6 @@ also provide `bash-like history list editing`_.
 
 .. automethod:: cmd2.Cmd.do_history
 
-.. automethod:: cmd2.Cmd.do_list
-
 .. automethod:: cmd2.Cmd.do_run
 
 Quitting the application
