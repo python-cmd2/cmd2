@@ -142,48 +142,62 @@ shortcuts
 """)
     assert out == expected
 
-
-def test_base_list(base_app):
+def test_history_with_string_argument(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
-    out = run_cmd(base_app, 'list')
+    run_cmd(base_app, 'help history')
+    out = run_cmd(base_app, 'history help')
     expected = normalize("""
+-------------------------[1]
+help
+-------------------------[3]
+help history
+""")
+    assert out == expected
+
+
+def test_history_with_integer_argument(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    out = run_cmd(base_app, 'history 1')
+    expected = normalize("""
+-------------------------[1]
+help
+""")
+    assert out == expected
+
+
+def test_history_with_integer_span(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    run_cmd(base_app, 'help history')
+    out = run_cmd(base_app, 'history 1..2')
+    expected = normalize("""
+-------------------------[1]
+help
 -------------------------[2]
 shortcuts
 """)
     assert out == expected
 
-
-def test_list_with_string_argument(base_app):
+def test_history_with_span_start(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
-    run_cmd(base_app, 'help list')
-    out = run_cmd(base_app, 'list help')
+    run_cmd(base_app, 'help history')
+    out = run_cmd(base_app, 'history 2:')
     expected = normalize("""
--------------------------[1]
-help
+-------------------------[2]
+shortcuts
 -------------------------[3]
-help list
+help history
 """)
     assert out == expected
 
-
-def test_list_with_integer_argument(base_app):
+def test_history_with_span_end(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
-    out = run_cmd(base_app, 'list 1')
-    expected = normalize("""
--------------------------[1]
-help
-""")
-    assert out == expected
-
-
-def test_list_with_integer_span(base_app):
-    run_cmd(base_app, 'help')
-    run_cmd(base_app, 'shortcuts')
-    run_cmd(base_app, 'help list')
-    out = run_cmd(base_app, 'list 1..2')
+    run_cmd(base_app, 'help history')
+    out = run_cmd(base_app, 'history :2')
     expected = normalize("""
 -------------------------[1]
 help

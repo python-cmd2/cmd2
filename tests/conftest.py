@@ -15,8 +15,8 @@ import cmd2
 # Help text for base cmd2.Cmd application
 BASE_HELP = """Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  history  load   py    run   set    shortcuts
-cmdenvironment  help  list     pause  quit  save  shell  show
+_relative_load  edit  history  pause  quit  save  shell      show
+cmdenvironment  help  load     py     run   set   shortcuts
 """
 
 # Help text for the history command
@@ -24,7 +24,8 @@ HELP_HISTORY = """history [arg]: lists past commands issued
 
         | no arg:         list all
         | arg is integer: list one history item, by index
-        | arg is string:  string search
+        | a..b, a:b, a:, ..b -> list history items by a span of indices (inclusive)
+        | arg is string:  list all commands matching string search
         | arg is /enclosed in forward-slashes/: regular expression search
 
 Usage: history [options] (limit on which commands to include)

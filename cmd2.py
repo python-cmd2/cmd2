@@ -1592,7 +1592,8 @@ class Cmd(cmd.Cmd):
 
         | no arg:         list all
         | arg is integer: list one history item, by index
-        | arg is string:  string search
+        | a..b, a:b, a:, ..b -> list history items by a span of indices (inclusive)
+        | arg is string:  list all commands matching string search
         | arg is /enclosed in forward-slashes/: regular expression search
         """
         # If arguments are being passed as a list instead of as a string
@@ -1602,10 +1603,20 @@ class Cmd(cmd.Cmd):
             else:
                 arg = ''
 
+        # If an argument was supplied, then retrieve partial contents of the history
         if arg:
-            history = self.history.get(arg)
+            # If a character indicating a slice is present, retrieve a slice of the history
+            if '..' in arg or ':' in arg:
+                # Get a slice of history
+                history = self.history.span(arg)
+            else:
+                # Get item(s) from history by index or string search
+                history = self.history.get(arg)
         else:
+            # If no arg given, then retrieve the entire history
             history = self.history
+
+        # Display the history items retrieved
         for hi in history:
             if opts.script:
                 self.poutput(hi)
@@ -1627,38 +1638,6 @@ class Cmd(cmd.Cmd):
                 return self.history[-1]
         except IndexError:
             return None
-
-    def do_list(self, arg):
-        """list [arg]: lists command(s) from history in a flexible/searchable way.
-
-        :param arg: str - behavior varies as follows:
-
-        * no arg -> list most recent command
-        * arg is integer -> list one history item, by index
-        * a..b, a:b, a:, ..b -> list spans from a (or start) to b (or end)
-        * arg is string -> list all commands matching string search
-        * arg is /enclosed in forward-slashes/ -> regular expression search
-        """
-        try:
-            history = self.history.span(arg or '-1')
-        except IndexError:
-            history = self.history.search(arg)
-        for hi in history:
-            self.poutput(hi.pr())
-
-    def help_list(self):
-        """Print help for do_list()."""
-        help_str = """Lists command(s) from history in a flexible/searchable way.
-
-    Usage:  list [arg]
-
-    Where arg is:
-    no arg                               -> list most recent command
-    arg is integer                       -> list one history item, by index
-    a..b, a:b, a:, ..b                   -> list spans from a (or start) to b (or end)
-    arg is string                        -> list all commands matching string search
-    arg is /enclosed in forward-slashes/ -> regular expression search"""
-        self.stdout.write("{}\n".format(help_str))
 
     def do_edit(self, arg):
         """Edit a file or command in a text editor.
@@ -2170,7 +2149,7 @@ class History(list):
             raise IndexError
         if not results.group('separator'):
             return [self[self._to_index(results.group('start'))]]
-        start = self._to_index(results.group('start'))
+        start = self._to_index(results.group('start')) or 0  # Ensure start is not None
         end = self._to_index(results.group('end'))
         reverse = False
         if end is not None:
