@@ -1,6 +1,17 @@
 News
 ====
 
+0.7.3
+-----
+
+*Release date: TBD*
+
+* Bug fixes
+    * Fixed a bug in display a span of history items when only an end index is supplied
+* Enhancements
+    * Added the ability to exclude commands from the help menu (**eof** included by default)
+    * Redundant list command removed and features merged into history command
+
 0.7.2
 -----
 

@@ -142,48 +142,62 @@ shortcuts
 """)
     assert out == expected
 
-
-def test_base_list(base_app):
+def test_history_with_string_argument(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
-    out = run_cmd(base_app, 'list')
+    run_cmd(base_app, 'help history')
+    out = run_cmd(base_app, 'history help')
     expected = normalize("""
+-------------------------[1]
+help
+-------------------------[3]
+help history
+""")
+    assert out == expected
+
+
+def test_history_with_integer_argument(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    out = run_cmd(base_app, 'history 1')
+    expected = normalize("""
+-------------------------[1]
+help
+""")
+    assert out == expected
+
+
+def test_history_with_integer_span(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    run_cmd(base_app, 'help history')
+    out = run_cmd(base_app, 'history 1..2')
+    expected = normalize("""
+-------------------------[1]
+help
 -------------------------[2]
 shortcuts
 """)
     assert out == expected
 
-
-def test_list_with_string_argument(base_app):
+def test_history_with_span_start(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
-    run_cmd(base_app, 'help list')
-    out = run_cmd(base_app, 'list help')
+    run_cmd(base_app, 'help history')
+    out = run_cmd(base_app, 'history 2:')
     expected = normalize("""
--------------------------[1]
-help
+-------------------------[2]
+shortcuts
 -------------------------[3]
-help list
+help history
 """)
     assert out == expected
 
-
-def test_list_with_integer_argument(base_app):
+def test_history_with_span_end(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
-    out = run_cmd(base_app, 'list 1')
-    expected = normalize("""
--------------------------[1]
-help
-""")
-    assert out == expected
-
-
-def test_list_with_integer_span(base_app):
-    run_cmd(base_app, 'help')
-    run_cmd(base_app, 'shortcuts')
-    run_cmd(base_app, 'help list')
-    out = run_cmd(base_app, 'list 1..2')
+    run_cmd(base_app, 'help history')
+    out = run_cmd(base_app, 'history :2')
     expected = normalize("""
 -------------------------[1]
 help
@@ -201,17 +215,13 @@ def test_base_cmdenvironment(base_app):
         Commands may be terminated with: [';']
         Command-line arguments allowed: True
         Output redirection and pipes allowed: True
+        Parsing of @options commands:
+            Use POSIX-style argument parser (vs Windows): False
+            Strip Quotes when using Windows-style argument parser: True
+            Use a list of arguments instead of a single argument string: False
+            
 """)
-    assert out[:4] == expected[:4]
-    assert out[4].strip().startswith('Settable parameters: ')
-
-    # Settable parameters can be listed in any order, so need to validate carefully using unordered sets
-    settable_params = {'continuation_prompt', 'default_file_name', 'prompt', 'abbrev', 'quiet', 'case_insensitive',
-                       'colors', 'echo', 'timing', 'editor', 'feedback_to_output', 'debug', 'autorun_on_edit',
-                       'locals_in_py'}
-    out_params = set(out[4].split("Settable parameters: ")[1].split())
-    assert settable_params == out_params
-
+    assert out == expected
 
 def test_base_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)

@@ -3,8 +3,8 @@
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  help     list  orate  py    run   say  shell      show
-cmdenvironment  eof   history  load  pause  quit  save  set  shortcuts  speak
+_relative_load  edit  history  orate  py    run   say  shell      show
+cmdenvironment  help  load     pause  quit  save  set  shortcuts  speak
 
 (Cmd) help say
 Repeats what you tell me to.
