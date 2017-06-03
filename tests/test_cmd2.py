@@ -215,17 +215,13 @@ def test_base_cmdenvironment(base_app):
         Commands may be terminated with: [';']
         Command-line arguments allowed: True
         Output redirection and pipes allowed: True
+        Parsing of @options commands:
+            Use POSIX-style argument parser (vs Windows): False
+            Strip Quotes when using Windows-style argument parser: True
+            Use a list of arguments instead of a single argument string: False
+            
 """)
-    assert out[:4] == expected[:4]
-    assert out[4].strip().startswith('Settable parameters: ')
-
-    # Settable parameters can be listed in any order, so need to validate carefully using unordered sets
-    settable_params = {'continuation_prompt', 'default_file_name', 'prompt', 'abbrev', 'quiet', 'case_insensitive',
-                       'colors', 'echo', 'timing', 'editor', 'feedback_to_output', 'debug', 'autorun_on_edit',
-                       'locals_in_py'}
-    out_params = set(out[4].split("Settable parameters: ")[1].split())
-    assert settable_params == out_params
-
+    assert out == expected
 
 def test_base_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
