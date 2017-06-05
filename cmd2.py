@@ -1610,8 +1610,11 @@ class Cmd(cmd.Cmd):
         if arg:
             # If a character indicating a slice is present, retrieve a slice of the history
             if '..' in arg or ':' in arg:
-                # Get a slice of history
-                history = self.history.span(arg)
+                try:
+                    # Get a slice of history
+                    history = self.history.span(arg)
+                except IndexError:
+                    history = self.history.get(arg)
             else:
                 # Get item(s) from history by index or string search
                 history = self.history.get(arg)

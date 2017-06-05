@@ -206,6 +206,17 @@ shortcuts
 """)
     assert out == expected
 
+def test_history_with_span_index_error(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'help history')
+    run_cmd(base_app, '!ls -hal :')
+    out = run_cmd(base_app, 'history "hal :"')
+    expected = normalize("""
+-------------------------[3]
+!ls -hal :
+""")
+    assert out == expected
+
 
 def test_base_cmdenvironment(base_app):
     out = run_cmd(base_app, 'cmdenvironment')
