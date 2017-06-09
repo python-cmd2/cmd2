@@ -1090,7 +1090,10 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput and self.completekey:
             try:
                 self.old_completer = readline.get_completer()
+                self.old_delims = readline.get_completer_delims()
                 readline.set_completer(self.complete)
+                # Don't treat "-" as a readline delimiter since it is commonly used in filesystem paths
+                readline.set_completer_delims(self.old_delims.replace('-', ''))
                 readline.parse_and_bind(self.completekey + ": complete")
             except NameError:
                 pass
@@ -1109,6 +1112,7 @@ class Cmd(cmd.Cmd):
             if self.use_rawinput and self.completekey:
                 try:
                     readline.set_completer(self.old_completer)
+                    readline.set_completer_delims(self.old_delims)
                 except NameError:
                     pass
             return stop
