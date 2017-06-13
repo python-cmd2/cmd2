@@ -1516,67 +1516,71 @@ class Cmd(cmd.Cmd):
         py: Enters interactive Python mode.
         End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
         Non-python commands can be issued with ``cmd("your command")``.
-        Run python code from external script files with ``run("filename.py")``
+        Run python code from external script files with ``run("script.py")``
         """
         if self._in_py:
             self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
             return
         self._in_py = True
 
-        self.pystate['self'] = self
-        arg = arg.parsed.raw[2:].strip()
+        try:
+            self.pystate['self'] = self
+            arg = arg.strip()
 
-        # Support the run command even if called prior to invoking an interactive interpreter
-        def run(filename):
-            """Run a Python script file in the interactive console.
+            # Support the run command even if called prior to invoking an interactive interpreter
+            def run(filename):
+                """Run a Python script file in the interactive console.
 
-            :param filename: str - filename of *.py script file to run
-            """
-            try:
-                with open(filename) as f:
-                    interp.runcode(f.read())
-            except IOError as e:
-                self.perror(e)
+                :param filename: str - filename of *.py script file to run
+                """
+                try:
+                    with open(filename) as f:
+                        interp.runcode(f.read())
+                except IOError as e:
+                    self.perror(e)
 
-        def onecmd_plus_hooks(cmd_plus_args):
-            """Run a cmd2.Cmd command from a Python script or the interactive Python console.
+            def onecmd_plus_hooks(cmd_plus_args):
+                """Run a cmd2.Cmd command from a Python script or the interactive Python console.
 
-            :param cmd_plus_args: str - command line including command and arguments to run
-            :return: bool - True if cmdloop() should exit once leaving the interactive Python console, False otherwise.
-            """
-            return self.onecmd_plus_hooks(cmd_plus_args + '\n')
+                :param cmd_plus_args: str - command line including command and arguments to run
+                :return: bool - True if cmdloop() should exit once leaving the interactive Python console, False otherwise.
+                """
+                return self.onecmd_plus_hooks(cmd_plus_args + '\n')
 
-        self.pystate['run'] = run
-        self.pystate['cmd'] = onecmd_plus_hooks
+            self.pystate['run'] = run
+            self.pystate['cmd'] = onecmd_plus_hooks
 
-        localvars = (self.locals_in_py and self.pystate) or {}
-        interp = InteractiveConsole(locals=localvars)
-        interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
+            localvars = (self.locals_in_py and self.pystate) or {}
+            interp = InteractiveConsole(locals=localvars)
+            interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
-        if arg.strip():
-            interp.runcode(arg)
-        else:
-            # noinspection PyShadowingBuiltins
-            def quit():
-                """Function callable from the interactive Python console to exit that environment and return to cmd2."""
-                raise EmbeddedConsoleExit
+            if arg.strip():
+                interp.runcode(arg)
+            else:
+                # noinspection PyShadowingBuiltins
+                def quit():
+                    """Function callable from the interactive Python console to exit that environment and return to cmd2."""
+                    raise EmbeddedConsoleExit
 
-            self.pystate['quit'] = quit
-            self.pystate['exit'] = quit
+                self.pystate['quit'] = quit
+                self.pystate['exit'] = quit
 
-            keepstate = None
-            try:
-                cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
-                keepstate = Statekeeper(sys, ('stdin', 'stdout'))
-                sys.stdout = self.stdout
-                sys.stdin = self.stdin
-                interp.interact(banner="Python %s on %s\n%s\n(%s)\n%s" %
-                                       (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
-            except EmbeddedConsoleExit:
-                pass
-            if keepstate is not None:
-                keepstate.restore()
-        self._in_py = False
+                keepstate = None
+                try:
+                    cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+                    keepstate = Statekeeper(sys, ('stdin', 'stdout'))
+                    sys.stdout = self.stdout
+                    sys.stdin = self.stdin
+                    interp.interact(banner="Python %s on %s\n%s\n(%s)\n%s" %
+                                           (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
+                except EmbeddedConsoleExit:
+                    pass
+                if keepstate is not None:
+                    keepstate.restore()
+        except Exception:
+            pass
+        finally:
+            self._in_py = False
         return self._should_quit
 
     # Only include the do_ipy() method if IPython is available on the system
