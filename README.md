@@ -155,8 +155,9 @@ example/exampleSession.txt:
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  help     list  orate  py    run   say  shell      show
-cmdenvironment  eof   history  load  pause  quit  save  set  shortcuts  speak
+_relative_load  help     orate  pyscript  save  shell      speak
+cmdenvironment  history  pause  quit      say   shortcuts
+edit            load     py     run       set   show
 
 (Cmd) help say
 Repeats what you tell me to.

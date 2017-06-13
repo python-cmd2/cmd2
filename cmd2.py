@@ -1583,6 +1583,42 @@ class Cmd(cmd.Cmd):
             self._in_py = False
         return self._should_quit
 
+    # noinspection PyUnusedLocal
+    @options([], arg_desc='<script_path> [script_arguments]')
+    def do_pyscript(self, arg, opts=None):
+        """\nRuns a python script file inside the console
+
+Console commands can be executed inside this script with cmd("your command")
+However, you cannot run nested "py" or "pyscript" commands from within this script
+Paths or arguments that contain spaces must be enclosed in quotes
+"""
+        if not arg:
+            self.perror("pyscript command requires at least 1 argument ...", traceback_war=False)
+            self.do_help('pyscript')
+            return
+
+        if not USE_ARG_LIST:
+            arg = shlex.split(arg, posix=POSIX_SHLEX)
+
+        # Get the absolute path of the script
+        script_path = os.path.abspath(os.path.expanduser(arg[0]))
+
+        # Save current command line arguments
+        orig_args = sys.argv
+
+        # Overwrite sys.argv to allow the script to take command line arguments
+        sys.argv = [script_path]
+        sys.argv.extend(arg[1:])
+
+        # Run the script
+        self.do_py("run('{}')".format(arg[0]))
+
+        # Restore command line arguments to original state
+        sys.argv = orig_args
+
+    # Enable tab completion of paths for pyscript command
+    complete_pyscript = path_complete
+
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:
         # noinspection PyMethodMayBeStatic,PyUnusedLocal

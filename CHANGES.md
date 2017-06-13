@@ -11,6 +11,7 @@ News
 * Enhancements
     * Added the ability to exclude commands from the help menu (**eof** included by default)
     * Redundant list command removed and features merged into history command
+    * Added **pyscript** command which supports running Python scripts with arguments
 
 0.7.2
 -----
