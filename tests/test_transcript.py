@@ -270,7 +270,7 @@ def test_transcript_from_cmdloop(request, capsys):
 
     # Check for the unittest "OK" condition for the 1 test which ran
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
-    expected_end = "s\n\nOK\n\n"
+    expected_end = "s\n\nOK\n"
     out, err = capsys.readouterr()
     if six.PY3:
         assert err.startswith(expected_start)
@@ -296,7 +296,7 @@ def test_multiline_command_transcript_with_comments_at_beginning(request, capsys
 
     # Check for the unittest "OK" condition for the 1 test which ran
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
-    expected_end = "s\n\nOK\n\n"
+    expected_end = "s\n\nOK\n"
     out, err = capsys.readouterr()
     if six.PY3:
         assert err.startswith(expected_start)
@@ -329,7 +329,7 @@ def test_regex_transcript(request, capsys):
 
     # Check for the unittest "OK" condition for the 1 test which ran
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
-    expected_end = "s\n\nOK\n\n"
+    expected_end = "s\n\nOK\n"
     out, err = capsys.readouterr()
     if six.PY3:
         assert err.startswith(expected_start)

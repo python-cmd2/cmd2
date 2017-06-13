@@ -1895,8 +1895,7 @@ Script should contain one command per line, just like command would be typed in 
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
         runner = unittest.TextTestRunner()
-        result = runner.run(testcase)
-        result.printErrors()
+        runner.run(testcase)
 
     def _run_commands_at_invocation(self, callargs):
         """Runs commands provided as arguments on the command line when the application is started.
