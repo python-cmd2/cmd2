@@ -1554,7 +1554,7 @@ class Cmd(cmd.Cmd):
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
-            if arg.strip():
+            if arg:
                 interp.runcode(arg)
             else:
                 # noinspection PyShadowingBuiltins
