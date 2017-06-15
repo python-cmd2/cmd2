@@ -765,6 +765,18 @@ class Cmd(cmd.Cmd):
 
     # -----  Methods which override stuff in cmd -----
 
+    # noinspection PyMethodOverriding
+    def completenames(self, text, line, begidx, endidx):
+        """Override of cmd2 method which completes command names both for command completion and help."""
+        # Call super class method.  Need to do it this way for Python 2 and 3 compatibility
+        cmd_completion = cmd.Cmd.completenames(self, text)
+
+        # If we are completing the initial command name and get exactly 1 result, add a space afterwards for convenience
+        if begidx == 0 and len(cmd_completion) == 1:
+            cmd_completion[0] += ' '
+
+        return cmd_completion
+
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
 
@@ -1543,7 +1555,7 @@ class Cmd(cmd.Cmd):
                 """Run a cmd2.Cmd command from a Python script or the interactive Python console.
 
                 :param cmd_plus_args: str - command line including command and arguments to run
-                :return: bool - True if cmdloop() should exit once leaving the interactive Python console, False otherwise.
+                :return: bool - True if cmdloop() should exit once leaving the interactive Python console
                 """
                 return self.onecmd_plus_hooks(cmd_plus_args + '\n')
 
@@ -1559,7 +1571,7 @@ class Cmd(cmd.Cmd):
             else:
                 # noinspection PyShadowingBuiltins
                 def quit():
-                    """Function callable from the interactive Python console to exit that environment and return to cmd2."""
+                    """Function callable from the interactive Python console to exit that environment"""
                     raise EmbeddedConsoleExit
 
                 self.pystate['quit'] = quit
@@ -1572,7 +1584,8 @@ class Cmd(cmd.Cmd):
                     sys.stdout = self.stdout
                     sys.stdin = self.stdin
                     interp.interact(banner="Python %s on %s\n%s\n(%s)\n%s" %
-                                           (sys.version, sys.platform, cprt, self.__class__.__name__, self.do_py.__doc__))
+                                           (sys.version, sys.platform, cprt, self.__class__.__name__,
+                                            self.do_py.__doc__))
                 except EmbeddedConsoleExit:
                     pass
                 if keepstate is not None:
