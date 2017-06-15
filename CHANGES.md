@@ -17,7 +17,7 @@ News
     * Changed default value of USE_ARG_LIST to True - this affects the beavhior of all **@options** commands
         * **WARNING**: This breaks backwards compatibility, to restore backwards compatibility, add this to the
           **__init__()** method in your custom class derived from cmd2.Cmd:
-            * set_use_arg_list(False)
+            * cmd2.set_use_arg_list(False)
         * This change improves argument parsing for all new applications
     * Refactored code to encapsulate most of the pyparsing logic into a ParserManager class
 
