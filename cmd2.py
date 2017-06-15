@@ -97,8 +97,8 @@ pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
 # The next 3 variables and associated setter functions effect how arguments are parsed for commands using @options.
-# The defaults are "sane" and maximize backward compatibility with cmd and previous versions of cmd2.
-# But depending on your particular application, you may wish to tweak them so you get the desired parsing behavior.
+# The defaults are "sane" and maximize ease of use for new applications based on cmd2.
+# To maximize backwards compatibility, we recommend setting USE_ARG_LIST to "False"
 
 # Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
 POSIX_SHLEX = False
@@ -107,7 +107,7 @@ POSIX_SHLEX = False
 STRIP_QUOTES_FOR_NON_POSIX = True
 
 # For option commands, pass a list of argument strings instead of a single argument string to the do_* methods
-USE_ARG_LIST = False
+USE_ARG_LIST = True
 
 
 def set_posix_shlex(val):

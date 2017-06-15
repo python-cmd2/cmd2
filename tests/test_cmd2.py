@@ -227,11 +227,11 @@ def test_base_cmdenvironment(base_app):
         Command-line arguments allowed: True
         Output redirection and pipes allowed: True
         Parsing of @options commands:
-            Use POSIX-style argument parser (vs Windows): False
-            Strip Quotes when using Windows-style argument parser: True
-            Use a list of arguments instead of a single argument string: False
+            Use POSIX-style argument parser (vs Windows): {}
+            Strip Quotes when using Windows-style argument parser: {}
+            Use a list of arguments instead of a single argument string: {}
             
-""")
+""".format(cmd2.POSIX_SHLEX, cmd2.STRIP_QUOTES_FOR_NON_POSIX, cmd2.USE_ARG_LIST))
     assert out == expected
 
 def test_base_load(base_app, request):
