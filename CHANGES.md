@@ -14,7 +14,7 @@ News
     * Redundant **list** command removed and features merged into **history** command
     * Added **pyscript** command which supports tab-completion and running Python scripts with arguments
     * Improved tab-completion of file system paths, command names, and shell commands
-        * Thanks to Kevin Van Brunt for all fo the help with debugging and testing this
+        * Thanks to Kevin Van Brunt for all of the help with debugging and testing this
     * Changed default value of USE_ARG_LIST to True - this affects the beavhior of all **@options** commands
         * **WARNING**: This breaks backwards compatibility, to restore backwards compatibility, add this to the
           **__init__()** method in your custom class derived from cmd2.Cmd:
