@@ -74,7 +74,7 @@ except NameError:
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
 try:
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences,PyPackageRequirements
     from IPython import embed
 except ImportError:
     ipython_available = False
@@ -712,6 +712,7 @@ class Cmd(cmd.Cmd):
 
     def _finalize_app_parameters(self):
         self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
+        # noinspection PyUnresolvedReferences
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
 
     def poutput(self, msg):
@@ -771,8 +772,8 @@ class Cmd(cmd.Cmd):
         # Call super class method.  Need to do it this way for Python 2 and 3 compatibility
         cmd_completion = cmd.Cmd.completenames(self, text)
 
-        # If we are completing the initial command name and get exactly 1 result, add a space afterwards for convenience
-        if begidx == 0 and len(cmd_completion) == 1:
+        # If we are completing the initial command name and get exactly 1 result and are at end of line, add a space
+        if begidx == 0 and len(cmd_completion) == 1 and endidx == len(line):
             cmd_completion[0] += ' '
 
         return cmd_completion
@@ -1434,18 +1435,22 @@ class Cmd(cmd.Cmd):
     complete_load = path_complete
     complete_save = path_complete
 
+    # noinspection PyUnusedLocal
     @staticmethod
-    def _shell_command_complete(search_text):
+    def _shell_command_complete(text, line, begidx, endidx):
         """Method called to complete an input line by environment PATH executable completion.
 
-        :param search_text: str - the search text used to find a shell command
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: int - the beginning index of the prefix text
+        :param endidx: int - the ending index of the prefix text
         :return: List[str] - a list of possible tab completions
         """
 
         # Purposely don't match any executable containing wildcards
         wildcards = ['*', '?']
         for wildcard in wildcards:
-            if wildcard in search_text:
+            if wildcard in text:
                 return []
 
         # Get a list of every directory in the PATH environment variable and ignore symbolic links
@@ -1454,15 +1459,14 @@ class Cmd(cmd.Cmd):
         # Find every executable file in the PATH that matches the pattern
         exes = []
         for path in paths:
-            full_path = os.path.join(path, search_text)
+            full_path = os.path.join(path, text)
             matches = [f for f in glob.glob(full_path + '*') if os.path.isfile(f) and os.access(f, os.X_OK)]
 
             for match in matches:
                 exes.append(os.path.basename(match))
 
-        # If there is a single completion, then add a space at the end for convenience since
-        # this will be printed to the command line the user is typing
-        if len(exes) == 1:
+        # If there is a single completion and we are at end of the line, then add a space at the end for convenience
+        if len(exes) == 1 and endidx == len(line):
             exes[0] += ' '
 
         return exes
@@ -1509,7 +1513,7 @@ class Cmd(cmd.Cmd):
             if os.path.sep not in possible_path and possible_path != '~':
                 # The text before the search text is not a directory path.
                 # It is OK to try shell command completion.
-                command_completions = self._shell_command_complete(text)
+                command_completions = self._shell_command_complete(text, line, begidx, endidx)
 
                 if command_completions:
                     return command_completions
@@ -1522,6 +1526,7 @@ class Cmd(cmd.Cmd):
             # Do path completion
             return self.path_complete(text, line, begidx, endidx)
 
+    # noinspection PyBroadException
     def do_py(self, arg):
         """
         py <command>: Executes a Python command.
