@@ -7,11 +7,16 @@ News
 *Release date: TBD*
 
 * Bug fixes
-    * Fixed a bug in display a span of history items when only an end index is supplied
+    * Fixed a bug in displaying a span of history items when only an end index is supplied
 * Enhancements
     * Added the ability to exclude commands from the help menu (**eof** included by default)
-    * Redundant list command removed and features merged into history command
-    * Added **pyscript** command which supports running Python scripts with arguments
+    * Redundant **list** command removed and features merged into **history** command
+    * Added **pyscript** command which supports tab-completion and running Python scripts with arguments
+    * Changed default value of USE_ARG_LIST to True - this affects the beavhior of all **@options** commands
+        * **WARNING**: This breaks backwards compatibility, to restore backwards compatibility, add this to the
+          **__init__()** method in your custom class derived from cmd2.Cmd:
+            * set_use_arg_list(False)
+        * This change improves argument parsing for all new applications
 
 0.7.2
 -----

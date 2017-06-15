@@ -15,7 +15,7 @@ import six
 # Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
 
-from cmd2 import Cmd, make_option, options, Cmd2TestCase
+from cmd2 import Cmd, make_option, options, Cmd2TestCase, set_use_arg_list
 from conftest import run_cmd, StdOut, normalize
 
 
@@ -28,6 +28,7 @@ class CmdLineApp(Cmd):
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
         Cmd.__init__(self, *args, **kwargs)
         self.settable.append('maxrepeats   Max number of `--repeat`s allowed')
+        set_use_arg_list(False)
 
     opts = [make_option('-p', '--piglatin', action="store_true", help="atinLay"),
             make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),

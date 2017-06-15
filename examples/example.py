@@ -9,7 +9,7 @@ Running `python example.py -t exampleSession.txt` will run all the commands in t
 verifying that the output produced matches the transcript.
 """
 
-from cmd2 import Cmd, make_option, options
+from cmd2 import Cmd, make_option, options, set_use_arg_list
 
 
 class CmdLineApp(Cmd):
@@ -25,6 +25,9 @@ class CmdLineApp(Cmd):
     def __init__(self):
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         Cmd.__init__(self, use_ipython=False)
+
+        # For option commands, pass a single argument string instead of a list of argument strings to the do_* methods
+        set_use_arg_list(False)
 
     @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
               make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),

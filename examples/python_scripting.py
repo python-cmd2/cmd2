@@ -19,9 +19,6 @@ import os
 
 from cmd2 import Cmd, options, make_option, CmdResult, set_use_arg_list
 
-# For option commands, pass a list of argument strings instead of a single argument string to the do_* methods
-set_use_arg_list(True)
-
 
 class CmdLineApp(Cmd):
     """ Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 aps. """
@@ -32,6 +29,9 @@ class CmdLineApp(Cmd):
         self._set_prompt()
         self.autorun_on_edit = False
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇  (Python 3 only)  💩'
+
+        # For option commands, pass a list of argument strings instead of a single argument string to the do_* methods
+        set_use_arg_list(True)
 
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
