@@ -8,15 +8,18 @@ News
 
 * Bug fixes
     * Fixed a bug in displaying a span of history items when only an end index is supplied
+    * Fixed a bug which caused transcript test failures to display twice
 * Enhancements
     * Added the ability to exclude commands from the help menu (**eof** included by default)
     * Redundant **list** command removed and features merged into **history** command
     * Added **pyscript** command which supports tab-completion and running Python scripts with arguments
+    * Improved tab-completion of file system paths, particularly for paths containing a dash (**-**)
     * Changed default value of USE_ARG_LIST to True - this affects the beavhior of all **@options** commands
         * **WARNING**: This breaks backwards compatibility, to restore backwards compatibility, add this to the
           **__init__()** method in your custom class derived from cmd2.Cmd:
             * set_use_arg_list(False)
         * This change improves argument parsing for all new applications
+    * Refactored code to encapsulate most of the pyparsing logic into a ParserManager class
 
 0.7.2
 -----
