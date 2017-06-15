@@ -176,6 +176,35 @@ conditional control flow logic.  See the **python_scripting.py** ``cmd2`` applic
 the **script_conditional.py** script in the ``examples`` source code directory for an
 example of how to achieve this in your own applications.
 
+Using ``py`` to run scripts directly is considered deprecated.  The newer ``pyscript`` command
+is superior for doing this in two primary ways:
+
+- it supports tab-completion of file system paths
+- it has the ability to pass command-line arguments to the scripts invoked
+
+There are no disadvantages to using ``pyscript`` as opposed to ``py run()``.  A simple example
+of using ``pyscript`` is shown below  along with the **examples/arg_printer.py** script::
+
+    (Cmd) pyscript examples/arg_printer.py foo bar baz
+    Running Python script 'arg_printer.py' which was called with 3 arguments
+    arg 1: 'foo'
+    arg 2: 'bar'
+    arg 3: 'baz'
+
+.. note::
+
+    If you want to be able to pass arguments with spaces to scripts, then we strongly recommend setting the
+    cmd2 global variable ``USE_ARG_LIST`` to ``True`` in your application using the ``set_use_arg_list`` function.
+    This passes all arguments to ``@options`` commands as a list of strings instead of a single string.
+
+    Once this option is set, you can then put arguments in quotes like so::
+
+        (Cmd) pyscript examples/arg_printer.py hello '23 fnord'
+        Running Python script 'arg_printer.py' which was called with 2 arguments
+        arg 1: 'hello'
+        arg 2: '23 fnord'
+
+
 IPython (optional)
 ==================
 

@@ -204,7 +204,7 @@ There are three functions which can globally effect how arguments are parsed for
 .. note::
 
    Since optparse_ has been deprecated since Python 3.2, the ``cmd2`` developers plan to replace optparse_ with
-   argparse_ in the next version of ``cmd2``.  We will endeavor to keep the API as identical as possible when this
+   argparse_ at some point in the future.  We will endeavor to keep the API as identical as possible when this
    change occurs.
 
 .. _optparse: https://docs.python.org/3/library/optparse.html

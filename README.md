@@ -36,6 +36,7 @@ cmd2 provides the following features, in addition to those already existing in c
 - Simple transcript-based application testing
 - Unicode character support (*Python 3 only*)
 - Path completion for ``edit``, ``load``, ``save``, and ``shell`` commands
+- Integrated Python scripting capability via ``pyscript`` and ``py``
 
 Instructions for implementing each feature follow.
 
