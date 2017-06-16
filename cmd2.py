@@ -1136,14 +1136,16 @@ class Cmd(cmd.Cmd):
         self.stdout.write("""
         Commands are case-sensitive: {}
         Commands may be terminated with: {}
-        Command-line arguments allowed: {}
+        Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
         Parsing of @options commands:
-            Use POSIX-style argument parser (vs Windows): {}
-            Strip Quotes when using Windows-style argument parser: {}
-            Use a list of arguments instead of a single argument string: {}
+            Shell lexer mode for command argument splitting: {}
+            Strip Quotes after splitting arguments: {}
+            Argument type: {}
         \n""".format(not self.case_insensitive, str(self.terminators), self.allow_cli_args, self.allow_redirection,
-                     POSIX_SHLEX, STRIP_QUOTES_FOR_NON_POSIX, USE_ARG_LIST))
+                     "POSIX" if POSIX_SHLEX else "non-POSIX",
+                     "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False",
+                     "List of argument strings" if USE_ARG_LIST else "string of space-separated arguments"))
 
     def do_help(self, arg):
         """List available commands with "help" or detailed help with "help cmd"."""
