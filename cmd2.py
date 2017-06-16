@@ -1315,35 +1315,15 @@ class Cmd(cmd.Cmd):
     def do_pause(self, text):
         """Displays the specified text then waits for the user to press <Enter>.
 
-        Usage:  pause [text]
-
-        :param text: str - Text to display to the user (default: blank line)
-        """
-        sm.input(text + '\n')
-
-    def help_pause(self):
-        """Print help for do_pause()."""
-        help_str = """Displays the specified text then waits for the user to press <Enter>.
-
     Usage:  pause [text]"""
-        self.stdout.write("{}\n".format(help_str))
+        sm.input(text + '\n')
 
     # noinspection PyMethodMayBeStatic
     def do_shell(self, command):
         """Execute a command as if at the OS prompt.
 
-        Usage:  shell command
-
-        :param command: str - shell command to execute
-        """
+    Usage:  shell <command> [arguments]"""
         os.system(command)
-
-    def help_shell(self):
-        """Print help for do_shell()."""
-        help_str = """Execute a command as if at the OS prompt.
-
-    Usage:  shell cmd"""
-        self.stdout.write("{}\n".format(help_str))
 
     def path_complete(self, text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
         """Method called to complete an input line by local file system path completion.
@@ -1710,23 +1690,20 @@ Paths or arguments that contain spaces must be enclosed in quotes
     def do_edit(self, arg):
         """Edit a file or command in a text editor.
 
-        Usage:  edit [N]|[file_path]
+    Usage:  edit [N]|[file_path]
 
-        :param arg: str - [N]|[file_path]
+    * N         - Number of command (from history), or `*` for all commands in history (default: last command)
+    * file_path - path to a file to open in editor
 
-        * **N** - Number of command (from history), or `*` for all commands in history (default: most recent command)
-        * **file_path** - path to a file to open in editor
+The editor used is determined by the ``editor`` settable parameter.
+"set editor (program-name)" to change or set the EDITOR environment variable.
 
-        The editor used is determined by the ``editor`` settable parameter.
-        "set editor (program-name)" to change or set the EDITOR environment variable.
+The optional arguments are mutually exclusive.  Either a command number OR a file name can be supplied.
+If neither is supplied, the most recent command in the history is edited.
 
-        The optional arguments are mutually exclusive.  Either a command number OR a file name can be supplied.
-        If neither is supplied, the most recent command in the history is edited.
+Edited commands are always run after the editor is closed.
 
-        Edited commands are always run after the editor is closed.
-
-        Edited files are run on close if the ``autorun_on_edit`` settable parameter is True.
-        """
+Edited files are run on close if the ``autorun_on_edit`` settable parameter is True."""
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
         filename = self.default_file_name
@@ -1749,27 +1726,6 @@ Paths or arguments that contain spaces must be enclosed in quotes
         if self.autorun_on_edit or buffer:
             self.do_load(filename)
 
-    def help_edit(self):
-        """Print help for do_edit()."""
-        help_str = """Edit a file or command in a text editor.
-
-    Usage:  edit [N]|[file_path]
-
-    optional arguments:
-    N           Number of command (from history), or `*` for all commands in history (default: most recent command)
-    file_path   path to a file to open in editor
-
-The editor used is determined by the `editor` settable parameter.
-"set editor (program-name" to change or set the EDITOR environment variable.
-
-The optional arguments are mutually exclusive.  Either a command number OR a file name can be supplied.
-If neither is supplied, the most recent command in the history is edited.
-
-Edited commands are always run after the editor is closed.
-
-Edited files are run on close if the `autorun_on_edit` settable parameter is True."""
-        self.stdout.write("{}\n".format(help_str))
-
     saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
                   pyparsing.stringEnd)
@@ -1777,13 +1733,10 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
     def do_save(self, arg):
         """Saves command(s) from history to file.
 
-        Usage:  save [N] [file_path]
+    Usage:  save [N] [file_path]
 
-        :param arg: str - [N] [filepath]
-
-        * **N** - Number of command (from history), or `*` for all commands in history (default: most recent command)
-        * **file_path** - location to save script of command(s) to (default: value stored in ``default_file_name``)
-        """
+    * N         - Number of command (from history), or `*` for all commands in history (default: last command)
+    * file_path - location to save script of command(s) to (default: value stored in `default_file_name` param)"""
         try:
             args = self.saveparser.parseString(arg)
         except pyparsing.ParseException:
@@ -1805,17 +1758,6 @@ Edited files are run on close if the `autorun_on_edit` settable parameter is Tru
         except Exception:
             self.perror('Error saving {}'.format(fname))
             raise
-
-    def help_save(self):
-        """Print help for do_save()."""
-        help_str = """Saves command(s) from history to file.
-
-    Usage:  save [N] [file_path]
-
-    optional arguments:
-    N           - Number of command (from history), or `*` for all commands in history (default: most recent command)
-    file_path   - location to save script of command(s) to (default: value stored in `default_file_name` parameter)"""
-        self.stdout.write("{}\n".format(help_str))
 
     def _read_file_or_url(self, fname):
         """Open a file or URL for reading by the do_load() method.
@@ -1871,12 +1813,11 @@ NOTE: This command is intended to only be used within text file scripts.
     def do_load(self, file_path=None):
         """Runs commands in script at file or URL.
 
-        Usage:  load [file_path]
+    Usage:  load [file_path]
 
-        :param file_path: str - a file path or URL pointing to a script (default: value stored in ``default_file_name``)
-        :return: bool - True implies application should stop, False to continue like normal
+    * file_path - a file path or URL pointing to a script (default: value stored in `default_file_name` param)
 
-        Script should contain one command per line, just like command would be typed in console.
+Script should contain one command per line, just like command would be typed in console.
         """
         # If arg is None or arg is an empty string, use the default filename
         if not file_path:
@@ -1901,42 +1842,17 @@ NOTE: This command is intended to only be used within text file scripts.
         self.lastcmd = ''
         return stop and (stop != self._STOP_SCRIPT_NO_EXIT)
 
-    def help_load(self):
-        """Print help for do_load()."""
-        help_str = """Runs commands in script at file or URL.
-
-    Usage:  load [file_path]
-
-    optional argument:
-    file_path   -   a file path or URL pointing to a script (default: value stored in `default_file_name` parameter)
-
-Script should contain one command per line, just like command would be typed in console."""
-        self.stdout.write("{}\n".format(help_str))
-
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
-
-        :param arg: str - determines which command is re-run, as follows:
-
-        * no arg -> run most recent command
-        * arg is integer -> run one history item, by index
-        * arg is string -> run most recent command by string search
-        * arg is /enclosed in forward-slashes/ -> run most recent by regex
-        """
-        runme = self._last_matching(arg)
-        self.pfeedback(runme)
-        if runme:
-            return self.onecmd_plus_hooks(runme)
-
-    def help_run(self):
-        """Print help for do_run()."""
-        help_str = """run [arg]: re-runs an earlier command
 
     no arg                               -> run most recent command
     arg is integer                       -> run one history item, by index
     arg is string                        -> run most recent command by string search
     arg is /enclosed in forward-slashes/ -> run most recent by regex"""
-        self.stdout.write("{}\n".format(help_str))
+        runme = self._last_matching(arg)
+        self.pfeedback(runme)
+        if runme:
+            return self.onecmd_plus_hooks(runme)
 
     def run_transcript_tests(self, callargs):
         """Runs transcript tests for provided file(s).
