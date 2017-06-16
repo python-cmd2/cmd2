@@ -222,16 +222,19 @@ def test_base_cmdenvironment(base_app):
     out = run_cmd(base_app, 'cmdenvironment')
     expected = normalize("""
 
-        Commands are case-sensitive: False
-        Commands may be terminated with: [';']
-        Command-line arguments allowed: True
-        Output redirection and pipes allowed: True
+        Commands are case-sensitive: {}
+        Commands may be terminated with: {}
+        Arguments at invocation allowed: {}
+        Output redirection and pipes allowed: {}
         Parsing of @options commands:
-            Use POSIX-style argument parser (vs Windows): {}
-            Strip Quotes when using Windows-style argument parser: {}
-            Use a list of arguments instead of a single argument string: {}
+            Shell lexer mode for command argument splitting: {}
+            Strip Quotes after splitting arguments: {}
+            Argument type: {}
             
-""".format(cmd2.POSIX_SHLEX, cmd2.STRIP_QUOTES_FOR_NON_POSIX, cmd2.USE_ARG_LIST))
+""".format(not base_app.case_insensitive, base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
+           "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
+           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
+           "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))
     assert out == expected
 
 def test_base_load(base_app, request):
