@@ -68,11 +68,11 @@ def test_cmd2_help_completion_multiple(cmd2_app):
 
 def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
-        text = 'di'
-        line = '!di'
-        begidx = 1
-        endidx = 3
-        assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['dir ']
+        text = 'calc'
+        line = 'shell calc'
+        begidx = 6
+        endidx = 10
+        assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['calc.exe ']
     else:
         text = 'eg'
         line = '!eg'
@@ -82,11 +82,11 @@ def test_shell_command_completion(cmd2_app):
 
 def test_shell_command_completion_multiple(cmd2_app):
     if sys.platform == "win32":
-        text = 'd'
-        line = '!d'
-        begidx = 1
-        endidx = 2
-        assert 'dir' in cmd2_app.complete_shell(text, line, begidx, endidx)
+        text = 'c'
+        line = 'shell c'
+        begidx = 6
+        endidx = 7
+        assert 'calc.exe' in cmd2_app.complete_shell(text, line, begidx, endidx)
     else:
         text = 'l'
         line = '!l'
