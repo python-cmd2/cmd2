@@ -12,7 +12,7 @@ users will want to create a script with conditional control flow - where the nex
 from the previous command.  This is where the ability to run Python scripts inside a cmd2 application via the pyscript
 command and the "pyscript <script> [arguments]" syntax comes into play.
 
-This application and the "script_conditional.py" script serve as an example for one way in which this can be done.
+This application and the "scripts/conditional.py" script serve as an example for one way in which this can be done.
 """
 import functools
 import os
