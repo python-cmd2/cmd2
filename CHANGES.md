@@ -4,7 +4,7 @@ News
 0.7.3
 -----
 
-*Release date: TBD*
+*Release date: 2017-06-23*
 
 * Bug fixes
     * Fixed a bug in displaying a span of history items when only an end index is supplied
