@@ -138,7 +138,7 @@ def test_path_completion_single_mid(cmd2_app, request):
     begidx = line.find(text)
     endidx = begidx + len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['tests/']
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['tests' + os.path.sep]
 
 def test_path_completion_multiple(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -163,3 +163,31 @@ def test_path_completion_nomatch(cmd2_app, request):
     begidx = endidx - len(text)
 
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
+
+def test_parseline_command_and_args(cmd2_app):
+    line = 'help history'
+    command, args, out_line = cmd2_app.parseline(line)
+    assert command == 'help'
+    assert args == 'history'
+    assert line == out_line
+
+def test_parseline_emptyline(cmd2_app):
+    line = ''
+    command, args, out_line = cmd2_app.parseline(line)
+    assert command == None
+    assert args == None
+    assert line == out_line
+
+def test_parseline_strips_line(cmd2_app):
+    line = '  help history  '
+    command, args, out_line = cmd2_app.parseline(line)
+    assert command == 'help'
+    assert args == 'history'
+    assert line.strip() == out_line
+
+def test_parseline_expands_shortcuts(cmd2_app):
+    line = '!cat foobar.txt'
+    command, args, out_line = cmd2_app.parseline(line)
+    assert command == 'shell'
+    assert args == 'cat foobar.txt'
+    assert line.replace('!', 'shell ') == out_line
