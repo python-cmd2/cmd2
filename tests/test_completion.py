@@ -8,6 +8,7 @@ file system paths, and shell commands.
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import os
 import sys
 
 import cmd2
@@ -44,6 +45,13 @@ def test_cmd2_command_completion_multiple(cmd2_app):
     # It is not at end of line, so no extra space
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help', 'history']
 
+def test_cmd2_command_completion_nomatch(cmd2_app):
+    text = 'z'
+    line = 'z'
+    begidx = 0
+    endidx = 1
+    assert cmd2_app.completenames(text, line, begidx, endidx) == []
+
 def test_cmd2_help_completion_single_end(cmd2_app):
     text = 'he'
     line = 'help he'
@@ -65,6 +73,13 @@ def test_cmd2_help_completion_multiple(cmd2_app):
     begidx = 5
     endidx = 6
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help', 'history']
+
+def test_cmd2_help_completion_nomatch(cmd2_app):
+    text = 'z'
+    line = 'help z'
+    begidx = 5
+    endidx = 6
+    assert cmd2_app.completenames(text, line, begidx, endidx) == []
 
 def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
@@ -94,4 +109,57 @@ def test_shell_command_completion_multiple(cmd2_app):
         endidx = 2
         assert 'ls' in cmd2_app.complete_shell(text, line, begidx, endidx)
 
-# TODO: Add tests for path completion
+def test_shell_command_completion_nomatch(cmd2_app):
+    text = 'zzzz'
+    line = 'shell zzzz'
+    begidx = 6
+    endidx = 10
+    assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
+
+def test_path_completion_single_end(cmd2_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = '!cat {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['conftest.py ']
+
+def test_path_completion_single_mid(cmd2_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'tes'
+    path = os.path.join(test_dir, 'c')
+    line = '!cat {}'.format(path)
+
+    begidx = line.find(text)
+    endidx = begidx + len(text)
+
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['tests/']
+
+def test_path_completion_multiple(cmd2_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 's'
+    path = os.path.join(test_dir, text)
+    line = '!cat {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['script.py', 'script.txt']
+
+def test_path_completion_nomatch(cmd2_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'z'
+    path = os.path.join(test_dir, text)
+    line = '!cat {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
