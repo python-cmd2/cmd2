@@ -13,10 +13,10 @@ exclude_lines =
     # Don't complain if non-runnable code isn't run:
     if __name__ == .__main__.:
 
-    # Don't complain about OS-specific code for other OSes (excludes Windows and Mac, includes Linux)
-    if sys\.platform
+    # Don't complain about macOS-specific code until we have a CI platform that builds on macOS
+    if sys\.platform == 'darwin':
 
-# (integer): the number of digits after the decimal point to display for reported coverage percentages. 
+# (integer): the number of digits after the decimal point to display for reported coverage percentages.
 precision = 1
 
 
