@@ -5,7 +5,7 @@ Setuptools setup file, used to install or test 'cmd2'
 """
 from setuptools import setup
 
-VERSION = '0.7.3'
+VERSION = '0.7.4b'
 DESCRIPTION = "Extra features for standard library's cmd module"
 
 LONG_DESCRIPTION = """cmd2 is an enhancement to the standard library's cmd module for Python 2.7
@@ -16,7 +16,7 @@ https://cmd2.readthedocs.io/
 
 Drop-in replacement adds several features for command-prompt tools:
 
-    * Searchable command history (commands: "hi", "li", "run")
+    * Searchable command history (commands: "history", "run")
     * Load commands from file, save to file, edit commands in file
     * Multi-line commands
     * Case-insensitive commands
@@ -28,6 +28,8 @@ Drop-in replacement adds several features for command-prompt tools:
     * bare >, >>, < redirect to/from paste buffer
     * accepts abbreviated commands when unambiguous
     * `py` enters interactive Python console
+    * `pyscript` executes a Python script
+    * Good tab-completion of commands and file system paths
     * test apps against sample session transcript (see examples/example.py)
 
 Usable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
