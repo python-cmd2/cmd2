@@ -111,6 +111,18 @@ def test_base_run_python_script(base_app, capsys, request):
     assert out == expected
 
 
+@pytest.mark.skipif(sys.platform == 'win32',
+                    reason="Unit test doesn't work on win32, but feature does")
+def test_base_run_pyscript(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'script.py')
+    expected = 'This is a python script running ...\n'
+
+    run_cmd(base_app, "pyscript {}".format(python_script))
+    out, err = capsys.readouterr()
+    assert out == expected
+
+
 def test_base_error(base_app):
     out = run_cmd(base_app, 'meow')
     assert out == ["*** Unknown syntax: meow"]
