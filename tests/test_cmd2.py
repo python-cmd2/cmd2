@@ -418,30 +418,30 @@ def test_pipe_to_shell(base_app):
     assert out[0].strip() == expected[0].strip()
 
 
-@pytest.mark.skipif(not cmd2.can_clip,
-                    reason="CLI utility for interacting with PasteBuffer/ClipBoard is not installed")
 def test_send_to_paste_buffer(base_app):
     from cmd2 import can_clip
 
     run_cmd(base_app, 'help >')
     expected = normalize(BASE_HELP)
 
-    # Read from the clipboard
-    try:
-        # Python2
-        import Tkinter as tk
-    except ImportError:
-        # Python3
-        import tkinter as tk
+    # If the tools for interacting with the clipboard/pastebuffer are available
+    if cmd2.can_clip:
+        # Read from the clipboard
+        try:
+            # Python2
+            import Tkinter as tk
+        except ImportError:
+            # Python3
+            import tkinter as tk
 
-    root = tk.Tk()
-    # keep the window from showing
-    root.withdraw()
+        root = tk.Tk()
+        # keep the window from showing
+        root.withdraw()
 
-    # read the clipboard
-    c = root.clipboard_get()
+        # read the clipboard
+        c = root.clipboard_get()
 
-    assert normalize(c) == expected
+        assert normalize(c) == expected
 
 
 def test_base_timing(base_app, capsys):
@@ -647,10 +647,11 @@ def test_cmdloop_without_rawinput():
     assert out == expected
 
 
-@pytest.mark.skipif(not cmd2.can_clip,
-                    reason="CLI utility for interacting with PasteBuffer/ClipBoard is not installed")
 def test_pastebuffer_read_and_write():
     text_to_pb = 'This is a test ...'
     cmd2.write_to_paste_buffer(text_to_pb)
     text_from_pb = cmd2.get_paste_buffer()
-    assert text_from_pb == text_to_pb
+
+    # If the tools for interacting with the clipboard/pastebuffer are available
+    if cmd2.can_clip:
+        assert text_from_pb == text_to_pb

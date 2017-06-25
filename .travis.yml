@@ -27,26 +27,26 @@ matrix:
 #        - os: linux
 #          python: pypy3
 #          env: TOXENV=pypy3
-#        # Stock OSX Python
-#        - os: osx
-#          language: generic
-#          env: TOXENV=py27
-#        # Latest Python 3.x from Homebrew
-#        - os: osx
-#          language: generic
-#          env:
-#            - TOXENV=py36
-#            - BREW_INSTALL=python3
+        # Stock OSX Python
+        - os: osx
+          language: generic
+          env: TOXENV=py27
+        # Latest Python 3.x from Homebrew
+        - os: osx
+          language: generic
+          env:
+            - TOXENV=py36
+            - BREW_INSTALL=python3
 install:
-  - pip install tox
-#  - |
-#    if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
-#      if [[ -n "$BREW_INSTALL" ]]; then
-#        brew update
-#        brew install "$BREW_INSTALL"
-#      fi
-#    fi
-#    pip install tox
+#  - pip install tox
+  - |
+    if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
+      if [[ -n "$BREW_INSTALL" ]]; then
+        brew update
+        brew install "$BREW_INSTALL"
+      fi
+    fi
+    pip install tox
 
 script:
   - tox
