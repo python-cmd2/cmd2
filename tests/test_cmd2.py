@@ -647,11 +647,10 @@ def test_cmdloop_without_rawinput():
     assert out == expected
 
 
+@pytest.mark.skipif(not cmd2.can_clip,
+                    reason="CLI utility for interacting with PasteBuffer/ClipBoard is not available")
 def test_pastebuffer_read_and_write():
     text_to_pb = 'This is a test ...'
     cmd2.write_to_paste_buffer(text_to_pb)
     text_from_pb = cmd2.get_paste_buffer()
-
-    # If the tools for interacting with the clipboard/pastebuffer are available
-    if cmd2.can_clip:
-        assert text_from_pb == text_to_pb
+    assert text_from_pb == text_to_pb
