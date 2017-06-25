@@ -4,6 +4,7 @@ cmd2
 [![Appveyor build status](https://ci.appveyor.com/api/projects/status/github/python-cmd2/cmd2?branch=master)](https://ci.appveyor.com/project/FedericoCeratto/cmd2)
 [![Documentation Status](https://readthedocs.org/projects/cmd2/badge/?version=latest)](http://cmd2.readthedocs.io/en/latest/?badge=latest)
 [![Latest Version](https://img.shields.io/pypi/v/cmd2.svg)](https://pypi.python.org/pypi/cmd2/)
+[![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/master/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
 [![License](https://img.shields.io/pypi/l/cmd2.svg)](https://pypi.python.org/pypi/cmd2/)
 
 cmd2 is a tool for writing command-line interactive applications for Python 2.7 and Python 3.3+.  It is based on the
