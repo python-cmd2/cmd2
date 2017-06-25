@@ -36,6 +36,21 @@ def test_base_help_history(base_app):
     expected = normalize(HELP_HISTORY)
     assert out == expected
 
+def test_base_options_help(base_app, capsys):
+    run_cmd(base_app, 'show -h')
+    out, err = capsys.readouterr()
+    expected = run_cmd(base_app, 'help show')
+    # 'show -h' is the same as 'help show', other than whitespace differences of an extra newline present in 'help show'
+    assert normalize(str(out)) == expected
+
+def test_base_invalid_option(base_app, capsys):
+    run_cmd(base_app, 'show -z')
+    out, err = capsys.readouterr()
+    show_help = run_cmd(base_app, 'help show')
+    expected = ['no such option: -z']
+    expected.extend(show_help)
+    # 'show -h' is the same as 'help show', other than whitespace differences of an extra newline present in 'help show'
+    assert normalize(str(out)) == expected
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')
@@ -409,8 +424,8 @@ def test_send_to_paste_buffer(base_app):
     run_cmd(base_app, 'help >')
     expected = normalize(BASE_HELP)
 
-    # If an appropriate tool is installed for reading the contents of the clipboard, then do so
-    if can_clip:
+    # If the tools for interacting with the clipboard/pastebuffer are available
+    if cmd2.can_clip:
         # Read from the clipboard
         try:
             # Python2
@@ -632,4 +647,10 @@ def test_cmdloop_without_rawinput():
     assert out == expected
 
 
-
+@pytest.mark.skipif(not cmd2.can_clip,
+                    reason="CLI utility for interacting with PasteBuffer/ClipBoard is not available")
+def test_pastebuffer_read_and_write():
+    text_to_pb = 'This is a test ...'
+    cmd2.write_to_paste_buffer(text_to_pb)
+    text_from_pb = cmd2.get_paste_buffer()
+    assert text_from_pb == text_to_pb

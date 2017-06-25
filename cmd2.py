@@ -196,17 +196,6 @@ def remaining_args(opts_plus_args, arg_list):
     return remaining
 
 
-def _attr_get_(obj, attr):
-    """Returns an attribute's value, or None (no error) if undefined.
-       Analogous to .get() for dictionaries.  Useful when checking for
-       value of options that may not have been defined on a given
-       method."""
-    try:
-        return getattr(obj, attr)
-    except AttributeError:
-        return None
-
-
 def _which(editor):
     try:
         return subprocess.Popen(['which', editor], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]
@@ -229,10 +218,6 @@ def strip_quotes(arg):
     return arg
 
 
-optparse.Values.get = _attr_get_
-options_defined = []  # used to distinguish --options from SQL-style --comments
-
-
 def options(option_list, arg_desc="arg"):
     """Used as a decorator and passed a list of optparse-style options,
        alters a cmd2 method to populate its ``opts`` argument from its
@@ -250,9 +235,8 @@ def options(option_list, arg_desc="arg"):
                self.fast_button = True
        """
     if not isinstance(option_list, list):
+        # If passed a single option instead of a list of options, convert it to a list with one option
         option_list = [option_list]
-    for opt in option_list:
-        options_defined.append(pyparsing.Literal(opt.get_opt_string()))
 
     def option_setup(func):
         """Decorator function which modifies on of the do_* methods that use the @options decorator.
@@ -387,9 +371,13 @@ elif sys.platform == 'darwin':
 
             :return: str - contents of the clipboard
             """
-            pbcopyproc = subprocess.Popen('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+            pbcopyproc = subprocess.Popen('pbpaste', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
-            return pbcopyproc.stdout.read()
+            stdout, stderr = pbcopyproc.communicate()
+            if six.PY3:
+                return stdout.decode()
+            else:
+                return stdout
 
         def write_to_paste_buffer(txt):
             """Paste text to the clipboard for Mac OS X.
@@ -398,7 +386,10 @@ elif sys.platform == 'darwin':
             """
             pbcopyproc = subprocess.Popen('pbcopy', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
-            pbcopyproc.communicate(txt.encode())
+            if six.PY3:
+                pbcopyproc.communicate(txt.encode())
+            else:
+                pbcopyproc.communicate(txt)
     else:
         # noinspection PyUnusedLocal
         def get_paste_buffer(*args):
@@ -424,7 +415,11 @@ else:
             """
             xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE,
                                          stdin=subprocess.PIPE)
-            return xclipproc.stdout.read()
+            stdout, stderr = xclipproc.communicate()
+            if six.PY3:
+                return stdout.decode()
+            else:
+                return stdout
 
         def write_to_paste_buffer(txt):
             """Paste text to the clipboard for Linux OSes.
@@ -432,11 +427,18 @@ else:
             :param txt: str - text to paste to the clipboard
             """
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            xclipproc.stdin.write(txt.encode())
+            if six.PY3:
+                xclipproc.stdin.write(txt.encode())
+            else:
+                xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
+
             # but we want it in both the "primary" and "mouse" clipboards
             xclipproc = subprocess.Popen('xclip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            xclipproc.stdin.write(txt.encode())
+            if six.PY3:
+                xclipproc.stdin.write(txt.encode())
+            else:
+                xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
     else:
         # noinspection PyUnusedLocal
@@ -1410,7 +1412,8 @@ class Cmd(cmd.Cmd):
             elif os.path.isdir(path_completions[0]) and add_sep_after_tilde:
                 completions[0] = os.path.sep + completions[0]
 
-        return completions
+        # If there are multiple completions, then sort them alphabetically
+        return sorted(completions)
 
     # Enable tab completion of paths for relevant commands
     complete_edit = path_complete
@@ -1451,7 +1454,8 @@ class Cmd(cmd.Cmd):
         if len(exes) == 1 and endidx == len(line):
             exes[0] += ' '
 
-        return exes
+        # If there are multiple completions, then sort them alphabetically
+        return sorted(exes)
 
     # noinspection PyUnusedLocal
     def complete_shell(self, text, line, begidx, endidx):
