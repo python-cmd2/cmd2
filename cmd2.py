@@ -196,17 +196,6 @@ def remaining_args(opts_plus_args, arg_list):
     return remaining
 
 
-def _attr_get_(obj, attr):
-    """Returns an attribute's value, or None (no error) if undefined.
-       Analogous to .get() for dictionaries.  Useful when checking for
-       value of options that may not have been defined on a given
-       method."""
-    try:
-        return getattr(obj, attr)
-    except AttributeError:
-        return None
-
-
 def _which(editor):
     try:
         return subprocess.Popen(['which', editor], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]
@@ -229,10 +218,6 @@ def strip_quotes(arg):
     return arg
 
 
-optparse.Values.get = _attr_get_
-options_defined = []  # used to distinguish --options from SQL-style --comments
-
-
 def options(option_list, arg_desc="arg"):
     """Used as a decorator and passed a list of optparse-style options,
        alters a cmd2 method to populate its ``opts`` argument from its
@@ -250,9 +235,8 @@ def options(option_list, arg_desc="arg"):
                self.fast_button = True
        """
     if not isinstance(option_list, list):
+        # If passed a single option instead of a list of options, convert it to a list with one option
         option_list = [option_list]
-    for opt in option_list:
-        options_defined.append(pyparsing.Literal(opt.get_opt_string()))
 
     def option_setup(func):
         """Decorator function which modifies on of the do_* methods that use the @options decorator.
@@ -387,9 +371,13 @@ elif sys.platform == 'darwin':
 
             :return: str - contents of the clipboard
             """
-            pbcopyproc = subprocess.Popen('pbcopy -help', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+            pbcopyproc = subprocess.Popen('pbpaste', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
-            return pbcopyproc.stdout.read()
+            stdout, stderr = pbcopyproc.communicate()
+            if six.PY3:
+                return stdout.decode()
+            else:
+                return stdout
 
         def write_to_paste_buffer(txt):
             """Paste text to the clipboard for Mac OS X.
@@ -398,7 +386,10 @@ elif sys.platform == 'darwin':
             """
             pbcopyproc = subprocess.Popen('pbcopy', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
-            pbcopyproc.communicate(txt.encode())
+            if six.PY3:
+                pbcopyproc.communicate(txt.encode())
+            else:
+                pbcopyproc.communicate(txt)
     else:
         # noinspection PyUnusedLocal
         def get_paste_buffer(*args):
