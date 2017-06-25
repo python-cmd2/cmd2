@@ -432,7 +432,7 @@ else:
             else:
                 xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
-            
+
             # but we want it in both the "primary" and "mouse" clipboards
             xclipproc = subprocess.Popen('xclip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             if six.PY3:
@@ -1412,7 +1412,8 @@ class Cmd(cmd.Cmd):
             elif os.path.isdir(path_completions[0]) and add_sep_after_tilde:
                 completions[0] = os.path.sep + completions[0]
 
-        return completions
+        # If there are multiple completions, then sort them alphabetically
+        return sorted(completions)
 
     # Enable tab completion of paths for relevant commands
     complete_edit = path_complete
@@ -1453,7 +1454,8 @@ class Cmd(cmd.Cmd):
         if len(exes) == 1 and endidx == len(line):
             exes[0] += ' '
 
-        return exes
+        # If there are multiple completions, then sort them alphabetically
+        return sorted(exes)
 
     # noinspection PyUnusedLocal
     def complete_shell(self, text, line, begidx, endidx):
