@@ -1,5 +1,5 @@
 install:
-  - python -m pip install pywin32 tox
+  - python -m pip install tox
 
 build: off
 
