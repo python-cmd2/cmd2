@@ -1,6 +1,16 @@
 News
 ====
 
+0.7.4
+-----
+
+*Release date: TBD*
+
+* Bug fixes
+    * Fixed a couple bugs in interacting with pastebuffer/clipboard on macOS and Linux
+* Enhancements
+    * Ensure that path and shell command tab-completion results are alphabetically sorted
+    
 0.7.3
 -----
 
