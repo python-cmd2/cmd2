@@ -1,5 +1,5 @@
 language: python
-sudo: true  # false enables container-based build for fast boot times on Linux
+sudo: false  # false enables container-based build for fast boot times on Linux
 matrix:
     include:
         - os: linux
@@ -39,7 +39,6 @@ matrix:
 #            - BREW_INSTALL=python3
 install:
   - pip install tox
-  - sudo apt-get install xclip
 #  - |
 #    if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 #      if [[ -n "$BREW_INSTALL" ]]; then
