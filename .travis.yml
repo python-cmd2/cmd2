@@ -39,6 +39,7 @@ matrix:
 #            - BREW_INSTALL=python3
 install:
   - pip install tox
+  - apt-get install xclip
 #  - |
 #    if [[ $TRAVIS_OS_NAME == 'osx' ]]; then
 #      if [[ -n "$BREW_INSTALL" ]]; then
