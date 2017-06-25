@@ -415,7 +415,11 @@ else:
             """
             xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE,
                                          stdin=subprocess.PIPE)
-            return xclipproc.stdout.read()
+            stdout, stderr = xclipproc.communicate()
+            if six.PY3:
+                return stdout.decode()
+            else:
+                return stdout
 
         def write_to_paste_buffer(txt):
             """Paste text to the clipboard for Linux OSes.
@@ -423,11 +427,18 @@ else:
             :param txt: str - text to paste to the clipboard
             """
             xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            xclipproc.stdin.write(txt.encode())
+            if six.PY3:
+                xclipproc.stdin.write(txt.encode())
+            else:
+                xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
+            
             # but we want it in both the "primary" and "mouse" clipboards
             xclipproc = subprocess.Popen('xclip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-            xclipproc.stdin.write(txt.encode())
+            if six.PY3:
+                xclipproc.stdin.write(txt.encode())
+            else:
+                xclipproc.stdin.write(txt)
             xclipproc.stdin.close()
     else:
         # noinspection PyUnusedLocal
