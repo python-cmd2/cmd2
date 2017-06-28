@@ -597,12 +597,11 @@ class Cmd(cmd.Cmd):
 
     # Attributes which ARE dynamically settable at runtime
     abbrev = True  # Abbreviated commands recognized
-    autorun_on_edit = True  # Should files automatically run after editing (doesn't apply to commands)
+    autorun_on_edit = False  # Should files automatically run after editing (doesn't apply to commands)
     case_insensitive = True  # Commands recognized regardless of case
     colors = (platform.system() != 'Windows')
     continuation_prompt = '> '
     debug = False
-    default_file_name = 'command.txt'  # For ``edit`` when called with a history item number and ``save``
     echo = False
     editor = os.environ.get('EDITOR')
     if not editor:
@@ -626,7 +625,6 @@ class Cmd(cmd.Cmd):
         colors                Colorized output (*nix only)
         continuation_prompt   On 2nd+ line of input
         debug                 Show full error stack on error
-        default_file_name     For ``edit`` and ``save``
         echo                  Echo command issued into output
         editor                Program used by ``edit``
         feedback_to_output    Include nonessentials in `|`, `>` results
@@ -929,7 +927,8 @@ class Cmd(cmd.Cmd):
             # TODO: Once support for Python 3.x prior to 3.5 is no longer necessary, replace with a real subprocess pipe
 
             # Redirect stdout to a temporary file
-            _, self._temp_filename = tempfile.mkstemp()
+            fd, self._temp_filename = tempfile.mkstemp()
+            os.close(fd)
             self.stdout = open(self._temp_filename, 'w')
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
@@ -1706,7 +1705,7 @@ Edited commands are always run after the editor is closed.
 Edited files are run on close if the ``autorun_on_edit`` settable parameter is True."""
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
-        filename = self.default_file_name
+        filename = None
         if arg:
             try:
                 buffer = self._last_matching(int(arg))
@@ -1720,7 +1719,13 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
                 self.perror('edit must be called with argument if history is empty', traceback_war=False)
                 return
 
+        delete_tempfile = False
         if buffer:
+            if filename is None:
+                fd, filename = tempfile.mkstemp(suffix='.txt', text=True)
+                os.close(fd)
+                delete_tempfile = True
+
             f = open(os.path.expanduser(filename), 'w')
             f.write(buffer or '')
             f.close()
@@ -1729,6 +1734,9 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
 
         if self.autorun_on_edit or buffer:
             self.do_load(filename)
+
+        if delete_tempfile:
+            os.remove(filename)
 
     saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
@@ -1740,13 +1748,20 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
     Usage:  save [N] [file_path]
 
     * N         - Number of command (from history), or `*` for all commands in history (default: last command)
-    * file_path - location to save script of command(s) to (default: value stored in `default_file_name` param)"""
+    * file_path - location to save script of command(s) to (default: value stored in temporary file)"""
         try:
             args = self.saveparser.parseString(arg)
         except pyparsing.ParseException:
             self.perror('Could not understand save target %s' % arg)
             raise SyntaxError(self.do_save.__doc__)
-        fname = args.fname or self.default_file_name
+
+        # If a filename was supplied then use that, otherwise use a temp file
+        if args.fname:
+            fname = args.fname
+        else:
+            fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
+            os.close(fd)
+
         if args.idx == '*':
             saveme = '\n\n'.join(self.history[:])
         elif args.idx:

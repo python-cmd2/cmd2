@@ -545,10 +545,7 @@ def test_edit_number(base_app):
     run_cmd(base_app, 'edit 1')
 
     # We have an editor, so should expect a system call
-    m.assert_called_once_with('{} {}'.format(base_app.editor, base_app.default_file_name))
-
-    # Editing history item causes a file of default name to get created, remove it so we have a clean slate
-    os.remove(base_app.default_file_name)
+    m.assert_called_once()
 
 
 def test_edit_blank(base_app):
@@ -565,10 +562,7 @@ def test_edit_blank(base_app):
     run_cmd(base_app, 'edit')
 
     # We have an editor, so should expect a system call
-    m.assert_called_once_with('{} {}'.format(base_app.editor, base_app.default_file_name))
-
-    # Editing history item causes a file of default name to get created, remove it so we have a clean slate
-    os.remove(base_app.default_file_name)
+    m.assert_called_once()
 
 
 def test_base_py_interactive(base_app):

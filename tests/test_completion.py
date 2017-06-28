@@ -150,7 +150,7 @@ def test_path_completion_multiple(cmd2_app, request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['script.py', 'script.txt']
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['script.py', 'script.txt', 'scripts/']
 
 def test_path_completion_nomatch(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
