@@ -58,10 +58,6 @@ import six.moves as sm
 # itertools.zip() for Python 2 or zip() for Python 3 - produces an iterator in both cases
 from six.moves import zip
 
-# Python 2 urllib2.urlopen() or Python3  urllib.request.urlopen()
-# noinspection PyUnresolvedReferences
-from six.moves.urllib.request import urlopen
-
 # Python 3 compatibility hack due to no built-in file keyword in Python 3
 # Due to one occurrence of isinstance(<foo>, file) checking to see if something is of file type
 try:
@@ -587,7 +583,6 @@ class Cmd(cmd.Cmd):
     commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
 
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    defaultExtension = 'txt'    # For ``save``, ``load``, etc.
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     exclude_from_help = ['do_eof']  # Commands to exclude from the help menu
 
@@ -599,16 +594,14 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     terminators = [';']
-    urlre = re.compile('(https?://[-\\w./]+)')
 
     # Attributes which ARE dynamically settable at runtime
     abbrev = True  # Abbreviated commands recognized
-    autorun_on_edit = True  # Should files automatically run after editing (doesn't apply to commands)
+    autorun_on_edit = False  # Should files automatically run after editing (doesn't apply to commands)
     case_insensitive = True  # Commands recognized regardless of case
     colors = (platform.system() != 'Windows')
     continuation_prompt = '> '
     debug = False
-    default_file_name = 'command.txt'  # For ``save``, ``load``, etc.
     echo = False
     editor = os.environ.get('EDITOR')
     if not editor:
@@ -628,14 +621,13 @@ class Cmd(cmd.Cmd):
     settable = stubborn_dict('''
         abbrev                Accept abbreviated commands
         autorun_on_edit       Automatically run files after editing
-        case_insensitive      upper- and lower-case both OK
+        case_insensitive      Upper- and lower-case both OK
         colors                Colorized output (*nix only)
         continuation_prompt   On 2nd+ line of input
         debug                 Show full error stack on error
-        default_file_name     for ``save``, ``load``, etc.
         echo                  Echo command issued into output
         editor                Program used by ``edit``
-        feedback_to_output    include nonessentials in `|`, `>` results
+        feedback_to_output    Include nonessentials in `|`, `>` results
         locals_in_py          Allow access to your application in py via self
         prompt                The prompt issued to solicit input
         quiet                 Don't print nonessential feedback
@@ -935,7 +927,8 @@ class Cmd(cmd.Cmd):
             # TODO: Once support for Python 3.x prior to 3.5 is no longer necessary, replace with a real subprocess pipe
 
             # Redirect stdout to a temporary file
-            _, self._temp_filename = tempfile.mkstemp()
+            fd, self._temp_filename = tempfile.mkstemp()
+            os.close(fd)
             self.stdout = open(self._temp_filename, 'w')
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
@@ -1712,7 +1705,7 @@ Edited commands are always run after the editor is closed.
 Edited files are run on close if the ``autorun_on_edit`` settable parameter is True."""
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
-        filename = self.default_file_name
+        filename = None
         if arg:
             try:
                 buffer = self._last_matching(int(arg))
@@ -1720,9 +1713,19 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
                 filename = arg
                 buffer = ''
         else:
-            buffer = self.history[-1]
+            try:
+                buffer = self.history[-1]
+            except IndexError:
+                self.perror('edit must be called with argument if history is empty', traceback_war=False)
+                return
 
+        delete_tempfile = False
         if buffer:
+            if filename is None:
+                fd, filename = tempfile.mkstemp(suffix='.txt', text=True)
+                os.close(fd)
+                delete_tempfile = True
+
             f = open(os.path.expanduser(filename), 'w')
             f.write(buffer or '')
             f.close()
@@ -1731,6 +1734,9 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
 
         if self.autorun_on_edit or buffer:
             self.do_load(filename)
+
+        if delete_tempfile:
+            os.remove(filename)
 
     saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
                   pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
@@ -1742,20 +1748,32 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
     Usage:  save [N] [file_path]
 
     * N         - Number of command (from history), or `*` for all commands in history (default: last command)
-    * file_path - location to save script of command(s) to (default: value stored in `default_file_name` param)"""
+    * file_path - location to save script of command(s) to (default: value stored in temporary file)"""
         try:
             args = self.saveparser.parseString(arg)
         except pyparsing.ParseException:
             self.perror('Could not understand save target %s' % arg)
             raise SyntaxError(self.do_save.__doc__)
-        fname = args.fname or self.default_file_name
+
+        # If a filename was supplied then use that, otherwise use a temp file
+        if args.fname:
+            fname = args.fname
+        else:
+            fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
+            os.close(fd)
+
         if args.idx == '*':
             saveme = '\n\n'.join(self.history[:])
         elif args.idx:
             saveme = self.history[int(args.idx) - 1]
         else:
-            # Since this save command has already been added to history, need to go one more back for previous
-            saveme = self.history[-2]
+            saveme = ''
+            # Wrap in try to deal with case of empty history
+            try:
+                # Since this save command has already been added to history, need to go one more back for previous
+                saveme = self.history[-2]
+            except IndexError:
+                pass
         try:
             f = open(os.path.expanduser(fname), 'w')
             f.write(saveme)
@@ -1765,43 +1783,13 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
             self.perror('Error saving {}'.format(fname))
             raise
 
-    def _read_file_or_url(self, fname):
-        """Open a file or URL for reading by the do_load() method.
+    def do__relative_load(self, file_path):
+        """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
-        This method methodically proceeds in the following path until it succeeds (or fails in the end):
-        1) Try to open the file
-        2) Try to open the URL if it looks like one
-        3) Try to expand the ~ to create an absolute path for the filename
-        4) Try to add the default extension to the expanded path
-        5) Raise an error
-
-        :param fname: str - filename or URL
-        :return: stream  or a file-like object pointing to the file or URL (or raise an exception if it couldn't open)
-        """
-        # TODO: not working on localhost
-        if os.path.isfile(fname):
-            result = open(fname, 'r')
-        else:
-            match = self.urlre.match(fname)
-            if match:
-                result = urlopen(match.group(1))
-            else:
-                fname = os.path.expanduser(fname)
-                try:
-                    result = open(os.path.expanduser(fname), 'r')
-                except IOError:
-                    result = open('%s.%s' % (os.path.expanduser(fname),
-                                             self.defaultExtension), 'r')
-        return result
-
-    def do__relative_load(self, arg=None):
-        """Runs commands in script at file or URL.
-
-    Usage:  _relative_load [file_path]
+    Usage:  _relative_load <file_path>
 
     optional argument:
-    file_path   a file path or URL pointing to a script
-                default: value stored in `default_file_name` settable param
+    file_path   a file path pointing to a script
 
 Script should contain one command per line, just like command would be typed in console.
 
@@ -1810,38 +1798,43 @@ relative to the already-running script's directory.
 
 NOTE: This command is intended to only be used within text file scripts.
         """
-        if arg:
-            arg = arg.split(None, 1)
-            targetname, args = arg[0], (arg[1:] or [''])[0]
-            targetname = os.path.join(self._current_script_dir or '', targetname)
-            self.do_load('%s %s' % (targetname, args))
+        # If arg is None or arg is an empty string this is an error
+        if not file_path:
+            self.perror('_relative_load command requires a file path:\n', traceback_war=False)
+            return
 
-    def do_load(self, file_path=None):
-        """Runs commands in script at file or URL.
+        file_path = file_path.strip()
+        # NOTE: Relative path is an absolute path, it is just relative to the current script directory
+        relative_path = os.path.join(self._current_script_dir or '', file_path)
+        self.do_load(relative_path)
 
-    Usage:  load [file_path]
+    def do_load(self, file_path):
+        """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
-    * file_path - a file path or URL pointing to a script (default: value stored in `default_file_name` param)
+    Usage:  load <file_path>
+
+    * file_path - a file path pointing to a script
 
 Script should contain one command per line, just like command would be typed in console.
         """
-        # If arg is None or arg is an empty string, use the default filename
+        # If arg is None or arg is an empty string this is an error
         if not file_path:
-            targetname = self.default_file_name
-        else:
-            file_path = file_path.split(None, 1)
-            targetname, args = file_path[0], (file_path[1:] or [''])[0].strip()
-        try:
-            target = self._read_file_or_url(targetname)
-        except IOError as e:
-            self.perror('Problem accessing script from %s: \n%s' % (targetname, e))
+            self.perror('load command requires a file path:\n', traceback_war=False)
             return
+
+        expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
+        try:
+            target = open(expanded_path)
+        except IOError as e:
+            self.perror('Problem accessing script from {}:\n{}'.format(expanded_path, e))
+            return
+
         keepstate = Statekeeper(self, ('stdin', 'use_rawinput', 'prompt',
                                        'continuation_prompt', '_current_script_dir'))
         self.stdin = target
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
-        self._current_script_dir = os.path.split(targetname)[0]
+        self._current_script_dir = os.path.dirname(expanded_path)
         stop = self._cmdloop()
         self.stdin.close()
         keepstate.restore()

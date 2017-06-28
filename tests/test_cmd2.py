@@ -283,18 +283,13 @@ load {}
     assert out == expected
 
 
-def test_base_load_default_file(base_app, capsys):
-    # TODO: Make sure to remove the 'command.txt' file in case it exists
-
+def test_base_load_with_empty_args(base_app, capsys):
     # The way the load command works, we can't directly capture its stdout or stderr
     run_cmd(base_app, 'load')
     out, err = capsys.readouterr()
 
-    # The default file 'command.txt' doesn't exist, so we should get an error message
-    expected = normalize("""ERROR: Problem accessing script from command.txt:
-[Errno 2] No such file or directory: 'command.txt.txt'
-To enable full traceback, run the following command:  'set debug true'
-""")
+    # The load command requires a file path argument, so we should get an error message
+    expected = normalize("""ERROR: load command requires a file path:\n""")
     assert normalize(str(err)) == expected
 
 
@@ -550,10 +545,7 @@ def test_edit_number(base_app):
     run_cmd(base_app, 'edit 1')
 
     # We have an editor, so should expect a system call
-    m.assert_called_once_with('{} {}'.format(base_app.editor, base_app.default_file_name))
-
-    # Editing history item causes a file of default name to get created, remove it so we have a clean slate
-    os.remove(base_app.default_file_name)
+    m.assert_called_once()
 
 
 def test_edit_blank(base_app):
@@ -570,10 +562,7 @@ def test_edit_blank(base_app):
     run_cmd(base_app, 'edit')
 
     # We have an editor, so should expect a system call
-    m.assert_called_once_with('{} {}'.format(base_app.editor, base_app.default_file_name))
-
-    # Editing history item causes a file of default name to get created, remove it so we have a clean slate
-    os.remove(base_app.default_file_name)
+    m.assert_called_once()
 
 
 def test_base_py_interactive(base_app):

@@ -8,8 +8,15 @@ News
 
 * Bug fixes
     * Fixed a couple bugs in interacting with pastebuffer/clipboard on macOS and Linux
+    * Fixed a couple bugs in edit and save commands if called when history is empty
 * Enhancements
     * Ensure that path and shell command tab-completion results are alphabetically sorted
+    * Removed feature for load command to load scripts from URLS
+        * It didn't work, there were no unit tests, and it felt out of place
+    * Removed presence of a default file name and default file extension
+        * These also strongly felt out of place
+        * ``load`` and ``_relative_load`` now require a file path
+        * ``edit`` and ``save`` now use a temporary file if a file path isn't provided   
     
 0.7.3
 -----

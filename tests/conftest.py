@@ -48,12 +48,11 @@ if sys.platform.startswith('win'):
     expect_colors = False
 # Output from the show command with default settings
 SHOW_TXT = """abbrev: True
-autorun_on_edit: True
+autorun_on_edit: False
 case_insensitive: True
 colors: {}
 continuation_prompt: >
 debug: False
-default_file_name: command.txt
 echo: False
 editor: vim
 feedback_to_output: True
@@ -67,20 +66,20 @@ if expect_colors:
     color_str = 'True '
 else:
     color_str = 'False'
-SHOW_LONG = """abbrev: True                   # Accept abbreviated commands
-autorun_on_edit: True          # Automatically run files after editing
-case_insensitive: True         # upper- and lower-case both OK
-colors: {}                  # Colorized output (*nix only)
-continuation_prompt: >         # On 2nd+ line of input
-debug: False                   # Show full error stack on error
-default_file_name: command.txt # for ``save``, ``load``, etc.
-echo: False                    # Echo command issued into output
-editor: vim                    # Program used by ``edit``
-feedback_to_output: True       # include nonessentials in `|`, `>` results
-locals_in_py: True             # Allow access to your application in py via self
-prompt: (Cmd)                  # The prompt issued to solicit input
-quiet: False                   # Don't print nonessential feedback
-timing: False                  # Report execution times
+SHOW_LONG = """
+abbrev: True             # Accept abbreviated commands
+autorun_on_edit: False   # Automatically run files after editing
+case_insensitive: True   # Upper- and lower-case both OK
+colors: {}            # Colorized output (*nix only)
+continuation_prompt: >   # On 2nd+ line of input
+debug: False             # Show full error stack on error
+echo: False              # Echo command issued into output
+editor: vim              # Program used by ``edit``
+feedback_to_output: True # Include nonessentials in `|`, `>` results
+locals_in_py: True       # Allow access to your application in py via self
+prompt: (Cmd)            # The prompt issued to solicit input
+quiet: False             # Don't print nonessential feedback
+timing: False            # Report execution times
 """.format(color_str)
 
 

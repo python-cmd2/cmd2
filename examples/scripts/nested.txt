@@ -1,0 +1,3 @@
+!echo "Doing a relative load"
+_relative_load script.txt
+ 
