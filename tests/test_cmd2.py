@@ -288,7 +288,7 @@ def test_base_load_with_empty_args(base_app, capsys):
     run_cmd(base_app, 'load')
     out, err = capsys.readouterr()
 
-    # The default file 'command.txt' doesn't exist, so we should get an error message
+    # The load command requires a file path argument, so we should get an error message
     expected = normalize("""ERROR: load command requires a file path:\n""")
     assert normalize(str(err)) == expected
 
