@@ -1714,7 +1714,11 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
                 filename = arg
                 buffer = ''
         else:
-            buffer = self.history[-1]
+            try:
+                buffer = self.history[-1]
+            except IndexError:
+                self.perror('edit must be called with argument if history is empty', traceback_war=False)
+                return
 
         if buffer:
             f = open(os.path.expanduser(filename), 'w')
