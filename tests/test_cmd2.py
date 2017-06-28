@@ -292,7 +292,7 @@ def test_base_load_default_file(base_app, capsys):
 
     # The default file 'command.txt' doesn't exist, so we should get an error message
     expected = normalize("""ERROR: Problem accessing script from command.txt:
-[Errno 2] No such file or directory: 'command.txt.txt'
+[Errno 2] No such file or directory: 'command.txt'
 To enable full traceback, run the following command:  'set debug true'
 """)
     assert normalize(str(err)) == expected

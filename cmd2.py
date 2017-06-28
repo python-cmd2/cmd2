@@ -58,10 +58,6 @@ import six.moves as sm
 # itertools.zip() for Python 2 or zip() for Python 3 - produces an iterator in both cases
 from six.moves import zip
 
-# Python 2 urllib2.urlopen() or Python3  urllib.request.urlopen()
-# noinspection PyUnresolvedReferences
-from six.moves.urllib.request import urlopen
-
 # Python 3 compatibility hack due to no built-in file keyword in Python 3
 # Due to one occurrence of isinstance(<foo>, file) checking to see if something is of file type
 try:
@@ -587,7 +583,6 @@ class Cmd(cmd.Cmd):
     commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
 
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    defaultExtension = 'txt'    # For ``save``, ``load``, etc.
     excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
     exclude_from_help = ['do_eof']  # Commands to exclude from the help menu
 
@@ -599,7 +594,6 @@ class Cmd(cmd.Cmd):
     reserved_words = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     terminators = [';']
-    urlre = re.compile('(https?://[-\\w./]+)')
 
     # Attributes which ARE dynamically settable at runtime
     abbrev = True  # Abbreviated commands recognized
@@ -1765,43 +1759,13 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
             self.perror('Error saving {}'.format(fname))
             raise
 
-    def _read_file_or_url(self, fname):
-        """Open a file or URL for reading by the do_load() method.
-
-        This method methodically proceeds in the following path until it succeeds (or fails in the end):
-        1) Try to open the file
-        2) Try to open the URL if it looks like one
-        3) Try to expand the ~ to create an absolute path for the filename
-        4) Try to add the default extension to the expanded path
-        5) Raise an error
-
-        :param fname: str - filename or URL
-        :return: stream  or a file-like object pointing to the file or URL (or raise an exception if it couldn't open)
-        """
-        # TODO: not working on localhost
-        if os.path.isfile(fname):
-            result = open(fname, 'r')
-        else:
-            match = self.urlre.match(fname)
-            if match:
-                result = urlopen(match.group(1))
-            else:
-                fname = os.path.expanduser(fname)
-                try:
-                    result = open(os.path.expanduser(fname), 'r')
-                except IOError:
-                    result = open('%s.%s' % (os.path.expanduser(fname),
-                                             self.defaultExtension), 'r')
-        return result
-
     def do__relative_load(self, arg=None):
-        """Runs commands in script at file or URL.
+        """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  _relative_load [file_path]
 
     optional argument:
-    file_path   a file path or URL pointing to a script
-                default: value stored in `default_file_name` settable param
+    file_path   a file path pointing to a script
 
 Script should contain one command per line, just like command would be typed in console.
 
@@ -1817,11 +1781,11 @@ NOTE: This command is intended to only be used within text file scripts.
             self.do_load('%s %s' % (targetname, args))
 
     def do_load(self, file_path=None):
-        """Runs commands in script at file or URL.
+        """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  load [file_path]
 
-    * file_path - a file path or URL pointing to a script (default: value stored in `default_file_name` param)
+    * file_path - a file path pointing to a script
 
 Script should contain one command per line, just like command would be typed in console.
         """
@@ -1831,17 +1795,20 @@ Script should contain one command per line, just like command would be typed in 
         else:
             file_path = file_path.split(None, 1)
             targetname, args = file_path[0], (file_path[1:] or [''])[0].strip()
+
+        expanded_path = os.path.expanduser(targetname)
         try:
-            target = self._read_file_or_url(targetname)
+            target = open(expanded_path)
         except IOError as e:
-            self.perror('Problem accessing script from %s: \n%s' % (targetname, e))
+            self.perror('Problem accessing script from {}:\n{}'.format(expanded_path, e))
             return
+
         keepstate = Statekeeper(self, ('stdin', 'use_rawinput', 'prompt',
                                        'continuation_prompt', '_current_script_dir'))
         self.stdin = target
         self.use_rawinput = False
         self.prompt = self.continuation_prompt = ''
-        self._current_script_dir = os.path.split(targetname)[0]
+        self._current_script_dir = os.path.dirname(expanded_path)
         stop = self._cmdloop()
         self.stdin.close()
         keepstate.restore()
