@@ -1759,10 +1759,10 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
             self.perror('Error saving {}'.format(fname))
             raise
 
-    def do__relative_load(self, arg=None):
+    def do__relative_load(self, file_path):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
-    Usage:  _relative_load [file_path]
+    Usage:  _relative_load <file_path>
 
     optional argument:
     file_path   a file path pointing to a script
@@ -1774,29 +1774,31 @@ relative to the already-running script's directory.
 
 NOTE: This command is intended to only be used within text file scripts.
         """
-        if arg:
-            arg = arg.split(None, 1)
-            targetname, args = arg[0], (arg[1:] or [''])[0]
-            targetname = os.path.join(self._current_script_dir or '', targetname)
-            self.do_load('%s %s' % (targetname, args))
+        # If arg is None or arg is an empty string this is an error
+        if not file_path:
+            self.perror('_relative_load command requires a file path:\n', traceback_war=False)
+            return
 
-    def do_load(self, file_path=None):
+        file_path = file_path.strip()
+        # NOTE: Relative path is an absolute path, it is just relative to the current script directory
+        relative_path = os.path.join(self._current_script_dir or '', file_path)
+        self.do_load(relative_path)
+
+    def do_load(self, file_path):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
-    Usage:  load [file_path]
+    Usage:  load <file_path>
 
     * file_path - a file path pointing to a script
 
 Script should contain one command per line, just like command would be typed in console.
         """
-        # If arg is None or arg is an empty string, use the default filename
+        # If arg is None or arg is an empty string this is an error
         if not file_path:
-            targetname = self.default_file_name
-        else:
-            file_path = file_path.split(None, 1)
-            targetname, args = file_path[0], (file_path[1:] or [''])[0].strip()
+            self.perror('load command requires a file path:\n', traceback_war=False)
+            return
 
-        expanded_path = os.path.expanduser(targetname)
+        expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
         try:
             target = open(expanded_path)
         except IOError as e:
