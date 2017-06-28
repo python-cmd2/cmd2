@@ -602,7 +602,7 @@ class Cmd(cmd.Cmd):
     colors = (platform.system() != 'Windows')
     continuation_prompt = '> '
     debug = False
-    default_file_name = 'command.txt'  # For ``save``, ``load``, etc.
+    default_file_name = 'command.txt'  # For ``edit`` when called with a history item number and ``save``
     echo = False
     editor = os.environ.get('EDITOR')
     if not editor:
@@ -622,14 +622,14 @@ class Cmd(cmd.Cmd):
     settable = stubborn_dict('''
         abbrev                Accept abbreviated commands
         autorun_on_edit       Automatically run files after editing
-        case_insensitive      upper- and lower-case both OK
+        case_insensitive      Upper- and lower-case both OK
         colors                Colorized output (*nix only)
         continuation_prompt   On 2nd+ line of input
         debug                 Show full error stack on error
-        default_file_name     for ``save``, ``load``, etc.
+        default_file_name     For ``edit`` and ``save``
         echo                  Echo command issued into output
         editor                Program used by ``edit``
-        feedback_to_output    include nonessentials in `|`, `>` results
+        feedback_to_output    Include nonessentials in `|`, `>` results
         locals_in_py          Allow access to your application in py via self
         prompt                The prompt issued to solicit input
         quiet                 Don't print nonessential feedback
@@ -1748,8 +1748,13 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         elif args.idx:
             saveme = self.history[int(args.idx) - 1]
         else:
-            # Since this save command has already been added to history, need to go one more back for previous
-            saveme = self.history[-2]
+            saveme = ''
+            # Wrap in try to deal with case of empty history
+            try:
+                # Since this save command has already been added to history, need to go one more back for previous
+                saveme = self.history[-2]
+            except IndexError:
+                pass
         try:
             f = open(os.path.expanduser(fname), 'w')
             f.write(saveme)

@@ -1,0 +1,7 @@
+save
+
+!cat command.txt
+
+help save
+
+save * save.hist
