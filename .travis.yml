@@ -44,6 +44,13 @@ matrix:
 #          env:
 #            - TOXENV=py36
 #            - BREW_INSTALL=python3
+
+# use xvfb (X Virtual Framebuffer) to imitate a display so that xclip should work
+before_script:
+  - "export DISPLAY=:99.0"
+  - "sh -e /etc/init.d/xvfb start"
+  - sleep 3 # give xvfb some time to start
+
 install:
   - pip install tox
 #  - |
