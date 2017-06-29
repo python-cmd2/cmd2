@@ -416,27 +416,20 @@ def test_pipe_to_shell(base_app):
 def test_send_to_paste_buffer(base_app):
     from cmd2 import can_clip
 
+    # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
     expected = normalize(BASE_HELP)
 
     # If the tools for interacting with the clipboard/pastebuffer are available
     if cmd2.can_clip:
         # Read from the clipboard
-        try:
-            # Python2
-            import Tkinter as tk
-        except ImportError:
-            # Python3
-            import tkinter as tk
+        assert normalize(cmd2.get_paste_buffer()) == expected
 
-        root = tk.Tk()
-        # keep the window from showing
-        root.withdraw()
-
-        # read the clipboard
-        c = root.clipboard_get()
-
-        assert normalize(c) == expected
+    # Test appending to the PasteBuffer/Clipboard
+    run_cmd(base_app, 'help history >>')
+    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
+    if cmd2.can_clip:
+        assert normalize(cmd2.get_paste_buffer()) == expected
 
 
 def test_base_timing(base_app, capsys):
