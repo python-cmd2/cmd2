@@ -1,5 +1,12 @@
 language: python
+
 sudo: false  # false enables container-based build for fast boot times on Linux
+
+addons:
+  apt:
+    packages:
+      - xclip
+
 matrix:
     include:
         - os: linux

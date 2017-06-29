@@ -398,11 +398,10 @@ else:
     # Running on Linux
     try:
         with open(os.devnull, 'w') as DEVNULL:
-            subprocess.check_call('xclip -o -sel clip', shell=True, stdin=subprocess.PIPE, stdout=DEVNULL,
-                                  stderr=DEVNULL)
+            subprocess.check_call(['which', 'xclip'], stdout=DEVNULL, stderr=DEVNULL)
         can_clip = True
     except (subprocess.CalledProcessError, OSError, IOError):
-        pass  # something went wrong with xclip and we cannot use it
+        pass  # xclip is not present, so we cannot use it
     if can_clip:
         def get_paste_buffer():
             """Get the contents of the clipboard for Linux OSes.
