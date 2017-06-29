@@ -406,13 +406,10 @@ def test_pipe_to_shell(base_app):
         # Windows
         # Get help menu and pipe it's output to the sort shell command
         out = run_cmd(base_app, 'help | sort')
-        expected = normalize("""
-
-
-_relative_load  edit  history  pause  pyscript  run   set    shortcuts
-========================================
-cmdenvironment  help  load     py     quit      save  shell  show
-Documented commands (type help <topic>):""")
+        expected = ['', '', '_relative_load  edit  history  pause  pyscript  run   set    shortcuts',
+                    '========================================',
+                    'cmdenvironment  help  load     py     quit      save  shell  show',
+                    'Documented commands (type help <topic>):']
         assert out == expected
     else:
         # Mac and Linux
