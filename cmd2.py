@@ -82,7 +82,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.7.4b'
+__version__ = '0.7.4'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
