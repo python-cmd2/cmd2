@@ -398,18 +398,17 @@ else:
     # Running on Linux
     try:
         with open(os.devnull, 'w') as DEVNULL:
-            subprocess.check_call(['which', 'xclip'], stdout=DEVNULL, stderr=DEVNULL)
+            subprocess.check_call(['uptime', '|', 'xclip'], stdout=DEVNULL, stderr=DEVNULL)
         can_clip = True
     except (subprocess.CalledProcessError, OSError, IOError):
-        pass  # xclip is not present, so we cannot use it
+        pass  # something went wrong with xclip and we cannot use it
     if can_clip:
         def get_paste_buffer():
             """Get the contents of the clipboard for Linux OSes.
 
             :return: str - contents of the clipboard
             """
-            xclipproc = subprocess.Popen('xclip -o -sel clip', shell=True, stdout=subprocess.PIPE,
-                                         stdin=subprocess.PIPE)
+            xclipproc = subprocess.Popen(['xclip', '-o', '-selection', 'clipboard'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             stdout, stderr = xclipproc.communicate()
             if six.PY3:
                 return stdout.decode()
@@ -421,7 +420,7 @@ else:
 
             :param txt: str - text to paste to the clipboard
             """
-            xclipproc = subprocess.Popen('xclip -sel clip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc = subprocess.Popen(['xclip', '-selection', 'clipboard'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             if six.PY3:
                 xclipproc.stdin.write(txt.encode())
             else:
@@ -429,7 +428,7 @@ else:
             xclipproc.stdin.close()
 
             # but we want it in both the "primary" and "mouse" clipboards
-            xclipproc = subprocess.Popen('xclip', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc = subprocess.Popen(['xclip'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
             if six.PY3:
                 xclipproc.stdin.write(txt.encode())
             else:
