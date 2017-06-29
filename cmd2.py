@@ -27,7 +27,6 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
 import cmd
 import collections
-import copy
 import datetime
 import glob
 import optparse
@@ -474,71 +473,6 @@ class ParsedString(str):
         return new
 
 
-class StubbornDict(dict):
-    """ Dictionary that tolerates many input formats.
-
-    Create it with the stubbornDict(arg) factory function.
-    """
-    # noinspection PyMethodOverriding
-    def update(self, arg):
-        """Adds dictionary arg's key-values pairs in to dict
-
-        :param arg: an object convertible to a StubbornDict
-        """
-        dict.update(self, StubbornDict.to_dict(arg))
-
-    append = update
-
-    def __iadd__(self, arg):
-        self.update(arg)
-        return self
-
-    def __add__(self, arg):
-        selfcopy = copy.copy(self)
-        selfcopy.update(stubborn_dict(arg))
-        return selfcopy
-
-    def __radd__(self, arg):
-        selfcopy = copy.copy(self)
-        selfcopy.update(stubborn_dict(arg))
-        return selfcopy
-
-    @classmethod
-    def to_dict(cls, arg):
-        """Generates dictionary from string or list of strings"""
-        if hasattr(arg, 'splitlines'):
-            arg = arg.splitlines()
-        if hasattr(arg, '__reversed__'):
-            result = {}
-            for a in arg:
-                a = a.strip()
-                if a:
-                    key_val = a.split(None, 1)
-                    key = key_val[0]
-                    if len(key_val) > 1:
-                        val = key_val[1]
-                    else:
-                        val = ''
-                    result[key] = val
-        else:
-            result = arg
-        return result
-
-
-def stubborn_dict(*arg, **kwarg):
-    """ Factory function which creates instances of the StubbornDict class.
-
-    :param arg: an argument which could be used to construct a built-in dict dictionary
-    :param kwarg: a variable number of key/value pairs
-    :return: StubbornDict - a StubbornDict containing everything in both arg and kwarg
-    """
-    result = {}
-    for a in arg:
-        result.update(StubbornDict.to_dict(a))
-    result.update(kwarg)
-    return StubbornDict(result)
-
-
 def replace_with_file_contents(fname):
     """Action to perform when successfully matching parse element definition for inputFrom parser.
 
@@ -619,21 +553,20 @@ class Cmd(cmd.Cmd):
     timing = False  # Prints elapsed time for each command
 
     # To make an attribute settable with the "do_set" command, add it to this ...
-    settable = stubborn_dict('''
-        abbrev                Accept abbreviated commands
-        autorun_on_edit       Automatically run files after editing
-        case_insensitive      Upper- and lower-case both OK
-        colors                Colorized output (*nix only)
-        continuation_prompt   On 2nd+ line of input
-        debug                 Show full error stack on error
-        echo                  Echo command issued into output
-        editor                Program used by ``edit``
-        feedback_to_output    Include nonessentials in `|`, `>` results
-        locals_in_py          Allow access to your application in py via self
-        prompt                The prompt issued to solicit input
-        quiet                 Don't print nonessential feedback
-        timing                Report execution times
-        ''')
+    # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
+    settable = {'abbrev': 'Accept abbreviated commands',
+                'autorun_on_edit': 'Automatically run files after editing',
+                'case_insensitive': 'Upper- and lower-case both OK',
+                'colors': 'Colorized output (*nix only)',
+                'continuation_prompt': 'On 2nd+ line of input',
+                'debug': 'Show full error stack on error',
+                'echo': 'Echo command issued into output',
+                'editor': 'Program used by ``edit``',
+                'feedback_to_output': 'Include nonessentials in `|`, `>` results',
+                'locals_in_py': 'Allow access to your application in py via self',
+                'prompt': 'The prompt issued to solicit input',
+                'quiet': "Don't print nonessential feedback",
+                'timing': 'Report execution times'}
 
     def __init__(self, completekey='tab', stdin=None, stdout=None, use_ipython=False, transcript_files=None):
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
@@ -709,6 +642,9 @@ class Cmd(cmd.Cmd):
         self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
         # noinspection PyUnresolvedReferences
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
+
+        # Make sure settable parameters are sorted alphabetically by key
+        self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
     def poutput(self, msg):
         """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
@@ -1271,7 +1207,7 @@ class Cmd(cmd.Cmd):
         if result:
             for p in sorted(result):
                 if opts.long:
-                    self.poutput('%s # %s' % (result[p].ljust(maxlen), self.settable[p]))
+                    self.poutput('{} # {}'.format(result[p].ljust(maxlen), self.settable[p]))
                 else:
                     self.poutput(result[p])
         else:

@@ -43,27 +43,6 @@ def test_remaining_args():
     assert cmd2.remaining_args('-f bar   bar   cow', ['bar', 'cow']) == 'bar   cow'
 
 
-def test_stubborn_dict_class():
-    d = cmd2.StubbornDict(large='gross', small='klein')
-    assert sorted(d.items()) == [('large', 'gross'), ('small', 'klein')]
-
-    d.append(['plain', '  plaid'])
-    assert sorted(d.items()) == [('large', 'gross'), ('plaid', ''), ('plain', ''), ('small', 'klein')]
-
-    d += '   girl Frauelein, Maedchen\n\n shoe schuh'
-    assert sorted(d.items()) == [('girl', 'Frauelein, Maedchen'), ('large', 'gross'), ('plaid', ''), ('plain', ''),
-                                 ('shoe', 'schuh'), ('small', 'klein')]
-
-def test_stubborn_dict_factory():
-    assert sorted(cmd2.stubborn_dict('cow a bovine\nhorse an equine').items()) == [('cow', 'a bovine'),
-                                                                                   ('horse', 'an equine')]
-    assert sorted(cmd2.stubborn_dict(['badger', 'porcupine a poky creature']).items()) == [('badger', ''),
-                                                                                           ('porcupine',
-                                                                                           'a poky creature')]
-    assert sorted(cmd2.stubborn_dict(turtle='has shell', frog='jumpy').items()) == [('frog', 'jumpy'),
-                                                                                    ('turtle', 'has shell')]
-
-
 def test_history_span(hist):
     h = hist
     assert h.span('-2..') == ['third', 'fourth']
