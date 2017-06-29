@@ -20,14 +20,16 @@ from conftest import run_cmd, StdOut, normalize
 
 
 class CmdLineApp(Cmd):
-    multilineCommands = ['orate']
-    maxrepeats = 3
-    redirector = '->'
-
     def __init__(self, *args, **kwargs):
+        self.multilineCommands = ['orate']
+        self.maxrepeats = 3
+        self.redirector = '->'
+
+        # Add stuff to settable and/or shortcuts before calling base class initializer
+        self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
+
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
         Cmd.__init__(self, *args, **kwargs)
-        self.settable.append('maxrepeats   Max number of `--repeat`s allowed')
 
         # Configure how arguments are parsed for @options commands
         set_posix_shlex(False)

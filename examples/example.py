@@ -14,15 +14,18 @@ from cmd2 import Cmd, make_option, options, set_use_arg_list
 
 class CmdLineApp(Cmd):
     """ Example cmd2 application. """
-    multilineCommands = ['orate']
-    Cmd.shortcuts.update({'&': 'speak'})
-    maxrepeats = 3
-    Cmd.settable.append('maxrepeats')
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
     # default_to_shell = True
 
     def __init__(self):
+        self.multilineCommands = ['orate']
+        self.maxrepeats = 3
+
+        # Add stuff to settable and shortcutgs before calling base class initializer
+        self.settable['maxrepeats'] = 'max repetitions for speak command'
+        self.shortcuts.update({'&': 'speak'})
+
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         Cmd.__init__(self, use_ipython=False)
 
