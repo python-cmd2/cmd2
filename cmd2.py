@@ -357,7 +357,7 @@ elif sys.platform == 'darwin':
         # Python 3.3+ supports subprocess.DEVNULL, but that isn't defined for Python 2.7
         with open(os.devnull, 'w') as DEVNULL:
             # test for pbcopy - AFAIK, should always be installed on MacOS
-            subprocess.check_call('pbcopy -help', shell=True, stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
+            subprocess.check_call(['pbcopy', '-help'], stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
         can_clip = True
     except (subprocess.CalledProcessError, OSError, IOError):
         pass
@@ -367,7 +367,7 @@ elif sys.platform == 'darwin':
 
             :return: str - contents of the clipboard
             """
-            pbcopyproc = subprocess.Popen('pbpaste', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+            pbcopyproc = subprocess.Popen('pbpaste', stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
             stdout, stderr = pbcopyproc.communicate()
             if six.PY3:
@@ -380,7 +380,7 @@ elif sys.platform == 'darwin':
 
             :param txt: str - text to paste to the clipboard
             """
-            pbcopyproc = subprocess.Popen('pbcopy', shell=True, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+            pbcopyproc = subprocess.Popen('pbcopy', stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                           stderr=subprocess.PIPE)
             if six.PY3:
                 pbcopyproc.communicate(txt.encode())
@@ -398,7 +398,7 @@ else:
     # Running on Linux
     try:
         with open(os.devnull, 'w') as DEVNULL:
-            subprocess.check_call(['uptime', '|', 'xclip'], stdout=DEVNULL, stderr=DEVNULL)
+            subprocess.check_call(['uptime', '|', 'xclip'], stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
         can_clip = True
     except (subprocess.CalledProcessError, OSError, IOError):
         pass  # something went wrong with xclip and we cannot use it
@@ -408,7 +408,8 @@ else:
 
             :return: str - contents of the clipboard
             """
-            xclipproc = subprocess.Popen(['xclip', '-o', '-selection', 'clipboard'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc = subprocess.Popen(['xclip', '-o', '-selection', 'clipboard'], stdin=subprocess.PIPE,
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = xclipproc.communicate()
             if six.PY3:
                 return stdout.decode()
@@ -420,7 +421,8 @@ else:
 
             :param txt: str - text to paste to the clipboard
             """
-            xclipproc = subprocess.Popen(['xclip', '-selection', 'clipboard'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc = subprocess.Popen(['xclip', '-selection', 'clipboard'], stdin=subprocess.PIPE,
+                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             if six.PY3:
                 xclipproc.stdin.write(txt.encode())
             else:
@@ -428,7 +430,8 @@ else:
             xclipproc.stdin.close()
 
             # but we want it in both the "primary" and "mouse" clipboards
-            xclipproc = subprocess.Popen(['xclip'], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+            xclipproc = subprocess.Popen(['xclip'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                         stderr=subprocess.PIPE)
             if six.PY3:
                 xclipproc.stdin.write(txt.encode())
             else:
