@@ -1,5 +1,7 @@
 language: python
+
 sudo: false  # false enables container-based build for fast boot times on Linux
+
 matrix:
     include:
         - os: linux
@@ -37,6 +39,7 @@ matrix:
 #          env:
 #            - TOXENV=py36
 #            - BREW_INSTALL=python3
+
 install:
   - pip install tox
 #  - |
