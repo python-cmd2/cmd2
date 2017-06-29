@@ -900,17 +900,16 @@ class Cmd(cmd.Cmd):
                 self.kept_state = None
 
                 if statement.parsed.pipeTo:
-                    # cat the tempfile and pipe the output to the specified shell command
-                    cat_command = 'cat'
-                    p1 = subprocess.Popen([cat_command, self._temp_filename], stdout=subprocess.PIPE)
-                    p2 = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=p1.stdout, stdout=subprocess.PIPE)
-                    p1.stdout.close()  # Allow p1 to receive a SIGPIPE if p2 exits.
-                    output, err = p2.communicate()
+                    # Pipe the contents of tempfile to the specified shell command
+                    with open(self._temp_filename) as fd:
+                        pipe_proc = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=fd,
+                                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        output, err = pipe_proc.communicate()
 
-                    if six.PY3:
-                        self.stdout.write(output.decode())
-                    else:
-                        self.stdout.write(output)
+                        if six.PY3:
+                            self.stdout.write(output.decode())
+                        else:
+                            self.stdout.write(output)
 
                     os.remove(self._temp_filename)
                     self._temp_filename = None

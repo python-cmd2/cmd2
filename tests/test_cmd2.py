@@ -402,15 +402,22 @@ def test_input_redirection(base_app, request):
 
 
 def test_pipe_to_shell(base_app):
-    # Get help on help and pipe it's output to the input of the word count shell command
-    out = run_cmd(base_app, 'help help | wc')
-
     if sys.platform == "win32":
-        expected = normalize("1      11      71")
+        # Windows
+        # Get help menu and pipe it's output to the sort shell command
+        out = run_cmd(base_app, 'help | sort')
+        expected = normalize("""
+_relative_load  edit  history  pause  pyscript  run   set    shortcuts
+========================================
+cmdenvironment  help  load     py     quit      save  shell  show
+Documented commands (type help <topic>):""")
+        assert out == expected
     else:
-        expected = normalize("1      11      70")
-
-    assert out[0].strip() == expected[0].strip()
+        # Mac and Linux
+        # Get help on help and pipe it's output to the input of the word count shell command
+        out = run_cmd(base_app, 'help help | wc')
+        expected = normalize("1 11 70")
+        assert out[0].strip() == expected[0].strip()
 
 
 def test_send_to_paste_buffer(base_app):
