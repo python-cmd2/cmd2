@@ -472,23 +472,20 @@ def test_pipe_to_shell(base_app):
         assert out[0].strip() == expected[0].strip()
 
 
+@pytest.mark.skipif(not cmd2.can_clip,
+                    reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
     from cmd2 import can_clip
 
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
     expected = normalize(BASE_HELP)
-
-    # If the tools for interacting with the clipboard/pastebuffer are available
-    if cmd2.can_clip:
-        # Read from the clipboard
-        assert normalize(cmd2.get_paste_buffer()) == expected
+    assert normalize(cmd2.get_paste_buffer()) == expected
 
     # Test appending to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help history >>')
     expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
-    if cmd2.can_clip:
-        assert normalize(cmd2.get_paste_buffer()) == expected
+    assert normalize(cmd2.get_paste_buffer()) == expected
 
 
 def test_base_timing(base_app, capsys):
