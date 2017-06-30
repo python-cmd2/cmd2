@@ -293,6 +293,54 @@ def test_base_load_with_empty_args(base_app, capsys):
     assert normalize(str(err)) == expected
 
 
+def test_base_load_with_nonexistent_file(base_app, capsys):
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load does_not_exist.txt')
+    out, err = capsys.readouterr()
+
+    # The load command requires a path to an existing file
+    assert str(err).startswith("ERROR")
+    assert "does not exist or is not a file" in str(err)
+
+
+def test_base_load_with_empty_file(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'empty.txt')
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load {}'.format(filename))
+    out, err = capsys.readouterr()
+
+    # The load command requires non-empty scripts files
+    assert str(err).startswith("ERROR")
+    assert "is empty" in str(err)
+
+
+def test_base_load_with_binary_file(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'binary.bin')
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load {}'.format(filename))
+    out, err = capsys.readouterr()
+
+    # The load command requires non-empty scripts files
+    assert str(err).startswith("ERROR")
+    assert "is not an ASCII or UTF-8 encoded text file" in str(err)
+
+
+def test_base_load_with_utf8_file(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'utf8.txt')
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load {}'.format(filename))
+    out, err = capsys.readouterr()
+
+    # TODO Make this test better once shell command is fixed to used cmd2's stdout
+    assert str(err) == ''
+
+
 def test_base_relative_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
@@ -458,10 +506,10 @@ now: True
 
 
 def test_base_debug(base_app, capsys):
-    # Try to load a non-existent file with debug set to False by default
-    run_cmd(base_app, 'load does_not_exist.txt')
+    # Try to set a non-existent parameter with debug set to False by default
+    run_cmd(base_app, 'set does_not_exist 5')
     out, err = capsys.readouterr()
-    assert err.startswith('ERROR')
+    assert err.startswith('EXCEPTION')
 
     # Set debug true
     out = run_cmd(base_app, 'set debug True')
@@ -472,7 +520,7 @@ now: True
     assert out == expected
 
     # Verify that we now see the exception traceback
-    run_cmd(base_app, 'load does_not_exist.txt')
+    run_cmd(base_app, 'set does_not_exist 5')
     out, err = capsys.readouterr()
     assert str(err).startswith('Traceback (most recent call last):')
 
