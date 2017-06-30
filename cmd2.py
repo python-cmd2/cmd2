@@ -1644,31 +1644,31 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         filename = None
         if arg:
             try:
-                buffer = self._last_matching(int(arg))
+                history_item = self._last_matching(int(arg))
             except ValueError:
                 filename = arg
-                buffer = ''
+                history_item = ''
         else:
             try:
-                buffer = self.history[-1]
+                history_item = self.history[-1]
             except IndexError:
                 self.perror('edit must be called with argument if history is empty', traceback_war=False)
                 return
 
         delete_tempfile = False
-        if buffer:
+        if history_item:
             if filename is None:
                 fd, filename = tempfile.mkstemp(suffix='.txt', text=True)
                 os.close(fd)
                 delete_tempfile = True
 
             f = open(os.path.expanduser(filename), 'w')
-            f.write(buffer or '')
+            f.write(history_item or '')
             f.close()
 
         os.system('%s %s' % (self.editor, filename))
 
-        if self.autorun_on_edit or buffer:
+        if self.autorun_on_edit or history_item:
             self.do_load(filename)
 
         if delete_tempfile:
@@ -1805,7 +1805,8 @@ Script should contain one command per line, just like command would be typed in 
         if runme:
             return self.onecmd_plus_hooks(runme)
 
-    def is_text_file(self, file_path):
+    @staticmethod
+    def is_text_file(file_path):
         """
         Returns if a file contains only ASCII or UTF-8 encoded text
         :param file_path: path to the file being checked
@@ -1817,6 +1818,7 @@ Script should contain one command per line, just like command would be typed in 
         try:
             with codecs.open(expanded_path, encoding='ascii', errors='strict') as f:
                 # Make sure the file has at least one line of text
+                # noinspection PyUnusedLocal
                 if sum(1 for line in f) > 0:
                     valid_text_file = True
         except IOError:
@@ -1826,6 +1828,7 @@ Script should contain one command per line, just like command would be typed in 
             try:
                 with codecs.open(expanded_path, encoding='utf-8', errors='strict') as f:
                     # Make sure the file has at least one line of text
+                    # noinspection PyUnusedLocal
                     if sum(1 for line in f) > 0:
                         valid_text_file = True
             except IOError:
