@@ -105,6 +105,7 @@ the following Python packages are installed:
 
   * six
   * pyparsing
+  * pyperclip
 
 
 Upgrading cmd2

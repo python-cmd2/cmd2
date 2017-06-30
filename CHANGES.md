@@ -17,7 +17,9 @@ News
     * Removed presence of a default file name and default file extension
         * These also strongly felt out of place
         * ``load`` and ``_relative_load`` now require a file path
-        * ``edit`` and ``save`` now use a temporary file if a file path isn't provided   
+        * ``edit`` and ``save`` now use a temporary file if a file path isn't provided
+    * Load command has better error checking and reporting
+    * Clipboard copy and paste functionality is now handled by the ``pyperclip`` module
     
 0.7.3
 -----
