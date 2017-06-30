@@ -26,6 +26,7 @@ written to use `self.stdout.write()`,
 Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
 import cmd
+import codecs
 import collections
 import datetime
 import glob
@@ -1528,31 +1529,31 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         filename = None
         if arg:
             try:
-                buffer = self._last_matching(int(arg))
+                history_item = self._last_matching(int(arg))
             except ValueError:
                 filename = arg
-                buffer = ''
+                history_item = ''
         else:
             try:
-                buffer = self.history[-1]
+                history_item = self.history[-1]
             except IndexError:
                 self.perror('edit must be called with argument if history is empty', traceback_war=False)
                 return
 
         delete_tempfile = False
-        if buffer:
+        if history_item:
             if filename is None:
                 fd, filename = tempfile.mkstemp(suffix='.txt', text=True)
                 os.close(fd)
                 delete_tempfile = True
 
             f = open(os.path.expanduser(filename), 'w')
-            f.write(buffer or '')
+            f.write(history_item or '')
             f.close()
 
         os.system('%s %s' % (self.editor, filename))
 
-        if self.autorun_on_edit or buffer:
+        if self.autorun_on_edit or history_item:
             self.do_load(filename)
 
         if delete_tempfile:
@@ -1643,6 +1644,22 @@ Script should contain one command per line, just like command would be typed in 
             return
 
         expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
+
+        # Make sure expanded_path points to a file
+        if not os.path.isfile(expanded_path):
+            self.perror('{} does not exist or is not a file\n'.format(expanded_path), traceback_war=False)
+            return
+
+        # Make sure the file is not empty
+        if os.path.getsize(expanded_path) == 0:
+            self.perror('{} is empty\n'.format(expanded_path), traceback_war=False)
+            return
+
+        # Make sure the file is ASCII or UTF-8 encoded text
+        if not self.is_text_file(expanded_path):
+            self.perror('{} is not an ASCII or UTF-8 encoded text file\n'.format(expanded_path), traceback_war=False)
+            return
+
         try:
             target = open(expanded_path)
         except IOError as e:
@@ -1672,6 +1689,40 @@ Script should contain one command per line, just like command would be typed in 
         self.pfeedback(runme)
         if runme:
             return self.onecmd_plus_hooks(runme)
+
+    @staticmethod
+    def is_text_file(file_path):
+        """
+        Returns if a file contains only ASCII or UTF-8 encoded text
+        :param file_path: path to the file being checked
+        """
+        expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
+        valid_text_file = False
+
+        # Check if the file is ASCII
+        try:
+            with codecs.open(expanded_path, encoding='ascii', errors='strict') as f:
+                # Make sure the file has at least one line of text
+                # noinspection PyUnusedLocal
+                if sum(1 for line in f) > 0:
+                    valid_text_file = True
+        except IOError:
+            pass
+        except UnicodeDecodeError:
+            # The file is not ASCII. Check if it is UTF-8.
+            try:
+                with codecs.open(expanded_path, encoding='utf-8', errors='strict') as f:
+                    # Make sure the file has at least one line of text
+                    # noinspection PyUnusedLocal
+                    if sum(1 for line in f) > 0:
+                        valid_text_file = True
+            except IOError:
+                pass
+            except UnicodeDecodeError:
+                # Not UTF-8
+                pass
+
+        return valid_text_file
 
     def run_transcript_tests(self, callargs):
         """Runs transcript tests for provided file(s).
@@ -2242,5 +2293,4 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
 if __name__ == '__main__':
     # If run as the main application, simply start a bare-bones cmd2 application with only built-in functionality.
     app = Cmd()
-    app.debug = True
     app.cmdloop()
