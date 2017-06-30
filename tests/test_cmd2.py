@@ -303,6 +303,44 @@ def test_base_load_with_nonexistent_file(base_app, capsys):
     assert "does not exist or is not a file" in str(err)
 
 
+def test_base_load_with_empty_file(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'empty.txt')
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load {}'.format(filename))
+    out, err = capsys.readouterr()
+
+    # The load command requires non-empty scripts files
+    assert str(err).startswith("ERROR")
+    assert "is empty" in str(err)
+
+
+def test_base_load_with_binary_file(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'binary.bin')
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load {}'.format(filename))
+    out, err = capsys.readouterr()
+
+    # The load command requires non-empty scripts files
+    assert str(err).startswith("ERROR")
+    assert "is not an ASCII or UTF-8 encoded text file" in str(err)
+
+
+def test_base_load_with_utf8_file(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'utf8.txt')
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load {}'.format(filename))
+    out, err = capsys.readouterr()
+
+    # TODO Make this test better once shell command is fixed to used cmd2's stdout
+    assert str(err) == ''
+
+
 def test_base_relative_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
