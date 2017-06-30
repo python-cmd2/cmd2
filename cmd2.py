@@ -44,6 +44,7 @@ from code import InteractiveConsole
 from optparse import make_option
 
 import pyparsing
+import pyperclip
 
 # next(it) gets next item of iterator it. This is a replacement for calling it.next() in Python 2 and next(it) in Py3
 from six import next
@@ -301,148 +302,32 @@ def options(option_list, arg_desc="arg"):
     return option_setup
 
 
-# Prefix to use on all OSes when the appropriate library or CLI tool isn't installed for getting access to paste buffer
-pastebufferr = """Redirecting to or from paste buffer requires %s
-to be installed on operating system.
-%s"""
-
 # Can we access the clipboard?
-can_clip = False
-if sys.platform == "win32":
-    # Running on Windows
-    try:
-        # noinspection PyUnresolvedReferences
-        import win32clipboard
+can_clip = True
 
-        def get_paste_buffer():
-            """Get the contents of the clipboard for Windows OSes.
 
-            :return: str - contents of the clipboard
-            """
-            win32clipboard.OpenClipboard(0)
-            try:
-                result = win32clipboard.GetClipboardData()
-            except TypeError:
-                result = ''  # non-text
-            win32clipboard.CloseClipboard()
-            return result
+def get_paste_buffer():
+    """Get the contents of the clipboard / paste buffer.
 
-        def write_to_paste_buffer(txt):
-            """Paste text to the clipboard for Windows OSes.
+    :return: str - contents of the clipboard
+    """
+    pb_unicode = pyperclip.paste()
 
-            :param txt: str - text to paste to the clipboard
-            """
-            win32clipboard.OpenClipboard(0)
-            win32clipboard.EmptyClipboard()
-            win32clipboard.SetClipboardText(txt)
-            win32clipboard.CloseClipboard()
-
-        can_clip = True
-    except ImportError:
-        # noinspection PyUnusedLocal
-        def get_paste_buffer(*args):
-            """For Windows OSes without the appropriate library installed to get text from clipboard, raise an exception.
-            """
-            raise OSError(pastebufferr % ('pywin32', 'Download from http://sourceforge.net/projects/pywin32/'))
-
-        write_to_paste_buffer = get_paste_buffer
-elif sys.platform == 'darwin':
-    # Running on Mac OS X
-    try:
-        # Warning: subprocess.call() and subprocess.check_call() should never be called with stdout=PIPE or stderr=PIPE
-        # because the child process will block if it generates enough output to a pipe to fill up the OS pipe buffer.
-        # Starting with Python 3.5 there is a newer, safer API based on the run() function.
-
-        # Python 3.3+ supports subprocess.DEVNULL, but that isn't defined for Python 2.7
-        with open(os.devnull, 'w') as DEVNULL:
-            # test for pbcopy - AFAIK, should always be installed on MacOS
-            subprocess.check_call(['pbcopy', '-help'], stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
-        can_clip = True
-    except (subprocess.CalledProcessError, OSError, IOError):
-        pass
-    if can_clip:
-        def get_paste_buffer():
-            """Get the contents of the clipboard for Mac OS X.
-
-            :return: str - contents of the clipboard
-            """
-            pbcopyproc = subprocess.Popen('pbpaste', stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                          stderr=subprocess.PIPE)
-            stdout, stderr = pbcopyproc.communicate()
-            if six.PY3:
-                return stdout.decode()
-            else:
-                return stdout
-
-        def write_to_paste_buffer(txt):
-            """Paste text to the clipboard for Mac OS X.
-
-            :param txt: str - text to paste to the clipboard
-            """
-            pbcopyproc = subprocess.Popen('pbcopy', stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                          stderr=subprocess.PIPE)
-            if six.PY3:
-                pbcopyproc.communicate(txt.encode())
-            else:
-                pbcopyproc.communicate(txt)
+    if six.PY3:
+        pb_str = pb_unicode
     else:
-        # noinspection PyUnusedLocal
-        def get_paste_buffer(*args):
-            """For Mac OS X without the appropriate tool installed to get text from clipboard, raise an exception."""
-            raise OSError(pastebufferr % ('pbcopy',
-                                          'On MacOS X - error should not occur - part of the default installation'))
+        import unicodedata
+        pb_str = unicodedata.normalize('NFKD', pb_unicode).encode('ascii', 'ignore')
 
-        write_to_paste_buffer = get_paste_buffer
-else:
-    # Running on Linux
-    try:
-        with open(os.devnull, 'w') as DEVNULL:
-            subprocess.check_call(['uptime', '|', 'xclip'], stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
-        can_clip = True
-    except (subprocess.CalledProcessError, OSError, IOError):
-        pass  # something went wrong with xclip and we cannot use it
-    if can_clip:
-        def get_paste_buffer():
-            """Get the contents of the clipboard for Linux OSes.
+    return pb_str
 
-            :return: str - contents of the clipboard
-            """
-            xclipproc = subprocess.Popen(['xclip', '-o', '-selection', 'clipboard'], stdin=subprocess.PIPE,
-                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            stdout, stderr = xclipproc.communicate()
-            if six.PY3:
-                return stdout.decode()
-            else:
-                return stdout
 
-        def write_to_paste_buffer(txt):
-            """Paste text to the clipboard for Linux OSes.
+def write_to_paste_buffer(txt):
+    """Copy text to the clipboard / paste buffer.
 
-            :param txt: str - text to paste to the clipboard
-            """
-            xclipproc = subprocess.Popen(['xclip', '-selection', 'clipboard'], stdin=subprocess.PIPE,
-                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            if six.PY3:
-                xclipproc.stdin.write(txt.encode())
-            else:
-                xclipproc.stdin.write(txt)
-            xclipproc.stdin.close()
-
-            # but we want it in both the "primary" and "mouse" clipboards
-            xclipproc = subprocess.Popen(['xclip'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                         stderr=subprocess.PIPE)
-            if six.PY3:
-                xclipproc.stdin.write(txt.encode())
-            else:
-                xclipproc.stdin.write(txt)
-            xclipproc.stdin.close()
-    else:
-        # noinspection PyUnusedLocal
-        def get_paste_buffer(*args):
-            """For Linux without the appropriate tool installed to get text from clipboard, raise an exception."""
-            raise OSError(pastebufferr % ('xclip', 'On Debian/Ubuntu, install with "sudo apt-get install xclip"'))
-
-        write_to_paste_buffer = get_paste_buffer
+    :param txt: str - text to copy to the clipboard
+    """
+    pyperclip.copy(txt)
 
 
 class ParsedString(str):
