@@ -68,13 +68,6 @@ class DemoApp(Cmd):
         else:
             self.stdout.write('Hello Nobody\n')
 
-    def do_eat(self, arg):
-        """Eat something, with a selection of sauces to choose from."""
-        sauce = self.select('sweet salty', 'Sauce? ')
-        result = '{food} with {sauce} sauce, yum!'
-        result = result.format(food=arg, sauce=sauce)
-        self.stdout.write(result + '\n')
-
 
 @pytest.fixture
 def _cmdline_app():
@@ -238,27 +231,6 @@ def test_commands_at_invocation():
         app.cmdloop()
         out = app.stdout.buffer
         assert out == expected
-
-
-def test_select_options(_demo_app):
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
-
-    food = 'bacon'
-    run_cmd(_demo_app, "set debug true")
-    out = run_cmd(_demo_app, "eat {}".format(food))
-    expected = normalize("""
-   1. sweet
-   2. salty
-{} with salty sauce, yum!
-""".format(food))
-
-    # Make sure our mock was called with the expected arguments
-    m.assert_called_once_with('Sauce? ')
-
-    # And verify the expected output to stdout
-    assert out == expected
 
 
 def test_transcript_from_cmdloop(request, capsys):
