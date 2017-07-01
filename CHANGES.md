@@ -4,7 +4,7 @@ News
 0.7.4
 -----
 
-*Release date: TBD*
+*Release date: 2017-07-TBD*
 
 * Bug fixes
     * Fixed a couple bugs in interacting with pastebuffer/clipboard on macOS and Linux
@@ -18,8 +18,10 @@ News
         * These also strongly felt out of place
         * ``load`` and ``_relative_load`` now require a file path
         * ``edit`` and ``save`` now use a temporary file if a file path isn't provided
-    * Load command has better error checking and reporting
-    * Clipboard copy and paste functionality is now handled by the ``pyperclip`` module
+    * ``load`` command has better error checking and reporting
+    * Clipboard copy and paste functionality is now handled by the **pyperclip** module
+        * NOTE: This adds an additional required 3rd-party dependency
+    * Added a lot of unit tests
     
 0.7.3
 -----
