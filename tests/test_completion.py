@@ -24,8 +24,8 @@ def cmd2_app():
 def test_cmd2_command_completion_single_end(cmd2_app):
     text = 'he'
     line = 'he'
-    begidx = 0
-    endidx = 2
+    endidx = len(line)
+    begidx = endidx - len(text)
     # It is at end of line, so extra space is present
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help ']
 
@@ -40,23 +40,23 @@ def test_cmd2_command_completion_single_mid(cmd2_app):
 def test_cmd2_command_completion_multiple(cmd2_app):
     text = 'h'
     line = 'h'
-    begidx = 0
-    endidx = 1
+    endidx = len(line)
+    begidx = endidx - len(text)
     # It is not at end of line, so no extra space
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help', 'history']
 
 def test_cmd2_command_completion_nomatch(cmd2_app):
     text = 'z'
     line = 'z'
-    begidx = 0
-    endidx = 1
+    endidx = len(line)
+    begidx = endidx - len(text)
     assert cmd2_app.completenames(text, line, begidx, endidx) == []
 
 def test_cmd2_help_completion_single_end(cmd2_app):
     text = 'he'
     line = 'help he'
-    begidx = 5
-    endidx = 7
+    endidx = len(line)
+    begidx = endidx - len(text)
     # Even though it is at end of line, no extra space is present when tab completing a command name to get help on
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
 
@@ -70,51 +70,87 @@ def test_cmd2_help_completion_single_mid(cmd2_app):
 def test_cmd2_help_completion_multiple(cmd2_app):
     text = 'h'
     line = 'help h'
-    begidx = 5
-    endidx = 6
+    endidx = len(line)
+    begidx = endidx - len(text)
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help', 'history']
 
 def test_cmd2_help_completion_nomatch(cmd2_app):
     text = 'z'
     line = 'help z'
-    begidx = 5
-    endidx = 6
+    endidx = len(line)
+    begidx = endidx - len(text)
     assert cmd2_app.completenames(text, line, begidx, endidx) == []
 
 def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
         text = 'calc'
-        line = 'shell calc'
-        begidx = 6
-        endidx = 10
-        assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['calc.exe ']
+        line = 'shell {}'.format(text)
+        expected = ['calc.exe ']
     else:
         text = 'eg'
-        line = '!eg'
-        begidx = 1
-        endidx = 3
-        assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['egrep ']
+        line = '!{}'.format(text)
+        expected = ['egrep ']
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert cmd2_app.complete_shell(text, line, begidx, endidx) == expected
+
+def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
+    if sys.platform == "win32":
+        text = 'c*'
+        line = 'shell {}'.format(text)
+    else:
+        text = 'e*'
+        line = '!{}'.format(text)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
 
 def test_shell_command_completion_multiple(cmd2_app):
     if sys.platform == "win32":
         text = 'c'
-        line = 'shell c'
-        begidx = 6
-        endidx = 7
-        assert 'calc.exe' in cmd2_app.complete_shell(text, line, begidx, endidx)
+        line = 'shell {}'.format(text)
+        expected = 'calc.exe'
     else:
         text = 'l'
-        line = '!l'
-        begidx = 1
-        endidx = 2
-        assert 'ls' in cmd2_app.complete_shell(text, line, begidx, endidx)
+        line = '!{}'.format(text)
+        expected = 'ls'
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert expected in cmd2_app.complete_shell(text, line, begidx, endidx)
 
 def test_shell_command_completion_nomatch(cmd2_app):
     text = 'zzzz'
     line = 'shell zzzz'
-    begidx = 6
-    endidx = 10
+    endidx = len(line)
+    begidx = endidx - len(text)
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
+
+def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app):
+    text = ''
+    if sys.platform == "win32":
+        line = 'shell'.format(text)
+    else:
+        line = '!'.format(text)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
+
+def test_shell_command_completion_does_path_completion_when_after_command(cmd2_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'shell cat {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['conftest.py ']
+
 
 def test_path_completion_single_end(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -163,6 +199,80 @@ def test_path_completion_nomatch(cmd2_app, request):
     begidx = endidx - len(text)
 
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
+
+def test_path_completion_cwd(cmd2_app):
+    # Run path complete with no path and no search text
+    text = ''
+    line = '!ls {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    completions_empty = cmd2_app.path_complete(text, line, begidx, endidx)
+
+    # Run path complete with path set to the CWD
+    cwd = os.getcwd()
+    line = '!ls {}'.format(cwd)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    completions_cwd = cmd2_app.path_complete(text, line, begidx, endidx)
+
+    # Verify that the results are the same in both cases and that there is something there
+    assert completions_empty == completions_cwd
+    assert completions_cwd
+
+def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c*'
+    path = os.path.join(test_dir, text)
+    line = '!cat {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Currently path completion doesn't accept wildcards, so will always return empty results
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
+
+def test_path_completion_user_expansion(cmd2_app):
+    # Run path with just a tilde
+    text = ''
+    if sys.platform.startswith('win'):
+        line = '!dir ~\{}'.format(text)
+    else:
+        line = '!ls ~{}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    completions_tilde = cmd2_app.path_complete(text, line, begidx, endidx)
+
+    # Run path complete on the user's home directory
+    user_dir = os.path.expanduser('~')
+    if sys.platform.startswith('win'):
+        line = '!dir {}'.format(user_dir)
+    else:
+        line = '!ls {}'.format(user_dir)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    completions_home = cmd2_app.path_complete(text, line, begidx, endidx)
+
+    # Verify that the results are the same in both cases
+    assert completions_tilde == completions_home
+
+    # This next assert fails on AppVeyor Windows containers, but works fine on my Windows 10 VM
+    if not sys.platform.startswith('win'):
+        # Verify that there is something there
+        assert completions_tilde
+
+def test_path_completion_directories_only(cmd2_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 's'
+    path = os.path.join(test_dir, text)
+    line = '!cat {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert cmd2_app.path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
+
 
 def test_parseline_command_and_args(cmd2_app):
     line = 'help history'
