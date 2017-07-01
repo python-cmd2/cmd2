@@ -148,6 +148,14 @@ def test_base_error(base_app):
     assert out == ["*** Unknown syntax: meow"]
 
 
+def test_base_pause(base_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='\n')
+    sm.input = m
+
+    run_cmd(base_app, 'pause')
+    m.assert_called_once()
+
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
