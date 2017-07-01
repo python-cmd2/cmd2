@@ -2294,5 +2294,7 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
 
 if __name__ == '__main__':
     # If run as the main application, simply start a bare-bones cmd2 application with only built-in functionality.
-    app = Cmd()
+    # But enable the ipy command if IPython is installed, which supports advanced interactive debugging of your app,
+    # via introspection on self.
+    app = Cmd(use_ipython=True)
     app.cmdloop()
