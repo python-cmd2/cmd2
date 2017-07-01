@@ -728,7 +728,7 @@ def shell_app():
     return app
 
 def test_default_to_shell_found(shell_app):
-    out = run_cmd(shell_app, 'ls -hal')
+    out = run_cmd(shell_app, 'echo Hello')
     assert out == []
 
 def test_default_to_shell_unknown(shell_app):
