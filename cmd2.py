@@ -305,7 +305,7 @@ def options(option_list, arg_desc="arg"):
 
 # Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
 try:
-    pyperclip.paste()
+    _ = pyperclip.paste()
 except pyperclip.exceptions.PyperclipException:
     can_clip = False
 else:

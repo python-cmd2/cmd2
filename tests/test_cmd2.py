@@ -699,7 +699,6 @@ class HookFailureApp(cmd2.Cmd):
         """Simulate precmd hook failure."""
         return True, statement
 
-
 @pytest.fixture
 def hook_failure():
     app = HookFailureApp()
@@ -714,3 +713,52 @@ def test_precmd_hook_success(base_app):
 def test_precmd_hook_failure(hook_failure):
     out = hook_failure.onecmd_plus_hooks('help')
     assert out == True
+
+
+class ShellApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+        self.default_to_shell = True
+
+@pytest.fixture
+def shell_app():
+    app = ShellApp()
+    app.stdout = StdOut()
+    return app
+
+@pytest.mark.skipif(sys.platform == 'win32' or sys.platform.startswith('linux'),
+                    reason="Unit test passes when I run it, but fails on TravisCI and AppVeyor machines")
+def test_default_to_shell_found(shell_app):
+    out = run_cmd(shell_app, 'echo Hello')
+    assert out == []
+
+def test_default_to_shell_unknown(shell_app):
+    unknown_command = 'zyxcw23'
+    out = run_cmd(shell_app, unknown_command)
+    assert out == ["*** Unknown syntax: {}".format(unknown_command)]
+
+
+def test_ansi_prompt_not_esacped(base_app):
+    prompt = '(Cmd) '
+    assert base_app._surround_ansi_escapes(prompt) == prompt
+
+
+def test_ansi_prompt_escaped():
+    app = cmd2.Cmd()
+    color = 'cyan'
+    prompt = 'InColor'
+    color_prompt = app.colorize(prompt, color)
+
+    readline_hack_start = "\x01"
+    readline_hack_end = "\x02"
+
+    readline_safe_prompt = app._surround_ansi_escapes(color_prompt)
+    if sys.platform.startswith('win'):
+        # colorize() does nothing on Windows due to lack of ANSI color support
+        assert prompt == color_prompt
+        assert readline_safe_prompt == prompt
+    else:
+        assert prompt != color_prompt
+        assert readline_safe_prompt.startswith(readline_hack_start + app._colorcodes[color][True] + readline_hack_end)
+        assert readline_safe_prompt.endswith(readline_hack_start + app._colorcodes[color][False] + readline_hack_end)
