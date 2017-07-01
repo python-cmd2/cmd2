@@ -813,3 +813,139 @@ def test_help_overridden_method(help_app):
     out = run_cmd(help_app, 'help pause')
     expected = normalize('This overrides the pause command and does nothing.')
     assert out == expected
+
+
+class SelectApp(cmd2.Cmd):
+    def do_eat(self, arg):
+        """Eat something, with a selection of sauces to choose from."""
+        # Pass in a single string of space-separated selections
+        sauce = self.select('sweet salty', 'Sauce? ')
+        result = '{food} with {sauce} sauce, yum!'
+        result = result.format(food=arg, sauce=sauce)
+        self.stdout.write(result + '\n')
+
+    def do_study(self, arg):
+        """Learn something, with a selection of subjects to choose from."""
+        # Pass in a list of strings for selections
+        subject = self.select(['math', 'science'], 'Subject? ')
+        result = 'Good luck learning {}!\n'.format(subject)
+        self.stdout.write(result)
+
+    def do_procrastinate(self, arg):
+        """Waste time in your manner of choice."""
+        # Pass in a list of tuples for selections
+        leisure_activity = self.select([('Netflix and chill', 'Netflix'), ('Porn', 'WebSurfing')],
+                                       'How would you like to procrastinate? ')
+        result = 'Have fun procrasinating with {}!\n'.format(leisure_activity)
+        self.stdout.write(result)
+
+    def do_play(self, arg):
+        """Play your favorite musical instrument."""
+        # Pass in an uneven list of tuples for selections
+        instrument = self.select([('Guitar', 'Electric Guitar'), ('Drums',)], 'Instrument? ')
+        result = 'Charm us with the {}...\n'.format(instrument)
+        self.stdout.write(result)
+
+@pytest.fixture
+def select_app():
+    app = SelectApp()
+    app.stdout = StdOut()
+    return app
+
+def test_select_options(select_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='2')
+    sm.input = m
+
+    food = 'bacon'
+    out = run_cmd(select_app, "eat {}".format(food))
+    expected = normalize("""
+   1. sweet
+   2. salty
+{} with salty sauce, yum!
+""".format(food))
+
+    # Make sure our mock was called with the expected arguments
+    m.assert_called_once_with('Sauce? ')
+
+    # And verify the expected output to stdout
+    assert out == expected
+
+def test_select_invalid_option(select_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input')
+    # If side_effect is an iterable then each call to the mock will return the next value from the iterable.
+    m.side_effect = ['3', '1']  # First pass and invalid selection, then pass a valid one
+    sm.input = m
+
+    food = 'fish'
+    out = run_cmd(select_app, "eat {}".format(food))
+    expected = normalize("""
+   1. sweet
+   2. salty
+3 isn't a valid choice. Pick a number between 1 and 2:
+{} with sweet sauce, yum!
+""".format(food))
+
+    # Make sure our mock was called exactly twice with the expected arguments
+    arg = 'Sauce? '
+    calls = [mock.call(arg), mock.call(arg)]
+    m.assert_has_calls(calls)
+
+    # And verify the expected output to stdout
+    assert out == expected
+
+def test_select_list_of_strings(select_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='2')
+    sm.input = m
+
+    out = run_cmd(select_app, "study")
+    expected = normalize("""
+   1. math
+   2. science
+Good luck learning {}!
+""".format('science'))
+
+    # Make sure our mock was called with the expected arguments
+    m.assert_called_once_with('Subject? ')
+
+    # And verify the expected output to stdout
+    assert out == expected
+
+def test_select_list_of_tuples(select_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='2')
+    sm.input = m
+
+    out = run_cmd(select_app, "procrastinate")
+    expected = normalize("""
+   1. Netflix
+   2. WebSurfing
+Have fun procrasinating with {}!
+""".format('Porn'))
+
+    # Make sure our mock was called with the expected arguments
+    m.assert_called_once_with('How would you like to procrastinate? ')
+
+    # And verify the expected output to stdout
+    assert out == expected
+
+
+def test_select_uneven_list_of_tuples(select_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='2')
+    sm.input = m
+
+    out = run_cmd(select_app, "play")
+    expected = normalize("""
+   1. Electric Guitar
+   2. Drums
+Charm us with the {}...
+""".format('Drums'))
+
+    # Make sure our mock was called with the expected arguments
+    m.assert_called_once_with('Instrument? ')
+
+    # And verify the expected output to stdout
+    assert out == expected

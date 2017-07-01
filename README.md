@@ -7,7 +7,7 @@ cmd2
 [![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/master/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
 [![License](https://img.shields.io/pypi/l/cmd2.svg)](https://pypi.python.org/pypi/cmd2/)
 
-cmd2 is a tool for writing command-line interactive applications for Python 2.7 and Python 3.3+.  It is based on the
+cmd2 is a tool for writing interactive command-line applications for Python 2.7 and Python 3.3+.  It is based on the
 Python Standard Library's [cmd](https://docs.python.org/3/library/cmd.html) module, and can be used any place cmd is used simply by importing cmd2 instead.  It is
 pure Python code with the only 3rd-party dependencies being on [six](https://pypi.python.org/pypi/six), [pyparsing](http://pyparsing.wikispaces.com),
 and [pyperclip](https://github.com/asweigart/pyperclip).
