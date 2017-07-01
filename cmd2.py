@@ -303,13 +303,13 @@ def options(option_list, arg_desc="arg"):
     return option_setup
 
 
-# Can we access the clipboard, always true on Windows and Mac, but only sometimes on Linux
-can_clip = True
-if sys.platform.startswith('linux'):
-    try:
-        pyperclip.paste()
-    except pyperclip.exceptions.PyperclipException:
-        can_clip = False
+# Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
+try:
+    pyperclip.paste()
+except pyperclip.exceptions.PyperclipException:
+    can_clip = False
+else:
+    can_clip = True
 
 
 def get_paste_buffer():
@@ -317,13 +317,11 @@ def get_paste_buffer():
 
     :return: str - contents of the clipboard
     """
-    pb_unicode = pyperclip.paste()
+    pb_str = pyperclip.paste()
 
-    if six.PY3:
-        pb_str = pb_unicode
-    else:
+    if six.PY2:
         import unicodedata
-        pb_str = unicodedata.normalize('NFKD', pb_unicode).encode('ascii', 'ignore')
+        pb_str = unicodedata.normalize('NFKD', pb_str).encode('ascii', 'ignore')
 
     return pb_str
 
@@ -368,16 +366,15 @@ def replace_with_file_contents(fname):
     """Action to perform when successfully matching parse element definition for inputFrom parser.
 
     :param fname: str - filename
-    :return: str - contents of file "fname" or contents of the clipboard if fname is None or an empty string
+    :return: str - contents of file "fname"
     """
-    if fname:
-        try:
-            with open(os.path.expanduser(fname[0])) as source_file:
-                result = source_file.read()
-        except IOError:
-            result = '< %s' % fname[0]  # wasn't a file after all
-    else:
-        result = get_paste_buffer()
+    try:
+        with open(os.path.expanduser(fname[0])) as source_file:
+            result = source_file.read()
+    except IOError:
+        result = '< %s' % fname[0]  # wasn't a file after all
+
+    # TODO: IF pyparsing input parser logic gets fixed to support empty file, add support to get from paste buffer
     return result
 
 

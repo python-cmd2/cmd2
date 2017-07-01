@@ -25,6 +25,11 @@ def test_ver():
     assert cmd2.__version__ == '0.7.4'
 
 
+def test_empty_statement(base_app):
+    out = run_cmd(base_app, '')
+    expected = normalize('')
+    assert out == expected
+
 def test_base_help(base_app):
     out = run_cmd(base_app, 'help')
     expected = normalize(BASE_HELP)
@@ -683,3 +688,29 @@ def test_cmdloop_without_rawinput():
         app.cmdloop()
     out = app.stdout.buffer
     assert out == expected
+
+
+class HookFailureApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+
+    def postparsing_precmd(self, statement):
+        """Simulate precmd hook failure."""
+        return True, statement
+
+
+@pytest.fixture
+def hook_failure():
+    app = HookFailureApp()
+    app.stdout = StdOut()
+    return app
+
+def test_precmd_hook_success(base_app):
+    out = base_app.onecmd_plus_hooks('help')
+    assert out is None
+
+
+def test_precmd_hook_failure(hook_failure):
+    out = hook_failure.onecmd_plus_hooks('help')
+    assert out == True
