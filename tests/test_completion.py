@@ -235,14 +235,20 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
 def test_path_completion_user_expansion(cmd2_app):
     # Run path with just a tilde
     text = ''
-    line = '!ls ~{}'.format(text)
+    if sys.platform.startswith('win'):
+        line = '!dir ~\{}'.format(text)
+    else:
+        line = '!ls ~{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde = cmd2_app.path_complete(text, line, begidx, endidx)
 
     # Run path complete on the user's home directory
     user_dir = os.path.expanduser('~')
-    line = '!ls {}'.format(user_dir)
+    if sys.platform.startswith('win'):
+        line = '!dir {}'.format(user_dir)
+    else:
+        line = '!ls {}'.format(user_dir)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_home = cmd2_app.path_complete(text, line, begidx, endidx)
