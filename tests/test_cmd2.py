@@ -727,12 +727,6 @@ def shell_app():
     app.stdout = StdOut()
     return app
 
-@pytest.mark.skipif(sys.platform == 'win32' or sys.platform.startswith('linux'),
-                    reason="Unit test passes when I run it, but fails on TravisCI and AppVeyor machines")
-def test_default_to_shell_found(shell_app):
-    out = run_cmd(shell_app, 'echo Hello')
-    assert out == []
-
 def test_default_to_shell_unknown(shell_app):
     unknown_command = 'zyxcw23'
     out = run_cmd(shell_app, unknown_command)
@@ -762,3 +756,60 @@ def test_ansi_prompt_escaped():
         assert prompt != color_prompt
         assert readline_safe_prompt.startswith(readline_hack_start + app._colorcodes[color][True] + readline_hack_end)
         assert readline_safe_prompt.endswith(readline_hack_start + app._colorcodes[color][False] + readline_hack_end)
+
+
+class HelpApp(cmd2.Cmd):
+    """Class for testing custom help_* methods which override docstring help."""
+    def __init__(self, *args, **kwargs):
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+
+    def do_squat(self, arg):
+        """This docstring help will never be shown because the help_squat method overrides it."""
+        pass
+
+    def help_squat(self):
+        self.stdout.write('This command does diddly squat...\n')
+
+    def do_pause(self, arg):
+        """This overrides the pause command and does nothing."""
+        pass
+
+    # This command will be in the "undocumented" section of the help menu
+    def do_undoc(self, arg):
+        pass
+
+@pytest.fixture
+def help_app():
+    app = HelpApp()
+    app.stdout = StdOut()
+    return app
+
+def test_custom_command_help(help_app):
+    out = run_cmd(help_app, 'help squat')
+    expected = normalize('This command does diddly squat...')
+    assert out == expected
+
+def test_custom_help_menu(help_app):
+    out = run_cmd(help_app, 'help')
+    expected = normalize("""
+Documented commands (type help <topic>):
+========================================
+_relative_load  edit  history  pause  pyscript  run   set    shortcuts  squat
+cmdenvironment  help  load     py     quit      save  shell  show
+
+Undocumented commands:
+======================
+undoc
+""")
+    assert out == expected
+
+def test_help_undocumented(help_app):
+    out = run_cmd(help_app, 'help undoc')
+    expected = normalize('*** No help on undoc')
+    assert out == expected
+
+def test_help_overridden_method(help_app):
+    out = run_cmd(help_app, 'help pause')
+    expected = normalize('This overrides the pause command and does nothing.')
+    assert out == expected
