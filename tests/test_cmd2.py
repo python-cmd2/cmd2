@@ -1154,3 +1154,44 @@ def test_clipboard_failure(capsys):
     out, err = capsys.readouterr()
     assert out == ''
     assert 'Cannot redirect to paste buffer; install ``xclip`` and re-run to enable' in err
+
+
+def test_run_command_with_empty_arg(base_app):
+    command = 'help'
+    run_cmd(base_app, command)
+    out = run_cmd(base_app, 'run')
+    expected = normalize('{}\n\n'.format(command) + BASE_HELP)
+    assert out == expected
+
+def test_run_command_with_empty_history(base_app):
+    out = run_cmd(base_app, 'run')
+    assert out == []
+
+
+class CmdResultApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+
+    def do_affirmative(self, arg):
+        self._last_result = cmd2.CmdResult(arg)
+
+    def do_negative(self, arg):
+        self._last_result = cmd2.CmdResult('', arg)
+
+@pytest.fixture
+def cmdresult_app():
+    app = CmdResultApp()
+    app.stdout = StdOut()
+    return app
+
+def test_cmdresult(cmdresult_app):
+    arg = 'foo'
+    run_cmd(cmdresult_app, 'affirmative {}'.format(arg))
+    assert cmdresult_app._last_result
+    assert cmdresult_app._last_result == cmd2.CmdResult(arg)
+
+    arg = 'bar'
+    run_cmd(cmdresult_app, 'negative {}'.format(arg))
+    assert not cmdresult_app._last_result
+    assert cmdresult_app._last_result == cmd2.CmdResult('', arg)
