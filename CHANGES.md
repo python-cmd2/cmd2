@@ -10,6 +10,7 @@ News
     * Fixed a couple bugs in interacting with pastebuffer/clipboard on macOS and Linux
     * Fixed a couple bugs in edit and save commands if called when history is empty
     * Ability to pipe ``cmd2`` command output to a shell command is now more reliable, particularly on Windows
+    * Fixed a bug in ``pyscript`` command on Windows related to ``\`` being interpreted as an escape
 * Enhancements
     * Ensure that path and shell command tab-completion results are alphabetically sorted
     * Removed feature for load command to load scripts from URLS

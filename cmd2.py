@@ -1431,8 +1431,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
         sys.argv.extend(arg[1:])
 
         # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
-        py_cmd = "run({!r})".format(script_path)
-        self.do_py(py_cmd)
+        self.do_py("run({!r})".format(script_path))
 
         # Restore command line arguments to original state
         sys.argv = orig_args
