@@ -1967,24 +1967,6 @@ class History(list):
             result = None
         return result
 
-    def search(self, target):
-        """ Search the history for a particular term.
-
-        :param target: str - term to search for
-        :return: List[str] - list of matches
-        """
-        # If there is no history yet, don't try to search through a non-existent list, just return an empty list
-        if len(self) < 1:
-            return []
-
-        target = target.strip()
-        if target[0] == target[-1] == '/' and len(target) > 1:
-            target = target[1:-1]
-        else:
-            target = re.escape(target)
-        pattern = re.compile(target, re.IGNORECASE)
-        return [s for s in self if pattern.search(s)]
-
     spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>-?\d+)?\s*$')
 
     def span(self, raw):
@@ -2286,6 +2268,10 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
     def __bool__(self):
         """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
         return not self.err
+
+    def __nonzero__(self):
+        """Python 2 uses this method for determining Truthiness"""
+        return self.__bool__()
 
 
 if __name__ == '__main__':

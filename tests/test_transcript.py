@@ -30,6 +30,7 @@ class CmdLineApp(Cmd):
 
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
         Cmd.__init__(self, *args, **kwargs)
+        self.intro = 'This is an intro banner ...'
 
         # Configure how arguments are parsed for @options commands
         set_posix_shlex(False)
@@ -224,7 +225,7 @@ def test_optarser_options_with_spaces_in_quotes(_demo_app):
 
 def test_commands_at_invocation():
     testargs = ["prog", "say hello", "say Gracie", "quit"]
-    expected = "hello\nGracie\n"
+    expected = "This is an intro banner ...\nhello\nGracie\n"
     with mock.patch.object(sys, 'argv', testargs):
         app = CmdLineApp()
         app.stdout = StdOut()
