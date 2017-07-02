@@ -1421,7 +1421,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
             arg = shlex.split(arg, posix=POSIX_SHLEX)
 
         # Get the absolute path of the script
-        script_path = os.path.abspath(os.path.expanduser(arg[0]))
+        script_path = os.path.expanduser(arg[0])
 
         # Save current command line arguments
         orig_args = sys.argv
@@ -1430,8 +1430,8 @@ Paths or arguments that contain spaces must be enclosed in quotes
         sys.argv = [script_path]
         sys.argv.extend(arg[1:])
 
-        # Run the script
-        self.do_py("run('{}')".format(script_path))
+        # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
+        self.do_py("run({!r})".format(script_path))
 
         # Restore command line arguments to original state
         sys.argv = orig_args

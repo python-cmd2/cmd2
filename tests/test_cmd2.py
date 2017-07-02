@@ -131,8 +131,6 @@ def test_base_run_python_script(base_app, capsys, request):
     assert out == expected
 
 
-@pytest.mark.skipif(sys.platform == 'win32',
-                    reason="Unit test doesn't work on win32, but feature does")
 def test_base_run_pyscript(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'script.py')
@@ -141,6 +139,34 @@ def test_base_run_pyscript(base_app, capsys, request):
     run_cmd(base_app, "pyscript {}".format(python_script))
     out, err = capsys.readouterr()
     assert out == expected
+
+def test_recursive_pyscript_not_allowed(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'scripts', 'recursive.py')
+    expected = 'ERROR: Recursively entering interactive Python consoles is not allowed.\n'
+
+    run_cmd(base_app, "pyscript {}".format(python_script))
+    out, err = capsys.readouterr()
+    assert err == expected
+
+def test_pyscript_with_nonexist_file(base_app, capsys):
+    python_script = 'does_not_exist.py'
+    run_cmd(base_app, "pyscript {}".format(python_script))
+    out, err = capsys.readouterr()
+    assert err.startswith('ERROR: [Errno 2] No such file or directory:')
+
+def test_pyscript_with_exception(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'scripts', 'raises_exception.py')
+    run_cmd(base_app, "pyscript {}".format(python_script))
+    out, err = capsys.readouterr()
+    assert err.startswith('Traceback')
+    assert err.endswith("TypeError: unsupported operand type(s) for +: 'int' and 'str'\n")
+
+def test_pyscript_requires_an_argument(base_app, capsys):
+    run_cmd(base_app, "pyscript")
+    out, err = capsys.readouterr()
+    assert err.startswith('ERROR: pyscript command requires at least 1 argument ...')
 
 
 def test_base_error(base_app):
@@ -956,4 +982,22 @@ Charm us with the {}...
     m.assert_called_once_with('Instrument? ')
 
     # And verify the expected output to stdout
+    assert out == expected
+
+@pytest.fixture
+def noarglist_app():
+    cmd2.set_use_arg_list(False)
+    app = cmd2.Cmd()
+    app.stdout = StdOut()
+    return app
+
+def test_pyscript_with_noarglist(noarglist_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, '..', 'examples', 'scripts', 'arg_printer.py')
+    expected = """Running Python script 'arg_printer.py' which was called with 2 arguments
+arg 1: 'foo'
+arg 2: 'bar'
+"""
+    run_cmd(noarglist_app, 'pyscript {} foo bar'.format(python_script))
+    out, err = capsys.readouterr()
     assert out == expected
