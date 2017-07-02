@@ -1138,21 +1138,15 @@ class Cmd(cmd.Cmd):
     Usage:  pause [text]"""
         sm.input(text + '\n')
 
-    # noinspection PyMethodMayBeStatic
     def do_shell(self, command):
         """Execute a command as if at the OS prompt.
 
     Usage:  shell <command> [arguments]"""
         try:
-            out = subprocess.check_output(shlex.split(command))
-        except subprocess.CalledProcessError as e:
-            self.perror(e, traceback_war=False)
+            proc = subprocess.Popen(command, stdout=self.stdout, stderr=sys.stderr, shell=True)
+            proc.communicate()
         except FileNotFoundError as e:
-            self.perror(e, traceback_war=False)
-        else:
-            if six.PY3:
-                out = out.decode()
-            self.stdout.write(out + '\n')
+            self.perror(e.strerror, traceback_war=False)
 
     def path_complete(self, text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
         """Method called to complete an input line by local file system path completion.

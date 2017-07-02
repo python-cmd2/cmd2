@@ -103,12 +103,10 @@ To enable full traceback, run the following command:  'set debug true'
 
 def test_base_shell(base_app, monkeypatch):
     m = mock.Mock()
-    monkeypatch.setattr("os.system", m)
+    monkeypatch.setattr("subprocess.Popen", m)
     out = run_cmd(base_app, 'shell echo a')
     assert out == []
     assert m.called
-    m.assert_called_with('echo a')
-
 
 def test_base_py(base_app, capsys):
     run_cmd(base_app, 'py qqq=3')
