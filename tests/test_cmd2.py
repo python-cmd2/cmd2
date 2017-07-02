@@ -90,8 +90,7 @@ now: True
     out = run_cmd(base_app, 'show quiet')
     assert out == ['quiet: True']
 
-
-def test_base_set_not_supported(base_app, capsys):
+def test_set_not_supported(base_app, capsys):
     run_cmd(base_app, 'set qqq True')
     out, err = capsys.readouterr()
     expected = normalize("""
@@ -99,6 +98,17 @@ EXCEPTION of type 'LookupError' occurred with message: 'Parameter 'qqq' not supp
 To enable full traceback, run the following command:  'set debug true'
 """)
     assert normalize(str(err)) == expected
+
+def test_set_abbreviated(base_app):
+    out = run_cmd(base_app, 'set quie True')
+    expected = normalize("""
+quiet - was: False
+now: True
+""")
+    assert out == expected
+
+    out = run_cmd(base_app, 'show quiet')
+    assert out == ['quiet: True']
 
 
 def test_base_shell(base_app, monkeypatch):
@@ -202,6 +212,16 @@ help
     out = run_cmd(base_app, 'history sh')
     expected = normalize("""
 -------------------------[2]
+shortcuts
+""")
+    assert out == expected
+
+def test_history_script_format(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    out = run_cmd(base_app, 'history -s')
+    expected = normalize("""
+help
 shortcuts
 """)
     assert out == expected
@@ -319,8 +339,7 @@ load {}
 """.format(filename))
     assert out == expected
 
-
-def test_base_load_with_empty_args(base_app, capsys):
+def test_load_with_empty_args(base_app, capsys):
     # The way the load command works, we can't directly capture its stdout or stderr
     run_cmd(base_app, 'load')
     out, err = capsys.readouterr()
@@ -330,7 +349,7 @@ def test_base_load_with_empty_args(base_app, capsys):
     assert normalize(str(err)) == expected
 
 
-def test_base_load_with_nonexistent_file(base_app, capsys):
+def test_load_with_nonexistent_file(base_app, capsys):
     # The way the load command works, we can't directly capture its stdout or stderr
     run_cmd(base_app, 'load does_not_exist.txt')
     out, err = capsys.readouterr()
@@ -340,7 +359,7 @@ def test_base_load_with_nonexistent_file(base_app, capsys):
     assert "does not exist or is not a file" in str(err)
 
 
-def test_base_load_with_empty_file(base_app, capsys, request):
+def test_load_with_empty_file(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'empty.txt')
 
@@ -353,7 +372,7 @@ def test_base_load_with_empty_file(base_app, capsys, request):
     assert "is empty" in str(err)
 
 
-def test_base_load_with_binary_file(base_app, capsys, request):
+def test_load_with_binary_file(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'binary.bin')
 
@@ -366,7 +385,7 @@ def test_base_load_with_binary_file(base_app, capsys, request):
     assert "is not an ASCII or UTF-8 encoded text file" in str(err)
 
 
-def test_base_load_with_utf8_file(base_app, capsys, request):
+def test_load_with_utf8_file(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'utf8.txt')
 
@@ -395,6 +414,12 @@ def test_base_relative_load(base_app, request):
 _relative_load {}
 """.format(filename))
     assert out == expected
+
+def test_relative_load_requires_an_argument(base_app, capsys):
+    run_cmd(base_app, '_relative_load')
+    out, err = capsys.readouterr()
+    assert out == ''
+    assert err.startswith('ERROR: _relative_load command requires a file path:\n')
 
 
 def test_base_save(base_app):
@@ -435,6 +460,46 @@ save * deleteme.txt
 
     # Delete file that was created
     os.remove(filename)
+
+def test_save_parse_error(base_app, capsys):
+    invalid_file = '~!@'
+    run_cmd(base_app, 'save {}'.format(invalid_file))
+    out, err = capsys.readouterr()
+    assert out == ''
+    assert err.startswith('ERROR: Could not understand save target {}\n'.format(invalid_file))
+
+def test_save_tempfile(base_app):
+    # Just run help to make sure there is something in the history
+    run_cmd(base_app, 'help')
+    out = run_cmd(base_app, 'save *')
+    output = out[0]
+    assert output.startswith('Saved to ')
+
+    # Delete the tempfile which was created
+    temp_file = output.split('Saved to ')[1].strip()
+    os.remove(temp_file)
+
+def test_save_invalid_history_index(base_app, capsys):
+    run_cmd(base_app, 'save 5')
+    out, err = capsys.readouterr()
+    assert out == ''
+    assert err.startswith("EXCEPTION of type 'IndexError' occurred with message: 'list index out of range'\n")
+
+def test_save_empty_history_and_index(base_app, capsys):
+    run_cmd(base_app, 'save')
+    out, err = capsys.readouterr()
+    assert out == ''
+    assert err.startswith("ERROR: History is empty, nothing to save.\n")
+
+def test_save_invalid_path(base_app, capsys):
+    # Just run help to make sure there is something in the history
+    run_cmd(base_app, 'help')
+
+    invalid_path = '/no_such_path/foobar.txt'
+    run_cmd(base_app, 'save {}'.format(invalid_path))
+    out, err = capsys.readouterr()
+    assert out == ''
+    assert err.startswith("ERROR: Saving '{}' - ".format(invalid_path))
 
 
 def test_output_redirection(base_app):
@@ -587,7 +652,6 @@ To enable full traceback, run the following command:  'set debug true'
 
     return expected_text
 
-
 def test_edit_no_editor(base_app, capsys):
     # Purposely set the editor to None
     base_app.editor = None
@@ -598,7 +662,6 @@ def test_edit_no_editor(base_app, capsys):
 
     expected = _expected_no_editor_error()
     assert normalize(str(err)) == expected
-
 
 def test_edit_file(base_app, request):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
@@ -616,7 +679,6 @@ def test_edit_file(base_app, request):
     # We think we have an editor, so should expect a system call
     m.assert_called_once_with('{} {}'.format(base_app.editor, filename))
 
-
 def test_edit_number(base_app):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
@@ -633,7 +695,6 @@ def test_edit_number(base_app):
     # We have an editor, so should expect a system call
     m.assert_called_once()
 
-
 def test_edit_blank(base_app):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
@@ -649,6 +710,12 @@ def test_edit_blank(base_app):
 
     # We have an editor, so should expect a system call
     m.assert_called_once()
+
+def test_edit_empty_history(base_app, capsys):
+    run_cmd(base_app, 'edit')
+    out, err = capsys.readouterr()
+    assert out == ''
+    assert err == 'ERROR: edit must be called with argument if history is empty\n'
 
 
 def test_base_py_interactive(base_app):
@@ -999,3 +1066,91 @@ arg 2: 'bar'
     run_cmd(noarglist_app, 'pyscript {} foo bar'.format(python_script))
     out, err = capsys.readouterr()
     assert out == expected
+
+
+class OptionApp(cmd2.Cmd):
+    @cmd2.options([cmd2.make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
+    def do_greet(self, arg, opts=None):
+        arg = ''.join(arg)
+        if opts.shout:
+            arg = arg.upper()
+        self.stdout.write(arg + '\n')
+
+def test_option_help_with_no_docstring(capsys):
+    app = OptionApp()
+    app.onecmd_plus_hooks('greet -h')
+    out, err = capsys.readouterr()
+    assert err == ''
+    assert out == """Usage: greet [options] arg
+
+Options:
+  -h, --help   show this help message and exit
+  -s, --shout  N00B EMULATION MODE
+"""
+
+@pytest.mark.skipif(sys.platform.startswith('win'),
+                    reason="cmd2._which function only used on Mac and Linux")
+def test_which_editor_good():
+    editor = 'vi'
+    path = cmd2._which(editor)
+    # Assert that the vi editor was found because it should exist on all Mac and Linux systems
+    assert path
+
+@pytest.mark.skipif(sys.platform.startswith('win'),
+                    reason="cmd2._which function only used on Mac and Linux")
+def test_which_editor_bad():
+    editor = 'notepad.exe'
+    path = cmd2._which(editor)
+    # Assert that the editor wasn't found because no notepad.exe on non-Windows systems ;-)
+    assert path is None
+
+
+class MultilineApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        self.multilineCommands = ['orate']
+
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+
+    @cmd2.options([cmd2.make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
+    def do_orate(self, arg, opts=None):
+        arg = ''.join(arg)
+        if opts.shout:
+            arg = arg.upper()
+        self.stdout.write(arg + '\n')
+
+@pytest.fixture
+def multiline_app():
+    app = MultilineApp()
+    app.stdout = StdOut()
+    return app
+
+def test_multiline_complete_empty_statement_raises_exception(multiline_app):
+    with pytest.raises(cmd2.EmptyStatement):
+        multiline_app._complete_statement('')
+
+def test_multiline_complete_statement_without_terminator(multiline_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin when it looks for more input
+    m = mock.MagicMock(name='input', return_value='\n')
+    sm.input = m
+
+    command = 'orate'
+    args = 'hello world'
+    line = '{} {}'.format(command, args)
+    statement = multiline_app._complete_statement(line)
+    assert statement == args
+    assert statement.parsed.command == command
+
+
+def test_clipboard_failure(capsys):
+    # Force cmd2 clipboard to be disabled
+    cmd2.can_clip = False
+    app = cmd2.Cmd()
+
+    # Redirect command output to the clipboard when a clipboard isn't present
+    app.onecmd_plus_hooks('help > ')
+
+    # Make sure we got the error output
+    out, err = capsys.readouterr()
+    assert out == ''
+    assert 'Cannot redirect to paste buffer; install ``xclip`` and re-run to enable' in err
