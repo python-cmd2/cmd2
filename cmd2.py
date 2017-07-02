@@ -479,9 +479,7 @@ class Cmd(cmd.Cmd):
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
-        # noinspection PyUnresolvedReferences
-        self.keywords = self.reserved_words + [fname[3:] for fname in dir(self)
-                                               if fname.startswith('do_')]
+        self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
         self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
                                             multilineCommands=self.multilineCommands,
                                             legalChars=self.legalChars, commentGrammars=self.commentGrammars,
@@ -1138,12 +1136,12 @@ class Cmd(cmd.Cmd):
     Usage:  pause [text]"""
         sm.input(text + '\n')
 
-    # noinspection PyMethodMayBeStatic
     def do_shell(self, command):
         """Execute a command as if at the OS prompt.
 
     Usage:  shell <command> [arguments]"""
-        os.system(command)
+        proc = subprocess.Popen(command, stdout=self.stdout, stderr=sys.stderr, shell=True)
+        proc.communicate()
 
     def path_complete(self, text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
         """Method called to complete an input line by local file system path completion.
