@@ -196,10 +196,9 @@ def remaining_args(opts_plus_args, arg_list):
 
 def _which(editor):
     try:
+        editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
         if six.PY3:
-            editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT, encoding='utf-8').strip()
-        else:
-            editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
+            editor_path = editor_path.decode()
     except subprocess.CalledProcessError:
         editor_path = None
     return editor_path
@@ -974,7 +973,6 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             funcname = self._func_named(arg)
             if funcname:
-                fn = getattr(self, funcname)
                 # No special behavior needed, delegate to cmd base class do_help()
                 cmd.Cmd.do_help(self, funcname[3:])
         else:
@@ -1602,7 +1600,7 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
             f.close()
             self.pfeedback('Saved to {}'.format(fname))
         except Exception as e:
-            self.perror('Saving {!r} - {}'.format(fname, e.strerror), traceback_war=False)
+            self.perror('Saving {!r} - {}'.format(fname, e), traceback_war=False)
 
     def do__relative_load(self, file_path):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
