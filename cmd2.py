@@ -150,7 +150,9 @@ class OptionParser(optparse.OptionParser):
 
         We override exit so it doesn't automatically exit the application.
         """
-        self.values._exit = True
+        if self.values is not None:
+            self.values._exit = True
+
         if msg:
             print(msg)
 
@@ -159,10 +161,9 @@ class OptionParser(optparse.OptionParser):
 
         We override it so that before the standard optparse help, it prints the do_* method docstring, if available.
         """
-        try:
+        if self._func.__doc__:
             print(self._func.__doc__)
-        except AttributeError:
-            pass
+
         optparse.OptionParser.print_help(self, *args, **kwargs)
 
     def error(self, msg):
@@ -195,9 +196,13 @@ def remaining_args(opts_plus_args, arg_list):
 
 def _which(editor):
     try:
-        return subprocess.Popen(['which', editor], stdout=subprocess.PIPE, stderr=subprocess.STDOUT).communicate()[0]
-    except OSError:
-        return None
+        if six.PY3:
+            editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT, encoding='utf-8').strip()
+        else:
+            editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
+    except subprocess.CalledProcessError:
+        editor_path = None
+    return editor_path
 
 
 def strip_quotes(arg):
@@ -297,7 +302,7 @@ def options(option_list, arg_desc="arg"):
             result = func(instance, arg, opts)
             return result
 
-        new_func.__doc__ = '%s\n%s' % (func.__doc__, option_parser.format_help())
+        new_func.__doc__ = '%s%s' % (func.__doc__ + '\n' if func.__doc__ else '', option_parser.format_help())
         return new_func
 
     return option_setup
@@ -746,7 +751,7 @@ class Cmd(cmd.Cmd):
 
             # NOTE: We couldn't get a real pipe working via subprocess for Python 3.x prior to 3.5.
             # So to allow compatibility with Python 2.7 and 3.3+ we are redirecting output to a temporary file.
-            # And once command is complete we are using the "cat" shell command to pipe to whatever.
+            # And once command is complete we are the temp file as stdin for the shell command to pipe to.
             # TODO: Once support for Python 3.x prior to 3.5 is no longer necessary, replace with a real subprocess pipe
 
             # Redirect stdout to a temporary file
@@ -789,8 +794,8 @@ class Cmd(cmd.Cmd):
                     # Pipe the contents of tempfile to the specified shell command
                     with open(self._temp_filename) as fd:
                         pipe_proc = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=fd,
-                                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                        output, err = pipe_proc.communicate()
+                                                     stdout=subprocess.PIPE)
+                        output, _ = pipe_proc.communicate()
 
                         if six.PY3:
                             self.stdout.write(output.decode())
@@ -970,12 +975,8 @@ class Cmd(cmd.Cmd):
             funcname = self._func_named(arg)
             if funcname:
                 fn = getattr(self, funcname)
-                try:
-                    # Use Optparse help for @options commands
-                    fn.optionParser.print_help(file=self.stdout)
-                except AttributeError:
-                    # No special behavior needed, delegate to cmd base class do_help()
-                    cmd.Cmd.do_help(self, funcname[3:])
+                # No special behavior needed, delegate to cmd base class do_help()
+                cmd.Cmd.do_help(self, funcname[3:])
         else:
             # Show a menu of what commands help can be gotten for
             self._help_menu()
@@ -1140,7 +1141,7 @@ class Cmd(cmd.Cmd):
         """Execute a command as if at the OS prompt.
 
     Usage:  shell <command> [arguments]"""
-        proc = subprocess.Popen(command, stdout=self.stdout, stderr=sys.stderr, shell=True)
+        proc = subprocess.Popen(command, stdout=self.stdout, shell=True)
         proc.communicate()
 
     def path_complete(self, text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
@@ -1573,7 +1574,7 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         try:
             args = self.saveparser.parseString(arg)
         except pyparsing.ParseException:
-            self.perror('Could not understand save target %s' % arg)
+            self.perror('Could not understand save target %s' % arg, traceback_war=False)
             raise SyntaxError(self.do_save.__doc__)
 
         # If a filename was supplied then use that, otherwise use a temp file
@@ -1588,21 +1589,20 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         elif args.idx:
             saveme = self.history[int(args.idx) - 1]
         else:
-            saveme = ''
             # Wrap in try to deal with case of empty history
             try:
                 # Since this save command has already been added to history, need to go one more back for previous
                 saveme = self.history[-2]
             except IndexError:
-                pass
+                self.perror('History is empty, nothing to save.', traceback_war=False)
+                return
         try:
             f = open(os.path.expanduser(fname), 'w')
             f.write(saveme)
             f.close()
             self.pfeedback('Saved to {}'.format(fname))
-        except Exception:
-            self.perror('Error saving {}'.format(fname))
-            raise
+        except Exception as e:
+            self.perror('Saving {!r} - {}'.format(fname, e.strerror), traceback_war=False)
 
     def do__relative_load(self, file_path):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
