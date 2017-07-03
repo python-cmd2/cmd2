@@ -84,7 +84,7 @@ try:
 except ImportError:
     pass
 
-__version__ = '0.7.4'
+__version__ = '0.7.5a'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -2270,36 +2270,7 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
 if __name__ == '__main__':
     # If run as the main application, simply start a bare-bones cmd2 application with only built-in functionality.
 
-    # Set this to True to include the ipy command if IPython is installed, which supports advanced interactive debugging
-    # of your application via introspection on self.
-    # include_ipy = False
-    #
-    # app = Cmd(use_ipython=include_ipy)
-    # app.cmdloop()
-
-
-    class HelpApp(Cmd):
-        """Class for testing custom help_* methods which override docstring help."""
-
-        def __init__(self, *args, **kwargs):
-            # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-            Cmd.__init__(self, *args, **kwargs)
-
-        def do_squat(self, arg):
-            """This docstring help will never be shown because the help_squat method overrides it."""
-            pass
-
-        def help_squat(self):
-            self.stdout.write('This command does diddly squat...\n')
-
-        def do_edit(self, arg):
-            """This overrides the edit command and does nothing."""
-            pass
-
-        # This command will be in the "undocumented" section of the help menu
-        def do_undoc(self, arg):
-            pass
-
-
-    app = HelpApp()
+    # Set "use_iptyhon" to True to include the ipy command if IPython is installed, which supports advanced interactive
+    # debugging of your application via introspection on self.
+    app = Cmd(use_ipython=False)
     app.cmdloop()
