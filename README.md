@@ -6,7 +6,13 @@ cmd2: a tool for building interactive command line apps
 [![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/master/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
 [![Documentation Status](https://readthedocs.org/projects/cmd2/badge/?version=latest)](http://cmd2.readthedocs.io/en/latest/?badge=latest)
 
-cmd2 is a tool for building interactive command line applications in Python. Its goal is to make it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It provides a simple API which is an extension of Python's built-in [cmd](https://docs.python.org/3/library/cmd.html) module.  cmd2 provides a wealth of features on top of cmd to make your life easier.
+cmd2 is a tool for building interactive command line applications in Python. Its goal is to make it
+quick and easy for developers to build feature-rich and user-friendly interactive command line
+applications.  It provides a simple API which is an extension of Python's built-in
+[cmd](https://docs.python.org/3/library/cmd.html) module.  cmd2 provides a wealth of features on top
+of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary
+when using cmd.
+
 
 Main Features
 -------------
@@ -29,6 +35,7 @@ Main Features
 - Trivial to provide built-in help for all commands
 - Built-in regression testing framework for your applications (transcript-based testing)
 
+
 Installation
 ------------
 On all operating systems, the latest stable version of `cmd2` can be installed using pip:
@@ -37,17 +44,20 @@ On all operating systems, the latest stable version of `cmd2` can be installed u
 pip install -U cmd2
 ```
 
-cmd2 works with Python 2.7 and Python 3.3+ on Windows, macOS, and Linux. It is pure Python code with the only 3rd-party dependencies being on [six](https://pypi.python.org/pypi/six), [pyparsing](http://pyparsing.wikispaces.com),
-and [pyperclip](https://github.com/asweigart/pyperclip).
+cmd2 works with Python 2.7 and Python 3.3+ on Windows, macOS, and Linux. It is pure Python code with
+the only 3rd-party dependencies being on [six](https://pypi.python.org/pypi/six),
+[pyparsing](http://pyparsing.wikispaces.com), and [pyperclip](https://github.com/asweigart/pyperclip).
 
-For information on other installation options, see [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2 documentation.
+For information on other installation options, see
+[Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2
+documentation.
+
 
 Documentation
 -------------
 The latest documentation for cmd2 can be read online here: https://cmd2.readthedocs.io/en/latest/
 
 It is available in HTML, PDF, and ePub formats.
-
 
 
 Feature Overview
@@ -106,6 +116,7 @@ A couple tutorials on using cmd2 exist:
     * http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html
 * A nice brief step-by-step tutorial
     * https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
+
 
 Example Application
 -------------------
