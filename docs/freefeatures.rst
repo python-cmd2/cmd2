@@ -218,15 +218,18 @@ be present::
             Cmd.__init__(self, use_ipython=True)
 
 The ``ipy`` command enters an interactive IPython_ session.  Similar to an
-interactive Python session, this shell can access your application instance via ``self``.
-However, the ``ipy`` shell cannot call "back" to your application with ``cmd("")`` and
-any changes made will not persist between sessions or back in the main application.
+interactive Python session, this shell can access your application instance via ``self`` and any changes
+to your application made via ``self`` will persist.
+However, any local or global variable created within the ``ipy`` shell will not persist.
+Within the ``ipy`` shell, you cannot call "back" to your application with ``cmd("")``, however you can run commands
+directly like so::
+
+    self.onecmd_plus_hooks('help')
 
 IPython_ provides many advantages, including:
 
     * Comprehensive object introspection
-    * Input history, persistent across sessions
-    * Caching of output results during a session with automatically generated references
+    * Get help on objects with ``?``
     * Extensible tab completion, with support by default for completion of python variables and keywords
 
 The object introspection and tab completion make IPython particularly efficient for debugging as well as for interactive
