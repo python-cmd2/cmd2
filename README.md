@@ -1,46 +1,57 @@
-cmd2
-====
-[![Build status](https://secure.travis-ci.org/python-cmd2/cmd2.png?branch=master)](https://travis-ci.org/python-cmd2/cmd2)
-[![Appveyor build status](https://ci.appveyor.com/api/projects/status/github/python-cmd2/cmd2?branch=master)](https://ci.appveyor.com/project/FedericoCeratto/cmd2)
-[![Documentation Status](https://readthedocs.org/projects/cmd2/badge/?version=latest)](http://cmd2.readthedocs.io/en/latest/?badge=latest)
-[![Latest Version](https://img.shields.io/pypi/v/cmd2.svg)](https://pypi.python.org/pypi/cmd2/)
+cmd2: a tool for building interactive command line applications
+===============================================================
+[![Latest Version](https://img.shields.io/pypi/v/cmd2.svg?style=flat-square&label=latest%20stable%20version)](https://pypi.python.org/pypi/cmd2/)
+[![Build status](https://img.shields.io/travis/python-cmd2/cmd2.svg?style=flat-square&label=unix%20build)](https://travis-ci.org/python-cmd2/cmd2)
+[![Appveyor build status](https://img.shields.io/appveyor/ci/FedericoCeratto/cmd2.svg?style=flat-square&label=windows%20build)](https://ci.appveyor.com/project/FedericoCeratto/cmd2)
 [![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/master/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
-[![License](https://img.shields.io/pypi/l/cmd2.svg)](https://pypi.python.org/pypi/cmd2/)
+[![Documentation Status](https://readthedocs.org/projects/cmd2/badge/?version=latest)](http://cmd2.readthedocs.io/en/latest/?badge=latest)
 
-cmd2 is a tool for writing interactive command-line applications for Python 2.7 and Python 3.3+.  It is based on the
-Python Standard Library's [cmd](https://docs.python.org/3/library/cmd.html) module, and can be used any place cmd is used simply by importing cmd2 instead.  It is
-pure Python code with the only 3rd-party dependencies being on [six](https://pypi.python.org/pypi/six), [pyparsing](http://pyparsing.wikispaces.com),
-and [pyperclip](https://github.com/asweigart/pyperclip).
+cmd2 is a tool for building interactive command line applications in Python. Its goal is to make it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It provides a simple API which is an extension of Python's built-in [cmd](https://docs.python.org/3/library/cmd.html) module.  cmd2 provides a wealth of features on top of cmd to make your life easier.
 
-The latest documentation for cmd2 can be read online here: https://cmd2.readthedocs.io/en/latest/
-
-See the [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2 documentation for instructions on installing, upgrading, and
-uninstalling cmd2.
-
-Bug reports may be submitted directly to the [issue tracker](https://github.com/python-cmd2/cmd2/issues).  Pull Requests are welcome, see the
-[Contributor's Guide](https://github.com/python-cmd2/cmd2/blob/master/CONTRIBUTING.md) for more information.
-
-Feature Support
----------------
-
-cmd2 provides the following features, in addition to those already existing in cmd:
-
-- Searchable command history
-- Load commands from file, save to file, edit commands in file
-- Multi-line commands
-- Case-insensitive commands
-- Special-character shortcut commands (beyond cmd's `@` and `!`)
+Main Features
+-------------
+- Searchable command history (`history` command and `<Ctrl>+r`)
+- Text file scripting of your application with `load` (`@`) and `_relative_load` (`@@`)
+- Python scripting of your application with ``pyscript``
+- Run shell commands with ``!``
+- Pipe command output to shell commands with `|`
+- Redirect command output to file with `>`, `>>`; input from file with `<`
+- Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
+- `py` enters interactive Python console (opt-in `ipy` for IPython console)
+- Multi-line, case-insensitive, and abbreviated commands
+- Special-character command shortcuts (beyond cmd's `@` and `!`)
 - Settable environment parameters
 - Parsing commands with flags
-- Redirection to file with `>`, `>>`; input from file with `<`
-- Bare `>`, `>>` with no filename send output to paste buffer
-- Pipe output to shell commands with `|`
-- Simple transcript-based application testing
 - Unicode character support (*Python 3 only*)
-- Tab completion of file system paths for ``edit``, ``load``, ``pyscript``, ``save``, and ``shell`` commands
-- Integrated Python scripting capability via ``pyscript`` and ``py`` commands
-- (Optional) Embedded IPython shell integration via optional opt-in ``ipy`` command
+- Good tab-completion of commands, file system paths, and shell commands`
+- Python 2.7 and 3.3+ support
+- Linux, macOS and Windows support
+- Trivial to provide built-in help for all commands
+- Built-in regression testing framework for your applications (transcript-based testing)
 
+Installation
+------------
+On all operating systems, the latest stable version of `cmd2` can be installed using pip:
+
+```bash
+pip install -U cmd2
+```
+
+cmd2 works with Python 2.7 and Python 3.3+ on Windows, macOS, and Linux. It is pure Python code with the only 3rd-party dependencies being on [six](https://pypi.python.org/pypi/six), [pyparsing](http://pyparsing.wikispaces.com),
+and [pyperclip](https://github.com/asweigart/pyperclip).
+
+For information on other installation options, see [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2 documentation.
+
+Documentation
+-------------
+The latest documentation for cmd2 can be read online here: https://cmd2.readthedocs.io/en/latest/
+
+It is available in HTML, PDF, and ePub formats.
+
+
+
+Feature Overview
+----------------
 Instructions for implementing each feature follow.
 
 - Searchable command history

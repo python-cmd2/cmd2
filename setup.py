@@ -6,31 +6,35 @@ Setuptools setup file, used to install or test 'cmd2'
 from setuptools import setup
 
 VERSION = '0.7.4'
-DESCRIPTION = "Extra features for standard library's cmd module"
-
-LONG_DESCRIPTION = """cmd2 is an enhancement to the standard library's cmd module for Python 2.7
-and Python 3.3+.   It is pure Python code with dependencies only on the six and pyparsing modules.
+DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
+LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
+it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
+provides a simple API which is an extension of Python's built-in cmd module.  cmd2 provides a wealth of features on top 
+of cmd to make your life easier.
 
 The latest documentation for cmd2 can be read online here:
 https://cmd2.readthedocs.io/
 
-Drop-in replacement adds several features for command-prompt tools:
+Main features:
 
-    * Searchable command history (commands: "history", "run")
-    * Load commands from file, save to file, edit commands in file
-    * Multi-line commands
-    * Case-insensitive commands
-    * Special-character shortcut commands (beyond cmd's "@" and "!")
-    * Settable environment parameters
-    * Parsing commands with flags
-    * > (filename), >> (filename) redirect output to file
-    * < (filename) gets input from file
-    * bare >, >>, < redirect to/from paste buffer
-    * accepts abbreviated commands when unambiguous
-    * `py` enters interactive Python console
-    * `pyscript` executes a Python script
-    * Good tab-completion of commands and file system paths
-    * test apps against sample session transcript (see examples/example.py)
+    - Searchable command history (`history` command and `<Ctrl>+r`)
+    - Text file scripting of your application with `load` (`@`) and `_relative_load` (`@@`)
+    - Python scripting of your application with ``pyscript``
+    - Run shell commands with ``!``
+    - Pipe command output to shell commands with `|`
+    - Redirect command output to file with `>`, `>>`; input from file with `<`
+    - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
+    - `py` enters interactive Python console (opt-in `ipy` for IPython console)
+    - Multi-line, case-insensitive, and abbreviated commands
+    - Special-character command shortcuts (beyond cmd's `@` and `!`)
+    - Settable environment parameters
+    - Parsing commands with flags
+    - Unicode character support (*Python 3 only*)
+    - Good tab-completion of commands, file system paths, and shell commands`
+    - Python 2.7 and 3.3+ support
+    - Linux, macOS and Windows support
+    - Trivial to provide built-in help for all commands
+    - Built-in regression testing framework for your applications (transcript-based testing)
 
 Usable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 """
@@ -76,5 +80,4 @@ setup(
     keywords='command prompt console cmd',
     install_requires=INSTALL_REQUIRES,
     tests_require=TESTS_REQUIRE,
-    docs_require=DOCS_REQUIRE,
 )
