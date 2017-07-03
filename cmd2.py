@@ -1128,13 +1128,6 @@ class Cmd(cmd.Cmd):
         except (ValueError, AttributeError):
             self.do_show(arg)
 
-    # noinspection PyMethodMayBeStatic
-    def do_pause(self, text):
-        """Displays the specified text then waits for the user to press <Enter>.
-
-    Usage:  pause [text]"""
-        sm.input(text + '\n')
-
     def do_shell(self, command):
         """Execute a command as if at the OS prompt.
 
@@ -2276,7 +2269,37 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
 
 if __name__ == '__main__':
     # If run as the main application, simply start a bare-bones cmd2 application with only built-in functionality.
-    # But enable the ipy command if IPython is installed, which supports advanced interactive debugging of your app,
-    # via introspection on self.
-    app = Cmd(use_ipython=True)
+
+    # Set this to True to include the ipy command if IPython is installed, which supports advanced interactive debugging
+    # of your application via introspection on self.
+    # include_ipy = False
+    #
+    # app = Cmd(use_ipython=include_ipy)
+    # app.cmdloop()
+
+
+    class HelpApp(Cmd):
+        """Class for testing custom help_* methods which override docstring help."""
+
+        def __init__(self, *args, **kwargs):
+            # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+            Cmd.__init__(self, *args, **kwargs)
+
+        def do_squat(self, arg):
+            """This docstring help will never be shown because the help_squat method overrides it."""
+            pass
+
+        def help_squat(self):
+            self.stdout.write('This command does diddly squat...\n')
+
+        def do_edit(self, arg):
+            """This overrides the edit command and does nothing."""
+            pass
+
+        # This command will be in the "undocumented" section of the help menu
+        def do_undoc(self, arg):
+            pass
+
+
+    app = HelpApp()
     app.cmdloop()

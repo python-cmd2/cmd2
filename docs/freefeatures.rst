@@ -286,8 +286,6 @@ with automatically included ``do_`` methods.
 
 .. automethod:: cmd2.Cmd.do_quit
 
-.. automethod:: cmd2.Cmd.do_pause
-
 .. automethod:: cmd2.Cmd.do_shell
 
 ( ``!`` is a shortcut for ``shell``; thus ``!ls``

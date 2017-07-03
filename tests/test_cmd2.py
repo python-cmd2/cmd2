@@ -182,14 +182,6 @@ def test_base_error(base_app):
     assert out == ["*** Unknown syntax: meow"]
 
 
-def test_base_pause(base_app):
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='\n')
-    sm.input = m
-
-    run_cmd(base_app, 'pause')
-    m.assert_called_once()
-
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
@@ -556,9 +548,9 @@ def test_pipe_to_shell(base_app):
         # Windows
         # Get help menu and pipe it's output to the sort shell command
         out = run_cmd(base_app, 'help | sort')
-        expected = ['', '', '_relative_load  edit  history  pause  pyscript  run   set    shortcuts',
+        expected = ['', '', '_relative_load  edit  history  py        quit  save  shell      show',
                     '========================================',
-                    'cmdenvironment  help  load     py     quit      save  shell  show',
+                    'cmdenvironment  help  load     pyscript  run   set   shortcuts',
                     'Documented commands (type help <topic>):']
         assert out == expected
     else:
@@ -870,8 +862,8 @@ class HelpApp(cmd2.Cmd):
     def help_squat(self):
         self.stdout.write('This command does diddly squat...\n')
 
-    def do_pause(self, arg):
-        """This overrides the pause command and does nothing."""
+    def do_edit(self, arg):
+        """This overrides the edit command and does nothing."""
         pass
 
     # This command will be in the "undocumented" section of the help menu
@@ -894,8 +886,8 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  history  pause  pyscript  run   set    shortcuts  squat
-cmdenvironment  help  load     py     quit      save  shell  show
+_relative_load  edit  history  py        quit  save  shell      show
+cmdenvironment  help  load     pyscript  run   set   shortcuts  squat
 
 Undocumented commands:
 ======================
@@ -909,8 +901,8 @@ def test_help_undocumented(help_app):
     assert out == expected
 
 def test_help_overridden_method(help_app):
-    out = run_cmd(help_app, 'help pause')
-    expected = normalize('This overrides the pause command and does nothing.')
+    out = run_cmd(help_app, 'help edit')
+    expected = normalize('This overrides the edit command and does nothing.')
     assert out == expected
 
 
