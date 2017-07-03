@@ -1,5 +1,5 @@
-cmd2: a tool for building interactive command line applications
-===============================================================
+cmd2: a tool for building interactive command line apps
+=======================================================
 [![Latest Version](https://img.shields.io/pypi/v/cmd2.svg?style=flat-square&label=latest%20stable%20version)](https://pypi.python.org/pypi/cmd2/)
 [![Build status](https://img.shields.io/travis/python-cmd2/cmd2.svg?style=flat-square&label=unix%20build)](https://travis-ci.org/python-cmd2/cmd2)
 [![Appveyor build status](https://img.shields.io/appveyor/ci/FedericoCeratto/cmd2.svg?style=flat-square&label=windows%20build)](https://ci.appveyor.com/project/FedericoCeratto/cmd2)
