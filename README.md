@@ -13,6 +13,8 @@ applications.  It provides a simple API which is an extension of Python's built-
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary
 when using cmd.
 
+[![Screenshot](cmd2.png)](https://github.com/python-cmd2/cmd2/blob/master/cmd2.png)
+
 
 Main Features
 -------------

@@ -274,7 +274,7 @@ where `4` should be replaced by the number of parallel threads you wish to run f
 Code coverage can be measured as follows:
 
 ```shell
-py.test --cov=cmd2 --cov-report term-missing --cov-report=html
+py.test -nauto --cov=cmd2 --cov-report=term-missing --cov-report=html
 ```
 
 Then use your web browser of choice to look at the results which are in `<cmd2>/htmlcov/index.html`.
@@ -390,6 +390,14 @@ how to do it.
 
 6.  Indicate what local testing you have done (e.g. what OS and version(s) of Python did you run the
     unit test suite with)
+    
+7.  Creating the PR causes our continuous integration (CI) systems to automatically run all of the
+    unit tests on all supported OSes and all supported versions of Python.  You should watch your PR
+    to make sure that all unit tests pass on Both TravisCI (Linux) and AppVeyor (Windows).  
+    
+8.  If any unit tests fail, you should look at the details and fix the failures.  You can then push
+    the fix to the same branch in your fork and the PR will automatically get updated and the CI system
+    will automatically run all of the unit tests again.
 
 
 ### How We Review and Merge Pull Requests

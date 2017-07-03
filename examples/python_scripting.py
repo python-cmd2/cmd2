@@ -36,7 +36,7 @@ class CmdLineApp(Cmd):
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.prompt = '{!r} $ '.format(self.cwd)
+        self.prompt = self.colorize('{!r} $ '.format(self.cwd), 'cyan')
 
     def postcmd(self, stop, line):
         """Hook method executed just after a command dispatch is finished.
