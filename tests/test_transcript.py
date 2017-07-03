@@ -106,9 +106,8 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  help     orate  pyscript  save  shell      speak
-cmdenvironment  history  pause  quit      say   shortcuts
-edit            load     py     run       set   show
+_relative_load  edit  history  orate  pyscript  run   say  shell      show
+cmdenvironment  help  load     py     quit      save  set  shortcuts  speak
 
 (Cmd) help say
 Repeats what you tell me to.
