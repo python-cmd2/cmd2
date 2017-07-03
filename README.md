@@ -31,7 +31,7 @@ Main Features
 - Settable environment parameters
 - Parsing commands with flags
 - Unicode character support (*Python 3 only*)
-- Good tab-completion of commands, file system paths, and shell commands`
+- Good tab-completion of commands, file system paths, and shell commands
 - Python 2.7 and 3.3+ support
 - Linux, macOS and Windows support
 - Trivial to provide built-in help for all commands
