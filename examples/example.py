@@ -19,6 +19,7 @@ class CmdLineApp(Cmd):
     # default_to_shell = True
 
     def __init__(self):
+        self.abbrev = True
         self.multilineCommands = ['orate']
         self.maxrepeats = 3
 

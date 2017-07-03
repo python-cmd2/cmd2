@@ -99,7 +99,7 @@ To enable full traceback, run the following command:  'set debug true'
 """)
     assert normalize(str(err)) == expected
 
-def test_set_abbreviated(base_app):
+def test_set_quiet(base_app):
     out = run_cmd(base_app, 'set quie True')
     expected = normalize("""
 quiet - was: False
@@ -649,7 +649,7 @@ def test_edit_no_editor(base_app, capsys):
     base_app.editor = None
 
     # Make sure we get an exception, but cmd2 handles it
-    run_cmd(base_app, 'ed')
+    run_cmd(base_app, 'edit')
     out, err = capsys.readouterr()
 
     expected = _expected_no_editor_error()

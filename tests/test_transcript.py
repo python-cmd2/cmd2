@@ -21,6 +21,7 @@ from conftest import run_cmd, StdOut, normalize
 
 class CmdLineApp(Cmd):
     def __init__(self, *args, **kwargs):
+        self.abbrev = True
         self.multilineCommands = ['orate']
         self.maxrepeats = 3
         self.redirector = '->'

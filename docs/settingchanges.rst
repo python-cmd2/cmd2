@@ -105,7 +105,6 @@ with::
     (Cmd) set --long
     abbrev: True                   # Accept abbreviated commands
     autorun_on_edit: False         # Automatically run files after editing
-    case_insensitive: True         # upper- and lower-case both OK
     colors: True                   # Colorized output (*nix only)
     continuation_prompt: >         # On 2nd+ line of input
     debug: False                   # Show full error stack on error

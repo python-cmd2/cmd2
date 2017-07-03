@@ -11,14 +11,16 @@ from cmd2 import Cmd, options, make_option
 
 class Pirate(Cmd):
     """A piratical example cmd2 application involving looting and drinking."""
-    default_to_shell = True
-    multilineCommands = ['sing']
-    terminators = Cmd.terminators + ['...']
-    songcolor = 'blue'
-    settable = Cmd.settable + 'songcolor Color to ``sing`` in (red/blue/green/cyan/magenta, bold, underline)'
-    Cmd.shortcuts.update({'~': 'sing'})
-
     def __init__(self):
+        self.default_to_shell = True
+        self.multilineCommands = ['sing']
+        self.terminators = Cmd.terminators + ['...']
+        self.songcolor = 'blue'
+
+        # Add stuff to settable and/or shortcuts before calling base class initializer
+        self.settable['songcolor'] = 'Color to ``sing`` in (red/blue/green/cyan/magenta, bold, underline)'
+        self.shortcuts.update({'~': 'sing'})
+
         """Initialize the base class as well as this one"""
         Cmd.__init__(self)
         # prompts and defaults
