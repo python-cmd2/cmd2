@@ -1187,3 +1187,47 @@ def test_cmdresult(cmdresult_app):
     run_cmd(cmdresult_app, 'negative {}'.format(arg))
     assert not cmdresult_app._last_result
     assert cmdresult_app._last_result == cmd2.CmdResult('', arg)
+
+
+@pytest.fixture
+def abbrev_app():
+    app = cmd2.Cmd()
+    app.abbrev = True
+    app.stdout = StdOut()
+    return app
+
+def test_exclude_from_history(abbrev_app):
+    # Run all variants of run
+    run_cmd(abbrev_app, 'run')
+    run_cmd(abbrev_app, 'ru')
+    run_cmd(abbrev_app, 'r')
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    os.system = m
+
+    # Run all variants of edit
+    run_cmd(abbrev_app, 'edit')
+    run_cmd(abbrev_app, 'edi')
+    run_cmd(abbrev_app, 'ed')
+
+    # Run all variants of history
+    run_cmd(abbrev_app, 'history')
+    run_cmd(abbrev_app, 'histor')
+    run_cmd(abbrev_app, 'histo')
+    run_cmd(abbrev_app, 'hist')
+    run_cmd(abbrev_app, 'his')
+    run_cmd(abbrev_app, 'hi')
+
+    # Verify that the history is empty
+    out = run_cmd(abbrev_app, 'history')
+    assert out == []
+
+    # Now run a command which isn't excluded from the history
+    run_cmd(abbrev_app, 'help')
+    # And verify we have a history now ...
+    out = run_cmd(abbrev_app, 'history')
+    expected = normalize("""-------------------------[1]
+help""")
+    assert out == expected
+
