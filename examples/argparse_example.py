@@ -3,10 +3,10 @@
 """A sample application for cmd2 showing how to use Argparse to process command line arguments for your application.
 It doubles as an example of how you can still do transcript testing even if allow_cli_args is false.
 
-Thanks to cmd2's built-in transcript testing capability, it also serves as a test suite for argparse_example.py when 
+Thanks to cmd2's built-in transcript testing capability, it also serves as a test suite for argparse_example.py when
 used with the exampleSession.txt transcript.
 
-Running `python argparse_example.py -t exampleSession.txt` will run all the commands in the transcript against 
+Running `python argparse_example.py -t exampleSession.txt` will run all the commands in the transcript against
 argparse_example.py, verifying that the output produced matches the transcript.
 """
 import argparse
@@ -16,15 +16,14 @@ from cmd2 import Cmd, make_option, options
 
 class CmdLineApp(Cmd):
     """ Example cmd2 application. """
-    multilineCommands = ['orate']
-    Cmd.shortcuts.update({'&': 'speak'})
-    maxrepeats = 3
-    Cmd.settable.append('maxrepeats')
-
-    # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
-    # default_to_shell = True
-
     def __init__(self, ip_addr=None, port=None, transcript_files=None):
+        self.multilineCommands = ['orate']
+        self.shortcuts.update({'&': 'speak'})
+        self.maxrepeats = 3
+
+        # Add stuff to settable and/or shortcuts before calling base class initializer
+        self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
+
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         Cmd.__init__(self, use_ipython=False, transcript_files=transcript_files)
 
@@ -34,6 +33,9 @@ class CmdLineApp(Cmd):
         # Example of args set from the command-line (but they aren't being used here)
         self._ip = ip_addr
         self._port = port
+
+        # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
+        # self.default_to_shell = True
 
     @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
               make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),

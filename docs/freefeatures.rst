@@ -265,13 +265,13 @@ Abbreviated commands
 ====================
 
 ``cmd2`` apps will accept shortened command names
-so long as there is no ambiguity.  Thus, if
-``do_divide`` is defined, then ``divid``, ``div``,
+so long as there is no ambiguity if the ``abrev`` settable parameter is set to ``True``.
+Thus, if ``do_divide`` is defined, then ``divid``, ``div``,
 or even ``d`` will suffice, so long as there are
 no other commands defined beginning with *divid*,
 *div*, or *d*.
 
-This behavior can be turned off with ``app.abbrev`` (see :ref:`parameters`)
+This behavior is disabled by default, but can be turned on with ``app.abbrev`` (see :ref:`parameters`)
 
 .. warning::
 

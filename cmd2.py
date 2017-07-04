@@ -400,32 +400,29 @@ class Cmd(cmd.Cmd):
 
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
-    # Attributes which are NOT dynamically settable at runtime
-    allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
-    allow_redirection = True    # Should output redirection and pipes be allowed
+    # Attributes used to configure the ParserManager (all are not dynamically settable at runtime)
     blankLinesAllowed = False
-    commentGrammars = pyparsing.Or(
-         [pyparsing.pythonStyleComment, pyparsing.cStyleComment]
-         )
+    case_insensitive = True  # Commands recognized regardless of case
+    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
-
-    default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    excludeFromHistory = '''run r list l history hi ed edit li eof'''.split()
-    exclude_from_help = ['do_eof']  # Commands to exclude from the help menu
-
-    # make sure your terminators are not in legalChars!
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
     multilineCommands = []  # NOTE: Multiline commands can never be abbreviated, even if abbrev is True
     prefixParser = pyparsing.Empty()
-    redirector = '>'            # for sending output to file
-    reserved_words = []
+    redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    terminators = [';']
+    terminators = [';']     # make sure your terminators are not in legalChars!
+
+    # Attributes which are NOT dynamically settable at runtime
+    allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
+    allow_redirection = True    # Should output redirection and pipes be allowed
+    default_to_shell = False    # Attempt to run unrecognized commands as shell commands
+    excludeFromHistory = '''run ru r history histor histo hist his hi h edit edi ed e eof eo'''.split()
+    exclude_from_help = ['do_eof']  # Commands to exclude from the help menu
+    reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
-    abbrev = True  # Abbreviated commands recognized
+    abbrev = False  # Abbreviated commands recognized
     autorun_on_edit = False  # Should files automatically run after editing (doesn't apply to commands)
-    case_insensitive = True  # Commands recognized regardless of case
     colors = (platform.system() != 'Windows')
     continuation_prompt = '> '
     debug = False
@@ -448,7 +445,6 @@ class Cmd(cmd.Cmd):
     # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
     settable = {'abbrev': 'Accept abbreviated commands',
                 'autorun_on_edit': 'Automatically run files after editing',
-                'case_insensitive': 'Upper- and lower-case both OK',
                 'colors': 'Colorized output (*nix only)',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
