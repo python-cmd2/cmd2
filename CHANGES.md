@@ -12,11 +12,9 @@ News
         * Added additional command abbreviations to the "exclude from history" list
     * Fixed argparse_example.py and pirate.py examples and transcript_regex.txt transcript
 * Enhancements
-- Organized all attributes used to configure the ParserManager into a single location
-- Set the default value of `abbrev` to `False` (which controls whether or not abbreviated commands are allowed)
-    - With good tab-completion of command names, using abbreviated commands isn't a particularly useful feature
-    - And it can create problems
-
+    * Organized all attributes used to configure the ParserManager into a single location
+    * Set the default value of `abbrev` to `False` (which controls whether or not abbreviated commands are allowed)
+        * With good tab-completion of command names, using abbreviated commands isn't a particularly useful feature
 
 0.7.4
 -----
