@@ -14,7 +14,8 @@ News
 * Enhancements
     * Organized all attributes used to configure the ParserManager into a single location
     * Set the default value of `abbrev` to `False` (which controls whether or not abbreviated commands are allowed)
-        * With good tab-completion of command names, using abbreviated commands isn't a particularly useful feature
+        * With good tab-completion of command names, using abbreviated commands isn't particularly useful
+        * And it can create complications if you are't careful
 
 0.7.4
 -----
