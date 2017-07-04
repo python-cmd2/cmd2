@@ -103,7 +103,7 @@ comments, is viewable from within a running application
 with::
 
     (Cmd) set --long
-    abbrev: True                   # Accept abbreviated commands
+    abbrev: False                  # Accept abbreviated commands
     autorun_on_edit: False         # Automatically run files after editing
     colors: True                   # Colorized output (*nix only)
     continuation_prompt: >         # On 2nd+ line of input
@@ -118,5 +118,5 @@ with::
 
 Any of these user-settable parameters can be set while running your app with the ``set`` command like so::
 
-    set abbrev False
+    set abbrev True
 
