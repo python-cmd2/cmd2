@@ -1231,3 +1231,12 @@ def test_exclude_from_history(abbrev_app):
 help""")
     assert out == expected
 
+
+def test_is_text_file_bad_input(base_app):
+    # Test with a non-existent file
+    file_is_valid = base_app.is_text_file('does_not_exist.txt')
+    assert not file_is_valid
+
+    # Test with a directory
+    dir_is_valid = base_app.is_text_file('.')
+    assert not dir_is_valid
