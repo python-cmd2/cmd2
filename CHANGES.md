@@ -4,13 +4,14 @@ News
 0.7.5
 -----
 
-*Release date: TBD*
+*Release date: 2017-TBD*
 
 * Bug Fixes
     * `case_insensitive` is no longer a runtime-settable parameter, but it was still listed as such
     * Fixed a recursive loop bug when abbreviated commands are enabled and it could get stuck in the editor forever
         * Added additional command abbreviations to the "exclude from history" list
     * Fixed argparse_example.py and pirate.py examples and transcript_regex.txt transcript
+    * Fixed a bug in a unit test which occurred under unusual circumstances
 * Enhancements
     * Organized all attributes used to configure the ParserManager into a single location
     * Set the default value of `abbrev` to `False` (which controls whether or not abbreviated commands are allowed)
