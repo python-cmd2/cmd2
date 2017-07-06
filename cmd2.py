@@ -1608,7 +1608,7 @@ NOTE: This command is intended to only be used within text file scripts.
         """
         # If arg is None or arg is an empty string this is an error
         if not file_path:
-            self.perror('_relative_load command requires a file path:\n', traceback_war=False)
+            self.perror('_relative_load command requires a file path:', traceback_war=False)
             return
 
         file_path = file_path.strip()
@@ -1627,24 +1627,24 @@ Script should contain one command per line, just like command would be typed in 
         """
         # If arg is None or arg is an empty string this is an error
         if not file_path:
-            self.perror('load command requires a file path:\n', traceback_war=False)
+            self.perror('load command requires a file path:', traceback_war=False)
             return
 
         expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
 
         # Make sure expanded_path points to a file
         if not os.path.isfile(expanded_path):
-            self.perror('{} does not exist or is not a file\n'.format(expanded_path), traceback_war=False)
+            self.perror('{} does not exist or is not a file'.format(expanded_path), traceback_war=False)
             return
 
         # Make sure the file is not empty
         if os.path.getsize(expanded_path) == 0:
-            self.perror('{} is empty\n'.format(expanded_path), traceback_war=False)
+            self.perror('{} is empty'.format(expanded_path), traceback_war=False)
             return
 
         # Make sure the file is ASCII or UTF-8 encoded text
         if not self.is_text_file(expanded_path):
-            self.perror('{} is not an ASCII or UTF-8 encoded text file\n'.format(expanded_path), traceback_war=False)
+            self.perror('{} is not an ASCII or UTF-8 encoded text file'.format(expanded_path), traceback_war=False)
             return
 
         try:
