@@ -1262,3 +1262,23 @@ def test_eos(base_app):
 
     # And make sure it reduced the length of the script dir list
     assert len(base_app._script_dir) == 0
+
+
+def test_echo(capsys):
+    app = cmd2.Cmd()
+    # Turn echo on and pre-stage some commands in the queue, simulating like we are in the middle of a script
+    app.echo = True
+    app.cmdqueue = ['help history', 'quit', 'eos']
+    app._script_dir.append('some_dir')
+
+    assert app._current_script_dir is not None
+
+    # Run the inner _cmdloop
+    app._cmdloop()
+
+    out, err = capsys.readouterr()
+
+    # Check the output
+    assert app.cmdqueue == []
+    assert app._current_script_dir is None
+    assert out.startswith('help history\n' + 'history [arg]: lists past commands issued')

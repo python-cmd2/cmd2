@@ -59,15 +59,6 @@ import six.moves as sm
 # itertools.zip() for Python 2 or zip() for Python 3 - produces an iterator in both cases
 from six.moves import zip
 
-# Python 3 compatibility hack due to no built-in file keyword in Python 3
-# Due to one occurrence of isinstance(<foo>, file) checking to see if something is of file type
-try:
-    # noinspection PyUnboundLocalVariable,PyUnresolvedReferences
-    file
-except NameError:
-    import io
-    file = io.TextIOWrapper
-
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
 try:
@@ -927,13 +918,18 @@ class Cmd(cmd.Cmd):
         stop = None
         try:
             while not stop:
-                # NOTE: cmdqueue appears completely unused, but it is defined in cmd.Cmd, so we are leaving it here
                 if self.cmdqueue:
+                    # Run command out of cmdqueue if nonempty (populated by load command or commands at invocation)
                     line = self.cmdqueue.pop(0)
                 else:
+                    # Otherwise, read a command from stdin
                     line = self.pseudo_raw_input(self.prompt)
-                if self.echo and isinstance(self.stdin, file):
+
+                # If echo is on and in the middle of running a script, then echo the line to the output
+                if self.echo and self._current_script_dir is not None:
                     self.stdout.write(line + '\n')
+
+                # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
         finally:
             if self.use_rawinput and self.completekey:
@@ -942,6 +938,11 @@ class Cmd(cmd.Cmd):
                     readline.set_completer_delims(self.old_delims)
                 except NameError:
                     pass
+
+            # Need to set empty list this way because Python 2 doesn't support the clear() method on lists
+            self.cmdqueue = []
+            self._script_dir = []
+            
             return stop
 
     # noinspection PyUnusedLocal
