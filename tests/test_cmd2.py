@@ -731,16 +731,16 @@ def test_base_cmdloop_with_queue():
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = cmd2.Cmd()
     app.use_rawinput = True
-    app.intro = 'Hello World, this is an intro ...'
+    intro = 'Hello World, this is an intro ...'
     app.cmdqueue.append('quit\n')
     app.stdout = StdOut()
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
-    expected = app.intro + '\n'
+    expected = intro + '\n'
     with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        app.cmdloop()
+        # Run the command loop with custom intro
+        app.cmdloop(intro=intro)
     out = app.stdout.buffer
     assert out == expected
 

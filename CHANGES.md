@@ -4,7 +4,7 @@ News
 0.7.5
 -----
 
-*Release date: 2017-TBD*
+*Release date: 2017-07-08*
 
 * Bug Fixes
     * `case_insensitive` is no longer a runtime-settable parameter, but it was still listed as such
@@ -17,6 +17,7 @@ News
     * Set the default value of `abbrev` to `False` (which controls whether or not abbreviated commands are allowed)
         * With good tab-completion of command names, using abbreviated commands isn't particularly useful
         * And it can create complications if you are't careful
+    * Improved implementation of `load` to use command queue instead of nested inner loop
 
 0.7.4
 -----
