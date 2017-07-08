@@ -1659,9 +1659,15 @@ Script should contain one command per line, just like command would be typed in 
             return
 
         try:
-            # Add all commands in the script to the command queue
-            with open(expanded_path) as target:
-                self.cmdqueue.extend(target.read().splitlines())
+            # Specify file encoding in Python 3, but Python 2 doesn't allow that argument to open()
+            if six.PY3:
+                # Add all commands in the script to the command queue
+                with open(expanded_path, encoding='utf-8') as target:
+                    self.cmdqueue.extend(target.read().splitlines())
+            else:
+                # Add all commands in the script to the command queue
+                with open(expanded_path) as target:
+                    self.cmdqueue.extend(target.read().splitlines())
 
             # Append in an "end of script (eos)" command to cleanup the self._script_dir list
             self.cmdqueue.append('eos')

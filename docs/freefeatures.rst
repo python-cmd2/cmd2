@@ -13,14 +13,20 @@ Script files
 ============
 
 Text files can serve as scripts for your ``cmd2``-based
-application, with the ``load``, ``save``, and ``edit``
-commands.
+application, with the ``load``, ``_relative_load``, ``save``, and ``edit`` commands.
+
+Both ASCII and UTF-8 encoded unicode text files are supported.
+
+Simply include one command per line, typed exactly as you would inside a ``cmd2`` application.
 
 .. automethod:: cmd2.Cmd.do_load
+
+.. automethod:: cmd2.Cmd.do__relative_load
 
 .. automethod:: cmd2.Cmd.do_save
 
 .. automethod:: cmd2.Cmd.do_edit
+
 
 Comments
 ========
