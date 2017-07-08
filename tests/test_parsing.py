@@ -329,3 +329,12 @@ def test_option_parser_exit_with_msg(option_parser, capsys):
     out, err = capsys.readouterr()
     assert out == msg + '\n'
     assert err == ''
+
+
+def test_empty_statement_raises_exception():
+    app = cmd2.Cmd()
+    with pytest.raises(cmd2.EmptyStatement):
+        app._complete_statement('')
+
+    with pytest.raises(cmd2.EmptyStatement):
+        app._complete_statement(' ')

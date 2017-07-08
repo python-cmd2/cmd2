@@ -878,20 +878,23 @@ class Cmd(cmd.Cmd):
     def pseudo_raw_input(self, prompt):
         """copied from cmd's cmdloop; like raw_input, but accounts for changed stdin, stdout"""
 
+        # Deal with the vagaries of readline and ANSI escape codes
+        safe_prompt = self._surround_ansi_escapes(prompt)
+
         if self.use_rawinput:
-            safe_prompt = self._surround_ansi_escapes(prompt)
             try:
                 line = sm.input(safe_prompt)
             except EOFError:
                 line = 'EOF'
         else:
-            self.stdout.write(prompt)
+            self.stdout.write(safe_prompt)
             self.stdout.flush()
             line = self.stdin.readline()
             if not len(line):
                 line = 'EOF'
             else:
                 line = line.rstrip('\r\n')
+
         return line.strip()
 
     def _cmdloop(self):
@@ -942,7 +945,7 @@ class Cmd(cmd.Cmd):
             # Need to set empty list this way because Python 2 doesn't support the clear() method on lists
             self.cmdqueue = []
             self._script_dir = []
-            
+
             return stop
 
     # noinspection PyUnusedLocal

@@ -1282,3 +1282,39 @@ def test_echo(capsys):
     assert app.cmdqueue == []
     assert app._current_script_dir is None
     assert out.startswith('help history\n' + 'history [arg]: lists past commands issued')
+
+
+def test_raw_input(base_app):
+    base_app.use_raw_input = True
+    fake_input = 'quit'
+
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.Mock(name='input', return_value=fake_input)
+    sm.input = m
+
+    line = base_app.pseudo_raw_input('(cmd2)')
+    assert line == fake_input
+
+def test_stdin_input():
+    app = cmd2.Cmd()
+    app.use_rawinput = False
+    fake_input = 'quit'
+
+    # Mock out the readline call so we don't actually read from stdin
+    m = mock.Mock(name='readline', return_value=fake_input)
+    app.stdin.readline = m
+
+    line = app.pseudo_raw_input('(cmd2)')
+    assert line == fake_input
+
+def test_empty_stdin_input():
+    app = cmd2.Cmd()
+    app.use_rawinput = False
+    fake_input = ''
+
+    # Mock out the readline call so we don't actually read from stdin
+    m = mock.Mock(name='readline', return_value=fake_input)
+    app.stdin.readline = m
+
+    line = app.pseudo_raw_input('(cmd2)')
+    assert line == 'EOF'
