@@ -829,6 +829,26 @@ def test_default_to_shell_unknown(shell_app):
     out = run_cmd(shell_app, unknown_command)
     assert out == ["*** Unknown syntax: {}".format(unknown_command)]
 
+def test_default_to_shell_good(capsys):
+    app = cmd2.Cmd()
+    app.default_to_shell = True
+    line = 'ls'
+    statement = app.parser_manager.parsed(line)
+    retval = app._default(statement)
+    assert not retval
+    out, err = capsys.readouterr()
+    assert out == ''
+
+def test_default_to_shell_failure(capsys):
+    app = cmd2.Cmd()
+    app.default_to_shell = True
+    line = 'ls does_not_exist.xyz'
+    statement = app.parser_manager.parsed(line)
+    retval = app._default(statement)
+    assert not retval
+    out, err = capsys.readouterr()
+    assert out == "*** Unknown syntax: {}\n".format(line)
+
 
 def test_ansi_prompt_not_esacped(base_app):
     prompt = '(Cmd) '
