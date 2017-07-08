@@ -416,8 +416,8 @@ class Cmd(cmd.Cmd):
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
     allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    excludeFromHistory = '''run ru r history histor histo hist his hi h edit edi ed e eof eo'''.split()
-    exclude_from_help = ['do_eof']  # Commands to exclude from the help menu
+    excludeFromHistory = '''run ru r history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
+    exclude_from_help = ['do_eof', 'do_eos']  # Commands to exclude from the help menu
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
@@ -507,8 +507,7 @@ class Cmd(cmd.Cmd):
         self._temp_filename = None
 
         # Codes used for exit conditions
-        self._STOP_AND_EXIT = True  # distinguish end of script file from actual exit
-        self._STOP_SCRIPT_NO_EXIT = -999
+        self._STOP_AND_EXIT = True  # cmd convention
 
         self._colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
                             'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
@@ -519,8 +518,8 @@ class Cmd(cmd.Cmd):
                             'underline': {True: '\x1b[4m', False: '\x1b[24m'},
                             'yellow': {True: '\x1b[33m', False: '\x1b[39m'}}
 
-        # Used by load and _relative_load commands
-        self._current_script_dir = None
+        # Used load command to store the current script dir as a LIFO queue to support _relative_load command
+        self._script_dir = []
 
     # -----  Methods related to presenting output to the user -----
 
@@ -829,7 +828,6 @@ class Cmd(cmd.Cmd):
         :return: bool - a flag indicating whether the interpretation of commands should stop
         """
         statement = self.parser_manager.parsed(line)
-        self.lastcmd = statement.parsed.raw
         funcname = self._func_named(statement.parsed.command)
         if not funcname:
             return self._default(statement)
@@ -1020,9 +1018,9 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyUnusedLocal
     def do_eof(self, arg):
-        """Automatically called at end of loading a script or when <Ctrl>-D is pressed."""
+        """Called when <Ctrl>-D is pressed."""
         # End of script should not exit app, but <Ctrl>-D should.
-        return self._STOP_SCRIPT_NO_EXIT
+        return self._STOP_AND_EXIT
 
     def do_quit(self, arg):
         """Exits this application."""
@@ -1591,6 +1589,14 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         except Exception as e:
             self.perror('Saving {!r} - {}'.format(fname, e), traceback_war=False)
 
+    @property
+    def _current_script_dir(self):
+        """Accessor to get the current script directory from the _script_dir LIFO queue."""
+        if self._script_dir:
+            return self._script_dir[-1]
+        else:
+            return None
+
     def do__relative_load(self, file_path):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
@@ -1615,6 +1621,11 @@ NOTE: This command is intended to only be used within text file scripts.
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
         self.do_load(relative_path)
+
+    def do_eos(self, _):
+        """Handles cleanup when a script has finished executing."""
+        if self._script_dir:
+            self._script_dir.pop()
 
     def do_load(self, file_path):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
@@ -1648,22 +1659,17 @@ Script should contain one command per line, just like command would be typed in 
             return
 
         try:
-            target = open(expanded_path)
+            # Add all commands in the script to the command queue
+            with open(expanded_path) as target:
+                self.cmdqueue.extend(target.read().splitlines())
+
+            # Append in an "end of script (eos)" command to cleanup the self._script_dir list
+            self.cmdqueue.append('eos')
         except IOError as e:
             self.perror('Problem accessing script from {}:\n{}'.format(expanded_path, e))
             return
 
-        keepstate = Statekeeper(self, ('stdin', 'use_rawinput', 'prompt',
-                                       'continuation_prompt', '_current_script_dir'))
-        self.stdin = target
-        self.use_rawinput = False
-        self.prompt = self.continuation_prompt = ''
-        self._current_script_dir = os.path.dirname(expanded_path)
-        stop = self._cmdloop()
-        self.stdin.close()
-        keepstate.restore()
-        self.lastcmd = ''
-        return stop and (stop != self._STOP_SCRIPT_NO_EXIT)
+        self._script_dir.append(os.path.dirname(expanded_path))
 
     def do_run(self, arg):
         """run [arg]: re-runs an earlier command
@@ -1728,16 +1734,6 @@ Script should contain one command per line, just like command would be typed in 
         runner = unittest.TextTestRunner()
         runner.run(testcase)
 
-    def _run_commands_at_invocation(self, callargs):
-        """Runs commands provided as arguments on the command line when the application is started.
-
-        :param callargs: List[str] - list of strings where each string is a command plus its arguments
-        :return: bool - True implies the entire application should exit
-        """
-        for initial_command in callargs:
-            if self.onecmd_plus_hooks(initial_command + '\n'):
-                return self._STOP_AND_EXIT
-
     def cmdloop(self, intro=None):
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
 
@@ -1749,19 +1745,25 @@ Script should contain one command per line, just like command would be typed in 
 
         :param intro: str - if provided this overrides self.intro and serves as the intro banner printed once at start
         """
-        callargs = None
         if self.allow_cli_args:
             parser = optparse.OptionParser()
             parser.add_option('-t', '--test', dest='test',
                               action="store_true",
                               help='Test against transcript(s) in FILE (wildcards OK)')
             (callopts, callargs) = parser.parse_args()
+
+            # If transcript testing was called for, use other arguments as transcript files
             if callopts.test:
                 self._transcript_files = callargs
+
+            # If commands were supplied at invocation, then add them to the command queue
+            if callargs:
+                self.cmdqueue.extend(callargs)
 
         # Always run the preloop first
         self.preloop()
 
+        # If transcript-based regression testing was requested, then do that instead of the main loop
         if self._transcript_files is not None:
             self.run_transcript_tests(self._transcript_files)
         else:
@@ -1773,14 +1775,8 @@ Script should contain one command per line, just like command would be typed in 
             if self.intro is not None:
                 self.stdout.write(str(self.intro) + "\n")
 
-            stop = False
-            # If allowed, process any commands present as arguments on the command-line, if allowed
-            if self.allow_cli_args:
-                stop = self._run_commands_at_invocation(callargs)
-
-            # And then call _cmdloop() if there wasn't something in those causing us to quit
-            if not stop:
-                self._cmdloop()
+            # And then call _cmdloop() to enter the main loop
+            self._cmdloop()
 
         # Run the postloop() no matter what
         self.postloop()

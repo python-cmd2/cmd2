@@ -317,19 +317,17 @@ def test_base_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
-    # The way the load command works, we can't directly capture its stdout or stderr
+    assert base_app.cmdqueue == []
+    assert base_app._script_dir == []
+    assert base_app._current_script_dir is None
+
+    # Run the load command, which populates the command queue and sets the script directory
     run_cmd(base_app, 'load {}'.format(filename))
 
-    # But what we can do is check the history to see what commands have been run ...
-    out = run_cmd(base_app, 'history')
-
-    # TODO: Figure out why when we unit test the command this way the commands from the script aren't shown in history
-    # NOTE: It works correctly when we run it at the command line
-    expected = normalize("""
--------------------------[1]
-load {}
-""".format(filename))
-    assert out == expected
+    assert base_app.cmdqueue == ['help history', 'eos']
+    sdir = os.path.dirname(filename)
+    assert base_app._script_dir == [sdir]
+    assert base_app._current_script_dir == sdir
 
 def test_load_with_empty_args(base_app, capsys):
     # The way the load command works, we can't directly capture its stdout or stderr
@@ -339,6 +337,7 @@ def test_load_with_empty_args(base_app, capsys):
     # The load command requires a file path argument, so we should get an error message
     expected = normalize("""ERROR: load command requires a file path:\n""")
     assert normalize(str(err)) == expected
+    assert base_app.cmdqueue == []
 
 
 def test_load_with_nonexistent_file(base_app, capsys):
@@ -349,6 +348,7 @@ def test_load_with_nonexistent_file(base_app, capsys):
     # The load command requires a path to an existing file
     assert str(err).startswith("ERROR")
     assert "does not exist or is not a file" in str(err)
+    assert base_app.cmdqueue == []
 
 
 def test_load_with_empty_file(base_app, capsys, request):
@@ -362,6 +362,7 @@ def test_load_with_empty_file(base_app, capsys, request):
     # The load command requires non-empty scripts files
     assert str(err).startswith("ERROR")
     assert "is empty" in str(err)
+    assert base_app.cmdqueue == []
 
 
 def test_load_with_binary_file(base_app, capsys, request):
@@ -375,43 +376,48 @@ def test_load_with_binary_file(base_app, capsys, request):
     # The load command requires non-empty scripts files
     assert str(err).startswith("ERROR")
     assert "is not an ASCII or UTF-8 encoded text file" in str(err)
+    assert base_app.cmdqueue == []
 
 
 def test_load_with_utf8_file(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'utf8.txt')
 
-    # The way the load command works, we can't directly capture its stdout or stderr
-    run_cmd(base_app, 'load {}'.format(filename))
-    out, err = capsys.readouterr()
+    assert base_app.cmdqueue == []
+    assert base_app._script_dir == []
+    assert base_app._current_script_dir is None
 
-    # TODO Make this test better once shell command is fixed to used cmd2's stdout
-    assert str(err) == ''
+    # Run the load command, which populates the command queue and sets the script directory
+    run_cmd(base_app, 'load {}'.format(filename))
+
+    assert base_app.cmdqueue == ['!echo γνωρίζω', 'eos']
+    sdir = os.path.dirname(filename)
+    assert base_app._script_dir == [sdir]
+    assert base_app._current_script_dir == sdir
 
 
 def test_base_relative_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
-    # The way the load command works, we can't directly capture its stdout or stderr
+    assert base_app.cmdqueue == []
+    assert base_app._script_dir == []
+    assert base_app._current_script_dir is None
+
+    # Run the load command, which populates the command queue and sets the script directory
     run_cmd(base_app, '_relative_load {}'.format(filename))
 
-    # But what we can do is check the history to see what commands have been run ...
-    out = run_cmd(base_app, 'history')
-
-    # TODO: Figure out why when we unit test the command this way the commands from the script aren't shown in history
-    # NOTE: It works correctly when we run it at the command line
-    expected = normalize("""
--------------------------[1]
-_relative_load {}
-""".format(filename))
-    assert out == expected
+    assert base_app.cmdqueue == ['help history', 'eos']
+    sdir = os.path.dirname(filename)
+    assert base_app._script_dir == [sdir]
+    assert base_app._current_script_dir == sdir
 
 def test_relative_load_requires_an_argument(base_app, capsys):
     run_cmd(base_app, '_relative_load')
     out, err = capsys.readouterr()
     assert out == ''
     assert err.startswith('ERROR: _relative_load command requires a file path:\n')
+    assert base_app.cmdqueue == []
 
 
 def test_base_save(base_app):
@@ -1240,3 +1246,19 @@ def test_is_text_file_bad_input(base_app):
     # Test with a directory
     dir_is_valid = base_app.is_text_file('.')
     assert not dir_is_valid
+
+
+def test_eof(base_app):
+    # Only thing to verify is that it returns True
+    assert base_app.do_eof('dont care')
+
+def test_eos(base_app):
+    sdir = 'dummy_dir'
+    base_app._script_dir.append(sdir)
+    assert len(base_app._script_dir) == 1
+
+    # Assert that it does NOT return true
+    assert not base_app.do_eos('dont care')
+
+    # And make sure it reduced the length of the script dir list
+    assert len(base_app._script_dir) == 0
