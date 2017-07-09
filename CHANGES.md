@@ -6,6 +6,8 @@ News
 
 *Release date: TBD*
 
+* Bug Fixes
+    * Fixed some timing bugs when running unit tests in parallel by using monkeypatch
 
 0.7.5
 -----
