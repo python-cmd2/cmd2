@@ -661,13 +661,13 @@ def test_edit_no_editor(base_app, capsys):
     expected = _expected_no_editor_error()
     assert normalize(str(err)) == expected
 
-def test_edit_file(base_app, request):
+def test_edit_file(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
     # Mock out the os.system call so we don't actually open an editor
     m = mock.MagicMock(name='system')
-    os.system = m
+    monkeypatch.setattr("os.system", m)
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
@@ -677,13 +677,13 @@ def test_edit_file(base_app, request):
     # We think we have an editor, so should expect a system call
     m.assert_called_once_with('{} {}'.format(base_app.editor, filename))
 
-def test_edit_number(base_app):
+def test_edit_number(base_app, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
     # Mock out the os.system call so we don't actually open an editor
     m = mock.MagicMock(name='system')
-    os.system = m
+    monkeypatch.setattr("os.system", m)
 
     # Run help command just so we have a command in history
     run_cmd(base_app, 'help')
@@ -693,13 +693,13 @@ def test_edit_number(base_app):
     # We have an editor, so should expect a system call
     m.assert_called_once()
 
-def test_edit_blank(base_app):
+def test_edit_blank(base_app, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
     # Mock out the os.system call so we don't actually open an editor
     m = mock.MagicMock(name='system')
-    os.system = m
+    monkeypatch.setattr("os.system", m)
 
     # Run help command just so we have a command in history
     run_cmd(base_app, 'help')
@@ -1222,7 +1222,7 @@ def abbrev_app():
     app.stdout = StdOut()
     return app
 
-def test_exclude_from_history(abbrev_app):
+def test_exclude_from_history(abbrev_app, monkeypatch):
     # Run all variants of run
     run_cmd(abbrev_app, 'run')
     run_cmd(abbrev_app, 'ru')
@@ -1230,7 +1230,7 @@ def test_exclude_from_history(abbrev_app):
 
     # Mock out the os.system call so we don't actually open an editor
     m = mock.MagicMock(name='system')
-    os.system = m
+    monkeypatch.setattr("os.system", m)
 
     # Run all variants of edit
     run_cmd(abbrev_app, 'edit')
