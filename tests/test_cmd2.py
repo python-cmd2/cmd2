@@ -575,8 +575,6 @@ def test_pipe_to_shell(base_app):
 @pytest.mark.skipif(not cmd2.can_clip,
                     reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
-    from cmd2 import can_clip
-
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
     expected = normalize(BASE_HELP)
