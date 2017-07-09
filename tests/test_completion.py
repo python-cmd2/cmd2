@@ -87,7 +87,7 @@ def test_shell_command_completion(cmd2_app):
         line = 'shell {}'.format(text)
         expected = ['calc.exe ']
     else:
-        text = 'eg'
+        text = 'egr'
         line = '!{}'.format(text)
         expected = ['egrep ']
 
