@@ -1799,7 +1799,7 @@ class ParserManager:
     """
     def __init__(self, redirector, terminators, multilineCommands, legalChars, commentGrammars, commentInProgress,
                  case_insensitive, blankLinesAllowed, prefixParser, preparse, postparse, shortcuts):
-        """Creates and uses parsers for user input according to app's paramters."""
+        """Creates and uses parsers for user input according to app's parameters."""
 
         self.commentGrammars = commentGrammars
         self.preparse = preparse
