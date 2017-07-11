@@ -319,7 +319,8 @@ def get_paste_buffer():
     """
     pb_str = pyperclip.paste()
 
-    if six.PY2:
+    # If value returned from the clipboard is unicode and this is Python 2, convert to a "normal" Python 2 string first
+    if six.PY2 and not isinstance(pb_str, str):
         import unicodedata
         pb_str = unicodedata.normalize('NFKD', pb_str).encode('ascii', 'ignore')
 
