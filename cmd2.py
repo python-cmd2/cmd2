@@ -300,7 +300,12 @@ def options(option_list, arg_desc="arg"):
 
 # Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
 try:
-    _ = pyperclip.paste()
+    if six.PY3 and sys.platform.startswith('linux'):
+        # Avoid extraneous output to stderr from xclip when clipboard is empty at cost of overwriting clipboard contents
+        pyperclip.copy('')
+    else:
+        # Try getting the contents of the clipboard
+        _ = pyperclip.paste()
 except pyperclip.exceptions.PyperclipException:
     can_clip = False
 else:
@@ -314,7 +319,8 @@ def get_paste_buffer():
     """
     pb_str = pyperclip.paste()
 
-    if six.PY2:
+    # If value returned from the clipboard is unicode and this is Python 2, convert to a "normal" Python 2 string first
+    if six.PY2 and not isinstance(pb_str, str):
         import unicodedata
         pb_str = unicodedata.normalize('NFKD', pb_str).encode('ascii', 'ignore')
 
