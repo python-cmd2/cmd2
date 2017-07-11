@@ -684,7 +684,7 @@ class Cmd(cmd.Cmd):
     def onecmd_plus_hooks(self, line):
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
-        :param line: str - line of text read from inp
+        :param line: str - line of text read from input
         :return: bool - True if cmdloop() should exit, False otherwise
         """
         stop = 0

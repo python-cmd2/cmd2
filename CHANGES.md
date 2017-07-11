@@ -8,6 +8,7 @@ News
 
 * Bug Fixes
     * Fixed some timing bugs when running unit tests in parallel by using monkeypatch
+    * Fixed some pyperclip clipboard interaction bugs on Linux
 
 0.7.5
 -----
