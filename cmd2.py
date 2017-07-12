@@ -855,7 +855,7 @@ class Cmd(cmd.Cmd):
 
     @staticmethod
     def _surround_ansi_escapes(prompt, start="\x01", end="\x02"):
-        """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ASNI escape codes.
+        """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
 
         :param prompt: str - original prompt
         :param start: str - start code to tell GNU Readline about beginning of invisible characters
@@ -1488,7 +1488,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
                 self.stdout.write(hi.pr())
 
     def _last_matching(self, arg):
-        """Return the last item from the history list that matches arg.  Or if arg not provided, retern last item.
+        """Return the last item from the history list that matches arg.  Or if arg not provided, return last item.
 
         If not match is found, return None.
 
@@ -1754,7 +1754,7 @@ Script should contain one command per line, just like command would be typed in 
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
 
         _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
-        the following extra feactures provided by cmd2:
+        the following extra features provided by cmd2:
         - commands at invocation
         - transcript testing
         - intro banner
