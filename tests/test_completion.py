@@ -20,6 +20,12 @@ def cmd2_app():
     c = cmd2.Cmd()
     return c
 
+@pytest.fixture
+def cs_app():
+    cmd2.Cmd.case_insensitive = False
+    c = cmd2.Cmd()
+    return c
+
 
 def test_cmd2_command_completion_single_end(cmd2_app):
     text = 'he'
@@ -28,6 +34,22 @@ def test_cmd2_command_completion_single_end(cmd2_app):
     begidx = endidx - len(text)
     # It is at end of line, so extra space is present
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help ']
+
+def test_cmd2_command_completion_is_case_insensitive_by_default(cmd2_app):
+    text = 'HE'
+    line = 'HE'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    # It is at end of line, so extra space is present
+    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help ']
+
+def test_cmd2_case_sensitive_command_completion(cs_app):
+    text = 'HE'
+    line = 'HE'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    # It is at end of line, so extra space is present
+    assert cs_app.completenames(text, line, begidx, endidx) == []
 
 def test_cmd2_command_completion_single_mid(cmd2_app):
     text = 'he'
