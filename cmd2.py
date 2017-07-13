@@ -582,8 +582,12 @@ class Cmd(cmd.Cmd):
     # noinspection PyMethodOverriding
     def completenames(self, text, line, begidx, endidx):
         """Override of cmd2 method which completes command names both for command completion and help."""
+        command = text
+        if self.case_insensitive:
+            command = text.lower()
+
         # Call super class method.  Need to do it this way for Python 2 and 3 compatibility
-        cmd_completion = cmd.Cmd.completenames(self, text)
+        cmd_completion = cmd.Cmd.completenames(self, command)
 
         # If we are completing the initial command name and get exactly 1 result and are at end of line, add a space
         if begidx == 0 and len(cmd_completion) == 1 and endidx == len(line):
