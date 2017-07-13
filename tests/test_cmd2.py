@@ -1335,4 +1335,4 @@ def test_empty_stdin_input():
     app.stdin.readline = m
 
     line = app.pseudo_raw_input('(cmd2)')
-    assert line == 'EOF'
+    assert line == 'eof'

@@ -7,9 +7,11 @@ News
 *Release date: TBD*
 
 * Bug Fixes
-    * Fixed some timing bugs when running unit tests in parallel by using monkeypatch
+    * Case-sensitive command parsing was completely broken and has been fixed
+    * <Ctrl>+D now properly quits when case-sensitive command parsing is enabled
     * Fixed some pyperclip clipboard interaction bugs on Linux
-
+    * Fixed some timing bugs when running unit tests in parallel by using monkeypatch
+    
 0.7.5
 -----
 
