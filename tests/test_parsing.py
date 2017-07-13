@@ -20,6 +20,7 @@ def hist():
     h = cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
     return h
 
+# Case-insensitive parser
 @pytest.fixture
 def parser():
     c = cmd2.Cmd()
@@ -31,6 +32,33 @@ def parser():
                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
                           preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager.main_parser
+
+# Case-insensitive ParserManager
+@pytest.fixture
+def ci_pm():
+    c = cmd2.Cmd()
+    c.multilineCommands = ['multiline']
+    c.case_insensitive = True
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
+                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+    return c.parser_manager
+
+# Case-sensitive ParserManager
+@pytest.fixture
+def cs_pm():
+    c = cmd2.Cmd()
+    c.multilineCommands = ['multiline']
+    c.case_insensitive = False
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
+                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+    return c.parser_manager
+
 
 @pytest.fixture
 def input_parser():
@@ -189,6 +217,18 @@ def test_parse_output_redirect_with_dash_in_path(parser):
     assert results.args == 'into'
     assert results.output == '>'
     assert results.outputTo == 'python-cmd2/afile.txt'
+
+
+def test_case_insensitive_parsed_single_word(ci_pm):
+    line = 'HeLp'
+    statement = ci_pm.parsed(line)
+    assert statement.parsed.command == line.lower()
+
+def test_case_sensitive_parsed_single_word(cs_pm):
+    line = 'HeLp'
+    statement = cs_pm.parsed(line)
+    assert statement.parsed.command == line
+
 
 def test_parse_input_redirect(input_parser):
     line = '< afile.txt'

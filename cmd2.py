@@ -891,13 +891,13 @@ class Cmd(cmd.Cmd):
             try:
                 line = sm.input(safe_prompt)
             except EOFError:
-                line = 'EOF'
+                line = 'eof'
         else:
             self.stdout.write(safe_prompt)
             self.stdout.flush()
             line = self.stdin.readline()
             if not len(line):
-                line = 'EOF'
+                line = 'eof'
             else:
                 line = line.rstrip('\r\n')
 
@@ -1846,6 +1846,10 @@ class ParserManager:
         if case_insensitive:
             multilineCommand.setParseAction(lambda x: x[0].lower())
             oneline_command.setParseAction(lambda x: x[0].lower())
+        else:
+            multilineCommand.setParseAction(lambda x: x[0])
+            oneline_command.setParseAction(lambda x: x[0])
+
         if blankLinesAllowed:
             blankLineTerminationParser = pyparsing.NoMatch
         else:
