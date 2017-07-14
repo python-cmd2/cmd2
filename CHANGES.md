@@ -8,12 +8,12 @@ News
 
 * Bug Fixes
     * Case-sensitive command parsing was completely broken and has been fixed
-    * <Ctrl>+D now properly quits when case-sensitive command parsing is enabled
+    * ``<Ctrl>+d`` now properly quits when case-sensitive command parsing is enabled
     * Fixed some pyperclip clipboard interaction bugs on Linux
     * Fixed some timing bugs when running unit tests in parallel by using monkeypatch
 * Enhancements
     * Enhanced tab-completion of cmd2 command names to support case-insensitive completion
-    
+
 0.7.5
 -----
 
@@ -57,7 +57,7 @@ News
 * Other changes
     * Removed pause command
     * Added a dependency on the **pyperclip** module
-    
+
 0.7.3
 -----
 
