@@ -271,7 +271,7 @@ Abbreviated commands
 ====================
 
 ``cmd2`` apps will accept shortened command names
-so long as there is no ambiguity if the ``abrev`` settable parameter is set to ``True``.
+so long as there is no ambiguity if the ``abbrev`` settable parameter is set to ``True``.
 Thus, if ``do_divide`` is defined, then ``divid``, ``div``,
 or even ``d`` will suffice, so long as there are
 no other commands defined beginning with *divid*,
