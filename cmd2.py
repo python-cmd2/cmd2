@@ -1028,7 +1028,7 @@ class Cmd(cmd.Cmd):
     def do_shortcuts(self, args):
         """Lists shortcuts (aliases) available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
-        self.stdout.write("Single-key shortcuts for other commands:\n{}\n".format(result))
+        self.stdout.write("Shortcuts for other commands:\n{}\n".format(result))
 
     # noinspection PyUnusedLocal
     def do_eof(self, arg):
