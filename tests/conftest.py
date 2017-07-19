@@ -36,7 +36,7 @@ Options:
 """
 
 # Output from the shortcuts command with default built-in shortcuts
-SHORTCUTS_TXT = """Single-key shortcuts for other commands:
+SHORTCUTS_TXT = """Shortcuts for other commands:
 !: shell
 ?: help
 @: load
