@@ -1,4 +1,4 @@
-News
+rerNews
 ====
 
 0.7.6
@@ -13,6 +13,7 @@ News
     * Fixed some timing bugs when running unit tests in parallel by using monkeypatch
 * Enhancements
     * Enhanced tab-completion of cmd2 command names to support case-insensitive completion
+    * Added an example showing how to remove unused commands
 
 0.7.5
 -----
