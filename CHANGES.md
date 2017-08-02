@@ -4,7 +4,7 @@ rerNews
 0.7.6
 -----
 
-*Release date: TBD*
+*Release date: 2017-08-TBD*
 
 * Bug Fixes
     * Case-sensitive command parsing was completely broken and has been fixed
@@ -14,6 +14,7 @@ rerNews
 * Enhancements
     * Enhanced tab-completion of cmd2 command names to support case-insensitive completion
     * Added an example showing how to remove unused commands
+    * Improved how transcript testing handles prompts with ANSI escape codes by stripping them
 
 0.7.5
 -----
