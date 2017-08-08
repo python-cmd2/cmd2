@@ -30,13 +30,13 @@ import codecs
 import collections
 import datetime
 import glob
+import io
 import optparse
 import os
 import platform
 import re
 import shlex
 import six
-import subprocess
 import sys
 import tempfile
 import traceback
@@ -58,6 +58,13 @@ import six.moves as sm
 
 # itertools.zip() for Python 2 or zip() for Python 3 - produces an iterator in both cases
 from six.moves import zip
+
+# If using Python 2.7, try to use the subprocess32 package backported from Python 3.2 due to various improvements
+# NOTE: The feature to pipe output to a shell command won't work correctly in Python 2.7 without this
+try:
+    import subprocess32 as subprocess
+except ImportError:
+    import subprocess
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
@@ -513,9 +520,6 @@ class Cmd(cmd.Cmd):
         self.kept_state = None
         self.kept_sys = None
 
-        # Used for a temp file during a pipe (needed tempfile instead of real pipe for Python 3.x prior to 3.5)
-        self._temp_filename = None
-
         # Codes used for exit conditions
         self._STOP_AND_EXIT = True  # cmd convention
 
@@ -530,6 +534,9 @@ class Cmd(cmd.Cmd):
 
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
+
+        # Used when piping command output to a shell command
+        self.pipe_proc = None
 
     # -----  Methods related to presenting output to the user -----
 
@@ -765,18 +772,29 @@ class Cmd(cmd.Cmd):
         """
         if statement.parsed.pipeTo:
             self.kept_state = Statekeeper(self, ('stdout',))
-            self.kept_sys = Statekeeper(sys, ('stdout',))
-            sys.stdout = self.stdout
 
-            # NOTE: We couldn't get a real pipe working via subprocess for Python 3.x prior to 3.5.
-            # So to allow compatibility with Python 2.7 and 3.3+ we are redirecting output to a temporary file.
-            # And once command is complete we are the temp file as stdin for the shell command to pipe to.
-            # TODO: Once support for Python 3.x prior to 3.5 is no longer necessary, replace with a real subprocess pipe
+            # Create a pipe with read and write sides
+            read_fd, write_fd = os.pipe()
 
-            # Redirect stdout to a temporary file
-            fd, self._temp_filename = tempfile.mkstemp()
-            os.close(fd)
-            self.stdout = open(self._temp_filename, 'w')
+            # Open each side of the pipe and set stdout accordingly
+            # noinspection PyTypeChecker
+            self.stdout = io.open(write_fd, 'w')
+            # noinspection PyTypeChecker
+            subproc_stdin = io.open(read_fd, 'r')
+
+            # If you don't set shell=True, subprocess failure will throw an exception
+            try:
+                self.pipe_proc = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=subproc_stdin)
+            except Exception as ex:
+                # Restore stdout to what it was and close the pipe
+                self.stdout.close()
+                subproc_stdin.close()
+                self.pipe_proc = None
+                self.kept_state.restore()
+                self.kept_state = None
+
+                # Re-raise the exception
+                raise ex
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
@@ -797,32 +815,29 @@ class Cmd(cmd.Cmd):
 
         :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
         """
-        if self.kept_state:
-            try:
-                if statement.parsed.output:
-                    if not statement.parsed.outputTo:
-                        self.stdout.seek(0)
-                        write_to_paste_buffer(self.stdout.read())
-            finally:
-                self.stdout.close()
-                self.kept_state.restore()
-                self.kept_sys.restore()
-                self.kept_state = None
+        # If we have redirected output to a file or the clipboard or piped it to a shell command, then restore state
+        if self.kept_state is not None:
+            # If we redirected output to the clipboard
+            if statement.parsed.output and not statement.parsed.outputTo:
+                self.stdout.seek(0)
+                write_to_paste_buffer(self.stdout.read())
 
-                if statement.parsed.pipeTo:
-                    # Pipe the contents of tempfile to the specified shell command
-                    with open(self._temp_filename) as fd:
-                        pipe_proc = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=fd,
-                                                     stdout=subprocess.PIPE)
-                        output, _ = pipe_proc.communicate()
+            # Close the file or pipe that stdout was redirected to
+            self.stdout.close()
 
-                        if six.PY3:
-                            self.stdout.write(output.decode())
-                        else:
-                            self.stdout.write(output)
+            # If we were piping output to a shell command, then close the subprocess the shell command was running in
+            if self.pipe_proc is not None:
+                self.pipe_proc.communicate()
+                self.pipe_proc = None
 
-                    os.remove(self._temp_filename)
-                    self._temp_filename = None
+            # Restore self.stdout
+            self.kept_state.restore()
+            self.kept_state = None
+
+        # Restore sys.stdout if need be
+        if self.kept_sys is not None:
+            self.kept_sys.restore()
+            self.kept_sys = None
 
     def _func_named(self, arg):
         """Gets the method name associated with a given command.
