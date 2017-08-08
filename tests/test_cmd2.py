@@ -589,7 +589,10 @@ def test_pipe_to_shell_error(base_app, capsys):
 
     expected_error = 'FileNotFoundError'
     if six.PY2:
-        expected_error = 'OSError'
+        if sys.platform.startswith('win'):
+            expected_error = 'WindowsError'
+        else:
+            expected_error = 'OSError'
     assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 

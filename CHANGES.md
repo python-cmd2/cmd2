@@ -15,6 +15,7 @@ rerNews
     * Enhanced tab-completion of cmd2 command names to support case-insensitive completion
     * Added an example showing how to remove unused commands
     * Improved how transcript testing handles prompts with ANSI escape codes by stripping them
+    * Greatly improved implementation for how command output gets piped to a shell command
 
 0.7.5
 -----
