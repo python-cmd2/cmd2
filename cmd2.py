@@ -564,7 +564,7 @@ class Cmd(cmd.Cmd):
         """Convenient shortcut for self.stdout.write(); by default adds newline to end if not already present.
 
         Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
-        that process terminates before than command is finished executing.
+        that process terminates before the cmd2 command is finished executing.
 
         :param msg: str - message to print to current stdout
         :param end: str - string appended after the end of the message if not already present, default a newline
