@@ -113,7 +113,10 @@ now: True
 
 def test_base_shell(base_app, monkeypatch):
     m = mock.Mock()
-    monkeypatch.setattr("subprocess.Popen", m)
+    subprocess = 'subprocess'
+    if six.PY2:
+        subprocess = 'subprocess32'
+    monkeypatch.setattr("{}.Popen".format(subprocess), m)
     out = run_cmd(base_app, 'shell echo a')
     assert out == []
     assert m.called
@@ -543,33 +546,54 @@ def test_input_redirection(base_app, request):
 
     # NOTE: File 'redirect.txt" contains 1 word "history"
 
-    # Verify that redirecting input from a file works
+    # Verify that redirecting input ffom a file works
     out = run_cmd(base_app, 'help < {}'.format(filename))
     expected = normalize(HELP_HISTORY)
     assert out == expected
 
 
-def test_pipe_to_shell(base_app):
+def test_pipe_to_shell(base_app, capsys):
     if sys.platform == "win32":
         # Windows
+        command = 'help | sort'
         # Get help menu and pipe it's output to the sort shell command
-        out = run_cmd(base_app, 'help | sort')
-        expected = ['', '', '_relative_load  edit  history  py        quit  save  shell      show',
-                    '========================================',
-                    'cmdenvironment  help  load     pyscript  run   set   shortcuts',
-                    'Documented commands (type help <topic>):']
-        assert out == expected
+        # expected = ['', '', '_relative_load  edit  history  py        quit  save  shell      show',
+        #             '========================================',
+        #             'cmdenvironment  help  load     pyscript  run   set   shortcuts',
+        #             'Documented commands (type help <topic>):']
+        # assert out == expected
     else:
         # Mac and Linux
         # Get help on help and pipe it's output to the input of the word count shell command
-        out = run_cmd(base_app, 'help help | wc')
+        command = 'help help | wc'
+        # # Mac and Linux wc behave the same when piped from shell, but differently when piped stdin from file directly
+        # if sys.platform == 'darwin':
+        #     expected = "1      11      70"
+        # else:
+        #     expected = "1 11 70"
+        # assert out.strip() == expected.strip()
 
-        # Mac and Linux wc behave the same when piped from shell, but differently when piped stdin from file directly
-        if sys.platform == 'darwin':
-            expected = normalize("1      11      70")
+    run_cmd(base_app, command)
+    out, err = capsys.readouterr()
+
+    # Unfortunately with the improved way of piping output to a subprocess, there isn't any good way of getting
+    # access to the output produced by that subprocess within a unit test, but we can verify that no error occured
+    assert not err
+
+def test_pipe_to_shell_error(base_app, capsys):
+    # Try to pipe command output to a shell command that doesn't exist in order to produce an error
+    run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
+    out, err = capsys.readouterr()
+
+    assert not out
+
+    expected_error = 'FileNotFoundError'
+    if six.PY2:
+        if sys.platform.startswith('win'):
+            expected_error = 'WindowsError'
         else:
-            expected = normalize("1 11 70")
-        assert out[0].strip() == expected[0].strip()
+            expected_error = 'OSError'
+    assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 
 @pytest.mark.skipif(not cmd2.can_clip,

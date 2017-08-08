@@ -17,9 +17,8 @@ Redirection to file with >, >>; input from file with <
 Easy transcript-based testing of applications (see examples/example.py)
 Bash-style ``select`` available
 
-Note that redirection with > and | will only work if `self.stdout.write()`
-is used in place of `print`.  The standard library's `cmd` module is
-written to use `self.stdout.write()`,
+Note that redirection with > and | will only work if `self.poutput()`
+is used in place of `print`.
 
 - Catherine Devlin, Jan 03 2008 - catherinedevlin.blogspot.com
 
@@ -30,13 +29,13 @@ import codecs
 import collections
 import datetime
 import glob
+import io
 import optparse
 import os
 import platform
 import re
 import shlex
 import six
-import subprocess
 import sys
 import tempfile
 import traceback
@@ -58,6 +57,14 @@ import six.moves as sm
 
 # itertools.zip() for Python 2 or zip() for Python 3 - produces an iterator in both cases
 from six.moves import zip
+
+# If using Python 2.7, try to use the subprocess32 package backported from Python 3.2 due to various improvements
+# NOTE: The feature to pipe output to a shell command won't work correctly in Python 2.7 without this
+try:
+    # noinspection PyPackageRequirements
+    import subprocess32 as subprocess
+except ImportError:
+    import subprocess
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
@@ -299,6 +306,7 @@ def options(option_list, arg_desc="arg"):
 
 
 # Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
+# noinspection PyUnresolvedReferences
 try:
     if six.PY3 and sys.platform.startswith('linux'):
         # Avoid extraneous output to stderr from xclip when clipboard is empty at cost of overwriting clipboard contents
@@ -513,9 +521,6 @@ class Cmd(cmd.Cmd):
         self.kept_state = None
         self.kept_sys = None
 
-        # Used for a temp file during a pipe (needed tempfile instead of real pipe for Python 3.x prior to 3.5)
-        self._temp_filename = None
-
         # Codes used for exit conditions
         self._STOP_AND_EXIT = True  # cmd convention
 
@@ -530,6 +535,9 @@ class Cmd(cmd.Cmd):
 
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
+
+        # Used when piping command output to a shell command
+        self.pipe_proc = None
 
     # -----  Methods related to presenting output to the user -----
 
@@ -552,12 +560,26 @@ class Cmd(cmd.Cmd):
         # Make sure settable parameters are sorted alphabetically by key
         self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
-    def poutput(self, msg):
-        """Convenient shortcut for self.stdout.write(); adds newline if necessary."""
+    def poutput(self, msg, end='\n'):
+        """Convenient shortcut for self.stdout.write(); by default adds newline to end if not already present.
+
+        Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
+        that process terminates before than command is finished executing.
+
+        :param msg: str - message to print to current stdout
+        :param end: str - string appended after the end of the message, default a newline
+        """
         if msg:
-            self.stdout.write(msg)
-            if msg[-1] != '\n':
-                self.stdout.write('\n')
+            try:
+                self.stdout.write(msg)
+                if not msg.endswith(end):
+                    self.stdout.write(end)
+            except BrokenPipeError:
+                # This occurs if a command's output is being piped to another process and that process closes before the
+                # command is finished.  We intentionally don't print a warning message here since we know that stdout
+                # will be restored by the _restore_output() method.  If you would like your application to print a
+                # warning message, then override this method.
+                pass
 
     def perror(self, errmsg, exception_type=None, traceback_war=True):
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
@@ -765,18 +787,36 @@ class Cmd(cmd.Cmd):
         """
         if statement.parsed.pipeTo:
             self.kept_state = Statekeeper(self, ('stdout',))
-            self.kept_sys = Statekeeper(sys, ('stdout',))
-            sys.stdout = self.stdout
 
-            # NOTE: We couldn't get a real pipe working via subprocess for Python 3.x prior to 3.5.
-            # So to allow compatibility with Python 2.7 and 3.3+ we are redirecting output to a temporary file.
-            # And once command is complete we are the temp file as stdin for the shell command to pipe to.
-            # TODO: Once support for Python 3.x prior to 3.5 is no longer necessary, replace with a real subprocess pipe
+            # Create a pipe with read and write sides
+            read_fd, write_fd = os.pipe()
 
-            # Redirect stdout to a temporary file
-            fd, self._temp_filename = tempfile.mkstemp()
-            os.close(fd)
-            self.stdout = open(self._temp_filename, 'w')
+            # Make sure that self.poutput() expects unicode strings in Python 3 and byte strings in Python 2
+            write_mode = 'w'
+            read_mode = 'r'
+            if six.PY2:
+                write_mode = 'wb'
+                read_mode = 'rb'
+
+            # Open each side of the pipe and set stdout accordingly
+            # noinspection PyTypeChecker
+            self.stdout = io.open(write_fd, write_mode)
+            # noinspection PyTypeChecker
+            subproc_stdin = io.open(read_fd, read_mode)
+
+            # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
+            try:
+                self.pipe_proc = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=subproc_stdin)
+            except Exception as ex:
+                # Restore stdout to what it was and close the pipe
+                self.stdout.close()
+                subproc_stdin.close()
+                self.pipe_proc = None
+                self.kept_state.restore()
+                self.kept_state = None
+
+                # Re-raise the exception
+                raise ex
         elif statement.parsed.output:
             if (not statement.parsed.outputTo) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
@@ -790,39 +830,39 @@ class Cmd(cmd.Cmd):
             else:
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
                 if statement.parsed.output == '>>':
-                    self.stdout.write(get_paste_buffer())
+                    self.poutput(get_paste_buffer())
 
     def _restore_output(self, statement):
         """Handles restoring state after output redirection as well as the actual pipe operation if present.
 
         :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
         """
-        if self.kept_state:
+        # If we have redirected output to a file or the clipboard or piped it to a shell command, then restore state
+        if self.kept_state is not None:
+            # If we redirected output to the clipboard
+            if statement.parsed.output and not statement.parsed.outputTo:
+                self.stdout.seek(0)
+                write_to_paste_buffer(self.stdout.read())
+
+            # Close the file or pipe that stdout was redirected to
             try:
-                if statement.parsed.output:
-                    if not statement.parsed.outputTo:
-                        self.stdout.seek(0)
-                        write_to_paste_buffer(self.stdout.read())
-            finally:
                 self.stdout.close()
-                self.kept_state.restore()
-                self.kept_sys.restore()
-                self.kept_state = None
+            except BrokenPipeError:
+                pass
 
-                if statement.parsed.pipeTo:
-                    # Pipe the contents of tempfile to the specified shell command
-                    with open(self._temp_filename) as fd:
-                        pipe_proc = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=fd,
-                                                     stdout=subprocess.PIPE)
-                        output, _ = pipe_proc.communicate()
+            # If we were piping output to a shell command, then close the subprocess the shell command was running in
+            if self.pipe_proc is not None:
+                self.pipe_proc.communicate()
+                self.pipe_proc = None
 
-                        if six.PY3:
-                            self.stdout.write(output.decode())
-                        else:
-                            self.stdout.write(output)
+            # Restore self.stdout
+            self.kept_state.restore()
+            self.kept_state = None
 
-                    os.remove(self._temp_filename)
-                    self._temp_filename = None
+        # Restore sys.stdout if need be
+        if self.kept_sys is not None:
+            self.kept_sys.restore()
+            self.kept_sys = None
 
     def _func_named(self, arg):
         """Gets the method name associated with a given command.
@@ -921,7 +961,7 @@ class Cmd(cmd.Cmd):
             except EOFError:
                 line = 'eof'
         else:
-            self.stdout.write(safe_prompt)
+            self.poutput(safe_prompt, end='')
             self.stdout.flush()
             line = self.stdin.readline()
             if not len(line):
@@ -964,7 +1004,7 @@ class Cmd(cmd.Cmd):
 
                 # If echo is on and in the middle of running a script, then echo the line to the output
                 if self.echo and self._current_script_dir is not None:
-                    self.stdout.write(line + '\n')
+                    self.poutput(line + '\n')
 
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
@@ -985,7 +1025,7 @@ class Cmd(cmd.Cmd):
     # noinspection PyUnusedLocal
     def do_cmdenvironment(self, args):
         """Summary report of interactive parameters."""
-        self.stdout.write("""
+        self.poutput("""
         Commands are case-sensitive: {}
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
@@ -1043,7 +1083,7 @@ class Cmd(cmd.Cmd):
                     cmds_doc.append(command)
                 else:
                     cmds_undoc.append(command)
-        self.stdout.write("%s\n" % str(self.doc_leader))
+        self.poutput("%s\n" % str(self.doc_leader))
         self.print_topics(self.doc_header, cmds_doc, 15, 80)
         self.print_topics(self.misc_header, list(help_dict.keys()), 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
@@ -1052,7 +1092,7 @@ class Cmd(cmd.Cmd):
     def do_shortcuts(self, args):
         """Lists shortcuts (aliases) available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
-        self.stdout.write("Shortcuts for other commands:\n{}\n".format(result))
+        self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
     # noinspection PyUnusedLocal
     def do_eof(self, arg):
@@ -1097,9 +1137,8 @@ class Cmd(cmd.Cmd):
                 result = fulloptions[response - 1][0]
                 break
             except (ValueError, IndexError):
-                self.stdout.write("{!r} isn't a valid choice. Pick a number "
-                                  "between 1 and {}:\n".format(
-                                      response, len(fulloptions)))
+                self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:\n".format(response,
+                                                                                                   len(fulloptions)))
         return result
 
     @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
@@ -1150,7 +1189,7 @@ class Cmd(cmd.Cmd):
             else:
                 val = cast(current_val, val)
             setattr(self, param_name, val)
-            self.stdout.write('%s - was: %s\nnow: %s\n' % (param_name, current_val, val))
+            self.poutput('%s - was: %s\nnow: %s\n' % (param_name, current_val, val))
             if current_val != val:
                 try:
                     onchange_hook = getattr(self, '_onchange_%s' % param_name)
@@ -1513,7 +1552,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
             if opts.script:
                 self.poutput(hi)
             else:
-                self.stdout.write(hi.pr())
+                self.poutput(hi.pr())
 
     def _last_matching(self, arg):
         """Return the last item from the history list that matches arg.  Or if arg not provided, return last item.
@@ -1817,7 +1856,7 @@ Script should contain one command per line, just like command would be typed in 
 
             # Print the intro, if there is one, right after the preloop
             if self.intro is not None:
-                self.stdout.write(str(self.intro) + "\n")
+                self.poutput(str(self.intro) + "\n")
 
             # And then call _cmdloop() to enter the main loop
             self._cmdloop()
