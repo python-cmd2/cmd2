@@ -567,7 +567,7 @@ class Cmd(cmd.Cmd):
         that process terminates before than command is finished executing.
 
         :param msg: str - message to print to current stdout
-        :param end: str - string appended after the end of the message, default a newline
+        :param end: str - string appended after the end of the message if not already present, default a newline
         """
         if msg:
             try:
