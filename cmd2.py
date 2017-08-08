@@ -776,11 +776,18 @@ class Cmd(cmd.Cmd):
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
+            # Make sure that self.stdout.write() expects unicode strings in Python 3 and byte strings in Python 2
+            write_mode = 'w'
+            read_mode = 'r'
+            if six.PY2:
+                write_mode = 'wb'
+                read_mode = 'rb'
+
             # Open each side of the pipe and set stdout accordingly
             # noinspection PyTypeChecker
-            self.stdout = io.open(write_fd, 'w')
+            self.stdout = io.open(write_fd, write_mode)
             # noinspection PyTypeChecker
-            subproc_stdin = io.open(read_fd, 'r')
+            subproc_stdin = io.open(read_fd, read_mode)
 
             # If you don't set shell=True, subprocess failure will throw an exception
             try:

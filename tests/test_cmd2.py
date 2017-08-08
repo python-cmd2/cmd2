@@ -113,7 +113,10 @@ now: True
 
 def test_base_shell(base_app, monkeypatch):
     m = mock.Mock()
-    monkeypatch.setattr("subprocess.Popen", m)
+    subprocess = 'subprocess'
+    if six.PY2:
+        subprocess = 'subprocess32'
+    monkeypatch.setattr("{}.Popen".format(subprocess), m)
     out = run_cmd(base_app, 'shell echo a')
     assert out == []
     assert m.called
@@ -554,7 +557,6 @@ def test_pipe_to_shell(base_app, capsys):
         # Windows
         command = 'help | sort'
         # Get help menu and pipe it's output to the sort shell command
-        run_cmd(base_app, 'help | sort')
         # expected = ['', '', '_relative_load  edit  history  py        quit  save  shell      show',
         #             '========================================',
         #             'cmdenvironment  help  load     pyscript  run   set   shortcuts',
@@ -578,15 +580,17 @@ def test_pipe_to_shell(base_app, capsys):
     # access to the output produced by that subprocess within a unit test, but we can verify that no error occured
     assert not err
 
-
-
 def test_pipe_to_shell_error(base_app, capsys):
     # Try to pipe command output to a shell command that doesn't exist in order to produce an error
     run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
     out, err = capsys.readouterr()
 
     assert not out
-    assert err.startswith("EXCEPTION of type 'FileNotFoundError' occurred with message:")
+
+    expected_error = 'FileNotFoundError'
+    if six.PY2:
+        expected_error = 'OSError'
+    assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 
 @pytest.mark.skipif(not cmd2.can_clip,
