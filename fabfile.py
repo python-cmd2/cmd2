@@ -80,11 +80,11 @@ def release_check():
     if 'a' in env.version:
         print("WARNING: alpha release %s" % env.version)
 
-    # hacky CHANGES.md check
-    with open("CHANGES.md") as f:
+    # hacky CHANGELOG.md check
+    with open("CHANGELOG.md") as f:
         raw_changes = f.read()
     assert "%s\n---" % env.version in raw_changes, \
-        "The current version %s is not in CHANGES.md" % env.version
+        "The current version %s is not in CHANGELOG.md" % env.version
     if env.version in tags:
         raise Exception("Already released v. %r" % env.version)
 
