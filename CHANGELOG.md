@@ -1,7 +1,4 @@
-0.7.6
------
-
-*Release date: 2017-08-TBD*
+## 0.7.6 (August TBD, 2017)
 
 * Bug Fixes
     * Case-sensitive command parsing was completely broken and has been fixed
@@ -14,10 +11,7 @@
     * Improved how transcript testing handles prompts with ANSI escape codes by stripping them
     * Greatly improved implementation for how command output gets piped to a shell command
 
-0.7.5
------
-
-*Release date: 2017-07-08*
+## 0.7.5 (July 8, 2017)
 
 * Bug Fixes
     * `case_insensitive` is no longer a runtime-settable parameter, but it was still listed as such
@@ -32,10 +26,7 @@
         * And it can create complications if you are't careful
     * Improved implementation of `load` to use command queue instead of nested inner loop
 
-0.7.4
------
-
-*Release date: 2017-07-03*
+## 0.7.4 (July 3, 2017)
 
 * Bug fixes
     * Fixed a couple bugs in interacting with pastebuffer/clipboard on macOS and Linux
@@ -58,10 +49,7 @@
     * Removed pause command
     * Added a dependency on the **pyperclip** module
 
-0.7.3
------
-
-*Release date: 2017-06-23*
+## 0.7.3 (June 23, 2017)
 
 * Bug fixes
     * Fixed a bug in displaying a span of history items when only an end index is supplied
@@ -79,17 +67,11 @@
         * This change improves argument parsing for all new applications
     * Refactored code to encapsulate most of the pyparsing logic into a ParserManager class
 
-0.7.2
------
-
-*Release date: 2017-05-22*
+## 0.7.2 (May 22, 2017)
 
 * Added a MANIFEST.ini file to make sure a few extra files get included in the PyPI source distribution
 
-0.7.1
------
-
-*Release date: 2017-05-22*
+## 0.7.1 (May 22, 2017)
 
 * Bug fixes
     * ``-`` wasn't being treated as a legal character
@@ -110,10 +92,7 @@
 * Add shell command completion for ``shell`` command or ``!`` shortcut
 * Abbreviated multiline commands are no longer allowed (they never worked correctly anyways)
 
-0.7.0
------
-
-*Release date: 2017-02-23*
+## 0.7.0 (February 23, 2017)
 
 * Refactored to use six module for a unified codebase which supports both Python 2 and Python 3
 * Stabilized on all platforms (Windows, Mac, Linux) and all supported Python versions (2.7, 3.3, 3.4, 3.5, 3.6, PyPy)
@@ -121,10 +100,7 @@
 * Improved documentation and moved it to cmd2.readthedocs.io
 
 
-0.6.9
------
-
-*Release date: 2016-10-03*
+## 0.6.9 (October 3, 2016)
 
 * Support Python 3 input()
 * Fix subprocess.mswindows bug
@@ -132,42 +108,27 @@
 * Drop distutils from setup.py
 
 
-0.6.8
------
-
-*Release date: 2014-12-09*
+## 0.6.8 (December 9, 2014)
 
 * better editor checking (by Ian Cordascu)
 
 
-0.6.6.1
--------
-
-*Release date: 2013-08-14*
+## 0.6.6.1 (August 14, 2013)
 
 * No changes to code trunk.  Generated sdist from Python 2.7 to avoid 2to3 changes being applied to source.  (Issue https://bitbucket.org/catherinedevlin/cmd2/issue/6/packaging-bug)
 
 
-0.6.6
------
-
-*Release date: 2013-08-06*
+## 0.6.6 (August 6, 2013)
 
 * Added fix by bitbucket.org/desaintmartin to silence the editor check.  bitbucket.org/catherinedevlin/cmd2/issue/1/silent-editor-check
 
 
-0.6.5.1
--------
-
-*Release date: 2013-03-18*
+## 0.6.5.1 (March 18, 2013)
 
 * Bugfix for setup.py version check for Python 2.6, contributed by Tomaz Muraus (https://bitbucket.org/kami)
 
 
-0.6.5
------
-
-*Release date: 2013-02-29*
+## 0.6.5 (February 29, 2013)
 
 * Belatedly began a NEWS.txt
 * Changed pyparsing requirement for compatibility with Python version (2 vs 3)
