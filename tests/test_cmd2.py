@@ -856,7 +856,7 @@ def test_default_to_shell_good(capsys):
     app.default_to_shell = True
     line = 'ls'
     statement = app.parser_manager.parsed(line)
-    retval = app._default(statement)
+    retval = app.default(statement)
     assert not retval
     out, err = capsys.readouterr()
     assert out == ''
@@ -866,7 +866,7 @@ def test_default_to_shell_failure(capsys):
     app.default_to_shell = True
     line = 'ls does_not_exist.xyz'
     statement = app.parser_manager.parsed(line)
-    retval = app._default(statement)
+    retval = app.default(statement)
     assert not retval
     out, err = capsys.readouterr()
     assert out == "*** Unknown syntax: {}\n".format(line)
