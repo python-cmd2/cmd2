@@ -566,13 +566,14 @@ class Cmd(cmd.Cmd):
         Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
         that process terminates before the cmd2 command is finished executing.
 
-        :param msg: str - message to print to current stdout
+        :param msg: str - message to print to current stdout - anyting convertible to a str with '{}'.format() is OK
         :param end: str - string appended after the end of the message if not already present, default a newline
         """
         if msg:
             try:
-                self.stdout.write(msg)
-                if not msg.endswith(end):
+                msg_str = '{}'.format(msg)
+                self.stdout.write(msg_str)
+                if not msg_str.endswith(end):
                     self.stdout.write(end)
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
@@ -698,6 +699,10 @@ class Cmd(cmd.Cmd):
         :param stop: bool - True implies the entire application should exit.
         :return: bool - True implies the entire application should exit.
         """
+        if not sys.platform.startswith('win'):
+            # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
+            proc = subprocess.Popen(shlex.split('stty sane'))
+            proc.communicate()
         return stop
 
     def parseline(self, line):
@@ -844,20 +849,20 @@ class Cmd(cmd.Cmd):
                 self.stdout.seek(0)
                 write_to_paste_buffer(self.stdout.read())
 
-            # Close the file or pipe that stdout was redirected to
             try:
+                # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
             except BrokenPipeError:
                 pass
+            finally:
+                # Restore self.stdout
+                self.kept_state.restore()
+                self.kept_state = None
 
             # If we were piping output to a shell command, then close the subprocess the shell command was running in
             if self.pipe_proc is not None:
                 self.pipe_proc.communicate()
                 self.pipe_proc = None
-
-            # Restore self.stdout
-            self.kept_state.restore()
-            self.kept_state = None
 
         # Restore sys.stdout if need be
         if self.kept_sys is not None:
@@ -895,15 +900,15 @@ class Cmd(cmd.Cmd):
         statement = self.parser_manager.parsed(line)
         funcname = self._func_named(statement.parsed.command)
         if not funcname:
-            return self._default(statement)
+            return self.default(statement)
         try:
             func = getattr(self, funcname)
         except AttributeError:
-            return self._default(statement)
+            return self.default(statement)
         stop = func(statement)
         return stop
 
-    def _default(self, statement):
+    def default(self, statement):
         """Executed when the command given isn't a recognized command implemented by a do_* method.
 
         :param statement: ParsedString - subclass of string including the pyparsing ParseResults
@@ -914,12 +919,10 @@ class Cmd(cmd.Cmd):
             result = os.system(arg)
             # If os.system() succeeded, then don't print warning about unknown command
             if not result:
-                return False
+                return
 
         # Print out a message stating this is an unknown command
-        self.default(arg)
-
-        return False
+        self.poutput('*** Unknown syntax: {}\n'.format(arg))
 
     @staticmethod
     def _surround_ansi_escapes(prompt, start="\x01", end="\x02"):
