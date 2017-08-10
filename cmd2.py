@@ -545,11 +545,6 @@ class Cmd(cmd.Cmd):
         # Used when piping command output to a shell command
         self.pipe_proc = None
 
-        # Size of the stdin/stdout buffers used when piping command output to a shell command via self.stdout.
-        # This should be increased in cases where large amounts of data are expected to be piped to the shell
-        # to prevent blocking when writing to self.stdout.
-        self._pipe_buffer_size = io.DEFAULT_BUFFER_SIZE
-
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -816,9 +811,9 @@ class Cmd(cmd.Cmd):
 
             # Open each side of the pipe and set stdout accordingly
             # noinspection PyTypeChecker
-            self.stdout = io.open(write_fd, write_mode, buffering=self._pipe_buffer_size)
+            self.stdout = io.open(write_fd, write_mode)
             # noinspection PyTypeChecker
-            subproc_stdin = io.open(read_fd, read_mode, buffering=self._pipe_buffer_size)
+            subproc_stdin = io.open(read_fd, read_mode)
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
