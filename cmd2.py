@@ -82,6 +82,12 @@ try:
 except ImportError:
     pass
 
+# BrokenPipeError is only in Python 3. Use IOError for Python 2.
+if six.PY3:
+    BROKEN_PIPE_ERROR = BrokenPipeError
+else:
+    BROKEN_PIPE_ERROR = IOError
+
 __version__ = '0.7.6'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
@@ -539,6 +545,11 @@ class Cmd(cmd.Cmd):
         # Used when piping command output to a shell command
         self.pipe_proc = None
 
+        # Size of the stdin/stdout buffers used when piping command output to a shell command via self.stdout.
+        # This should be increased in cases where large amounts of data are expected to be piped to the shell
+        # to prevent blocking when writing to self.stdout.
+        self._pipe_buffer_size = io.DEFAULT_BUFFER_SIZE
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -575,7 +586,7 @@ class Cmd(cmd.Cmd):
                 self.stdout.write(msg_str)
                 if not msg_str.endswith(end):
                     self.stdout.write(end)
-            except BrokenPipeError:
+            except BROKEN_PIPE_ERROR:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished.  We intentionally don't print a warning message here since we know that stdout
                 # will be restored by the _restore_output() method.  If you would like your application to print a
@@ -805,9 +816,9 @@ class Cmd(cmd.Cmd):
 
             # Open each side of the pipe and set stdout accordingly
             # noinspection PyTypeChecker
-            self.stdout = io.open(write_fd, write_mode)
+            self.stdout = io.open(write_fd, write_mode, buffering=self._pipe_buffer_size)
             # noinspection PyTypeChecker
-            subproc_stdin = io.open(read_fd, read_mode)
+            subproc_stdin = io.open(read_fd, read_mode, buffering=self._pipe_buffer_size)
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
@@ -852,7 +863,7 @@ class Cmd(cmd.Cmd):
             try:
                 # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
-            except BrokenPipeError:
+            except BROKEN_PIPE_ERROR:
                 pass
             finally:
                 # Restore self.stdout
@@ -2352,7 +2363,7 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
 if __name__ == '__main__':
     # If run as the main application, simply start a bare-bones cmd2 application with only built-in functionality.
 
-    # Set "use_iptyhon" to True to include the ipy command if IPython is installed, which supports advanced interactive
+    # Set "use_ipython" to True to include the ipy command if IPython is installed, which supports advanced interactive
     # debugging of your application via introspection on self.
     app = Cmd(use_ipython=False)
     app.cmdloop()
