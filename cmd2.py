@@ -545,7 +545,9 @@ class Cmd(cmd.Cmd):
         # Used when piping command output to a shell command
         self.pipe_proc = None
 
-        # Size of the stdin/stdout buffers used when piping command output to a shell command
+        # Size of the stdin/stdout buffers used when piping command output to a shell command via self.stdout.
+        # This should be increased in cases where large amounts of data are expected to be piped to the shell
+        # to prevent blocking when writing to self.stdout.
         self._pipe_buffer_size = io.DEFAULT_BUFFER_SIZE
 
     # -----  Methods related to presenting output to the user -----
