@@ -1,4 +1,4 @@
-## 0.7.6 (August TBD, 2017)
+## 0.7.6 (August 11, 2017)
 
 * Bug Fixes
     * Case-sensitive command parsing was completely broken and has been fixed
