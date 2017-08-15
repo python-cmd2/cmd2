@@ -46,6 +46,16 @@ from optparse import make_option
 import pyparsing
 import pyperclip
 
+# On some systems, pyperclip will import gtk for its clipboard functionality.
+# The following code is a workaround for gtk interfering with printing from a background
+# thread while the CLI thread is blocking in raw_input() in Python 2 on Linux.
+try:
+    # noinspection PyUnresolvedReferences
+    import gtk
+    gtk.set_interactive(0)
+except ImportError:
+    pass
+
 # next(it) gets next item of iterator it. This is a replacement for calling it.next() in Python 2 and next(it) in Py3
 from six import next
 
