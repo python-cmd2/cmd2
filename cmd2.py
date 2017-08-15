@@ -46,6 +46,14 @@ from optparse import make_option
 import pyparsing
 import pyperclip
 
+# Workaround for gtk interfering when printing from background thread while main
+# thread is blocking in raw_input() in Python 2 on Linux when gtk is installed
+try:
+    import gtk
+    gtk.set_interactive(0)
+except ImportError:
+    pass
+
 # next(it) gets next item of iterator it. This is a replacement for calling it.next() in Python 2 and next(it) in Py3
 from six import next
 
