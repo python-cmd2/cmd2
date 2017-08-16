@@ -1,3 +1,8 @@
+## 0.7.7 (TBD)
+
+* Bug Fixes
+    * Added workaround for bug which occurs in Python 2.7 on Linux when ``pygtk`` is installed
+    
 ## 0.7.6 (August 11, 2017)
 
 * Bug Fixes
