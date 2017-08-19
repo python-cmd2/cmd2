@@ -506,6 +506,7 @@ def test_save_invalid_path(base_app, capsys):
 
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
+    os.close(fd)
     
     try:
         # Verify that writing to a file works
@@ -530,7 +531,8 @@ def test_output_redirection(base_app):
 def test_feedback_to_output_true(base_app):
     base_app.feedback_to_output = True
     base_app.timing = True
-    fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
+    f, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
+    os.close(f)
     
     try:
         run_cmd(base_app, 'help > {}'.format(filename))
@@ -546,7 +548,8 @@ def test_feedback_to_output_true(base_app):
 def test_feedback_to_output_false(base_app, capsys):
     base_app.feedback_to_output = False
     base_app.timing = True
-    fd, filename = tempfile.mkstemp(prefix='feedback_to_output', suffix='.txt')
+    f, filename = tempfile.mkstemp(prefix='feedback_to_output', suffix='.txt')
+    os.close(f)
     
     try:
         run_cmd(base_app, 'help > {}'.format(filename))
