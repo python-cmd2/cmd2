@@ -627,7 +627,7 @@ class Cmd(cmd.Cmd):
             if self.feedback_to_output:
                 self.poutput(msg)
             else:
-                print(msg)
+                sys.stderr.write("{}\n".format(msg))
 
     def colorize(self, val, color):
         """Given a string (``val``), returns that string wrapped in UNIX-style

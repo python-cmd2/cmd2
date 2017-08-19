@@ -7,6 +7,7 @@ Released under MIT license, see LICENSE file
 """
 import os
 import sys
+import tempfile
 
 import mock
 import pytest
@@ -504,25 +505,60 @@ def test_save_invalid_path(base_app, capsys):
 
 
 def test_output_redirection(base_app):
-    # TODO: Use a temporary directory/file for this file
-    filename = 'out.txt'
+    fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
+    
+    try:
+        # Verify that writing to a file works
+        run_cmd(base_app, 'help > {}'.format(filename))
+        expected = normalize(BASE_HELP)
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
 
-    # Verify that writing to a file works
-    run_cmd(base_app, 'help > {}'.format(filename))
-    expected = normalize(BASE_HELP)
-    with open(filename) as f:
-        content = normalize(f.read())
-    assert content == expected
+        # Verify that appending to a file also works
+        run_cmd(base_app, 'help history >> {}'.format(filename))
+        expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
+    except:
+        raise
+    finally:
+        os.remove(filename)
 
-    # Verify that appending to a file also works
-    run_cmd(base_app, 'help history >> {}'.format(filename))
-    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
-    with open(filename) as f:
-        content = normalize(f.read())
-    assert content == expected
 
-    # Delete file that was created
-    os.remove(filename)
+def test_feedback_to_output_true(base_app):
+    base_app.feedback_to_output = True
+    base_app.timing = True
+    fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
+    
+    try:
+        run_cmd(base_app, 'help > {}'.format(filename))
+        with open(filename) as f:
+            content = f.readlines()
+        assert content[-1].startswith('Elapsed: ')
+    except:
+        raise
+    finally:
+        os.remove(filename)
+
+
+def test_feedback_to_output_false(base_app, capsys):
+    base_app.feedback_to_output = False
+    base_app.timing = True
+    fd, filename = tempfile.mkstemp(prefix='feedback_to_output', suffix='.txt')
+    
+    try:
+        run_cmd(base_app, 'help > {}'.format(filename))
+        out, err = capsys.readouterr()
+        with open(filename) as f:
+            content = f.readlines()
+        assert not content[-1].startswith('Elapsed: ')
+        assert err.startswith('Elapsed')
+    except:
+        raise
+    finally:
+        os.remove(filename)
 
 
 def test_allow_redirection(base_app):
@@ -619,9 +655,9 @@ now: True
     assert out == expected
     out, err = capsys.readouterr()
     if sys.platform == 'win32':
-        assert out.startswith('Elapsed: 0:00:00')
+        assert err.startswith('Elapsed: 0:00:00')
     else:
-        assert out.startswith('Elapsed: 0:00:00.0')
+        assert err.startswith('Elapsed: 0:00:00.0')
 
 
 def test_base_debug(base_app, capsys):
