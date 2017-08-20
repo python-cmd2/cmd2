@@ -240,7 +240,7 @@ def test_transcript_from_cmdloop(request, capsys):
 
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'transcript.txt')
+    transcript_file = os.path.join(test_dir, 'transcripts/transcript.txt')
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
@@ -266,7 +266,7 @@ def test_multiline_command_transcript_with_comments_at_beginning(request, capsys
 
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'multiline_transcript.txt')
+    transcript_file = os.path.join(test_dir, 'transcripts/multiline_transcript.txt')
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
@@ -299,7 +299,7 @@ def test_regex_transcript(request, capsys):
 
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'transcript_regex.txt')
+    transcript_file = os.path.join(test_dir, 'transcripts/transcript_regex.txt')
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
