@@ -427,6 +427,7 @@ def test_relative_load_requires_an_argument(base_app, capsys):
 def test_base_save(base_app):
     # TODO: Use a temporary directory for the file
     filename = 'deleteme.txt'
+    base_app.feedback_to_output = True
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help save')
 
@@ -472,6 +473,7 @@ def test_save_parse_error(base_app, capsys):
 
 def test_save_tempfile(base_app):
     # Just run help to make sure there is something in the history
+    base_app.feedback_to_output = True
     run_cmd(base_app, 'help')
     out = run_cmd(base_app, 'save *')
     output = out[0]
@@ -507,7 +509,7 @@ def test_save_invalid_path(base_app, capsys):
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
     os.close(fd)
-    
+
     try:
         # Verify that writing to a file works
         run_cmd(base_app, 'help > {}'.format(filename))
@@ -533,7 +535,7 @@ def test_feedback_to_output_true(base_app):
     base_app.timing = True
     f, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
     os.close(f)
-    
+
     try:
         run_cmd(base_app, 'help > {}'.format(filename))
         with open(filename) as f:
@@ -550,7 +552,7 @@ def test_feedback_to_output_false(base_app, capsys):
     base_app.timing = True
     f, filename = tempfile.mkstemp(prefix='feedback_to_output', suffix='.txt')
     os.close(f)
-    
+
     try:
         run_cmd(base_app, 'help > {}'.format(filename))
         out, err = capsys.readouterr()
@@ -1253,12 +1255,14 @@ def test_clipboard_failure(capsys):
 
 def test_run_command_with_empty_arg(base_app):
     command = 'help'
+    base_app.feedback_to_output = True
     run_cmd(base_app, command)
     out = run_cmd(base_app, 'run')
     expected = normalize('{}\n\n'.format(command) + BASE_HELP)
     assert out == expected
 
 def test_run_command_with_empty_history(base_app):
+    base_app.feedback_to_output = True
     out = run_cmd(base_app, 'run')
     assert out == []
 

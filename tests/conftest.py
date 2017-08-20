@@ -54,7 +54,7 @@ continuation_prompt: >
 debug: False
 echo: False
 editor: vim
-feedback_to_output: True
+feedback_to_output: False
 locals_in_py: True
 prompt: (Cmd)
 quiet: False
@@ -66,18 +66,18 @@ if expect_colors:
 else:
     color_str = 'False'
 SHOW_LONG = """
-abbrev: False            # Accept abbreviated commands
-autorun_on_edit: False   # Automatically run files after editing
-colors: {}            # Colorized output (*nix only)
-continuation_prompt: >   # On 2nd+ line of input
-debug: False             # Show full error stack on error
-echo: False              # Echo command issued into output
-editor: vim              # Program used by ``edit``
-feedback_to_output: True # Include nonessentials in `|`, `>` results
-locals_in_py: True       # Allow access to your application in py via self
-prompt: (Cmd)            # The prompt issued to solicit input
-quiet: False             # Don't print nonessential feedback
-timing: False            # Report execution times
+abbrev: False             # Accept abbreviated commands
+autorun_on_edit: False    # Automatically run files after editing
+colors: {}             # Colorized output (*nix only)
+continuation_prompt: >    # On 2nd+ line of input
+debug: False              # Show full error stack on error
+echo: False               # Echo command issued into output
+editor: vim               # Program used by ``edit``
+feedback_to_output: False # Include nonessentials in `|`, `>` results
+locals_in_py: True        # Allow access to your application in py via self
+prompt: (Cmd)             # The prompt issued to solicit input
+quiet: False              # Don't print nonessential feedback
+timing: False             # Report execution times
 """.format(color_str)
 
 

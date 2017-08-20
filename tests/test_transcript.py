@@ -150,7 +150,6 @@ set maxrepeats 5
 -------------------------[6]
 say -ps --repeat=5 goodnight, Gracie
 (Cmd) run 4
-say -ps --repeat=5 goodnight, Gracie
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
@@ -237,6 +236,7 @@ def test_commands_at_invocation():
 def test_transcript_from_cmdloop(request, capsys):
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = CmdLineApp()
+    app.feedback_to_output = True
 
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)

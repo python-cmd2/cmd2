@@ -9,7 +9,7 @@ continuation_prompt: >
 debug: False
 echo: False
 editor: /.*/
-feedback_to_output: True
+feedback_to_output: False
 locals_in_py: True
 maxrepeats: 3
 prompt: (Cmd)
