@@ -1,6 +1,6 @@
 # Run this transcript with "python example.py -t transcript_regex.txt"
 # The regex for colors is because no color on Windows.
-# The regex for editor will match whatever program you use. 
+# The regex for editor will match whatever program you use.
 (Cmd) set
 abbrev: True
 autorun_on_edit: False
@@ -9,7 +9,7 @@ continuation_prompt: >
 debug: False
 echo: False
 editor: /.*/
-feedback_to_output: True
+feedback_to_output: False
 locals_in_py: True
 maxrepeats: 3
 prompt: (Cmd)

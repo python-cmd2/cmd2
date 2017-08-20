@@ -470,7 +470,7 @@ class Cmd(cmd.Cmd):
             for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
                 if _which(editor):
                     break
-    feedback_to_output = True  # Do include nonessentials in >, | output
+    feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
     locals_in_py = True
     quiet = False  # Do not suppress nonessential output
     timing = False  # Prints elapsed time for each command

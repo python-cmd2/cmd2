@@ -2,6 +2,10 @@
 
 * Bug Fixes
     * Added workaround for bug which occurs in Python 2.7 on Linux when ``pygtk`` is installed
+    * ``pfeedback()`` now honors feedback_to_output setting and won't redirect when it is ``False``
+    * For ``edit`` command, both **editor** and **filename** can now have spaces in the name/path
+* Enhancements
+    * ``feedback_to_output`` now defaults to ``False`` so info like command timing won't redirect
     
 ## 0.7.6 (August 11, 2017)
 
