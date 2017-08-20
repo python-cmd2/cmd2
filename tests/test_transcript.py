@@ -232,60 +232,6 @@ def test_commands_at_invocation():
         out = app.stdout.buffer
         assert out == expected
 
-
-def test_transcript_from_cmdloop(request, capsys):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
-    app = CmdLineApp()
-    app.feedback_to_output = True
-
-    # Get location of the transcript
-    test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'transcripts/from_cmdloop.txt')
-
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ['prog', '-t', transcript_file]
-    with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        app.cmdloop()
-
-    # Check for the unittest "OK" condition for the 1 test which ran
-    expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
-    expected_end = "s\n\nOK\n"
-    out, err = capsys.readouterr()
-    if six.PY3:
-        assert err.startswith(expected_start)
-        assert err.endswith(expected_end)
-    else:
-        assert err == ''
-        assert out == ''
-
-
-def test_multiline_command_transcript_with_comments_at_beginning(request, capsys):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
-    app = CmdLineApp()
-
-    # Get location of the transcript
-    test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'transcripts/multiline.txt')
-
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ['prog', '-t', transcript_file]
-    with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        app.cmdloop()
-
-    # Check for the unittest "OK" condition for the 1 test which ran
-    expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
-    expected_end = "s\n\nOK\n"
-    out, err = capsys.readouterr()
-    if six.PY3:
-        assert err.startswith(expected_start)
-        assert err.endswith(expected_end)
-    else:
-        assert err == ''
-        assert out == ''
-
-
 def test_invalid_syntax(_cmdline_app, capsys):
     run_cmd(_cmdline_app, 'speak "')
     out, err = capsys.readouterr()
@@ -293,13 +239,19 @@ def test_invalid_syntax(_cmdline_app, capsys):
     assert normalize(str(err)) == expected
 
 
-def test_transcript_with_regex_set(request, capsys):
+@pytest.mark.parametrize('filename, feedback_to_output', [
+    ('regex_set.txt', False),
+    ('multiline.txt', False),
+    ('from_cmdloop.txt', True),
+    ])
+def test_transcript(request, capsys, filename, feedback_to_output):
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = CmdLineApp()
+    app.feedback_to_output = feedback_to_output
 
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'transcripts/regex_set.txt')
+    transcript_file = os.path.join(test_dir, 'transcripts', filename)
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
