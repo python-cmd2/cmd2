@@ -1633,7 +1633,7 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
             f.write(history_item or '')
             f.close()
 
-        os.system('%s %s' % (self.editor, filename))
+        os.system('"{}" "{}"'.format(self.editor, filename))
 
         if self.autorun_on_edit or history_item:
             self.do_load(filename)

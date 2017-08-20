@@ -1,5 +1,6 @@
 # Run this transcript with "python example.py -t transcript_regex.txt"
-# The regex for editor matches any word until first space.  The one for colors is because no color on Windows.
+# The regex for colors is because no color on Windows.
+# The regex for editor will match whatever program you use.
 (Cmd) set
 abbrev: True
 autorun_on_edit: False
@@ -7,7 +8,7 @@ colors: /(True|False)/
 continuation_prompt: >
 debug: False
 echo: False
-editor: /([^\s]+)/
+editor: /.*/
 feedback_to_output: True
 locals_in_py: True
 maxrepeats: 3

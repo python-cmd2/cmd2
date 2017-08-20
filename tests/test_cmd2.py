@@ -736,7 +736,23 @@ def test_edit_file(base_app, request, monkeypatch):
     run_cmd(base_app, 'edit {}'.format(filename))
 
     # We think we have an editor, so should expect a system call
-    m.assert_called_once_with('{} {}'.format(base_app.editor, filename))
+    m.assert_called_once_with('"{}" "{}"'.format(base_app.editor, filename))
+
+def test_edit_file_with_spaces(base_app, request, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'my commands.txt')
+
+    run_cmd(base_app, 'edit {}'.format(filename))
+
+    # We think we have an editor, so should expect a system call
+    m.assert_called_once_with('"{}" "{}"'.format(base_app.editor, filename))
 
 def test_edit_number(base_app, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
