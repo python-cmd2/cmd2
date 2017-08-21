@@ -1,0 +1,4 @@
+(Cmd) say -r 3 -s yabba dabba do
+/^Y.*?$/
+/^Y.*?$/
+/^Y.*?$/

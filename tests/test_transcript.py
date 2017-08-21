@@ -240,9 +240,19 @@ def test_invalid_syntax(_cmdline_app, capsys):
 
 
 @pytest.mark.parametrize('filename, feedback_to_output', [
-    ('regex_set.txt', False),
-    ('multiline.txt', False),
+    ('bol_eol.txt', False),
+    ('characterclass.txt', False),
+    ('dotstar.txt', False),
+    ('extension_notation.txt', False),
     ('from_cmdloop.txt', True),
+    ('multiline_no_regex.txt', False),
+    ('multiline_regex.txt', False),
+    ('regex_set.txt', False),
+    ('singleslash.txt', False),
+    ('slashdot.txt', False),
+    ('slashslash_escaped.txt', False),
+    ('slashslash.txt', False),
+    ('spaces.txt', False),
     ])
 def test_transcript(request, capsys, filename, feedback_to_output):
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test

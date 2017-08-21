@@ -1,0 +1,2 @@
+(Cmd) say -r 3 -s yabba dabba do
+/\A(YA.*?DO\n?){3}/

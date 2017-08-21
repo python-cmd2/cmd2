@@ -1,0 +1,6 @@
+(Cmd) say how many spaces
+how many spaces
+(Cmd) say how many spaces
+how/\s+/many/\s+/spaces
+(Cmd) say "how          many      spaces"
+how/\s+/many/\s+/spaces
