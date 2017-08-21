@@ -1,2 +1,6 @@
 (Cmd) say -r 3 -s yabba dabba do
 /\A(YA.*?DO\n?){3}/
+(Cmd) say -r 5 -s yabba dabba do
+YABBA DABBA DO
+YABBA /[A-Z ]*?/
+DO
