@@ -751,7 +751,7 @@ def test_edit_file_with_spaces(base_app, request, monkeypatch):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'my commands.txt')
 
-    run_cmd(base_app, 'edit {}'.format(filename))
+    run_cmd(base_app, 'edit {!r}'.format(filename))
 
     # We think we have an editor, so should expect a system call
     m.assert_called_once_with('"{}" "{}"'.format(base_app.editor, filename))

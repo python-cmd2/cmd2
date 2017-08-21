@@ -1589,13 +1589,11 @@ Paths or arguments that contain spaces must be enclosed in quotes
         except IndexError:
             return None
 
-    def do_edit(self, arg):
-        """Edit a file or command in a text editor.
-
-    Usage:  edit [N]|[file_path]
-
+    @options([], arg_desc="""[N]|[file_path]
     * N         - Number of command (from history), or `*` for all commands in history (default: last command)
-    * file_path - path to a file to open in editor
+    * file_path - path to a file to open in editor""")
+    def do_edit(self, arg, opts=None):
+        """Edit a file or command in a text editor.
 
 The editor used is determined by the ``editor`` settable parameter.
 "set editor (program-name)" to change or set the EDITOR environment variable.
@@ -1605,15 +1603,16 @@ If neither is supplied, the most recent command in the history is edited.
 
 Edited commands are always run after the editor is closed.
 
-Edited files are run on close if the ``autorun_on_edit`` settable parameter is True."""
+Edited files are run on close if the ``autorun_on_edit`` settable parameter is True.
+"""
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
         filename = None
-        if arg:
+        if arg and arg[0]:
             try:
-                history_item = self._last_matching(int(arg))
+                history_item = self._last_matching(int(arg[0]))
             except ValueError:
-                filename = arg
+                filename = arg[0]
                 history_item = ''
         else:
             try:
