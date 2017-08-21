@@ -301,34 +301,20 @@ is equivalent to ``shell ls``.)
 Transcript-based testing
 ========================
 
-If the entire transcript (input and output) of a successful session of
-a ``cmd2``-based app is copied from the screen and pasted into a text
-file, ``transcript.txt``, then a transcript test can be run against it::
+A transcript is both the input and output of a successful session of a
+``cmd2``-based app which is saved to a text file. The transcript can be played
+back into the app as a unit test.
 
-  python app.py --test transcript.txt
+.. code-block:: none
 
-Any non-whitespace deviations between the output prescribed in ``transcript.txt`` and
-the actual output from a fresh run of the application will be reported
-as a unit test failure.  (Whitespace is ignored during the comparison.)
+   $ python example.py --test transcript_regex.txt
+   .
+   ----------------------------------------------------------------------
+   Ran 1 test in 0.013s
 
-Regular expressions can be embedded in the transcript inside paired ``/``
-slashes.  These regular expressions should not include any whitespace
-expressions.
+   OK
 
-.. note::
-
-   If you have set ``allow_cli_args`` to False in order to disable parsing of command line arguments at invocation,
-   then the use of ``-t`` or ``--test`` to run transcript testing is automatically disabled.  In this case, you can
-   alternatively provide a value for the optional ``transcript_files`` when constructing the instance of your
-   ``cmd2.Cmd`` derived class in order to cause a transcript test to run::
-
-       from cmd2 import Cmd
-       class App(Cmd):
-         # customized attributes and methods here
-
-       if __name__ == '__main__':
-           app = App(transcript_files=['exampleSession.txt'])
-           app.cmdloop()
+See :doc:`<transcription>` for more details.
 
 
 Tab-Completion
