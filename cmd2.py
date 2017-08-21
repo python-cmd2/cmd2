@@ -2231,12 +2231,6 @@ class Cmd2TestCase(unittest.TestCase):
        that will execute the commands in a transcript file and expect the results shown.
        See example.py"""
     cmdapp = None
-    regexPattern = pyparsing.QuotedString(quoteChar=r'/', escChar='\\', multiline=True, unquoteResults=True)
-    regexPattern.ignore(pyparsing.cStyleComment)
-    notRegexPattern = pyparsing.Word(pyparsing.printables)
-    notRegexPattern.setParseAction(lambda t: re.escape(t[0]))
-    expectationParser = regexPattern | notRegexPattern
-    anyWhitespace = re.compile(r'\s', re.DOTALL | re.MULTILINE)
 
     def fetchTranscripts(self):
         self.transcripts = {}
@@ -2310,15 +2304,42 @@ class Cmd2TestCase(unittest.TestCase):
                     break
                 line_num += 1
             expected = ''.join(expected)
-            # Compare actual result to expected
-            message = '\nFile %s, line %d\nCommand was:\n%s\nExpected:\n%s\nGot:\n%s\n' % \
-                      (fname, line_num, command, expected, result)
-            expected = self.expectationParser.transformString(expected)
-            # checking whitespace is a pain - let's skip it
-            expected = self.anyWhitespace.sub('', expected)
-            result = self.anyWhitespace.sub('', result)
+            
+            # transform the expected text into a valid regular expression
+            expected = self._transform_transcript_expected(expected)
+            message = '\nFile {}, line {}\nCommand was:\n{}\nExpected:\n{}\nGot:\n{}\n'.format(
+                      fname, line_num, command, expected, result)
             self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
+    def _transform_transcript_expected(self, expected):
+        """parse the expected text from the transcript into a valid regex"""
+        slash = '/'
+        backslash = '\\'
+        regex = ''
+        start = 0
+        while True:
+            first_slash_pos = expected.find(slash, start)
+            if first_slash_pos == -1:
+                # no more slashes, add the rest of the string and bail
+                regex += re.escape(expected[start:])
+                break
+            else:
+                # there is a slash, go find the next one
+                second_slash_pos = expected.find(slash, first_slash_pos+1)
+                if second_slash_pos > 0:
+                    # add everything before the first slash as plain text
+                    regex += re.escape(expected[start:first_slash_pos])
+                    # add everything between the slashes (but not the slashes)
+                    # as a regular expression
+                    regex += expected[first_slash_pos+1:second_slash_pos]
+                    # and change where we start looking for slashed on the
+                    # turn through the loop
+                    start = second_slash_pos + 1
+                else:
+                    # no closing slash, treat it all as plain text
+                    regex += re.escape(expected[start:])
+        return regex
+        
     def tearDown(self):
         if self.cmdapp:
             # Restore stdout
