@@ -54,15 +54,15 @@ class CmdLineApp(Cmd):
         """Repeats what you tell me to."""
         arg = ''.join(arg)
         if opts.piglatin:
-            arg = '%s%say' % (arg[1:].rstrip(), arg[0])
+            arg = '%s%say' % (arg[1:], arg[0])
         if opts.shout:
             arg = arg.upper()
         repetitions = opts.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(arg)
-            self.stdout.write('\n')
-            # self.stdout.write is better than "print", because Cmd can be
-            # initialized with a non-standard output destination
+            self.poutput(arg)
+            # recommend using the poutput function instead of
+            # self.stdout.write or "print", because Cmd allows the user
+            # to redirect output
 
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
