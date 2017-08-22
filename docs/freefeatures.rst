@@ -82,6 +82,8 @@ quotation marks if it is more than a one-word command.
 
 .. _Argparse: https://docs.python.org/3/library/argparse.html
 
+.. _output_redirection:
+
 Output redirection
 ==================
 
