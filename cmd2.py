@@ -2022,10 +2022,12 @@ class ParserManager:
 class HistoryItem(str):
     """Class used to represent an item in the History list.
 
-    Thing wrapper around str class which adds a custom format for printing.  It also keeps track of its index in the
-    list as well as a lowercase representation of itself for convenience/efficiency.
+    Thin wrapper around str class which adds a custom format for printing. It
+    also keeps track of its index in the list as well as a lowercase
+    representation of itself for convenience/efficiency.
+
     """
-    listformat = '-------------------------[%d]\n%s\n'
+    listformat = '-------------------------[{}]\n{}\n'
 
     # noinspection PyUnusedLocal
     def __init__(self, instr):
@@ -2038,7 +2040,7 @@ class HistoryItem(str):
 
         :return: str - pretty print string version of a HistoryItem
         """
-        return self.listformat % (self.idx, str(self))
+        return self.listformat.format(self.idx, str(self).rstrip())
 
 
 class History(list):
