@@ -7,6 +7,7 @@ Released under MIT license, see LICENSE file
 """
 import os
 import sys
+import random
 
 import mock
 import pytest
@@ -21,6 +22,11 @@ from conftest import run_cmd, StdOut, normalize
 
 
 class CmdLineApp(Cmd):
+
+    MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
+    MUMBLE_FIRST = ['so', 'like', 'well']
+    MUMBLE_LAST = ['right?']
+    
     def __init__(self, *args, **kwargs):
         self.abbrev = True
         self.multilineCommands = ['orate']
@@ -60,6 +66,23 @@ class CmdLineApp(Cmd):
 
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
+
+    @options([ make_option('-r', '--repeat', type="int", help="output [n] times") ])
+    def do_mumble(self, arg, opts=None):
+        """Mumbles what you tell me to."""
+        repetitions = opts.repeat or 1
+        arg = arg.split()
+        for i in range(min(repetitions, self.maxrepeats)):
+            output = []
+            if (random.random() < .33):
+                output.append(random.choice(self.MUMBLE_FIRST))
+            for word in arg:
+                if (random.random() < .40):
+                    output.append(random.choice(self.MUMBLES))
+                output.append(word)
+            if (random.random() < .25):
+                output.append(random.choice(self.MUMBLE_LAST))
+            self.poutput(' '.join(output))
 
 
 class DemoApp(Cmd):
@@ -108,8 +131,9 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  history  orate  pyscript  run   say  shell      show
-cmdenvironment  help  load     py     quit      save  set  shortcuts  speak
+_relative_load  help     mumble  pyscript  save  shell      speak
+cmdenvironment  history  orate   quit      say   shortcuts
+edit            load     py      run       set   show
 
 (Cmd) help say
 Repeats what you tell me to.
@@ -251,9 +275,10 @@ def test_invalid_syntax(_cmdline_app, capsys):
     ('regex_set.txt', False),
     ('singleslash.txt', False),
     ('slashdot.txt', False),
-    ('slashslash_escaped.txt', False),
+    ('slashes_escaped.txt', False),
     ('slashslash.txt', False),
     ('spaces.txt', False),
+    ('word_boundaries.txt', False),
     ])
 def test_transcript(request, capsys, filename, feedback_to_output):
     # Create a cmd2.Cmd() instance and make sure basic settings are
@@ -285,16 +310,17 @@ def test_transcript(request, capsys, filename, feedback_to_output):
 
 
 @pytest.mark.parametrize('expected, transformed', [
-    ( 'text with no slashes', 'text\ with\ no\ slashes'),
-    ( 'specials .*', 'specials\ \.\*'),
-    ( '/.*/', '.*'),
-    ( 'specials ^ and + /[0-9]+/', 'specials\ \^\ and\ \+\ [0-9]+'),
-    ( '/a{6}/ but not a{6} with /.*?/ more', 'a{6}\ but\ not\ a\{6\}\ with\ .*?\ more'),
-    ( 'not this slash\/ or this one\/', 'not\ this\ slash\\/\ or\ this\ one\\/'),
-    ( 'not \/, use /\|?/, not \/', 'not\ \\/\,\ use\ \|?\,\ not\ \\/'),
+    ( 'text with no slashes', 'text\ with\ no\ slashes' ),
+    ( 'specials .*', 'specials\ \.\*' ),
+    ( '/.*/', '.*' ),
+    ( 'use 2\/3 cup', 'use\ 2\/3\ cup' ),
+    ( 'specials ^ and + /[0-9]+/', 'specials\ \^\ and\ \+\ [0-9]+' ),
+    ( '/a{6}/ but not a{6} with /.*?/ more', 'a{6}\ but\ not\ a\{6\}\ with\ .*?\ more' ),
+    ( 'not this slash\/ or this one\/', 'not\ this\ slash\\/\ or\ this\ one\\/' ),
+    ( 'not \/, use /\|?/, not \/', 'not\ \\/\,\ use\ \|?\,\ not\ \\/' ),
     # inception: we have a slashes in our regex: backslashed on input, bare on output
-    ( 'not \/, use /\/?/, not \/', 'not\ \\/\,\ use\ /?\,\ not\ \\/'),
-    ( 'the /\/?/ more /.*/ stuff', 'the\ /?\ more\ .*\ stuff')
+    ( 'not \/, use /\/?/, not \/', 'not\ \\/\,\ use\ /?\,\ not\ \\/' ),
+    ( 'the /\/?/ more /.*/ stuff', 'the\ /?\ more\ .*\ stuff' ),
     ])
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()

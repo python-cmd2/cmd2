@@ -1,0 +1,4 @@
+(Cmd) mumble maybe we could go to lunch
+/.*\bmaybe\b.*\bcould\b.*\blunch\b.*/
+(Cmd) mumble maybe we could go to lunch
+/.*\bmaybe\b.*\bcould\b.*\blunch\b.*/

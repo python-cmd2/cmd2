@@ -1,2 +1,2 @@
 (Cmd) say use 2/3 cup of sugar
-use 2/3 cup of sugar
+use 2\/3 cup of sugar

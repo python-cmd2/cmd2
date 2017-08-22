@@ -1,5 +1,2 @@
-(Cmd) say //
-\/\/
 (Cmd) say /some/unix/path
 \/some\/unix\/path
-
