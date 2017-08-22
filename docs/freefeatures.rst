@@ -314,7 +314,7 @@ back into the app as a unit test.
 
    OK
 
-See :doc:`<transcription>` for more details.
+See :doc:`transcript` for more details.
 
 
 Tab-Completion
