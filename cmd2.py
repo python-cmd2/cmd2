@@ -2292,8 +2292,8 @@ class Cmd2TestCase(unittest.TestCase):
             result = self.cmdapp.stdout.read()
             # Read the expected result from transcript
             if strip_ansi(line).startswith(self.cmdapp.visible_prompt):
-                message = '\nFile %s, line %d\nCommand was:\n%r\nExpected: (nothing)\nGot:\n%r\n' % \
-                          (fname, line_num, command, result)
+                message = '\nFile {}, line {}\nCommand was:\n{}\nExpected: (nothing)\nGot:\n{}\n'.format(
+                          fname, line_num, command, result)
                 self.assert_(not (result.strip()), message)
                 continue
             expected = []
