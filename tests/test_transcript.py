@@ -310,14 +310,18 @@ def test_transcript(request, capsys, filename, feedback_to_output):
 
 @pytest.mark.parametrize('expected, transformed', [
     ( 'text with no slashes', 'text\ with\ no\ slashes' ),
+    # stuff with just one slash
+    ( 'use 2/3 cup', 'use\ 2\/3\ cup' ),
+    ( '/tmp is nice', '\/tmp\ is\ nice'),
+    ( 'slash at end/', 'slash\ at\ end\/'),
+    # regexes
     ( 'specials .*', 'specials\ \.\*' ),
     ( '/.*/', '.*' ),
-    ( 'use 2\/3 cup', 'use\ 2\/3\ cup' ),
     ( 'specials ^ and + /[0-9]+/', 'specials\ \^\ and\ \+\ [0-9]+' ),
-    ( '/a{6}/ but not a{6} with /.*?/ more', 'a{6}\ but\ not\ a\{6\}\ with\ .*?\ more' ),
+    ( '/a{6}/ but not \/a{6} with /.*?/ more', 'a{6}\ but\ not\ \/a\{6\}\ with\ .*?\ more' ),
     ( 'not this slash\/ or this one\/', 'not\ this\ slash\\/\ or\ this\ one\\/' ),
     ( 'not \/, use /\|?/, not \/', 'not\ \\/\,\ use\ \|?\,\ not\ \\/' ),
-    # inception: we have a slashes in our regex: backslashed on input, bare on output
+    # inception: slashes in our regex. backslashed on input, bare on output
     ( 'not \/, use /\/?/, not \/', 'not\ \\/\,\ use\ /?\,\ not\ \\/' ),
     ( 'the /\/?/ more /.*/ stuff', 'the\ /?\ more\ .*\ stuff' ),
     ])

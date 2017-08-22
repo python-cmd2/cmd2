@@ -2341,8 +2341,10 @@ class Cmd2TestCase(unittest.TestCase):
                     # turn through the loop
                     start = second_slash_pos + 1
                 else:
-                    # no closing slash, treat it all as plain text
-                    regex += re.escape(s[start:])
+                    # No closing slash, we have to add the first slash,
+                    # and the rest of the text
+                    regex += re.escape(s[start-1:])
+                    break
         return regex
 
     def _escaped_find(self, regex, s, start, in_regex):
