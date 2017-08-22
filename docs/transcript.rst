@@ -79,11 +79,10 @@ ensure that ``we`` or ``go`` or ``to`` appear in the output, but it does work if
 mumble happens to add words to the beginning or the end of the output.
 
 Since the output could be multiple lines long, ``cmd2`` uses multiline regular
-expression matching, and also uses the ``DOTALL`` flag, which subtly changes
-the behavior of commonly used special characters like ``.``, ``^`` and ``$``,
-so you may want to double check the `Python regular expression documentation
-<https://docs.python.org/3/library/re.html>`_. You also need to be careful when
-using ``\Z``, it matches after the newline at the end of the string.
+expression matching, and also uses the ``DOTALL`` flag. These two flags subtly
+change the behavior of commonly used special characters like ``.``, ``^`` and
+``$``, so you may want to double check the `Python regular expression
+documentation <https://docs.python.org/3/library/re.html>`_.
 
 If your output has slashes in it, you will need to escape those slashes so the
 stuff between them is not interpred as a regular expression. In this transcript::
@@ -123,6 +122,8 @@ the path instead of specifying it verbatim, or we can escape the slashes::
    
    If you are using regular expressions, be aware that depending on how you
    write your regex, the newlines after the regex may or may not matter.
+   ``\Z`` matches *after* the newline at the end of the string, whereas
+   ``$`` matches the end of the string *or* just before a newline.
 
 
 Running a transcript
