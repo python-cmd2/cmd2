@@ -1,7 +1,8 @@
 # Run this transcript with "python example.py -t transcript_regex.txt"
 # The regex for colors is because no color on Windows.
 # The regex for editor will match whatever program you use.
-# regexes on prompts just make the trailing space obvious
+# Regexes on prompts just make the trailing space obvious
+
 (Cmd) set
 abbrev: True
 autorun_on_edit: False

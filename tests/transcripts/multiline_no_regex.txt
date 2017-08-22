@@ -1,6 +1,4 @@
-# cmd2 will skip any lines
-# which occur before a valid
-# command prompt
+# test a multi-line command
 
 (Cmd) orate This is a test
 > of the

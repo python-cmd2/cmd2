@@ -274,7 +274,6 @@ def test_invalid_syntax(_cmdline_app, capsys):
     ('multiline_regex.txt', False),
     ('regex_set.txt', False),
     ('singleslash.txt', False),
-    ('slashdot.txt', False),
     ('slashes_escaped.txt', False),
     ('slashslash.txt', False),
     ('spaces.txt', False),
