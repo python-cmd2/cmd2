@@ -256,7 +256,8 @@ def test_invalid_syntax(_cmdline_app, capsys):
     ('spaces.txt', False),
     ])
 def test_transcript(request, capsys, filename, feedback_to_output):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+    # Create a cmd2.Cmd() instance and make sure basic settings are
+    # like we want for test
     app = CmdLineApp()
     app.feedback_to_output = feedback_to_output
 
@@ -264,7 +265,8 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     test_dir = os.path.dirname(request.module.__file__)
     transcript_file = os.path.join(test_dir, 'transcripts', filename)
 
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    # Need to patch sys.argv so cmd2 doesn't think it was called with
+    # arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop
@@ -288,6 +290,11 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     ( '/.*/', '.*'),
     ( 'specials ^ and + /[0-9]+/', 'specials\ \^\ and\ \+\ [0-9]+'),
     ( '/a{6}/ but not a{6} with /.*?/ more', 'a{6}\ but\ not\ a\{6\}\ with\ .*?\ more'),
+    ( 'not this slash\/ or this one\/', 'not\ this\ slash\\/\ or\ this\ one\\/'),
+    ( 'not \/, use /\|?/, not \/', 'not\ \\/\,\ use\ \|?\,\ not\ \\/'),
+    # inception: we have a slashes in our regex: backslashed on input, bare on output
+    ( 'not \/, use /\/?/, not \/', 'not\ \\/\,\ use\ /?\,\ not\ \\/'),
+    ( 'the /\/?/ more /.*/ stuff', 'the\ /?\ more\ .*\ stuff')
     ])
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
@@ -296,6 +303,4 @@ def test_parse_transcript_expected(expected, transformed):
         cmdapp = app
 
     testcase = TestMyAppCase()
-
     assert testcase._transform_transcript_expected(expected) == transformed
-

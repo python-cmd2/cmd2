@@ -2311,35 +2311,86 @@ class Cmd2TestCase(unittest.TestCase):
                       fname, line_num, command, expected, result)
             self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
-    def _transform_transcript_expected(self, expected):
-        """parse the expected text from the transcript into a valid regex"""
+    def _transform_transcript_expected(self, s):
+        """parse the string with slashed regexes into a valid regex"""
         slash = '/'
         backslash = '\\'
         regex = ''
         start = 0
+        
         while True:
-            first_slash_pos = expected.find(slash, start)
+            (regex, first_slash_pos, start) = self._escaped_find(regex, s, start, False)
             if first_slash_pos == -1:
                 # no more slashes, add the rest of the string and bail
-                regex += re.escape(expected[start:])
+                regex += re.escape(s[start:])
                 break
             else:
-                # there is a slash, go find the next one
-                second_slash_pos = expected.find(slash, first_slash_pos+1)
+                # there is a slash, add everything we have found so far
+                # add stuff before the first slash as plain text
+                regex += re.escape(s[start:first_slash_pos])
+                start = first_slash_pos+1
+                # and go find the next one
+                (regex, second_slash_pos, start) = self._escaped_find(regex, s, start, True)
                 if second_slash_pos > 0:
-                    # add everything before the first slash as plain text
-                    regex += re.escape(expected[start:first_slash_pos])
                     # add everything between the slashes (but not the slashes)
                     # as a regular expression
-                    regex += expected[first_slash_pos+1:second_slash_pos]
+                    regex += s[start:second_slash_pos]
                     # and change where we start looking for slashed on the
                     # turn through the loop
                     start = second_slash_pos + 1
                 else:
                     # no closing slash, treat it all as plain text
-                    regex += re.escape(expected[start:])
+                    regex += re.escape(s[start:])
         return regex
+
+    def _escaped_find(self, regex, s, start, in_regex):
+        """
+        Find the next slash in {s} after {start} that is not preceded by a backslash.
         
+        If we find an escaped slash, add everything up to and including it to regex,
+        updating {start}. {start} therefore serves two purposes, tells us where to start
+        looking for the next thing, and also tells us where in {s} we have already
+        added things to {regex}
+        
+        {in_regex} specifies whether we are currently searching in a regex, we behave
+        differently if we are or if we aren't.
+        """
+
+        while True:
+            pos = s.find('/', start)
+            if pos == -1:
+                # no match, return to caller
+                break
+            elif pos == 0:
+                # slash at the beginning of the string, so it can't be
+                # escaped. We found it.
+                break
+            else:
+                # check if the slash is preceeded by a backslash
+                if s[pos-1:pos] == '\\':
+                    # it is.
+                    if in_regex:
+                        # add everything up to the backslash as a
+                        # regular expression
+                        regex += s[start:pos-1]
+                        # skip the backslash, and add the slash
+                        regex += s[pos]
+                    else:
+                        # add everything up to the backslash as escaped
+                        # plain text
+                        regex += re.escape(s[start:pos-1])
+                        # and then add the slash as escaped
+                        # plain text
+                        regex += re.escape(s[pos])
+                    # update start to show we have handled everything
+                    # before it
+                    start = pos+1
+                    # and continue to look
+                else:
+                    # slash is not escaped, this is what we are looking for
+                    break
+        return (regex, pos, start)
+
     def tearDown(self):
         if self.cmdapp:
             # Restore stdout
