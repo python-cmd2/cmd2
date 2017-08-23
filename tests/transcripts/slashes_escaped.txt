@@ -1,0 +1,6 @@
+# escape those slashes
+
+(Cmd) say /some/unix/path
+\/some\/unix\/path
+(Cmd) say mix 2/3 c. sugar, 1/2 c. butter, and 1/2 tsp. salt
+mix 2\/3 c. sugar, 1\/2 c. butter, and 1\/2 tsp. salt

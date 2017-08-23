@@ -1,0 +1,4 @@
+# ensure the old standby .* works. We use the non-greedy flavor
+
+(Cmd) say Adopt the pace of nature: her secret is patience.
+Adopt the pace of /.*?/ is patience.

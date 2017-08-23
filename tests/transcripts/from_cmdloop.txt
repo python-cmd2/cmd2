@@ -1,9 +1,13 @@
+# responses with trailing spaces have been matched with a regex
+# so you can see where they are.
+
 (Cmd) help
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  history  orate  pyscript  run   say  shell      show
-cmdenvironment  help  load     py     quit      save  set  shortcuts  speak
+_relative_load  help     mumble  pyscript  save  shell      speak
+cmdenvironment  history  orate   quit      say   shortcuts
+edit            load     py      run       set   show/ */
 
 (Cmd) help say
 Repeats what you tell me to.
@@ -46,12 +50,11 @@ set maxrepeats 5
 say -ps --repeat=5 goodnight, Gracie
 (Cmd) run 4
 say -ps --repeat=5 goodnight, Gracie
-
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 (Cmd) set prompt "---> "
-prompt - was: (Cmd)
-now: --->
+prompt - was: (Cmd)/ /
+now: --->/ /

@@ -1,0 +1,4 @@
+# inception: a regular expression that matches itself
+
+(Cmd) say (?:fred)
+/(?:\(\?:fred\))/

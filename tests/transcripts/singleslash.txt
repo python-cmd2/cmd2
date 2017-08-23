@@ -1,0 +1,5 @@
+# even if you only have a single slash, you have
+# to escape it
+
+(Cmd) say use 2/3 cup of sugar
+use 2\/3 cup of sugar

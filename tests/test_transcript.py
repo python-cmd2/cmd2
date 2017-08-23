@@ -7,6 +7,7 @@ Released under MIT license, see LICENSE file
 """
 import os
 import sys
+import random
 
 import mock
 import pytest
@@ -15,11 +16,17 @@ import six
 # Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
 
-from cmd2 import Cmd, make_option, options, Cmd2TestCase, set_use_arg_list, set_posix_shlex, set_strip_quotes
+from cmd2 import (Cmd, make_option, options, Cmd2TestCase, set_use_arg_list,
+                  set_posix_shlex, set_strip_quotes)
 from conftest import run_cmd, StdOut, normalize
 
 
 class CmdLineApp(Cmd):
+
+    MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
+    MUMBLE_FIRST = ['so', 'like', 'well']
+    MUMBLE_LAST = ['right?']
+    
     def __init__(self, *args, **kwargs):
         self.abbrev = True
         self.multilineCommands = ['orate']
@@ -47,18 +54,35 @@ class CmdLineApp(Cmd):
         """Repeats what you tell me to."""
         arg = ''.join(arg)
         if opts.piglatin:
-            arg = '%s%say' % (arg[1:].rstrip(), arg[0])
+            arg = '%s%say' % (arg[1:], arg[0])
         if opts.shout:
             arg = arg.upper()
         repetitions = opts.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(arg)
-            self.stdout.write('\n')
-            # self.stdout.write is better than "print", because Cmd can be
-            # initialized with a non-standard output destination
+            self.poutput(arg)
+            # recommend using the poutput function instead of
+            # self.stdout.write or "print", because Cmd allows the user
+            # to redirect output
 
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
+
+    @options([ make_option('-r', '--repeat', type="int", help="output [n] times") ])
+    def do_mumble(self, arg, opts=None):
+        """Mumbles what you tell me to."""
+        repetitions = opts.repeat or 1
+        arg = arg.split()
+        for i in range(min(repetitions, self.maxrepeats)):
+            output = []
+            if (random.random() < .33):
+                output.append(random.choice(self.MUMBLE_FIRST))
+            for word in arg:
+                if (random.random() < .40):
+                    output.append(random.choice(self.MUMBLES))
+                output.append(word)
+            if (random.random() < .25):
+                output.append(random.choice(self.MUMBLE_LAST))
+            self.poutput(' '.join(output))
 
 
 class DemoApp(Cmd):
@@ -107,8 +131,9 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  history  orate  pyscript  run   say  shell      show
-cmdenvironment  help  load     py     quit      save  set  shortcuts  speak
+_relative_load  help     mumble  pyscript  save  shell      speak
+cmdenvironment  history  orate   quit      say   shortcuts
+edit            load     py      run       set   show
 
 (Cmd) help say
 Repeats what you tell me to.
@@ -232,60 +257,6 @@ def test_commands_at_invocation():
         out = app.stdout.buffer
         assert out == expected
 
-
-def test_transcript_from_cmdloop(request, capsys):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
-    app = CmdLineApp()
-    app.feedback_to_output = True
-
-    # Get location of the transcript
-    test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'transcript.txt')
-
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ['prog', '-t', transcript_file]
-    with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        app.cmdloop()
-
-    # Check for the unittest "OK" condition for the 1 test which ran
-    expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
-    expected_end = "s\n\nOK\n"
-    out, err = capsys.readouterr()
-    if six.PY3:
-        assert err.startswith(expected_start)
-        assert err.endswith(expected_end)
-    else:
-        assert err == ''
-        assert out == ''
-
-
-def test_multiline_command_transcript_with_comments_at_beginning(request, capsys):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
-    app = CmdLineApp()
-
-    # Get location of the transcript
-    test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'multiline_transcript.txt')
-
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ['prog', '-t', transcript_file]
-    with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        app.cmdloop()
-
-    # Check for the unittest "OK" condition for the 1 test which ran
-    expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
-    expected_end = "s\n\nOK\n"
-    out, err = capsys.readouterr()
-    if six.PY3:
-        assert err.startswith(expected_start)
-        assert err.endswith(expected_end)
-    else:
-        assert err == ''
-        assert out == ''
-
-
 def test_invalid_syntax(_cmdline_app, capsys):
     run_cmd(_cmdline_app, 'speak "')
     out, err = capsys.readouterr()
@@ -293,15 +264,33 @@ def test_invalid_syntax(_cmdline_app, capsys):
     assert normalize(str(err)) == expected
 
 
-def test_regex_transcript(request, capsys):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+@pytest.mark.parametrize('filename, feedback_to_output', [
+    ('bol_eol.txt', False),
+    ('characterclass.txt', False),
+    ('dotstar.txt', False),
+    ('extension_notation.txt', False),
+    ('from_cmdloop.txt', True),
+    ('multiline_no_regex.txt', False),
+    ('multiline_regex.txt', False),
+    ('regex_set.txt', False),
+    ('singleslash.txt', False),
+    ('slashes_escaped.txt', False),
+    ('slashslash.txt', False),
+    ('spaces.txt', False),
+    ('word_boundaries.txt', False),
+    ])
+def test_transcript(request, capsys, filename, feedback_to_output):
+    # Create a cmd2.Cmd() instance and make sure basic settings are
+    # like we want for test
     app = CmdLineApp()
+    app.feedback_to_output = feedback_to_output
 
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
-    transcript_file = os.path.join(test_dir, 'transcript_regex.txt')
+    transcript_file = os.path.join(test_dir, 'transcripts', filename)
 
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    # Need to patch sys.argv so cmd2 doesn't think it was called with
+    # arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop
@@ -317,3 +306,30 @@ def test_regex_transcript(request, capsys):
     else:
         assert err == ''
         assert out == ''
+
+
+@pytest.mark.parametrize('expected, transformed', [
+    ( 'text with no slashes', 'text\ with\ no\ slashes' ),
+    # stuff with just one slash
+    ( 'use 2/3 cup', 'use\ 2\/3\ cup' ),
+    ( '/tmp is nice', '\/tmp\ is\ nice'),
+    ( 'slash at end/', 'slash\ at\ end\/'),
+    # regexes
+    ( 'specials .*', 'specials\ \.\*' ),
+    ( '/.*/', '.*' ),
+    ( 'specials ^ and + /[0-9]+/', 'specials\ \^\ and\ \+\ [0-9]+' ),
+    ( '/a{6}/ but not \/a{6} with /.*?/ more', 'a{6}\ but\ not\ \/a\{6\}\ with\ .*?\ more' ),
+    ( 'not this slash\/ or this one\/', 'not\ this\ slash\\/\ or\ this\ one\\/' ),
+    ( 'not \/, use /\|?/, not \/', 'not\ \\/\,\ use\ \|?\,\ not\ \\/' ),
+    # inception: slashes in our regex. backslashed on input, bare on output
+    ( 'not \/, use /\/?/, not \/', 'not\ \\/\,\ use\ /?\,\ not\ \\/' ),
+    ( 'the /\/?/ more /.*/ stuff', 'the\ /?\ more\ .*\ stuff' ),
+    ])
+def test_parse_transcript_expected(expected, transformed):
+    app = CmdLineApp()
+    
+    class TestMyAppCase(Cmd2TestCase):
+        cmdapp = app
+
+    testcase = TestMyAppCase()
+    assert testcase._transform_transcript_expected(expected) == transformed

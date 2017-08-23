@@ -1,0 +1,8 @@
+# check spaces in all their forms
+
+(Cmd) say how many spaces
+how many spaces
+(Cmd) say how many spaces
+how/\s{1}/many/\s{1}/spaces
+(Cmd) say "how          many      spaces"
+how/\s+/many/\s+/spaces

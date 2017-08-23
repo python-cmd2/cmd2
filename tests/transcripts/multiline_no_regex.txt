@@ -1,0 +1,6 @@
+# test a multi-line command
+
+(Cmd) orate This is a test
+> of the
+> emergency broadcast system
+This is a test of the emergency broadcast system

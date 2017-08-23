@@ -1,0 +1,6 @@
+# match the text with regular expressions and the newlines as literal text
+
+(Cmd) say -r 3 -s yabba dabba do
+/^Y.*?$/
+/^Y.*?$/
+/^Y.*?$/

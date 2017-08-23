@@ -66,6 +66,7 @@ Contents:
    freefeatures
    settingchanges
    unfreefeatures
+   transcript
    integrating
    hooks
    alternatives

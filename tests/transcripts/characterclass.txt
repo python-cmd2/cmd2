@@ -1,0 +1,6 @@
+# match using character classes and special sequence for digits (\d)
+
+(Cmd) say 555-1212
+/[0-9]{3}-[0-9]{4}/
+(Cmd) say 555-1212
+/\d{3}-\d{4}/
