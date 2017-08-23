@@ -717,8 +717,9 @@ class Cmd(cmd.Cmd):
         """
         if not sys.platform.startswith('win'):
             # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
-            proc = subprocess.Popen(shlex.split('stty sane'))
-            proc.communicate()
+            if self.stdin.isatty():
+                proc = subprocess.Popen(shlex.split('stty sane'))
+                proc.communicate()
         return stop
 
     def parseline(self, line):
