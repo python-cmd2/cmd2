@@ -6,6 +6,11 @@
     * For ``edit`` command, both **editor** and **filename** can now have spaces in the name/path
 * Enhancements
     * ``feedback_to_output`` now defaults to ``False`` so info like command timing won't redirect
+    * Transcript regexes now have predictable, tested, and documented behavior
+        * This makes a breaking change to the format and expectations of transcript testing
+        * The prior behavior removed whitespace before making the comparison
+        * This new version does not, whitespace must match exactly
+        * Transcripts now support a vastly expanded subset of all possible regexes
     
 ## 0.7.6 (August 11, 2017)
 
