@@ -1369,7 +1369,6 @@ def test_eos(base_app):
     # And make sure it reduced the length of the script dir list
     assert len(base_app._script_dir) == 0
 
-
 def test_echo(capsys):
     app = cmd2.Cmd()
     # Turn echo on and pre-stage some commands in the queue, simulating like we are in the middle of a script
@@ -1390,112 +1389,72 @@ def test_echo(capsys):
     assert app._current_script_dir is None
     assert out.startswith('{}{}\n'.format(app.prompt, command) + 'history [arg]: lists past commands issued')
 
-def test_piped_input_echo_false_rawinput_false(capsys):
-    command = 'set'
+# the next helper function and two tests check for piped
+# input when use_rawinput is True.
+#
+# the only way to make this testable is to mock the builtin input()
+# function
+def piped_input_rawinput_true(capsys, echo, command):
+    m = mock.Mock(name='input', side_effect=[command, 'quit'])
+    sm.input = m
 
+    # run the cmdloop, which should pull input from our mocked input_list
+    app = cmd2.Cmd()
+    app.use_rawinput = True
+    app.echo = echo
+    app.abbrev = False
+    app._cmdloop()
+    out, err = capsys.readouterr()
+    return (app, out)
+
+def test_piped_input_rawinput_true_echo_true(capsys):
+    command = 'set'
+    app, out = piped_input_rawinput_true(capsys, True, command)
+    out = out.splitlines()
+    assert out[0] == '{}{}'.format(app.prompt, command)
+    assert out[1] == 'abbrev: False'
+
+def test_piped_input_rawinput_true_echo_false(capsys):
+    command = 'set'
+    app, out = piped_input_rawinput_true(capsys, False, command)
+    firstline = out.splitlines()[0]
+    assert firstline == 'abbrev: False'
+    assert not '{}{}'.format(app.prompt, command) in out
+
+# the next helper function and two tests check for piped
+# input when use_rawinput is False
+#
+# the only way to make this testable is to pass a file handle
+# as stdin
+def piped_input_rawinput_false(capsys, echo, command):
     # mock up the input
     fakein = io.StringIO(command)
 
     # run the cmdloop, which should pull input from stdin
     app = cmd2.Cmd(stdin=fakein)
     app.use_rawinput = False
-    app.echo = False
+    app.echo = echo
     app.abbrev = False
     app._cmdloop()
     out, err = capsys.readouterr()
+    return (app, out)
 
+def test_piped_input_rawinput_false_echo_true(capsys):
+    command = 'set'
+    app, out = piped_input_rawinput_false(capsys, True, command)
+    out = out.splitlines()
+    assert out[0] == '{}{}'.format(app.prompt, command)
+    assert out[1] == 'abbrev: False'
+
+def test_piped_input_rawinput_false_echo_false(capsys):
+    command = 'set'
+    app, out = piped_input_rawinput_false(capsys, False, command)
     firstline = out.splitlines()[0]
     assert firstline == 'abbrev: False'
     assert not '{}{}'.format(app.prompt, command) in out
 
 #
-# WARNING:
-# 
-# this test passes, and validates the proper behavior of
-# cmd2.pseudo_raw_input() when use_rawinput = True
-#
-# However, there is only one way to patch/mock/hack input()
-# or raw_input() for testing: that is to change the
-# sys.stdin file descriptor. This results in unpredictable
-# failures when 'pytest -n8' parallelizes tests.
-#
-# @pytest.mark.parametrize('rawinput', [True, False])
-# def test_piped_input_echo_false_stdin_hack(capsys, rawinput):
-#     command = 'set'
-#
-#     # hack up stdin
-#     fakein = io.StringIO(command)
-#     realin = sys.stdin
-#     sys.stdin = fakein
-#
-#     # run the cmdloop, which should pull input from stdin
-#     app = cmd2.Cmd(stdin=fakein)
-#     app.use_rawinput = rawinput
-#     app.echo = False
-#     app.abbrev = False
-#     app._cmdloop()
-#     out, err = capsys.readouterr()
-#
-#     # put stdin back
-#     sys.stdin = realin
-#
-#     firstline = out.splitlines()[0]
-#     assert firstline == 'abbrev: False'
-#     assert not '{}{}'.format(app.prompt, command) in out
-
-def test_piped_input_echo_true_rawinput_false(capsys):
-    command = 'set'
-
-    # mock up the input
-    fakein = io.StringIO(command)
-
-    # run the cmdloop, which should pull input from stdin
-    app = cmd2.Cmd(stdin=fakein)
-    app.use_rawinput = False
-    app.echo = True
-    app.abbrev = False
-    app._cmdloop()
-    out, err = capsys.readouterr()
-
-    out = out.splitlines()
-    assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1] == 'abbrev: False'
-
-#
-# WARNING:
-# 
-# this test passes, and validates the proper behavior of
-# cmd2.pseudo_raw_input() when use_rawinput = True
-#
-# However, there is only one way to patch/mock/hack input()
-# or raw_input() for testing: that is to change the
-# sys.stdin file descriptor. This results in unpredictable
-# failures when 'pytest -n8' parallelizes tests.
-#
-# @pytest.mark.parametrize('rawinput', [True, False])
-# def test_piped_input_echo_true_stdin_hack(capsys, rawinput):
-#     command = 'set'
-#
-#     # hack up stdin
-#     fakein = io.StringIO(command)
-#     realin = sys.stdin
-#     sys.stdin = fakein
-#
-#     # run the cmdloop, which should pull input from stdin
-#     app = cmd2.Cmd()
-#     app.use_rawinput = rawinput
-#     app.echo = True
-#     app.abbrev = False
-#     app._cmdloop()
-#     out, err = capsys.readouterr()
-#
-#     # put stdin back
-#     sys.stdin = realin
-#
-#     out = out.splitlines()
-#     assert out[0] == '{}{}'.format(app.prompt, command)
-#     assert out[1] == 'abbrev: False'
-
+# other input tests
 def test_raw_input(base_app):
     base_app.use_raw_input = True
     fake_input = 'quit'
