@@ -7,6 +7,7 @@ Released under MIT license, see LICENSE file
 """
 import os
 import sys
+import io
 import tempfile
 
 import mock
@@ -849,6 +850,7 @@ def test_cmdloop_without_rawinput():
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = cmd2.Cmd()
     app.use_rawinput = False
+    app.echo = False
     app.intro = 'Hello World, this is an intro ...'
     app.stdout = StdOut()
 
@@ -858,7 +860,7 @@ def test_cmdloop_without_rawinput():
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
-    expected = app.intro + '\n{}'.format(app.prompt)
+    expected = app.intro + '\n'
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop
         app.cmdloop()
@@ -1388,7 +1390,54 @@ def test_echo(capsys):
     assert app._current_script_dir is None
     assert out.startswith('{}{}\n'.format(app.prompt, command) + 'history [arg]: lists past commands issued')
 
+#@pytest.mark.parametrize('rawinput', [True, False])
+def test_piped_input_echo_false(capsys):
+    command = 'set'
 
+    # hack up stdin
+    fakein = io.StringIO(command)
+    #realin = sys.stdin
+    #sys.stdin = fakein
+
+    # run the cmdloop, which should pull input from stdin
+    app = cmd2.Cmd(stdin=fakein)
+    app.use_rawinput = False
+    app.echo = False
+    app.abbrev = False
+    app._cmdloop()
+    out, err = capsys.readouterr()
+
+    # put stdin back
+    #sys.stdin = realin
+
+    firstline = out.splitlines()[0]
+    assert firstline == 'abbrev: False'
+    assert not '{}{}'.format(app.prompt, command) in out
+
+#@pytest.mark.parametrize('rawinput', [True, False])
+def test_piped_input_echo_true(capsys):
+    command = 'set'
+
+    # hack up stdin
+    fakein = io.StringIO(command)
+    # realin = sys.stdin
+    # sys.stdin = fakein
+
+    # run the cmdloop, which should pull input from stdin
+    app = cmd2.Cmd(stdin=fakein)
+    app.use_rawinput = False
+    app.echo = True
+    app.abbrev = False
+    app._cmdloop()
+    out, err = capsys.readouterr()
+
+    # put stdin back
+    # sys.stdin = realin
+
+    out = out.splitlines()
+    assert out[0] == '{}{}'.format(app.prompt, command)
+    assert out[1] == 'abbrev: False'
+        
 def test_raw_input(base_app):
     base_app.use_raw_input = True
     fake_input = 'quit'
