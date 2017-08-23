@@ -1390,14 +1390,11 @@ def test_echo(capsys):
     assert app._current_script_dir is None
     assert out.startswith('{}{}\n'.format(app.prompt, command) + 'history [arg]: lists past commands issued')
 
-#@pytest.mark.parametrize('rawinput', [True, False])
-def test_piped_input_echo_false(capsys):
+def test_piped_input_echo_false_rawinput_false(capsys):
     command = 'set'
 
-    # hack up stdin
+    # mock up the input
     fakein = io.StringIO(command)
-    #realin = sys.stdin
-    #sys.stdin = fakein
 
     # run the cmdloop, which should pull input from stdin
     app = cmd2.Cmd(stdin=fakein)
@@ -1407,21 +1404,50 @@ def test_piped_input_echo_false(capsys):
     app._cmdloop()
     out, err = capsys.readouterr()
 
-    # put stdin back
-    #sys.stdin = realin
-
     firstline = out.splitlines()[0]
     assert firstline == 'abbrev: False'
     assert not '{}{}'.format(app.prompt, command) in out
 
-#@pytest.mark.parametrize('rawinput', [True, False])
-def test_piped_input_echo_true(capsys):
+#
+# WARNING:
+# 
+# this test passes, and validates the proper behavior of
+# cmd2.pseudo_raw_input() when use_rawinput = True
+#
+# However, there is only one way to patch/mock/hack input()
+# or raw_input() for testing: that is to change the
+# sys.stdin file descriptor. This results in unpredictable
+# failures when 'pytest -n8' parallelizes tests.
+#
+# @pytest.mark.parametrize('rawinput', [True, False])
+# def test_piped_input_echo_false_stdin_hack(capsys, rawinput):
+#     command = 'set'
+#
+#     # hack up stdin
+#     fakein = io.StringIO(command)
+#     realin = sys.stdin
+#     sys.stdin = fakein
+#
+#     # run the cmdloop, which should pull input from stdin
+#     app = cmd2.Cmd(stdin=fakein)
+#     app.use_rawinput = rawinput
+#     app.echo = False
+#     app.abbrev = False
+#     app._cmdloop()
+#     out, err = capsys.readouterr()
+#
+#     # put stdin back
+#     sys.stdin = realin
+#
+#     firstline = out.splitlines()[0]
+#     assert firstline == 'abbrev: False'
+#     assert not '{}{}'.format(app.prompt, command) in out
+
+def test_piped_input_echo_true_rawinput_false(capsys):
     command = 'set'
 
-    # hack up stdin
+    # mock up the input
     fakein = io.StringIO(command)
-    # realin = sys.stdin
-    # sys.stdin = fakein
 
     # run the cmdloop, which should pull input from stdin
     app = cmd2.Cmd(stdin=fakein)
@@ -1431,13 +1457,45 @@ def test_piped_input_echo_true(capsys):
     app._cmdloop()
     out, err = capsys.readouterr()
 
-    # put stdin back
-    # sys.stdin = realin
-
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
     assert out[1] == 'abbrev: False'
-        
+
+#
+# WARNING:
+# 
+# this test passes, and validates the proper behavior of
+# cmd2.pseudo_raw_input() when use_rawinput = True
+#
+# However, there is only one way to patch/mock/hack input()
+# or raw_input() for testing: that is to change the
+# sys.stdin file descriptor. This results in unpredictable
+# failures when 'pytest -n8' parallelizes tests.
+#
+# @pytest.mark.parametrize('rawinput', [True, False])
+# def test_piped_input_echo_true_stdin_hack(capsys, rawinput):
+#     command = 'set'
+#
+#     # hack up stdin
+#     fakein = io.StringIO(command)
+#     realin = sys.stdin
+#     sys.stdin = fakein
+#
+#     # run the cmdloop, which should pull input from stdin
+#     app = cmd2.Cmd()
+#     app.use_rawinput = rawinput
+#     app.echo = True
+#     app.abbrev = False
+#     app._cmdloop()
+#     out, err = capsys.readouterr()
+#
+#     # put stdin back
+#     sys.stdin = realin
+#
+#     out = out.splitlines()
+#     assert out[0] == '{}{}'.format(app.prompt, command)
+#     assert out[1] == 'abbrev: False'
+
 def test_raw_input(base_app):
     base_app.use_raw_input = True
     fake_input = 'quit'
