@@ -1017,13 +1017,12 @@ class Cmd(cmd.Cmd):
                 if self.cmdqueue:
                     # Run command out of cmdqueue if nonempty (populated by load command or commands at invocation)
                     line = self.cmdqueue.pop(0)
+
+                    if self.echo and line != 'eos':
+                        self.poutput('{}{}'.format(self.prompt, line))
                 else:
                     # Otherwise, read a command from stdin
                     line = self.pseudo_raw_input(self.prompt)
-
-                # If echo is on and in the middle of running a script, then echo the line to the output
-                if self.echo and self._current_script_dir is not None:
-                    self.poutput(line + '\n')
 
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)

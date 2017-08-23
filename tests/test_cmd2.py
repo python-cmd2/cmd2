@@ -1372,7 +1372,8 @@ def test_echo(capsys):
     app = cmd2.Cmd()
     # Turn echo on and pre-stage some commands in the queue, simulating like we are in the middle of a script
     app.echo = True
-    app.cmdqueue = ['help history', 'quit', 'eos']
+    command = 'help history'
+    app.cmdqueue = [command, 'quit', 'eos']
     app._script_dir.append('some_dir')
 
     assert app._current_script_dir is not None
@@ -1385,7 +1386,7 @@ def test_echo(capsys):
     # Check the output
     assert app.cmdqueue == []
     assert app._current_script_dir is None
-    assert out.startswith('help history\n' + 'history [arg]: lists past commands issued')
+    assert out.startswith('{}{}\n'.format(app.prompt, command) + 'history [arg]: lists past commands issued')
 
 
 def test_raw_input(base_app):
