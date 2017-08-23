@@ -998,6 +998,8 @@ class Cmd(cmd.Cmd):
                 self.poutput(safe_prompt, end='')
                 self.stdout.flush()
                 line = self.stdin.readline()
+                if len(line) == 0:
+                    line = 'eof'
             else:
                 # we are reading from a pipe, read the line to see if there is
                 # anything there, if so, then decide whether to print the
