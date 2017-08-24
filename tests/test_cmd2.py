@@ -1428,7 +1428,7 @@ def test_piped_input_rawinput_true_echo_false(capsys):
 # as stdin
 def piped_input_rawinput_false(capsys, echo, command):
     # mock up the input
-    fakein = io.StringIO(command)
+    fakein = io.StringIO(u'{}'.format(command))
 
     # run the cmdloop, which should pull input from stdin
     app = cmd2.Cmd(stdin=fakein)
