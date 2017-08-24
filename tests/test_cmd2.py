@@ -1436,11 +1436,11 @@ def test_pseudo_raw_input_tty_rawinput_false(capsys):
 #
 # the only way to make this testable is to mock the builtin input()
 # function
-def piped_input_rawinput_true(capsys, echo, command):
+def piped_rawinput_true(capsys, echo, command):
     m = mock.Mock(name='input', side_effect=[command, 'quit'])
     sm.input = m
 
-    # run the cmdloop, which should pull input from our mocked input_list
+    # run the cmdloop, which should pull input from our mocked input
     app = cmd2.Cmd()
     app.use_rawinput = True
     app.echo = echo
@@ -1449,16 +1449,16 @@ def piped_input_rawinput_true(capsys, echo, command):
     out, err = capsys.readouterr()
     return (app, out)
 
-def test_piped_input_rawinput_true_echo_true(capsys):
+def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     command = 'set'
-    app, out = piped_input_rawinput_true(capsys, True, command)
+    app, out = piped_rawinput_true(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
     assert out[1] == 'abbrev: False'
 
-def test_piped_input_rawinput_true_echo_false(capsys):
+def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
-    app, out = piped_input_rawinput_true(capsys, False, command)
+    app, out = piped_rawinput_true(capsys, False, command)
     firstline = out.splitlines()[0]
     assert firstline == 'abbrev: False'
     assert not '{}{}'.format(app.prompt, command) in out
@@ -1468,11 +1468,11 @@ def test_piped_input_rawinput_true_echo_false(capsys):
 #
 # the only way to make this testable is to pass a file handle
 # as stdin
-def piped_input_rawinput_false(capsys, echo, command):
+def piped_rawinput_false(capsys, echo, command):
     # mock up the input
     fakein = io.StringIO(u'{}'.format(command))
 
-    # run the cmdloop, which should pull input from stdin
+    # run the cmdloop, telling it where to get input from
     app = cmd2.Cmd(stdin=fakein)
     app.use_rawinput = False
     app.echo = echo
@@ -1481,16 +1481,16 @@ def piped_input_rawinput_false(capsys, echo, command):
     out, err = capsys.readouterr()
     return (app, out)
 
-def test_piped_input_rawinput_false_echo_true(capsys):
+def test_pseudo_raw_input_piped_rawinput_false_echo_true(capsys):
     command = 'set'
-    app, out = piped_input_rawinput_false(capsys, True, command)
+    app, out = piped_rawinput_false(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
     assert out[1] == 'abbrev: False'
 
-def test_piped_input_rawinput_false_echo_false(capsys):
+def test_pseudo_raw_input_piped_rawinput_false_echo_false(capsys):
     command = 'set'
-    app, out = piped_input_rawinput_false(capsys, False, command)
+    app, out = piped_rawinput_false(capsys, False, command)
     firstline = out.splitlines()[0]
     assert firstline == 'abbrev: False'
     assert not '{}{}'.format(app.prompt, command) in out
