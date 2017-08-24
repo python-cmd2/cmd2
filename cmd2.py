@@ -717,8 +717,9 @@ class Cmd(cmd.Cmd):
         """
         if not sys.platform.startswith('win'):
             # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
-            proc = subprocess.Popen(shlex.split('stty sane'))
-            proc.communicate()
+            if self.stdin.isatty():
+                proc = subprocess.Popen(shlex.split('stty sane'))
+                proc.communicate()
         return stop
 
     def parseline(self, line):
@@ -969,25 +970,46 @@ class Cmd(cmd.Cmd):
         return result
 
     def pseudo_raw_input(self, prompt):
-        """copied from cmd's cmdloop; like raw_input, but accounts for changed stdin, stdout"""
+        """
+        began life as a copy of cmd's cmdloop; like raw_input but
+
+        - accounts for changed stdin, stdout
+        - if input is a pipe (instead of a tty), look at self.echo
+          to decide whether to print the prompt and the input
+        """
 
         # Deal with the vagaries of readline and ANSI escape codes
         safe_prompt = self._surround_ansi_escapes(prompt)
 
         if self.use_rawinput:
             try:
-                line = sm.input(safe_prompt)
+                if sys.stdin.isatty():
+                    line = sm.input(safe_prompt)
+                else:
+                    line = sm.input()
+                    if self.echo:
+                        sys.stdout.write('{}{}\n'.format(safe_prompt,line))
             except EOFError:
                 line = 'eof'
         else:
-            self.poutput(safe_prompt, end='')
-            self.stdout.flush()
-            line = self.stdin.readline()
-            if not len(line):
-                line = 'eof'
+            if self.stdin.isatty():
+                # on a tty, print the prompt first, then read the line
+                self.poutput(safe_prompt, end='')
+                self.stdout.flush()
+                line = self.stdin.readline()
+                if len(line) == 0:
+                    line = 'eof'
             else:
-                line = line.rstrip('\r\n')
-
+                # we are reading from a pipe, read the line to see if there is
+                # anything there, if so, then decide whether to print the
+                # prompt or not
+                line = self.stdin.readline()
+                if len(line):
+                    # we read something, output the prompt and the something
+                    if self.echo:
+                        self.poutput('{}{}'.format(safe_prompt, line))
+                else:
+                    line = 'eof'
         return line.strip()
 
     def _cmdloop(self):
