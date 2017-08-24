@@ -1389,6 +1389,48 @@ def test_echo(capsys):
     assert app._current_script_dir is None
     assert out.startswith('{}{}\n'.format(app.prompt, command) + 'history [arg]: lists past commands issued')
 
+def test_pseudo_raw_input_tty_rawinput_true(capsys):
+    minput = mock.MagicMock(name='input', side_effect=['set', 'quit'])
+    sm.input = minput
+    mtty = mock.MagicMock(name='isatty', return_value=True)
+    sys.stdin.isatty = mtty
+
+    # run the cmdloop, which should pull input from the mocked input
+    app = cmd2.Cmd()
+    app.use_rawinput = True
+    app.abbrev = False
+    app._cmdloop()
+    out, err = capsys.readouterr()
+    
+    # because we mocked the input() call, we won't see the prompt
+    # or the name of the command in the output, so we can't check
+    # if its there. We assume that if input got called twice, once
+    # for the 'set' command, and once for the 'quit' command,
+    # that the rest of it worked
+    assert minput.call_count == 2
+
+def test_pseudo_raw_input_tty_rawinput_false(capsys):
+    # mock up the input
+    fakein = io.StringIO(u'{}'.format('set\nquit\n'))
+    mtty = mock.MagicMock(name='isatty', return_value=True)
+    fakein.isatty = mtty
+    mreadline = mock.MagicMock(name='readline', wraps=fakein.readline)
+    fakein.readline = mreadline
+
+    # run the cmdloop, telling it where to get input from
+    app = cmd2.Cmd(stdin=fakein)
+    app.use_rawinput = False
+    app.abbrev = False
+    app._cmdloop()
+    out, err = capsys.readouterr()
+    
+    # because we mocked the readline() call, we won't see the prompt
+    # or the name of the command in the output, so we can't check
+    # if its there. We assume that if readline() got called twice, once
+    # for the 'set' command, and once for the 'quit' command,
+    # that the rest of it worked
+    assert mreadline.call_count == 2
+
 # the next helper function and two tests check for piped
 # input when use_rawinput is True.
 #
