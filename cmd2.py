@@ -972,7 +972,7 @@ class Cmd(cmd.Cmd):
     def pseudo_raw_input(self, prompt):
         """
         began life as a copy of cmd's cmdloop; like raw_input but
-        
+
         - accounts for changed stdin, stdout
         - if input is a pipe (instead of a tty), look at self.echo
           to decide whether to print the prompt and the input
@@ -984,8 +984,7 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
-                    sys.stdout.write(safe_prompt)
-                    line = sm.input()
+                    line = sm.input(safe_prompt)
                 else:
                     line = sm.input()
                     if self.echo:
