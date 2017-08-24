@@ -1390,37 +1390,37 @@ def test_echo(capsys):
     assert out.startswith('{}{}\n'.format(app.prompt, command) + 'history [arg]: lists past commands issued')
 
 def test_pseudo_raw_input_tty_rawinput_true():
-    minput = mock.MagicMock(name='input', side_effect=['set', 'quit'])
-    sm.input = minput
-    mtty = mock.MagicMock(name='isatty', return_value=True)
-    sys.stdin.isatty = mtty
-
-    # run the cmdloop, which should pull input from the mocked input
-    app = cmd2.Cmd()
-    app.use_rawinput = True
-    app._cmdloop()
+    # use context managers so original functions get put back when we are done
+    # we dont use decorators because we need m_input for the assertion
+    with mock.patch('sys.stdin.isatty',
+                mock.MagicMock(name='isatty', return_value=True)):
+        with mock.patch('six.moves.input',
+                    mock.MagicMock(name='input', side_effect=['set', 'quit'])) as m_input:
+            # run the cmdloop, which should pull input from our mocks
+            app = cmd2.Cmd()
+            app.use_rawinput = True
+            app._cmdloop()
+            # because we mocked the input() call, we won't get the prompt
+            # or the name of the command in the output, so we can't check
+            # if its there. We assume that if input got called twice, once
+            # for the 'set' command, and once for the 'quit' command,
+            # that the rest of it worked
+            assert m_input.call_count == 2
     
-    # because we mocked the input() call, we won't see the prompt
-    # or the name of the command in the output, so we can't check
-    # if its there. We assume that if input got called twice, once
-    # for the 'set' command, and once for the 'quit' command,
-    # that the rest of it worked
-    assert minput.call_count == 2
-
 def test_pseudo_raw_input_tty_rawinput_false():
-    # mock up the input
+    # gin up some input like it's coming from a tty
     fakein = io.StringIO(u'{}'.format('set\nquit\n'))
     mtty = mock.MagicMock(name='isatty', return_value=True)
     fakein.isatty = mtty
     mreadline = mock.MagicMock(name='readline', wraps=fakein.readline)
     fakein.readline = mreadline
-
+    
     # run the cmdloop, telling it where to get input from
     app = cmd2.Cmd(stdin=fakein)
     app.use_rawinput = False
     app._cmdloop()
     
-    # because we mocked the readline() call, we won't see the prompt
+    # because we mocked the readline() call, we won't get the prompt
     # or the name of the command in the output, so we can't check
     # if its there. We assume that if readline() got called twice, once
     # for the 'set' command, and once for the 'quit' command,
@@ -1429,22 +1429,18 @@ def test_pseudo_raw_input_tty_rawinput_false():
 
 # the next helper function and two tests check for piped
 # input when use_rawinput is True.
-#
-# the only way to make this testable is to mock the builtin input()
-# function
 def piped_rawinput_true(capsys, echo, command):
-    m = mock.Mock(name='input', side_effect=[command, 'quit'])
-    sm.input = m
-
-    # run the cmdloop, which should pull input from our mocked input
     app = cmd2.Cmd()
     app.use_rawinput = True
     app.echo = echo
-    app.abbrev = False
+    # run the cmdloop, which should pull input from our mock
     app._cmdloop()
     out, err = capsys.readouterr()
     return (app, out)
 
+# using the decorator puts the original function at six.moves.input
+# back when this method returns
+@mock.patch('six.moves.input', mock.MagicMock(name='input', side_effect=['set', 'quit']))
 def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, True, command)
@@ -1452,6 +1448,9 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     assert out[0] == '{}{}'.format(app.prompt, command)
     assert out[1] == 'abbrev: False'
 
+# using the decorator puts the original function at six.moves.input
+# back when this method returns
+@mock.patch('six.moves.input', mock.MagicMock(name='input', side_effect=['set', 'quit']))
 def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
@@ -1460,14 +1459,9 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     assert not '{}{}'.format(app.prompt, command) in out
 
 # the next helper function and two tests check for piped
-# input when use_rawinput is False
-#
-# the only way to make this testable is to pass a file handle
-# as stdin
+# input when use_rawinput=False
 def piped_rawinput_false(capsys, echo, command):
-    # mock up the input
     fakein = io.StringIO(u'{}'.format(command))
-
     # run the cmdloop, telling it where to get input from
     app = cmd2.Cmd(stdin=fakein)
     app.use_rawinput = False
