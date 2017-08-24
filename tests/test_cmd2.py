@@ -1393,9 +1393,9 @@ def test_pseudo_raw_input_tty_rawinput_true():
     # use context managers so original functions get put back when we are done
     # we dont use decorators because we need m_input for the assertion
     with mock.patch('sys.stdin.isatty',
-                mock.MagicMock(name='isatty', return_value=True)):
+            mock.MagicMock(name='isatty', return_value=True)):
         with mock.patch('six.moves.input',
-                    mock.MagicMock(name='input', side_effect=['set', 'quit'])) as m_input:
+                mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
             # run the cmdloop, which should pull input from our mocks
             app = cmd2.Cmd()
             app.use_rawinput = True
@@ -1409,7 +1409,7 @@ def test_pseudo_raw_input_tty_rawinput_true():
     
 def test_pseudo_raw_input_tty_rawinput_false():
     # gin up some input like it's coming from a tty
-    fakein = io.StringIO(u'{}'.format('set\nquit\n'))
+    fakein = io.StringIO(u'{}'.format('set\n'))
     mtty = mock.MagicMock(name='isatty', return_value=True)
     fakein.isatty = mtty
     mreadline = mock.MagicMock(name='readline', wraps=fakein.readline)
@@ -1440,7 +1440,8 @@ def piped_rawinput_true(capsys, echo, command):
 
 # using the decorator puts the original function at six.moves.input
 # back when this method returns
-@mock.patch('six.moves.input', mock.MagicMock(name='input', side_effect=['set', 'quit']))
+@mock.patch('six.moves.input',
+        mock.MagicMock(name='input', side_effect=['set', EOFError]))
 def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, True, command)
@@ -1450,7 +1451,8 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
 
 # using the decorator puts the original function at six.moves.input
 # back when this method returns
-@mock.patch('six.moves.input', mock.MagicMock(name='input', side_effect=['set', 'quit']))
+@mock.patch('six.moves.input',
+        mock.MagicMock(name='input', side_effect=['set', EOFError]))
 def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
