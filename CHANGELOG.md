@@ -1,15 +1,17 @@
-## 0.7.7 (TBD)
+## 0.7.7 (August 25, 2017)
 
 * Bug Fixes
     * Added workaround for bug which occurs in Python 2.7 on Linux when ``pygtk`` is installed
     * ``pfeedback()`` now honors feedback_to_output setting and won't redirect when it is ``False``
     * For ``edit`` command, both **editor** and **filename** can now have spaces in the name/path
+    * Fixed a bug which occurred when stdin was a pipe instead of a tty due to input redirection
 * Enhancements
     * ``feedback_to_output`` now defaults to ``False`` so info like command timing won't redirect
     * Transcript regular expressions now have predictable, tested, and documented behavior
         * This makes a breaking change to the format and expectations of transcript testing
         * The prior behavior removed whitespace before making the comparison, now whitespace must match exactly
         * Prior version did not allow regexes with whitespace, new version allows any regex
+    * Improved display for ``load`` command and input redirection when **echo** is ``True``
     
 ## 0.7.6 (August 11, 2017)
 
