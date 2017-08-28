@@ -82,47 +82,39 @@ to *use* ``arg.parsed``.)
 Environment parameters
 ======================
 
-Your application can define user-settable parameters
-which your code can reference.  Create them as class attributes
-with their default values, and add them (with optional
-documentation) to ``settable``.
+Your application can define user-settable parameters which your code can
+reference. First create a class attribute with the default value. Then
+update the ``settable`` dictionary with your setting name and a short
+description before you initialize the superclass. Here's an example, from
+``examples/environment.py``:
 
-::
+.. literalinclude:: ../examples/environment.py
 
-    from cmd2 import Cmd
-    class App(Cmd):
-        degrees_c = 22
-        sunny = False
-        settable = Cmd.settable + '''degrees_c temperature in Celsius
-            sunny'''
-        def do_sunbathe(self, arg):
-            if self.degrees_c < 20:
-                result = "It's {temp} C - are you a penguin?".format(temp=self.degrees_c)
-            elif not self.sunny:
-                result = 'Too dim.'
-            else:
-                result = 'UV is bad for your skin.'
-            self.stdout.write(result + '\n')
-    app = App()
-    app.cmdloop()
+If you want to be notified when a setting changes (as we do above), then
+define a method ``_onchange_{setting}()``. This method will be called after
+the user changes a setting, and will receive both the old value and the new
+value.
 
-::
+.. code-block:: none
 
-    (Cmd) set --long
-    degrees_c: 22                  # temperature in Celsius
-    sunny: False                   #
-    (Cmd) sunbathe
-    Too dim.
-    (Cmd) set sunny yes
-    sunny - was: False
-    now: True
-    (Cmd) sunbathe
-    UV is bad for your skin.
-    (Cmd) set degrees_c 13
-    degrees_c - was: 22
-    now: 13
-    (Cmd) sunbathe
-    It's 13 C - are you a penguin?
+   (Cmd) set --long | grep sunny
+   sunny: False                # Is it sunny outside?
+   (Cmd) set --long | grep degrees
+   degrees_c: 22               # Temperature in Celsius
+   (Cmd) sunbathe
+   Too dim.
+   (Cmd) set degrees_c 41
+   degrees_c - was: 22
+   now: 41
+   (Cmd) set sunny
+   sunny: True
+   (Cmd) sunbathe
+   UV is bad for your skin.
+   (Cmd) set degrees_c 13
+   degrees_c - was: 41
+   now: 13
+   (Cmd) sunbathe
+   It's 13 C - are you a penguin?
 
 
 Commands with flags
