@@ -1406,7 +1406,7 @@ def test_pseudo_raw_input_tty_rawinput_true():
             # for the 'set' command, and once for the 'quit' command,
             # that the rest of it worked
             assert m_input.call_count == 2
-    
+
 def test_pseudo_raw_input_tty_rawinput_false():
     # gin up some input like it's coming from a tty
     fakein = io.StringIO(u'{}'.format('set\n'))
@@ -1414,12 +1414,12 @@ def test_pseudo_raw_input_tty_rawinput_false():
     fakein.isatty = mtty
     mreadline = mock.MagicMock(name='readline', wraps=fakein.readline)
     fakein.readline = mreadline
-    
+
     # run the cmdloop, telling it where to get input from
     app = cmd2.Cmd(stdin=fakein)
     app.use_rawinput = False
     app._cmdloop()
-    
+
     # because we mocked the readline() call, we won't get the prompt
     # or the name of the command in the output, so we can't check
     # if its there. We assume that if readline() got called twice, once
@@ -1523,3 +1523,32 @@ def test_empty_stdin_input():
 
     line = app.pseudo_raw_input('(cmd2)')
     assert line == 'eof'
+
+
+def test_poutput_string(base_app):
+    msg = 'This is a test'
+    base_app.poutput(msg)
+    out = base_app.stdout.buffer
+    expected = msg + '\n'
+    assert out == expected
+
+def test_poutput_zero(base_app):
+    msg = 0
+    base_app.poutput(msg)
+    out = base_app.stdout.buffer
+    expected = str(msg) + '\n'
+    assert out == expected
+
+def test_poutput_empty_string(base_app):
+    msg = ''
+    base_app.poutput(msg)
+    out = base_app.stdout.buffer
+    expected = msg
+    assert out == expected
+
+def test_poutput_none(base_app):
+    msg = None
+    base_app.poutput(msg)
+    out = base_app.stdout.buffer
+    expected = ''
+    assert out == expected

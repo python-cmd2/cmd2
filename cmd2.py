@@ -585,7 +585,7 @@ class Cmd(cmd.Cmd):
         :param msg: str - message to print to current stdout - anyting convertible to a str with '{}'.format() is OK
         :param end: str - string appended after the end of the message if not already present, default a newline
         """
-        if msg:
+        if msg is not None and msg != '':
             try:
                 msg_str = '{}'.format(msg)
                 self.stdout.write(msg_str)
