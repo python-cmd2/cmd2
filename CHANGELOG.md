@@ -1,3 +1,11 @@
+## 0.7.8 (TBD, 2017)
+
+* Bug Fixes
+    * Fixed ``poutput()`` so it can print an integer zero and other **falsy** things
+* Enhancements
+    * Improved documentation for user-settable environment parameters
+    * Improved documentation for overriding the default supported comment styles
+
 ## 0.7.7 (August 25, 2017)
 
 * Bug Fixes
@@ -12,7 +20,7 @@
         * The prior behavior removed whitespace before making the comparison, now whitespace must match exactly
         * Prior version did not allow regexes with whitespace, new version allows any regex
     * Improved display for ``load`` command and input redirection when **echo** is ``True``
-    
+
 ## 0.7.6 (August 11, 2017)
 
 * Bug Fixes
