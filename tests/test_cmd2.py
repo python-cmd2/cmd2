@@ -401,6 +401,61 @@ def test_load_with_utf8_file(base_app, capsys, request):
     assert base_app._current_script_dir == sdir
 
 
+def test_load_nested_loads(base_app, request):
+    # Verify that loading a script with nested load commands works correctly,
+    # and loads the nested script commands in the correct order. The recursive
+    # loads don't happen all at once, but as the commands are interpreted. So,
+    # we will need to drain the cmdqueue and inspect the stdout to see if all
+    # steps were executed in the expected order.
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'nested.txt')
+    assert base_app.cmdqueue == []
+
+    # Load the top level script and then run the command queue until all
+    # commands have been exhausted.
+    initial_load = 'load ' + filename
+    run_cmd(base_app, initial_load)
+    while base_app.cmdqueue:
+        base_app.onecmd_plus_hooks(base_app.cmdqueue.pop(0))
+
+    # Check that the right commands were executed.
+    expected = """
+%s
+_relative_load precmds.txt
+set abbrev on
+set colors on
+help
+shortcuts
+_relative_load postcmds.txt
+set abbrev off
+set colors off""" % initial_load
+    assert run_cmd(base_app, 'history -s') == normalize(expected)
+
+
+def test_base_runcmds_plus_hooks(base_app, request):
+    # Make sure that runcmds_plus_hooks works as intended. I.E. to run multiple
+    # commands and process any commands added, by them, to the command queue.
+    test_dir = os.path.dirname(request.module.__file__)
+    prefilepath = os.path.join(test_dir, 'scripts', 'precmds.txt')
+    postfilepath = os.path.join(test_dir, 'scripts', 'postcmds.txt')
+    assert base_app.cmdqueue == []
+
+    base_app.runcmds_plus_hooks(['load ' + prefilepath,
+                                 'help',
+                                 'shortcuts',
+                                 'load ' + postfilepath])
+    expected = """
+load %s
+set abbrev on
+set colors on
+help
+shortcuts
+load %s
+set abbrev off
+set colors off""" % (prefilepath, postfilepath)
+    assert run_cmd(base_app, 'history -s') == normalize(expected)
+
+
 def test_base_relative_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')

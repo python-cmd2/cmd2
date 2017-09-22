@@ -789,6 +789,44 @@ class Cmd(cmd.Cmd):
         finally:
             return self.postparsing_postcmd(stop)
 
+    def runcmds_plus_hooks(self, cmds):
+        """Convenience method to run multiple commands by onecmd_plus_hooks.
+
+        This method adds the given cmds to the command queue and processes the
+        queue until completion or an error causes it to abort. Scripts that are
+        loaded will have their commands added to the queue. Scripts may even
+        load other scripts recursively. This means, however, that you should not
+        use this method if there is a running cmdloop or some other event-loop.
+        This method is only intended to be used in "one-off" scenarios.
+
+        NOTE: You may need this method even if you only have one command. If
+        that command is a load, then you will need this command to fully process
+        all the subsequent commands that are loaded from the script file. This
+        is an improvement over onecmd_plus_hooks, which expects to be used
+        inside of a command loop which does the processing of loaded commands.
+
+        Example: cmd_obj.runcmds_plus_hooks(['load myscript.txt'])
+
+        :param cmds: list - Command strings suitable for onecmd_plus_hooks.
+        :return: bool - True implies the entire application should exit.
+
+        """
+        stop = False
+        self.cmdqueue = list(cmds) + self.cmdqueue
+        try:
+            while self.cmdqueue and not stop:
+                stop = self.onecmd_plus_hooks(self.cmdqueue.pop(0))
+        finally:
+            # Clear out the command queue and script directory stack, just in
+            # case we hit an error and they were not completed.
+            self.cmdqueue = []
+            self._script_dir = []
+            # NOTE: placing this return here inside the finally block will
+            # swallow exceptions. This is consistent with what is done in
+            # onecmd_plus_hooks and _cmdloop, although it may not be
+            # necessary/desired here.
+            return stop
+
     def _complete_statement(self, line):
         """Keep accepting lines of input until the command is complete."""
         if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
@@ -1775,18 +1813,13 @@ Script should contain one command per line, just like command would be typed in 
             return
 
         try:
-            # Specify file encoding in Python 3, but Python 2 doesn't allow that argument to open()
-            if six.PY3:
-                # Add all commands in the script to the command queue
-                with open(expanded_path, encoding='utf-8') as target:
-                    self.cmdqueue.extend(target.read().splitlines())
-            else:
-                # Add all commands in the script to the command queue
-                with open(expanded_path) as target:
-                    self.cmdqueue.extend(target.read().splitlines())
-
-            # Append in an "end of script (eos)" command to cleanup the self._script_dir list
-            self.cmdqueue.append('eos')
+            # Read all lines of the script and insert into the head of the
+            # command queue. Add an "end of script (eos)" command to cleanup the
+            # self._script_dir list when done. Specify file encoding in Python
+            # 3, but Python 2 doesn't allow that argument to open().
+            kwargs = {'encoding' : 'utf-8'} if six.PY3 else {}
+            with open(expanded_path, **kwargs) as target:
+                self.cmdqueue = target.read().splitlines() + ['eos'] + self.cmdqueue
         except IOError as e:
             self.perror('Problem accessing script from {}:\n{}'.format(expanded_path, e))
             return
