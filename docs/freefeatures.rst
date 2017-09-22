@@ -36,7 +36,7 @@ before it is passed to a ``do_`` method.  By
 default, both Python-style and C-style comments
 are recognized; you may change this by overriding
 ``app.commentGrammars`` with a different pyparsing_
-grammar.
+grammar (see the arg_print_ example for specifically how to to this).
 
 Comments can be useful in :ref:`scripts`, but would
 be pointless within an interactive session.
@@ -52,6 +52,7 @@ be pointless within an interactive session.
   it was  delicious!
 
 .. _pyparsing: http://pyparsing.wikispaces.com/
+.. _arg_print: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
 
 Commands at invocation
 ======================
