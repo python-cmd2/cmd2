@@ -1,0 +1,2 @@
+set abbrev off
+set colors off

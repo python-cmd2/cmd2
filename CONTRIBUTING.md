@@ -192,7 +192,7 @@ Once you have cmd2 cloned, before you start any cmd2 application, you first need
 
 ```bash
 # Install cmd2 prerequisites
-pip install -U six pyparsing
+pip install -U six pyparsing pyperclip
 
 # Install prerequisites for running cmd2 unit tests
 pip install -U pytest mock
