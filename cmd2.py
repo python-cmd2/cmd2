@@ -1688,10 +1688,6 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
                 # Make sure the index is actually within the history
                 if 1 <= history_idx <= len(self.history):
                     history_item = self._last_matching(history_idx)
-                    if history_item is None:
-                        self.perror('index {!r} does not exist within the history'.format(orig_indx),
-                                    traceback_war=False)
-                        return
                 else:
                     self.perror('index {!r} does not exist within the history'.format(orig_indx), traceback_war=False)
                     return
