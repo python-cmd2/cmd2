@@ -1026,7 +1026,7 @@ class Cmd(cmd.Cmd):
                 else:
                     line = sm.input()
                     if self.echo:
-                        sys.stdout.write('{}{}\n'.format(safe_prompt,line))
+                        sys.stdout.write('{}{}\n'.format(safe_prompt, line))
             except EOFError:
                 line = 'eof'
         else:
@@ -1669,10 +1669,15 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         filename = None
         if arg and arg[0]:
             try:
-                history_item = self._last_matching(int(arg[0]))
+                history_idx = int(arg[0])
             except ValueError:
                 filename = arg[0]
                 history_item = ''
+            else:
+                history_item = self._last_matching(history_idx)
+                if history_item is None:
+                    self.perror('index {!r} does not exist within the history'.format(history_idx), traceback_war=False)
+                    return
         else:
             try:
                 history_item = self.history[-1]
@@ -1817,7 +1822,7 @@ Script should contain one command per line, just like command would be typed in 
             # command queue. Add an "end of script (eos)" command to cleanup the
             # self._script_dir list when done. Specify file encoding in Python
             # 3, but Python 2 doesn't allow that argument to open().
-            kwargs = {'encoding' : 'utf-8'} if six.PY3 else {}
+            kwargs = {'encoding': 'utf-8'} if six.PY3 else {}
             with open(expanded_path, **kwargs) as target:
                 self.cmdqueue = target.read().splitlines() + ['eos'] + self.cmdqueue
         except IOError as e:
@@ -2368,8 +2373,6 @@ class Cmd2TestCase(unittest.TestCase):
 
     def _transform_transcript_expected(self, s):
         """parse the string with slashed regexes into a valid regex"""
-        slash = '/'
-        backslash = '\\'
         regex = ''
         start = 0
 
@@ -2400,7 +2403,8 @@ class Cmd2TestCase(unittest.TestCase):
                     break
         return regex
 
-    def _escaped_find(self, regex, s, start, in_regex):
+    @staticmethod
+    def _escaped_find(regex, s, start, in_regex):
         """
         Find the next slash in {s} after {start} that is not preceded by a backslash.
 
@@ -2446,7 +2450,7 @@ class Cmd2TestCase(unittest.TestCase):
                 else:
                     # slash is not escaped, this is what we are looking for
                     break
-        return (regex, pos, start)
+        return regex, pos, start
 
     def tearDown(self):
         if self.cmdapp:
