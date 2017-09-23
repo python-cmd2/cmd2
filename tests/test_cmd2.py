@@ -812,22 +812,6 @@ def test_edit_file_with_spaces(base_app, request, monkeypatch):
     # We think we have an editor, so should expect a system call
     m.assert_called_once_with('"{}" "{}"'.format(base_app.editor, filename))
 
-def test_edit_number(base_app, monkeypatch):
-    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
-    base_app.editor = 'fooedit'
-
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
-
-    # Run help command just so we have a command in history
-    run_cmd(base_app, 'help')
-
-    run_cmd(base_app, 'edit 1')
-
-    # We have an editor, so should expect a system call
-    m.assert_called_once()
-
 def test_edit_blank(base_app, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
@@ -849,6 +833,70 @@ def test_edit_empty_history(base_app, capsys):
     out, err = capsys.readouterr()
     assert out == ''
     assert err == 'ERROR: edit must be called with argument if history is empty\n'
+
+def test_edit_valid_positive_number(base_app, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    # Run help command just so we have a command in history
+    run_cmd(base_app, 'help')
+
+    run_cmd(base_app, 'edit 1')
+
+    # We have an editor, so should expect a system call
+    m.assert_called_once()
+
+def test_edit_valid_negative_number(base_app, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    # Run help command just so we have a command in history
+    run_cmd(base_app, 'help')
+
+    run_cmd(base_app, 'edit "-1"')
+
+    # We have an editor, so should expect a system call
+    m.assert_called_once()
+
+def test_edit_invalid_positive_number(base_app, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    # Run help command just so we have a command in history
+    run_cmd(base_app, 'help')
+
+    run_cmd(base_app, 'edit 23')
+
+    # History index is invalid, so should expect a system call
+    m.assert_not_called()
+
+def test_edit_invalid_negative_number(base_app, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    # Run help command just so we have a command in history
+    run_cmd(base_app, 'help')
+
+    run_cmd(base_app, 'edit "-23"')
+
+    # History index is invalid, so should expect a system call
+    m.assert_not_called()
 
 
 def test_base_py_interactive(base_app):
