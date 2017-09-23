@@ -2,9 +2,11 @@
 
 * Bug Fixes
     * Fixed ``poutput()`` so it can print an integer zero and other **falsy** things
+    * Fixed a bug which was causing autodoc to fail for building docs on Readthedocs
 * Enhancements
     * Improved documentation for user-settable environment parameters
     * Improved documentation for overriding the default supported comment styles
+    * Added ``runcmds_plus_hooks()`` method to run multiple commands w/o a cmdloop
 
 ## 0.7.7 (August 25, 2017)
 
