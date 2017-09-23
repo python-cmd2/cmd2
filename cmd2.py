@@ -1669,15 +1669,33 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         filename = None
         if arg and arg[0]:
             try:
+                # Try to convert argument to an integer
                 history_idx = int(arg[0])
             except ValueError:
+                # Argument passed is not convertible to an integer, so treat it as a file path
                 filename = arg[0]
                 history_item = ''
             else:
-                history_item = self._last_matching(history_idx)
-                if history_item is None:
-                    self.perror('index {!r} does not exist within the history'.format(history_idx), traceback_war=False)
+                # Argument passed IS convertible to an integer, so treat it as a history index
+
+                # Save off original index for pringing
+                orig_indx = history_idx
+
+                # Convert negative index into equivalent positive one
+                if history_idx < 0:
+                    history_idx += len(self.history) + 1
+
+                # Make sure the index is actually within the history
+                if 1 <= history_idx <= len(self.history):
+                    history_item = self._last_matching(history_idx)
+                    if history_item is None:
+                        self.perror('index {!r} does not exist within the history'.format(orig_indx),
+                                    traceback_war=False)
+                        return
+                else:
+                    self.perror('index {!r} does not exist within the history'.format(orig_indx), traceback_war=False)
                     return
+
         else:
             try:
                 history_item = self.history[-1]
