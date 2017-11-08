@@ -24,7 +24,7 @@ from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT,
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.7.8a'
+    assert cmd2.__version__ == '0.7.8'
 
 
 def test_empty_statement(base_app):
