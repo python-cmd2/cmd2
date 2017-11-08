@@ -46,9 +46,13 @@ code like the following::
 
         # Do this within whatever event loop mechanism you wish to run a single command
         cmd_line_text = "help history"
-        app.onecmd_plus_hooks(cmd_line_text)
+        app.runcmds_plus_hooks([cmd_line_text])
 
         app.postloop()
+
+The **runcmds_plus_hooks()** method is a convenience method to run multiple commands via **onecmd_plus_hooks()**.  It
+properly deals with ``load`` commands which under the hood put commands in a FIFO queue as it reads them in from a
+script file.
 
 The **onecmd_plus_hooks()** method will do the following to execute a single ``cmd2`` command in a normal fashion:
 
@@ -69,5 +73,11 @@ several disadvantages, including:
 * Requires the developer to write more code
 * Does not support transcript testing
 * Does not allow commands at invocation via command-line arguments
+
+Here is a little more info on ``runcmds_plus_hooks``:
+
+.. automethod:: cmd2.Cmd.runcmds_plus_hooks
+
+
 
 

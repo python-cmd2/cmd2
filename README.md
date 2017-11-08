@@ -114,10 +114,9 @@ Tutorials
 
 A couple tutorials on using cmd2 exist:
 
-* A detailed PyCon 2010 talk by [Catherine Devlin](https://github.com/catherinedevlin), the original author
-    * http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html
-* A nice brief step-by-step tutorial
-    * https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
+* Florida PyCon 2017 talk: [slides](https://archive.org/details/pyvideo_541___pyohio-2011-interactive-command-line-interpreters-with-cmd-and-cmd2)
+* PyCon 2010 talk by Catherine Devlin, the original author: [video](http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html)
+* A nice brief step-by-step tutorial: [blog](https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html)
 
 
 Example Application
