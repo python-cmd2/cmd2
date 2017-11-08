@@ -48,8 +48,7 @@ Resources
 * `project bug tracker`_
 * Florida PyCon 2017: `slides <https://docs.google.com/presentation/d/1LRmpfBt3V-pYQfgQHdczf16F3hcXmhK83tl77R6IJtE>`_
 * PyOhio 2011: `video <https://archive.org/details/pyvideo_541___pyohio-2011-interactive-command-line-interpreters-with-cmd-and-cmd2>`_
-* PyCon 2010: `presentation <https://github.com/python-cmd2/cmd2/blob/master/docs/pycon2010/pycon2010.rst>`_,
-  `video <http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html>`_
+* PyCon 2010: `video <http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html>`_
 
 These docs will refer to ``App`` as your ``cmd2.Cmd``
 subclass, and ``app`` as an instance of ``App``.  Of
