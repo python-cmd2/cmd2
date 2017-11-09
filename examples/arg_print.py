@@ -6,6 +6,8 @@
 
 This is intended to serve as a live demonstration so that developers can experiment with and understand how command
 and argument parsing is intended to work.
+
+It also serves as an example of how to create command aliases (shortcuts).
 """
 import pyparsing
 import cmd2
@@ -19,8 +21,13 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         # Uncomment this line to disable Python-style comments but still allow C-style comments
         # self.commentGrammars = pyparsing.Or([pyparsing.cStyleComment])
 
-        # Make sure to call this super class __init__ after setting commentGrammars and not before
+        # Create command aliases which are shorter
+        self.shortcuts.update({'ap': 'aprint', 'op': 'oprint'})
+
+        # Make sure to call this super class __init__ *after* setting commentGrammars and/or updating shortcuts
         cmd2.Cmd.__init__(self)
+        # NOTE: It is critical that the super class __init__ method be called AFTER updating certain parameters which
+        # are not settable at runtime.  This includes the commentGrammars, shortcuts, multilineCommands, etc.
 
     def do_aprint(self, arg):
         """Print the argument string this basic command is called with."""
