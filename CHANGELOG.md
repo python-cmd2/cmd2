@@ -1,4 +1,4 @@
-## 0.7.8 (November TBD, 2017)
+## 0.7.8 (November 8, 2017)
 
 * Bug Fixes
     * Fixed ``poutput()`` so it can print an integer zero and other **falsy** things
