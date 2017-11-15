@@ -48,7 +48,8 @@ pip install -U cmd2
 
 cmd2 works with Python 2.7 and Python 3.3+ on Windows, macOS, and Linux. It is pure Python code with
 the only 3rd-party dependencies being on [six](https://pypi.python.org/pypi/six),
-[pyparsing](http://pyparsing.wikispaces.com), and [pyperclip](https://github.com/asweigart/pyperclip).
+[pyparsing](http://pyparsing.wikispaces.com), and [pyperclip](https://github.com/asweigart/pyperclip) 
+(on Windows, [pyreadline](https://pypi.python.org/pypi/pyreadline) is an additional dependency).
 
 For information on other installation options, see
 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2
