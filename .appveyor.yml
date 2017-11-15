@@ -1,5 +1,5 @@
 install:
-  - python -m pip install tox
+  - python -m pip install tox pyreadline
 
 build: off
 
