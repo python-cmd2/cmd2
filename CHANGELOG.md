@@ -5,7 +5,7 @@
 * Enhancements
     * Improved documentation for modifying shortcuts (command aliases)
     * Made ``pyreadline`` a dependency on Windows to ensure tab-completion works
-    
+
 ## 0.7.8 (November 8, 2017)
 
 * Bug Fixes
