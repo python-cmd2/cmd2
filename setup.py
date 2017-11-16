@@ -3,6 +3,7 @@
 """
 Setuptools setup file, used to install or test 'cmd2'
 """
+import sys
 from setuptools import setup
 
 VERSION = '0.7.9a'
@@ -61,6 +62,9 @@ Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
 INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'pyperclip', 'six']
+if sys.platform.startswith('win'):
+    INSTALL_REQUIRES += ['pyreadline']
+
 # unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
 TESTS_REQUIRE = ['mock', 'pytest']
 DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'six']
