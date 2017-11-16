@@ -107,6 +107,10 @@ the following Python packages are installed:
   * pyparsing
   * pyperclip
 
+On Windows, there is an additional dependency:
+
+  * pyreadline
+
 
 Upgrading cmd2
 --------------
