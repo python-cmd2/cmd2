@@ -1,3 +1,10 @@
+## 0.7.9 (TBD)
+
+* Bug Fixes
+    * Fixed a couple broken examples
+* Enhancements
+    * Improved documentation for modifying shortcuts (command aliases)
+    
 ## 0.7.8 (November 8, 2017)
 
 * Bug Fixes
