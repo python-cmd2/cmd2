@@ -105,7 +105,7 @@ if six.PY3:
 else:
     BROKEN_PIPE_ERROR = IOError
 
-__version__ = '0.7.8'
+__version__ = '0.7.9a'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
