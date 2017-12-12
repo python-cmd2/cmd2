@@ -19,11 +19,11 @@ Whether or not you set ``case_insensitive``, *please do not* define
 command method names with any uppercase letters.  ``cmd2`` expects all command methods
 to be lowercase.
 
-Shortcuts
-=========
+Shortcuts (command aliases)
+===========================
 
-Special-character shortcuts for common commands can make life more convenient for your
-users.  Shortcuts are used without a space separating them from their arguments,
+Command aliases for long command names such as special-character shortcuts for common commands can make life more
+convenient for your users.  Shortcuts are used without a space separating them from their arguments,
 like ``!ls``.  By default, the following shortcuts are defined:
 
   ``?``
@@ -42,7 +42,20 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
 {'shortcut': 'command_name'} (omit ``do_``)::
 
   class App(Cmd2):
-      Cmd2.shortcuts.update({'*': 'sneeze', '~': 'squirm'})
+      def __init__(self):
+        # Make sure you update the shortcuts attribute before calling the super class __init__
+        self.shortcuts.update({'*': 'sneeze', '~': 'squirm'})
+
+        # Make sure to call this super class __init__ after updating shortcuts
+        cmd2.Cmd.__init__(self)
+
+.. warning::
+
+  Command aliases needed to be created by updating the ``shortcuts`` dictionary attribute prior to calling the
+  ``cmd2.Cmd`` super class ``__init__()`` method.  Moreover, that super class init method needs to be called after
+  updating the ``shortcuts`` attribute  This warning applies in general to many other attributes which are not
+  settable at runtime such as ``commentGrammars``, ``multilineCommands``, etc.
+
 
 Default to shell
 ================

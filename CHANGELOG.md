@@ -1,8 +1,17 @@
-## 0.7.8 (TBD, 2017)
+## 0.7.9 (TBD)
+
+* Bug Fixes
+    * Fixed a couple broken examples
+* Enhancements
+    * Improved documentation for modifying shortcuts (command aliases)
+    * Made ``pyreadline`` a dependency on Windows to ensure tab-completion works
+
+## 0.7.8 (November 8, 2017)
 
 * Bug Fixes
     * Fixed ``poutput()`` so it can print an integer zero and other **falsy** things
     * Fixed a bug which was causing autodoc to fail for building docs on Readthedocs
+    * Fixed bug due to ``pyperclip`` dependency radically changing its project structure in latest version
 * Enhancements
     * Improved documentation for user-settable environment parameters
     * Improved documentation for overriding the default supported comment styles

@@ -46,6 +46,13 @@ from optparse import make_option
 import pyparsing
 import pyperclip
 
+# Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
+try:
+    from pyperclip.exceptions import PyperclipException
+except ImportError:
+    # noinspection PyUnresolvedReferences
+    from pyperclip import PyperclipException
+
 # On some systems, pyperclip will import gtk for its clipboard functionality.
 # The following code is a workaround for gtk interfering with printing from a background
 # thread while the CLI thread is blocking in raw_input() in Python 2 on Linux.
@@ -98,7 +105,7 @@ if six.PY3:
 else:
     BROKEN_PIPE_ERROR = IOError
 
-__version__ = '0.7.8a'
+__version__ = '0.7.9a'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -339,13 +346,17 @@ def options(option_list, arg_desc="arg"):
 # Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
 # noinspection PyUnresolvedReferences
 try:
-    if sys.platform.startswith('linux'):
+    # Get the version of the pyperclip module as a float
+    pyperclip_ver = float('.'.join(pyperclip.__version__.split('.')[:2]))
+
+    # The extraneous output bug in pyperclip on Linux using xclip was fixed in more recent versions of pyperclip
+    if sys.platform.startswith('linux') and pyperclip_ver < 1.6:
         # Avoid extraneous output to stderr from xclip when clipboard is empty at cost of overwriting clipboard contents
         pyperclip.copy('')
     else:
         # Try getting the contents of the clipboard
         _ = pyperclip.paste()
-except pyperclip.exceptions.PyperclipException:
+except PyperclipException:
     can_clip = False
 else:
     can_clip = True
@@ -597,7 +608,7 @@ class Cmd(cmd.Cmd):
         Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
         that process terminates before the cmd2 command is finished executing.
 
-        :param msg: str - message to print to current stdout - anyting convertible to a str with '{}'.format() is OK
+        :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
         :param end: str - string appended after the end of the message if not already present, default a newline
         """
         if msg is not None and msg != '':

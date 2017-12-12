@@ -48,7 +48,8 @@ pip install -U cmd2
 
 cmd2 works with Python 2.7 and Python 3.3+ on Windows, macOS, and Linux. It is pure Python code with
 the only 3rd-party dependencies being on [six](https://pypi.python.org/pypi/six),
-[pyparsing](http://pyparsing.wikispaces.com), and [pyperclip](https://github.com/asweigart/pyperclip).
+[pyparsing](http://pyparsing.wikispaces.com), and [pyperclip](https://github.com/asweigart/pyperclip) 
+(on Windows, [pyreadline](https://pypi.python.org/pypi/pyreadline) is an additional dependency).
 
 For information on other installation options, see
 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2
@@ -112,12 +113,11 @@ Instructions for implementing each feature follow.
 Tutorials
 ---------
 
-A couple tutorials on using cmd2 exist:
+A few tutorials on using cmd2 exist:
 
-* A detailed PyCon 2010 talk by [Catherine Devlin](https://github.com/catherinedevlin), the original author
-    * http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html
-* A nice brief step-by-step tutorial
-    * https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html
+* Florida PyCon 2017 talk: [slides](https://docs.google.com/presentation/d/1LRmpfBt3V-pYQfgQHdczf16F3hcXmhK83tl77R6IJtE)
+* PyCon 2010 talk by Catherine Devlin, the original author: [video](http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html)
+* A nice brief step-by-step tutorial: [blog](https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html)
 
 
 Example Application
@@ -173,91 +173,38 @@ if __name__ == '__main__':
 
 The following is a sample session running example.py.
 Thanks to Cmd2's built-in transcript testing capability, it also serves as a test
-suite for example.py when saved as *exampleSession.txt*.
+suite for example.py when saved as *transcript_regex.txt*.
 Running
 
 ```bash
-python example.py -t exampleSession.txt
+python example.py -t transcript_regex.txt
 ```
 will run all the commands in the transcript against `example.py`, verifying that the output produced
 matches the transcript.
 
-example/exampleSession.txt:
+example/transcript_regex.txt:
 
 ```text
-(Cmd) help
-
-Documented commands (type help <topic>):
-========================================
-_relative_load  edit  history  orate  pyscript  run   say  shell      show
-cmdenvironment  help  load     py     quit      save  set  shortcuts  speak
-
-(Cmd) help say
-Repeats what you tell me to.
-Usage: speak [options] arg
-
-Options:
-  -h, --help            show this help message and exit
-  -p, --piglatin        atinLay
-  -s, --shout           N00B EMULATION MODE
-  -r REPEAT, --repeat=REPEAT
-                        output [n] times
-
-(Cmd) say goodnight, Gracie
-goodnight, Gracie
-(Cmd) say -ps --repeat=5 goodnight, Gracie
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-(Cmd) set maxrepeats 5
-maxrepeats - was: 3
-now: 5
-(Cmd) say -ps --repeat=5 goodnight, Gracie
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-(Cmd) hi
--------------------------[1]
-help
--------------------------[2]
-help say
--------------------------[3]
-say goodnight, Gracie
--------------------------[4]
-say -ps --repeat=5 goodnight, Gracie
--------------------------[5]
-set maxrepeats 5
--------------------------[6]
-say -ps --repeat=5 goodnight, Gracie
-(Cmd) run 4
-say -ps --repeat=5 goodnight, Gracie
-
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-(Cmd) orate Four score and
-> seven releases ago
-> our BDFL
-> blah blah blah
-Four score and
-seven releases ago
-our BDFL
-blah blah blah
-(Cmd) & look, a shortcut!
-look, a shortcut!
-(Cmd) show color
+# Run this transcript with "python example.py -t transcript_regex.txt"
+# The regex for colors is because no color on Windows.
+# The regex for editor will match whatever program you use.
+# regexes on prompts just make the trailing space obvious
+(Cmd) set
+abbrev: True
+autorun_on_edit: False
 colors: /(True|False)/
-(Cmd) set prompt "---> "
-prompt - was: (Cmd)
-now: --->
----> say goodbye
-goodbye
+continuation_prompt: >/ /
+debug: False
+echo: False
+editor: /.*?/
+feedback_to_output: False
+locals_in_py: True
+maxrepeats: 3
+prompt: (Cmd)/ /
+quiet: False
+timing: False
 ```
 
-Note how a regular expression `/(True|False)/` is used near the end for output of the **show color** command since
+Note how a regular expression `/(True|False)/` is used for output of the **show color** command since
 colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
 transcript file simply by embedding them within two forward slashes, `/`.
