@@ -233,6 +233,21 @@ def strip_quotes(arg):
     return arg
 
 
+def with_argument_parser(argparser):
+    """A decorator to alter a cmd2 method to populate its ``opts``
+    argument by parsing arguments with the given instance of
+    argparse.ArgumentParser.
+    """
+    def arg_decorator(func):
+        def cmd_wrapper(instance, arg):
+            print("before command")
+            opts = argparser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
+            func(instance, arg, opts)
+            print("after command")
+        return cmd_wrapper
+    return arg_decorator
+
+
 def options(option_list, arg_desc="arg"):
     """Used as a decorator and passed a list of optparse-style options,
        alters a cmd2 method to populate its ``opts`` argument from its
