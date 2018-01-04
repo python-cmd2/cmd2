@@ -1,10 +1,12 @@
-## 0.7.9 (TBD)
+## 0.7.9 (January 4, 2018)
 
 * Bug Fixes
     * Fixed a couple broken examples
 * Enhancements
     * Improved documentation for modifying shortcuts (command aliases)
     * Made ``pyreadline`` a dependency on Windows to ensure tab-completion works
+* Other changes
+    * Abandoned official support for Python 3.3.  It should still work, just don't have an easy way to test it anymore.
 
 ## 0.7.8 (November 8, 2017)
 

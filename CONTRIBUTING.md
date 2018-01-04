@@ -44,10 +44,10 @@ The tables below list all prerequisites along with the minimum required version 
 
 | Prerequisite                                        | Minimum Version |
 | --------------------------------------------------- | --------------- |
-| [Python](https://www.python.org/downloads/)         | `3.3 or 2.7`    |
+| [Python](https://www.python.org/downloads/)         | `3.4 or 2.7`    |
 | [six](https://pypi.python.org/pypi/six)             | `1.8`           |
 | [pyparsing](http://pyparsing.wikispaces.com)        | `2.0.3`         |
-| [pyperclip](https://github.com/asweigart/pyperclip) | `1.5`           |
+| [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
 
 #### Additional prerequisites to run cmd2 unit tests
 

@@ -7,7 +7,7 @@ This section covers the basics of how to install, upgrade, and uninstall ``cmd2`
 
 Installing
 ----------
-First you need to make sure you have Python 2.7 or Python 3.3+, pip_, and setuptools_.  Then you can just use pip to
+First you need to make sure you have Python 2.7 or Python 3.4+, pip_, and setuptools_.  Then you can just use pip to
 install from PyPI_.
 
 .. _pip: https://pypi.python.org/pypi/pip
