@@ -1,4 +1,4 @@
-## 0.7.9 (TBD)
+## 0.7.9 (January 4, 2018)
 
 * Bug Fixes
     * Fixed a couple broken examples
