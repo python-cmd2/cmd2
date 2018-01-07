@@ -6,4 +6,5 @@ cmd2.egg-info
 .cache
 *.pyc
 .coverage
+.tox
 htmlcov
