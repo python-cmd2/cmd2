@@ -7,6 +7,7 @@ Released under MIT license, see LICENSE file
 """
 import os
 import sys
+import re
 import random
 
 import mock
@@ -309,21 +310,25 @@ def test_transcript(request, capsys, filename, feedback_to_output):
 
 
 @pytest.mark.parametrize('expected, transformed', [
-    ( 'text with no slashes', 'text\ with\ no\ slashes' ),
-    # stuff with just one slash
-    ( 'use 2/3 cup', 'use\ 2\/3\ cup' ),
-    ( '/tmp is nice', '\/tmp\ is\ nice'),
-    ( 'slash at end/', 'slash\ at\ end\/'),
+    # strings with zero or one slash or with escaped slashes means no regular
+    # expression present, so the result should just be what re.escape returns.
+    # we don't use static strings in these tests because re.escape behaves
+    # differently in python 3.7 than in prior versions
+    ( 'text with no slashes', re.escape('text with no slashes') ),
+    ( 'specials .*', re.escape('specials .*') ),
+    ( 'use 2/3 cup', re.escape('use 2/3 cup') ),
+    ( '/tmp is nice', re.escape('/tmp is nice') ),
+    ( 'slash at end/', re.escape('slash at end/') ),
+    # escaped slashes
+    ( 'not this slash\/ or this one\/', re.escape('not this slash/ or this one/' ) ),
     # regexes
-    ( 'specials .*', 'specials\ \.\*' ),
     ( '/.*/', '.*' ),
-    ( 'specials ^ and + /[0-9]+/', 'specials\ \^\ and\ \+\ [0-9]+' ),
-    ( '/a{6}/ but not \/a{6} with /.*?/ more', 'a{6}\ but\ not\ \/a\{6\}\ with\ .*?\ more' ),
-    ( 'not this slash\/ or this one\/', 'not\ this\ slash\\/\ or\ this\ one\\/' ),
-    ( 'not \/, use /\|?/, not \/', 'not\ \\/\,\ use\ \|?\,\ not\ \\/' ),
+    ( 'specials ^ and + /[0-9]+/', re.escape('specials ^ and + ') + '[0-9]+' ),
+    ( '/a{6}/ but not \/a{6} with /.*?/ more', 'a{6}' + re.escape(' but not /a{6} with ') + '.*?' + re.escape(' more') ),
+    ( 'not \/, use /\|?/, not \/', re.escape('not /, use ') + '\|?' + re.escape(', not /') ),
     # inception: slashes in our regex. backslashed on input, bare on output
-    ( 'not \/, use /\/?/, not \/', 'not\ \\/\,\ use\ /?\,\ not\ \\/' ),
-    ( 'the /\/?/ more /.*/ stuff', 'the\ /?\ more\ .*\ stuff' ),
+    ( 'not \/, use /\/?/, not \/', re.escape('not /, use ') + '/?' + re.escape(', not /') ),
+    ( 'lots /\/?/ more /.*/ stuff', re.escape('lots ') + '/?' + re.escape(' more ') + '.*' + re.escape(' stuff') ),
     ])
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
