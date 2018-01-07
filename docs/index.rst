@@ -73,7 +73,7 @@ Contents:
 Compatibility
 =============
 
-Tested and working with Python 2.7 and 3.3+.
+Tested and working with Python 2.7 and 3.4+.
 
 Indices and tables
 ==================
