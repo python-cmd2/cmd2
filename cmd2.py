@@ -249,7 +249,6 @@ def with_argument_parser(argparser):
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, arg):
-            print("before command")
             # Use shlex to split the command line into a list of arguments based on shell rules
             lexed_arglist = shlex.split(arg, posix=POSIX_SHLEX)
             # If not using POSIX shlex, make sure to strip off outer quotes for convenience
@@ -261,7 +260,6 @@ def with_argument_parser(argparser):
             opts = argparser.parse_args(lexed_arglist)
 
             func(instance, arg, opts)
-            print("after command")
         return cmd_wrapper
     return arg_decorator
 
