@@ -1,3 +1,7 @@
+## 0.8.0 (TBD, 2018)
+* Bug Fixes
+    * Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
+
 ## 0.7.9 (January 4, 2018)
 
 * Bug Fixes

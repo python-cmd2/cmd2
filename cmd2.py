@@ -106,7 +106,7 @@ if six.PY2 and sys.platform.startswith('lin'):
     except ImportError:
         pass
 
-__version__ = '0.7.9'
+__version__ = '0.8.0a'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -2399,18 +2399,18 @@ class Cmd2TestCase(unittest.TestCase):
 
     def _transform_transcript_expected(self, s):
         """parse the string with slashed regexes into a valid regex
-        
+
         Given a string like:
-        
+
             Match a 10 digit phone number: /\d{3}-\d{3}-\d{4}/
-        
+
         Turn it into a valid regular expression which matches the literal text
         of the string and the regular expression. We have to remove the slashes
         because they differentiate between plain text and a regular expression.
         Unless the slashes are escaped, in which case they are interpreted as
         plain text, or there is only one slash, which is treated as plain text
         also.
-        
+
         Check the tests in tests/test_transcript.py to see all the edge
         cases.
         """
