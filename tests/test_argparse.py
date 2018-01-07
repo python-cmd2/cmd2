@@ -37,6 +37,18 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
 
+    argparser = argparse.ArgumentParser(
+      prog='tag',
+      description='create an html tag, the first argument is the tag, the rest is the contents'
+    )
+    argparser.add_argument('tag', nargs=1, help='tag')
+    argparser.add_argument('content', nargs='+', help='content to surround with tag')
+    @cmd2.with_argument_parser(argparser)
+    def do_tag(self, cmdline, args=None):
+        self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
+        self.stdout.write('\n')
+
+
 @pytest.fixture
 def argparse_app():
     app = ArgparseApp()
@@ -53,8 +65,18 @@ def test_argparse_quoted_arguments(argparse_app):
     out = run_cmd(argparse_app, 'say "hello there"')
     assert out == ['hello there']
 
-def test_pargparse_quoted_arguments_too_many(argparse_app):
+def test_argparse_quoted_arguments_multiple(argparse_app):
     argparse_app.POSIX = False
     argparse_app.STRIP_QUOTES_FOR_NON_POSIX = True
-    out = run_cmd(argparse_app, 'say "hello there" morty')
-    assert out == ['hello there morty']
+    out = run_cmd(argparse_app, 'say "hello  there" "rick & morty"')
+    assert out == ['hello  there rick & morty']
+
+def test_argparse_quoted_arguments_posix(argparse_app):
+    argparse_app.POSIX = True
+    out = run_cmd(argparse_app, 'tag strong this should be loud')
+    assert out == ['<strong>this should be loud</strong>']
+
+def test_argparse_quoted_arguments_posix_multiple(argparse_app):
+    argparse_app.POSIX = True
+    out = run_cmd(argparse_app, 'tag strong this "should  be" loud')
+    assert out == ['<strong>this should  be loud</strong>']

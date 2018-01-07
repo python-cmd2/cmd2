@@ -59,6 +59,10 @@ class CmdLineApp(Cmd):
             # self.stdout.write is better than "print", because Cmd can be
             # initialized with a non-standard output destination
 
+    do_say = do_speak  # now "say" is a synonym for "speak"
+    do_orate = do_speak  # another synonym, but this one takes multi-line input
+
+
     argparser = argparse.ArgumentParser(
       prog='sspeak',
       description='Repeats what you tell me to'
@@ -83,8 +87,20 @@ class CmdLineApp(Cmd):
             self.stdout.write('\n')
             # self.stdout.write is better than "print", because Cmd can be
             # initialized with a non-standard output destination
-    do_say = do_speak  # now "say" is a synonym for "speak"
-    do_orate = do_speak  # another synonym, but this one takes multi-line input
+
+
+    argparser = argparse.ArgumentParser(
+      prog='tag',
+      description='create an html tag, the first argument is the tag, the rest is the contents'
+    )
+    argparser.add_argument('tag', nargs=1, help='tag')
+    argparser.add_argument('content', nargs='+', help='content to surround with tag')
+    @with_argument_parser(argparser)
+    def do_tag(self, cmdline, args=None):
+        self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
+        self.stdout.write('\n')
+        # self.stdout.write is better than "print", because Cmd can be
+        # initialized with a non-standard output destination
 
 
 if __name__ == '__main__':
