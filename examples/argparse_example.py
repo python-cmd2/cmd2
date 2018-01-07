@@ -45,14 +45,16 @@ class CmdLineApp(Cmd):
               ])
     def do_speak(self, arg, opts=None):
         """Repeats what you tell me to."""
-        arg = ''.join(arg)
-        if opts.piglatin:
-            arg = '%s%say' % (arg[1:], arg[0])
-        if opts.shout:
-            arg = arg.upper()
+        words = []
+        for word in arg:
+            if opts.piglatin:
+                word = '%s%say' % (word[1:], word[0])
+            if opts.shout:
+                arg = arg.upper()
+            words.append(word)
         repetitions = opts.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(arg)
+            self.stdout.write(' '.join(words))
             self.stdout.write('\n')
             # self.stdout.write is better than "print", because Cmd can be
             # initialized with a non-standard output destination
@@ -64,20 +66,20 @@ class CmdLineApp(Cmd):
     argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    argparser.add_argument('word', nargs='?', help='word to say')
+    argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
     def do_sspeak(self, rawarg, args=None):
         """Repeats what you tell me to."""
-        word = args.word
-        if word is None:
-            word = ''
-        if args.piglatin:
-            word = '%s%say' % (word[1:], word[0])
-        if args.shout:
-            word = word.upper()
+        words = []
+        for word in args.words:
+            if args.piglatin:
+                word = '%s%say' % (word[1:], word[0])
+            if args.shout:
+                word = word.upper()
+            words.append(word)
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(word)
+            self.stdout.write(' '.join(words))
             self.stdout.write('\n')
             # self.stdout.write is better than "print", because Cmd can be
             # initialized with a non-standard output destination

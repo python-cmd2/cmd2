@@ -31,6 +31,7 @@ import datetime
 import glob
 import io
 import optparse
+import argparse
 import os
 import platform
 import re
@@ -248,22 +249,19 @@ def with_argument_parser(argparser):
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, arg):
-            #print("before command")
+            print("before command")
             # Use shlex to split the command line into a list of arguments based on shell rules
-            opts = argparser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
-            #import ipdb; ipdb.set_trace()
-            
-
+            lexed_arglist = shlex.split(arg, posix=POSIX_SHLEX)
             # If not using POSIX shlex, make sure to strip off outer quotes for convenience
             if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
-                newopts = opts
-#                for key, val in vars(opts):
-#                    if isinstance(val, str):
-#                        newopts[key] = strip_quotes(val)
-                opts = newopts
-###            opts = argparser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
+                temp_arglist = []
+                for arg in lexed_arglist:
+                    temp_arglist.append(strip_quotes(arg))
+                lexed_arglist = temp_arglist
+            opts = argparser.parse_args(lexed_arglist)
+
             func(instance, arg, opts)
-            #print("after command")
+            print("after command")
         return cmd_wrapper
     return arg_decorator
 
