@@ -6,7 +6,7 @@ Setuptools setup file, used to install or test 'cmd2'
 import sys
 from setuptools import setup
 
-VERSION = '0.7.9'
+VERSION = '0.8.0a'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
@@ -55,6 +55,7 @@ Programming Language :: Python :: 3
 Programming Language :: Python :: 3.4
 Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
+Programming Language :: Python :: 3.7
 Programming Language :: Python :: Implementation :: CPython
 Programming Language :: Python :: Implementation :: PyPy
 Topic :: Software Development :: Libraries :: Python Modules
