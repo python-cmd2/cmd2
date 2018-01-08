@@ -65,7 +65,7 @@ Contents:
    settingchanges
    unfreefeatures
    transcript
-   argument_parsing
+   argument_processing
    integrating
    hooks
    alternatives
