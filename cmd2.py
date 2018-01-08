@@ -258,8 +258,16 @@ def with_argument_parser(argparser):
                     temp_arglist.append(strip_quotes(arg))
                 lexed_arglist = temp_arglist
             opts = argparser.parse_args(lexed_arglist)
-
             func(instance, arg, opts)
+
+        funcdoc = func.__doc__
+        if funcdoc:
+            funcdoc += '\n'
+        else:
+            # if it's None, make it an empty string
+            funcdoc = ''
+        
+        cmd_wrapper.__doc__ = '{}{}'.format(funcdoc, argparser.format_help())
         return cmd_wrapper
     return arg_decorator
 

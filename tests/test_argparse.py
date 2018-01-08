@@ -15,7 +15,6 @@ class ArgparseApp(cmd2.Cmd):
 
     argparser = argparse.ArgumentParser(
       prog='say',
-      description='Repeats what you tell me to'
     )
     argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
@@ -23,6 +22,7 @@ class ArgparseApp(cmd2.Cmd):
     argparser.add_argument('words', nargs='+', help='words to say')
     @cmd2.with_argument_parser(argparser)
     def do_say(self, cmdline, args=None):
+        """Repeat what you tell me to."""
         words = []
         for word in args.words:
             if word is None:
@@ -39,7 +39,7 @@ class ArgparseApp(cmd2.Cmd):
 
     argparser = argparse.ArgumentParser(
       prog='tag',
-      description='create an html tag, the first argument is the tag, the rest is the contents'
+      description='create a html tag'
     )
     argparser.add_argument('tag', nargs=1, help='tag')
     argparser.add_argument('content', nargs='+', help='content to surround with tag')
@@ -80,3 +80,11 @@ def test_argparse_quoted_arguments_posix_multiple(argparse_app):
     argparse_app.POSIX = True
     out = run_cmd(argparse_app, 'tag strong this "should  be" loud')
     assert out == ['<strong>this should  be loud</strong>']
+
+def test_argparse_help_docstring(argparse_app):
+    out = run_cmd(argparse_app, 'help say')
+    assert out[0] == 'Repeat what you tell me to.'
+
+def test_argparse_help_description(argparse_app):
+    out = run_cmd(argparse_app, 'help tag')
+    assert out[2] == 'create a html tag'
