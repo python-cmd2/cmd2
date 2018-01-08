@@ -260,13 +260,17 @@ def with_argument_parser(argparser):
             opts = argparser.parse_args(lexed_arglist)
             func(instance, arg, opts)
 
+        # argparser defaults the program name to sys.argv[0]
+        # we want it to be the name of our command
+        argparser.prog = func.__name__[3:]
+
+        # put the help message in the method docstring
         funcdoc = func.__doc__
         if funcdoc:
             funcdoc += '\n'
         else:
             # if it's None, make it an empty string
             funcdoc = ''
-        
         cmd_wrapper.__doc__ = '{}{}'.format(funcdoc, argparser.format_help())
         return cmd_wrapper
     return arg_decorator

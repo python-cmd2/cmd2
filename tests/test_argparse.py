@@ -13,9 +13,7 @@ class ArgparseApp(cmd2.Cmd):
         self.maxrepeats = 3
         cmd2.Cmd.__init__(self)
 
-    argparser = argparse.ArgumentParser(
-      prog='say',
-    )
+    argparser = argparse.ArgumentParser()
     argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
@@ -37,10 +35,7 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
 
-    argparser = argparse.ArgumentParser(
-      prog='tag',
-      description='create a html tag'
-    )
+    argparser = argparse.ArgumentParser(description='create a html tag')
     argparser.add_argument('tag', nargs=1, help='tag')
     argparser.add_argument('content', nargs='+', help='content to surround with tag')
     @cmd2.with_argument_parser(argparser)
@@ -88,3 +83,9 @@ def test_argparse_help_docstring(argparse_app):
 def test_argparse_help_description(argparse_app):
     out = run_cmd(argparse_app, 'help tag')
     assert out[2] == 'create a html tag'
+
+def test_argparse_prog(argparse_app):
+    out = run_cmd(argparse_app, 'help tag')
+    progname = out[0].split(' ')[1]
+    assert progname == 'tag'
+    
