@@ -12,8 +12,9 @@ the transcript.
 """
 
 import random
+import argparse
 
-from cmd2 import Cmd, make_option, options, set_use_arg_list
+from cmd2 import Cmd, with_argument_parser
 
 
 class CmdLineApp(Cmd):
@@ -37,41 +38,41 @@ class CmdLineApp(Cmd):
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         Cmd.__init__(self, use_ipython=False)
 
-        # For option commands, pass a single argument string instead of a list of argument strings to the do_* methods
-        set_use_arg_list(False)
-
-    opts = [make_option('-p', '--piglatin', action="store_true", help="atinLay"),
-            make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
-            make_option('-r', '--repeat', type="int", help="output [n] times")]
-
-    @options(opts, arg_desc='(text to say)')
-    def do_speak(self, arg, opts=None):
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    argparser.add_argument('words', nargs='+', help='words to say')
+    @with_argument_parser(argparser)
+    def do_speak(self, cmdline, opts=None):
         """Repeats what you tell me to."""
-        arg = ''.join(arg)
-        if opts.piglatin:
-            arg = '%s%say' % (arg[1:], arg[0])
-        if opts.shout:
-            arg = arg.upper()
-        repetitions = opts.repeat or 1
+        words = []
+        for word in args.words:
+            if args.piglatin:
+                word = '%s%say' % (word[1:], word[0])
+            if args.shout:
+                word = word.upper()
+            words.append(word)
+        repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
-            self.poutput(arg)
-            # recommend using the poutput function instead of
-            # self.stdout.write or "print", because Cmd allows the user
-            # to redirect output
+            # .poutput handles newlines, and accommodates output redirection too
+            self.poutput(' '.join(words))
 
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
-    @options([ make_option('-r', '--repeat', type="int", help="output [n] times") ])
-    def do_mumble(self, arg, opts=None):
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
+    argparser.add_argument('words', nargs='+', help='words to say')
+    @with_argument_parser(argparser)
+    def do_mumble(self, cmdline, args=None):
         """Mumbles what you tell me to."""
-        repetitions = opts.repeat or 1
-        arg = arg.split()
+        repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
             output = []
             if (random.random() < .33):
                 output.append(random.choice(self.MUMBLE_FIRST))
-            for word in arg:
+            for word in args.words:
                 if (random.random() < .40):
                     output.append(random.choice(self.MUMBLES))
                 output.append(word)
