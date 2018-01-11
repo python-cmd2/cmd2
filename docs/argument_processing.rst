@@ -2,7 +2,8 @@
 Argument Processing
 ===================
 
-``cmd2`` makes it easy to add sophisticated argument processing to your commands using the ``argparse`` python module. ``cmd2`` handles the following for you:
+``cmd2`` makes it easy to add sophisticated argument processing to your commands using the ``argparse`` python module.
+``cmd2`` handles the following for you:
 
 1. Parsing input and quoted strings like the Unix shell
 2. Parse the resulting argument list using an instance of ``argparse.ArgumentParser`` that you provide
@@ -80,7 +81,7 @@ The ``help tag`` command displays:
    optional arguments:
      -h, --help  show this help message and exit
 
-   
+
 If you would prefer the short description of your command to come after the usage message, leave the docstring on your method empty, but supply a ``description`` variable to the argument parser::
 
    argparser = argparse.ArgumentParser(description='create an html tag')
