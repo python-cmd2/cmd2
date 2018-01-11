@@ -41,13 +41,13 @@ class CmdLineApp(Cmd):
         # self.default_to_shell = True
 
 
-    argparser = argparse.ArgumentParser(prog='speak')
+    argparser = argparse.ArgumentParser()
     argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
-    def do_speak(self, argv, args=None):
+    def do_speak(self, cmdline, args=None):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -58,10 +58,7 @@ class CmdLineApp(Cmd):
             words.append(word)
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(' '.join(words))
-            self.stdout.write('\n')
-            # self.stdout.write is better than "print", because Cmd can be
-            # initialized with a non-standard output destination
+            self.poutput(' '.join(words))
 
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
