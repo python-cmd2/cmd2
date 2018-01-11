@@ -31,6 +31,7 @@ import datetime
 import glob
 import io
 import optparse
+import argparse
 import os
 import platform
 import re
@@ -239,6 +240,40 @@ def strip_quotes(arg):
     if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in quote_chars:
         arg = arg[1:-1]
     return arg
+
+
+def with_argument_parser(argparser):
+    """A decorator to alter a cmd2 method to populate its ``opts``
+    argument by parsing arguments with the given instance of
+    argparse.ArgumentParser.
+    """
+    def arg_decorator(func):
+        def cmd_wrapper(instance, arg):
+            # Use shlex to split the command line into a list of arguments based on shell rules
+            lexed_arglist = shlex.split(arg, posix=POSIX_SHLEX)
+            # If not using POSIX shlex, make sure to strip off outer quotes for convenience
+            if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
+                temp_arglist = []
+                for arg in lexed_arglist:
+                    temp_arglist.append(strip_quotes(arg))
+                lexed_arglist = temp_arglist
+            opts = argparser.parse_args(lexed_arglist)
+            func(instance, arg, opts)
+
+        # argparser defaults the program name to sys.argv[0]
+        # we want it to be the name of our command
+        argparser.prog = func.__name__[3:]
+
+        # put the help message in the method docstring
+        funcdoc = func.__doc__
+        if funcdoc:
+            funcdoc += '\n'
+        else:
+            # if it's None, make it an empty string
+            funcdoc = ''
+        cmd_wrapper.__doc__ = '{}{}'.format(funcdoc, argparser.format_help())
+        return cmd_wrapper
+    return arg_decorator
 
 
 def options(option_list, arg_desc="arg"):
