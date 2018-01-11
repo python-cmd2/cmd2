@@ -29,7 +29,7 @@ Main Features
 - Multi-line, case-insensitive, and abbreviated commands
 - Special-character command shortcuts (beyond cmd's `@` and `!`)
 - Settable environment parameters
-- Parsing commands with flags
+- Parsing commands with arguments using `argparse`
 - Unicode character support (*Python 3 only*)
 - Good tab-completion of commands, file system paths, and shell commands
 - Python 2.7 and 3.4+ support
@@ -97,17 +97,27 @@ Instructions for implementing each feature follow.
     To allow a user to change an environment parameter during program execution,
     append the parameter's name to `Cmd.settable``
 
-- Parsing commands with `optparse` options (flags)
+- Parsing commands with `argparse`
 
     ```python
-    @options([make_option('-m', '--myoption', action="store_true", help="all about my option")])
-    def do_myfunc(self, arg, opts):
-        if opts.myoption:
-            #TODO: Do something useful
-            pass
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    argparser.add_argument('words', nargs='+', help='words to say')
+    @with_argument_parser(argparser)
+    def do_speak(self, cmdline, args=None):
+        """Repeats what you tell me to."""
+        words = []
+        for word in args.words:
+            if args.piglatin:
+                word = '%s%say' % (word[1:], word[0])
+            if args.shout:
+                word = word.upper()
+            words.append(word)
+        self.stdout.write('{}\n'.format(' '.join(words)))
     ```
 
-    See Python standard library's `optparse` documentation: https://docs.python.org/3/library/optparse.html
+    See https://cmd2.readthedocs.io/en/latest/argument_processing.html for more details
 
 
 Tutorials
@@ -126,45 +136,80 @@ Example Application
 Example cmd2 application (**examples/example.py**):
 
 ```python
-'''A sample application for cmd2.'''
+#!/usr/bin/env python
+# coding=utf-8
+"""
+A sample application for cmd2.
+"""
 
-from cmd2 import Cmd, make_option, options, set_use_arg_list
+import random
+import argparse
+
+from cmd2 import Cmd, with_argument_parser
+
 
 class CmdLineApp(Cmd):
+    """ Example cmd2 application. """
+
+    # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
+    # default_to_shell = True
+    MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
+    MUMBLE_FIRST = ['so', 'like', 'well']
+    MUMBLE_LAST = ['right?']
+
     def __init__(self):
+        self.abbrev = True
         self.multilineCommands = ['orate']
         self.maxrepeats = 3
 
-        # Add stuff to settable and shortcutgs before calling base class initializer
+        # Add stuff to settable and shortcuts before calling base class initializer
         self.settable['maxrepeats'] = 'max repetitions for speak command'
         self.shortcuts.update({'&': 'speak'})
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         Cmd.__init__(self, use_ipython=False)
 
-        # For option commands, pass a single argument string instead of a list of argument strings to the do_* methods
-        set_use_arg_list(False)
-
-    @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
-              make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
-              make_option('-r', '--repeat', type="int", help="output [n] times")
-             ])
-    def do_speak(self, arg, opts=None):
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    argparser.add_argument('words', nargs='+', help='words to say')
+    @with_argument_parser(argparser)
+    def do_speak(self, cmdline, opts=None):
         """Repeats what you tell me to."""
-        arg = ''.join(arg)
-        if opts.piglatin:
-            arg = '%s%say' % (arg[1:], arg[0])
-        if opts.shout:
-            arg = arg.upper()
-        repetitions = opts.repeat or 1
+        words = []
+        for word in args.words:
+            if args.piglatin:
+                word = '%s%say' % (word[1:], word[0])
+            if args.shout:
+                word = word.upper()
+            words.append(word)
+        repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(arg)
-            self.stdout.write('\n')
-            # self.stdout.write is better than "print", because Cmd can be
-            # initialized with a non-standard output destination
+            # .poutput handles newlines, and accommodates output redirection too
+            self.poutput(' '.join(words))
 
-    do_say = do_speak     # now "say" is a synonym for "speak"
-    do_orate = do_speak   # another synonym, but this one takes multi-line input
+    do_say = do_speak  # now "say" is a synonym for "speak"
+    do_orate = do_speak  # another synonym, but this one takes multi-line input
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
+    argparser.add_argument('words', nargs='+', help='words to say')
+    @with_argument_parser(argparser)
+    def do_mumble(self, cmdline, args=None):
+        """Mumbles what you tell me to."""
+        repetitions = args.repeat or 1
+        for i in range(min(repetitions, self.maxrepeats)):
+            output = []
+            if (random.random() < .33):
+                output.append(random.choice(self.MUMBLE_FIRST))
+            for word in args.words:
+                if (random.random() < .40):
+                    output.append(random.choice(self.MUMBLES))
+                output.append(word)
+            if (random.random() < .25):
+                output.append(random.choice(self.MUMBLE_LAST))
+            self.poutput(' '.join(output))
 
 if __name__ == '__main__':
     c = CmdLineApp()
@@ -207,4 +252,4 @@ timing: False
 
 Note how a regular expression `/(True|False)/` is used for output of the **show color** command since
 colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
-transcript file simply by embedding them within two forward slashes, `/`.
+transcript file simply by enclosing them within forward slashes, `/`.

@@ -248,9 +248,9 @@ def with_argument_parser(argparser):
     argparse.ArgumentParser.
     """
     def arg_decorator(func):
-        def cmd_wrapper(instance, arg):
+        def cmd_wrapper(instance, cmdline):
             # Use shlex to split the command line into a list of arguments based on shell rules
-            lexed_arglist = shlex.split(arg, posix=POSIX_SHLEX)
+            lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
             # If not using POSIX shlex, make sure to strip off outer quotes for convenience
             if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
                 temp_arglist = []
@@ -258,7 +258,7 @@ def with_argument_parser(argparser):
                     temp_arglist.append(strip_quotes(arg))
                 lexed_arglist = temp_arglist
             opts = argparser.parse_args(lexed_arglist)
-            func(instance, arg, opts)
+            func(instance, cmdline, opts)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command

@@ -2,6 +2,7 @@
 """
 Cmd2 testing for argument parsing
 """
+import re
 import argparse
 import pytest
 
@@ -43,6 +44,16 @@ class ArgparseApp(cmd2.Cmd):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
         self.stdout.write('\n')
 
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('args', nargs='*')
+    @cmd2.with_argument_parser(argparser)
+    def do_compare(self, cmdline, args=None):
+        cmdline_str = re.sub('\s+', ' ', cmdline)
+        args_str = re.sub('\s+', ' ', ' '.join(args.args))
+        if cmdline_str == args_str:
+            self.stdout.write('True')
+        else:
+            self.stdout.write('False')
 
 @pytest.fixture
 def argparse_app():
@@ -88,4 +99,9 @@ def test_argparse_prog(argparse_app):
     out = run_cmd(argparse_app, 'help tag')
     progname = out[0].split(' ')[1]
     assert progname == 'tag'
+
+def test_argparse_cmdline(argparse_app):
+    out = run_cmd(argparse_app, 'compare this is a test')
+    assert out[0] == 'True'
+
     
