@@ -1,6 +1,12 @@
 ## 0.8.0 (TBD, 2018)
 * Bug Fixes
     * Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
+* Enhancements
+    * Added new **with_argument_parser** decorator for argparse-based argument parsing of command arguments
+        * This replaces the old **options** decorator for optparse-based argument parsing
+            * The old decorator is still present for now, but should be considered *deprecated* and will eventually be removed
+        * See the **Argument Processing** section of the documentation for more information
+            * Alternatively, see the **argparse_example.py** example
 
 ## 0.7.9 (January 4, 2018)
 
