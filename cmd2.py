@@ -276,6 +276,24 @@ def with_argument_parser(argparser):
     return arg_decorator
 
 
+def with_argument_list(func):
+    """A decorator to alter the arguments passed to a do_* cmd2
+    method. Default passes a string of whatever the user typed.
+    With this decorator, the decorated method will receive a list
+    of arguments parsed from user input using shlex.split()."""
+    def cmd_wrapper(self, cmdline):
+        # Use shlex to split the command line into a list of arguments based on shell rules
+        lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
+        # If not using POSIX shlex, make sure to strip off outer quotes for convenience
+        if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
+            temp_arglist = []
+            for arg in lexed_arglist:
+                temp_arglist.append(strip_quotes(arg))
+            lexed_arglist = temp_arglist
+        func(self, lexed_arglist)
+    return cmd_wrapper
+
+
 def options(option_list, arg_desc="arg"):
     """Used as a decorator and passed a list of optparse-style options,
        alters a cmd2 method to populate its ``opts`` argument from its

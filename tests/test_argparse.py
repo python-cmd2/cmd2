@@ -58,7 +58,14 @@ class ArgparseApp(cmd2.Cmd):
     argparser = argparse.ArgumentParser()
     argparser.add_argument('args', nargs='*')
     @cmd2.with_argument_parser(argparser)
-    def do_arglist(self, arglist, args=None):
+    def do_argparse_arglist(self, arglist, args=None):
+        if isinstance(arglist, list):
+            self.stdout.write('True')
+        else:
+            self.stdout.write('False')
+
+    @cmd2.with_argument_list
+    def do_arglist(self, arglist):
         if isinstance(arglist, list):
             self.stdout.write('True')
         else:
@@ -114,5 +121,9 @@ def test_argparse_cmdline(argparse_app):
     assert out[0] == 'True'
 
 def test_argparse_arglist(argparse_app):
-    out = run_cmd(argparse_app, 'arglist "some   arguments" and some more')
+    out = run_cmd(argparse_app, 'argparse_arglist "some   arguments" and some more')
+    assert out[0] == 'True'
+
+def test_arglist(argparse_app):
+    out = run_cmd(argparse_app, 'arglist "we should" get these in a list, not a string')
     assert out[0] == 'True'

@@ -14,7 +14,7 @@ verifying that the output produced matches the transcript.
 import argparse
 import sys
 
-from cmd2 import Cmd, make_option, options, with_argument_parser
+from cmd2 import Cmd, make_option, options, with_argument_parser, with_argument_list
 
 
 class CmdLineApp(Cmd):
@@ -69,10 +69,20 @@ class CmdLineApp(Cmd):
     argparser.add_argument('content', nargs='+', help='content to surround with tag')
     @with_argument_parser(argparser)
     def do_tag(self, arglist, args=None):
-        self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
-        self.stdout.write('\n')
-        # self.stdout.write is better than "print", because Cmd can be
-        # initialized with a non-standard output destination
+        """create a html tag"""
+        self.poutput('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
+
+
+    @with_argument_list
+    def do_tagg(self, arglist):
+        """verion of creating an html tag using arglist instead of argparser"""
+        if len(arglist) >= 2:
+            tag = arglist[0]
+            content = arglist[1:]
+            self.poutput('<{0}>{1}</{0}>'.format(tag, ' '.join(content)))
+        else:
+            self.perror("tagg requires at least 2 arguments")
+
 
     # @options uses the python optparse module which has been deprecated
     # since 2011. Use @with_argument_parser instead, which utilizes the
