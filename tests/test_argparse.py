@@ -71,9 +71,26 @@ class ArgparseApp(cmd2.Cmd):
         else:
             self.stdout.write('False')
 
+class ArglistApp(cmd2.Cmd):
+    def __init__(self):
+        self.use_argument_list = True
+        cmd2.Cmd.__init__(self)
+
+    def do_arglist(self, arglist):
+        if isinstance(arglist, list):
+            self.stdout.write('True')
+        else:
+            self.stdout.write('False')
+
 @pytest.fixture
 def argparse_app():
     app = ArgparseApp()
+    app.stdout = StdOut()
+    return app
+
+@pytest.fixture
+def arglist_app():
+    app = ArglistApp()
     app.stdout = StdOut()
     return app
 
@@ -126,4 +143,8 @@ def test_argparse_arglist(argparse_app):
 
 def test_arglist(argparse_app):
     out = run_cmd(argparse_app, 'arglist "we should" get these in a list, not a string')
+    assert out[0] == 'True'
+
+def test_use_argument_list(arglist_app):
+    out = run_cmd(arglist_app, 'arglist "we should" get these in a list, not a string')
     assert out[0] == 'True'
