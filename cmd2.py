@@ -258,7 +258,7 @@ def with_argument_parser(argparser):
                     temp_arglist.append(strip_quotes(arg))
                 lexed_arglist = temp_arglist
             opts = argparser.parse_args(lexed_arglist)
-            func(instance, cmdline, opts)
+            func(instance, lexed_arglist, opts)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command

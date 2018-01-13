@@ -47,7 +47,7 @@ class CmdLineApp(Cmd):
     argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
-    def do_speak(self, cmdline, args=None):
+    def do_speak(self, arglist, args=None):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -68,7 +68,7 @@ class CmdLineApp(Cmd):
     argparser.add_argument('tag', nargs=1, help='tag')
     argparser.add_argument('content', nargs='+', help='content to surround with tag')
     @with_argument_parser(argparser)
-    def do_tag(self, argv, args=None):
+    def do_tag(self, arglist, args=None):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
         self.stdout.write('\n')
         # self.stdout.write is better than "print", because Cmd can be

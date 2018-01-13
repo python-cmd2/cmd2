@@ -20,7 +20,7 @@ class ArgparseApp(cmd2.Cmd):
     argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     argparser.add_argument('words', nargs='+', help='words to say')
     @cmd2.with_argument_parser(argparser)
-    def do_say(self, cmdline, args=None):
+    def do_say(self, arglist, args=None):
         """Repeat what you tell me to."""
         words = []
         for word in args.words:
@@ -40,17 +40,26 @@ class ArgparseApp(cmd2.Cmd):
     argparser.add_argument('tag', nargs=1, help='tag')
     argparser.add_argument('content', nargs='+', help='content to surround with tag')
     @cmd2.with_argument_parser(argparser)
-    def do_tag(self, cmdline, args=None):
+    def do_tag(self, arglist, args=None):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
         self.stdout.write('\n')
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument('args', nargs='*')
     @cmd2.with_argument_parser(argparser)
-    def do_compare(self, cmdline, args=None):
-        cmdline_str = re.sub('\s+', ' ', cmdline)
+    def do_compare(self, arglist, args=None):
+        cmdline_str = re.sub('\s+', ' ', ' '.join(arglist))
         args_str = re.sub('\s+', ' ', ' '.join(args.args))
         if cmdline_str == args_str:
+            self.stdout.write('True')
+        else:
+            self.stdout.write('False')
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('args', nargs='*')
+    @cmd2.with_argument_parser(argparser)
+    def do_arglist(self, arglist, args=None):
+        if isinstance(arglist, list):
             self.stdout.write('True')
         else:
             self.stdout.write('False')
@@ -104,4 +113,6 @@ def test_argparse_cmdline(argparse_app):
     out = run_cmd(argparse_app, 'compare this is a test')
     assert out[0] == 'True'
 
-    
+def test_argparse_arglist(argparse_app):
+    out = run_cmd(argparse_app, 'arglist "some   arguments" and some more')
+    assert out[0] == 'True'

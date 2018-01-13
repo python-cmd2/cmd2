@@ -13,8 +13,8 @@ Argument Processing
 
 These features are all provided by the ``@with_argument_parser`` decorator.
 
-Using the decorator
-===================
+Using the argument parser decorator
+===================================
 
 For each command in the ``cmd2`` subclass which requires argument parsing,
 create an instance of ``argparse.ArgumentParser()`` which can parse the
@@ -31,8 +31,9 @@ Here's what it looks like::
       argparser.add_argument('word', nargs='?', help='word to say')
 
       @with_argument_parser(argparser)
-      def do_speak(self, argv, opts)
+      def do_speak(self, arglist, opts)
          """Repeats what you tell me to."""
+         # arglist contains a list of arguments as parsed by shlex.split()
          arg = opts.word
          if opts.piglatin:
             arg = '%s%say' % (arg[1:], arg[0])
@@ -41,6 +42,8 @@ Here's what it looks like::
          repetitions = opts.repeat or 1
          for i in range(min(repetitions, self.maxrepeats)):
             self.poutput(arg)
+
+This decorator also changes the value passed to the first argument of the ``do_*`` method. Instead of a string, the method will be passed a list of arguments as parsed by ``shlex.split()``.
 
 .. note::
 
@@ -62,7 +65,7 @@ appended to the docstring for the method of that command. With this code::
    argparser.add_argument('tag', nargs=1, help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argument_parser(argparser)
-   def do_tag(self, cmdline, args=None):
+   def do_tag(self, arglist, args=None):
       """create a html tag"""
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
       self.stdout.write('\n')
@@ -88,7 +91,7 @@ If you would prefer the short description of your command to come after the usag
    argparser.add_argument('tag', nargs=1, help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argument_parser(argparser)
-   def do_tag(self, cmdline, args=None):
+   def do_tag(self, arglist, args=None):
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
       self.stdout.write('\n')
 
