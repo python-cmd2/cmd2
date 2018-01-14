@@ -64,6 +64,17 @@ class ArgparseApp(cmd2.Cmd):
         else:
             self.stdout.write('False')
 
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('args', nargs='*')
+    @cmd2.with_argument_list
+    @cmd2.with_argument_parser(argparser)
+    def do_arglistandargparser(self, arglist, args=None):
+        if isinstance(arglist, list):
+            self.stdout.write(' '.join(arglist))
+        else:
+            self.stdout.write('False')
+
     @cmd2.with_argument_list
     def do_arglist(self, arglist):
         if isinstance(arglist, list):
@@ -71,16 +82,31 @@ class ArgparseApp(cmd2.Cmd):
         else:
             self.stdout.write('False')
 
+    @cmd2.with_argument_list
+    @cmd2.with_argument_list
+    def do_arglisttwice(self, arglist):
+        if isinstance(arglist, list):
+            self.stdout.write(' '.join(arglist))
+        else:
+            self.stdout.write('False')
+
+
 class ArglistApp(cmd2.Cmd):
     def __init__(self):
         self.use_argument_list = True
         cmd2.Cmd.__init__(self)
 
     def do_arglist(self, arglist):
+        """Print true if the arglist parameter is passed as a list."""
         if isinstance(arglist, list):
             self.stdout.write('True')
         else:
             self.stdout.write('False')
+
+    @cmd2.with_argument_list
+    def do_arglistwithdecorator(self, arglist):
+        self.stdout.write(' '.join(arglist))
+        
 
 @pytest.fixture
 def argparse_app():
@@ -142,9 +168,25 @@ def test_argparse_arglist(argparse_app):
     assert out[0] == 'True'
 
 def test_arglist(argparse_app):
-    out = run_cmd(argparse_app, 'arglist "we should" get these in a list, not a string')
+    out = run_cmd(argparse_app, 'arglist "we  should" get these')
     assert out[0] == 'True'
 
+def test_arglist_decorator_twice(argparse_app):
+    out = run_cmd(argparse_app, 'arglisttwice "we  should" get these')
+    assert out[0] == 'we  should get these'
+
+def test_arglist_and_argparser(argparse_app):
+    out = run_cmd(argparse_app, 'arglistandargparser some "quoted   words"')
+    assert out[0] == 'some quoted   words'
+
 def test_use_argument_list(arglist_app):
-    out = run_cmd(arglist_app, 'arglist "we should" get these in a list, not a string')
+    out = run_cmd(arglist_app, 'arglist "we  should" get these in a list, not a string')
     assert out[0] == 'True'
+
+def test_arglist_attribute_and_decorator(arglist_app):
+    out = run_cmd(arglist_app, 'arglistwithdecorator "we  should" get these')
+    assert out[0] == 'we  should get these'
+
+#def test_arglist_help(arglist_app):
+#    out = run_cmd(arglist_app, 'help arglist')
+#    assert out[0] == 'True'

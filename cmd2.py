@@ -242,6 +242,22 @@ def strip_quotes(arg):
     return arg
 
 
+def parse_quoted_string(cmdline):
+    """Parse a quoted string into a list of arguments."""
+    if isinstance(cmdline, list):
+        # arguments are already a list, return the list we were passed
+        lexed_arglist = cmdline
+    else:
+        # Use shlex to split the command line into a list of arguments based on shell rules
+        lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
+        # If not using POSIX shlex, make sure to strip off outer quotes for convenience
+        if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
+            temp_arglist = []
+            for arg in lexed_arglist:
+                temp_arglist.append(strip_quotes(arg))
+            lexed_arglist = temp_arglist
+    return lexed_arglist
+
 def with_argument_parser(argparser):
     """A decorator to alter a cmd2 method to populate its ``opts``
     argument by parsing arguments with the given instance of
@@ -249,14 +265,7 @@ def with_argument_parser(argparser):
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, cmdline):
-            # Use shlex to split the command line into a list of arguments based on shell rules
-            lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
-            # If not using POSIX shlex, make sure to strip off outer quotes for convenience
-            if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
-                temp_arglist = []
-                for arg in lexed_arglist:
-                    temp_arglist.append(strip_quotes(arg))
-                lexed_arglist = temp_arglist
+            lexed_arglist = parse_quoted_string(cmdline)
             opts = argparser.parse_args(lexed_arglist)
             func(instance, lexed_arglist, opts)
 
@@ -282,14 +291,7 @@ def with_argument_list(func):
     With this decorator, the decorated method will receive a list
     of arguments parsed from user input using shlex.split()."""
     def cmd_wrapper(self, cmdline):
-        # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
-        # If not using POSIX shlex, make sure to strip off outer quotes for convenience
-        if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
-            temp_arglist = []
-            for arg in lexed_arglist:
-                temp_arglist.append(strip_quotes(arg))
-            lexed_arglist = temp_arglist
+        lexed_arglist = parse_quoted_string(cmdline)
         func(self, lexed_arglist)
     return cmd_wrapper
 
