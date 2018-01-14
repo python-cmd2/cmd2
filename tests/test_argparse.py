@@ -187,6 +187,6 @@ def test_arglist_attribute_and_decorator(arglist_app):
     out = run_cmd(arglist_app, 'arglistwithdecorator "we  should" get these')
     assert out[0] == 'we  should get these'
 
-#def test_arglist_help(arglist_app):
-#    out = run_cmd(arglist_app, 'help arglist')
-#    assert out[0] == 'True'
+def test_arglist_help(arglist_app):
+    out = run_cmd(arglist_app, 'help arglist')
+    assert out[0] == 'Print true if the arglist parameter is passed as a list.'
