@@ -1490,7 +1490,7 @@ def test_echo(capsys):
     # Check the output
     assert app.cmdqueue == []
     assert app._current_script_dir is None
-    assert out.startswith('{}{}\n'.format(app.prompt, command) + 'usage: history [-h] [-s] [arg [arg ...]]')
+    assert out.startswith('{}{}\n'.format(app.prompt, command) + HELP_HISTORY.split()[0])
 
 def test_pseudo_raw_input_tty_rawinput_true():
     # use context managers so original functions get put back when we are done
