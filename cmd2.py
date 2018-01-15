@@ -258,6 +258,7 @@ def parse_quoted_string(cmdline):
             lexed_arglist = temp_arglist
     return lexed_arglist
 
+
 def with_argument_parser(argparser):
     """A decorator to alter a cmd2 method to populate its ``opts``
     argument by parsing arguments with the given instance of
@@ -293,6 +294,8 @@ def with_argument_list(func):
     def cmd_wrapper(self, cmdline):
         lexed_arglist = parse_quoted_string(cmdline)
         func(self, lexed_arglist)
+
+    cmd_wrapper.__doc__ = func.__doc__
     return cmd_wrapper
 
 
@@ -1665,10 +1668,11 @@ a..b, a:b, a:, ..b   by indices (inclusive)
 arg is string        containing string
 arg is /regex/       matching regular expression regex"""
     argparser.add_argument('arg', nargs='*', help=_history_arg_help)
+
     @with_argument_parser(argparser)
     def do_history(self, arglist, args):
         # If an argument was supplied, then retrieve partial contents of the history
-        if arglist:
+        if args.arg:
             # If a character indicating a slice is present, retrieve a slice of the history
             arg = args.arg[0]
             if '..' in arg or ':' in arg:
