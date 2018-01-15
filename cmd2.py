@@ -520,7 +520,6 @@ class Cmd(cmd.Cmd):
     excludeFromHistory = '''run ru r history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
     exclude_from_help = ['do_eof', 'do_eos']  # Commands to exclude from the help menu
     reserved_words = []
-    use_argument_list = False
 
     # Attributes which ARE dynamically settable at runtime
     abbrev = False  # Abbreviated commands recognized
@@ -1024,16 +1023,13 @@ class Cmd(cmd.Cmd):
         funcname = self._func_named(statement.parsed.command)
         if not funcname:
             return self.default(statement)
+
         try:
             func = getattr(self, funcname)
         except AttributeError:
             return self.default(statement)
 
-        if self.use_argument_list:
-            lexed_arglist = parse_quoted_string(cmdline)
-            stop = func(lexed_arglist)
-        else:
-            stop = func(statement)
+        stop = func(statement)
         return stop
 
     def default(self, statement):

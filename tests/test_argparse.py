@@ -91,34 +91,12 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write('False')
 
 
-class ArglistApp(cmd2.Cmd):
-    def __init__(self):
-        self.use_argument_list = True
-        cmd2.Cmd.__init__(self)
-
-    def do_arglist(self, arglist):
-        """Print true if the arglist parameter is passed as a list."""
-        if isinstance(arglist, list):
-            self.stdout.write('True')
-        else:
-            self.stdout.write('False')
-
-    @cmd2.with_argument_list
-    def do_arglistwithdecorator(self, arglist):
-        self.stdout.write(' '.join(arglist))
-        
-
 @pytest.fixture
 def argparse_app():
     app = ArgparseApp()
     app.stdout = StdOut()
     return app
 
-@pytest.fixture
-def arglist_app():
-    app = ArglistApp()
-    app.stdout = StdOut()
-    return app
 
 def test_argparse_basic_command(argparse_app):
     out = run_cmd(argparse_app, 'say hello')
@@ -178,15 +156,3 @@ def test_arglist_decorator_twice(argparse_app):
 def test_arglist_and_argparser(argparse_app):
     out = run_cmd(argparse_app, 'arglistandargparser some "quoted   words"')
     assert out[0] == 'some quoted   words'
-
-def test_use_argument_list(arglist_app):
-    out = run_cmd(arglist_app, 'arglist "we  should" get these in a list, not a string')
-    assert out[0] == 'True'
-
-def test_arglist_attribute_and_decorator(arglist_app):
-    out = run_cmd(arglist_app, 'arglistwithdecorator "we  should" get these')
-    assert out[0] == 'we  should get these'
-
-def test_arglist_help(arglist_app):
-    out = run_cmd(arglist_app, 'help arglist')
-    assert out[0] == 'Print true if the arglist parameter is passed as a list.'

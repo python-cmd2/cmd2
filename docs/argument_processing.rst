@@ -146,39 +146,7 @@ Receiving an argument list
 ==========================
 
 The default behavior of ``cmd2`` is to pass the user input directly to your
-``do_*`` methods as a string. If you don't want to use the full argument parser support outlined above, you can still have ``cmd2`` apply shell parsing rules to the user input and pass you a list of arguments instead of a string. There are two methods to effect this change.
-
-The ``use_argument_list`` attribute of a ``cmd2`` class or subclass defaults to ``False``. Set it to ``True`` and all of your ``do_*`` methods will receive a list of arguments parsed by ``shlex.split()`` instead of receiving a string::
-
-   class CmdLineApp(cmd2.Cmd):
-      """ Example cmd2 application. """
-      def __init__(self):
-         self.use_argument_list = True
-         Cmd.__init__(self)
-   
-      def do_speak(self, arglist):
-         # instead of a string, arglist contains a list of arguments
-         pass
-
-Any ``do_*`` methods decorated with ``@with_argument_parser()`` will receive both a list of arguments (instead of a string) and the parsed options as parameters::
-
-   class CmdLineApp(cmd2.Cmd):
-      """ Example cmd2 application. """
-      def __init__(self):
-         self.use_argument_list = True
-         Cmd.__init__(self)
-   
-   argparser = argparse.ArgumentParser()
-   argparser.add_argument('tag', nargs=1, help='tag')
-   argparser.add_argument('content', nargs='+', help='content to surround with tag')
-   @with_argument_parser(argparser)
-   def do_tag(self, arglist, args=None):
-      """create a html tag"""
-      # arglist contains a list of arguments, not a string
-      self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
-      self.stdout.write('\n')
-
-Instead of having all of your ``do_*`` methods receive an argument list, you can choose to only have certain methods receive the argument list (instead of a string). Leave the ``use_argument_list`` attribute at it's default value of ``False``. Then apply the ``@with_argument_list`` decorator only to those methods that should receive an argument list instead of a string::
+``do_*`` methods as a string. If you don't want to use the full argument parser support outlined above, you can still have ``cmd2`` apply shell parsing rules to the user input and pass you a list of arguments instead of a string. Apply the ``@with_argument_list`` decorator to those methods that should receive an argument list instead of a string::
 
    class CmdLineApp(cmd2.Cmd):
       """ Example cmd2 application. """
