@@ -1710,11 +1710,15 @@ arg is /regex/       matching regular expression regex"""
         except IndexError:
             return None
 
-    @options([], arg_desc="""[N]|[file_path]
-    * N         - Number of command (from history), or `*` for all commands in history (default: last command)
-    * file_path - path to a file to open in editor""")
-    def do_edit(self, arg, opts=None):
+    @with_argument_list
+    def do_edit(self, arglist):
         """Edit a file or command in a text editor.
+
+    Usage:  edit [N]|[file_path]
+    Where:
+        N         - Number of command (from history), or `*` for all commands in history
+                    (default: last command)
+        file_path - path to a file to open in editor
 
 The editor used is determined by the ``editor`` settable parameter.
 "set editor (program-name)" to change or set the EDITOR environment variable.
@@ -1729,13 +1733,13 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
         filename = None
-        if arg and arg[0]:
+        if arglist and arglist[0]:
             try:
                 # Try to convert argument to an integer
-                history_idx = int(arg[0])
+                history_idx = int(arglist[0])
             except ValueError:
                 # Argument passed is not convertible to an integer, so treat it as a file path
-                filename = arg[0]
+                filename = arglist[0]
                 history_item = ''
             else:
                 # Argument passed IS convertible to an integer, so treat it as a history index
