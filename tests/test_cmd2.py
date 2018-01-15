@@ -15,6 +15,7 @@ import pytest
 import six
 
 from code import InteractiveConsole
+from optparse import make_option
 
 # Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
@@ -1273,7 +1274,7 @@ arg 2: 'bar'
 
 
 class OptionApp(cmd2.Cmd):
-    @cmd2.options([cmd2.make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
+    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
     def do_greet(self, arg, opts=None):
         arg = ''.join(arg)
         if opts.shout:
@@ -1316,7 +1317,7 @@ class MultilineApp(cmd2.Cmd):
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
         cmd2.Cmd.__init__(self, *args, **kwargs)
 
-    @cmd2.options([cmd2.make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
+    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
     def do_orate(self, arg, opts=None):
         arg = ''.join(arg)
         if opts.shout:

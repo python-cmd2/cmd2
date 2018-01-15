@@ -14,12 +14,13 @@ class ArgparseApp(cmd2.Cmd):
         self.maxrepeats = 3
         cmd2.Cmd.__init__(self)
 
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    argparser.add_argument('words', nargs='+', help='words to say')
-    @cmd2.with_argument_parser(argparser)
+    say_parser = argparse.ArgumentParser()
+    say_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    say_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    say_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    say_parser.add_argument('words', nargs='+', help='words to say')
+
+    @cmd2.with_argument_parser(say_parser)
     def do_say(self, arglist, args=None):
         """Repeat what you tell me to."""
         words = []
@@ -36,17 +37,19 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
 
-    argparser = argparse.ArgumentParser(description='create a html tag')
-    argparser.add_argument('tag', nargs=1, help='tag')
-    argparser.add_argument('content', nargs='+', help='content to surround with tag')
-    @cmd2.with_argument_parser(argparser)
+    tag_parser = argparse.ArgumentParser(description='create a html tag')
+    tag_parser.add_argument('tag', nargs=1, help='tag')
+    tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
+
+    @cmd2.with_argument_parser(tag_parser)
     def do_tag(self, arglist, args=None):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
         self.stdout.write('\n')
 
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('args', nargs='*')
-    @cmd2.with_argument_parser(argparser)
+    compare_parser = argparse.ArgumentParser()
+    compare_parser.add_argument('args', nargs='*')
+
+    @cmd2.with_argument_parser(compare_parser)
     def do_compare(self, arglist, args=None):
         cmdline_str = re.sub('\s+', ' ', ' '.join(arglist))
         args_str = re.sub('\s+', ' ', ' '.join(args.args))
@@ -55,9 +58,10 @@ class ArgparseApp(cmd2.Cmd):
         else:
             self.stdout.write('False')
 
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('args', nargs='*')
-    @cmd2.with_argument_parser(argparser)
+    argpasre_arglist_parser = argparse.ArgumentParser()
+    argpasre_arglist_parser.add_argument('args', nargs='*')
+
+    @cmd2.with_argument_parser(argpasre_arglist_parser)
     def do_argparse_arglist(self, arglist, args=None):
         if isinstance(arglist, list):
             self.stdout.write('True')
@@ -65,10 +69,10 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write('False')
 
 
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('args', nargs='*')
+    arglist_and_argparser_parser = argparse.ArgumentParser()
+    arglist_and_argparser_parser.add_argument('args', nargs='*')
     @cmd2.with_argument_list
-    @cmd2.with_argument_parser(argparser)
+    @cmd2.with_argument_parser(arglist_and_argparser_parser)
     def do_arglistandargparser(self, arglist, args=None):
         if isinstance(arglist, list):
             self.stdout.write(' '.join(arglist))

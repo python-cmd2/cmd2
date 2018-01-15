@@ -42,7 +42,6 @@ import tempfile
 import traceback
 import unittest
 from code import InteractiveConsole
-from optparse import make_option
 
 import pyparsing
 import pyperclip
@@ -1172,7 +1171,6 @@ class Cmd(cmd.Cmd):
 
             return stop
 
-    # noinspection PyUnusedLocal
     def do_cmdenvironment(self, _):
         """Summary report of interactive parameters."""
         self.poutput("""
@@ -1239,13 +1237,11 @@ class Cmd(cmd.Cmd):
         self.print_topics(self.misc_header, list(help_dict.keys()), 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
-    # noinspection PyUnusedLocal
     def do_shortcuts(self, _):
         """Lists shortcuts (aliases) available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
-    # noinspection PyUnusedLocal
     def do_eof(self, _):
         """Called when <Ctrl>-D is pressed."""
         # End of script should not exit app, but <Ctrl>-D should.
@@ -1292,10 +1288,11 @@ class Cmd(cmd.Cmd):
                                                                                                    len(fulloptions)))
         return result
 
-    argparser = argparse.ArgumentParser(description='show value of a parameter')
-    argparser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    argparser.add_argument('param', nargs='?', help='name of parameter, if not supplied show all parameters')
-    @with_argument_parser(argparser)
+    show_parser = argparse.ArgumentParser(description='show value of a parameter')
+    show_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
+    show_parser.add_argument('param', nargs='?', help='name of parameter, if not supplied show all parameters')
+
+    @with_argument_parser(show_parser)
     def do_show(self, arglist, args):
         param = ''
         if args.param:
@@ -1616,6 +1613,8 @@ class Cmd(cmd.Cmd):
     def do_pyscript(self, arglist):
         """\nRuns a python script file inside the console
 
+    Usage: pyscript <script_path> [script_arguments]
+
 Console commands can be executed inside this script with cmd("your command")
 However, you cannot run nested "py" or "pyscript" commands from within this script
 Paths or arguments that contain spaces must be enclosed in quotes
@@ -1657,19 +1656,19 @@ Paths or arguments that contain spaces must be enclosed in quotes
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
             embed(banner1=banner, exit_msg=exit_msg)
 
-    argparser = argparse.ArgumentParser(
+    show_parser = argparse.ArgumentParser(
                     description='list past commands issued',
                     formatter_class=argparse.RawTextHelpFormatter,
                 )
-    argparser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    show_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
     _history_arg_help = """no arg               list all
 arg is integer       by index
 a..b, a:b, a:, ..b   by indices (inclusive)
 arg is string        containing string
 arg is /regex/       matching regular expression regex"""
-    argparser.add_argument('arg', nargs='*', help=_history_arg_help)
+    show_parser.add_argument('arg', nargs='*', help=_history_arg_help)
 
-    @with_argument_parser(argparser)
+    @with_argument_parser(show_parser)
     def do_history(self, arglist, args):
         # If an argument was supplied, then retrieve partial contents of the history
         if args.arg:

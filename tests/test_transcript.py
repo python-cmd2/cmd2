@@ -17,9 +17,10 @@ import six
 # Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
 
-from cmd2 import (Cmd, make_option, options, Cmd2TestCase, set_use_arg_list,
+from cmd2 import (Cmd, options, Cmd2TestCase, set_use_arg_list,
                   set_posix_shlex, set_strip_quotes)
 from conftest import run_cmd, StdOut, normalize
+from optparse import make_option
 
 
 class CmdLineApp(Cmd):
@@ -27,7 +28,7 @@ class CmdLineApp(Cmd):
     MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']
-    
+
     def __init__(self, *args, **kwargs):
         self.abbrev = True
         self.multilineCommands = ['orate']
@@ -332,7 +333,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     ])
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
-    
+
     class TestMyAppCase(Cmd2TestCase):
         cmdapp = app
 
