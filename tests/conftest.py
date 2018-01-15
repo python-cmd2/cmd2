@@ -20,20 +20,24 @@ edit            history  py    quit      save  shell  show
 """
 
 # Help text for the history command
-HELP_HISTORY = """usage: history [-h] [-s] [arg [arg ...]]
+HELP_HISTORY = """usage: history [-h] [-s] [-r | -e | -o FILE] [arg]
 
-list past commands issued
+run, edit, and save past commands
 
 positional arguments:
-  arg           no arg               list all
-                arg is integer       by index
-                a..b, a:b, a:, ..b   by indices (inclusive)
-                arg is string        containing string
-                arg is /regex/       matching regular expression regex
+  arg                   empty               all history items
+                        a                   one history item by number
+                        a..b, a:b, a:, ..b  items by indices (inclusive)
+                        [string]            items containing string
+                        /regex/             items matching regular expression
 
 optional arguments:
-  -h, --help    show this help message and exit
-  -s, --script  script format; no separation lines
+  -h, --help            show this help message and exit
+  -s, --script          script format; no separation lines
+  -r, --run             run selected history items
+  -e, --edit            edit and then run selected history items
+  -o FILE, --output-file FILE
+                        output to file
 """
 
 # Output from the shortcuts command with default built-in shortcuts
