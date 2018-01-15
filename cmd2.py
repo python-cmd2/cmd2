@@ -1609,32 +1609,28 @@ class Cmd(cmd.Cmd):
             self._in_py = False
         return self._should_quit
 
-    # noinspection PyUnusedLocal
-    @options([], arg_desc='<script_path> [script_arguments]')
-    def do_pyscript(self, arg, opts=None):
+    @with_argument_list
+    def do_pyscript(self, arglist):
         """\nRuns a python script file inside the console
 
 Console commands can be executed inside this script with cmd("your command")
 However, you cannot run nested "py" or "pyscript" commands from within this script
 Paths or arguments that contain spaces must be enclosed in quotes
 """
-        if not arg:
+        if not arglist:
             self.perror("pyscript command requires at least 1 argument ...", traceback_war=False)
             self.do_help('pyscript')
             return
 
-        if not USE_ARG_LIST:
-            arg = shlex.split(arg, posix=POSIX_SHLEX)
-
         # Get the absolute path of the script
-        script_path = os.path.expanduser(arg[0])
+        script_path = os.path.expanduser(arglist[0])
 
         # Save current command line arguments
         orig_args = sys.argv
 
         # Overwrite sys.argv to allow the script to take command line arguments
         sys.argv = [script_path]
-        sys.argv.extend(arg[1:])
+        sys.argv.extend(arglist[1:])
 
         # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
         self.do_py("run({!r})".format(script_path))
