@@ -20,19 +20,20 @@ cmdenvironment  help  load     pyscript  run   set   shortcuts
 """
 
 # Help text for the history command
-HELP_HISTORY = """history [arg]: lists past commands issued
+HELP_HISTORY = """usage: history [-h] [-s] [arg [arg ...]]
 
-        | no arg:         list all
-        | arg is integer: list one history item, by index
-        | a..b, a:b, a:, ..b -> list history items by a span of indices (inclusive)
-        | arg is string:  list all commands matching string search
-        | arg is /enclosed in forward-slashes/: regular expression search
+list past commands issued
 
-Usage: history [options] (limit on which commands to include)
+positional arguments:
+  arg           no arg               list all
+                arg is integer       by index
+                a..b, a:b, a:, ..b   by indices (inclusive)
+                arg is string        containing string
+                arg is /regex/       matching regular expression regex
 
-Options:
+optional arguments:
   -h, --help    show this help message and exit
-  -s, --script  Script format; no separation lines
+  -s, --script  script format; no separation lines
 """
 
 # Output from the shortcuts command with default built-in shortcuts

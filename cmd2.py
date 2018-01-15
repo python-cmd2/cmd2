@@ -1679,7 +1679,7 @@ arg is /regex/       matching regular expression regex"""
     @with_argument_parser(argparser)
     def do_history(self, arglist, args):
         # If an argument was supplied, then retrieve partial contents of the history
-        if arglist:
+        if args.arg:
             # If a character indicating a slice is present, retrieve a slice of the history
             arg = args.arg[0]
             if '..' in arg or ':' in arg:
