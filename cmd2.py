@@ -1030,13 +1030,7 @@ class Cmd(cmd.Cmd):
             return self.default(statement)
 
         if self.use_argument_list:
-            lexed_arglist = shlex.split(statement, posix=POSIX_SHLEX)
-            # If not using POSIX shlex, make sure to strip off outer quotes for convenience
-            if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
-                temp_arglist = []
-                for arg in lexed_arglist:
-                    temp_arglist.append(strip_quotes(arg))
-                lexed_arglist = temp_arglist
+            lexed_arglist = parse_quoted_string(cmdline)
             stop = func(lexed_arglist)
         else:
             stop = func(statement)
