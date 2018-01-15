@@ -115,8 +115,9 @@ pyparsing.ParserElement.enablePackrat()
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
-# The next 3 variables and associated setter functions effect how arguments are parsed for commands using @options.
-# The defaults are "sane" and maximize ease of use for new applications based on cmd2.
+# The next 3 variables and associated setter functions effect how arguments are parsed for decorated commands
+#   which use one of the decorators such as @with_argument_list or @with_argument_parser
+# The defaults are sane and maximize ease of use for new applications based on cmd2.
 # To maximize backwards compatibility, we recommend setting USE_ARG_LIST to "False"
 
 # Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
@@ -125,12 +126,12 @@ POSIX_SHLEX = False
 # Strip outer quotes for convenience if POSIX_SHLEX = False
 STRIP_QUOTES_FOR_NON_POSIX = True
 
-# For option commands, pass a list of argument strings instead of a single argument string to the do_* methods
+# For @options commands, pass a list of argument strings instead of a single argument string to the do_* methods
 USE_ARG_LIST = True
 
 
 def set_posix_shlex(val):
-    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for @options commands.
+    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for decorated commands.
 
     :param val: bool - True => POSIX,  False => Non-POSIX
     """
@@ -141,7 +142,7 @@ def set_posix_shlex(val):
 def set_strip_quotes(val):
     """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
 
-    :param val: bool - True => strip quotes on args and option args for @option commands if POSIX_SHLEX is False.
+    :param val: bool - True => strip quotes on args for decorated commands if POSIX_SHLEX is False.
     """
     global STRIP_QUOTES_FOR_NON_POSIX
     STRIP_QUOTES_FOR_NON_POSIX = val
