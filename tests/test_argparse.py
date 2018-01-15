@@ -81,6 +81,22 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
 
+    @cmd2.with_argparser_and_unknown_args(known_parser)
+    def do_talk(self, args, extra):
+        words = []
+        for word in extra:
+            if word is None:
+                word = ''
+            if args.piglatin:
+                word = '%s%say' % (word[1:], word[0])
+            if args.shout:
+                word = word.upper()
+            words.append(word)
+        repetitions = args.repeat or 1
+        for i in range(min(repetitions, self.maxrepeats)):
+            self.stdout.write(' '.join(words))
+            self.stdout.write('\n')
+
 @pytest.fixture
 def argparse_app():
     app = ArgparseApp()
@@ -99,6 +115,10 @@ def test_argparse_quoted_arguments(argparse_app):
     assert out == ['hello there']
 
 def test_argparse_with_list(argparse_app):
+    out = run_cmd(argparse_app, 'speak -s hello world!')
+    assert out == ['HELLO WORLD!']
+
+def test_argparse_with_list_and_empty_doc(argparse_app):
     out = run_cmd(argparse_app, 'speak -s hello world!')
     assert out == ['HELLO WORLD!']
 
