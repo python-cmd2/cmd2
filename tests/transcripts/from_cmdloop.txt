@@ -55,5 +55,5 @@ OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 (Cmd) set prompt "---> "
-prompt - was: (Cmd)/ /
-now: --->/ /
+prompt - was: (Cmd)/ */
+now: --->/ */
