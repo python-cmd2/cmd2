@@ -11,6 +11,8 @@
             * **do_*** commands get two arguments, the output of argparse.parse_known_args()
     *  See the **Argument Processing** section of the documentation for more information on these decorators
         * Alternatively, see the **argparse_example.py** and **arg_print.py** examples
+    * The **__relative_load** command is now hidden from the help menu by default
+        * This command is not intended to be called from the command line, only from within scripts
 * Deprecations
     * The old **options** decorator for optparse-based argument parsing is now *deprecated*
         * The old decorator is still present for now, but will eventually be removed in a future release

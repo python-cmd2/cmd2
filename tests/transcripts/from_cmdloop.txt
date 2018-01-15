@@ -5,9 +5,8 @@
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  help     mumble  pyscript  save  shell      speak
-cmdenvironment  history  orate   quit      say   shortcuts
-edit            load     py      run       set   show/ */
+cmdenvironment  help     load    orate  pyscript  run   say  shell      show/ */
+edit            history  mumble  py     quit      save  set  shortcuts  speak/ */
 
 (Cmd) help say
 Repeats what you tell me to.

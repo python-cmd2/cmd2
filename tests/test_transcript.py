@@ -14,9 +14,6 @@ import mock
 import pytest
 import six
 
-# Used for sm.input: raw_input() for Python 2 or input() for Python 3
-import six.moves as sm
-
 from cmd2 import (Cmd, options, Cmd2TestCase, set_use_arg_list,
                   set_posix_shlex, set_strip_quotes)
 from conftest import run_cmd, StdOut, normalize
@@ -133,9 +130,8 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  help     mumble  pyscript  save  shell      speak
-cmdenvironment  history  orate   quit      say   shortcuts
-edit            load     py      run       set   show
+cmdenvironment  help     load    orate  pyscript  run   say  shell      show
+edit            history  mumble  py     quit      save  set  shortcuts  speak
 
 (Cmd) help say
 Repeats what you tell me to.

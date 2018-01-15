@@ -547,7 +547,7 @@ class Cmd(cmd.Cmd):
     allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
     excludeFromHistory = '''run ru r history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
-    exclude_from_help = ['do_eof', 'do_eos']  # Commands to exclude from the help menu
+    exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']  # Commands to exclude from the help menu
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
