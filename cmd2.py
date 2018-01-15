@@ -1661,27 +1661,23 @@ Paths or arguments that contain spaces must be enclosed in quotes
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
             embed(banner1=banner, exit_msg=exit_msg)
 
-    @options([make_option('-s', '--script', action="store_true", help="Script format; no separation lines"),
-              ], arg_desc='(limit on which commands to include)')
-    def do_history(self, arg, opts):
-        """history [arg]: lists past commands issued
-
-        | no arg:         list all
-        | arg is integer: list one history item, by index
-        | a..b, a:b, a:, ..b -> list history items by a span of indices (inclusive)
-        | arg is string:  list all commands matching string search
-        | arg is /enclosed in forward-slashes/: regular expression search
-        """
-        # If arguments are being passed as a list instead of as a string
-        if USE_ARG_LIST:
-            if arg:
-                arg = arg[0]
-            else:
-                arg = ''
-
+    argparser = argparse.ArgumentParser(
+                    description='list past commands issued',
+                    formatter_class=argparse.RawTextHelpFormatter,
+                )
+    argparser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    _history_arg_help = """no arg               list all
+arg is integer       by index
+a..b, a:b, a:, ..b   by indices (inclusive)
+arg is string        containing string
+arg is /regex/       matching regular expression regex"""
+    argparser.add_argument('arg', nargs='*', help=_history_arg_help)
+    @with_argument_parser(argparser)
+    def do_history(self, arglist, args):
         # If an argument was supplied, then retrieve partial contents of the history
-        if arg:
+        if arglist:
             # If a character indicating a slice is present, retrieve a slice of the history
+            arg = args.arg[0]
             if '..' in arg or ':' in arg:
                 try:
                     # Get a slice of history
@@ -1697,7 +1693,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
 
         # Display the history items retrieved
         for hi in history:
-            if opts.script:
+            if args.script:
                 self.poutput(hi)
             else:
                 self.poutput(hi.pr())
