@@ -271,7 +271,7 @@ def with_argument_list(func):
     return cmd_wrapper
 
 
-def with_argparser_and_list(argparser):
+def with_argparser_and_unknown_args(argparser):
     """A decorator to alter a cmd2 method to populate its ``args``
     argument by parsing arguments with the given instance of
     argparse.ArgumentParser, but also returning unknown args as a list.

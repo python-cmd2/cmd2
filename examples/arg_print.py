@@ -14,7 +14,7 @@ import argparse
 import cmd2
 import pyparsing
 
-from cmd2 import with_argument_list, with_argument_parser, with_argparser_and_list
+from cmd2 import with_argument_list, with_argument_parser, with_argparser_and_unknown_args
 
 
 class ArgumentAndOptionPrinter(cmd2.Cmd):
@@ -56,7 +56,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     pprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     pprint_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     pprint_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    @with_argparser_and_list(pprint_parser)
+    @with_argparser_and_unknown_args(pprint_parser)
     def do_pprint(self, args, unknown):
         """Print the options and argument list this options command was called with."""
         print('oprint was called with the following\n\toptions: {!r}\n\targuments: {}'.format(args, unknown))

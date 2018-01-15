@@ -64,7 +64,7 @@ class ArgparseApp(cmd2.Cmd):
     known_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     known_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    @cmd2.with_argparser_and_list(known_parser)
+    @cmd2.with_argparser_and_unknown_args(known_parser)
     def do_speak(self, args, extra):
         """Repeat what you tell me to."""
         words = []
