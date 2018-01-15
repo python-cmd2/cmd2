@@ -105,7 +105,7 @@ Instructions for implementing each feature follow.
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
-    def do_speak(self, cmdline, args=None):
+    def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -175,7 +175,7 @@ class CmdLineApp(Cmd):
     argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
-    def do_speak(self, cmdline, opts=None):
+    def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -196,7 +196,7 @@ class CmdLineApp(Cmd):
     argparser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
     argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
-    def do_mumble(self, cmdline, args=None):
+    def do_mumble(self, args):
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
