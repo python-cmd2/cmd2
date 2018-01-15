@@ -80,6 +80,7 @@ def test_base_show_long(base_app):
 
 
 def test_base_show_readonly(base_app):
+    base_app.editor = 'vim'
     out = run_cmd(base_app, 'set -a')
     expected = normalize(SHOW_TXT + '\nRead only settings:' + """
         Commands are case-sensitive: {}
