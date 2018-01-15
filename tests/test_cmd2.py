@@ -54,10 +54,9 @@ def test_base_invalid_option(base_app, capsys):
     run_cmd(base_app, 'show -z')
     out, err = capsys.readouterr()
     show_help = run_cmd(base_app, 'help show')
-    expected = ['no such option: -z']
-    expected.extend(show_help)
+    expected = ['usage: show [-h] [-l] [param]', 'show: error: unrecognized arguments: -z']
     # 'show -h' is the same as 'help show', other than whitespace differences of an extra newline present in 'help show'
-    assert normalize(str(out)) == expected
+    assert normalize(str(err)) == expected
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')
