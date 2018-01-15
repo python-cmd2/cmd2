@@ -1683,24 +1683,28 @@ Paths or arguments that contain spaces must be enclosed in quotes
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
             embed(banner1=banner, exit_msg=exit_msg)
 
-    show_parser = argparse.ArgumentParser(
-                    description='list past commands issued',
+    history_parser = argparse.ArgumentParser(
+                    description='run, edit, and save past commands',
                     formatter_class=argparse.RawTextHelpFormatter,
                 )
-    show_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
-    _history_arg_help = """no arg               list all
-arg is integer       by index
-a..b, a:b, a:, ..b   by indices (inclusive)
-arg is string        containing string
-arg is /regex/       matching regular expression regex"""
-    show_parser.add_argument('arg', nargs='*', help=_history_arg_help)
+    history_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    history_parser_group = history_parser.add_mutually_exclusive_group()
+    history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
+    history_parser_group.add_argument('-e', '--edit', action='store_true', help='edit and then run selected history items')
+    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('w'), help='output to file')
+    _history_arg_help = """empty               all history items
+a                   one history item by number
+a..b, a:b, a:, ..b  items by indices (inclusive)
+[string]            items containing string
+/regex/             items matching regular expression"""
+    history_parser.add_argument('arg', nargs='?', help=_history_arg_help)
 
-    @with_argument_parser(show_parser)
+    @with_argument_parser(history_parser)
     def do_history(self, args):
         # If an argument was supplied, then retrieve partial contents of the history
         if args.arg:
             # If a character indicating a slice is present, retrieve a slice of the history
-            arg = args.arg[0]
+            arg = args.arg
             if '..' in arg or ':' in arg:
                 try:
                     # Get a slice of history
