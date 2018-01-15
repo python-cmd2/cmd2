@@ -48,7 +48,7 @@ class CmdLineApp(Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @with_argument_parser(speak_parser)
-    def do_speak(self, arglist, args=None):
+    def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -69,7 +69,7 @@ class CmdLineApp(Cmd):
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
     @with_argument_parser(tag_parser)
-    def do_tag(self, arglist, args=None):
+    def do_tag(self, args):
         """create a html tag"""
         self.poutput('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
 

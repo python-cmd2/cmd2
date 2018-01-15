@@ -258,17 +258,29 @@ def parse_quoted_string(cmdline):
             lexed_arglist = temp_arglist
     return lexed_arglist
 
+def with_argument_list(func):
+    """A decorator to alter the arguments passed to a do_* cmd2
+    method. Default passes a string of whatever the user typed.
+    With this decorator, the decorated method will receive a list
+    of arguments parsed from user input using shlex.split()."""
+    def cmd_wrapper(self, cmdline):
+        lexed_arglist = parse_quoted_string(cmdline)
+        func(self, lexed_arglist)
 
-def with_argument_parser(argparser):
-    """A decorator to alter a cmd2 method to populate its ``opts``
+    cmd_wrapper.__doc__ = func.__doc__
+    return cmd_wrapper
+
+
+def with_argparser_and_list(argparser):
+    """A decorator to alter a cmd2 method to populate its ``args``
     argument by parsing arguments with the given instance of
-    argparse.ArgumentParser.
+    argparse.ArgumentParser, but also returning unknown args as a list.
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
-            opts = argparser.parse_args(lexed_arglist)
-            func(instance, lexed_arglist, opts)
+            args, unknown = argparser.parse_known_args(lexed_arglist)
+            func(instance, args, unknown)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -286,17 +298,31 @@ def with_argument_parser(argparser):
     return arg_decorator
 
 
-def with_argument_list(func):
-    """A decorator to alter the arguments passed to a do_* cmd2
-    method. Default passes a string of whatever the user typed.
-    With this decorator, the decorated method will receive a list
-    of arguments parsed from user input using shlex.split()."""
-    def cmd_wrapper(self, cmdline):
-        lexed_arglist = parse_quoted_string(cmdline)
-        func(self, lexed_arglist)
+def with_argument_parser(argparser):
+    """A decorator to alter a cmd2 method to populate its ``args``
+    argument by parsing arguments with the given instance of
+    argparse.ArgumentParser.
+    """
+    def arg_decorator(func):
+        def cmd_wrapper(instance, cmdline):
+            lexed_arglist = parse_quoted_string(cmdline)
+            args = argparser.parse_args(lexed_arglist)
+            func(instance, args)
 
-    cmd_wrapper.__doc__ = func.__doc__
-    return cmd_wrapper
+        # argparser defaults the program name to sys.argv[0]
+        # we want it to be the name of our command
+        argparser.prog = func.__name__[3:]
+
+        # put the help message in the method docstring
+        funcdoc = func.__doc__
+        if funcdoc:
+            funcdoc += '\n'
+        else:
+            # if it's None, make it an empty string
+            funcdoc = ''
+        cmd_wrapper.__doc__ = '{}{}'.format(funcdoc, argparser.format_help())
+        return cmd_wrapper
+    return arg_decorator
 
 
 def options(option_list, arg_desc="arg"):
@@ -1294,7 +1320,7 @@ class Cmd(cmd.Cmd):
     show_parser.add_argument('param', nargs='?', help='name of parameter, if not supplied show all parameters')
 
     @with_argument_parser(show_parser)
-    def do_show(self, arglist, args):
+    def do_show(self, args):
         param = ''
         if args.param:
             param = args.param.strip().lower()
@@ -1670,7 +1696,7 @@ arg is /regex/       matching regular expression regex"""
     show_parser.add_argument('arg', nargs='*', help=_history_arg_help)
 
     @with_argument_parser(show_parser)
-    def do_history(self, arglist, args):
+    def do_history(self, args):
         # If an argument was supplied, then retrieve partial contents of the history
         if args.arg:
             # If a character indicating a slice is present, retrieve a slice of the history
@@ -1715,11 +1741,11 @@ arg is /regex/       matching regular expression regex"""
     def do_edit(self, arglist):
         """Edit a file or command in a text editor.
 
-    Usage:  edit [N]|[file_path]
+Usage:  edit [N]|[file_path]
     Where:
-        N         - Number of command (from history), or `*` for all commands in history
+        * N         - Number of command (from history), or `*` for all commands in history
                     (default: last command)
-        file_path - path to a file to open in editor
+        * file_path - path to a file to open in editor
 
 The editor used is determined by the ``editor`` settable parameter.
 "set editor (program-name)" to change or set the EDITOR environment variable.

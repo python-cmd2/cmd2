@@ -2,7 +2,6 @@
 """
 Cmd2 testing for argument parsing
 """
-import re
 import argparse
 import pytest
 
@@ -21,7 +20,7 @@ class ArgparseApp(cmd2.Cmd):
     say_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argument_parser(say_parser)
-    def do_say(self, arglist, args=None):
+    def do_say(self, args):
         """Repeat what you tell me to."""
         words = []
         for word in args.words:
@@ -42,42 +41,9 @@ class ArgparseApp(cmd2.Cmd):
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
     @cmd2.with_argument_parser(tag_parser)
-    def do_tag(self, arglist, args=None):
+    def do_tag(self, args):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
         self.stdout.write('\n')
-
-    compare_parser = argparse.ArgumentParser()
-    compare_parser.add_argument('args', nargs='*')
-
-    @cmd2.with_argument_parser(compare_parser)
-    def do_compare(self, arglist, args=None):
-        cmdline_str = re.sub('\s+', ' ', ' '.join(arglist))
-        args_str = re.sub('\s+', ' ', ' '.join(args.args))
-        if cmdline_str == args_str:
-            self.stdout.write('True')
-        else:
-            self.stdout.write('False')
-
-    argpasre_arglist_parser = argparse.ArgumentParser()
-    argpasre_arglist_parser.add_argument('args', nargs='*')
-
-    @cmd2.with_argument_parser(argpasre_arglist_parser)
-    def do_argparse_arglist(self, arglist, args=None):
-        if isinstance(arglist, list):
-            self.stdout.write('True')
-        else:
-            self.stdout.write('False')
-
-
-    arglist_and_argparser_parser = argparse.ArgumentParser()
-    arglist_and_argparser_parser.add_argument('args', nargs='*')
-    @cmd2.with_argument_list
-    @cmd2.with_argument_parser(arglist_and_argparser_parser)
-    def do_arglistandargparser(self, arglist, args=None):
-        if isinstance(arglist, list):
-            self.stdout.write(' '.join(arglist))
-        else:
-            self.stdout.write('False')
 
     @cmd2.with_argument_list
     def do_arglist(self, arglist):
@@ -94,6 +60,26 @@ class ArgparseApp(cmd2.Cmd):
         else:
             self.stdout.write('False')
 
+    known_parser = argparse.ArgumentParser()
+    known_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    known_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    @cmd2.with_argparser_and_list(known_parser)
+    def do_speak(self, args, extra):
+        """Repeat what you tell me to."""
+        words = []
+        for word in extra:
+            if word is None:
+                word = ''
+            if args.piglatin:
+                word = '%s%say' % (word[1:], word[0])
+            if args.shout:
+                word = word.upper()
+            words.append(word)
+        repetitions = args.repeat or 1
+        for i in range(min(repetitions, self.maxrepeats)):
+            self.stdout.write(' '.join(words))
+            self.stdout.write('\n')
 
 @pytest.fixture
 def argparse_app():
@@ -111,6 +97,10 @@ def test_argparse_quoted_arguments(argparse_app):
     argparse_app.STRIP_QUOTES_FOR_NON_POSIX = True
     out = run_cmd(argparse_app, 'say "hello there"')
     assert out == ['hello there']
+
+def test_argparse_with_list(argparse_app):
+    out = run_cmd(argparse_app, 'speak -s hello world!')
+    assert out == ['HELLO WORLD!']
 
 def test_argparse_quoted_arguments_multiple(argparse_app):
     argparse_app.POSIX = False
@@ -141,14 +131,6 @@ def test_argparse_prog(argparse_app):
     progname = out[0].split(' ')[1]
     assert progname == 'tag'
 
-def test_argparse_cmdline(argparse_app):
-    out = run_cmd(argparse_app, 'compare this is a test')
-    assert out[0] == 'True'
-
-def test_argparse_arglist(argparse_app):
-    out = run_cmd(argparse_app, 'argparse_arglist "some   arguments" and some more')
-    assert out[0] == 'True'
-
 def test_arglist(argparse_app):
     out = run_cmd(argparse_app, 'arglist "we  should" get these')
     assert out[0] == 'True'
@@ -156,7 +138,3 @@ def test_arglist(argparse_app):
 def test_arglist_decorator_twice(argparse_app):
     out = run_cmd(argparse_app, 'arglisttwice "we  should" get these')
     assert out[0] == 'we  should get these'
-
-def test_arglist_and_argparser(argparse_app):
-    out = run_cmd(argparse_app, 'arglistandargparser some "quoted   words"')
-    assert out[0] == 'some quoted   words'

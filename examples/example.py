@@ -45,7 +45,7 @@ class CmdLineApp(Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @with_argument_parser(speak_parser)
-    def do_speak(self, cmdline, opts=None):
+    def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -67,7 +67,7 @@ class CmdLineApp(Cmd):
     mumble_parser.add_argument('words', nargs='+', help='words to say')
 
     @with_argument_parser(mumble_parser)
-    def do_mumble(self, cmdline, args=None):
+    def do_mumble(self, args):
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
