@@ -258,6 +258,7 @@ def parse_quoted_string(cmdline):
             lexed_arglist = temp_arglist
     return lexed_arglist
 
+
 def with_argument_list(func):
     """A decorator to alter the arguments passed to a do_* cmd2
     method. Default passes a string of whatever the user typed.
@@ -1315,15 +1316,10 @@ class Cmd(cmd.Cmd):
                                                                                                    len(fulloptions)))
         return result
 
-    show_parser = argparse.ArgumentParser(description='show value of a parameter')
-    show_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    show_parser.add_argument('param', nargs='?', help='name of parameter, if not supplied show all parameters')
-
-    @with_argument_parser(show_parser)
-    def do_show(self, args):
+    def show(self, args, parameter):
         param = ''
-        if args.param:
-            param = args.param.strip().lower()
+        if parameter:
+            param = parameter.strip().lower()
         result = {}
         maxlen = 0
         for p in self.settable:
@@ -1339,14 +1335,19 @@ class Cmd(cmd.Cmd):
         else:
             raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
-    def do_set(self, arg):
-        """Sets a settable parameter.
+    set_parser = argparse.ArgumentParser(description='show or set value of a parameter')
+    set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
+    set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
+
+    @with_argument_parser(set_parser)
+    def do_set(self, args):
+        """Sets a settable parameter or shows current settings of parameters.
 
         Accepts abbreviated parameter names so long as there is no ambiguity.
         Call without arguments for a list of settable parameters with their values.
         """
         try:
-            statement, param_name, val = arg.parsed.raw.split(None, 2)
+            param_name, val = args.settable
             val = val.strip()
             param_name = param_name.strip().lower()
             if param_name not in self.settable:
@@ -1354,7 +1355,7 @@ class Cmd(cmd.Cmd):
                 if len(hits) == 1:
                     param_name = hits[0]
                 else:
-                    return self.do_show(param_name)
+                    return self.show(args, param_name)
             current_val = getattr(self, param_name)
             if (val[0] == val[-1]) and val[0] in ("'", '"'):
                 val = val[1:-1]
@@ -1369,7 +1370,10 @@ class Cmd(cmd.Cmd):
                 except AttributeError:
                     pass
         except (ValueError, AttributeError):
-            self.do_show(arg)
+            param = ''
+            if args.settable:
+                param = args.settable[0]
+            self.show(args, param)
 
     def do_shell(self, command):
         """Execute a command as if at the OS prompt.

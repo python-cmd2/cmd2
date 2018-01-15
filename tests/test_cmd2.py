@@ -44,19 +44,17 @@ def test_base_help_history(base_app):
     expected = normalize(HELP_HISTORY)
     assert out == expected
 
-def test_base_options_help(base_app, capsys):
-    run_cmd(base_app, 'show -h')
+def test_base_argparse_help(base_app, capsys):
+    run_cmd(base_app, 'set -h')
     out, err = capsys.readouterr()
-    expected = run_cmd(base_app, 'help show')
-    # 'show -h' is the same as 'help show', other than whitespace differences of an extra newline present in 'help show'
-    assert normalize(str(out)) == expected
+    expected = run_cmd(base_app, 'help set')
+    assert normalize(base_app.do_set.__doc__ + str(err)) == expected
 
 def test_base_invalid_option(base_app, capsys):
-    run_cmd(base_app, 'show -z')
+    run_cmd(base_app, 'set -z')
     out, err = capsys.readouterr()
-    show_help = run_cmd(base_app, 'help show')
-    expected = ['usage: show [-h] [-l] [param]', 'show: error: unrecognized arguments: -z']
-    # 'show -h' is the same as 'help show', other than whitespace differences of an extra newline present in 'help show'
+    run_cmd(base_app, 'help set')
+    expected = ['usage: set [-h] [-l] [settable [settable ...]]', 'set: error: unrecognized arguments: -z']
     assert normalize(str(err)) == expected
 
 def test_base_shortcuts(base_app):
@@ -68,7 +66,7 @@ def test_base_shortcuts(base_app):
 def test_base_show(base_app):
     # force editor to be 'vim' so test is repeatable across platforms
     base_app.editor = 'vim'
-    out = run_cmd(base_app, 'show')
+    out = run_cmd(base_app, 'set')
     expected = normalize(SHOW_TXT)
     assert out == expected
 
@@ -76,7 +74,7 @@ def test_base_show(base_app):
 def test_base_show_long(base_app):
     # force editor to be 'vim' so test is repeatable across platforms
     base_app.editor = 'vim'
-    out = run_cmd(base_app, 'show -l')
+    out = run_cmd(base_app, 'set -l')
     expected = normalize(SHOW_LONG)
     assert out == expected
 
@@ -89,7 +87,7 @@ now: True
 """)
     assert out == expected
 
-    out = run_cmd(base_app, 'show quiet')
+    out = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
 
 def test_set_not_supported(base_app, capsys):
@@ -109,7 +107,7 @@ now: True
 """)
     assert out == expected
 
-    out = run_cmd(base_app, 'show quiet')
+    out = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
 
 
@@ -1099,8 +1097,8 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-cmdenvironment  help     load  pyscript  run   set    shortcuts  squat
-edit            history  py    quit      save  shell  show
+cmdenvironment  help     load  pyscript  run   set    shortcuts
+edit            history  py    quit      save  shell  squat
 
 Undocumented commands:
 ======================
