@@ -11,7 +11,8 @@ It also serves as an example of how to create command aliases (shortcuts).
 """
 import pyparsing
 import cmd2
-from cmd2 import options, make_option
+from cmd2 import options
+from optparse import make_option
 
 
 class ArgumentAndOptionPrinter(cmd2.Cmd):

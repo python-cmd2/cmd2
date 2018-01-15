@@ -6,7 +6,8 @@ presented as part of her PyCon 2010 talk.
 
 It demonstrates many features of cmd2.
 """
-from cmd2 import Cmd, options, make_option
+from cmd2 import Cmd, options
+from optparse import make_option
 
 
 class Pirate(Cmd):

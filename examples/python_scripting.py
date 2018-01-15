@@ -17,7 +17,8 @@ This application and the "scripts/conditional.py" script serve as an example for
 import functools
 import os
 
-from cmd2 import Cmd, options, make_option, CmdResult, set_use_arg_list
+from cmd2 import Cmd, options, CmdResult, with_argument_list
+from optparse import make_option
 
 
 class CmdLineApp(Cmd):
@@ -29,9 +30,6 @@ class CmdLineApp(Cmd):
         self._set_prompt()
         self.autorun_on_edit = False
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇  (Python 3 only)  💩'
-
-        # For option commands, pass a list of argument strings instead of a single argument string to the do_* methods
-        set_use_arg_list(True)
 
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
@@ -49,19 +47,21 @@ class CmdLineApp(Cmd):
         self._set_prompt()
         return stop
 
-    # noinspection PyUnusedLocal
-    @options([], arg_desc='<new_dir>')
-    def do_cd(self, arg, opts=None):
-        """Change directory."""
+    @with_argument_list
+    def do_cd(self, arglist):
+        """Change directory.
+    Usage:
+        cd <new_dir>
+        """
         # Expect 1 argument, the directory to change to
-        if not arg or len(arg) != 1:
+        if not arglist or len(arglist) != 1:
             self.perror("cd requires exactly 1 argument:", traceback_war=False)
             self.do_help('cd')
             self._last_result = CmdResult('', 'Bad arguments')
             return
 
         # Convert relative paths to absolute paths
-        path = os.path.abspath(os.path.expanduser(arg[0]))
+        path = os.path.abspath(os.path.expanduser(arglist[0]))
 
         # Make sure the directory exists, is a directory, and we have read access
         out = ''
