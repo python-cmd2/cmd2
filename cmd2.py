@@ -1289,17 +1289,14 @@ class Cmd(cmd.Cmd):
                                                                                                    len(fulloptions)))
         return result
 
-    @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
-    def do_show(self, arg, opts):
-        """Shows value of a parameter."""
-        # If arguments are being passed as a list instead of as a string
-        if USE_ARG_LIST:
-            if arg:
-                arg = arg[0]
-            else:
-                arg = ''
-
-        param = arg.strip().lower()
+    argparser = argparse.ArgumentParser(description='show value of a parameter')
+    argparser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
+    argparser.add_argument('param', nargs='?', help='name of parameter, if not supplied show all parameters')
+    @with_argument_parser(argparser)
+    def do_show(self, arglist, args):
+        param = ''
+        if args.param:
+            param = args.param.strip().lower()
         result = {}
         maxlen = 0
         for p in self.settable:
@@ -1308,7 +1305,7 @@ class Cmd(cmd.Cmd):
                 maxlen = max(maxlen, len(result[p]))
         if result:
             for p in sorted(result):
-                if opts.long:
+                if args.long:
                     self.poutput('{} # {}'.format(result[p].ljust(maxlen), self.settable[p]))
                 else:
                     self.poutput(result[p])
