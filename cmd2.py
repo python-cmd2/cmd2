@@ -1180,7 +1180,7 @@ class Cmd(cmd.Cmd):
             return stop
 
     # noinspection PyUnusedLocal
-    def do_cmdenvironment(self, args):
+    def do_cmdenvironment(self, _):
         """Summary report of interactive parameters."""
         self.poutput("""
         Commands are case-sensitive: {}
@@ -1196,11 +1196,12 @@ class Cmd(cmd.Cmd):
                      "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False",
                      "List of argument strings" if USE_ARG_LIST else "string of space-separated arguments"))
 
-    def do_help(self, arg):
+    @with_argument_list
+    def do_help(self, arglist):
         """List available commands with "help" or detailed help with "help cmd"."""
-        if arg:
+        if arglist:
             # Getting help for a specific command
-            funcname = self._func_named(arg)
+            funcname = self._func_named(arglist[0])
             if funcname:
                 # No special behavior needed, delegate to cmd base class do_help()
                 cmd.Cmd.do_help(self, funcname[3:])
@@ -1246,18 +1247,18 @@ class Cmd(cmd.Cmd):
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
     # noinspection PyUnusedLocal
-    def do_shortcuts(self, args):
+    def do_shortcuts(self, _):
         """Lists shortcuts (aliases) available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
     # noinspection PyUnusedLocal
-    def do_eof(self, arg):
+    def do_eof(self, _):
         """Called when <Ctrl>-D is pressed."""
         # End of script should not exit app, but <Ctrl>-D should.
         return self._STOP_AND_EXIT
 
-    def do_quit(self, arg):
+    def do_quit(self, _):
         """Exits this application."""
         self._should_quit = True
         return self._STOP_AND_EXIT
@@ -1849,7 +1850,8 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         else:
             return None
 
-    def do__relative_load(self, file_path):
+    @with_argument_list
+    def do__relative_load(self, arglist):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  _relative_load <file_path>
@@ -1865,11 +1867,11 @@ relative to the already-running script's directory.
 NOTE: This command is intended to only be used within text file scripts.
         """
         # If arg is None or arg is an empty string this is an error
-        if not file_path:
+        if not arglist:
             self.perror('_relative_load command requires a file path:', traceback_war=False)
             return
 
-        file_path = file_path.strip()
+        file_path = arglist[0].strip()
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
         self.do_load(relative_path)
@@ -1879,7 +1881,8 @@ NOTE: This command is intended to only be used within text file scripts.
         if self._script_dir:
             self._script_dir.pop()
 
-    def do_load(self, file_path):
+    @with_argument_list
+    def do_load(self, arglist):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  load <file_path>
@@ -1889,11 +1892,12 @@ NOTE: This command is intended to only be used within text file scripts.
 Script should contain one command per line, just like command would be typed in console.
         """
         # If arg is None or arg is an empty string this is an error
-        if not file_path:
+        if not arglist:
             self.perror('load command requires a file path:', traceback_war=False)
             return
 
-        expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
+        file_path = arglist[0].strip()
+        expanded_path = os.path.abspath(os.path.expanduser(file_path))
 
         # Make sure expanded_path points to a file
         if not os.path.isfile(expanded_path):
