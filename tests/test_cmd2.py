@@ -54,7 +54,7 @@ def test_base_invalid_option(base_app, capsys):
     run_cmd(base_app, 'set -z')
     out, err = capsys.readouterr()
     run_cmd(base_app, 'help set')
-    expected = ['usage: set [-h] [-l] [settable [settable ...]]', 'set: error: unrecognized arguments: -z']
+    expected = ['usage: set [-h] [-a] [-l] [settable [settable ...]]', 'set: error: unrecognized arguments: -z']
     assert normalize(str(err)) == expected
 
 def test_base_shortcuts(base_app):
@@ -76,6 +76,25 @@ def test_base_show_long(base_app):
     base_app.editor = 'vim'
     out = run_cmd(base_app, 'set -l')
     expected = normalize(SHOW_LONG)
+    assert out == expected
+
+
+def test_base_show_readonly(base_app):
+    out = run_cmd(base_app, 'set -a')
+    expected = normalize(SHOW_TXT + '\nRead only settings:' + """
+        Commands are case-sensitive: {}
+        Commands may be terminated with: {}
+        Arguments at invocation allowed: {}
+        Output redirection and pipes allowed: {}
+        Parsing of @options commands:
+            Shell lexer mode for command argument splitting: {}
+            Strip Quotes after splitting arguments: {}
+            Argument type: {}
+            
+""".format(not base_app.case_insensitive, base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
+           "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
+           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
+           "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))
     assert out == expected
 
 
@@ -294,26 +313,6 @@ def test_history_with_span_index_error(base_app):
 -------------------------[3]
 !ls -hal :
 """)
-    assert out == expected
-
-
-def test_base_cmdenvironment(base_app):
-    out = run_cmd(base_app, 'cmdenvironment')
-    expected = normalize("""
-
-        Commands are case-sensitive: {}
-        Commands may be terminated with: {}
-        Arguments at invocation allowed: {}
-        Output redirection and pipes allowed: {}
-        Parsing of @options commands:
-            Shell lexer mode for command argument splitting: {}
-            Strip Quotes after splitting arguments: {}
-            Argument type: {}
-            
-""".format(not base_app.case_insensitive, base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
-           "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
-           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
-           "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))
     assert out == expected
 
 def test_base_load(base_app, request):
@@ -1097,8 +1096,8 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-cmdenvironment  help     load  pyscript  run   set    shortcuts
-edit            history  py    quit      save  shell  squat
+edit  history  py        quit  save  shell      squat
+help  load     pyscript  run   set   shortcuts
 
 Undocumented commands:
 ======================

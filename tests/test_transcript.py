@@ -130,8 +130,8 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-cmdenvironment  help     load    orate  pyscript  run   say  shell      speak
-edit            history  mumble  py     quit      save  set  shortcuts
+edit  history  mumble  py        quit  save  set    shortcuts
+help  load     orate   pyscript  run   say   shell  speak
 
 (Cmd) help say
 Repeats what you tell me to.

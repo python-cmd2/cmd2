@@ -1199,22 +1199,6 @@ class Cmd(cmd.Cmd):
 
             return stop
 
-    def do_cmdenvironment(self, _):
-        """Summary report of interactive parameters."""
-        self.poutput("""
-        Commands are case-sensitive: {}
-        Commands may be terminated with: {}
-        Arguments at invocation allowed: {}
-        Output redirection and pipes allowed: {}
-        Parsing of @options commands:
-            Shell lexer mode for command argument splitting: {}
-            Strip Quotes after splitting arguments: {}
-            Argument type: {}
-        \n""".format(not self.case_insensitive, str(self.terminators), self.allow_cli_args, self.allow_redirection,
-                     "POSIX" if POSIX_SHLEX else "non-POSIX",
-                     "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False",
-                     "List of argument strings" if USE_ARG_LIST else "string of space-separated arguments"))
-
     @with_argument_list
     def do_help(self, arglist):
         """List available commands with "help" or detailed help with "help cmd"."""
@@ -1316,6 +1300,26 @@ class Cmd(cmd.Cmd):
                                                                                                    len(fulloptions)))
         return result
 
+    def cmdenvironment(self):
+        """Get a summary report of read-only settings which the user cannot modify at runtime.
+
+        :return: str - summary report of read-only settings which the user cannot modify at runtime
+        """
+        read_only_settings = """
+        Commands are case-sensitive: {}
+        Commands may be terminated with: {}
+        Arguments at invocation allowed: {}
+        Output redirection and pipes allowed: {}
+        Parsing of @options commands:
+            Shell lexer mode for command argument splitting: {}
+            Strip Quotes after splitting arguments: {}
+            Argument type: {}
+        """.format(not self.case_insensitive, str(self.terminators), self.allow_cli_args, self.allow_redirection,
+                   "POSIX" if POSIX_SHLEX else "non-POSIX",
+                   "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False",
+                   "List of argument strings" if USE_ARG_LIST else "string of space-separated arguments")
+        return read_only_settings
+
     def show(self, args, parameter):
         param = ''
         if parameter:
@@ -1332,10 +1336,15 @@ class Cmd(cmd.Cmd):
                     self.poutput('{} # {}'.format(result[p].ljust(maxlen), self.settable[p]))
                 else:
                     self.poutput(result[p])
+
+            # If user has requested to see all settings, also show read-only settings
+            if args.all:
+                self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
         else:
             raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
     set_parser = argparse.ArgumentParser(description='show or set value of a parameter')
+    set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
 
