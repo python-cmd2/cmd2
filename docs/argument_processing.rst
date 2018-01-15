@@ -1,3 +1,5 @@
+.. _decorators:
+
 ===================
 Argument Processing
 ===================

@@ -122,82 +122,26 @@ Commands with flags
 
 All ``do_`` methods are responsible for interpreting
 the arguments passed to them.  However, ``cmd2`` lets
-a ``do_`` methods accept Unix-style *flags*.  It uses optparse_
+a ``do_`` methods accept Unix-style *flags*.  It uses argparse_
 to parse the flags, and they work the same way as for
 that module.
 
-Flags are defined with the ``options`` decorator,
-which is passed a list of optparse_-style options,
-each created with ``make_option``.  The method
-should accept a second argument, ``opts``, in
-addition to ``args``; the flags will be stripped
-from ``args``.
-
-::
-
-    @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
-        make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
-        make_option('-r', '--repeat', type="int", help="output [n] times")
-    ])
-    def do_speak(self, arg, opts=None):
-        """Repeats what you tell me to."""
-        arg = ''.join(arg)
-        if opts.piglatin:
-            arg = '%s%say' % (arg[1:].rstrip(), arg[0])
-        if opts.shout:
-            arg = arg.upper()
-        repetitions = opts.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(arg)
-            self.stdout.write('\n')
-
-::
-
-    (Cmd) say goodnight, gracie
-    goodnight, gracie
-    (Cmd) say -sp goodnight, gracie
-    OODNIGHT, GRACIEGAY
-    (Cmd) say -r 2 --shout goodnight, gracie
-    GOODNIGHT, GRACIE
-    GOODNIGHT, GRACIE
-
-``options`` takes an optional additional argument, ``arg_desc``.
-If present, ``arg_desc`` will appear in place of ``arg`` in
-the option's online help.
-
-::
-
-    @options([make_option('-t', '--train', action='store_true', help='by train')],
-             arg_desc='(from city) (to city)')
-    def do_travel(self, arg, opts=None):
-        'Gets you from (from city) to (to city).'
-
-
-::
-
-    (Cmd) help travel
-    Gets you from (from city) to (to city).
-    Usage: travel [options] (from-city) (to-city)
-
-    Options:
-      -h, --help   show this help message and exit
-      -t, --train  by train
+``cmd2`` defines a few decorators which change the behavior of
+how arguments get parsed for and passed to a ``do_`` method.  See the section :ref:`decorators` for more information.
 
 Controlling how arguments are parsed for commands with flags
 ------------------------------------------------------------
-There are three functions which can globally effect how arguments are parsed for commands with flags:
+There are a couple functions which can globally effect how arguments are parsed for commands with flags:
 
 .. autofunction:: cmd2.set_posix_shlex
 
 .. autofunction:: cmd2.set_strip_quotes
 
-.. autofunction:: cmd2.set_use_arg_list
+.. warning::::
 
-.. note::
-
-   Since optparse_ has been deprecated since Python 3.2, the ``cmd2`` developers plan to replace optparse_ with
-   argparse_ at some point in the future.  We will endeavor to keep the API as identical as possible when this
-   change occurs.
+   Since optparse_ has been deprecated since Python 3.2, the ``cmd2`` developers have deprecated the old optparse-based
+   ``@options`` decorator.  This decorator still exists in the codebase, but it will be removed in a future release.
+   We recommend using one of the new argparse-based decorators.
 
 .. _optparse: https://docs.python.org/3/library/optparse.html
 .. _argparse: https://docs.python.org/3/library/argparse.html
