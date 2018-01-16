@@ -340,7 +340,7 @@ def test_history_edit(base_app, monkeypatch):
 
     # Run help command just so we have a command in history
     run_cmd(base_app, 'help')
-    run_cmd(base_app, 'edit')
+    run_cmd(base_app, 'history -e 1')
 
     # We have an editor, so should expect a system call
     m.assert_called_once()
