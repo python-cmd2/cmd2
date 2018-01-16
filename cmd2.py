@@ -1697,14 +1697,14 @@ Paths or arguments that contain spaces must be enclosed in quotes
             embed(banner1=banner, exit_msg=exit_msg)
 
     history_parser = argparse.ArgumentParser(
-                    description='run, edit, and save past commands',
+                    description='run, edit, and save previously entered commands',
                     formatter_class=argparse.RawTextHelpFormatter,
                 )
-    history_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
     history_parser_group = history_parser.add_mutually_exclusive_group()
     history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_parser_group.add_argument('-e', '--edit', action='store_true', help='edit and then run selected history items')
-    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', type=argparse.FileType('w'), help='output to file')
+    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output to file')
+    history_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
     _history_arg_help = """empty               all history items
 a                   one history item by number
 a..b, a:b, a:, ..b  items by indices (inclusive)
@@ -1714,9 +1714,12 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argument_parser(history_parser)
     def do_history(self, args):
-        # If an argument was supplied, then retrieve partial contents of the history
+        # If an argument was supplied, then retrieve partial contents of the
+        # history
+        cowerdly_refuse_to_run = False
         if args.arg:
-            # If a character indicating a slice is present, retrieve a slice of the history
+            # If a character indicating a slice is present, retrieve
+            # a slice of the history
             arg = args.arg
             if '..' in arg or ':' in arg:
                 try:
@@ -1729,14 +1732,43 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                 history = self.history.get(arg)
         else:
             # If no arg given, then retrieve the entire history
+            cowerdly_refuse_to_run = True
             history = self.history
 
-        # Display the history items retrieved
-        for hi in history:
-            if args.script:
-                self.poutput(hi)
+        if args.run:
+            if cowerdly_refuse_to_run:
+                self.perror("Cowerdly refusing to run all previously entered commands.", traceback_war=False)
+                self.perror("If this is what you want to do, specify '1:' as the range of history.", traceback_war=False)
             else:
-                self.poutput(hi.pr())
+                self.cmdqueue.extend(history)
+        elif args.edit:
+            fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
+            with os.fdopen(fd, 'w') as fobj:
+                for cmd in history:
+                    fobj.write('{}\n'.format(cmd))
+            try:
+                os.system('"{}" "{}"'.format(self.editor, fname))
+                self.do_load(fname)
+            except:
+                raise
+            finally:
+                os.remove(fname)
+        elif args.output_file:
+            try:
+                with open(os.path.expanduser(args.output_file), 'w') as fobj:
+                    for cmd in history:
+                        fobj.write('{}\n'.format(cmd))
+                plural = 's' if len(history) > 1 else ''
+                self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
+            except Exception as e:
+                self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
+        else:
+            # Display the history items retrieved
+            for hi in history:
+                if args.script:
+                    self.poutput(hi)
+                else:
+                    self.poutput(hi.pr())
 
     def _last_matching(self, arg):
         """Return the last item from the history list that matches arg.  Or if arg not provided, return last item.

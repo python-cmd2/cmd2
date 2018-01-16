@@ -316,6 +316,53 @@ def test_history_with_span_index_error(base_app):
 """)
     assert out == expected
 
+def test_history_output_file(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    run_cmd(base_app, 'help history')
+    
+    fd, fname = tempfile.mkstemp(prefix='', suffix='.txt')
+    os.close(fd)
+    run_cmd(base_app, 'history -o "{}"'.format(fname))
+    expected = normalize('\n'.join(['help', 'shortcuts', 'help history']))
+    with open(fname) as f:
+        content = normalize(f.read())
+    assert content == expected
+
+def test_history_edit(base_app, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't really
+    # going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    # Run help command just so we have a command in history
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'edit')
+
+    # We have an editor, so should expect a system call
+    m.assert_called_once()
+
+def test_history_run_all_commands(base_app):
+    # make sure we refuse to run all commands as a default
+    run_cmd(base_app, 'shortcuts')
+    out = run_cmd(base_app, 'history -r')
+    # this should generate an error, but we don't currently have a way to
+    # capture stderr in these tests. So we assume that if we got nothing on
+    # standard out, that the error occured because if the commaned executed
+    # then we should have a list of shortcuts in our output
+    assert out == []
+
+def test_history_run_one_command(base_app):
+    run_cmd(base_app, 'help')
+    # because of the way run_cmd works, it will not
+    # process the cmdqueue. So we can check to see
+    # if the cmdqueue has a waiting item
+    run_cmd(base_app, 'history -r 1')
+    assert len(base_app.cmdqueue) == 1
+
 def test_base_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
