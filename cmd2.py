@@ -1741,7 +1741,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                 for runme in history:
                     self.pfeedback(runme)
                     if runme:
-                        return self.onecmd_plus_hooks(runme)
+                        self.onecmd_plus_hooks(runme)
         elif args.edit:
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             with os.fdopen(fd, 'w') as fobj:
