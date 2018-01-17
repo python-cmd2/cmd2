@@ -14,12 +14,20 @@
     * The **__relative_load** command is now hidden from the help menu by default
         * This command is not intended to be called from the command line, only from within scripts
     * The **set** command now has an additional **-a/--all** option to also display read-only settings
+    * The **history** command can now run, edit, and save prior commands, in addition to the prior behavior of displaying prior commands.
+* Commands Removed
+    * The **cmdenvironment** has been removed and its functionality incorporated into the **-a/--all** argument to **set**
+    * The **show** command has been removed.  Its functionality has always existing within **set** and continues to do so
+    * The **save** command has been removed. The capability to save prior commands is now part of the **history** command.
+    * The **run** command has been removed. The capability to run prior commands is now part of the **history** command.
+* Other changes
+    * The **edit** command no longer allows you to edit prior commands. The capability to edit prior commands is now part of the **history** command. The **edit** command still allows you to edit arbitrary files.
+    * the **autorun_on_edit** setting has been removed.
 * Deprecations
     * The old **options** decorator for optparse-based argument parsing is now *deprecated*
         * The old decorator is still present for now, but will eventually be removed in a future release
         * ``cmd2`` no longer includes **optparse.make_option** so if your app needs it you need to import it directly from optparse
-    * The **cmdenvironment** has been removed and its functionality incorporated into the **-a/--all** argument to **set**
-    * The **show** command has been removed.  Its functionality has always existing within **set** and continues to do so
+
 
 ## 0.7.9 (January 4, 2018)
 
