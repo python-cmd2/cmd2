@@ -28,7 +28,6 @@ class CmdLineApp(Cmd):
         # Enable the optional ipy command if IPython is installed by setting use_ipython=True
         Cmd.__init__(self, use_ipython=True)
         self._set_prompt()
-        self.autorun_on_edit = False
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇  (Python 3 only)  💩'
 
     def _set_prompt(self):

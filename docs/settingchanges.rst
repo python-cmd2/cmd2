@@ -117,7 +117,6 @@ with::
 
     (Cmd) set --long
     abbrev: False                  # Accept abbreviated commands
-    autorun_on_edit: False         # Automatically run files after editing
     colors: True                   # Colorized output (*nix only)
     continuation_prompt: >         # On 2nd+ line of input
     debug: False                   # Show full error stack on error

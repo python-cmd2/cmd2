@@ -236,7 +236,6 @@ example/transcript_regex.txt:
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
 abbrev: True
-autorun_on_edit: False
 colors: /(True|False)/
 continuation_prompt: >/ /
 debug: False

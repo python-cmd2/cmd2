@@ -320,7 +320,7 @@ def test_history_output_file(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
     run_cmd(base_app, 'help history')
-    
+
     fd, fname = tempfile.mkstemp(prefix='', suffix='.txt')
     os.close(fd)
     run_cmd(base_app, 'history -o "{}"'.format(fname))
@@ -613,12 +613,6 @@ def test_pipe_to_shell(base_app, capsys):
     if sys.platform == "win32":
         # Windows
         command = 'help | sort'
-        # Get help menu and pipe it's output to the sort shell command
-        # expected = ['', '', '_relative_load  edit  history  py        quit  save  shell      show',
-        #             '========================================',
-        #             'cmdenvironment  help  load     pyscript  run   set   shortcuts',
-        #             'Documented commands (type help <topic>):']
-        # assert out == expected
     else:
         # Mac and Linux
         # Get help on help and pipe it's output to the input of the word count shell command

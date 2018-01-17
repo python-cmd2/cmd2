@@ -1478,7 +1478,6 @@ class Cmd(cmd.Cmd):
     # Enable tab completion of paths for relevant commands
     complete_edit = path_complete
     complete_load = path_complete
-    complete_save = path_complete
 
     # noinspection PyUnusedLocal
     @staticmethod
