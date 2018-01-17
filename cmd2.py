@@ -288,13 +288,10 @@ def with_argparser_and_unknown_args(argparser):
         argparser.prog = func.__name__[3:]
 
         # put the help message in the method docstring
-        funcdoc = func.__doc__
-        if funcdoc:
-            funcdoc += '\n'
-        else:
-            # if it's None, make it an empty string
-            funcdoc = ''
-        cmd_wrapper.__doc__ = '{}{}'.format(funcdoc, argparser.format_help())
+        if func.__doc__:
+            argparser.description = func.__doc__
+
+        cmd_wrapper.__doc__ = argparser.format_help()
         return cmd_wrapper
     return arg_decorator
 
@@ -315,13 +312,10 @@ def with_argument_parser(argparser):
         argparser.prog = func.__name__[3:]
 
         # put the help message in the method docstring
-        funcdoc = func.__doc__
-        if funcdoc:
-            funcdoc += '\n'
-        else:
-            # if it's None, make it an empty string
-            funcdoc = ''
-        cmd_wrapper.__doc__ = '{}{}'.format(funcdoc, argparser.format_help())
+        if func.__doc__:
+            argparser.description = func.__doc__
+
+        cmd_wrapper.__doc__ = argparser.format_help()
         return cmd_wrapper
     return arg_decorator
 
@@ -1341,7 +1335,7 @@ class Cmd(cmd.Cmd):
         else:
             raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
-    set_parser = argparse.ArgumentParser(description='show or set value of a parameter')
+    set_parser = argparse.ArgumentParser()
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
@@ -1693,13 +1687,11 @@ Paths or arguments that contain spaces must be enclosed in quotes
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
             embed(banner1=banner, exit_msg=exit_msg)
 
-    history_parser = argparse.ArgumentParser(
-                    description='run, edit, and save previously entered commands',
-                    formatter_class=argparse.RawTextHelpFormatter,
-                )
+    history_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     history_parser_group = history_parser.add_mutually_exclusive_group()
     history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
-    history_parser_group.add_argument('-e', '--edit', action='store_true', help='edit and then run selected history items')
+    history_parser_group.add_argument('-e', '--edit', action='store_true',
+                                      help='edit and then run selected history items')
     history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output to file')
     history_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
     _history_arg_help = """empty               all history items
@@ -1711,8 +1703,8 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argument_parser(history_parser)
     def do_history(self, args):
-        # If an argument was supplied, then retrieve partial contents of the
-        # history
+        """View, run, edit, and save previously entered commands."""
+        # If an argument was supplied, then retrieve partial contents of the history
         cowardly_refuse_to_run = False
         if args.arg:
             # If a character indicating a slice is present, retrieve
@@ -1735,7 +1727,8 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         if args.run:
             if cowardly_refuse_to_run:
                 self.perror("Cowardly refusing to run all previously entered commands.", traceback_war=False)
-                self.perror("If this is what you want to do, specify '1:' as the range of history.", traceback_war=False)
+                self.perror("If this is what you want to do, specify '1:' as the range of history.",
+                            traceback_war=False)
             else:
                 for runme in history:
                     self.pfeedback(runme)
@@ -1744,20 +1737,20 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         elif args.edit:
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             with os.fdopen(fd, 'w') as fobj:
-                for cmd in history:
-                    fobj.write('{}\n'.format(cmd))
+                for command in history:
+                    fobj.write('{}\n'.format(command))
             try:
                 os.system('"{}" "{}"'.format(self.editor, fname))
                 self.do_load(fname)
-            except:
+            except Exception:
                 raise
             finally:
                 os.remove(fname)
         elif args.output_file:
             try:
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
-                    for cmd in history:
-                        fobj.write('{}\n'.format(cmd))
+                    for command in history:
+                        fobj.write('{}\n'.format(command))
                 plural = 's' if len(history) > 1 else ''
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:
@@ -1769,7 +1762,6 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                     self.poutput(hi)
                 else:
                     self.poutput(hi.pr())
-
 
     @with_argument_list
     def do_edit(self, arglist):
@@ -1875,7 +1867,6 @@ Script should contain one command per line, just like command would be typed in 
             return
 
         self._script_dir.append(os.path.dirname(expanded_path))
-
 
     @staticmethod
     def is_text_file(file_path):

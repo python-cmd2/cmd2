@@ -64,7 +64,7 @@ class CmdLineApp(Cmd):
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
-    tag_parser = argparse.ArgumentParser(description='create a html tag')
+    tag_parser = argparse.ArgumentParser()
     tag_parser.add_argument('tag', nargs=1, help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 

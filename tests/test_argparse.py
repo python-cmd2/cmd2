@@ -140,10 +140,14 @@ def test_argparse_quoted_arguments_posix_multiple(argparse_app):
 
 def test_argparse_help_docstring(argparse_app):
     out = run_cmd(argparse_app, 'help say')
-    assert out[0] == 'Repeat what you tell me to.'
+    assert out[0].startswith('usage: say')
+    assert out[1] == ''
+    assert out[2] == 'Repeat what you tell me to.'
 
 def test_argparse_help_description(argparse_app):
     out = run_cmd(argparse_app, 'help tag')
+    assert out[0].startswith('usage: tag')
+    assert out[1] == ''
     assert out[2] == 'create a html tag'
 
 def test_argparse_prog(argparse_app):
