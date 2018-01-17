@@ -130,8 +130,8 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-edit  history  mumble  py        quit  save  set    shortcuts
-help  load     orate   pyscript  run   say   shell  speak
+edit  history  mumble  py        quit  set    shortcuts
+help  load     orate   pyscript  say   shell  speak
 
 (Cmd) help say
 Repeats what you tell me to.
@@ -172,7 +172,7 @@ say -ps --repeat=5 goodnight, Gracie
 set maxrepeats 5
 -------------------------[6]
 say -ps --repeat=5 goodnight, Gracie
-(Cmd) run 4
+(Cmd) history -r 4
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY

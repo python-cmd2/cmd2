@@ -356,12 +356,9 @@ def test_history_run_all_commands(base_app):
     assert out == []
 
 def test_history_run_one_command(base_app):
-    run_cmd(base_app, 'help')
-    # because of the way run_cmd works, it will not
-    # process the cmdqueue. So we can check to see
-    # if the cmdqueue has a waiting item
-    run_cmd(base_app, 'history -r 1')
-    assert len(base_app.cmdqueue) == 1
+    expected = run_cmd(base_app, 'help')
+    output = run_cmd(base_app, 'history -r 1')
+    assert output == expected
 
 def test_base_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -523,88 +520,6 @@ def test_relative_load_requires_an_argument(base_app, capsys):
     assert out == ''
     assert err.startswith('ERROR: _relative_load command requires a file path:\n')
     assert base_app.cmdqueue == []
-
-
-def test_base_save(base_app):
-    # TODO: Use a temporary directory for the file
-    filename = 'deleteme.txt'
-    base_app.feedback_to_output = True
-    run_cmd(base_app, 'help')
-    run_cmd(base_app, 'help save')
-
-    # Test the * form of save which saves all commands from history
-    out = run_cmd(base_app, 'save * {}'.format(filename))
-    assert out == normalize('Saved to {}\n'.format(filename))
-    expected = normalize("""
-help
-
-help save
-
-save * deleteme.txt
-""")
-    with open(filename) as f:
-        content = normalize(f.read())
-    assert content == expected
-
-    # Test the N form of save which saves a numbered command from history
-    out = run_cmd(base_app, 'save 1 {}'.format(filename))
-    assert out == normalize('Saved to {}\n'.format(filename))
-    expected = normalize('help')
-    with open(filename) as f:
-        content = normalize(f.read())
-    assert content == expected
-
-    # Test the blank form of save which saves the most recent command from history
-    out = run_cmd(base_app, 'save {}'.format(filename))
-    assert out == normalize('Saved to {}\n'.format(filename))
-    expected = normalize('save 1 {}'.format(filename))
-    with open(filename) as f:
-        content = normalize(f.read())
-    assert content == expected
-
-    # Delete file that was created
-    os.remove(filename)
-
-def test_save_parse_error(base_app, capsys):
-    invalid_file = '~!@'
-    run_cmd(base_app, 'save {}'.format(invalid_file))
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith('ERROR: Could not understand save target {}\n'.format(invalid_file))
-
-def test_save_tempfile(base_app):
-    # Just run help to make sure there is something in the history
-    base_app.feedback_to_output = True
-    run_cmd(base_app, 'help')
-    out = run_cmd(base_app, 'save *')
-    output = out[0]
-    assert output.startswith('Saved to ')
-
-    # Delete the tempfile which was created
-    temp_file = output.split('Saved to ')[1].strip()
-    os.remove(temp_file)
-
-def test_save_invalid_history_index(base_app, capsys):
-    run_cmd(base_app, 'save 5')
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith("EXCEPTION of type 'IndexError' occurred with message: 'list index out of range'\n")
-
-def test_save_empty_history_and_index(base_app, capsys):
-    run_cmd(base_app, 'save')
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith("ERROR: History is empty, nothing to save.\n")
-
-def test_save_invalid_path(base_app, capsys):
-    # Just run help to make sure there is something in the history
-    run_cmd(base_app, 'help')
-
-    invalid_path = '/no_such_path/foobar.txt'
-    run_cmd(base_app, 'save {}'.format(invalid_path))
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith("ERROR: Saving '{}' - ".format(invalid_path))
 
 
 def test_output_redirection(base_app):
@@ -1144,8 +1059,7 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-edit  history  py        quit  save  shell      squat
-help  load     pyscript  run   set   shortcuts
+edit  help  history  load  py  pyscript  quit  set  shell  shortcuts  squat
 
 Undocumented commands:
 ======================
@@ -1404,20 +1318,6 @@ def test_clipboard_failure(capsys):
     out, err = capsys.readouterr()
     assert out == ''
     assert 'Cannot redirect to paste buffer; install ``xclip`` and re-run to enable' in err
-
-
-def test_run_command_with_empty_arg(base_app):
-    command = 'help'
-    base_app.feedback_to_output = True
-    run_cmd(base_app, command)
-    out = run_cmd(base_app, 'run')
-    expected = normalize('{}\n\n'.format(command) + BASE_HELP)
-    assert out == expected
-
-def test_run_command_with_empty_history(base_app):
-    base_app.feedback_to_output = True
-    out = run_cmd(base_app, 'run')
-    assert out == []
 
 
 class CmdResultApp(cmd2.Cmd):

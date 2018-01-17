@@ -1716,7 +1716,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
     def do_history(self, args):
         # If an argument was supplied, then retrieve partial contents of the
         # history
-        cowerdly_refuse_to_run = False
+        cowardly_refuse_to_run = False
         if args.arg:
             # If a character indicating a slice is present, retrieve
             # a slice of the history
@@ -1732,15 +1732,18 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                 history = self.history.get(arg)
         else:
             # If no arg given, then retrieve the entire history
-            cowerdly_refuse_to_run = True
+            cowardly_refuse_to_run = True
             history = self.history
 
         if args.run:
-            if cowerdly_refuse_to_run:
-                self.perror("Cowerdly refusing to run all previously entered commands.", traceback_war=False)
+            if cowardly_refuse_to_run:
+                self.perror("Cowardly refusing to run all previously entered commands.", traceback_war=False)
                 self.perror("If this is what you want to do, specify '1:' as the range of history.", traceback_war=False)
             else:
-                self.cmdqueue.extend(history)
+                for runme in history:
+                    self.pfeedback(runme)
+                    if runme:
+                        return self.onecmd_plus_hooks(runme)
         elif args.edit:
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             with os.fdopen(fd, 'w') as fobj:
@@ -1860,50 +1863,6 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         if delete_tempfile:
             os.remove(filename)
 
-    saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
-                  pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
-                  pyparsing.stringEnd)
-
-    def do_save(self, arg):
-        """Saves command(s) from history to file.
-
-    Usage:  save [N] [file_path]
-
-    * N         - Number of command (from history), or `*` for all commands in history (default: last command)
-    * file_path - location to save script of command(s) to (default: value stored in temporary file)"""
-        try:
-            args = self.saveparser.parseString(arg)
-        except pyparsing.ParseException:
-            self.perror('Could not understand save target %s' % arg, traceback_war=False)
-            raise SyntaxError(self.do_save.__doc__)
-
-        # If a filename was supplied then use that, otherwise use a temp file
-        if args.fname:
-            fname = args.fname
-        else:
-            fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
-            os.close(fd)
-
-        if args.idx == '*':
-            saveme = '\n\n'.join(self.history[:])
-        elif args.idx:
-            saveme = self.history[int(args.idx) - 1]
-        else:
-            # Wrap in try to deal with case of empty history
-            try:
-                # Since this save command has already been added to history, need to go one more back for previous
-                saveme = self.history[-2]
-            except IndexError:
-                self.perror('History is empty, nothing to save.', traceback_war=False)
-                return
-        try:
-            f = open(os.path.expanduser(fname), 'w')
-            f.write(saveme)
-            f.close()
-            self.pfeedback('Saved to {}'.format(fname))
-        except Exception as e:
-            self.perror('Saving {!r} - {}'.format(fname, e), traceback_war=False)
-
     @property
     def _current_script_dir(self):
         """Accessor to get the current script directory from the _script_dir LIFO queue."""
@@ -1990,17 +1949,6 @@ Script should contain one command per line, just like command would be typed in 
 
         self._script_dir.append(os.path.dirname(expanded_path))
 
-    def do_run(self, arg):
-        """run [arg]: re-runs an earlier command
-
-    no arg                               -> run most recent command
-    arg is integer                       -> run one history item, by index
-    arg is string                        -> run most recent command by string search
-    arg is /enclosed in forward-slashes/ -> run most recent by regex"""
-        runme = self._last_matching(arg)
-        self.pfeedback(runme)
-        if runme:
-            return self.onecmd_plus_hooks(runme)
 
     @staticmethod
     def is_text_file(file_path):
