@@ -2,11 +2,32 @@
 * Bug Fixes
     * Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
 * Enhancements
-    * Added new **with_argument_parser** decorator for argparse-based argument parsing of command arguments
-        * This replaces the old **options** decorator for optparse-based argument parsing
-            * The old decorator is still present for now, but should be considered *deprecated* and will eventually be removed
-        * See the **Argument Processing** section of the documentation for more information
-            * Alternatively, see the **argparse_example.py** example
+    * Three new decorators for **do_*** commands to make argument parsing easier
+        * **with_argument_list** decorator to change argument type from str to List[str]
+            * **do_*** commands get a single argument which is a list of strings, as pre-parsed by shlex.split()
+        * **with_argument_parser** decorator for strict argparse-based argument parsing of command arguments
+            * **do_*** commands get a single argument which is the output of argparse.parse_args()
+        * **with_argparser_and_unknown_args** decorator for argparse-based argument parsing, but allowing unknown args
+            * **do_*** commands get two arguments, the output of argparse.parse_known_args()
+    *  See the **Argument Processing** section of the documentation for more information on these decorators
+        * Alternatively, see the **argparse_example.py** and **arg_print.py** examples
+    * The **__relative_load** command is now hidden from the help menu by default
+        * This command is not intended to be called from the command line, only from within scripts
+    * The **set** command now has an additional **-a/--all** option to also display read-only settings
+    * The **history** command can now run, edit, and save prior commands, in addition to the prior behavior of displaying prior commands.
+* Commands Removed
+    * The **cmdenvironment** has been removed and its functionality incorporated into the **-a/--all** argument to **set**
+    * The **show** command has been removed.  Its functionality has always existing within **set** and continues to do so
+    * The **save** command has been removed. The capability to save prior commands is now part of the **history** command.
+    * The **run** command has been removed. The capability to run prior commands is now part of the **history** command.
+* Other changes
+    * The **edit** command no longer allows you to edit prior commands. The capability to edit prior commands is now part of the **history** command. The **edit** command still allows you to edit arbitrary files.
+    * the **autorun_on_edit** setting has been removed.
+* Deprecations
+    * The old **options** decorator for optparse-based argument parsing is now *deprecated*
+        * The old decorator is still present for now, but will eventually be removed in a future release
+        * ``cmd2`` no longer includes **optparse.make_option** so if your app needs it you need to import it directly from optparse
+
 
 ## 0.7.9 (January 4, 2018)
 

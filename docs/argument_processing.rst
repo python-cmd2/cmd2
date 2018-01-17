@@ -1,3 +1,5 @@
+.. _decorators:
+
 ===================
 Argument Processing
 ===================
@@ -13,14 +15,15 @@ Argument Processing
 
 These features are all provided by the ``@with_argument_parser`` decorator.
 
-Using the decorator
-===================
+Using the argument parser decorator
+===================================
 
 For each command in the ``cmd2`` subclass which requires argument parsing,
 create an instance of ``argparse.ArgumentParser()`` which can parse the
 input appropriately for the command. Then decorate the command method with
 the ``@with_argument_parser`` decorator, passing the argument parser as the
-first parameter to the decorator. Add a third variable to the command method, which will contain the results of ``ArgumentParser.parse_args()``.
+first parameter to the decorator. This changes the second argumen to the command method, which will contain the results
+of ``ArgumentParser.parse_args()``.
 
 Here's what it looks like::
 
@@ -31,7 +34,7 @@ Here's what it looks like::
       argparser.add_argument('word', nargs='?', help='word to say')
 
       @with_argument_parser(argparser)
-      def do_speak(self, argv, opts)
+      def do_speak(self, opts)
          """Repeats what you tell me to."""
          arg = opts.word
          if opts.piglatin:
@@ -62,7 +65,7 @@ appended to the docstring for the method of that command. With this code::
    argparser.add_argument('tag', nargs=1, help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argument_parser(argparser)
-   def do_tag(self, cmdline, args=None):
+   def do_tag(self, args):
       """create a html tag"""
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
       self.stdout.write('\n')
@@ -88,7 +91,7 @@ If you would prefer the short description of your command to come after the usag
    argparser.add_argument('tag', nargs=1, help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argument_parser(argparser)
-   def do_tag(self, cmdline, args=None):
+   def do_tag(self, args):
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
       self.stdout.write('\n')
 
@@ -117,7 +120,7 @@ To add additional text to the end of the generated help message, use the ``epilo
    argparser.add_argument('tag', nargs=1, help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argument_parser(argparser)
-   def do_tag(self, cmdline, args=None):
+   def do_tag(self, args):
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
       self.stdout.write('\n')
 
@@ -138,6 +141,50 @@ Which yields:
 
    This command can not generate tags with no content, like <br/>
 
+
+Receiving an argument list
+==========================
+
+The default behavior of ``cmd2`` is to pass the user input directly to your
+``do_*`` methods as a string. If you don't want to use the full argument parser support outlined above, you can still have ``cmd2`` apply shell parsing rules to the user input and pass you a list of arguments instead of a string. Apply the ``@with_argument_list`` decorator to those methods that should receive an argument list instead of a string::
+
+   class CmdLineApp(cmd2.Cmd):
+      """ Example cmd2 application. """
+
+      def do_say(self, cmdline):
+         # cmdline contains a string
+         pass
+
+      @with_argument_list
+      def do_speak(self, arglist):
+         # arglist contains a list of arguments
+         pass
+
+
+Using the argument parser decorator and also receiving a a list of unknown positional arguments
+===============================================================================================
+If you want all unknown arguments to be passed to your command as a list of strings, then
+decorate the command method with the ``@with_argparser_and_list`` decorator.
+
+Here's what it looks like::
+
+    dir_parser = argparse.ArgumentParser()
+    dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
+
+    @with_argparser_and_list(dir_parser)
+    def do_dir(self, args, unknown):
+        """List contents of current directory."""
+        # No arguments for this command
+        if unknown:
+            self.perror("dir does not take any positional arguments:", traceback_war=False)
+            self.do_help('dir')
+            self._last_result = CmdResult('', 'Bad arguments')
+            return
+
+        # Get the contents as a list
+        contents = os.listdir(self.cwd)
+
+        ...
 
 Deprecated optparse support
 ===========================

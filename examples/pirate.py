@@ -6,7 +6,8 @@ presented as part of her PyCon 2010 talk.
 
 It demonstrates many features of cmd2.
 """
-from cmd2 import Cmd, options, make_option
+import argparse
+from cmd2 import Cmd, with_argument_parser
 
 
 class Pirate(Cmd):
@@ -72,17 +73,18 @@ class Pirate(Cmd):
         """Sing a colorful song."""
         print(self.colorize(arg, self.songcolor))
 
-    @options([make_option('--ho', type='int', default=2,
-                          help="How often to chant 'ho'"),
-              make_option('-c', '--commas',
-                          action="store_true",
-                          help="Intersperse commas")])
-    def do_yo(self, arg, opts):
+    yo_parser = argparse.ArgumentParser()
+    yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")
+    yo_parser.add_argument('-c', '--commas', action='store_true', help='Intersperse commas')
+    yo_parser.add_argument('beverage', nargs=1, help='beverage to drink with the chant')
+
+    @with_argument_parser(yo_parser)
+    def do_yo(self, args):
         """Compose a yo-ho-ho type chant with flexible options."""
-        chant = ['yo'] + ['ho'] * opts.ho
-        separator = ', ' if opts.commas else ' '
+        chant = ['yo'] + ['ho'] * args.ho
+        separator = ', ' if args.commas else ' '
         chant = separator.join(chant)
-        print('{0} and a bottle of {1}'.format(chant, arg))
+        print('{0} and a bottle of {1}'.format(chant, args.beverage[0]))
 
 
 if __name__ == '__main__':

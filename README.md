@@ -70,13 +70,13 @@ Instructions for implementing each feature follow.
 - Searchable command history
 
     All commands will automatically be tracked in the session's history, unless the command is listed in Cmd's excludeFromHistory attribute.
-    The history is accessed through the `history`, `list`, and `run` commands.
+    The history is accessed through the `history` command.
     If you wish to exclude some of your custom commands from the history, append their names
     to the list at `Cmd.ExcludeFromHistory`.
 
 - Load commands from file, save to file, edit commands in file
 
-    Type `help load`, `help save`, `help edit` for details.
+    Type `help load`, `help history` for details.
 
 - Multi-line commands
 
@@ -105,7 +105,7 @@ Instructions for implementing each feature follow.
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
-    def do_speak(self, cmdline, args=None):
+    def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -175,7 +175,7 @@ class CmdLineApp(Cmd):
     argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
-    def do_speak(self, cmdline, opts=None):
+    def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -196,7 +196,7 @@ class CmdLineApp(Cmd):
     argparser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
     argparser.add_argument('words', nargs='+', help='words to say')
     @with_argument_parser(argparser)
-    def do_mumble(self, cmdline, args=None):
+    def do_mumble(self, args):
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
         for i in range(min(repetitions, self.maxrepeats)):
@@ -236,7 +236,6 @@ example/transcript_regex.txt:
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
 abbrev: True
-autorun_on_edit: False
 colors: /(True|False)/
 continuation_prompt: >/ /
 debug: False

@@ -13,7 +13,7 @@ Script files
 ============
 
 Text files can serve as scripts for your ``cmd2``-based
-application, with the ``load``, ``_relative_load``, ``save``, and ``edit`` commands.
+application, with the ``load``, ``_relative_load``, ``edit`` and ``history`` commands.
 
 Both ASCII and UTF-8 encoded unicode text files are supported.
 
@@ -23,9 +23,9 @@ Simply include one command per line, typed exactly as you would inside a ``cmd2`
 
 .. automethod:: cmd2.Cmd.do__relative_load
 
-.. automethod:: cmd2.Cmd.do_save
-
 .. automethod:: cmd2.Cmd.do_edit
+
+.. automethod:: cmd2.Cmd.do_history
 
 
 Comments
@@ -257,11 +257,9 @@ also provide `bash-like history list editing`_.
 
 .. _`bash-like history list editing`: http://www.talug.org/events/20030709/cmdline_history.html
 
-``cmd2`` makes a third type of history access available, consisting of these commands:
+``cmd2`` makes a third type of history access available with the **history** command:
 
 .. automethod:: cmd2.Cmd.do_history
-
-.. automethod:: cmd2.Cmd.do_run
 
 Quitting the application
 ========================
@@ -328,7 +326,6 @@ Tab-Completion
 - ``edit``
 - ``load``
 - ``pyscript``
-- ``save``
 - ``shell``
 
 ``cmd2`` also adds tab-completion of shell commands to the ``shell`` command.

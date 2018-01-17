@@ -5,7 +5,6 @@
 
 (Cmd) set
 abbrev: True
-autorun_on_edit: False
 colors: /(True|False)/
 continuation_prompt: >/ /
 debug: False

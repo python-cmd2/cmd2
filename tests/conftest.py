@@ -15,24 +15,29 @@ import cmd2
 # Help text for base cmd2.Cmd application
 BASE_HELP = """Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  history  py        quit  save  shell      show
-cmdenvironment  help  load     pyscript  run   set   shortcuts
+edit  help  history  load  py  pyscript  quit  set  shell  shortcuts
 """
 
 # Help text for the history command
-HELP_HISTORY = """history [arg]: lists past commands issued
+HELP_HISTORY = """usage: history [-h] [-r | -e | -o FILE] [-s] [arg]
 
-        | no arg:         list all
-        | arg is integer: list one history item, by index
-        | a..b, a:b, a:, ..b -> list history items by a span of indices (inclusive)
-        | arg is string:  list all commands matching string search
-        | arg is /enclosed in forward-slashes/: regular expression search
+run, edit, and save previously entered commands
 
-Usage: history [options] (limit on which commands to include)
+positional arguments:
+  arg                   empty               all history items
+                        a                   one history item by number
+                        a..b, a:b, a:, ..b  items by indices (inclusive)
+                        [string]            items containing string
+                        /regex/             items matching regular expression
 
-Options:
-  -h, --help    show this help message and exit
-  -s, --script  Script format; no separation lines
+optional arguments:
+  -h, --help            show this help message and exit
+  -r, --run             run selected history items
+  -e, --edit            edit and then run selected history items
+  -o FILE, --output-file FILE
+                        output to file
+  -s, --script          script format; no separation lines
+
 """
 
 # Output from the shortcuts command with default built-in shortcuts
@@ -48,7 +53,6 @@ if sys.platform.startswith('win'):
     expect_colors = False
 # Output from the show command with default settings
 SHOW_TXT = """abbrev: False
-autorun_on_edit: False
 colors: {}
 continuation_prompt: >
 debug: False
@@ -67,7 +71,6 @@ else:
     color_str = 'False'
 SHOW_LONG = """
 abbrev: False             # Accept abbreviated commands
-autorun_on_edit: False    # Automatically run files after editing
 colors: {}             # Colorized output (*nix only)
 continuation_prompt: >    # On 2nd+ line of input
 debug: False              # Show full error stack on error

@@ -42,7 +42,6 @@ import tempfile
 import traceback
 import unittest
 from code import InteractiveConsole
-from optparse import make_option
 
 import pyparsing
 import pyperclip
@@ -116,8 +115,9 @@ pyparsing.ParserElement.enablePackrat()
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
-# The next 3 variables and associated setter functions effect how arguments are parsed for commands using @options.
-# The defaults are "sane" and maximize ease of use for new applications based on cmd2.
+# The next 3 variables and associated setter functions effect how arguments are parsed for decorated commands
+#   which use one of the decorators such as @with_argument_list or @with_argument_parser
+# The defaults are sane and maximize ease of use for new applications based on cmd2.
 # To maximize backwards compatibility, we recommend setting USE_ARG_LIST to "False"
 
 # Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
@@ -126,12 +126,12 @@ POSIX_SHLEX = False
 # Strip outer quotes for convenience if POSIX_SHLEX = False
 STRIP_QUOTES_FOR_NON_POSIX = True
 
-# For option commands, pass a list of argument strings instead of a single argument string to the do_* methods
+# For @options commands, pass a list of argument strings instead of a single argument string to the do_* methods
 USE_ARG_LIST = True
 
 
 def set_posix_shlex(val):
-    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for @options commands.
+    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for decorated commands.
 
     :param val: bool - True => POSIX,  False => Non-POSIX
     """
@@ -142,7 +142,7 @@ def set_posix_shlex(val):
 def set_strip_quotes(val):
     """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
 
-    :param val: bool - True => strip quotes on args and option args for @option commands if POSIX_SHLEX is False.
+    :param val: bool - True => strip quotes on args for decorated commands if POSIX_SHLEX is False.
     """
     global STRIP_QUOTES_FOR_NON_POSIX
     STRIP_QUOTES_FOR_NON_POSIX = val
@@ -242,23 +242,73 @@ def strip_quotes(arg):
     return arg
 
 
+def parse_quoted_string(cmdline):
+    """Parse a quoted string into a list of arguments."""
+    if isinstance(cmdline, list):
+        # arguments are already a list, return the list we were passed
+        lexed_arglist = cmdline
+    else:
+        # Use shlex to split the command line into a list of arguments based on shell rules
+        lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
+        # If not using POSIX shlex, make sure to strip off outer quotes for convenience
+        if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
+            temp_arglist = []
+            for arg in lexed_arglist:
+                temp_arglist.append(strip_quotes(arg))
+            lexed_arglist = temp_arglist
+    return lexed_arglist
+
+
+def with_argument_list(func):
+    """A decorator to alter the arguments passed to a do_* cmd2
+    method. Default passes a string of whatever the user typed.
+    With this decorator, the decorated method will receive a list
+    of arguments parsed from user input using shlex.split()."""
+    def cmd_wrapper(self, cmdline):
+        lexed_arglist = parse_quoted_string(cmdline)
+        func(self, lexed_arglist)
+
+    cmd_wrapper.__doc__ = func.__doc__
+    return cmd_wrapper
+
+
+def with_argparser_and_unknown_args(argparser):
+    """A decorator to alter a cmd2 method to populate its ``args``
+    argument by parsing arguments with the given instance of
+    argparse.ArgumentParser, but also returning unknown args as a list.
+    """
+    def arg_decorator(func):
+        def cmd_wrapper(instance, cmdline):
+            lexed_arglist = parse_quoted_string(cmdline)
+            args, unknown = argparser.parse_known_args(lexed_arglist)
+            func(instance, args, unknown)
+
+        # argparser defaults the program name to sys.argv[0]
+        # we want it to be the name of our command
+        argparser.prog = func.__name__[3:]
+
+        # put the help message in the method docstring
+        funcdoc = func.__doc__
+        if funcdoc:
+            funcdoc += '\n'
+        else:
+            # if it's None, make it an empty string
+            funcdoc = ''
+        cmd_wrapper.__doc__ = '{}{}'.format(funcdoc, argparser.format_help())
+        return cmd_wrapper
+    return arg_decorator
+
+
 def with_argument_parser(argparser):
-    """A decorator to alter a cmd2 method to populate its ``opts``
+    """A decorator to alter a cmd2 method to populate its ``args``
     argument by parsing arguments with the given instance of
     argparse.ArgumentParser.
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, cmdline):
-            # Use shlex to split the command line into a list of arguments based on shell rules
-            lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
-            # If not using POSIX shlex, make sure to strip off outer quotes for convenience
-            if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
-                temp_arglist = []
-                for arg in lexed_arglist:
-                    temp_arglist.append(strip_quotes(arg))
-                lexed_arglist = temp_arglist
-            opts = argparser.parse_args(lexed_arglist)
-            func(instance, cmdline, opts)
+            lexed_arglist = parse_quoted_string(cmdline)
+            args = argparser.parse_args(lexed_arglist)
+            func(instance, args)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -498,12 +548,11 @@ class Cmd(cmd.Cmd):
     allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
     excludeFromHistory = '''run ru r history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
-    exclude_from_help = ['do_eof', 'do_eos']  # Commands to exclude from the help menu
+    exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']  # Commands to exclude from the help menu
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
     abbrev = False  # Abbreviated commands recognized
-    autorun_on_edit = False  # Should files automatically run after editing (doesn't apply to commands)
     colors = (platform.system() != 'Windows')
     continuation_prompt = '> '
     debug = False
@@ -525,7 +574,6 @@ class Cmd(cmd.Cmd):
     # To make an attribute settable with the "do_set" command, add it to this ...
     # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
     settable = {'abbrev': 'Accept abbreviated commands',
-                'autorun_on_edit': 'Automatically run files after editing',
                 'colors': 'Colorized output (*nix only)',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
@@ -1003,10 +1051,12 @@ class Cmd(cmd.Cmd):
         funcname = self._func_named(statement.parsed.command)
         if not funcname:
             return self.default(statement)
+
         try:
             func = getattr(self, funcname)
         except AttributeError:
             return self.default(statement)
+
         stop = func(statement)
         return stop
 
@@ -1147,28 +1197,12 @@ class Cmd(cmd.Cmd):
 
             return stop
 
-    # noinspection PyUnusedLocal
-    def do_cmdenvironment(self, args):
-        """Summary report of interactive parameters."""
-        self.poutput("""
-        Commands are case-sensitive: {}
-        Commands may be terminated with: {}
-        Arguments at invocation allowed: {}
-        Output redirection and pipes allowed: {}
-        Parsing of @options commands:
-            Shell lexer mode for command argument splitting: {}
-            Strip Quotes after splitting arguments: {}
-            Argument type: {}
-        \n""".format(not self.case_insensitive, str(self.terminators), self.allow_cli_args, self.allow_redirection,
-                     "POSIX" if POSIX_SHLEX else "non-POSIX",
-                     "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False",
-                     "List of argument strings" if USE_ARG_LIST else "string of space-separated arguments"))
-
-    def do_help(self, arg):
+    @with_argument_list
+    def do_help(self, arglist):
         """List available commands with "help" or detailed help with "help cmd"."""
-        if arg:
+        if arglist:
             # Getting help for a specific command
-            funcname = self._func_named(arg)
+            funcname = self._func_named(arglist[0])
             if funcname:
                 # No special behavior needed, delegate to cmd base class do_help()
                 cmd.Cmd.do_help(self, funcname[3:])
@@ -1213,19 +1247,17 @@ class Cmd(cmd.Cmd):
         self.print_topics(self.misc_header, list(help_dict.keys()), 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
-    # noinspection PyUnusedLocal
-    def do_shortcuts(self, args):
+    def do_shortcuts(self, _):
         """Lists shortcuts (aliases) available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
-    # noinspection PyUnusedLocal
-    def do_eof(self, arg):
+    def do_eof(self, _):
         """Called when <Ctrl>-D is pressed."""
         # End of script should not exit app, but <Ctrl>-D should.
         return self._STOP_AND_EXIT
 
-    def do_quit(self, arg):
+    def do_quit(self, _):
         """Exits this application."""
         self._should_quit = True
         return self._STOP_AND_EXIT
@@ -1266,17 +1298,30 @@ class Cmd(cmd.Cmd):
                                                                                                    len(fulloptions)))
         return result
 
-    @options([make_option('-l', '--long', action="store_true", help="describe function of parameter")])
-    def do_show(self, arg, opts):
-        """Shows value of a parameter."""
-        # If arguments are being passed as a list instead of as a string
-        if USE_ARG_LIST:
-            if arg:
-                arg = arg[0]
-            else:
-                arg = ''
+    def cmdenvironment(self):
+        """Get a summary report of read-only settings which the user cannot modify at runtime.
 
-        param = arg.strip().lower()
+        :return: str - summary report of read-only settings which the user cannot modify at runtime
+        """
+        read_only_settings = """
+        Commands are case-sensitive: {}
+        Commands may be terminated with: {}
+        Arguments at invocation allowed: {}
+        Output redirection and pipes allowed: {}
+        Parsing of @options commands:
+            Shell lexer mode for command argument splitting: {}
+            Strip Quotes after splitting arguments: {}
+            Argument type: {}
+        """.format(not self.case_insensitive, str(self.terminators), self.allow_cli_args, self.allow_redirection,
+                   "POSIX" if POSIX_SHLEX else "non-POSIX",
+                   "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False",
+                   "List of argument strings" if USE_ARG_LIST else "string of space-separated arguments")
+        return read_only_settings
+
+    def show(self, args, parameter):
+        param = ''
+        if parameter:
+            param = parameter.strip().lower()
         result = {}
         maxlen = 0
         for p in self.settable:
@@ -1285,21 +1330,31 @@ class Cmd(cmd.Cmd):
                 maxlen = max(maxlen, len(result[p]))
         if result:
             for p in sorted(result):
-                if opts.long:
+                if args.long:
                     self.poutput('{} # {}'.format(result[p].ljust(maxlen), self.settable[p]))
                 else:
                     self.poutput(result[p])
+
+            # If user has requested to see all settings, also show read-only settings
+            if args.all:
+                self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
         else:
             raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
-    def do_set(self, arg):
-        """Sets a settable parameter.
+    set_parser = argparse.ArgumentParser(description='show or set value of a parameter')
+    set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
+    set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
+    set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
+
+    @with_argument_parser(set_parser)
+    def do_set(self, args):
+        """Sets a settable parameter or shows current settings of parameters.
 
         Accepts abbreviated parameter names so long as there is no ambiguity.
         Call without arguments for a list of settable parameters with their values.
         """
         try:
-            statement, param_name, val = arg.parsed.raw.split(None, 2)
+            param_name, val = args.settable
             val = val.strip()
             param_name = param_name.strip().lower()
             if param_name not in self.settable:
@@ -1307,7 +1362,7 @@ class Cmd(cmd.Cmd):
                 if len(hits) == 1:
                     param_name = hits[0]
                 else:
-                    return self.do_show(param_name)
+                    return self.show(args, param_name)
             current_val = getattr(self, param_name)
             if (val[0] == val[-1]) and val[0] in ("'", '"'):
                 val = val[1:-1]
@@ -1322,7 +1377,10 @@ class Cmd(cmd.Cmd):
                 except AttributeError:
                     pass
         except (ValueError, AttributeError):
-            self.do_show(arg)
+            param = ''
+            if args.settable:
+                param = args.settable[0]
+            self.show(args, param)
 
     def do_shell(self, command):
         """Execute a command as if at the OS prompt.
@@ -1420,7 +1478,6 @@ class Cmd(cmd.Cmd):
     # Enable tab completion of paths for relevant commands
     complete_edit = path_complete
     complete_load = path_complete
-    complete_save = path_complete
 
     # noinspection PyUnusedLocal
     @staticmethod
@@ -1589,32 +1646,30 @@ class Cmd(cmd.Cmd):
             self._in_py = False
         return self._should_quit
 
-    # noinspection PyUnusedLocal
-    @options([], arg_desc='<script_path> [script_arguments]')
-    def do_pyscript(self, arg, opts=None):
+    @with_argument_list
+    def do_pyscript(self, arglist):
         """\nRuns a python script file inside the console
+
+    Usage: pyscript <script_path> [script_arguments]
 
 Console commands can be executed inside this script with cmd("your command")
 However, you cannot run nested "py" or "pyscript" commands from within this script
 Paths or arguments that contain spaces must be enclosed in quotes
 """
-        if not arg:
+        if not arglist:
             self.perror("pyscript command requires at least 1 argument ...", traceback_war=False)
             self.do_help('pyscript')
             return
 
-        if not USE_ARG_LIST:
-            arg = shlex.split(arg, posix=POSIX_SHLEX)
-
         # Get the absolute path of the script
-        script_path = os.path.expanduser(arg[0])
+        script_path = os.path.expanduser(arglist[0])
 
         # Save current command line arguments
         orig_args = sys.argv
 
         # Overwrite sys.argv to allow the script to take command line arguments
         sys.argv = [script_path]
-        sys.argv.extend(arg[1:])
+        sys.argv.extend(arglist[1:])
 
         # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
         self.do_py("run({!r})".format(script_path))
@@ -1638,27 +1693,31 @@ Paths or arguments that contain spaces must be enclosed in quotes
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
             embed(banner1=banner, exit_msg=exit_msg)
 
-    @options([make_option('-s', '--script', action="store_true", help="Script format; no separation lines"),
-              ], arg_desc='(limit on which commands to include)')
-    def do_history(self, arg, opts):
-        """history [arg]: lists past commands issued
+    history_parser = argparse.ArgumentParser(
+                    description='run, edit, and save previously entered commands',
+                    formatter_class=argparse.RawTextHelpFormatter,
+                )
+    history_parser_group = history_parser.add_mutually_exclusive_group()
+    history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
+    history_parser_group.add_argument('-e', '--edit', action='store_true', help='edit and then run selected history items')
+    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output to file')
+    history_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    _history_arg_help = """empty               all history items
+a                   one history item by number
+a..b, a:b, a:, ..b  items by indices (inclusive)
+[string]            items containing string
+/regex/             items matching regular expression"""
+    history_parser.add_argument('arg', nargs='?', help=_history_arg_help)
 
-        | no arg:         list all
-        | arg is integer: list one history item, by index
-        | a..b, a:b, a:, ..b -> list history items by a span of indices (inclusive)
-        | arg is string:  list all commands matching string search
-        | arg is /enclosed in forward-slashes/: regular expression search
-        """
-        # If arguments are being passed as a list instead of as a string
-        if USE_ARG_LIST:
-            if arg:
-                arg = arg[0]
-            else:
-                arg = ''
-
-        # If an argument was supplied, then retrieve partial contents of the history
-        if arg:
-            # If a character indicating a slice is present, retrieve a slice of the history
+    @with_argument_parser(history_parser)
+    def do_history(self, args):
+        # If an argument was supplied, then retrieve partial contents of the
+        # history
+        cowardly_refuse_to_run = False
+        if args.arg:
+            # If a character indicating a slice is present, retrieve
+            # a slice of the history
+            arg = args.arg
             if '..' in arg or ':' in arg:
                 try:
                     # Get a slice of history
@@ -1670,144 +1729,66 @@ Paths or arguments that contain spaces must be enclosed in quotes
                 history = self.history.get(arg)
         else:
             # If no arg given, then retrieve the entire history
+            cowardly_refuse_to_run = True
             history = self.history
 
-        # Display the history items retrieved
-        for hi in history:
-            if opts.script:
-                self.poutput(hi)
+        if args.run:
+            if cowardly_refuse_to_run:
+                self.perror("Cowardly refusing to run all previously entered commands.", traceback_war=False)
+                self.perror("If this is what you want to do, specify '1:' as the range of history.", traceback_war=False)
             else:
-                self.poutput(hi.pr())
+                for runme in history:
+                    self.pfeedback(runme)
+                    if runme:
+                        self.onecmd_plus_hooks(runme)
+        elif args.edit:
+            fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
+            with os.fdopen(fd, 'w') as fobj:
+                for cmd in history:
+                    fobj.write('{}\n'.format(cmd))
+            try:
+                os.system('"{}" "{}"'.format(self.editor, fname))
+                self.do_load(fname)
+            except:
+                raise
+            finally:
+                os.remove(fname)
+        elif args.output_file:
+            try:
+                with open(os.path.expanduser(args.output_file), 'w') as fobj:
+                    for cmd in history:
+                        fobj.write('{}\n'.format(cmd))
+                plural = 's' if len(history) > 1 else ''
+                self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
+            except Exception as e:
+                self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
+        else:
+            # Display the history items retrieved
+            for hi in history:
+                if args.script:
+                    self.poutput(hi)
+                else:
+                    self.poutput(hi.pr())
 
-    def _last_matching(self, arg):
-        """Return the last item from the history list that matches arg.  Or if arg not provided, return last item.
 
-        If not match is found, return None.
-
-        :param arg: str - text to search for in history
-        :return: str - last match, last item, or None, depending on arg.
-        """
-        try:
-            if arg:
-                return self.history.get(arg)[-1]
-            else:
-                return self.history[-1]
-        except IndexError:
-            return None
-
-    @options([], arg_desc="""[N]|[file_path]
-    * N         - Number of command (from history), or `*` for all commands in history (default: last command)
-    * file_path - path to a file to open in editor""")
-    def do_edit(self, arg, opts=None):
+    @with_argument_list
+    def do_edit(self, arglist):
         """Edit a file or command in a text editor.
+
+Usage:  edit [file_path]
+    Where:
+        * file_path - path to a file to open in editor
 
 The editor used is determined by the ``editor`` settable parameter.
 "set editor (program-name)" to change or set the EDITOR environment variable.
-
-The optional arguments are mutually exclusive.  Either a command number OR a file name can be supplied.
-If neither is supplied, the most recent command in the history is edited.
-
-Edited commands are always run after the editor is closed.
-
-Edited files are run on close if the ``autorun_on_edit`` settable parameter is True.
 """
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
-        filename = None
-        if arg and arg[0]:
-            try:
-                # Try to convert argument to an integer
-                history_idx = int(arg[0])
-            except ValueError:
-                # Argument passed is not convertible to an integer, so treat it as a file path
-                filename = arg[0]
-                history_item = ''
-            else:
-                # Argument passed IS convertible to an integer, so treat it as a history index
-
-                # Save off original index for pringing
-                orig_indx = history_idx
-
-                # Convert negative index into equivalent positive one
-                if history_idx < 0:
-                    history_idx += len(self.history) + 1
-
-                # Make sure the index is actually within the history
-                if 1 <= history_idx <= len(self.history):
-                    history_item = self._last_matching(history_idx)
-                else:
-                    self.perror('index {!r} does not exist within the history'.format(orig_indx), traceback_war=False)
-                    return
-
+        filename = arglist[0] if arglist else ''
+        if filename:
+            os.system('"{}" "{}"'.format(self.editor, filename))
         else:
-            try:
-                history_item = self.history[-1]
-            except IndexError:
-                self.perror('edit must be called with argument if history is empty', traceback_war=False)
-                return
-
-        delete_tempfile = False
-        if history_item:
-            if filename is None:
-                fd, filename = tempfile.mkstemp(suffix='.txt', text=True)
-                os.close(fd)
-                delete_tempfile = True
-
-            f = open(os.path.expanduser(filename), 'w')
-            f.write(history_item or '')
-            f.close()
-
-        os.system('"{}" "{}"'.format(self.editor, filename))
-
-        if self.autorun_on_edit or history_item:
-            self.do_load(filename)
-
-        if delete_tempfile:
-            os.remove(filename)
-
-    saveparser = (pyparsing.Optional(pyparsing.Word(pyparsing.nums) ^ '*')("idx") +
-                  pyparsing.Optional(pyparsing.Word(legalChars + '/\\'))("fname") +
-                  pyparsing.stringEnd)
-
-    def do_save(self, arg):
-        """Saves command(s) from history to file.
-
-    Usage:  save [N] [file_path]
-
-    * N         - Number of command (from history), or `*` for all commands in history (default: last command)
-    * file_path - location to save script of command(s) to (default: value stored in temporary file)"""
-        try:
-            args = self.saveparser.parseString(arg)
-        except pyparsing.ParseException:
-            self.perror('Could not understand save target %s' % arg, traceback_war=False)
-            raise SyntaxError(self.do_save.__doc__)
-
-        # If a filename was supplied then use that, otherwise use a temp file
-        if args.fname:
-            fname = args.fname
-        else:
-            fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
-            os.close(fd)
-
-        if args.idx == '*':
-            saveme = '\n\n'.join(self.history[:])
-        elif args.idx:
-            saveme = self.history[int(args.idx) - 1]
-        else:
-            # Wrap in try to deal with case of empty history
-            try:
-                # Since this save command has already been added to history, need to go one more back for previous
-                saveme = self.history[-2]
-            except IndexError:
-                self.perror('History is empty, nothing to save.', traceback_war=False)
-                return
-        try:
-            f = open(os.path.expanduser(fname), 'w')
-            f.write(saveme)
-            f.close()
-            self.pfeedback('Saved to {}'.format(fname))
-        except Exception as e:
-            self.perror('Saving {!r} - {}'.format(fname, e), traceback_war=False)
+            os.system('"{}"'.format(self.editor))
 
     @property
     def _current_script_dir(self):
@@ -1817,7 +1798,8 @@ Edited files are run on close if the ``autorun_on_edit`` settable parameter is T
         else:
             return None
 
-    def do__relative_load(self, file_path):
+    @with_argument_list
+    def do__relative_load(self, arglist):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  _relative_load <file_path>
@@ -1833,11 +1815,11 @@ relative to the already-running script's directory.
 NOTE: This command is intended to only be used within text file scripts.
         """
         # If arg is None or arg is an empty string this is an error
-        if not file_path:
+        if not arglist:
             self.perror('_relative_load command requires a file path:', traceback_war=False)
             return
 
-        file_path = file_path.strip()
+        file_path = arglist[0].strip()
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
         self.do_load(relative_path)
@@ -1847,7 +1829,8 @@ NOTE: This command is intended to only be used within text file scripts.
         if self._script_dir:
             self._script_dir.pop()
 
-    def do_load(self, file_path):
+    @with_argument_list
+    def do_load(self, arglist):
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  load <file_path>
@@ -1857,11 +1840,12 @@ NOTE: This command is intended to only be used within text file scripts.
 Script should contain one command per line, just like command would be typed in console.
         """
         # If arg is None or arg is an empty string this is an error
-        if not file_path:
+        if not arglist:
             self.perror('load command requires a file path:', traceback_war=False)
             return
 
-        expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
+        file_path = arglist[0].strip()
+        expanded_path = os.path.abspath(os.path.expanduser(file_path))
 
         # Make sure expanded_path points to a file
         if not os.path.isfile(expanded_path):
@@ -1892,17 +1876,6 @@ Script should contain one command per line, just like command would be typed in 
 
         self._script_dir.append(os.path.dirname(expanded_path))
 
-    def do_run(self, arg):
-        """run [arg]: re-runs an earlier command
-
-    no arg                               -> run most recent command
-    arg is integer                       -> run one history item, by index
-    arg is string                        -> run most recent command by string search
-    arg is /enclosed in forward-slashes/ -> run most recent by regex"""
-        runme = self._last_matching(arg)
-        self.pfeedback(runme)
-        if runme:
-            return self.onecmd_plus_hooks(runme)
 
     @staticmethod
     def is_text_file(file_path):
