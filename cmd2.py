@@ -553,7 +553,6 @@ class Cmd(cmd.Cmd):
 
     # Attributes which ARE dynamically settable at runtime
     abbrev = False  # Abbreviated commands recognized
-    autorun_on_edit = False  # Should files automatically run after editing (doesn't apply to commands)
     colors = (platform.system() != 'Windows')
     continuation_prompt = '> '
     debug = False
@@ -575,7 +574,6 @@ class Cmd(cmd.Cmd):
     # To make an attribute settable with the "do_set" command, add it to this ...
     # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
     settable = {'abbrev': 'Accept abbreviated commands',
-                'autorun_on_edit': 'Automatically run files after editing',
                 'colors': 'Colorized output (*nix only)',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
@@ -1773,95 +1771,25 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                 else:
                     self.poutput(hi.pr())
 
-    def _last_matching(self, arg):
-        """Return the last item from the history list that matches arg.  Or if arg not provided, return last item.
-
-        If not match is found, return None.
-
-        :param arg: str - text to search for in history
-        :return: str - last match, last item, or None, depending on arg.
-        """
-        try:
-            if arg:
-                return self.history.get(arg)[-1]
-            else:
-                return self.history[-1]
-        except IndexError:
-            return None
 
     @with_argument_list
     def do_edit(self, arglist):
         """Edit a file or command in a text editor.
 
-Usage:  edit [N]|[file_path]
+Usage:  edit [file_path]
     Where:
-        * N         - Number of command (from history), or `*` for all commands in history
-                    (default: last command)
         * file_path - path to a file to open in editor
 
 The editor used is determined by the ``editor`` settable parameter.
 "set editor (program-name)" to change or set the EDITOR environment variable.
-
-The optional arguments are mutually exclusive.  Either a command number OR a file name can be supplied.
-If neither is supplied, the most recent command in the history is edited.
-
-Edited commands are always run after the editor is closed.
-
-Edited files are run on close if the ``autorun_on_edit`` settable parameter is True.
 """
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
-        filename = None
-        if arglist and arglist[0]:
-            try:
-                # Try to convert argument to an integer
-                history_idx = int(arglist[0])
-            except ValueError:
-                # Argument passed is not convertible to an integer, so treat it as a file path
-                filename = arglist[0]
-                history_item = ''
-            else:
-                # Argument passed IS convertible to an integer, so treat it as a history index
-
-                # Save off original index for pringing
-                orig_indx = history_idx
-
-                # Convert negative index into equivalent positive one
-                if history_idx < 0:
-                    history_idx += len(self.history) + 1
-
-                # Make sure the index is actually within the history
-                if 1 <= history_idx <= len(self.history):
-                    history_item = self._last_matching(history_idx)
-                else:
-                    self.perror('index {!r} does not exist within the history'.format(orig_indx), traceback_war=False)
-                    return
-
+        filename = arglist[0] if arglist else ''
+        if filename:
+            os.system('"{}" "{}"'.format(self.editor, filename))
         else:
-            try:
-                history_item = self.history[-1]
-            except IndexError:
-                self.perror('edit must be called with argument if history is empty', traceback_war=False)
-                return
-
-        delete_tempfile = False
-        if history_item:
-            if filename is None:
-                fd, filename = tempfile.mkstemp(suffix='.txt', text=True)
-                os.close(fd)
-                delete_tempfile = True
-
-            f = open(os.path.expanduser(filename), 'w')
-            f.write(history_item or '')
-            f.close()
-
-        os.system('"{}" "{}"'.format(self.editor, filename))
-
-        if self.autorun_on_edit or history_item:
-            self.do_load(filename)
-
-        if delete_tempfile:
-            os.remove(filename)
+            os.system('"{}"'.format(self.editor))
 
     @property
     def _current_script_dir(self):
