@@ -37,12 +37,12 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write('\n')
 
     tag_parser = argparse.ArgumentParser(description='create a html tag')
-    tag_parser.add_argument('tag', nargs=1, help='tag')
+    tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
     @cmd2.with_argument_parser(tag_parser)
     def do_tag(self, args):
-        self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
+        self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
         self.stdout.write('\n')
 
     @cmd2.with_argument_list

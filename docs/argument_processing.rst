@@ -58,24 +58,25 @@ Help Messages
 
 By default, cmd2 uses the docstring of the command method when a user asks
 for help on the command. When you use the ``@with_argument_parser``
-decorator, the formatted help from the ``argparse.ArgumentParser`` is
-appended to the docstring for the method of that command. With this code::
+decorator, the docstring for the ``do_*`` method is used to set the description for the ``argparse.ArgumentParser`` is
+With this code::
 
    argparser = argparse.ArgumentParser()
-   argparser.add_argument('tag', nargs=1, help='tag')
+   argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argument_parser(argparser)
    def do_tag(self, args):
       """create a html tag"""
-      self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
+      self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
       self.stdout.write('\n')
 
 The ``help tag`` command displays:
 
 .. code-block:: none
 
-   create a html tag
    usage: tag [-h] tag content [content ...]
+
+   create a html tag
 
    positional arguments:
      tag         tag
@@ -85,14 +86,15 @@ The ``help tag`` command displays:
      -h, --help  show this help message and exit
 
 
-If you would prefer the short description of your command to come after the usage message, leave the docstring on your method empty, but supply a ``description`` variable to the argument parser::
+If you would prefer you can set the ``description`` while instantiating the ``argparse.ArgumentParser`` and leave the
+docstring on your method empty::
 
    argparser = argparse.ArgumentParser(description='create an html tag')
-   argparser.add_argument('tag', nargs=1, help='tag')
+   argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argument_parser(argparser)
    def do_tag(self, args):
-      self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
+      self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
       self.stdout.write('\n')
 
 Now when the user enters ``help tag`` they see:
@@ -117,11 +119,11 @@ To add additional text to the end of the generated help message, use the ``epilo
       description='create an html tag',
       epilog='This command can not generate tags with no content, like <br/>.'
    )
-   argparser.add_argument('tag', nargs=1, help='tag')
+   argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
    @with_argument_parser(argparser)
    def do_tag(self, args):
-      self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
+      self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
       self.stdout.write('\n')
 
 Which yields:
