@@ -21,7 +21,7 @@ edit  help  history  load  py  pyscript  quit  set  shell  shortcuts
 # Help text for the history command
 HELP_HISTORY = """usage: history [-h] [-r | -e | -o FILE] [-s] [arg]
 
-run, edit, and save previously entered commands
+View, run, edit, and save previously entered commands.
 
 positional arguments:
   arg                   empty               all history items

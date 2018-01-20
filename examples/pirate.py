@@ -76,7 +76,7 @@ class Pirate(Cmd):
     yo_parser = argparse.ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")
     yo_parser.add_argument('-c', '--commas', action='store_true', help='Intersperse commas')
-    yo_parser.add_argument('beverage', nargs=1, help='beverage to drink with the chant')
+    yo_parser.add_argument('beverage', help='beverage to drink with the chant')
 
     @with_argument_parser(yo_parser)
     def do_yo(self, args):
@@ -84,7 +84,7 @@ class Pirate(Cmd):
         chant = ['yo'] + ['ho'] * args.ho
         separator = ', ' if args.commas else ' '
         chant = separator.join(chant)
-        print('{0} and a bottle of {1}'.format(chant, args.beverage[0]))
+        print('{0} and a bottle of {1}'.format(chant, args.beverage))
 
 
 if __name__ == '__main__':

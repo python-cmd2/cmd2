@@ -37,12 +37,12 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write('\n')
 
     tag_parser = argparse.ArgumentParser(description='create a html tag')
-    tag_parser.add_argument('tag', nargs=1, help='tag')
+    tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
     @cmd2.with_argument_parser(tag_parser)
     def do_tag(self, args):
-        self.stdout.write('<{0}>{1}</{0}>'.format(args.tag[0], ' '.join(args.content)))
+        self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
         self.stdout.write('\n')
 
     @cmd2.with_argument_list
@@ -140,10 +140,14 @@ def test_argparse_quoted_arguments_posix_multiple(argparse_app):
 
 def test_argparse_help_docstring(argparse_app):
     out = run_cmd(argparse_app, 'help say')
-    assert out[0] == 'Repeat what you tell me to.'
+    assert out[0].startswith('usage: say')
+    assert out[1] == ''
+    assert out[2] == 'Repeat what you tell me to.'
 
 def test_argparse_help_description(argparse_app):
     out = run_cmd(argparse_app, 'help tag')
+    assert out[0].startswith('usage: tag')
+    assert out[1] == ''
     assert out[2] == 'create a html tag'
 
 def test_argparse_prog(argparse_app):
