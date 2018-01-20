@@ -138,20 +138,26 @@ def test_argparse_quoted_arguments_posix_multiple(argparse_app):
     out = run_cmd(argparse_app, 'tag strong this "should  be" loud')
     assert out == ['<strong>this should  be loud</strong>']
 
-def test_argparse_help_docstring(argparse_app):
-    out = run_cmd(argparse_app, 'help say')
+def test_argparse_help_docstring(argparse_app, capsys):
+    run_cmd(argparse_app, 'help say')
+    out, err = capsys.readouterr()
+    out = out.splitlines()
     assert out[0].startswith('usage: say')
     assert out[1] == ''
     assert out[2] == 'Repeat what you tell me to.'
 
-def test_argparse_help_description(argparse_app):
-    out = run_cmd(argparse_app, 'help tag')
+def test_argparse_help_description(argparse_app, capsys):
+    run_cmd(argparse_app, 'help tag')
+    out, err = capsys.readouterr()
+    out = out.splitlines()
     assert out[0].startswith('usage: tag')
     assert out[1] == ''
     assert out[2] == 'create a html tag'
 
-def test_argparse_prog(argparse_app):
-    out = run_cmd(argparse_app, 'help tag')
+def test_argparse_prog(argparse_app, capsys):
+    run_cmd(argparse_app, 'help tag')
+    out, err = capsys.readouterr()
+    out = out.splitlines()
     progname = out[0].split(' ')[1]
     assert progname == 'tag'
 

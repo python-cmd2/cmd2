@@ -39,21 +39,30 @@ def test_base_help(base_app):
     assert out == expected
 
 
-def test_base_help_history(base_app):
-    out = run_cmd(base_app, 'help history')
-    expected = normalize(HELP_HISTORY)
-    assert out == expected
+def test_base_help_history(base_app, capsys):
+    run_cmd(base_app, 'help history')
+    out, err = capsys.readouterr()
+    assert out == HELP_HISTORY
+    assert err == ''
 
 def test_base_argparse_help(base_app, capsys):
+    # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
     run_cmd(base_app, 'set -h')
-    out, err = capsys.readouterr()
-    expected = run_cmd(base_app, 'help set')
-    assert normalize(base_app.do_set.__doc__ + str(err)) == expected
+    out1, err1 = capsys.readouterr()
+
+    run_cmd(base_app, 'help set')
+    out2, err2 = capsys.readouterr()
+
+    assert out1 == out2
+    assert err1 == err2
+    out = out1.splitlines()
+    assert out[0].startswith('usage: set')
+    assert out[1] == ''
+    assert out[2].startswith('Sets a settable parameter')
 
 def test_base_invalid_option(base_app, capsys):
     run_cmd(base_app, 'set -z')
     out, err = capsys.readouterr()
-    run_cmd(base_app, 'help set')
     expected = ['usage: set [-h] [-a] [-l] [settable [settable ...]]', 'set: error: unrecognized arguments: -z']
     assert normalize(str(err)) == expected
 
@@ -597,16 +606,17 @@ def test_allow_redirection(base_app):
     assert not os.path.exists(filename)
 
 
-def test_input_redirection(base_app, request):
+def test_input_redirection(base_app, request, capsys):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'redirect.txt')
 
     # NOTE: File 'redirect.txt" contains 1 word "history"
 
     # Verify that redirecting input ffom a file works
-    out = run_cmd(base_app, 'help < {}'.format(filename))
-    expected = normalize(HELP_HISTORY)
-    assert out == expected
+    run_cmd(base_app, 'help < {}'.format(filename))
+    out, err = capsys.readouterr()
+    assert out == HELP_HISTORY
+    assert err == ''
 
 
 def test_pipe_to_shell(base_app, capsys):

@@ -11,6 +11,8 @@
             * **do_*** commands get two arguments, the output of argparse.parse_known_args()
     *  See the **Argument Processing** section of the documentation for more information on these decorators
         * Alternatively, see the **argparse_example.py** and **arg_print.py** examples
+    * Added support for Argpasre sub-commands when using the **with_argument_parser** or **with_argparser_and_unknown_args** decorators
+        * See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use subcommands
     * The **__relative_load** command is now hidden from the help menu by default
         * This command is not intended to be called from the command line, only from within scripts
     * The **set** command now has an additional **-a/--all** option to also display read-only settings

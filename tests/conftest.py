@@ -37,7 +37,6 @@ optional arguments:
   -o FILE, --output-file FILE
                         output to file
   -s, --script          script format; no separation lines
-
 """
 
 # Output from the shortcuts command with default built-in shortcuts
