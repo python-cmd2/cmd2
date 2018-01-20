@@ -27,17 +27,17 @@ class SubcommandsExample(cmd2.Cmd):
         """bar sucommand of base command"""
         print('((%s))' % args.z)
 
-    # create the top-level parser
+    # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
     base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
 
-    # create the parser for the "foo" command
+    # create the parser for the "foo" sub-command
     parser_foo = base_subparsers.add_parser('foo', help='foo help')
     parser_foo.add_argument('-x', type=int, default=1, help='integer')
     parser_foo.add_argument('y', type=float, help='float')
     parser_foo.set_defaults(func=foo)
 
-    # create the parser for the "bar" command
+    # create the parser for the "bar" sub-command
     parser_bar = base_subparsers.add_parser('bar', help='bar help')
     parser_bar.add_argument('z', help='string')
     parser_bar.set_defaults(func=bar)
