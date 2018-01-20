@@ -21,11 +21,11 @@ class SubcommandsExample(cmd2.Cmd):
     # sub-command functions for the base command
     def foo(self, args):
         """foo subcommand of base command"""
-        print(args.x * args.y)
+        self.poutput(args.x * args.y)
 
     def bar(self, args):
         """bar sucommand of base command"""
-        print('((%s))' % args.z)
+        self.poutput('((%s))' % args.z)
 
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')

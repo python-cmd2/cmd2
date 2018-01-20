@@ -14,6 +14,7 @@
         and [arg_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) examples
     * Added support for Argpasre sub-commands when using the **with_argument_parser** or **with_argparser_and_unknown_args** decorators
         * See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use subcommands
+        * Tab-completion of sub-command names is automatically supported
     * The **__relative_load** command is now hidden from the help menu by default
         * This command is not intended to be called from the command line, only from within scripts
     * The **set** command now has an additional **-a/--all** option to also display read-only settings

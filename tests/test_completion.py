@@ -8,6 +8,7 @@ file system paths, and shell commands.
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import argparse
 import os
 import sys
 
@@ -323,3 +324,99 @@ def test_parseline_expands_shortcuts(cmd2_app):
     assert command == 'shell'
     assert args == 'cat foobar.txt'
     assert line.replace('!', 'shell ') == out_line
+
+
+class SubcommandsExample(cmd2.Cmd):
+    """ Example cmd2 application where we a base command which has a couple subcommands."""
+
+    def __init__(self):
+        cmd2.Cmd.__init__(self)
+
+    # sub-command functions for the base command
+    def foo(self, args):
+        """foo subcommand of base command"""
+        self.poutput(args.x * args.y)
+
+    def bar(self, args):
+        """bar sucommand of base command"""
+        self.poutput('((%s))' % args.z)
+
+    # create the top-level parser for the base command
+    base_parser = argparse.ArgumentParser(prog='base')
+    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+
+    # create the parser for the "foo" sub-command
+    parser_foo = base_subparsers.add_parser('foo', help='foo help')
+    parser_foo.add_argument('-x', type=int, default=1, help='integer')
+    parser_foo.add_argument('y', type=float, help='float')
+    parser_foo.set_defaults(func=foo)
+
+    # create the parser for the "bar" sub-command
+    parser_bar = base_subparsers.add_parser('bar', help='bar help')
+    parser_bar.add_argument('z', help='string')
+    parser_bar.set_defaults(func=bar)
+
+    # Create a list of subcommand names, which is used to enable tab-completion of sub-commands
+    subcommands = ['foo', 'bar']
+
+    @cmd2.with_argument_parser(base_parser, subcommands)
+    def do_base(self, args):
+        """Base command help"""
+        try:
+            # Call whatever sub-command function was selected
+            args.func(self, args)
+        except AttributeError:
+            # No sub-command was provided, so as called
+            self.do_help('base')
+
+
+@pytest.fixture
+def sc_app():
+    app = SubcommandsExample()
+    return app
+
+
+def test_cmd2_subcommand_completion_single_end(sc_app):
+    text = 'f'
+    line = 'base f'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo ']
+
+def test_cmd2_subcommand_completion_single_mid(sc_app):
+    text = 'f'
+    line = 'base f'
+    endidx = len(line) - 1
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo']
+
+def test_cmd2_subcommand_completion_multiple(sc_app):
+    text = ''
+    line = 'base '
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo', 'bar']
+
+def test_cmd2_subcommand_completion_nomatch(sc_app):
+    text = 'z'
+    line = 'base z'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == []
+
+def test_cmd2_subcommand_completion_after_subcommand(sc_app):
+    text = 'f'
+    line = 'base foo f'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == []

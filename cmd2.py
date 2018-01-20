@@ -776,7 +776,7 @@ class Cmd(cmd.Cmd):
         cmd, args, foo = self.parseline(line)
         arglist = args.split()
 
-        if cmd + ' ' + args == line:
+        if len(arglist) <= 1 and cmd + ' ' + args == line:
             funcname = self._func_named(cmd)
             if funcname:
                 # Check to see if this function was decorated with an argparse ArgumentParser
