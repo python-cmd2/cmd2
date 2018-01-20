@@ -292,7 +292,12 @@ def with_argparser_and_unknown_args(argparser):
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
+
+        # Mark this function as having an argparse ArgumentParser (used by do_help)
+        cmd_wrapper.__dict__['has_parser'] = True
+
         return cmd_wrapper
+
     return arg_decorator
 
 
@@ -316,7 +321,12 @@ def with_argument_parser(argparser):
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
+
+        # Mark this function as having an argparse ArgumentParser (used by do_help)
+        cmd_wrapper.__dict__['has_parser'] = True
+
         return cmd_wrapper
+
     return arg_decorator
 
 
@@ -1198,8 +1208,16 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             funcname = self._func_named(arglist[0])
             if funcname:
-                # No special behavior needed, delegate to cmd base class do_help()
-                cmd.Cmd.do_help(self, funcname[3:])
+                # Check to see if this function was decorated with an argparse ArgumentParser
+                func = getattr(self, funcname)
+                if func.__dict__.get('has_parser', False):
+                    # Function has an argparser, so get help based on all the arguments in case there are sub-commands
+                    new_arglist = arglist[1:]
+                    new_arglist.append('-h')
+                    func(new_arglist)
+                else:
+                    # No special behavior needed, delegate to cmd base class do_help()
+                    cmd.Cmd.do_help(self, funcname[3:])
         else:
             # Show a menu of what commands help can be gotten for
             self._help_menu()
