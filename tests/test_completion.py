@@ -10,9 +10,11 @@ Released under MIT license, see LICENSE file
 """
 import argparse
 import os
+import readline
 import sys
 
 import cmd2
+import mock
 import pytest
 
 
@@ -35,6 +37,100 @@ def test_cmd2_command_completion_single_end(cmd2_app):
     begidx = endidx - len(text)
     # It is at end of line, so extra space is present
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help ']
+
+def test_complete_command_single_end(cmd2_app):
+    text = 'he'
+    line = 'he'
+    state = 0
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                completion = cmd2_app.complete(text, state)
+    assert completion == 'help '
+
+def test_complete_command_invalid_state(cmd2_app):
+    text = 'he'
+    line = 'he'
+    state = 1
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                with pytest.raises(AttributeError):
+                    # Run the readline tab-completion function with readline mocks in place and cause an exception
+                    completion = cmd2_app.complete(text, state)
+
+def test_complete_empty_arg(cmd2_app):
+    text = ''
+    line = 'help '
+    state = 0
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                completion = cmd2_app.complete(text, state)
+
+    assert completion == cmd2_app.complete_help(text, line, begidx, endidx)[0]
+
+def test_complete_bogus_command(cmd2_app):
+    text = ''
+    line = 'fizbuzz '
+    state = 0
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                completion = cmd2_app.complete(text, state)
+
+    assert completion is None
 
 def test_cmd2_command_completion_is_case_insensitive_by_default(cmd2_app):
     text = 'HE'
@@ -420,3 +516,27 @@ def test_cmd2_subcommand_completion_after_subcommand(sc_app):
 
     # It is at end of line, so extra space is present
     assert sc_app.complete_subcommand(text, line, begidx, endidx) == []
+
+
+def test_complete_subcommand_single_end(sc_app):
+    text = 'f'
+    line = 'base f'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                completion = sc_app.complete(text, state)
+    assert completion == 'foo '

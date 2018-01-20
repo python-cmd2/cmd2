@@ -166,14 +166,14 @@ The default behavior of ``cmd2`` is to pass the user input directly to your
 Using the argument parser decorator and also receiving a a list of unknown positional arguments
 ===============================================================================================
 If you want all unknown arguments to be passed to your command as a list of strings, then
-decorate the command method with the ``@with_argparser_and_list`` decorator.
+decorate the command method with the ``@with_argparser_and_unknown_args`` decorator.
 
 Here's what it looks like::
 
     dir_parser = argparse.ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
-    @with_argparser_and_list(dir_parser)
+    @with_argparser_and_unknown_args(dir_parser)
     def do_dir(self, args, unknown):
         """List contents of current directory."""
         # No arguments for this command
@@ -187,6 +187,15 @@ Here's what it looks like::
         contents = os.listdir(self.cwd)
 
         ...
+
+Sub-commands
+============
+Sub-commands are supported for commands using either the ``@with_argument_parser`` or
+``@with_argparser_and_unknown_args`` decorator.  The syntax for supporting them is based on argparse sub-parsers.
+
+See the subcommands_ example to learn more about how to use sub-commands in your ``cmd2`` application.
+
+.. _subcommands: https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py
 
 Deprecated optparse support
 ===========================

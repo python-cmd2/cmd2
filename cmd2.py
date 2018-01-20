@@ -803,6 +803,14 @@ class Cmd(cmd.Cmd):
 
         If a command has not been entered, then complete against command list.
         Otherwise try to call complete_<command> to get list of completions.
+
+        This method gets called directly by readline because it is set as the tab-completion function.
+
+        This completer function is called as complete(text, state), for state in 0, 1, 2, …, until it returns a
+        non-string value. It should return the next possible completion starting with text.
+
+        :param text: str - the current word that user is typing
+        :param state: int - non-negative integer
         """
         if state == 0:
             import readline
