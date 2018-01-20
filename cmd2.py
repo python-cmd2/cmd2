@@ -272,10 +272,13 @@ def with_argument_list(func):
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser):
-    """A decorator to alter a cmd2 method to populate its ``args``
-    argument by parsing arguments with the given instance of
-    argparse.ArgumentParser, but also returning unknown args as a list.
+def with_argparser_and_unknown_args(argparser, subcommand_names=None):
+    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
+    instance of argparse.ArgumentParser, but also returning unknown args as a list.
+
+    :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
+    :param subcommand_names: List[str] - list of subcommand names for this parser (used for tab-completion)
+    :return: function that gets passed parsed args and a list of unknown args
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, cmdline):
@@ -296,15 +299,22 @@ def with_argparser_and_unknown_args(argparser):
         # Mark this function as having an argparse ArgumentParser (used by do_help)
         cmd_wrapper.__dict__['has_parser'] = True
 
+        # If there are subcommands, store their names to support tab-completion of subcommand names
+        if subcommand_names is not None:
+            cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
+
         return cmd_wrapper
 
     return arg_decorator
 
 
-def with_argument_parser(argparser):
-    """A decorator to alter a cmd2 method to populate its ``args``
-    argument by parsing arguments with the given instance of
-    argparse.ArgumentParser.
+def with_argument_parser(argparser, subcommand_names=None):
+    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
+    with the given instance of argparse.ArgumentParser.
+
+    :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
+    :param subcommand_names: List[str] - list of subcommand names for this parser (used for tab-completion)
+    :return: function that gets passed parsed args
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, cmdline):
@@ -324,6 +334,10 @@ def with_argument_parser(argparser):
 
         # Mark this function as having an argparse ArgumentParser (used by do_help)
         cmd_wrapper.__dict__['has_parser'] = True
+
+        # If there are subcommands, store their names to support tab-completion of subcommand names
+        if subcommand_names is not None:
+            cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
 
         return cmd_wrapper
 
@@ -743,7 +757,7 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyMethodOverriding
     def completenames(self, text, line, begidx, endidx):
-        """Override of cmd2 method which completes command names both for command completion and help."""
+        """Override of cmd method which completes command names both for command completion and help."""
         command = text
         if self.case_insensitive:
             command = text.lower()
@@ -756,6 +770,82 @@ class Cmd(cmd.Cmd):
             cmd_completion[0] += ' '
 
         return cmd_completion
+
+    def complete_subcommand(self, text, line, begidx, endidx):
+        """Readline tab-completion method for completing argparse sub-command names."""
+        cmd, args, foo = self.parseline(line)
+        arglist = args.split()
+
+        if cmd + ' ' + args == line:
+            funcname = self._func_named(cmd)
+            if funcname:
+                # Check to see if this function was decorated with an argparse ArgumentParser
+                func = getattr(self, funcname)
+                subcommand_names = func.__dict__.get('subcommand_names', None)
+
+                # If this command has subcommands
+                if subcommand_names is not None:
+                    arg = ''
+                    if arglist:
+                        arg = arglist[0]
+
+                    matches = [sc for sc in subcommand_names if sc.startswith(arg)]
+
+                    # If completing the sub-command name and get exactly 1 result and are at end of line, add a space
+                    if len(matches) == 1 and endidx == len(line):
+                        matches[0] += ' '
+                    return matches
+
+        return []
+
+    def complete(self, text, state):
+        """Override of cmd method which returns the next possible completion for 'text'.
+
+        If a command has not been entered, then complete against command list.
+        Otherwise try to call complete_<command> to get list of completions.
+        """
+        if state == 0:
+            import readline
+            origline = readline.get_line_buffer()
+            line = origline.lstrip()
+            stripped = len(origline) - len(line)
+            begidx = readline.get_begidx() - stripped
+            endidx = readline.get_endidx() - stripped
+            if begidx>0:
+                cmd, args, foo = self.parseline(line)
+                if cmd == '':
+                    compfunc = self.completedefault
+                else:
+                    arglist = args.split()
+
+                    compfunc = None
+                    # If the user has entered no more than a single argument after the command name
+                    if len(arglist) <= 1 and cmd + ' ' + args == line:
+                        funcname = self._func_named(cmd)
+                        if funcname:
+                            # Check to see if this function was decorated with an argparse ArgumentParser
+                            func = getattr(self, funcname)
+                            subcommand_names = func.__dict__.get('subcommand_names', None)
+
+                            # If this command has subcommands
+                            if subcommand_names is not None:
+                                compfunc = self.complete_subcommand
+
+                    if compfunc is None:
+                        # This command either doesn't have sub-commands or the user is past the point of entering one
+                        try:
+                            compfunc = getattr(self, 'complete_' + cmd)
+                        except AttributeError:
+                            compfunc = self.completedefault
+            else:
+                compfunc = self.completenames
+
+            self.completion_matches = compfunc(text, line, begidx, endidx)
+
+        try:
+            return self.completion_matches[state]
+        except IndexError:
+            return None
 
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
