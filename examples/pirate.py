@@ -25,13 +25,13 @@ class Pirate(Cmd):
         """Initialize the base class as well as this one"""
         Cmd.__init__(self)
         # prompts and defaults
-        self.gold = 3
+        self.gold = 0
         self.initial_gold = self.gold
         self.prompt = 'arrr> '
 
     def default(self, line):
         """This handles unknown commands."""
-        print('What mean ye by "{0}"?'.format(line))
+        self.poutput('What mean ye by "{0}"?'.format(line))
 
     def precmd(self, line):
         """Runs just before a command line is parsed, but after the prompt is presented."""
@@ -41,10 +41,10 @@ class Pirate(Cmd):
     def postcmd(self, stop, line):
         """Runs right before a command is about to return."""
         if self.gold != self.initial_gold:
-            print('Now we gots {0} doubloons'
+            self.poutput('Now we gots {0} doubloons'
                   .format(self.gold))
         if self.gold < 0:
-            print("Off to debtorrr's prison.")
+            self.poutput("Off to debtorrr's prison.")
             stop = True
         return stop
 
@@ -61,17 +61,17 @@ class Pirate(Cmd):
             self.gold -= int(arg)
         except ValueError:
             if arg:
-                print('''What's "{0}"?  I'll take rrrum.'''.format(arg))
+                self.poutput('''What's "{0}"?  I'll take rrrum.'''.format(arg))
             self.gold -= 1
 
     def do_quit(self, arg):
         """Quit the application gracefully."""
-        print("Quiterrr!")
+        self.poutput("Quiterrr!")
         return True
 
     def do_sing(self, arg):
         """Sing a colorful song."""
-        print(self.colorize(arg, self.songcolor))
+        self.poutput(self.colorize(arg, self.songcolor))
 
     yo_parser = argparse.ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")
@@ -84,7 +84,7 @@ class Pirate(Cmd):
         chant = ['yo'] + ['ho'] * args.ho
         separator = ', ' if args.commas else ' '
         chant = separator.join(chant)
-        print('{0} and a bottle of {1}'.format(chant, args.beverage))
+        self.poutput('{0} and a bottle of {1}'.format(chant, args.beverage))
 
 
 if __name__ == '__main__':

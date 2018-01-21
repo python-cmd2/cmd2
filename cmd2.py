@@ -962,8 +962,7 @@ class Cmd(cmd.Cmd):
             (stop, statement) = self.postparsing_precmd(statement)
             if stop:
                 return self.postparsing_postcmd(stop)
-            if statement.parsed.command not in self.excludeFromHistory:
-                self.history.append(statement.parsed.raw)
+
             try:
                 if self.allow_redirection:
                     self._redirect_output(statement)
@@ -1012,7 +1011,11 @@ class Cmd(cmd.Cmd):
         self.cmdqueue = list(cmds) + self.cmdqueue
         try:
             while self.cmdqueue and not stop:
-                stop = self.onecmd_plus_hooks(self.cmdqueue.pop(0))
+                line = self.cmdqueue.pop(0)
+                if self.echo and line != 'eos':
+                    self.poutput('{}{}'.format(self.prompt, line))
+
+                stop = self.onecmd_plus_hooks(line)
         finally:
             # Clear out the command queue and script directory stack, just in
             # case we hit an error and they were not completed.
@@ -1153,6 +1156,10 @@ class Cmd(cmd.Cmd):
         funcname = self._func_named(statement.parsed.command)
         if not funcname:
             return self.default(statement)
+
+        # Since we have a valid command store it in the history
+        if statement.parsed.command not in self.excludeFromHistory:
+            self.history.append(statement.parsed.raw)
 
         try:
             func = getattr(self, funcname)
@@ -1808,8 +1815,9 @@ Paths or arguments that contain spaces must be enclosed in quotes
     history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_parser_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
-    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output to file')
-    history_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    history_parser_group.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output commands to a script file')
+    history_parser_group.add_argument('-t', '--transcript', help='output commands and results to a transcript file')
     _history_arg_help = """empty               all history items
 a                   one history item by number
 a..b, a:b, a:, ..b  items by indices (inclusive)
@@ -1838,7 +1846,8 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         else:
             # If no arg given, then retrieve the entire history
             cowardly_refuse_to_run = True
-            history = self.history
+            # Get a copy of the history so it doesn't get mutated while we are using it
+            history = self.history[:]
 
         if args.run:
             if cowardly_refuse_to_run:
@@ -1871,6 +1880,28 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:
                 self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
+        elif args.transcript:
+            # Make sure echo is on so commands print to standard out
+            saved_echo = self.echo
+            self.echo = True
+
+            # Redirect stdout to the transcript file
+            saved_self_stdout = self.stdout
+            self.stdout = open(args.transcript, 'w')
+
+            # Run all of the commands in the history with output redirected to transcript and echo on
+            self.runcmds_plus_hooks(history)
+
+            # Restore stdout to its original state
+            self.stdout.close()
+            self.stdout = saved_self_stdout
+
+            # Set echo back to its original state
+            self.echo = saved_echo
+
+            plural = 's' if len(history) > 1 else ''
+            self.pfeedback('{} command{} and outputs saved to transcript file {!r}'.format(len(history), plural,
+                                                                                           args.transcript))
         else:
             # Display the history items retrieved
             for hi in history:

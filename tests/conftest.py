@@ -19,7 +19,7 @@ edit  help  history  load  py  pyscript  quit  set  shell  shortcuts
 """
 
 # Help text for the history command
-HELP_HISTORY = """usage: history [-h] [-r | -e | -o FILE] [-s] [arg]
+HELP_HISTORY = """usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT] [arg]
 
 View, run, edit, and save previously entered commands.
 
@@ -34,9 +34,11 @@ optional arguments:
   -h, --help            show this help message and exit
   -r, --run             run selected history items
   -e, --edit            edit and then run selected history items
-  -o FILE, --output-file FILE
-                        output to file
   -s, --script          script format; no separation lines
+  -o FILE, --output-file FILE
+                        output commands to a script file
+  -t TRANSCRIPT, --transcript TRANSCRIPT
+                        output commands and results to a transcript file
 """
 
 # Output from the shortcuts command with default built-in shortcuts
