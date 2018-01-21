@@ -1,6 +1,7 @@
 ## 0.8.0 (TBD, 2018)
 * Bug Fixes
     * Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
+    * Fixed a bug where unknown commands were getting saved in the history
 * Enhancements
     * Three new decorators for **do_*** commands to make argument parsing easier
         * **with_argument_list** decorator to change argument type from str to List[str]
@@ -19,6 +20,8 @@
         * This command is not intended to be called from the command line, only from within scripts
     * The **set** command now has an additional **-a/--all** option to also display read-only settings
     * The **history** command can now run, edit, and save prior commands, in addition to displaying prior commands.
+    * The **history** command can now automatically generate a transcript file for regression testing
+        * This feature works imperfectly at the moment, but it is still quite useful
 * Commands Removed
     * The **cmdenvironment** has been removed and its functionality incorporated into the **-a/--all** argument to **set**
     * The **show** command has been removed.  Its functionality has always existing within **set** and continues to do so
@@ -29,9 +32,8 @@
     * the **autorun_on_edit** setting has been removed.
 * Deprecations
     * The old **options** decorator for optparse-based argument parsing is now *deprecated*
-        * The old decorator is still present for now, but will eventually be removed in a future release
+        * The old decorator is still present for now, but will be removed in a future release
         * ``cmd2`` no longer includes **optparse.make_option**, so if your app needs it import directly from optparse
-
 
 ## 0.7.9 (January 4, 2018)
 
