@@ -80,9 +80,9 @@ def test_complete_command_invalid_state(cmd2_app):
     with mock.patch.object(readline, 'get_line_buffer', get_line):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
-                with pytest.raises(AttributeError):
-                    # Run the readline tab-completion function with readline mocks in place and cause an exception
-                    completion = cmd2_app.complete(text, state)
+                # Run the readline tab-completion function with readline mocks in place get None
+                completion = cmd2_app.complete(text, state)
+    assert completion is None
 
 def test_complete_empty_arg(cmd2_app):
     text = ''

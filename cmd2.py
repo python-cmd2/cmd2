@@ -92,8 +92,12 @@ except ImportError:
 # BrokenPipeError is only in Python 3. Use IOError for Python 2.
 if six.PY3:
     BROKEN_PIPE_ERROR = BrokenPipeError
+
+    # redirect_stdout and redirect_stderr weren't added to contextlib until Python 3.4
+    from contextlib import redirect_stdout, redirect_stderr
 else:
     BROKEN_PIPE_ERROR = IOError
+    from contextlib2 import redirect_stdout, redirect_stderr
 
 # On some systems, pyperclip will import gtk for its clipboard functionality.
 # The following code is a workaround for gtk interfering with printing from a background
@@ -668,6 +672,9 @@ class Cmd(cmd.Cmd):
         # Used when piping command output to a shell command
         self.pipe_proc = None
 
+        # Used by complete() for readline tab completion
+        self.completion_matches = []
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -771,13 +778,14 @@ class Cmd(cmd.Cmd):
 
         return cmd_completion
 
+    # noinspection PyUnusedLocal
     def complete_subcommand(self, text, line, begidx, endidx):
         """Readline tab-completion method for completing argparse sub-command names."""
-        cmd, args, foo = self.parseline(line)
+        command, args, foo = self.parseline(line)
         arglist = args.split()
 
-        if len(arglist) <= 1 and cmd + ' ' + args == line:
-            funcname = self._func_named(cmd)
+        if len(arglist) <= 1 and command + ' ' + args == line:
+            funcname = self._func_named(command)
             if funcname:
                 # Check to see if this function was decorated with an argparse ArgumentParser
                 func = getattr(self, funcname)
@@ -799,7 +807,7 @@ class Cmd(cmd.Cmd):
         return []
 
     def complete(self, text, state):
-        """Override of cmd method which returns the next possible completion for 'text'.
+        """Override of command method which returns the next possible completion for 'text'.
 
         If a command has not been entered, then complete against command list.
         Otherwise try to call complete_<command> to get list of completions.
@@ -819,17 +827,17 @@ class Cmd(cmd.Cmd):
             stripped = len(origline) - len(line)
             begidx = readline.get_begidx() - stripped
             endidx = readline.get_endidx() - stripped
-            if begidx>0:
-                cmd, args, foo = self.parseline(line)
-                if cmd == '':
+            if begidx > 0:
+                command, args, foo = self.parseline(line)
+                if command == '':
                     compfunc = self.completedefault
                 else:
                     arglist = args.split()
 
                     compfunc = None
                     # If the user has entered no more than a single argument after the command name
-                    if len(arglist) <= 1 and cmd + ' ' + args == line:
-                        funcname = self._func_named(cmd)
+                    if len(arglist) <= 1 and command + ' ' + args == line:
+                        funcname = self._func_named(command)
                         if funcname:
                             # Check to see if this function was decorated with an argparse ArgumentParser
                             func = getattr(self, funcname)
@@ -842,7 +850,7 @@ class Cmd(cmd.Cmd):
                     if compfunc is None:
                         # This command either doesn't have sub-commands or the user is past the point of entering one
                         try:
-                            compfunc = getattr(self, 'complete_' + cmd)
+                            compfunc = getattr(self, 'complete_' + command)
                         except AttributeError:
                             compfunc = self.completedefault
             else:
@@ -1319,7 +1327,11 @@ class Cmd(cmd.Cmd):
                     # Function has an argparser, so get help based on all the arguments in case there are sub-commands
                     new_arglist = arglist[1:]
                     new_arglist.append('-h')
-                    func(new_arglist)
+
+                    # Temporarily redirect all argparse output to both sys.stdout and sys.stderr to self.stdout
+                    with redirect_stdout(self.stdout):
+                        with redirect_stderr(self.stdout):
+                            func(new_arglist)
                 else:
                     # No special behavior needed, delegate to cmd base class do_help()
                     cmd.Cmd.do_help(self, funcname[3:])

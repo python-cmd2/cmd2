@@ -139,26 +139,20 @@ def test_argparse_quoted_arguments_posix_multiple(argparse_app):
     out = run_cmd(argparse_app, 'tag strong this "should  be" loud')
     assert out == ['<strong>this should  be loud</strong>']
 
-def test_argparse_help_docstring(argparse_app, capsys):
-    run_cmd(argparse_app, 'help say')
-    out, err = capsys.readouterr()
-    out = out.splitlines()
+def test_argparse_help_docstring(argparse_app):
+    out = run_cmd(argparse_app, 'help say')
     assert out[0].startswith('usage: say')
     assert out[1] == ''
     assert out[2] == 'Repeat what you tell me to.'
 
-def test_argparse_help_description(argparse_app, capsys):
-    run_cmd(argparse_app, 'help tag')
-    out, err = capsys.readouterr()
-    out = out.splitlines()
+def test_argparse_help_description(argparse_app):
+    out = run_cmd(argparse_app, 'help tag')
     assert out[0].startswith('usage: tag')
     assert out[1] == ''
     assert out[2] == 'create a html tag'
 
-def test_argparse_prog(argparse_app, capsys):
-    run_cmd(argparse_app, 'help tag')
-    out, err = capsys.readouterr()
-    out = out.splitlines()
+def test_argparse_prog(argparse_app):
+    out = run_cmd(argparse_app, 'help tag')
     progname = out[0].split(' ')[1]
     assert progname == 'tag'
 
@@ -237,26 +231,20 @@ def test_subcommand_invalid(subcommand_app, capsys):
     assert err[0].startswith('usage: base')
     assert err[1].startswith("base: error: invalid choice: 'baz'")
 
-def test_subcommand_base_help(subcommand_app, capsys):
-    run_cmd(subcommand_app, 'help base')
-    out, err = capsys.readouterr()
-    out = out.splitlines()
+def test_subcommand_base_help(subcommand_app):
+    out = run_cmd(subcommand_app, 'help base')
     assert out[0].startswith('usage: base')
     assert out[1] == ''
     assert out[2] == 'Base command help'
 
-def test_subcommand_help(subcommand_app, capsys):
-    run_cmd(subcommand_app, 'help base foo')
-    out, err = capsys.readouterr()
-    out = out.splitlines()
+def test_subcommand_help(subcommand_app):
+    out = run_cmd(subcommand_app, 'help base foo')
     assert out[0].startswith('usage: base foo')
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
 
-def test_subcommand_invalid_help(subcommand_app, capsys):
-    run_cmd(subcommand_app, 'help base baz')
-    out, err = capsys.readouterr()
-    err = err.splitlines()
-    assert err[0].startswith('usage: base')
-    assert err[1].startswith("base: error: invalid choice: 'baz'")
+def test_subcommand_invalid_help(subcommand_app):
+    out = run_cmd(subcommand_app, 'help base baz')
+    assert out[0].startswith('usage: base')
+    assert out[1].startswith("base: error: invalid choice: 'baz'")
