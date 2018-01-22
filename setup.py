@@ -67,9 +67,13 @@ INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'pyperclip', 'six']
 if sys.platform.startswith('win'):
     INSTALL_REQUIRES += ['pyreadline']
 
-# Python 2.7 also requires contextlib2 for temporarily redirecting stdout and stderr and subprocess32
+# Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
+if sys.version_info < (3, 5):
+    INSTALL_REQUIRES += ['contextlib2']
+
+# Python 2.7 also requires subprocess32
 if sys.version_info < (3, 0):
-    INSTALL_REQUIRES += ['contextlib2', 'subprocess32']
+    INSTALL_REQUIRES += ['subprocess32']
 
 # unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
 TESTS_REQUIRE = ['mock', 'pytest']

@@ -73,6 +73,12 @@ try:
 except ImportError:
     import subprocess
 
+# Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
+if sys.version_info < (3, 5):
+    from contextlib2 import redirect_stdout, redirect_stderr
+else:
+    from contextlib import redirect_stdout, redirect_stderr
+
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
 try:
@@ -92,12 +98,8 @@ except ImportError:
 # BrokenPipeError is only in Python 3. Use IOError for Python 2.
 if six.PY3:
     BROKEN_PIPE_ERROR = BrokenPipeError
-
-    # redirect_stdout and redirect_stderr weren't added to contextlib until Python 3.4
-    from contextlib import redirect_stdout, redirect_stderr
 else:
     BROKEN_PIPE_ERROR = IOError
-    from contextlib2 import redirect_stdout, redirect_stderr
 
 # On some systems, pyperclip will import gtk for its clipboard functionality.
 # The following code is a workaround for gtk interfering with printing from a background
