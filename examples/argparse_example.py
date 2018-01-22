@@ -14,7 +14,7 @@ verifying that the output produced matches the transcript.
 import argparse
 import sys
 
-from cmd2 import Cmd, options, with_argument_parser, with_argument_list
+from cmd2 import Cmd, options, with_argparser, with_argument_list
 from optparse import make_option
 
 
@@ -47,7 +47,7 @@ class CmdLineApp(Cmd):
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
-    @with_argument_parser(speak_parser)
+    @with_argparser(speak_parser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
@@ -68,7 +68,7 @@ class CmdLineApp(Cmd):
     tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
-    @with_argument_parser(tag_parser)
+    @with_argparser(tag_parser)
     def do_tag(self, args):
         """create a html tag"""
         self.poutput('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))

@@ -308,7 +308,7 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
     return arg_decorator
 
 
-def with_argument_parser(argparser, subcommand_names=None):
+def with_argparser(argparser, subcommand_names=None):
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
@@ -1463,7 +1463,7 @@ class Cmd(cmd.Cmd):
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
 
-    @with_argument_parser(set_parser)
+    @with_argparser(set_parser)
     def do_set(self, args):
         """Sets a settable parameter or shows current settings of parameters.
 
@@ -1825,7 +1825,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 /regex/             items matching regular expression"""
     history_parser.add_argument('arg', nargs='?', help=_history_arg_help)
 
-    @with_argument_parser(history_parser)
+    @with_argparser(history_parser)
     def do_history(self, args):
         """View, run, edit, and save previously entered commands."""
         # If an argument was supplied, then retrieve partial contents of the history

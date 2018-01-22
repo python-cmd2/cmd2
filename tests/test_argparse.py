@@ -20,7 +20,7 @@ class ArgparseApp(cmd2.Cmd):
     say_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     say_parser.add_argument('words', nargs='+', help='words to say')
 
-    @cmd2.with_argument_parser(say_parser)
+    @cmd2.with_argparser(say_parser)
     def do_say(self, args):
         """Repeat what you tell me to."""
         words = []
@@ -41,7 +41,7 @@ class ArgparseApp(cmd2.Cmd):
     tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
-    @cmd2.with_argument_parser(tag_parser)
+    @cmd2.with_argparser(tag_parser)
     def do_tag(self, args):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
         self.stdout.write('\n')
@@ -178,11 +178,11 @@ class SubcommandApp(cmd2.Cmd):
         cmd2.Cmd.__init__(self)
 
     # sub-command functions for the base command
-    def foo(self, args):
+    def base_foo(self, args):
         """foo subcommand of base command"""
         self.poutput(args.x * args.y)
 
-    def bar(self, args):
+    def base_bar(self, args):
         """bar sucommand of base command"""
         self.poutput('((%s))' % args.z)
 
@@ -194,12 +194,12 @@ class SubcommandApp(cmd2.Cmd):
     parser_foo = base_subparsers.add_parser('foo', help='foo help')
     parser_foo.add_argument('-x', type=int, default=1, help='integer')
     parser_foo.add_argument('y', type=float, help='float')
-    parser_foo.set_defaults(func=foo)
+    parser_foo.set_defaults(func=base_foo)
 
     # create the parser for the "bar" sub-command
     parser_bar = base_subparsers.add_parser('bar', help='bar help')
     parser_bar.add_argument('z', help='string')
-    parser_bar.set_defaults(func=bar)
+    parser_bar.set_defaults(func=base_bar)
 
     # Create a list of subcommand names, which is used to enable tab-completion of sub-commands
     subcommands = ['foo', 'bar']

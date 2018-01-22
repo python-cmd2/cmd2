@@ -429,11 +429,11 @@ class SubcommandsExample(cmd2.Cmd):
         cmd2.Cmd.__init__(self)
 
     # sub-command functions for the base command
-    def foo(self, args):
+    def base_foo(self, args):
         """foo subcommand of base command"""
         self.poutput(args.x * args.y)
 
-    def bar(self, args):
+    def base_bar(self, args):
         """bar sucommand of base command"""
         self.poutput('((%s))' % args.z)
 
@@ -445,17 +445,17 @@ class SubcommandsExample(cmd2.Cmd):
     parser_foo = base_subparsers.add_parser('foo', help='foo help')
     parser_foo.add_argument('-x', type=int, default=1, help='integer')
     parser_foo.add_argument('y', type=float, help='float')
-    parser_foo.set_defaults(func=foo)
+    parser_foo.set_defaults(func=base_foo)
 
     # create the parser for the "bar" sub-command
     parser_bar = base_subparsers.add_parser('bar', help='bar help')
     parser_bar.add_argument('z', help='string')
-    parser_bar.set_defaults(func=bar)
+    parser_bar.set_defaults(func=base_bar)
 
     # Create a list of subcommand names, which is used to enable tab-completion of sub-commands
     subcommands = ['foo', 'bar']
 
-    @cmd2.with_argument_parser(base_parser, subcommands)
+    @cmd2.with_argparser(base_parser, subcommands)
     def do_base(self, args):
         """Base command help"""
         try:

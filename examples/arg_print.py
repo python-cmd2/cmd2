@@ -14,7 +14,7 @@ import argparse
 import cmd2
 import pyparsing
 
-from cmd2 import with_argument_list, with_argument_parser, with_argparser_and_unknown_args
+from cmd2 import with_argument_list, with_argparser, with_argparser_and_unknown_args
 
 
 class ArgumentAndOptionPrinter(cmd2.Cmd):
@@ -47,7 +47,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     oprint_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     oprint_parser.add_argument('words', nargs='+', help='words to print')
 
-    @with_argument_parser(oprint_parser)
+    @with_argparser(oprint_parser)
     def do_oprint(self, args):
         """Print the options and argument list this options command was called with."""
         print('oprint was called with the following\n\toptions: {!r}'.format(args))

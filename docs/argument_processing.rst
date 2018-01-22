@@ -13,7 +13,7 @@ Argument Processing
 4. Adds the usage message from the argument parser to your command.
 5. Checks if the ``-h/--help`` option is present, and if so, display the help message for the command
 
-These features are all provided by the ``@with_argument_parser`` decorator.
+These features are all provided by the ``@with_argparser`` decorator.
 
 Using the argument parser decorator
 ===================================
@@ -21,7 +21,7 @@ Using the argument parser decorator
 For each command in the ``cmd2`` subclass which requires argument parsing,
 create an instance of ``argparse.ArgumentParser()`` which can parse the
 input appropriately for the command. Then decorate the command method with
-the ``@with_argument_parser`` decorator, passing the argument parser as the
+the ``@with_argparser`` decorator, passing the argument parser as the
 first parameter to the decorator. This changes the second argumen to the command method, which will contain the results
 of ``ArgumentParser.parse_args()``.
 
@@ -33,7 +33,7 @@ Here's what it looks like::
       argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
       argparser.add_argument('word', nargs='?', help='word to say')
 
-      @with_argument_parser(argparser)
+      @with_argparser(argparser)
       def do_speak(self, opts)
          """Repeats what you tell me to."""
          arg = opts.word
@@ -47,7 +47,7 @@ Here's what it looks like::
 
 .. note::
 
-   The ``@with_argument_parser`` decorator sets the ``prog`` variable in
+   The ``@with_argparser`` decorator sets the ``prog`` variable in
    the argument parser based on the name of the method it is decorating.
    This will override anything you specify in ``prog`` variable when
    creating the argument parser.
@@ -57,14 +57,14 @@ Help Messages
 =============
 
 By default, cmd2 uses the docstring of the command method when a user asks
-for help on the command. When you use the ``@with_argument_parser``
+for help on the command. When you use the ``@with_argparser``
 decorator, the docstring for the ``do_*`` method is used to set the description for the ``argparse.ArgumentParser`` is
 With this code::
 
    argparser = argparse.ArgumentParser()
    argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
-   @with_argument_parser(argparser)
+   @with_argparser(argparser)
    def do_tag(self, args):
       """create a html tag"""
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
@@ -92,7 +92,7 @@ docstring on your method empty::
    argparser = argparse.ArgumentParser(description='create an html tag')
    argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
-   @with_argument_parser(argparser)
+   @with_argparser(argparser)
    def do_tag(self, args):
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
       self.stdout.write('\n')
@@ -121,7 +121,7 @@ To add additional text to the end of the generated help message, use the ``epilo
    )
    argparser.add_argument('tag', help='tag')
    argparser.add_argument('content', nargs='+', help='content to surround with tag')
-   @with_argument_parser(argparser)
+   @with_argparser(argparser)
    def do_tag(self, args):
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
       self.stdout.write('\n')
@@ -190,7 +190,7 @@ Here's what it looks like::
 
 Sub-commands
 ============
-Sub-commands are supported for commands using either the ``@with_argument_parser`` or
+Sub-commands are supported for commands using either the ``@with_argparser`` or
 ``@with_argparser_and_unknown_args`` decorator.  The syntax for supporting them is based on argparse sub-parsers.
 
 See the subcommands_ example to learn more about how to use sub-commands in your ``cmd2`` application.
