@@ -30,6 +30,7 @@
 * Other changes
     * The **edit** command no longer allows you to edit prior commands. The capability to edit prior commands is now part of the **history** command. The **edit** command still allows you to edit arbitrary files.
     * the **autorun_on_edit** setting has been removed.
+    * For Python 3.4 and earlier, ``cmd2`` now has an additional dependency on the ``contextlib2`` module
 * Deprecations
     * The old **options** decorator for optparse-based argument parsing is now *deprecated*
         * The old decorator is still present for now, but will be removed in a future release
