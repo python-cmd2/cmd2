@@ -14,7 +14,7 @@ the transcript.
 import random
 import argparse
 
-from cmd2 import Cmd, with_argument_parser
+from cmd2 import Cmd, with_argparser
 
 
 class CmdLineApp(Cmd):
@@ -44,7 +44,7 @@ class CmdLineApp(Cmd):
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
-    @with_argument_parser(speak_parser)
+    @with_argparser(speak_parser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
@@ -66,7 +66,7 @@ class CmdLineApp(Cmd):
     mumble_parser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
     mumble_parser.add_argument('words', nargs='+', help='words to say')
 
-    @with_argument_parser(mumble_parser)
+    @with_argparser(mumble_parser)
     def do_mumble(self, args):
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1

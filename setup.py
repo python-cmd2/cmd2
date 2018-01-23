@@ -6,7 +6,7 @@ Setuptools setup file, used to install or test 'cmd2'
 import sys
 from setuptools import setup
 
-VERSION = '0.8.0a'
+VERSION = '0.8.0'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
@@ -62,8 +62,18 @@ Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
 INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'pyperclip', 'six']
+
+# Windows also requires pyreadline to ensure tab completion works
 if sys.platform.startswith('win'):
     INSTALL_REQUIRES += ['pyreadline']
+
+# Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
+if sys.version_info < (3, 5):
+    INSTALL_REQUIRES += ['contextlib2']
+
+# Python 2.7 also requires subprocess32
+if sys.version_info < (3, 0):
+    INSTALL_REQUIRES += ['subprocess32']
 
 # unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
 TESTS_REQUIRE = ['mock', 'pytest']

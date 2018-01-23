@@ -25,7 +25,7 @@ from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT,
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.8.0a'
+    assert cmd2.__version__ == '0.8.0'
 
 
 def test_empty_statement(base_app):
@@ -41,19 +41,24 @@ def test_base_help(base_app):
 
 def test_base_help_history(base_app):
     out = run_cmd(base_app, 'help history')
-    expected = normalize(HELP_HISTORY)
-    assert out == expected
+    assert out == normalize(HELP_HISTORY)
 
 def test_base_argparse_help(base_app, capsys):
+    # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
     run_cmd(base_app, 'set -h')
     out, err = capsys.readouterr()
-    expected = run_cmd(base_app, 'help set')
-    assert normalize(base_app.do_set.__doc__ + str(err)) == expected
+    out1 = out.splitlines()
+
+    out2 = run_cmd(base_app, 'help set')
+
+    assert out1 == out2
+    assert out1[0].startswith('usage: set')
+    assert out1[1] == ''
+    assert out1[2].startswith('Sets a settable parameter')
 
 def test_base_invalid_option(base_app, capsys):
     run_cmd(base_app, 'set -z')
     out, err = capsys.readouterr()
-    run_cmd(base_app, 'help set')
     expected = ['usage: set [-h] [-a] [-l] [settable [settable ...]]', 'set: error: unrecognized arguments: -z']
     assert normalize(str(err)) == expected
 
@@ -605,8 +610,7 @@ def test_input_redirection(base_app, request):
 
     # Verify that redirecting input ffom a file works
     out = run_cmd(base_app, 'help < {}'.format(filename))
-    expected = normalize(HELP_HISTORY)
-    assert out == expected
+    assert out == normalize(HELP_HISTORY)
 
 
 def test_pipe_to_shell(base_app, capsys):

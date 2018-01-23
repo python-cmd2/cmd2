@@ -73,6 +73,12 @@ try:
 except ImportError:
     import subprocess
 
+# Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
+if sys.version_info < (3, 5):
+    from contextlib2 import redirect_stdout, redirect_stderr
+else:
+    from contextlib import redirect_stdout, redirect_stderr
+
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
 try:
@@ -106,7 +112,7 @@ if six.PY2 and sys.platform.startswith('lin'):
     except ImportError:
         pass
 
-__version__ = '0.8.0a'
+__version__ = '0.8.0'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -272,10 +278,13 @@ def with_argument_list(func):
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser):
-    """A decorator to alter a cmd2 method to populate its ``args``
-    argument by parsing arguments with the given instance of
-    argparse.ArgumentParser, but also returning unknown args as a list.
+def with_argparser_and_unknown_args(argparser, subcommand_names=None):
+    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
+    instance of argparse.ArgumentParser, but also returning unknown args as a list.
+
+    :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
+    :param subcommand_names: List[str] - list of subcommand names for this parser (used for tab-completion)
+    :return: function that gets passed parsed args and a list of unknown args
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, cmdline):
@@ -292,14 +301,26 @@ def with_argparser_and_unknown_args(argparser):
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
+
+        # Mark this function as having an argparse ArgumentParser (used by do_help)
+        cmd_wrapper.__dict__['has_parser'] = True
+
+        # If there are subcommands, store their names to support tab-completion of subcommand names
+        if subcommand_names is not None:
+            cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
+
         return cmd_wrapper
+
     return arg_decorator
 
 
-def with_argument_parser(argparser):
-    """A decorator to alter a cmd2 method to populate its ``args``
-    argument by parsing arguments with the given instance of
-    argparse.ArgumentParser.
+def with_argparser(argparser, subcommand_names=None):
+    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
+    with the given instance of argparse.ArgumentParser.
+
+    :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
+    :param subcommand_names: List[str] - list of subcommand names for this parser (used for tab-completion)
+    :return: function that gets passed parsed args
     """
     def arg_decorator(func):
         def cmd_wrapper(instance, cmdline):
@@ -316,7 +337,16 @@ def with_argument_parser(argparser):
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
+
+        # Mark this function as having an argparse ArgumentParser (used by do_help)
+        cmd_wrapper.__dict__['has_parser'] = True
+
+        # If there are subcommands, store their names to support tab-completion of subcommand names
+        if subcommand_names is not None:
+            cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
+
         return cmd_wrapper
+
     return arg_decorator
 
 
@@ -644,6 +674,9 @@ class Cmd(cmd.Cmd):
         # Used when piping command output to a shell command
         self.pipe_proc = None
 
+        # Used by complete() for readline tab completion
+        self.completion_matches = []
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -733,7 +766,7 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyMethodOverriding
     def completenames(self, text, line, begidx, endidx):
-        """Override of cmd2 method which completes command names both for command completion and help."""
+        """Override of cmd method which completes command names both for command completion and help."""
         command = text
         if self.case_insensitive:
             command = text.lower()
@@ -746,6 +779,91 @@ class Cmd(cmd.Cmd):
             cmd_completion[0] += ' '
 
         return cmd_completion
+
+    # noinspection PyUnusedLocal
+    def complete_subcommand(self, text, line, begidx, endidx):
+        """Readline tab-completion method for completing argparse sub-command names."""
+        command, args, foo = self.parseline(line)
+        arglist = args.split()
+
+        if len(arglist) <= 1 and command + ' ' + args == line:
+            funcname = self._func_named(command)
+            if funcname:
+                # Check to see if this function was decorated with an argparse ArgumentParser
+                func = getattr(self, funcname)
+                subcommand_names = func.__dict__.get('subcommand_names', None)
+
+                # If this command has subcommands
+                if subcommand_names is not None:
+                    arg = ''
+                    if arglist:
+                        arg = arglist[0]
+
+                    matches = [sc for sc in subcommand_names if sc.startswith(arg)]
+
+                    # If completing the sub-command name and get exactly 1 result and are at end of line, add a space
+                    if len(matches) == 1 and endidx == len(line):
+                        matches[0] += ' '
+                    return matches
+
+        return []
+
+    def complete(self, text, state):
+        """Override of command method which returns the next possible completion for 'text'.
+
+        If a command has not been entered, then complete against command list.
+        Otherwise try to call complete_<command> to get list of completions.
+
+        This method gets called directly by readline because it is set as the tab-completion function.
+
+        This completer function is called as complete(text, state), for state in 0, 1, 2, …, until it returns a
+        non-string value. It should return the next possible completion starting with text.
+
+        :param text: str - the current word that user is typing
+        :param state: int - non-negative integer
+        """
+        if state == 0:
+            import readline
+            origline = readline.get_line_buffer()
+            line = origline.lstrip()
+            stripped = len(origline) - len(line)
+            begidx = readline.get_begidx() - stripped
+            endidx = readline.get_endidx() - stripped
+            if begidx > 0:
+                command, args, foo = self.parseline(line)
+                if command == '':
+                    compfunc = self.completedefault
+                else:
+                    arglist = args.split()
+
+                    compfunc = None
+                    # If the user has entered no more than a single argument after the command name
+                    if len(arglist) <= 1 and command + ' ' + args == line:
+                        funcname = self._func_named(command)
+                        if funcname:
+                            # Check to see if this function was decorated with an argparse ArgumentParser
+                            func = getattr(self, funcname)
+                            subcommand_names = func.__dict__.get('subcommand_names', None)
+
+                            # If this command has subcommands
+                            if subcommand_names is not None:
+                                compfunc = self.complete_subcommand
+
+                    if compfunc is None:
+                        # This command either doesn't have sub-commands or the user is past the point of entering one
+                        try:
+                            compfunc = getattr(self, 'complete_' + command)
+                        except AttributeError:
+                            compfunc = self.completedefault
+            else:
+                compfunc = self.completenames
+
+            self.completion_matches = compfunc(text, line, begidx, endidx)
+
+        try:
+            return self.completion_matches[state]
+        except IndexError:
+            return None
 
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
@@ -854,8 +972,7 @@ class Cmd(cmd.Cmd):
             (stop, statement) = self.postparsing_precmd(statement)
             if stop:
                 return self.postparsing_postcmd(stop)
-            if statement.parsed.command not in self.excludeFromHistory:
-                self.history.append(statement.parsed.raw)
+
             try:
                 if self.allow_redirection:
                     self._redirect_output(statement)
@@ -904,7 +1021,11 @@ class Cmd(cmd.Cmd):
         self.cmdqueue = list(cmds) + self.cmdqueue
         try:
             while self.cmdqueue and not stop:
-                stop = self.onecmd_plus_hooks(self.cmdqueue.pop(0))
+                line = self.cmdqueue.pop(0)
+                if self.echo and line != 'eos':
+                    self.poutput('{}{}'.format(self.prompt, line))
+
+                stop = self.onecmd_plus_hooks(line)
         finally:
             # Clear out the command queue and script directory stack, just in
             # case we hit an error and they were not completed.
@@ -1045,6 +1166,10 @@ class Cmd(cmd.Cmd):
         funcname = self._func_named(statement.parsed.command)
         if not funcname:
             return self.default(statement)
+
+        # Since we have a valid command store it in the history
+        if statement.parsed.command not in self.excludeFromHistory:
+            self.history.append(statement.parsed.raw)
 
         try:
             func = getattr(self, funcname)
@@ -1198,8 +1323,20 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             funcname = self._func_named(arglist[0])
             if funcname:
-                # No special behavior needed, delegate to cmd base class do_help()
-                cmd.Cmd.do_help(self, funcname[3:])
+                # Check to see if this function was decorated with an argparse ArgumentParser
+                func = getattr(self, funcname)
+                if func.__dict__.get('has_parser', False):
+                    # Function has an argparser, so get help based on all the arguments in case there are sub-commands
+                    new_arglist = arglist[1:]
+                    new_arglist.append('-h')
+
+                    # Temporarily redirect all argparse output to both sys.stdout and sys.stderr to self.stdout
+                    with redirect_stdout(self.stdout):
+                        with redirect_stderr(self.stdout):
+                            func(new_arglist)
+                else:
+                    # No special behavior needed, delegate to cmd base class do_help()
+                    cmd.Cmd.do_help(self, funcname[3:])
         else:
             # Show a menu of what commands help can be gotten for
             self._help_menu()
@@ -1340,7 +1477,7 @@ class Cmd(cmd.Cmd):
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
 
-    @with_argument_parser(set_parser)
+    @with_argparser(set_parser)
     def do_set(self, args):
         """Sets a settable parameter or shows current settings of parameters.
 
@@ -1692,8 +1829,9 @@ Paths or arguments that contain spaces must be enclosed in quotes
     history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_parser_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
-    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output to file')
-    history_parser.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    history_parser_group.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output commands to a script file')
+    history_parser_group.add_argument('-t', '--transcript', help='output commands and results to a transcript file')
     _history_arg_help = """empty               all history items
 a                   one history item by number
 a..b, a:b, a:, ..b  items by indices (inclusive)
@@ -1701,7 +1839,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 /regex/             items matching regular expression"""
     history_parser.add_argument('arg', nargs='?', help=_history_arg_help)
 
-    @with_argument_parser(history_parser)
+    @with_argparser(history_parser)
     def do_history(self, args):
         """View, run, edit, and save previously entered commands."""
         # If an argument was supplied, then retrieve partial contents of the history
@@ -1722,7 +1860,8 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         else:
             # If no arg given, then retrieve the entire history
             cowardly_refuse_to_run = True
-            history = self.history
+            # Get a copy of the history so it doesn't get mutated while we are using it
+            history = self.history[:]
 
         if args.run:
             if cowardly_refuse_to_run:
@@ -1755,6 +1894,28 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:
                 self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
+        elif args.transcript:
+            # Make sure echo is on so commands print to standard out
+            saved_echo = self.echo
+            self.echo = True
+
+            # Redirect stdout to the transcript file
+            saved_self_stdout = self.stdout
+            self.stdout = open(args.transcript, 'w')
+
+            # Run all of the commands in the history with output redirected to transcript and echo on
+            self.runcmds_plus_hooks(history)
+
+            # Restore stdout to its original state
+            self.stdout.close()
+            self.stdout = saved_self_stdout
+
+            # Set echo back to its original state
+            self.echo = saved_echo
+
+            plural = 's' if len(history) > 1 else ''
+            self.pfeedback('{} command{} and outputs saved to transcript file {!r}'.format(len(history), plural,
+                                                                                           args.transcript))
         else:
             # Display the history items retrieved
             for hi in history:

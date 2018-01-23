@@ -8,6 +8,7 @@ import pytest
 import cmd2
 from conftest import run_cmd, StdOut
 
+
 class ArgparseApp(cmd2.Cmd):
     def __init__(self):
         self.maxrepeats = 3
@@ -19,7 +20,7 @@ class ArgparseApp(cmd2.Cmd):
     say_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     say_parser.add_argument('words', nargs='+', help='words to say')
 
-    @cmd2.with_argument_parser(say_parser)
+    @cmd2.with_argparser(say_parser)
     def do_say(self, args):
         """Repeat what you tell me to."""
         words = []
@@ -40,7 +41,7 @@ class ArgparseApp(cmd2.Cmd):
     tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
-    @cmd2.with_argument_parser(tag_parser)
+    @cmd2.with_argparser(tag_parser)
     def do_tag(self, args):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
         self.stdout.write('\n')
@@ -162,3 +163,88 @@ def test_arglist(argparse_app):
 def test_arglist_decorator_twice(argparse_app):
     out = run_cmd(argparse_app, 'arglisttwice "we  should" get these')
     assert out[0] == 'we  should get these'
+
+
+class SubcommandApp(cmd2.Cmd):
+    """ Example cmd2 application where we a base command which has a couple subcommands."""
+
+    def __init__(self):
+        cmd2.Cmd.__init__(self)
+
+    # sub-command functions for the base command
+    def base_foo(self, args):
+        """foo subcommand of base command"""
+        self.poutput(args.x * args.y)
+
+    def base_bar(self, args):
+        """bar sucommand of base command"""
+        self.poutput('((%s))' % args.z)
+
+    # create the top-level parser for the base command
+    base_parser = argparse.ArgumentParser(prog='base')
+    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+
+    # create the parser for the "foo" sub-command
+    parser_foo = base_subparsers.add_parser('foo', help='foo help')
+    parser_foo.add_argument('-x', type=int, default=1, help='integer')
+    parser_foo.add_argument('y', type=float, help='float')
+    parser_foo.set_defaults(func=base_foo)
+
+    # create the parser for the "bar" sub-command
+    parser_bar = base_subparsers.add_parser('bar', help='bar help')
+    parser_bar.add_argument('z', help='string')
+    parser_bar.set_defaults(func=base_bar)
+
+    # Create a list of subcommand names, which is used to enable tab-completion of sub-commands
+    subcommands = ['foo', 'bar']
+
+    @cmd2.with_argparser_and_unknown_args(base_parser, subcommands)
+    def do_base(self, args, arglist):
+        """Base command help"""
+        try:
+            # Call whatever sub-command function was selected
+            args.func(self, args)
+        except AttributeError:
+            # No sub-command was provided, so as called
+            self.do_help('base')
+
+@pytest.fixture
+def subcommand_app():
+    app = SubcommandApp()
+    app.stdout = StdOut()
+    return app
+
+
+def test_subcommand_foo(subcommand_app):
+    out = run_cmd(subcommand_app, 'base foo -x2 5.0')
+    assert out == ['10.0']
+
+
+def test_subcommand_bar(subcommand_app):
+    out = run_cmd(subcommand_app, 'base bar baz')
+    assert out == ['((baz))']
+
+def test_subcommand_invalid(subcommand_app, capsys):
+    run_cmd(subcommand_app, 'base baz')
+    out, err = capsys.readouterr()
+    err = err.splitlines()
+    assert err[0].startswith('usage: base')
+    assert err[1].startswith("base: error: invalid choice: 'baz'")
+
+def test_subcommand_base_help(subcommand_app):
+    out = run_cmd(subcommand_app, 'help base')
+    assert out[0].startswith('usage: base')
+    assert out[1] == ''
+    assert out[2] == 'Base command help'
+
+def test_subcommand_help(subcommand_app):
+    out = run_cmd(subcommand_app, 'help base foo')
+    assert out[0].startswith('usage: base foo')
+    assert out[1] == ''
+    assert out[2] == 'positional arguments:'
+
+
+def test_subcommand_invalid_help(subcommand_app):
+    out = run_cmd(subcommand_app, 'help base baz')
+    assert out[0].startswith('usage: base')
+    assert out[1].startswith("base: error: invalid choice: 'baz'")
