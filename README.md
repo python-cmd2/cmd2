@@ -36,7 +36,13 @@ Main Features
 - Windows, macOS, and Linux support
 - Trivial to provide built-in help for all commands
 - Built-in regression testing framework for your applications (transcript-based testing)
+- Transcripts for use with built-in regression can be automatically generated from `history -t`
 
+<aside class="notice">
+**Support for Python 2.7 will be discontinued on Aug 31, 2018**.  The use of **Python 3** is *highly*
+preferred over Python 2. Consider upgrading your applications and infrastructure if you find
+yourself still using Python 2 in production today.
+</aside>
 
 Installation
 ------------
