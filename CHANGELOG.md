@@ -6,7 +6,7 @@
     * Three new decorators for **do_*** commands to make argument parsing easier
         * **with_argument_list** decorator to change argument type from str to List[str]
             * **do_*** commands get a single argument which is a list of strings, as pre-parsed by shlex.split()
-        * **with_argument_parser** decorator for strict argparse-based argument parsing of command arguments
+        * **with_arparser** decorator for strict argparse-based argument parsing of command arguments
             * **do_*** commands get a single argument which is the output of argparse.parse_args()
         * **with_argparser_and_unknown_args** decorator for argparse-based argument parsing, but allows unknown args
             * **do_*** commands get two arguments, the output of argparse.parse_known_args()
