@@ -11,7 +11,7 @@
         * **with_argparser_and_unknown_args** decorator for argparse-based argument parsing, but allows unknown args
             * **do_*** commands get two arguments, the output of argparse.parse_known_args()
     *  See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
-        * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argpasre_example.py) 
+        * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py) 
         and [arg_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) examples
     * Added support for Argpasre sub-commands when using the **with_argument_parser** or **with_argparser_and_unknown_args** decorators
         * See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use subcommands
