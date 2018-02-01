@@ -1,4 +1,4 @@
-## 0.8.0 (February TBD, 2018)
+## 0.8.0 (February 1, 2018)
 * Bug Fixes
     * Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
     * Fixed a bug where unknown commands were getting saved in the history
