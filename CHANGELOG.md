@@ -1,4 +1,4 @@
-## 0.8.0 (TBD, 2018)
+## 0.8.0 (February TBD, 2018)
 * Bug Fixes
     * Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
     * Fixed a bug where unknown commands were getting saved in the history
@@ -21,7 +21,7 @@
     * The **set** command now has an additional **-a/--all** option to also display read-only settings
     * The **history** command can now run, edit, and save prior commands, in addition to displaying prior commands.
     * The **history** command can now automatically generate a transcript file for regression testing
-        * This feature works imperfectly at the moment, but it is still quite useful
+        * This makes creating regression tests for your ``cmd2`` application trivial
 * Commands Removed
     * The **cmdenvironment** has been removed and its functionality incorporated into the **-a/--all** argument to **set**
     * The **show** command has been removed.  Its functionality has always existing within **set** and continues to do so

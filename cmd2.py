@@ -1913,6 +1913,13 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             # Set echo back to its original state
             self.echo = saved_echo
 
+            # Post-process the file to escape un-escaped "/" regex escapes
+            with open(args.transcript, 'r') as fin:
+                data = fin.read()
+            post_processed_data = data.replace('/', '\/')
+            with open(args.transcript, 'w') as fout:
+                fout.write(post_processed_data)
+
             plural = 's' if len(history) > 1 else ''
             self.pfeedback('{} command{} and outputs saved to transcript file {!r}'.format(len(history), plural,
                                                                                            args.transcript))
