@@ -38,11 +38,13 @@ Main Features
 - Built-in regression testing framework for your applications (transcript-based testing)
 - Transcripts for use with built-in regression can be automatically generated from `history -t`
 
-<aside class="notice">
-**Support for Python 2.7 will be discontinued on Aug 31, 2018**.  The use of **Python 3** is *highly*
-preferred over Python 2. Consider upgrading your applications and infrastructure if you find
-yourself still using Python 2 in production today.
-</aside>
+Plan for dropping Python 2.7 support
+------------------------------------
+Support for Python 2.7 will be discontinued on Aug 31, 2018.  After that date, new releases of `cmd2` will only support
+Python 3.  Older releases of `cmd2` will of course continue to support Python 2.7.
+
+Supporting Python 2 is an increasing burden on our limited resources.  Switching to support only Python 3 will allow
+us to clean up the codebase, remove some cruft, and focus on developing new features.
 
 Installation
 ------------
