@@ -108,12 +108,15 @@ Instructions for implementing each feature follow.
 
 - Parsing commands with `argparse`
 
-    ```python
+    ```Python
+    import argparse
+    from cmd2 import with_argparser
+
     argparser = argparse.ArgumentParser()
     argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     argparser.add_argument('words', nargs='+', help='words to say')
-    @with_argument_parser(argparser)
+    @with_argparser(argparser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
@@ -154,7 +157,7 @@ A sample application for cmd2.
 import random
 import argparse
 
-from cmd2 import Cmd, with_argument_parser
+from cmd2 import Cmd, with_argparser
 
 
 class CmdLineApp(Cmd):
@@ -178,12 +181,12 @@ class CmdLineApp(Cmd):
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         Cmd.__init__(self, use_ipython=False)
 
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
-    argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
-    argparser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    argparser.add_argument('words', nargs='+', help='words to say')
-    @with_argument_parser(argparser)
+    speak_parser = argparse.ArgumentParser()
+    speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    speak_parser.add_argument('words', nargs='+', help='words to say')
+    @with_argparser(speak_parser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
@@ -201,10 +204,10 @@ class CmdLineApp(Cmd):
     do_say = do_speak  # now "say" is a synonym for "speak"
     do_orate = do_speak  # another synonym, but this one takes multi-line input
 
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
-    argparser.add_argument('words', nargs='+', help='words to say')
-    @with_argument_parser(argparser)
+    mumble_parser = argparse.ArgumentParser()
+    mumble_parser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
+    mumble_parser.add_argument('words', nargs='+', help='words to say')
+    @with_argparser(mumble_parser)
     def do_mumble(self, args):
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
