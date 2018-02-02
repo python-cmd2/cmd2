@@ -122,7 +122,7 @@ pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
 # The next 3 variables and associated setter functions effect how arguments are parsed for decorated commands
-#   which use one of the decorators such as @with_argument_list or @with_argument_parser
+#   which use one of the decorators such as @with_argument_list or @with_argparser
 # The defaults are sane and maximize ease of use for new applications based on cmd2.
 # To maximize backwards compatibility, we recommend setting USE_ARG_LIST to "False"
 
