@@ -14,12 +14,10 @@ import mock
 import pytest
 import six
 
-# Used for sm.input: raw_input() for Python 2 or input() for Python 3
-import six.moves as sm
-
-from cmd2 import (Cmd, make_option, options, Cmd2TestCase, set_use_arg_list,
+from cmd2 import (Cmd, options, Cmd2TestCase, set_use_arg_list,
                   set_posix_shlex, set_strip_quotes)
 from conftest import run_cmd, StdOut, normalize
+from optparse import make_option
 
 
 class CmdLineApp(Cmd):
@@ -27,7 +25,7 @@ class CmdLineApp(Cmd):
     MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
     MUMBLE_FIRST = ['so', 'like', 'well']
     MUMBLE_LAST = ['right?']
-    
+
     def __init__(self, *args, **kwargs):
         self.abbrev = True
         self.multilineCommands = ['orate']
@@ -132,9 +130,8 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  help     mumble  pyscript  save  shell      speak
-cmdenvironment  history  orate   quit      say   shortcuts
-edit            load     py      run       set   show
+edit  history  mumble  py        quit  set    shortcuts
+help  load     orate   pyscript  say   shell  speak
 
 (Cmd) help say
 Repeats what you tell me to.
@@ -175,7 +172,7 @@ say -ps --repeat=5 goodnight, Gracie
 set maxrepeats 5
 -------------------------[6]
 say -ps --repeat=5 goodnight, Gracie
-(Cmd) run 4
+(Cmd) history -r 4
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
@@ -332,7 +329,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     ])
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
-    
+
     class TestMyAppCase(Cmd2TestCase):
         cmdapp = app
 

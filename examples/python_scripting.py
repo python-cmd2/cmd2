@@ -14,10 +14,11 @@ command and the "pyscript <script> [arguments]" syntax comes into play.
 
 This application and the "scripts/conditional.py" script serve as an example for one way in which this can be done.
 """
+import argparse
 import functools
 import os
 
-from cmd2 import Cmd, options, make_option, CmdResult, set_use_arg_list
+from cmd2 import Cmd, CmdResult, with_argument_list, with_argparser_and_unknown_args
 
 
 class CmdLineApp(Cmd):
@@ -27,11 +28,7 @@ class CmdLineApp(Cmd):
         # Enable the optional ipy command if IPython is installed by setting use_ipython=True
         Cmd.__init__(self, use_ipython=True)
         self._set_prompt()
-        self.autorun_on_edit = False
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇  (Python 3 only)  💩'
-
-        # For option commands, pass a list of argument strings instead of a single argument string to the do_* methods
-        set_use_arg_list(True)
 
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
@@ -49,19 +46,21 @@ class CmdLineApp(Cmd):
         self._set_prompt()
         return stop
 
-    # noinspection PyUnusedLocal
-    @options([], arg_desc='<new_dir>')
-    def do_cd(self, arg, opts=None):
-        """Change directory."""
+    @with_argument_list
+    def do_cd(self, arglist):
+        """Change directory.
+    Usage:
+        cd <new_dir>
+        """
         # Expect 1 argument, the directory to change to
-        if not arg or len(arg) != 1:
+        if not arglist or len(arglist) != 1:
             self.perror("cd requires exactly 1 argument:", traceback_war=False)
             self.do_help('cd')
             self._last_result = CmdResult('', 'Bad arguments')
             return
 
         # Convert relative paths to absolute paths
-        path = os.path.abspath(os.path.expanduser(arg[0]))
+        path = os.path.abspath(os.path.expanduser(arglist[0]))
 
         # Make sure the directory exists, is a directory, and we have read access
         out = ''
@@ -86,13 +85,15 @@ class CmdLineApp(Cmd):
     # Enable directory completion for cd command by freezing an argument to path_complete() with functools.partialmethod
     complete_cd = functools.partialmethod(Cmd.path_complete, dir_only=True)
 
-    @options([make_option('-l', '--long', action="store_true", help="display in long format with one item per line")],
-             arg_desc='')
-    def do_dir(self, arg, opts=None):
+    dir_parser = argparse.ArgumentParser()
+    dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
+
+    @with_argparser_and_unknown_args(dir_parser)
+    def do_dir(self, args, unknown):
         """List contents of current directory."""
         # No arguments for this command
-        if arg:
-            self.perror("dir does not take any arguments:", traceback_war=False)
+        if unknown:
+            self.perror("dir does not take any positional arguments:", traceback_war=False)
             self.do_help('dir')
             self._last_result = CmdResult('', 'Bad arguments')
             return
@@ -101,7 +102,7 @@ class CmdLineApp(Cmd):
         contents = os.listdir(self.cwd)
 
         fmt = '{} '
-        if opts.long:
+        if args.long:
             fmt = '{}\n'
         for f in contents:
             self.stdout.write(fmt.format(f))

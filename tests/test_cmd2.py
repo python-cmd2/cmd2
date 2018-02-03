@@ -15,6 +15,7 @@ import pytest
 import six
 
 from code import InteractiveConsole
+from optparse import make_option
 
 # Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
@@ -24,7 +25,7 @@ from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT,
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.7.9'
+    assert cmd2.__version__ == '0.8.0'
 
 
 def test_empty_statement(base_app):
@@ -40,24 +41,26 @@ def test_base_help(base_app):
 
 def test_base_help_history(base_app):
     out = run_cmd(base_app, 'help history')
-    expected = normalize(HELP_HISTORY)
-    assert out == expected
+    assert out == normalize(HELP_HISTORY)
 
-def test_base_options_help(base_app, capsys):
-    run_cmd(base_app, 'show -h')
+def test_base_argparse_help(base_app, capsys):
+    # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
+    run_cmd(base_app, 'set -h')
     out, err = capsys.readouterr()
-    expected = run_cmd(base_app, 'help show')
-    # 'show -h' is the same as 'help show', other than whitespace differences of an extra newline present in 'help show'
-    assert normalize(str(out)) == expected
+    out1 = out.splitlines()
+
+    out2 = run_cmd(base_app, 'help set')
+
+    assert out1 == out2
+    assert out1[0].startswith('usage: set')
+    assert out1[1] == ''
+    assert out1[2].startswith('Sets a settable parameter')
 
 def test_base_invalid_option(base_app, capsys):
-    run_cmd(base_app, 'show -z')
+    run_cmd(base_app, 'set -z')
     out, err = capsys.readouterr()
-    show_help = run_cmd(base_app, 'help show')
-    expected = ['no such option: -z']
-    expected.extend(show_help)
-    # 'show -h' is the same as 'help show', other than whitespace differences of an extra newline present in 'help show'
-    assert normalize(str(out)) == expected
+    expected = ['usage: set [-h] [-a] [-l] [settable [settable ...]]', 'set: error: unrecognized arguments: -z']
+    assert normalize(str(err)) == expected
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')
@@ -68,7 +71,7 @@ def test_base_shortcuts(base_app):
 def test_base_show(base_app):
     # force editor to be 'vim' so test is repeatable across platforms
     base_app.editor = 'vim'
-    out = run_cmd(base_app, 'show')
+    out = run_cmd(base_app, 'set')
     expected = normalize(SHOW_TXT)
     assert out == expected
 
@@ -76,8 +79,28 @@ def test_base_show(base_app):
 def test_base_show_long(base_app):
     # force editor to be 'vim' so test is repeatable across platforms
     base_app.editor = 'vim'
-    out = run_cmd(base_app, 'show -l')
+    out = run_cmd(base_app, 'set -l')
     expected = normalize(SHOW_LONG)
+    assert out == expected
+
+
+def test_base_show_readonly(base_app):
+    base_app.editor = 'vim'
+    out = run_cmd(base_app, 'set -a')
+    expected = normalize(SHOW_TXT + '\nRead only settings:' + """
+        Commands are case-sensitive: {}
+        Commands may be terminated with: {}
+        Arguments at invocation allowed: {}
+        Output redirection and pipes allowed: {}
+        Parsing of @options commands:
+            Shell lexer mode for command argument splitting: {}
+            Strip Quotes after splitting arguments: {}
+            Argument type: {}
+            
+""".format(not base_app.case_insensitive, base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
+           "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
+           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
+           "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))
     assert out == expected
 
 
@@ -89,7 +112,7 @@ now: True
 """)
     assert out == expected
 
-    out = run_cmd(base_app, 'show quiet')
+    out = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
 
 def test_set_not_supported(base_app, capsys):
@@ -109,7 +132,7 @@ now: True
 """)
     assert out == expected
 
-    out = run_cmd(base_app, 'show quiet')
+    out = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
 
 
@@ -298,25 +321,49 @@ def test_history_with_span_index_error(base_app):
 """)
     assert out == expected
 
+def test_history_output_file(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    run_cmd(base_app, 'help history')
 
-def test_base_cmdenvironment(base_app):
-    out = run_cmd(base_app, 'cmdenvironment')
-    expected = normalize("""
+    fd, fname = tempfile.mkstemp(prefix='', suffix='.txt')
+    os.close(fd)
+    run_cmd(base_app, 'history -o "{}"'.format(fname))
+    expected = normalize('\n'.join(['help', 'shortcuts', 'help history']))
+    with open(fname) as f:
+        content = normalize(f.read())
+    assert content == expected
 
-        Commands are case-sensitive: {}
-        Commands may be terminated with: {}
-        Arguments at invocation allowed: {}
-        Output redirection and pipes allowed: {}
-        Parsing of @options commands:
-            Shell lexer mode for command argument splitting: {}
-            Strip Quotes after splitting arguments: {}
-            Argument type: {}
-            
-""".format(not base_app.case_insensitive, base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
-           "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
-           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
-           "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))
-    assert out == expected
+def test_history_edit(base_app, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't really
+    # going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    # Run help command just so we have a command in history
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'history -e 1')
+
+    # We have an editor, so should expect a system call
+    m.assert_called_once()
+
+def test_history_run_all_commands(base_app):
+    # make sure we refuse to run all commands as a default
+    run_cmd(base_app, 'shortcuts')
+    out = run_cmd(base_app, 'history -r')
+    # this should generate an error, but we don't currently have a way to
+    # capture stderr in these tests. So we assume that if we got nothing on
+    # standard out, that the error occured because if the commaned executed
+    # then we should have a list of shortcuts in our output
+    assert out == []
+
+def test_history_run_one_command(base_app):
+    expected = run_cmd(base_app, 'help')
+    output = run_cmd(base_app, 'history -r 1')
+    assert output == expected
 
 def test_base_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -480,88 +527,6 @@ def test_relative_load_requires_an_argument(base_app, capsys):
     assert base_app.cmdqueue == []
 
 
-def test_base_save(base_app):
-    # TODO: Use a temporary directory for the file
-    filename = 'deleteme.txt'
-    base_app.feedback_to_output = True
-    run_cmd(base_app, 'help')
-    run_cmd(base_app, 'help save')
-
-    # Test the * form of save which saves all commands from history
-    out = run_cmd(base_app, 'save * {}'.format(filename))
-    assert out == normalize('Saved to {}\n'.format(filename))
-    expected = normalize("""
-help
-
-help save
-
-save * deleteme.txt
-""")
-    with open(filename) as f:
-        content = normalize(f.read())
-    assert content == expected
-
-    # Test the N form of save which saves a numbered command from history
-    out = run_cmd(base_app, 'save 1 {}'.format(filename))
-    assert out == normalize('Saved to {}\n'.format(filename))
-    expected = normalize('help')
-    with open(filename) as f:
-        content = normalize(f.read())
-    assert content == expected
-
-    # Test the blank form of save which saves the most recent command from history
-    out = run_cmd(base_app, 'save {}'.format(filename))
-    assert out == normalize('Saved to {}\n'.format(filename))
-    expected = normalize('save 1 {}'.format(filename))
-    with open(filename) as f:
-        content = normalize(f.read())
-    assert content == expected
-
-    # Delete file that was created
-    os.remove(filename)
-
-def test_save_parse_error(base_app, capsys):
-    invalid_file = '~!@'
-    run_cmd(base_app, 'save {}'.format(invalid_file))
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith('ERROR: Could not understand save target {}\n'.format(invalid_file))
-
-def test_save_tempfile(base_app):
-    # Just run help to make sure there is something in the history
-    base_app.feedback_to_output = True
-    run_cmd(base_app, 'help')
-    out = run_cmd(base_app, 'save *')
-    output = out[0]
-    assert output.startswith('Saved to ')
-
-    # Delete the tempfile which was created
-    temp_file = output.split('Saved to ')[1].strip()
-    os.remove(temp_file)
-
-def test_save_invalid_history_index(base_app, capsys):
-    run_cmd(base_app, 'save 5')
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith("EXCEPTION of type 'IndexError' occurred with message: 'list index out of range'\n")
-
-def test_save_empty_history_and_index(base_app, capsys):
-    run_cmd(base_app, 'save')
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith("ERROR: History is empty, nothing to save.\n")
-
-def test_save_invalid_path(base_app, capsys):
-    # Just run help to make sure there is something in the history
-    run_cmd(base_app, 'help')
-
-    invalid_path = '/no_such_path/foobar.txt'
-    run_cmd(base_app, 'save {}'.format(invalid_path))
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith("ERROR: Saving '{}' - ".format(invalid_path))
-
-
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
     os.close(fd)
@@ -645,20 +610,13 @@ def test_input_redirection(base_app, request):
 
     # Verify that redirecting input ffom a file works
     out = run_cmd(base_app, 'help < {}'.format(filename))
-    expected = normalize(HELP_HISTORY)
-    assert out == expected
+    assert out == normalize(HELP_HISTORY)
 
 
 def test_pipe_to_shell(base_app, capsys):
     if sys.platform == "win32":
         # Windows
         command = 'help | sort'
-        # Get help menu and pipe it's output to the sort shell command
-        # expected = ['', '', '_relative_load  edit  history  py        quit  save  shell      show',
-        #             '========================================',
-        #             'cmdenvironment  help  load     pyscript  run   set   shortcuts',
-        #             'Documented commands (type help <topic>):']
-        # assert out == expected
     else:
         # Mac and Linux
         # Get help on help and pipe it's output to the input of the word count shell command
@@ -820,83 +778,10 @@ def test_edit_blank(base_app, monkeypatch):
     m = mock.MagicMock(name='system')
     monkeypatch.setattr("os.system", m)
 
-    # Run help command just so we have a command in history
-    run_cmd(base_app, 'help')
-
     run_cmd(base_app, 'edit')
 
     # We have an editor, so should expect a system call
     m.assert_called_once()
-
-def test_edit_empty_history(base_app, capsys):
-    run_cmd(base_app, 'edit')
-    out, err = capsys.readouterr()
-    assert out == ''
-    assert err == 'ERROR: edit must be called with argument if history is empty\n'
-
-def test_edit_valid_positive_number(base_app, monkeypatch):
-    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
-    base_app.editor = 'fooedit'
-
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
-
-    # Run help command just so we have a command in history
-    run_cmd(base_app, 'help')
-
-    run_cmd(base_app, 'edit 1')
-
-    # We have an editor, so should expect a system call
-    m.assert_called_once()
-
-def test_edit_valid_negative_number(base_app, monkeypatch):
-    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
-    base_app.editor = 'fooedit'
-
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
-
-    # Run help command just so we have a command in history
-    run_cmd(base_app, 'help')
-
-    run_cmd(base_app, 'edit "-1"')
-
-    # We have an editor, so should expect a system call
-    m.assert_called_once()
-
-def test_edit_invalid_positive_number(base_app, monkeypatch):
-    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
-    base_app.editor = 'fooedit'
-
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
-
-    # Run help command just so we have a command in history
-    run_cmd(base_app, 'help')
-
-    run_cmd(base_app, 'edit 23')
-
-    # History index is invalid, so should expect a system call
-    m.assert_not_called()
-
-def test_edit_invalid_negative_number(base_app, monkeypatch):
-    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
-    base_app.editor = 'fooedit'
-
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
-
-    # Run help command just so we have a command in history
-    run_cmd(base_app, 'help')
-
-    run_cmd(base_app, 'edit "-23"')
-
-    # History index is invalid, so should expect a system call
-    m.assert_not_called()
 
 
 def test_base_py_interactive(base_app):
@@ -1099,8 +984,7 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-_relative_load  edit  history  py        quit  save  shell      show
-cmdenvironment  help  load     pyscript  run   set   shortcuts  squat
+edit  help  history  load  py  pyscript  quit  set  shell  shortcuts  squat
 
 Undocumented commands:
 ======================
@@ -1274,7 +1158,7 @@ arg 2: 'bar'
 
 
 class OptionApp(cmd2.Cmd):
-    @cmd2.options([cmd2.make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
+    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
     def do_greet(self, arg, opts=None):
         arg = ''.join(arg)
         if opts.shout:
@@ -1317,7 +1201,7 @@ class MultilineApp(cmd2.Cmd):
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
         cmd2.Cmd.__init__(self, *args, **kwargs)
 
-    @cmd2.options([cmd2.make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
+    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
     def do_orate(self, arg, opts=None):
         arg = ''.join(arg)
         if opts.shout:
@@ -1359,20 +1243,6 @@ def test_clipboard_failure(capsys):
     out, err = capsys.readouterr()
     assert out == ''
     assert 'Cannot redirect to paste buffer; install ``xclip`` and re-run to enable' in err
-
-
-def test_run_command_with_empty_arg(base_app):
-    command = 'help'
-    base_app.feedback_to_output = True
-    run_cmd(base_app, command)
-    out = run_cmd(base_app, 'run')
-    expected = normalize('{}\n\n'.format(command) + BASE_HELP)
-    assert out == expected
-
-def test_run_command_with_empty_history(base_app):
-    base_app.feedback_to_output = True
-    out = run_cmd(base_app, 'run')
-    assert out == []
 
 
 class CmdResultApp(cmd2.Cmd):
@@ -1490,7 +1360,7 @@ def test_echo(capsys):
     # Check the output
     assert app.cmdqueue == []
     assert app._current_script_dir is None
-    assert out.startswith('{}{}\n'.format(app.prompt, command) + 'history [arg]: lists past commands issued')
+    assert out.startswith('{}{}\n'.format(app.prompt, command) + HELP_HISTORY.split()[0])
 
 def test_pseudo_raw_input_tty_rawinput_true():
     # use context managers so original functions get put back when we are done

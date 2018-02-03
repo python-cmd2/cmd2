@@ -5,9 +5,8 @@
 
 Documented commands (type help <topic>):
 ========================================
-_relative_load  help     mumble  pyscript  save  shell      speak
-cmdenvironment  history  orate   quit      say   shortcuts
-edit            load     py      run       set   show/ */
+edit  history  mumble  py        quit  set    shortcuts/ */
+help  load     orate   pyscript  say   shell  speak/ */
 
 (Cmd) help say
 Repeats what you tell me to.
@@ -35,7 +34,7 @@ OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
-(Cmd) hi
+(Cmd) history
 -------------------------[1]
 help
 -------------------------[2]
@@ -48,7 +47,7 @@ say -ps --repeat=5 goodnight, Gracie
 set maxrepeats 5
 -------------------------[6]
 say -ps --repeat=5 goodnight, Gracie
-(Cmd) run 4
+(Cmd) history -r 4
 say -ps --repeat=5 goodnight, Gracie
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
@@ -56,5 +55,5 @@ OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 (Cmd) set prompt "---> "
-prompt - was: (Cmd)/ /
-now: --->/ /
+prompt - was: (Cmd)/ */
+now: --->/ */

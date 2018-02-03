@@ -8,10 +8,13 @@ file system paths, and shell commands.
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import argparse
 import os
+import readline
 import sys
 
 import cmd2
+import mock
 import pytest
 
 
@@ -34,6 +37,100 @@ def test_cmd2_command_completion_single_end(cmd2_app):
     begidx = endidx - len(text)
     # It is at end of line, so extra space is present
     assert cmd2_app.completenames(text, line, begidx, endidx) == ['help ']
+
+def test_complete_command_single_end(cmd2_app):
+    text = 'he'
+    line = 'he'
+    state = 0
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                completion = cmd2_app.complete(text, state)
+    assert completion == 'help '
+
+def test_complete_command_invalid_state(cmd2_app):
+    text = 'he'
+    line = 'he'
+    state = 1
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place get None
+                completion = cmd2_app.complete(text, state)
+    assert completion is None
+
+def test_complete_empty_arg(cmd2_app):
+    text = ''
+    line = 'help '
+    state = 0
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                completion = cmd2_app.complete(text, state)
+
+    assert completion == cmd2_app.complete_help(text, line, begidx, endidx)[0]
+
+def test_complete_bogus_command(cmd2_app):
+    text = ''
+    line = 'fizbuzz '
+    state = 0
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                completion = cmd2_app.complete(text, state)
+
+    assert completion is None
 
 def test_cmd2_command_completion_is_case_insensitive_by_default(cmd2_app):
     text = 'HE'
@@ -323,3 +420,123 @@ def test_parseline_expands_shortcuts(cmd2_app):
     assert command == 'shell'
     assert args == 'cat foobar.txt'
     assert line.replace('!', 'shell ') == out_line
+
+
+class SubcommandsExample(cmd2.Cmd):
+    """ Example cmd2 application where we a base command which has a couple subcommands."""
+
+    def __init__(self):
+        cmd2.Cmd.__init__(self)
+
+    # sub-command functions for the base command
+    def base_foo(self, args):
+        """foo subcommand of base command"""
+        self.poutput(args.x * args.y)
+
+    def base_bar(self, args):
+        """bar sucommand of base command"""
+        self.poutput('((%s))' % args.z)
+
+    # create the top-level parser for the base command
+    base_parser = argparse.ArgumentParser(prog='base')
+    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+
+    # create the parser for the "foo" sub-command
+    parser_foo = base_subparsers.add_parser('foo', help='foo help')
+    parser_foo.add_argument('-x', type=int, default=1, help='integer')
+    parser_foo.add_argument('y', type=float, help='float')
+    parser_foo.set_defaults(func=base_foo)
+
+    # create the parser for the "bar" sub-command
+    parser_bar = base_subparsers.add_parser('bar', help='bar help')
+    parser_bar.add_argument('z', help='string')
+    parser_bar.set_defaults(func=base_bar)
+
+    # Create a list of subcommand names, which is used to enable tab-completion of sub-commands
+    subcommands = ['foo', 'bar']
+
+    @cmd2.with_argparser(base_parser, subcommands)
+    def do_base(self, args):
+        """Base command help"""
+        try:
+            # Call whatever sub-command function was selected
+            args.func(self, args)
+        except AttributeError:
+            # No sub-command was provided, so as called
+            self.do_help('base')
+
+
+@pytest.fixture
+def sc_app():
+    app = SubcommandsExample()
+    return app
+
+
+def test_cmd2_subcommand_completion_single_end(sc_app):
+    text = 'f'
+    line = 'base f'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo ']
+
+def test_cmd2_subcommand_completion_single_mid(sc_app):
+    text = 'f'
+    line = 'base f'
+    endidx = len(line) - 1
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo']
+
+def test_cmd2_subcommand_completion_multiple(sc_app):
+    text = ''
+    line = 'base '
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo', 'bar']
+
+def test_cmd2_subcommand_completion_nomatch(sc_app):
+    text = 'z'
+    line = 'base z'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == []
+
+def test_cmd2_subcommand_completion_after_subcommand(sc_app):
+    text = 'f'
+    line = 'base foo f'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # It is at end of line, so extra space is present
+    assert sc_app.complete_subcommand(text, line, begidx, endidx) == []
+
+
+def test_complete_subcommand_single_end(sc_app):
+    text = 'f'
+    line = 'base f'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                completion = sc_app.complete(text, state)
+    assert completion == 'foo '

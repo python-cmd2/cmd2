@@ -6,7 +6,7 @@ Setuptools setup file, used to install or test 'cmd2'
 import sys
 from setuptools import setup
 
-VERSION = '0.7.9'
+VERSION = '0.8.0'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
@@ -29,13 +29,14 @@ Main features:
     - Multi-line, case-insensitive, and abbreviated commands
     - Special-character command shortcuts (beyond cmd's `@` and `!`)
     - Settable environment parameters
-    - Parsing commands with flags
+    - Parsing commands with arguments using `argparse`, including support for sub-commands
     - Unicode character support (*Python 3 only*)
-    - Good tab-completion of commands, file system paths, and shell commands
+    - Good tab-completion of commands, sub-commands, file system paths, and shell commands
     - Python 2.7 and 3.4+ support
     - Linux, macOS and Windows support
     - Trivial to provide built-in help for all commands
     - Built-in regression testing framework for your applications (transcript-based testing)
+    - Transcripts for use with built-in regression can be automatically generated from `history -t`
 
 Usable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 """
@@ -55,14 +56,25 @@ Programming Language :: Python :: 3
 Programming Language :: Python :: 3.4
 Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
+Programming Language :: Python :: 3.7
 Programming Language :: Python :: Implementation :: CPython
 Programming Language :: Python :: Implementation :: PyPy
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
 INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'pyperclip', 'six']
+
+# Windows also requires pyreadline to ensure tab completion works
 if sys.platform.startswith('win'):
     INSTALL_REQUIRES += ['pyreadline']
+
+# Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
+if sys.version_info < (3, 5):
+    INSTALL_REQUIRES += ['contextlib2']
+
+# Python 2.7 also requires subprocess32
+if sys.version_info < (3, 0):
+    INSTALL_REQUIRES += ['subprocess32']
 
 # unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
 TESTS_REQUIRE = ['mock', 'pytest']
