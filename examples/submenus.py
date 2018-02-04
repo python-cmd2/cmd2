@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 Create a CLI with a nested command structure as follows. The commands 'second' and 'third' navigate the CLI to the scope
 of the submenu. Nesting of the submenus is done with the cmd2.AddSubmenu() decorator.
@@ -25,7 +26,7 @@ class ThirdLevel(cmd2.Cmd):
 
     def do_say(self, line):
         print("You called a command in ThirdLevel with '%s'. " 
-              "It has access to second_level_attr: %s " 
+              "It has access to top_level_attr: %s " 
               "and second_level_attr: %s" % (line, self.top_level_attr, self.second_level_attr))
 
     def help_say(self):
