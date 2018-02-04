@@ -672,8 +672,9 @@ class AddSubmenu(object):
                 for sub_attr, par_attr in self.shared_attributes.items():
                     setattr(submenu, sub_attr, getattr(parent_cmd, par_attr))
 
-                if line:
-                    # Execute the command
+                if line.parsed.args:
+                    # Remove the menu argument and execute the command in the submenu
+                    line = submenu.parser_manager.parsed(line.parsed.args)
                     submenu.precmd(line)
                     ret = submenu.onecmd(line)
                     submenu.postcmd(ret, line)
