@@ -63,6 +63,13 @@ def submenu_app():
     second_level_cmd.stdout = StdOut()
     return app
 
+@pytest.fixture
+def secondlevel_app():
+    app = SecondLevel()
+    app.stdout = StdOut()
+    return app
+
+
 def run_submenu_cmd(app, cmd):
     """ Clear StdOut buffers, run the command, extract the buffer contents."""
     app.stdout.clear()
@@ -93,9 +100,9 @@ def test_submenu_second_say_from_top_level(submenu_app):
     assert len(out2) == 1
     assert out2[0] == "You called a command in SecondLevel with {!r}.".format(line)
 
-def test_submenu_say_from_second_level():
+def test_submenu_say_from_second_level(secondlevel_app):
     line = 'testing'
-    out = run_cmd(second_level_cmd, 'say ' + line)
+    out = run_cmd(secondlevel_app, 'say ' + line)
     assert out == ["You called a command in SecondLevel with '%s'." % line]
 
 
@@ -108,8 +115,8 @@ def test_submenu_help_second_say_from_top_level(submenu_app):
     assert out2 == ["This is a second level menu. Options are qwe, asd, zxc"]
 
 
-def test_submenu_help_say_from_second_level():
-    out = run_cmd(second_level_cmd, 'help say')
+def test_submenu_help_say_from_second_level(secondlevel_app):
+    out = run_cmd(secondlevel_app, 'help say')
     assert out == ["This is a second level menu. Options are qwe, asd, zxc"]
 
 
