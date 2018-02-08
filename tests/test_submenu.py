@@ -5,7 +5,7 @@ Cmd2 testing for argument parsing
 import pytest
 
 import cmd2
-from conftest import run_cmd, StdOut
+from conftest import run_cmd, StdOut, normalize
 
 
 class SecondLevel(cmd2.Cmd):
@@ -16,19 +16,19 @@ class SecondLevel(cmd2.Cmd):
         self.top_level_attr = None
 
     def do_say(self, line):
-        self.stdout.write("You called a command in SecondLevel with '%s'. " % line)
+        self.poutput("You called a command in SecondLevel with '%s'. " % line)
 
     def help_say(self):
-        self.stdout.write("This is a second level menu. Options are qwe, asd, zxc")
+        self.poutput("This is a second level menu. Options are qwe, asd, zxc")
 
     def complete_say(self, text, line, begidx, endidx):
         return [s for s in ['qwe', 'asd', 'zxc'] if s.startswith(text)]
 
     def do_get_top_level_attr(self, line):
-        self.stdout.write(str(self.top_level_attr))
+        self.poutput(str(self.top_level_attr))
 
     def do_get_prompt(self, line):
-        self.stdout.write(self.prompt)
+        self.poutput(self.prompt)
 
 
 second_level_cmd = SecondLevel()
@@ -47,10 +47,10 @@ class SubmenuApp(cmd2.Cmd):
         self.top_level_attr = 123456789
 
     def do_say(self, line):
-        self.stdout.write("You called a command in TopLevel with '%s'. " % line)
+        self.poutput("You called a command in TopLevel with '%s'. " % line)
 
     def help_say(self):
-        self.stdout.write("This is a top level submenu. Options are qwe, asd, zxc")
+        self.poutput("This is a top level submenu. Options are qwe, asd, zxc")
 
     def complete_say(self, text, line, begidx, endidx):
         return [s for s in ['qwe', 'asd', 'zxc'] if s.startswith(text)]
@@ -59,49 +59,73 @@ class SubmenuApp(cmd2.Cmd):
 @pytest.fixture
 def submenu_app():
     app = SubmenuApp()
-    second_level_cmd.stdout = app.stdout = StdOut()
+    app.stdout = StdOut()
+    second_level_cmd.stdout = StdOut()
     return app
 
+def run_submenu_cmd(app, cmd):
+    """ Clear StdOut buffers, run the command, extract the buffer contents."""
+    app.stdout.clear()
+    second_level_cmd.stdout.clear()
+    app.onecmd_plus_hooks(cmd)
+    out1 = app.stdout.buffer
+    out2 = second_level_cmd.stdout.buffer
+    app.stdout.clear()
+    second_level_cmd.stdout.clear()
+    return normalize(out1), normalize(out2)
 
-def test_second_say_from_top_level(submenu_app):
+
+def test_submenu_say_from_top_level(submenu_app):
     line = 'testing'
-    out = run_cmd(submenu_app, 'second say ' + line)
-    assert out == ["You called a command in SecondLevel with '%s'." % line]
+    out1, out2 = run_submenu_cmd(submenu_app, 'say ' + line)
+    assert len(out1) == 1
+    assert len(out2) == 0
+    assert out1[0] == "You called a command in TopLevel with {!r}.".format(line)
 
+def test_submenu_second_say_from_top_level(submenu_app):
+    line = 'testing'
+    out1, out2 = run_submenu_cmd(submenu_app, 'second say ' + line)
 
-def test_say_from_second_level():
+    # No output expected from the top level
+    assert out1 == []
+
+    # Output expected from the second level
+    assert len(out2) == 1
+    assert out2[0] == "You called a command in SecondLevel with {!r}.".format(line)
+
+def test_submenu_say_from_second_level():
     line = 'testing'
     out = run_cmd(second_level_cmd, 'say ' + line)
     assert out == ["You called a command in SecondLevel with '%s'." % line]
 
 
-def test_help_second_say_from_top_level(submenu_app):
-    out = run_cmd(submenu_app, 'help second say')
-    assert out == ["This is a second level menu. Options are qwe, asd, zxc"]
+def test_submenu_help_second_say_from_top_level(submenu_app):
+    out1, out2 = run_submenu_cmd(submenu_app, 'help second say')
+    # No output expected from the top level
+    assert out1 == []
+
+    # Output expected from the second level
+    assert out2 == ["This is a second level menu. Options are qwe, asd, zxc"]
 
 
-def test_help_say_from_second_level():
+def test_submenu_help_say_from_second_level():
     out = run_cmd(second_level_cmd, 'help say')
     assert out == ["This is a second level menu. Options are qwe, asd, zxc"]
 
 
-def test_help_second(submenu_app):
-    out = run_cmd(submenu_app, 'help second')
-    out2 = run_cmd(second_level_cmd, 'help')
-    assert out == out2
+def test_submenu_help_second(submenu_app):
+    out1, out2 = run_submenu_cmd(submenu_app, 'help second')
+    out3 = run_cmd(second_level_cmd, 'help')
+    assert out2 == out3
 
 
-def test_from_top_help_second_say(submenu_app):
-    out = run_cmd(submenu_app, 'help second say')
-    out2 = run_cmd(second_level_cmd, 'help say')
-    assert out == out2
+def test_submenu_from_top_help_second_say(submenu_app):
+    out1, out2 = run_submenu_cmd(submenu_app, 'help second say')
+    out3 = run_cmd(second_level_cmd, 'help say')
+    assert out2 == out3
 
 
-def test_shared_attribute(submenu_app):
-    out = run_cmd(submenu_app, 'second get_top_level_attr')
-    assert out == [str(submenu_app.top_level_attr)]
+def test_submenu_shared_attribute(submenu_app):
+    out1, out2 = run_submenu_cmd(submenu_app, 'second get_top_level_attr')
+    assert out2 == [str(submenu_app.top_level_attr)]
 
-
-if __name__ == '__main__':
-
-    pytest.main('test_submenu.py -v')
