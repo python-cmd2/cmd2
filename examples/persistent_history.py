@@ -10,14 +10,24 @@ import cmd2
 
 class Cmd2PersistentHistory(cmd2.Cmd):
     """Basic example of how to enable persistent readline history within your cmd2 app."""
-    def __init__(self):
-        """"""
-        cmd2.Cmd.__init__(self, persistent_history_file='~/.persistent_history.cmd2', persistent_history_length=500)
+    def __init__(self, hist_file):
+        """Configure the app to load persistent readline history from a file.
+
+        :param hist_file: file to load readline history from at start and write it to at end
+        """
+        cmd2.Cmd.__init__(self, persistent_history_file=hist_file, persistent_history_length=500)
+        self.allow_cli_args = False
         self.prompt = 'ph> '
 
     # ... your class code here ...
 
 
 if __name__ == '__main__':
-    app = Cmd2PersistentHistory()
+    import sys
+
+    history_file = '~/.persistent_history.cmd2'
+    if len(sys.argv) > 1:
+        history_file = sys.argv[1]
+
+    app = Cmd2PersistentHistory(hist_file=history_file)
     app.cmdloop()
