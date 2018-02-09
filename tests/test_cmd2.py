@@ -11,6 +11,7 @@ import io
 import tempfile
 
 import mock
+import pexpect
 import pytest
 import six
 
@@ -1525,3 +1526,29 @@ def test_poutput_none(base_app):
     out = base_app.stdout.buffer
     expected = ''
     assert out == expected
+
+
+def test_persistent_history(request):
+    test_dir = os.path.dirname(request.module.__file__)
+    persistent_app = os.path.join(test_dir, '..', 'examples', 'persistent_history.py')
+
+    # STart an instance of the persistent history example and send it a few commands
+    child = pexpect.spawn(persistent_app)
+    prompt = 'ph> '
+    child.expect(prompt)
+    child.sendline('help')
+    child.expect(prompt)
+    child.sendline('help history')
+    child.expect(prompt)
+    child.sendline('quit')
+    child.close()
+
+    # Start a 2nd instance of the persistent history example and send it an up arrow to verify persistent history
+    up_arrow = '\x1b[A'
+    child2 = pexpect.spawn(persistent_app)
+    child2.expect(prompt)
+    child2.send(up_arrow)
+    child2.expect('quit', timeout=5)
+    assert child2.after == b'quit'
+
+

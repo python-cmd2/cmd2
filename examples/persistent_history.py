@@ -13,6 +13,7 @@ class Cmd2PersistentHistory(cmd2.Cmd):
     def __init__(self):
         """"""
         cmd2.Cmd.__init__(self, persistent_history_file='~/.persistent_history.cmd2', persistent_history_length=500)
+        self.prompt = 'ph> '
 
     # ... your class code here ...
 
