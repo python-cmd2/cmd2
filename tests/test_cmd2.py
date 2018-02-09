@@ -1528,9 +1528,10 @@ def test_poutput_none(base_app):
     assert out == expected
 
 
-@pytest.mark.skipif(sys.platform == 'win32',
-                    reason="pexpect doesn't have a spawn() function on Windows")
+@pytest.mark.skipif(sys.platform == 'win32' or sys.platform.startswith('lin'),
+                    reason="pexpect doesn't have a spawn() function on Windows and readline doesn't work on TravisCI")
 def test_persistent_history(request):
+    """Will run on macOS to verify expected persistent history behavior."""
     test_dir = os.path.dirname(request.module.__file__)
     persistent_app = os.path.join(test_dir, '..', 'examples', 'persistent_history.py')
 
