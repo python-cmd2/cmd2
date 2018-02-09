@@ -1532,7 +1532,7 @@ def test_persistent_history(request):
     test_dir = os.path.dirname(request.module.__file__)
     persistent_app = os.path.join(test_dir, '..', 'examples', 'persistent_history.py')
 
-    # STart an instance of the persistent history example and send it a few commands
+    # Start an instance of the persistent history example and send it a few commands
     child = pexpect.spawn(persistent_app)
     prompt = 'ph> '
     child.expect(prompt)
@@ -1548,7 +1548,7 @@ def test_persistent_history(request):
     child2 = pexpect.spawn(persistent_app)
     child2.expect(prompt)
     child2.send(up_arrow)
-    child2.expect('quit', timeout=5)
+    child2.expect('quit')
     assert child2.after == b'quit'
 
 
