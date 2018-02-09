@@ -2,6 +2,11 @@ language: python
 
 sudo: false  # false enables container-based build for fast boot times on Linux
 
+addons:
+  apt:
+    packages:
+    - readline
+
 matrix:
     include:
         - os: linux
