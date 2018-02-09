@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 """
 Create a CLI with a nested command structure as follows. The commands 'second' and 'third' navigate the CLI to the scope
 of the submenu. Nesting of the submenus is done with the cmd2.AddSubmenu() decorator.
@@ -6,9 +7,6 @@ of the submenu. Nesting of the submenus is done with the cmd2.AddSubmenu() decor
       (Top Level)----second----->(2nd Level)----third----->(3rd Level)
         |                            |                          |
         ---> say                     ---> say                   ---> say
-
-
-
 """
 from __future__ import print_function
 import sys
@@ -71,7 +69,6 @@ class SecondLevel(cmd2.Cmd):
         return [s for s in ['qwe', 'asd', 'zxc'] if s.startswith(text)]
 
 
-
 @cmd2.AddSubmenu(SecondLevel(),
                  command='second',
                  aliases=('second_alias',),
@@ -103,7 +100,6 @@ class TopLevel(cmd2.Cmd):
 
     def complete_say(self, text, line, begidx, endidx):
         return [s for s in ['qwe', 'asd', 'zxc'] if s.startswith(text)]
-
 
 
 if __name__ == '__main__':

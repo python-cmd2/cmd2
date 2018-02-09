@@ -13,7 +13,7 @@ Script files
 ============
 
 Text files can serve as scripts for your ``cmd2``-based
-application, with the ``load``, ``_relative_load``, ``edit`` and ``history`` commands.
+application, with the ``load``, ``_relative_load``, and ``edit`` commands.
 
 Both ASCII and UTF-8 encoded unicode text files are supported.
 
@@ -24,8 +24,6 @@ Simply include one command per line, typed exactly as you would inside a ``cmd2`
 .. automethod:: cmd2.Cmd.do__relative_load
 
 .. automethod:: cmd2.Cmd.do_edit
-
-.. automethod:: cmd2.Cmd.do_history
 
 
 Comments
@@ -250,16 +248,21 @@ Searchable command history
 ==========================
 
 All cmd_-based applications have access to previous commands with
-the up- and down- cursor keys.
+the up- and down- arrow keys.
 
 All cmd_-based applications on systems with the ``readline`` module
-also provide `bash-like history list editing`_.
+also provide `Readline Emacs editing mode`_.  With this you can, for example, use **Ctrl-r** to search backward through
+the readline history.
 
-.. _`bash-like history list editing`: http://www.talug.org/events/20030709/cmdline_history.html
+``cmd2`` adds the option of making this readline history persistent via optional arguments to ``cmd2.Cmd.__init__()``:
+
+.. automethod:: cmd2.Cmd.__init__
 
 ``cmd2`` makes a third type of history access available with the **history** command:
 
 .. automethod:: cmd2.Cmd.do_history
+
+.. _`Readline Emacs editing mode`: http://readline.kablamo.org/emacs.html
 
 Quitting the application
 ========================
