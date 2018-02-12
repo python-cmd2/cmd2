@@ -1590,7 +1590,8 @@ class Cmd(cmd.Cmd):
 
         # Remove any command names which are explicitly excluded from the help menu
         for name in self.exclude_from_help:
-            names.remove(name)
+            if name in names:
+                names.remove(name)
 
         cmds_doc = []
         cmds_undoc = []
