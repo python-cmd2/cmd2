@@ -24,6 +24,8 @@ is used in place of `print`.
 
 Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
+import argparse
+import atexit
 import cmd
 import codecs
 import collections
@@ -31,7 +33,6 @@ import datetime
 import glob
 import io
 import optparse
-import argparse
 import os
 import platform
 import re
@@ -112,7 +113,7 @@ if six.PY2 and sys.platform.startswith('lin'):
     except ImportError:
         pass
 
-__version__ = '0.8.0'
+__version__ = '0.8.1'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -549,6 +550,7 @@ def strip_ansi(text):
 
 def _pop_readline_history(clear_history=True):
     """Returns a copy of readline's history and optionally clears it (default)"""
+    # noinspection PyArgumentList
     history = [
         readline.get_history_item(i)
         for i in range(1, 1 + readline.get_current_history_length())
@@ -689,6 +691,7 @@ class AddSubmenu(object):
                         )
                     submenu.cmdloop()
                     if self.reformat_prompt is not None:
+                        # noinspection PyUnboundLocalVariable
                         self.submenu.prompt = prompt
                     _push_readline_history(history)
             finally:
@@ -761,12 +764,12 @@ class AddSubmenu(object):
             _Cmd.complete_help = _complete_submenu_help
 
         # Create bindings in the parent command to the submenus commands.
-        setattr(_Cmd, 'do_'       + self.command, enter_submenu)
+        setattr(_Cmd, 'do_' + self.command, enter_submenu)
         setattr(_Cmd, 'complete_' + self.command, complete_submenu)
 
         # Create additional bindings for aliases
         for _alias in self.aliases:
-            setattr(_Cmd, 'do_'       + _alias, enter_submenu)
+            setattr(_Cmd, 'do_' + _alias, enter_submenu)
             setattr(_Cmd, 'complete_' + _alias, complete_submenu)
         return _Cmd
 
@@ -833,12 +836,15 @@ class Cmd(cmd.Cmd):
                 'quiet': "Don't print nonessential feedback",
                 'timing': 'Report execution times'}
 
-    def __init__(self, completekey='tab', stdin=None, stdout=None, use_ipython=False, transcript_files=None):
+    def __init__(self, completekey='tab', stdin=None, stdout=None, persistent_history_file='',
+                 persistent_history_length=1000, use_ipython=False, transcript_files=None):
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
         :param completekey: str - (optional) readline name of a completion key, default to Tab
         :param stdin: (optional) alternate input file object, if not specified, sys.stdin is used
         :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
+        :param persistent_history_file: str - (optional) file path to load a persistent readline history from
+        :param persistent_history_length: int - (optional) max number of lines which will be written to the history file
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
         :param transcript_files: str - (optional) allows running transcript tests when allow_cli_args is False
         """
@@ -848,6 +854,17 @@ class Cmd(cmd.Cmd):
                 del Cmd.do_ipy
             except AttributeError:
                 pass
+
+        # If persistent readline history is enabled, then read history from file and register to write to file at exit
+        if persistent_history_file:
+            persistent_history_file = os.path.expanduser(persistent_history_file)
+            try:
+                readline.read_history_file(persistent_history_file)
+                # default history len is -1 (infinite), which may grow unruly
+                readline.set_history_length(persistent_history_length)
+            except FileNotFoundError:
+                pass
+            atexit.register(readline.write_history_file, persistent_history_file)
 
         # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
         cmd.Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
@@ -2901,6 +2918,7 @@ def namedtuple_with_two_defaults(typename, field_names, default_values=('', ''))
     :return: namedtuple type
     """
     T = collections.namedtuple(typename, field_names)
+    # noinspection PyUnresolvedReferences
     T.__new__.__defaults__ = default_values
     return T
 

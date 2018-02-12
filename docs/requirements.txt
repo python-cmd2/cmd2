@@ -1,3 +1,4 @@
 pyparsing
 six
 pyperclip
+contextlib2

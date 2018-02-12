@@ -18,7 +18,7 @@ when using cmd.
 
 Main Features
 -------------
-- Searchable command history (`history` command and `<Ctrl>+r`)
+- Searchable command history (`history` command and `<Ctrl>+r`) - optionally persistent
 - Text file scripting of your application with `load` (`@`) and `_relative_load` (`@@`)
 - Python scripting of your application with ``pyscript``
 - Run shell commands with ``!``
@@ -30,6 +30,7 @@ Main Features
 - Special-character command shortcuts (beyond cmd's `@` and `!`)
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
+- Sub-menu support via the ``AddSubmenu`` decorator
 - Unicode character support (*Python 3 only*)
 - Good tab-completion of commands, sub-commands, file system paths, and shell commands
 - Python 2.7 and 3.4+ support

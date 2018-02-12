@@ -6,7 +6,7 @@ Setuptools setup file, used to install or test 'cmd2'
 import sys
 from setuptools import setup
 
-VERSION = '0.8.0'
+VERSION = '0.8.1'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
@@ -77,7 +77,7 @@ if sys.version_info < (3, 0):
     INSTALL_REQUIRES += ['subprocess32']
 
 # unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
-TESTS_REQUIRE = ['mock', 'pytest']
+TESTS_REQUIRE = ['mock', 'pytest', 'pexpect']
 DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'six']
 
 setup(

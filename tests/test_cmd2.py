@@ -11,6 +11,7 @@ import io
 import tempfile
 
 import mock
+import pexpect
 import pytest
 import six
 
@@ -25,7 +26,7 @@ from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT,
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.8.0'
+    assert cmd2.__version__ == '0.8.1'
 
 
 def test_empty_statement(base_app):
@@ -1525,3 +1526,37 @@ def test_poutput_none(base_app):
     out = base_app.stdout.buffer
     expected = ''
     assert out == expected
+
+
+@pytest.mark.skipif(sys.platform == 'win32' or sys.platform.startswith('lin'),
+                    reason="pexpect doesn't have a spawn() function on Windows and readline doesn't work on TravisCI")
+def test_persistent_history(request):
+    """Will run on macOS to verify expected persistent history behavior."""
+    test_dir = os.path.dirname(request.module.__file__)
+    persistent_app = os.path.join(test_dir, '..', 'examples', 'persistent_history.py')
+
+    python = 'python3'
+    if six.PY2:
+        python = 'python2'
+
+    command = '{} {}'.format(python, persistent_app)
+
+    # Start an instance of the persistent history example and send it a few commands
+    child = pexpect.spawn(command)
+    prompt = 'ph> '
+    child.expect(prompt)
+    child.sendline('help')
+    child.expect(prompt)
+    child.sendline('help history')
+    child.expect(prompt)
+    child.sendline('quit')
+    child.close()
+
+    # Start a 2nd instance of the persistent history example and send it an up arrow to verify persistent history
+    up_arrow = '\x1b[A'
+    child2 = pexpect.spawn(command)
+    child2.expect(prompt)
+    child2.send(up_arrow)
+    child2.expect('quit')
+    assert child2.after == b'quit'
+    child2.close()

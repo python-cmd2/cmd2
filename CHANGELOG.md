@@ -1,3 +1,12 @@
+## 0.8.1 (TBD, 2018)
+
+* Enhancements
+    * Added support for sub-menus.  
+        * See [submenus.py](https://github.com/python-cmd2/cmd2/blob/master/examples/submenus.py) for an example of how to use it
+    * Added option for persistent readline history
+        * See [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/master/examples/persistent_history.py) for an example
+        * See the [Searchable command history](http://cmd2.readthedocs.io/en/latest/freefeatures.html#searchable-command-history) section of the documentation for more info
+    
 ## 0.8.0 (February 1, 2018)
 * Bug Fixes
     * Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
