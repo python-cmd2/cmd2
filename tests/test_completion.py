@@ -375,11 +375,6 @@ def test_path_completion_user_expansion(cmd2_app):
     # Verify that the results are the same in both cases
     assert completions_tilde == completions_home
 
-    # This next assert fails on AppVeyor Windows containers, but works fine on my Windows 10 VM
-    if not sys.platform.startswith('win'):
-        # Verify that there is something there
-        assert completions_tilde
-
 def test_path_completion_directories_only(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
