@@ -24,39 +24,39 @@ def hist():
 @pytest.fixture
 def parser():
     c = cmd2.Cmd()
-    c.multilineCommands = ['multiline']
+    c.multiline_commands = ['multiline']
     c.case_insensitive = True
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
-                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multiline_commands,
+                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager.main_parser
 
 # Case-insensitive ParserManager
 @pytest.fixture
 def ci_pm():
     c = cmd2.Cmd()
-    c.multilineCommands = ['multiline']
+    c.multiline_commands = ['multiline']
     c.case_insensitive = True
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
-                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multiline_commands,
+                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager
 
 # Case-sensitive ParserManager
 @pytest.fixture
 def cs_pm():
     c = cmd2.Cmd()
-    c.multilineCommands = ['multiline']
+    c.multiline_commands = ['multiline']
     c.case_insensitive = False
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
-                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multiline_commands,
+                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager
 
 
