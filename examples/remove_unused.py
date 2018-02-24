@@ -19,10 +19,10 @@ class RemoveUnusedBuiltinCommands(cmd2.Cmd):
         cmd2.Cmd.__init__(self)
 
         # To hide commands from displaying in the help menu, add their function name to the exclude_from_help list
-        self.exclude_from_help.append('do__relative_load')
+        self.exclude_from_help.append('do_py')
 
         # To remove built-in commands entirely, delete their "do_*" function from the cmd2.Cmd class
-        del cmd2.Cmd.do_cmdenvironment
+        del cmd2.Cmd.do_edit
 
 
 if __name__ == '__main__':

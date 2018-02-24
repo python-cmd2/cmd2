@@ -2176,7 +2176,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argument_list
     def do_edit(self, arglist):
-        """Edit a file or command in a text editor.
+        """Edit a file in a text editor.
 
 Usage:  edit [file_path]
     Where:
