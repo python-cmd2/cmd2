@@ -27,10 +27,10 @@ def parser():
     c.multilineCommands = ['multiline']
     c.case_insensitive = True
     c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
-                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager.main_parser
 
 # Case-insensitive ParserManager
@@ -40,10 +40,10 @@ def ci_pm():
     c.multilineCommands = ['multiline']
     c.case_insensitive = True
     c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
-                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager
 
 # Case-sensitive ParserManager
@@ -53,10 +53,10 @@ def cs_pm():
     c.multilineCommands = ['multiline']
     c.case_insensitive = False
     c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
-                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
+                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager
 
 

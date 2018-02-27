@@ -803,8 +803,6 @@ class Cmd(cmd.Cmd):
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
     allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    excludeFromHistory = '''run ru r history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
-    exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']  # Commands to exclude from the help menu
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
@@ -874,7 +872,12 @@ class Cmd(cmd.Cmd):
         # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
         cmd.Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
 
+        # Commands to exclude from the help menu or history command
+        self.exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']
+        self.excludeFromHistory = '''history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
+
         self._finalize_app_parameters()
+
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
