@@ -793,8 +793,10 @@ class Cmd(cmd.Cmd):
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
+    multilineCommands = []  # NOTE: Multiline commands can never be abbreviated, even if abbrev is True
     prefixParser = pyparsing.Empty()
     redirector = '>'        # for sending output to file
+    shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     terminators = [';']     # make sure your terminators are not in legalChars!
 
     # Attributes which are NOT dynamically settable at runtime
@@ -870,12 +872,9 @@ class Cmd(cmd.Cmd):
         # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
         cmd.Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
 
-        self.multiline_commands = []  # NOTE: Multiline commands can never be abbreviated, even if abbrev is True
-        self.shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-
         # Commands to exclude from the help menu or history command
         self.exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']
-        self.exclude_from_history = '''history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
+        self.excludeFromHistory = '''history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
 
         self._finalize_app_parameters()
 
@@ -884,7 +883,7 @@ class Cmd(cmd.Cmd):
         self.pystate = {}
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
         self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
-                                            multilineCommands=self.multiline_commands,
+                                            multilineCommands=self.multilineCommands,
                                             legalChars=self.legalChars, commentGrammars=self.commentGrammars,
                                             commentInProgress=self.commentInProgress,
                                             case_insensitive=self.case_insensitive,
@@ -1399,7 +1398,7 @@ class Cmd(cmd.Cmd):
             result = target
         else:
             if self.abbrev:  # accept shortened versions of commands
-                funcs = [func for func in self.keywords if func.startswith(arg) and func not in self.multiline_commands]
+                funcs = [func for func in self.keywords if func.startswith(arg) and func not in self.multilineCommands]
                 if len(funcs) == 1:
                     result = 'do_' + funcs[0]
         return result
@@ -1418,7 +1417,7 @@ class Cmd(cmd.Cmd):
             return self.default(statement)
 
         # Since we have a valid command store it in the history
-        if statement.parsed.command not in self.exclude_from_history:
+        if statement.parsed.command not in self.excludeFromHistory:
             self.history.append(statement.parsed.raw)
 
         try:

@@ -24,9 +24,9 @@ def hist():
 @pytest.fixture
 def parser():
     c = cmd2.Cmd()
-    c.multiline_commands = ['multiline']
+    c.multilineCommands = ['multiline']
     c.case_insensitive = True
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multiline_commands,
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
                                           legalChars=c.legalChars, commentGrammars=c.commentGrammars,
                                           commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
                                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
@@ -37,9 +37,9 @@ def parser():
 @pytest.fixture
 def ci_pm():
     c = cmd2.Cmd()
-    c.multiline_commands = ['multiline']
+    c.multilineCommands = ['multiline']
     c.case_insensitive = True
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multiline_commands,
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
                                           legalChars=c.legalChars, commentGrammars=c.commentGrammars,
                                           commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
                                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
@@ -50,9 +50,9 @@ def ci_pm():
 @pytest.fixture
 def cs_pm():
     c = cmd2.Cmd()
-    c.multiline_commands = ['multiline']
+    c.multilineCommands = ['multiline']
     c.case_insensitive = False
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multiline_commands,
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
                                           legalChars=c.legalChars, commentGrammars=c.commentGrammars,
                                           commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
                                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
