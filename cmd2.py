@@ -30,6 +30,7 @@ import cmd
 import codecs
 import collections
 import datetime
+import functools
 import glob
 import io
 import optparse
@@ -271,6 +272,7 @@ def with_argument_list(func):
     method. Default passes a string of whatever the user typed.
     With this decorator, the decorated method will receive a list
     of arguments parsed from user input using shlex.split()."""
+    @functools.wraps(func)
     def cmd_wrapper(self, cmdline):
         lexed_arglist = parse_quoted_string(cmdline)
         func(self, lexed_arglist)
@@ -288,6 +290,7 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
     :return: function that gets passed parsed args and a list of unknown args
     """
     def arg_decorator(func):
+        @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
             args, unknown = argparser.parse_known_args(lexed_arglist)
@@ -324,6 +327,7 @@ def with_argparser(argparser, subcommand_names=None):
     :return: function that gets passed parsed args
     """
     def arg_decorator(func):
+        @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
             args = argparser.parse_args(lexed_arglist)
@@ -387,6 +391,7 @@ def options(option_list, arg_desc="arg"):
             option_parser.set_usage("%s %s" % (func.__name__[3:], arg_desc))
         option_parser._func = func
 
+        @functools.wraps(func)
         def new_func(instance, arg):
             """For @options commands this replaces the actual do_* methods in the instance __dict__.
 
