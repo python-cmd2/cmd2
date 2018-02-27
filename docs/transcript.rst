@@ -26,6 +26,12 @@ A transcript can automatically generated based upon commands previously executed
 
 This is by far the easiest way to generate a transcript.
 
+.. warning::
+
+   Make sure you use the **poutput()** method in your ``cmd2`` application for generating command output.  This method
+   of the ``cmd2.Cmd`` class ensure that output is properly redirected when redirecting to a file, piping to a shell
+   command, and when generating a transcript.
+
 Manually
 --------
 Here's a transcript created from ``python examples/example.py``::

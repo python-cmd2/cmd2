@@ -30,6 +30,7 @@ import cmd
 import codecs
 import collections
 import datetime
+import functools
 import glob
 import io
 import optparse
@@ -271,6 +272,7 @@ def with_argument_list(func):
     method. Default passes a string of whatever the user typed.
     With this decorator, the decorated method will receive a list
     of arguments parsed from user input using shlex.split()."""
+    @functools.wraps(func)
     def cmd_wrapper(self, cmdline):
         lexed_arglist = parse_quoted_string(cmdline)
         func(self, lexed_arglist)
@@ -288,6 +290,7 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
     :return: function that gets passed parsed args and a list of unknown args
     """
     def arg_decorator(func):
+        @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
             args, unknown = argparser.parse_known_args(lexed_arglist)
@@ -324,6 +327,7 @@ def with_argparser(argparser, subcommand_names=None):
     :return: function that gets passed parsed args
     """
     def arg_decorator(func):
+        @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
             args = argparser.parse_args(lexed_arglist)
@@ -387,6 +391,7 @@ def options(option_list, arg_desc="arg"):
             option_parser.set_usage("%s %s" % (func.__name__[3:], arg_desc))
         option_parser._func = func
 
+        @functools.wraps(func)
         def new_func(instance, arg):
             """For @options commands this replaces the actual do_* methods in the instance __dict__.
 
@@ -798,8 +803,6 @@ class Cmd(cmd.Cmd):
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
     allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    excludeFromHistory = '''run ru r history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
-    exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']  # Commands to exclude from the help menu
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
@@ -869,7 +872,12 @@ class Cmd(cmd.Cmd):
         # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
         cmd.Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
 
+        # Commands to exclude from the help menu or history command
+        self.exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']
+        self.excludeFromHistory = '''history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
+
         self._finalize_app_parameters()
+
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
