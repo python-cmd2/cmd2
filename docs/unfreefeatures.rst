@@ -155,8 +155,13 @@ but ``print`` decreases output flexibility).  ``cmd2`` applications can use
 ``self.poutput('output')``, ``self.pfeedback('message')``, and ``self.perror('errmsg')``
 instead.  These methods have these advantages:
 
+- Handle output redirection to file and/or pipe appropriately
 - More concise
     - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
+
+.. automethod:: cmd2.Cmd.poutput
+.. automethod:: cmd2.Cmd.perror
+.. automethod:: cmd2.Cmd.pfeedback
 
 
 color
