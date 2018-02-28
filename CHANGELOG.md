@@ -1,11 +1,19 @@
 ## 0.8.1 (TBD, 2018)
 
+* Bug Fixes
+    * Fixed a bug if a non-existent **do_*** method was added to the ``exclude_from_help`` list
+    * Fixed a bug in a unit test which would fail if your home directory was empty on a Linux system
+    * Fixed outdated help text for the **edit** command
+    * Fixed outdated [remove_unused.py](https://github.com/python-cmd2/cmd2/blob/master/examples/remove_unused.py)
 * Enhancements
     * Added support for sub-menus.  
         * See [submenus.py](https://github.com/python-cmd2/cmd2/blob/master/examples/submenus.py) for an example of how to use it
     * Added option for persistent readline history
         * See [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/master/examples/persistent_history.py) for an example
         * See the [Searchable command history](http://cmd2.readthedocs.io/en/latest/freefeatures.html#searchable-command-history) section of the documentation for more info
+    * Improved PyPI packaging by including unit tests, examples, and docs in the tarball
+    * Improved documentation to make it more obvious that **poutput()** should be used instead of **print()**
+    * ``exclude_from_help`` and ``excludeFromHistory`` are now instance instead of class attributes
     
 ## 0.8.0 (February 1, 2018)
 * Bug Fixes
