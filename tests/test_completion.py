@@ -427,7 +427,7 @@ class SubcommandsExample(cmd2.Cmd):
         self.poutput(args.x * args.y)
 
     def base_bar(self, args):
-        """bar sucommand of base command"""
+        """bar subcommand of base command"""
         self.poutput('((%s))' % args.z)
 
     # create the top-level parser for the base command
