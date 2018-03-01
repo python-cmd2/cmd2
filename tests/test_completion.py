@@ -208,7 +208,7 @@ def test_shell_command_completion(cmd2_app):
         expected = ['calc.exe ']
     else:
         text = 'egr'
-        line = '!{}'.format(text)
+        line = 'shell {}'.format(text)
         expected = ['egrep ']
 
     endidx = len(line)
@@ -221,7 +221,7 @@ def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
         line = 'shell {}'.format(text)
     else:
         text = 'e*'
-        line = '!{}'.format(text)
+        line = 'shell {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -234,7 +234,7 @@ def test_shell_command_completion_multiple(cmd2_app):
         expected = 'calc.exe'
     else:
         text = 'l'
-        line = '!{}'.format(text)
+        line = 'shell {}'.format(text)
         expected = 'ls'
 
     endidx = len(line)
@@ -250,10 +250,7 @@ def test_shell_command_completion_nomatch(cmd2_app):
 
 def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app):
     text = ''
-    if sys.platform == "win32":
-        line = 'shell'.format(text)
-    else:
-        line = '!'.format(text)
+    line = 'shell'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -277,7 +274,7 @@ def test_path_completion_single_end(cmd2_app, request):
 
     text = 'c'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -289,7 +286,7 @@ def test_path_completion_single_mid(cmd2_app, request):
 
     text = 'tes'
     path = os.path.join(test_dir, 'c')
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     begidx = line.find(text)
     endidx = begidx + len(text)
@@ -301,7 +298,7 @@ def test_path_completion_multiple(cmd2_app, request):
 
     text = 's'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -313,7 +310,7 @@ def test_path_completion_nomatch(cmd2_app, request):
 
     text = 'z'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -323,14 +320,14 @@ def test_path_completion_nomatch(cmd2_app, request):
 def test_path_completion_cwd(cmd2_app):
     # Run path complete with no path and no search text
     text = ''
-    line = '!ls {}'.format(text)
+    line = 'shell ls {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_empty = path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
     cwd = os.getcwd()
-    line = '!ls {}'.format(cwd)
+    line = 'shell ls {}'.format(cwd)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_cwd = path_complete(text, line, begidx, endidx)
@@ -344,7 +341,7 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
 
     text = 'c*'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -356,9 +353,9 @@ def test_path_completion_user_expansion(cmd2_app):
     # Run path with just a tilde
     text = ''
     if sys.platform.startswith('win'):
-        line = '!dir ~\{}'.format(text)
+        line = 'shell dir ~\{}'.format(text)
     else:
-        line = '!ls ~/{}'.format(text)
+        line = 'shell ls ~/{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde = path_complete(text, line, begidx, endidx)
@@ -366,9 +363,9 @@ def test_path_completion_user_expansion(cmd2_app):
     # Run path complete on the user's home directory
     user_dir = os.path.expanduser('~')
     if sys.platform.startswith('win'):
-        line = '!dir {}'.format(user_dir)
+        line = 'shell dir {}'.format(user_dir)
     else:
-        line = '!ls {}'.format(user_dir)
+        line = 'shell ls {}'.format(user_dir)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_home = path_complete(text, line, begidx, endidx)
@@ -381,7 +378,7 @@ def test_path_completion_directories_only(cmd2_app, request):
 
     text = 's'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
