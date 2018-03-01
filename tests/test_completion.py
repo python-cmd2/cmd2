@@ -17,6 +17,7 @@ import cmd2
 import mock
 import pytest
 
+from cmd2 import path_complete
 
 @pytest.fixture
 def cmd2_app():
@@ -281,7 +282,7 @@ def test_path_completion_single_end(cmd2_app, request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['conftest.py ']
+    assert path_complete(text, line, begidx, endidx) == ['conftest.py ']
 
 def test_path_completion_single_mid(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -293,7 +294,7 @@ def test_path_completion_single_mid(cmd2_app, request):
     begidx = line.find(text)
     endidx = begidx + len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['tests' + os.path.sep]
+    assert path_complete(text, line, begidx, endidx) == ['tests' + os.path.sep]
 
 def test_path_completion_multiple(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -305,7 +306,7 @@ def test_path_completion_multiple(cmd2_app, request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['script.py', 'script.txt', 'scripts' + os.path.sep]
+    assert path_complete(text, line, begidx, endidx) == ['script.py', 'script.txt', 'scripts' + os.path.sep]
 
 def test_path_completion_nomatch(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -317,7 +318,7 @@ def test_path_completion_nomatch(cmd2_app, request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
+    assert path_complete(text, line, begidx, endidx) == []
 
 def test_path_completion_cwd(cmd2_app):
     # Run path complete with no path and no search text
@@ -325,14 +326,14 @@ def test_path_completion_cwd(cmd2_app):
     line = '!ls {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_empty = cmd2_app.path_complete(text, line, begidx, endidx)
+    completions_empty = path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
     cwd = os.getcwd()
     line = '!ls {}'.format(cwd)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_cwd = cmd2_app.path_complete(text, line, begidx, endidx)
+    completions_cwd = path_complete(text, line, begidx, endidx)
 
     # Verify that the results are the same in both cases and that there is something there
     assert completions_empty == completions_cwd
@@ -349,7 +350,7 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     begidx = endidx - len(text)
 
     # Currently path completion doesn't accept wildcards, so will always return empty results
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
+    assert path_complete(text, line, begidx, endidx) == []
 
 def test_path_completion_user_expansion(cmd2_app):
     # Run path with just a tilde
@@ -360,7 +361,7 @@ def test_path_completion_user_expansion(cmd2_app):
         line = '!ls ~/{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_tilde = cmd2_app.path_complete(text, line, begidx, endidx)
+    completions_tilde = path_complete(text, line, begidx, endidx)
 
     # Run path complete on the user's home directory
     user_dir = os.path.expanduser('~')
@@ -370,7 +371,7 @@ def test_path_completion_user_expansion(cmd2_app):
         line = '!ls {}'.format(user_dir)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_home = cmd2_app.path_complete(text, line, begidx, endidx)
+    completions_home = path_complete(text, line, begidx, endidx)
 
     # Verify that the results are the same in both cases
     assert completions_tilde == completions_home
@@ -385,7 +386,7 @@ def test_path_completion_directories_only(cmd2_app, request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
+    assert path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
 
 
 def test_parseline_command_and_args(cmd2_app):
