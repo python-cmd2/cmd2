@@ -18,15 +18,15 @@ import argparse
 import functools
 import os
 
-from cmd2 import Cmd, CmdResult, with_argument_list, with_argparser_and_unknown_args
+import cmd2
 
 
-class CmdLineApp(Cmd):
+class CmdLineApp(cmd2.Cmd):
     """ Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 aps. """
 
     def __init__(self):
         # Enable the optional ipy command if IPython is installed by setting use_ipython=True
-        Cmd.__init__(self, use_ipython=True)
+        cmd2.Cmd.__init__(self, use_ipython=True)
         self._set_prompt()
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇  (Python 3 only)  💩'
 
@@ -46,7 +46,7 @@ class CmdLineApp(Cmd):
         self._set_prompt()
         return stop
 
-    @with_argument_list
+    @cmd2.with_argument_list
     def do_cd(self, arglist):
         """Change directory.
     Usage:
@@ -56,7 +56,7 @@ class CmdLineApp(Cmd):
         if not arglist or len(arglist) != 1:
             self.perror("cd requires exactly 1 argument:", traceback_war=False)
             self.do_help('cd')
-            self._last_result = CmdResult('', 'Bad arguments')
+            self._last_result = cmd2.CmdResult('', 'Bad arguments')
             return
 
         # Convert relative paths to absolute paths
@@ -80,22 +80,22 @@ class CmdLineApp(Cmd):
 
         if err:
             self.perror(err, traceback_war=False)
-        self._last_result = CmdResult(out, err)
+        self._last_result = cmd2.CmdResult(out, err)
 
-    # Enable directory completion for cd command by freezing an argument to path_complete() with functools.partialmethod
-    complete_cd = functools.partialmethod(Cmd.path_complete, dir_only=True)
+    # Enable directory completion for cd command by freezing an argument to path_complete() with functools.partial
+    complete_cd = functools.partial(cmd2.path_complete, dir_only=True)
 
     dir_parser = argparse.ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
-    @with_argparser_and_unknown_args(dir_parser)
+    @cmd2.with_argparser_and_unknown_args(dir_parser)
     def do_dir(self, args, unknown):
         """List contents of current directory."""
         # No arguments for this command
         if unknown:
             self.perror("dir does not take any positional arguments:", traceback_war=False)
             self.do_help('dir')
-            self._last_result = CmdResult('', 'Bad arguments')
+            self._last_result = cmd2.CmdResult('', 'Bad arguments')
             return
 
         # Get the contents as a list
@@ -108,7 +108,7 @@ class CmdLineApp(Cmd):
             self.stdout.write(fmt.format(f))
         self.stdout.write('\n')
 
-        self._last_result = CmdResult(contents)
+        self._last_result = cmd2.CmdResult(contents)
 
 
 if __name__ == '__main__':
