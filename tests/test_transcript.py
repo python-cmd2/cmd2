@@ -27,7 +27,6 @@ class CmdLineApp(Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self, *args, **kwargs):
-        self.abbrev = True
         self.multilineCommands = ['orate']
         self.maxrepeats = 3
         self.redirector = '->'
@@ -159,7 +158,7 @@ OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
-(Cmd) hi
+(Cmd) history
 -------------------------[1]
 help
 -------------------------[2]

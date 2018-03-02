@@ -995,7 +995,7 @@ class Cmd(cmd.Cmd):
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
-    multilineCommands = []  # NOTE: Multiline commands can never be abbreviated, even if abbrev is True
+    multilineCommands = []
     prefixParser = pyparsing.Empty()
     redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
@@ -1008,7 +1008,6 @@ class Cmd(cmd.Cmd):
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
-    abbrev = False  # Abbreviated commands recognized
     colors = (platform.system() != 'Windows')
     continuation_prompt = '> '
     debug = False
@@ -1029,8 +1028,7 @@ class Cmd(cmd.Cmd):
 
     # To make an attribute settable with the "do_set" command, add it to this ...
     # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
-    settable = {'abbrev': 'Accept abbreviated commands',
-                'colors': 'Colorized output (*nix only)',
+    settable = {'colors': 'Colorized output (*nix only)',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
@@ -1076,7 +1074,7 @@ class Cmd(cmd.Cmd):
 
         # Commands to exclude from the help menu or history command
         self.exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']
-        self.excludeFromHistory = '''history histor histo hist his hi h edit edi ed e eof eo eos'''.split()
+        self.excludeFromHistory = '''history edit eof eos'''.split()
 
         self._finalize_app_parameters()
 
@@ -1664,9 +1662,6 @@ class Cmd(cmd.Cmd):
     def _func_named(self, arg):
         """Gets the method name associated with a given command.
 
-        If self.abbrev is False, it is always just looks for do_arg.  However, if self.abbrev is True,
-        it allows abbreviated command names and looks for any commands which start with do_arg.
-
         :param arg: str - command to look up method name which implements it
         :return: str - method name which implements the given command
         """
@@ -1674,11 +1669,6 @@ class Cmd(cmd.Cmd):
         target = 'do_' + arg
         if target in dir(self):
             result = target
-        else:
-            if self.abbrev:  # accept shortened versions of commands
-                funcs = [func for func in self.keywords if func.startswith(arg) and func not in self.multilineCommands]
-                if len(funcs) == 1:
-                    result = 'do_' + funcs[0]
         return result
 
     def onecmd(self, line):

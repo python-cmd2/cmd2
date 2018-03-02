@@ -4,7 +4,6 @@
 # Regexes on prompts just make the trailing space obvious
 
 (Cmd) set
-abbrev: True
 colors: /(True|False)/
 continuation_prompt: >/ /
 debug: False

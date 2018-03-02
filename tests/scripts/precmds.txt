@@ -1,2 +1,1 @@
-set abbrev on
 set colors on
