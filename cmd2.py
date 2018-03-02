@@ -1332,6 +1332,38 @@ class Cmd(cmd.Cmd):
         except IndexError:
             return None
 
+    def complete_help(self, text, line, begidx, endidx):
+        """
+        Override of parent class method to handle tab completing subcommands
+        """
+        completions = []
+
+        # Get all tokens prior to text being completed
+        try:
+            tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
+        except ValueError:
+            # Invalid syntax for shlex (Probably due to missing closing quote)
+            return completions
+
+        # If we have "help" and a completed command token, then attempt to match subcommands
+        if len(tokens) == 2:
+
+            # Match subcommands if any exist
+            subcommands = self.get_subcommands(tokens[1])
+            if subcommands is not None:
+                completions = [cur_sub for cur_sub in subcommands if cur_sub.startswith(text)]
+
+        # Run normal help completion from the parent class
+        else:
+            completions = cmd.Cmd.complete_help(self, text, line, begidx, endidx)
+
+            # If only 1 command has been matched and it's at the end of the line,
+            # then add a space if it has subcommands
+            if len(completions) == 1 and endidx == len(line) and self.get_subcommands(completions[0]) is not None:
+                completions[0] += ' '
+
+        return completions
+
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
 
