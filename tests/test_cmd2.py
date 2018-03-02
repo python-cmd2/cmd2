@@ -1374,7 +1374,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     app, out = piped_rawinput_true(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1] == 'colors: True'
+    assert out[1].startswith('colors:')
 
 # using the decorator puts the original function at six.moves.input
 # back when this method returns
@@ -1384,7 +1384,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
     firstline = out.splitlines()[0]
-    assert firstline == 'colors: True'
+    assert firstline.startswith('colors:')
     assert not '{}{}'.format(app.prompt, command) in out
 
 # the next helper function and two tests check for piped
@@ -1404,13 +1404,13 @@ def test_pseudo_raw_input_piped_rawinput_false_echo_true(capsys):
     app, out = piped_rawinput_false(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1] == 'colors: True'
+    assert out[1].startswith('colors:')
 
 def test_pseudo_raw_input_piped_rawinput_false_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_false(capsys, False, command)
     firstline = out.splitlines()[0]
-    assert firstline == 'colors: True'
+    assert firstline.startswith('colors:')
     assert not '{}{}'.format(app.prompt, command) in out
 
 #
