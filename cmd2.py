@@ -185,10 +185,14 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
 
     # Get all tokens prior to text being completed
     try:
-        prev_space_index = line.rfind(' ', 0, begidx)
+        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
         tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
     except ValueError:
         # Invalid syntax for shlex (Probably due to missing closing quote)
+        return []
+
+    # Nothing to do
+    if len(tokens) == 0:
         return []
 
     completions = []
@@ -247,7 +251,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
 
     # Get all tokens prior to text being completed
     try:
-        prev_space_index = line.rfind(' ', 0, begidx)
+        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
         tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
     except ValueError:
         # Invalid syntax for shlex (Probably due to missing closing quote)
@@ -1348,7 +1352,7 @@ class Cmd(cmd.Cmd):
 
         # Get all tokens prior to text being completed
         try:
-            prev_space_index = line.rfind(' ', 0, begidx)
+            prev_space_index = max(line.rfind(' ', 0, begidx), 0)
             tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
         except ValueError:
             # Invalid syntax for shlex (Probably due to missing closing quote)
@@ -1464,7 +1468,7 @@ class Cmd(cmd.Cmd):
             if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
                 shortcut_len = len(shortcut)
-                if len(line) > shortcut_len and line[shortcut_len] != ' ':
+                if len(line) == shortcut_len or line[shortcut_len] != ' ':
                     expansion += ' '
 
                 # Expand the shortcut
@@ -2066,21 +2070,26 @@ class Cmd(cmd.Cmd):
         # Get a list of every directory in the PATH environment variable and ignore symbolic links
         paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
 
+        # Use a set to store exe names since there can be duplicates
+        exes = set()
+
         # Find every executable file in the PATH that matches the pattern
-        exes = []
         for path in paths:
             full_path = os.path.join(path, text)
             matches = [f for f in glob.glob(full_path + '*') if os.path.isfile(f) and os.access(f, os.X_OK)]
 
             for match in matches:
-                exes.append(os.path.basename(match))
+                exes.add(os.path.basename(match))
+
+        # Sort the exes alphabetically
+        results = list(exes)
+        results.sort()
 
         # If there is a single completion and we are at end of the line, then add a space at the end for convenience
-        if len(exes) == 1 and endidx == len(line):
-            exes[0] += ' '
+        if len(results) == 1 and endidx == len(line):
+            results[0] += ' '
 
-        exes.sort()
-        return exes
+        return results
 
     def complete_shell(self, text, line, begidx, endidx):
         """Handles tab completion of executable commands and local file system paths.
@@ -2092,26 +2101,31 @@ class Cmd(cmd.Cmd):
         :return: List[str] - a list of possible tab completions
         """
 
-        # Get all tokens through the text being completed
+        # Get all tokens prior to text being completed
         try:
-            tokens = shlex.split(line[:endidx], posix=POSIX_SHLEX)
+            prev_space_index = max(line.rfind(' ', 0, begidx), 0)
+            tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
         except ValueError:
             # Invalid syntax for shlex (Probably due to missing closing quote)
             return []
 
-        if len(tokens) == 1:
-            # Don't tab complete anything if user only typed shell
+        # Nothing to do
+        if len(tokens) == 0:
             return []
 
         # Check if we are still completing the shell command
-        elif len(tokens) == 2 and not line.endswith(' '):
+        elif len(tokens) == 1:
 
             # Readline places begidx after ~ and path separators (/) so we need to get the whole token
             # and see if it begins with a possible path in case we need to do path completion
             # to find the shell command executables
-            cur_token = tokens[-1]
+            cmd_token = line[prev_space_index + 1:begidx + 1]
 
-            if not (cur_token.startswith('~') or os.path.sep in cur_token):
+            # Don't tab complete anything if no shell command has been started
+            if len(cmd_token) == 0:
+                return []
+
+            if not (cmd_token.startswith('~') or os.path.sep in cmd_token):
                 # No path characters are in this token, it is OK to try shell command completion.
                 command_completions = self._shell_command_complete(text, line, begidx, endidx)
 

@@ -643,7 +643,7 @@ def test_cmd2_subcommand_completion_single_end(sc_app):
 
 def test_cmd2_subcommand_completion_single_mid(sc_app):
     text = 'f'
-    line = 'base f'
+    line = 'base fo'
     endidx = len(line) - 1
     begidx = endidx - len(text)
     state = 0
