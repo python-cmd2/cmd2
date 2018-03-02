@@ -1423,7 +1423,7 @@ class Cmd(cmd.Cmd):
             if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
                 shortcut_len = len(shortcut)
-                if len(line) == shortcut_len or line[shortcut_len] != ' ':
+                if len(line) > shortcut_len and line[shortcut_len] != ' ':
                     expansion += ' '
 
                 # Expand the shortcut
