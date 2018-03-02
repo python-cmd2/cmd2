@@ -465,52 +465,6 @@ def sc_app():
     return app
 
 
-def test_cmd2_subcommand_completion_single_end(sc_app):
-    text = 'f'
-    line = 'base f'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo ']
-
-def test_cmd2_subcommand_completion_single_mid(sc_app):
-    text = 'f'
-    line = 'base f'
-    endidx = len(line) - 1
-    begidx = endidx - len(text)
-
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo']
-
-def test_cmd2_subcommand_completion_multiple(sc_app):
-    text = ''
-    line = 'base '
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo', 'bar']
-
-def test_cmd2_subcommand_completion_nomatch(sc_app):
-    text = 'z'
-    line = 'base z'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == []
-
-def test_cmd2_subcommand_completion_after_subcommand(sc_app):
-    text = 'f'
-    line = 'base foo f'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == []
-
-
 def test_complete_subcommand_single_end(sc_app):
     text = 'f'
     line = 'base f'
