@@ -17,7 +17,7 @@ import cmd2
 import mock
 import pytest
 
-from cmd2 import path_complete
+from cmd2 import path_complete, flag_based_complete, index_based_complete
 
 @pytest.fixture
 def cmd2_app():
@@ -272,7 +272,7 @@ def test_shell_command_completion_does_path_completion_when_after_command(cmd2_a
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['conftest.py ']
 
 
-def test_path_completion_single_end(cmd2_app, request):
+def test_path_completion_single_end(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'c'
@@ -284,7 +284,7 @@ def test_path_completion_single_end(cmd2_app, request):
 
     assert path_complete(text, line, begidx, endidx) == ['conftest.py ']
 
-def test_path_completion_single_mid(cmd2_app, request):
+def test_path_completion_single_mid(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'tes'
@@ -296,7 +296,7 @@ def test_path_completion_single_mid(cmd2_app, request):
 
     assert path_complete(text, line, begidx, endidx) == ['tests' + os.path.sep]
 
-def test_path_completion_multiple(cmd2_app, request):
+def test_path_completion_multiple(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 's'
@@ -308,7 +308,7 @@ def test_path_completion_multiple(cmd2_app, request):
 
     assert path_complete(text, line, begidx, endidx) == ['script.py', 'script.txt', 'scripts' + os.path.sep]
 
-def test_path_completion_nomatch(cmd2_app, request):
+def test_path_completion_nomatch(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'z'
@@ -320,7 +320,7 @@ def test_path_completion_nomatch(cmd2_app, request):
 
     assert path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_cwd(cmd2_app):
+def test_path_completion_cwd():
     # Run path complete with no path and no search text
     text = ''
     line = 'shell ls {}'.format(text)
@@ -339,7 +339,7 @@ def test_path_completion_cwd(cmd2_app):
     assert completions_empty == completions_cwd
     assert completions_cwd
 
-def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
+def test_path_completion_doesnt_match_wildcards(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'c*'
@@ -352,7 +352,7 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     # Currently path completion doesn't accept wildcards, so will always return empty results
     assert path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_user_expansion(cmd2_app):
+def test_path_completion_user_expansion():
     # Run path with just a tilde
     text = ''
     if sys.platform.startswith('win'):
@@ -376,7 +376,7 @@ def test_path_completion_user_expansion(cmd2_app):
     # Verify that the results are the same in both cases
     assert completions_tilde == completions_home
 
-def test_path_completion_directories_only(cmd2_app, request):
+def test_path_completion_directories_only(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 's'
@@ -387,6 +387,57 @@ def test_path_completion_directories_only(cmd2_app, request):
     begidx = endidx - len(text)
 
     assert path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
+
+
+# List of strings used with flag and index based complete functions
+food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
+sports_equipment_strs = ['Soccer', 'Socks', 'Basketball', 'Football']
+
+# Dictionaries used with flag and index based complete functions
+flag_dict = {'-f': food_item_strs, '-s': sports_equipment_strs}
+position_dict = {1: food_item_strs, 2: sports_equipment_strs}
+
+def test_flag_based_completion_single_end():
+    text = 'Pi'
+    line = 'list_food -f Pi'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza ']
+
+def test_flag_based_completion_single_mid():
+    text = 'Pi'
+    line = 'list_food -f Pi'
+    begidx = len(line) - len(text)
+    endidx = begidx + 1
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
+
+def test_flag_based_completion_multiple():
+    text = ''
+    line = 'list_food -f '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == sorted(food_item_strs)
+
+def test_flag_based_completion_nomatch():
+    text = 'q'
+    line = 'list_food -f q'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+
+def test_flag_based_default_completer(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'list_food {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
 
 
 def test_parseline_command_and_args(cmd2_app):
@@ -612,6 +663,7 @@ def test_complete_subcommand_single_end(sc_app):
                 first_match = sc_app.complete(text, state)
 
     assert first_match is not None and sc_app.completion_matches == ['foo ']
+
 
 def test_cmd2_help_subcommand_completion_single_end(sc_app):
     text = 'base'
