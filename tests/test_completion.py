@@ -389,13 +389,12 @@ def test_path_completion_directories_only(request):
     assert path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
 
 
-# List of strings used with flag and index based complete functions
+# List of strings used with flag and index based completion functions
 food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
-sports_equipment_strs = ['Soccer', 'Socks', 'Basketball', 'Football']
+sports_equipment_strs = ['Bat', 'Basket', 'Basketball', 'Football']
 
-# Dictionaries used with flag and index based complete functions
+# Dictionary used with flag based completion functions
 flag_dict = {'-f': food_item_strs, '-s': sports_equipment_strs}
-position_dict = {1: food_item_strs, 2: sports_equipment_strs}
 
 def test_flag_based_completion_single_end():
     text = 'Pi'
@@ -433,6 +432,51 @@ def test_flag_based_default_completer(request):
     text = 'c'
     path = os.path.join(test_dir, text)
     line = 'list_food {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
+
+# Dictionary used with index based completion functions
+index_dict = {1: food_item_strs, 2: sports_equipment_strs}
+
+def test_index_based_completion_single_end():
+    text = 'Foo'
+    line = 'command Pizza Foo'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football ']
+
+def test_index_based_completion_single_mid():
+    text = 'Foo'
+    line = 'command Pizza Foo'
+    begidx = len(line) - len(text)
+    endidx = begidx + 1
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football']
+
+def test_index_based_completion_multiple():
+    text = ''
+    line = 'command Pizza '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == sorted(sports_equipment_strs)
+
+def test_index_based_completion_nomatch():
+    text = 'q'
+    line = 'command q'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == []
+
+def test_index_based_default_completer(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'command Pizza Bat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
