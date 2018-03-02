@@ -391,10 +391,10 @@ def test_path_completion_directories_only(request):
 
 # List of strings used with flag and index based completion functions
 food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
-sports_equipment_strs = ['Bat', 'Basket', 'Basketball', 'Football']
+sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
 
 # Dictionary used with flag based completion functions
-flag_dict = {'-f': food_item_strs, '-s': sports_equipment_strs}
+flag_dict = {'-f': food_item_strs, '-s': sport_item_strs}
 
 def test_flag_based_completion_single_end():
     text = 'Pi'
@@ -439,7 +439,7 @@ def test_flag_based_default_completer(request):
     assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
 
 # Dictionary used with index based completion functions
-index_dict = {1: food_item_strs, 2: sports_equipment_strs}
+index_dict = {1: food_item_strs, 2: sport_item_strs}
 
 def test_index_based_completion_single_end():
     text = 'Foo'
@@ -462,7 +462,7 @@ def test_index_based_completion_multiple():
     line = 'command Pizza '
     endidx = len(line)
     begidx = endidx - len(text)
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == sorted(sports_equipment_strs)
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == sorted(sport_item_strs)
 
 def test_index_based_completion_nomatch():
     text = 'q'
@@ -494,9 +494,9 @@ def test_parseline_command_and_args(cmd2_app):
 def test_parseline_emptyline(cmd2_app):
     line = ''
     command, args, out_line = cmd2_app.parseline(line)
-    assert command == None
-    assert args == None
-    assert line == out_line
+    assert command is None
+    assert args is None
+    assert line is out_line
 
 def test_parseline_strips_line(cmd2_app):
     line = '  help history  '
