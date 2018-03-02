@@ -182,14 +182,15 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
                                          being completed
     :return: List[str] - a list of possible tab completions
     """
-    completions = []
 
     # Get all tokens prior to text being completed
     try:
         tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
     except ValueError:
         # Invalid syntax for shlex (Probably due to missing closing quote)
-        return completions
+        return []
+
+    completions = []
 
     # Must have at least the command and one argument
     if len(tokens) > 1:
@@ -218,6 +219,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
         elif default_completer is not None:
             completions = default_completer(text, line, begidx, endidx)
 
+    completions.sort()
     return completions
 
 
@@ -238,14 +240,15 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
                                          any index in index_dict
     :return: List[str] - a list of possible tab completions
     """
-    completions = []
 
     # Get all tokens prior to text being completed
     try:
         tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
     except ValueError:
         # Invalid syntax for shlex (Probably due to missing closing quote)
-        return completions
+        return []
+
+    completions = []
 
     # Must have at least the command
     if len(tokens) > 0:
@@ -274,6 +277,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
         elif default_completer is not None:
             completions = default_completer(text, line, begidx, endidx)
 
+    completions.sort()
     return completions
 
 
@@ -350,8 +354,8 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         elif os.path.isdir(path_completions[0]) and add_sep_after_tilde:
             completions[0] = os.path.sep + completions[0]
 
-    # If there are multiple completions, then sort them alphabetically
-    return sorted(completions)
+    completions.sort()
+    return completions
 
 
 class OptionParser(optparse.OptionParser):
@@ -1336,14 +1340,15 @@ class Cmd(cmd.Cmd):
         """
         Override of parent class method to handle tab completing subcommands
         """
-        completions = []
 
         # Get all tokens prior to text being completed
         try:
             tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
         except ValueError:
             # Invalid syntax for shlex (Probably due to missing closing quote)
-            return completions
+            return []
+
+        completions = []
 
         # If we have "help" and a completed command token, then attempt to match subcommands
         if len(tokens) == 2:
@@ -1362,6 +1367,7 @@ class Cmd(cmd.Cmd):
             if len(completions) == 1 and endidx == len(line) and self.get_subcommands(completions[0]) is not None:
                 completions[0] += ' '
 
+        completions.sort()
         return completions
 
     def precmd(self, statement):
@@ -2067,8 +2073,8 @@ class Cmd(cmd.Cmd):
         if len(exes) == 1 and endidx == len(line):
             exes[0] += ' '
 
-        # If there are multiple completions, then sort them alphabetically
-        return sorted(exes)
+        exes.sort()
+        return exes
 
     def complete_shell(self, text, line, begidx, endidx):
         """Handles tab completion of executable commands and local file system paths.

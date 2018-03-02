@@ -181,28 +181,28 @@ def test_cmd2_help_completion_single_end(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
     # Even though it is at end of line, no extra space is present when tab completing a command name to get help on
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help']
 
 def test_cmd2_help_completion_single_mid(cmd2_app):
     text = 'he'
     line = 'help he'
     begidx = 5
     endidx = 6
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help']
 
 def test_cmd2_help_completion_multiple(cmd2_app):
     text = 'h'
     line = 'help h'
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help', 'history']
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help', 'history']
 
 def test_cmd2_help_completion_nomatch(cmd2_app):
     text = 'z'
     line = 'help z'
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.completenames(text, line, begidx, endidx) == []
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == []
 
 def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
@@ -539,7 +539,7 @@ def test_cmd2_subcommand_completion_multiple(sc_app):
                 # Run the readline tab-completion function with readline mocks in place
                 first_match = sc_app.complete(text, state)
 
-    assert first_match is not None and sc_app.completion_matches == ['foo', 'bar']
+    assert first_match is not None and sc_app.completion_matches == ['bar', 'foo']
 
 def test_cmd2_subcommand_completion_nomatch(sc_app):
     text = 'z'
@@ -612,3 +612,33 @@ def test_complete_subcommand_single_end(sc_app):
                 first_match = sc_app.complete(text, state)
 
     assert first_match is not None and sc_app.completion_matches == ['foo ']
+
+def test_cmd2_help_subcommand_completion_single_end(sc_app):
+    text = 'base'
+    line = 'help base'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Commands with subcommands have a space at the end when the cursor is at the end of the line
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['base ']
+
+def test_cmd2_help_subcommand_completion_single_mid(sc_app):
+    text = 'ba'
+    line = 'help base'
+    begidx = 5
+    endidx = 6
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['base']
+
+def test_cmd2_help_subcommand_completion_multiple(sc_app):
+    text = ''
+    line = 'help base'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo']
+
+def test_cmd2_help_subcommand_completion_nomatch(sc_app):
+    text = 'z'
+    line = 'help base z'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sc_app.complete_help(text, line, begidx, endidx) == []
