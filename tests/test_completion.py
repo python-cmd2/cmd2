@@ -59,8 +59,9 @@ def test_complete_command_single_end(cmd2_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                completion = cmd2_app.complete(text, state)
-    assert completion == 'help '
+                first_match = cmd2_app.complete(text, state)
+
+    assert first_match is not None and cmd2_app.completion_matches == ['help ']
 
 def test_complete_command_invalid_state(cmd2_app):
     text = 'he'
@@ -82,8 +83,9 @@ def test_complete_command_invalid_state(cmd2_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place get None
-                completion = cmd2_app.complete(text, state)
-    assert completion is None
+                first_match = cmd2_app.complete(text, state)
+
+    assert first_match is None
 
 def test_complete_empty_arg(cmd2_app):
     text = ''
@@ -105,9 +107,10 @@ def test_complete_empty_arg(cmd2_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                completion = cmd2_app.complete(text, state)
+                first_match = cmd2_app.complete(text, state)
 
-    assert completion == cmd2_app.complete_help(text, line, begidx, endidx)[0]
+    assert first_match is not None and \
+        cmd2_app.completion_matches == cmd2_app.complete_help(text, line, begidx, endidx)
 
 def test_complete_bogus_command(cmd2_app):
     text = ''
@@ -129,9 +132,9 @@ def test_complete_bogus_command(cmd2_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                completion = cmd2_app.complete(text, state)
+                first_match = cmd2_app.complete(text, state)
 
-    assert completion is None
+    assert first_match is None
 
 def test_cmd2_command_completion_is_case_insensitive_by_default(cmd2_app):
     text = 'HE'
@@ -465,6 +468,127 @@ def sc_app():
     return app
 
 
+def test_cmd2_subcommand_completion_single_end(sc_app):
+    text = 'f'
+    line = 'base f'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and sc_app.completion_matches == ['foo ']
+
+def test_cmd2_subcommand_completion_single_mid(sc_app):
+    text = 'f'
+    line = 'base f'
+    endidx = len(line) - 1
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is not None and sc_app.completion_matches == ['foo']
+
+def test_cmd2_subcommand_completion_multiple(sc_app):
+    text = ''
+    line = 'base '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is not None and sc_app.completion_matches == ['foo', 'bar']
+
+def test_cmd2_subcommand_completion_nomatch(sc_app):
+    text = 'z'
+    line = 'base z'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is None
+
+def test_cmd2_subcommand_completion_after_subcommand(sc_app):
+    text = 'f'
+    line = 'base foo f'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is None
+
 def test_complete_subcommand_single_end(sc_app):
     text = 'f'
     line = 'base f'
@@ -485,5 +609,6 @@ def test_complete_subcommand_single_end(sc_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                completion = sc_app.complete(text, state)
-    assert completion == 'foo '
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is not None and sc_app.completion_matches == ['foo ']
