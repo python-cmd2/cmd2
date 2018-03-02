@@ -185,24 +185,27 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
 
     # Get all tokens prior to text being completed
     try:
-        tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
+        prev_space_index = line.rfind(' ', 0, begidx)
+        tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
     except ValueError:
         # Invalid syntax for shlex (Probably due to missing closing quote)
         return []
 
     completions = []
+    flag_processed = False
 
-    # Must have at least the command and one argument
+    # Must have at least the command and one argument for a flag to be present
     if len(tokens) > 1:
 
         # Get the argument that precedes the text being completed
-        flag = tokens[len(tokens) - 1]
+        flag = tokens[-1]
 
         # Check if the flag is in the dictionary
         if flag in flag_dict:
 
             # Check if this flag does completions using an Iterable
             if isinstance(flag_dict[flag], collections.Iterable):
+                flag_processed = True
                 strs_to_match = flag_dict[flag]
                 completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
 
@@ -212,12 +215,13 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
 
             # Otherwise check if this flag does completions with a function
             elif callable(flag_dict[flag]):
+                flag_processed = True
                 completer_func = flag_dict[flag]
                 completions = completer_func(text, line, begidx, endidx)
 
-        # Otherwise check if there is a default completer
-        elif default_completer is not None:
-            completions = default_completer(text, line, begidx, endidx)
+    # Check if we need to run the default completer
+    if default_completer is not None and not flag_processed:
+        completions = default_completer(text, line, begidx, endidx)
 
     completions.sort()
     return completions
@@ -243,7 +247,8 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
 
     # Get all tokens prior to text being completed
     try:
-        tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
+        prev_space_index = line.rfind(' ', 0, begidx)
+        tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
     except ValueError:
         # Invalid syntax for shlex (Probably due to missing closing quote)
         return []
@@ -268,7 +273,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
                 if len(completions) == 1 and endidx == len(line):
                     completions[0] += ' '
 
-            # Otherwise check if this flag does completions with a function
+            # Otherwise check if this index does completions with a function
             elif callable(index_dict[index]):
                 completer_func = index_dict[index]
                 completions = completer_func(text, line, begidx, endidx)
@@ -1343,7 +1348,8 @@ class Cmd(cmd.Cmd):
 
         # Get all tokens prior to text being completed
         try:
-            tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
+            prev_space_index = line.rfind(' ', 0, begidx)
+            tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
         except ValueError:
             # Invalid syntax for shlex (Probably due to missing closing quote)
             return []
@@ -2103,7 +2109,7 @@ class Cmd(cmd.Cmd):
             # Readline places begidx after ~ and path separators (/) so we need to get the whole token
             # and see if it begins with a possible path in case we need to do path completion
             # to find the shell command executables
-            cur_token = tokens[len(tokens) - 1]
+            cur_token = tokens[-1]
 
             if not (cur_token.startswith('~') or os.path.sep in cur_token):
                 # No path characters are in this token, it is OK to try shell command completion.

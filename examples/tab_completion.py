@@ -6,7 +6,7 @@ import argparse
 import functools
 
 import cmd2
-from cmd2 import with_argparser, with_argument_list, flag_based_complete, index_based_complete
+from cmd2 import with_argparser, with_argument_list, flag_based_complete, index_based_complete, path_complete
 
 # List of strings used with flag and index based completion functions
 food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
@@ -19,6 +19,8 @@ flag_dict = \
         '--food': food_item_strs,    # Tab-complete food items after --food flag in command line
         '-s': sport_item_strs,       # Tab-complete sport items after -s flag in command line
         '--sport': sport_item_strs,  # Tab-complete sport items after --sport flag in command line
+        '-o': path_complete,         # Tab-complete using path_complete function after -o flag in command line
+        '--other': path_complete,    # Tab-complete using path_complete function after --other flag in command line
     }
 
 # Dictionary used with index based completion functions
@@ -26,6 +28,7 @@ index_dict = \
     {
         1: food_item_strs,   # Tab-complete food items at index 1 in command line
         2: sport_item_strs,  # Tab-complete sport items at index 2 in command line
+        3: path_complete,    # Tab-complete using path_complete function at index 3 in command line
     }
 
 
@@ -39,6 +42,7 @@ class TabCompleteExample(cmd2.Cmd):
     add_item_group = add_item_parser.add_mutually_exclusive_group()
     add_item_group.add_argument('-f', '--food', help='Adds food item')
     add_item_group.add_argument('-s', '--sport', help='Adds sport item')
+    add_item_group.add_argument('-o', '--other', help='Adds other item')
 
     @with_argparser(add_item_parser)
     def do_add_item(self, args):
@@ -47,6 +51,8 @@ class TabCompleteExample(cmd2.Cmd):
             add_item = args.food
         elif args.sport:
             add_item = args.sport
+        elif args.other:
+            add_item = args.other
         else:
             add_item = 'no items'
 

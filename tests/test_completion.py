@@ -356,9 +356,9 @@ def test_path_completion_user_expansion():
     # Run path with just a tilde
     text = ''
     if sys.platform.startswith('win'):
-        line = 'shell dir ~\{}'.format(text)
+        line = 'shell dir ~{}'.format(text)
     else:
-        line = 'shell ls ~/{}'.format(text)
+        line = 'shell ls ~{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde = path_complete(text, line, begidx, endidx)
@@ -394,7 +394,15 @@ food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
 
 # Dictionary used with flag based completion functions
-flag_dict = {'-f': food_item_strs, '-s': sport_item_strs}
+flag_dict = \
+    {
+        '-f': food_item_strs,        # Tab-complete food items after -f flag in command line
+        '--food': food_item_strs,    # Tab-complete food items after --food flag in command line
+        '-s': sport_item_strs,       # Tab-complete sport items after -s flag in command line
+        '--sport': sport_item_strs,  # Tab-complete sport items after --sport flag in command line
+        '-o': path_complete,         # Tab-complete using path_complete function after -o flag in command line
+        '--other': path_complete,    # Tab-complete using path_complete function after --other flag in command line
+    }
 
 def test_flag_based_completion_single_end():
     text = 'Pi'
@@ -438,8 +446,33 @@ def test_flag_based_default_completer(request):
 
     assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
 
+def test_flag_based_callable_completer(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'list_food -o {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
+
+def test_flag_based_completion_syntax_err():
+    text = 'Pi'
+    line = 'list_food -f " Pi'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+
 # Dictionary used with index based completion functions
-index_dict = {1: food_item_strs, 2: sport_item_strs}
+index_dict = \
+    {
+        1: food_item_strs,   # Tab-complete food items at index 1 in command line
+        2: sport_item_strs,  # Tab-complete sport items at index 2 in command line
+        3: path_complete,    # Tab-complete using path_complete function at index 3 in command line
+    }
 
 def test_index_based_completion_single_end():
     text = 'Foo'
@@ -476,12 +509,32 @@ def test_index_based_default_completer(request):
 
     text = 'c'
     path = os.path.join(test_dir, text)
+    line = 'command Pizza Bat Computer {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict, path_complete) == ['conftest.py ']
+
+def test_index_based_callable_completer(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
     line = 'command Pizza Bat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['conftest.py ']
+
+def test_index_based_completion_syntax_err():
+    text = 'Foo'
+    line = 'command "Pizza Foo'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == []
 
 
 def test_parseline_command_and_args(cmd2_app):
@@ -727,7 +780,7 @@ def test_cmd2_help_subcommand_completion_single_mid(sc_app):
 
 def test_cmd2_help_subcommand_completion_multiple(sc_app):
     text = ''
-    line = 'help base'
+    line = 'help base '
     endidx = len(line)
     begidx = endidx - len(text)
     assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo']
