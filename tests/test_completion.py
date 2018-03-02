@@ -17,6 +17,7 @@ import cmd2
 import mock
 import pytest
 
+from cmd2 import path_complete, flag_based_complete, index_based_complete
 
 @pytest.fixture
 def cmd2_app():
@@ -58,8 +59,9 @@ def test_complete_command_single_end(cmd2_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                completion = cmd2_app.complete(text, state)
-    assert completion == 'help '
+                first_match = cmd2_app.complete(text, state)
+
+    assert first_match is not None and cmd2_app.completion_matches == ['help ']
 
 def test_complete_command_invalid_state(cmd2_app):
     text = 'he'
@@ -81,8 +83,9 @@ def test_complete_command_invalid_state(cmd2_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place get None
-                completion = cmd2_app.complete(text, state)
-    assert completion is None
+                first_match = cmd2_app.complete(text, state)
+
+    assert first_match is None
 
 def test_complete_empty_arg(cmd2_app):
     text = ''
@@ -104,9 +107,10 @@ def test_complete_empty_arg(cmd2_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                completion = cmd2_app.complete(text, state)
+                first_match = cmd2_app.complete(text, state)
 
-    assert completion == cmd2_app.complete_help(text, line, begidx, endidx)[0]
+    assert first_match is not None and \
+        cmd2_app.completion_matches == cmd2_app.complete_help(text, line, begidx, endidx)
 
 def test_complete_bogus_command(cmd2_app):
     text = ''
@@ -128,9 +132,9 @@ def test_complete_bogus_command(cmd2_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                completion = cmd2_app.complete(text, state)
+                first_match = cmd2_app.complete(text, state)
 
-    assert completion is None
+    assert first_match is None
 
 def test_cmd2_command_completion_is_case_insensitive_by_default(cmd2_app):
     text = 'HE'
@@ -177,28 +181,28 @@ def test_cmd2_help_completion_single_end(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
     # Even though it is at end of line, no extra space is present when tab completing a command name to get help on
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help']
 
 def test_cmd2_help_completion_single_mid(cmd2_app):
     text = 'he'
     line = 'help he'
     begidx = 5
     endidx = 6
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help']
 
 def test_cmd2_help_completion_multiple(cmd2_app):
     text = 'h'
     line = 'help h'
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help', 'history']
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help', 'history']
 
 def test_cmd2_help_completion_nomatch(cmd2_app):
     text = 'z'
     line = 'help z'
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.completenames(text, line, begidx, endidx) == []
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == []
 
 def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
@@ -207,7 +211,7 @@ def test_shell_command_completion(cmd2_app):
         expected = ['calc.exe ']
     else:
         text = 'egr'
-        line = '!{}'.format(text)
+        line = 'shell {}'.format(text)
         expected = ['egrep ']
 
     endidx = len(line)
@@ -220,7 +224,7 @@ def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
         line = 'shell {}'.format(text)
     else:
         text = 'e*'
-        line = '!{}'.format(text)
+        line = 'shell {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -233,7 +237,7 @@ def test_shell_command_completion_multiple(cmd2_app):
         expected = 'calc.exe'
     else:
         text = 'l'
-        line = '!{}'.format(text)
+        line = 'shell {}'.format(text)
         expected = 'ls'
 
     endidx = len(line)
@@ -249,10 +253,7 @@ def test_shell_command_completion_nomatch(cmd2_app):
 
 def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app):
     text = ''
-    if sys.platform == "win32":
-        line = 'shell'.format(text)
-    else:
-        line = '!'.format(text)
+    line = 'shell'
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -271,121 +272,269 @@ def test_shell_command_completion_does_path_completion_when_after_command(cmd2_a
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['conftest.py ']
 
 
-def test_path_completion_single_end(cmd2_app, request):
+def test_path_completion_single_end(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'c'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['conftest.py ']
+    assert path_complete(text, line, begidx, endidx) == ['conftest.py ']
 
-def test_path_completion_single_mid(cmd2_app, request):
+def test_path_completion_single_mid(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'tes'
     path = os.path.join(test_dir, 'c')
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     begidx = line.find(text)
     endidx = begidx + len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['tests' + os.path.sep]
+    assert path_complete(text, line, begidx, endidx) == ['tests' + os.path.sep]
 
-def test_path_completion_multiple(cmd2_app, request):
+def test_path_completion_multiple(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 's'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == ['script.py', 'script.txt', 'scripts' + os.path.sep]
+    assert path_complete(text, line, begidx, endidx) == ['script.py', 'script.txt', 'scripts' + os.path.sep]
 
-def test_path_completion_nomatch(cmd2_app, request):
+def test_path_completion_nomatch(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'z'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
+    assert path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_cwd(cmd2_app):
+def test_path_completion_cwd():
     # Run path complete with no path and no search text
     text = ''
-    line = '!ls {}'.format(text)
+    line = 'shell ls {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_empty = cmd2_app.path_complete(text, line, begidx, endidx)
+    completions_empty = path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
     cwd = os.getcwd()
-    line = '!ls {}'.format(cwd)
+    line = 'shell ls {}'.format(cwd)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_cwd = cmd2_app.path_complete(text, line, begidx, endidx)
+    completions_cwd = path_complete(text, line, begidx, endidx)
 
     # Verify that the results are the same in both cases and that there is something there
     assert completions_empty == completions_cwd
     assert completions_cwd
 
-def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
+def test_path_completion_doesnt_match_wildcards(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'c*'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
     # Currently path completion doesn't accept wildcards, so will always return empty results
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
+    assert path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_user_expansion(cmd2_app):
+def test_path_completion_user_expansion():
     # Run path with just a tilde
     text = ''
     if sys.platform.startswith('win'):
-        line = '!dir ~\{}'.format(text)
+        line = 'shell dir ~{}'.format(text)
     else:
-        line = '!ls ~/{}'.format(text)
+        line = 'shell ls ~{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_tilde = cmd2_app.path_complete(text, line, begidx, endidx)
+    completions_tilde = path_complete(text, line, begidx, endidx)
 
     # Run path complete on the user's home directory
     user_dir = os.path.expanduser('~')
     if sys.platform.startswith('win'):
-        line = '!dir {}'.format(user_dir)
+        line = 'shell dir {}'.format(user_dir)
     else:
-        line = '!ls {}'.format(user_dir)
+        line = 'shell ls {}'.format(user_dir)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_home = cmd2_app.path_complete(text, line, begidx, endidx)
+    completions_home = path_complete(text, line, begidx, endidx)
 
     # Verify that the results are the same in both cases
     assert completions_tilde == completions_home
 
-def test_path_completion_directories_only(cmd2_app, request):
+def test_path_completion_directories_only(request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 's'
     path = os.path.join(test_dir, text)
-    line = '!cat {}'.format(path)
+    line = 'shell cat {}'.format(path)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
+    assert path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
+
+
+# List of strings used with flag and index based completion functions
+food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
+sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
+
+# Dictionary used with flag based completion functions
+flag_dict = \
+    {
+        '-f': food_item_strs,        # Tab-complete food items after -f flag in command line
+        '--food': food_item_strs,    # Tab-complete food items after --food flag in command line
+        '-s': sport_item_strs,       # Tab-complete sport items after -s flag in command line
+        '--sport': sport_item_strs,  # Tab-complete sport items after --sport flag in command line
+        '-o': path_complete,         # Tab-complete using path_complete function after -o flag in command line
+        '--other': path_complete,    # Tab-complete using path_complete function after --other flag in command line
+    }
+
+def test_flag_based_completion_single_end():
+    text = 'Pi'
+    line = 'list_food -f Pi'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza ']
+
+def test_flag_based_completion_single_mid():
+    text = 'Pi'
+    line = 'list_food -f Pi'
+    begidx = len(line) - len(text)
+    endidx = begidx + 1
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
+
+def test_flag_based_completion_multiple():
+    text = ''
+    line = 'list_food -f '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == sorted(food_item_strs)
+
+def test_flag_based_completion_nomatch():
+    text = 'q'
+    line = 'list_food -f q'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+
+def test_flag_based_default_completer(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'list_food {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
+
+def test_flag_based_callable_completer(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'list_food -o {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
+
+def test_flag_based_completion_syntax_err():
+    text = 'Pi'
+    line = 'list_food -f " Pi'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+
+# Dictionary used with index based completion functions
+index_dict = \
+    {
+        1: food_item_strs,   # Tab-complete food items at index 1 in command line
+        2: sport_item_strs,  # Tab-complete sport items at index 2 in command line
+        3: path_complete,    # Tab-complete using path_complete function at index 3 in command line
+    }
+
+def test_index_based_completion_single_end():
+    text = 'Foo'
+    line = 'command Pizza Foo'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football ']
+
+def test_index_based_completion_single_mid():
+    text = 'Foo'
+    line = 'command Pizza Foo'
+    begidx = len(line) - len(text)
+    endidx = begidx + 1
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football']
+
+def test_index_based_completion_multiple():
+    text = ''
+    line = 'command Pizza '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == sorted(sport_item_strs)
+
+def test_index_based_completion_nomatch():
+    text = 'q'
+    line = 'command q'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == []
+
+def test_index_based_default_completer(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'command Pizza Bat Computer {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict, path_complete) == ['conftest.py ']
+
+def test_index_based_callable_completer(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'command Pizza Bat {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['conftest.py ']
+
+def test_index_based_completion_syntax_err():
+    text = 'Foo'
+    line = 'command "Pizza Foo'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == []
 
 
 def test_parseline_command_and_args(cmd2_app):
@@ -398,9 +547,9 @@ def test_parseline_command_and_args(cmd2_app):
 def test_parseline_emptyline(cmd2_app):
     line = ''
     command, args, out_line = cmd2_app.parseline(line)
-    assert command == None
-    assert args == None
-    assert line == out_line
+    assert command is None
+    assert args is None
+    assert line is out_line
 
 def test_parseline_strips_line(cmd2_app):
     line = '  help history  '
@@ -429,7 +578,7 @@ class SubcommandsExample(cmd2.Cmd):
         self.poutput(args.x * args.y)
 
     def base_bar(self, args):
-        """bar sucommand of base command"""
+        """bar subcommand of base command"""
         self.poutput('((%s))' % args.z)
 
     # create the top-level parser for the base command
@@ -472,46 +621,121 @@ def test_cmd2_subcommand_completion_single_end(sc_app):
     line = 'base f'
     endidx = len(line)
     begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
 
     # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo ']
+    assert first_match is not None and sc_app.completion_matches == ['foo ']
 
 def test_cmd2_subcommand_completion_single_mid(sc_app):
     text = 'f'
-    line = 'base f'
+    line = 'base fo'
     endidx = len(line) - 1
     begidx = endidx - len(text)
+    state = 0
 
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo']
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is not None and sc_app.completion_matches == ['foo']
 
 def test_cmd2_subcommand_completion_multiple(sc_app):
     text = ''
     line = 'base '
     endidx = len(line)
     begidx = endidx - len(text)
+    state = 0
 
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == ['foo', 'bar']
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is not None and sc_app.completion_matches == ['bar', 'foo']
 
 def test_cmd2_subcommand_completion_nomatch(sc_app):
     text = 'z'
     line = 'base z'
     endidx = len(line)
     begidx = endidx - len(text)
+    state = 0
 
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == []
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is None
 
 def test_cmd2_subcommand_completion_after_subcommand(sc_app):
     text = 'f'
     line = 'base foo f'
     endidx = len(line)
     begidx = endidx - len(text)
+    state = 0
 
-    # It is at end of line, so extra space is present
-    assert sc_app.complete_subcommand(text, line, begidx, endidx) == []
+    def get_line():
+        return line
 
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is None
 
 def test_complete_subcommand_single_end(sc_app):
     text = 'f'
@@ -533,5 +757,37 @@ def test_complete_subcommand_single_end(sc_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                completion = sc_app.complete(text, state)
-    assert completion == 'foo '
+                first_match = sc_app.complete(text, state)
+
+    assert first_match is not None and sc_app.completion_matches == ['foo ']
+
+
+def test_cmd2_help_subcommand_completion_single_end(sc_app):
+    text = 'base'
+    line = 'help base'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Commands with subcommands have a space at the end when the cursor is at the end of the line
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['base ']
+
+def test_cmd2_help_subcommand_completion_single_mid(sc_app):
+    text = 'ba'
+    line = 'help base'
+    begidx = 5
+    endidx = 6
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['base']
+
+def test_cmd2_help_subcommand_completion_multiple(sc_app):
+    text = ''
+    line = 'help base '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo']
+
+def test_cmd2_help_subcommand_completion_nomatch(sc_app):
+    text = 'z'
+    line = 'help base z'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sc_app.complete_help(text, line, begidx, endidx) == []
