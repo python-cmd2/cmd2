@@ -182,11 +182,11 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict):
     """
     completions = []
 
-    # Get all tokens prior to the text being completed
+    # Get all tokens prior to text being completed
     try:
         tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
     except ValueError:
-        # Invalid syntax for shlex (Probably due to missing closing quotes)
+        # Invalid syntax for shlex (Probably due to missing closing quote)
         return completions
 
     # Must have at least the command and one argument
@@ -197,7 +197,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict):
 
             # Check if this flag does completions using an Iterable
             if isinstance(flag_dict[flag], collections.Iterable):
-                strs_to_match = (flag_dict[flag])
+                strs_to_match = flag_dict[flag]
                 completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
 
                 # If there is only 1 match and it's at the end of the line, then add a space
@@ -232,11 +232,11 @@ def index_based_complete(text, line, begidx, endidx, index_dict):
     """
     completions = []
 
-    # Get all tokens prior to the text being completed
+    # Get all tokens prior to text being completed
     try:
         tokens = shlex.split(line[:begidx], posix=POSIX_SHLEX)
     except ValueError:
-        # Invalid syntax for shlex (Probably due to missing closing quotes)
+        # Invalid syntax for shlex (Probably due to missing closing quote)
         return completions
 
     # Must have at least the command
@@ -247,7 +247,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict):
 
             # Check if this index does completions using an Iterable
             if isinstance(index_dict[index], collections.Iterable):
-                strs_to_match = (index_dict[index])
+                strs_to_match = index_dict[index]
                 completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
 
                 # If there is only 1 match and it's at the end of the line, then add a space
@@ -1259,25 +1259,23 @@ class Cmd(cmd.Cmd):
             # If begidx is greater than 0, then the cursor is past the command
             if begidx > 0:
 
-                # Expand command shortcuts
-                for (shortcut, expansion) in self.shortcuts:
-                    if line.startswith(shortcut):
-                        # If the next character after the shortcut isn't a space, then insert one
-                        shortcut_len = len(shortcut)
-                        if len(line) == shortcut_len or line[shortcut_len] != ' ':
-                            expansion += ' '
-
-                        # Expand the shortcut
-                        line = line.replace(shortcut, expansion, 1)
-
-                        # Calculate difference in length to adjust indexes
-                        diff = len(expansion) - len(shortcut)
-                        begidx += diff
-                        endidx += diff
-                        break
-
                 # Parse the command line
-                command, args, foo = self.parseline(line)
+                command, args, expanded_line = self.parseline(line)
+
+                # We overwrote line with a properly formatted but fully stripped version
+                # Restore the end spaces from the original since line is only supposed to be
+                # lstripped when passed to completer functions according to Python docs
+                rstripped_len = len(origline) - len(origline.rstrip())
+                expanded_line += ' ' * rstripped_len
+
+                # Fix the index values if expanded_line has a different size than line
+                if len(expanded_line) != len(line):
+                    diff = len(expanded_line) - len(line)
+                    begidx += diff
+                    endidx += diff
+
+                # Overwrite line to pass into completers
+                line = expanded_line
 
                 if command == '':
                     compfunc = self.completedefault
@@ -1303,10 +1301,34 @@ class Cmd(cmd.Cmd):
                             compfunc = getattr(self, 'complete_' + command)
                         except AttributeError:
                             compfunc = self.completedefault
-            else:
-                compfunc = self.completenames
 
-            self.completion_matches = compfunc(text, line, begidx, endidx)
+                # Call the completer function
+                self.completion_matches = compfunc(text, line, begidx, endidx)
+
+            else:
+                # Complete the command against command names and shortcuts. By design, shortcuts that start with
+                # symbols not in self.identchars won't be tab completed since they are handled in the above if
+                # statement. This includes shortcuts like: ?, !, @, @@
+                strs_to_match = []
+
+                # If a command has been started, then match against shortcuts. This keeps shortcuts out of the
+                # full list of commands that show up when tab completion is done on an empty line.
+                if len(line) > 0:
+                    for (shortcut, expansion) in self.shortcuts:
+                        strs_to_match.append(shortcut)
+
+                # Get command names
+                do_text = 'do_' + text
+                strs_to_match.extend([cur_name[3:] for cur_name in self.get_names() if cur_name.startswith(do_text)])
+
+                # Perform matching
+                completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
+
+                # If there is only 1 match and it's at the end of the line, then add a space
+                if len(completions) == 1 and endidx == len(line):
+                    completions[0] += ' '
+
+                self.completion_matches = completions
 
         try:
             return self.completion_matches[state]
@@ -1399,13 +1421,25 @@ class Cmd(cmd.Cmd):
         # Expand command shortcuts to the full command name
         for (shortcut, expansion) in self.shortcuts:
             if line.startswith(shortcut):
-                line = line.replace(shortcut, expansion + ' ', 1)
+                # If the next character after the shortcut isn't a space, then insert one
+                shortcut_len = len(shortcut)
+                if len(line) == shortcut_len or line[shortcut_len] != ' ':
+                    expansion += ' '
+
+                # Expand the shortcut
+                line = line.replace(shortcut, expansion, 1)
                 break
 
         i, n = 0, len(line)
         while i < n and line[i] in self.identchars:
             i += 1
         command, arg = line[:i], line[i:].strip()
+
+        # Make sure there is a space between the command and args
+        # This can occur when a character not in self.identchars bumps against the command (ex: help@)
+        if len(command) > 0 and len(arg) > 0 and line[len(command)] != ' ':
+            line = line.replace(command, command + ' ', 1)
+
         return command, arg, line
 
     def onecmd_plus_hooks(self, line):
@@ -2157,10 +2191,8 @@ Paths or arguments that contain spaces must be enclosed in quotes
         # Restore command line arguments to original state
         sys.argv = orig_args
 
-    @staticmethod
-    def complete_pyscript(text, line, begidx, endidx):
-        """Readline tab-completion method for completing pyscript command."""
-        return path_complete(text, line, begidx, endidx)
+    # Enable tab-completion for pyscript command
+    complete_pyscript = functools.partial(path_complete)
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:
@@ -2301,10 +2333,8 @@ The editor used is determined by the ``editor`` settable parameter.
         else:
             os.system('"{}"'.format(self.editor))
 
-    @staticmethod
-    def complete_edit(text, line, begidx, endidx):
-        """Readline tab-completion method for completing edit command."""
-        return path_complete(text, line, begidx, endidx)
+    # Enable tab-completion for edit command
+    complete_edit = functools.partial(path_complete)
 
     @property
     def _current_script_dir(self):
@@ -2392,10 +2422,8 @@ Script should contain one command per line, just like command would be typed in 
 
         self._script_dir.append(os.path.dirname(expanded_path))
 
-    @staticmethod
-    def complete_load(text, line, begidx, endidx):
-        """Readline tab-completion method for completing load command."""
-        return path_complete(text, line, begidx, endidx)
+    # Enable tab-completion for load command
+    complete_load = functools.partial(path_complete)
 
     @staticmethod
     def is_text_file(file_path):
