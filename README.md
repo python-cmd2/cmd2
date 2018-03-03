@@ -26,7 +26,7 @@ Main Features
 - Redirect command output to file with `>`, `>>`; input from file with `<`
 - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
 - `py` enters interactive Python console (opt-in `ipy` for IPython console)
-- Multi-line and case-insensitive commands
+- Multi-line commands
 - Special-character command shortcuts (beyond cmd's `@` and `!`)
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
@@ -93,10 +93,6 @@ Instructions for implementing each feature follow.
     Any command accepts multi-line input when its name is listed in `Cmd.multilineCommands`.
     The program will keep expecting input until a line ends with any of the characters
     in `Cmd.terminators` .  The default terminators are `;` and `/n` (empty newline).
-
-- Case-insensitive commands
-
-    All commands are case-insensitive, unless ``Cmd.caseInsensitive`` is set to ``False``.
 
 - Special-character shortcut commands (beyond cmd's "@" and "!")
 

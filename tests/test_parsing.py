@@ -20,41 +20,26 @@ def hist():
     h = cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
     return h
 
-# Case-insensitive parser
+# Case-sensitive parser
 @pytest.fixture
 def parser():
     c = cmd2.Cmd()
     c.multilineCommands = ['multiline']
-    c.case_insensitive = True
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
+                                          multilineCommands=c.multilineCommands, legalChars=c.legalChars,
+                                          commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
                                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
                                           preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager.main_parser
-
-# Case-insensitive ParserManager
-@pytest.fixture
-def ci_pm():
-    c = cmd2.Cmd()
-    c.multilineCommands = ['multiline']
-    c.case_insensitive = True
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
-                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
-    return c.parser_manager
 
 # Case-sensitive ParserManager
 @pytest.fixture
 def cs_pm():
     c = cmd2.Cmd()
     c.multilineCommands = ['multiline']
-    c.case_insensitive = False
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators, multilineCommands=c.multilineCommands,
-                                          legalChars=c.legalChars, commentGrammars=c.commentGrammars,
-                                          commentInProgress=c.commentInProgress, case_insensitive=c.case_insensitive,
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
+                                          multilineCommands=c.multilineCommands, legalChars=c.legalChars,
+                                          commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
                                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
                                           preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
     return c.parser_manager
@@ -167,7 +152,7 @@ def test_parse_suffix_after_terminator(parser):
     assert results.suffix == 'suffx'
 
 def test_parse_command_with_args(parser):
-    line = 'COMmand with args'
+    line = 'command with args'
     results = parser.parseString(line)
     assert results.command == 'command'
     assert results.args == 'with args'
@@ -218,11 +203,6 @@ def test_parse_output_redirect_with_dash_in_path(parser):
     assert results.output == '>'
     assert results.outputTo == 'python-cmd2/afile.txt'
 
-
-def test_case_insensitive_parsed_single_word(ci_pm):
-    line = 'HeLp'
-    statement = ci_pm.parsed(line)
-    assert statement.parsed.command == line.lower()
 
 def test_case_sensitive_parsed_single_word(cs_pm):
     line = 'HeLp'
