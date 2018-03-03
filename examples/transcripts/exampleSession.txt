@@ -3,7 +3,6 @@
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
-abbrev: False
 colors: /(True|False)/
 continuation_prompt: >/ /
 debug: False

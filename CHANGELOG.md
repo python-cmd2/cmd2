@@ -6,7 +6,7 @@
     * Fixed outdated help text for the **edit** command
     * Fixed outdated [remove_unused.py](https://github.com/python-cmd2/cmd2/blob/master/examples/remove_unused.py)
 * Enhancements
-    * Added support for sub-menus.  
+    * Added support for sub-menus.
         * See [submenus.py](https://github.com/python-cmd2/cmd2/blob/master/examples/submenus.py) for an example of how to use it
     * Added option for persistent readline history
         * See [persistent_history.py](https://github.com/python-cmd2/cmd2/blob/master/examples/persistent_history.py) for an example
@@ -14,7 +14,12 @@
     * Improved PyPI packaging by including unit tests, examples, and docs in the tarball
     * Improved documentation to make it more obvious that **poutput()** should be used instead of **print()**
     * ``exclude_from_help`` and ``excludeFromHistory`` are now instance instead of class attributes
-    
+    * Added flag and index based tab completion helper functions
+        * See [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py)
+* Attributes Removed
+    * ``abbrev`` - Removed support for abbreviated commands
+        * Good tab completion makes this unnecessary
+
 ## 0.8.0 (February 1, 2018)
 * Bug Fixes
     * Fixed unit tests on Python 3.7 due to changes in how re.escape() behaves in Python 3.7
@@ -28,7 +33,7 @@
         * **with_argparser_and_unknown_args** decorator for argparse-based argument parsing, but allows unknown args
             * **do_*** commands get two arguments, the output of argparse.parse_known_args()
     *  See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
-        * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py) 
+        * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
         and [arg_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) examples
     * Added support for Argpasre sub-commands when using the **with_argument_parser** or **with_argparser_and_unknown_args** decorators
         * See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use subcommands

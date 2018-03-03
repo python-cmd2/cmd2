@@ -326,12 +326,6 @@ def test_parse_multiline_ignores_terminators_in_comments(parser):
     assert results.terminator[0] == '\n'
     assert results.terminator[1] == '\n'
 
-def test_parse_abbreviated_multiline_not_allowed(parser):
-    line = 'multilin command\n'
-    results = parser.parseString(line)
-    assert results.command == 'multilin'
-    assert results.multilineCommand == ''
-
 # Unicode support is only present in cmd2 for Python 3
 @pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_command_with_unicode_args(parser):

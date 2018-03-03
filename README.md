@@ -26,7 +26,7 @@ Main Features
 - Redirect command output to file with `>`, `>>`; input from file with `<`
 - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
 - `py` enters interactive Python console (opt-in `ipy` for IPython console)
-- Multi-line, case-insensitive, and abbreviated commands
+- Multi-line and case-insensitive commands
 - Special-character command shortcuts (beyond cmd's `@` and `!`)
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
@@ -171,7 +171,6 @@ class CmdLineApp(Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        self.abbrev = True
         self.multilineCommands = ['orate']
         self.maxrepeats = 3
 
@@ -248,7 +247,6 @@ example/transcript_regex.txt:
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
-abbrev: True
 colors: /(True|False)/
 continuation_prompt: >/ /
 debug: False

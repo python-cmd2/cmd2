@@ -116,7 +116,6 @@ comments, is viewable from within a running application
 with::
 
     (Cmd) set --long
-    abbrev: False                  # Accept abbreviated commands
     colors: True                   # Colorized output (*nix only)
     continuation_prompt: >         # On 2nd+ line of input
     debug: False                   # Show full error stack on error
@@ -130,5 +129,5 @@ with::
 
 Any of these user-settable parameters can be set while running your app with the ``set`` command like so::
 
-    set abbrev True
+    set colors False
 

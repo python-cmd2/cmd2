@@ -53,8 +53,7 @@ expect_colors = True
 if sys.platform.startswith('win'):
     expect_colors = False
 # Output from the show command with default settings
-SHOW_TXT = """abbrev: False
-colors: {}
+SHOW_TXT = """colors: {}
 continuation_prompt: >
 debug: False
 echo: False
@@ -71,7 +70,6 @@ if expect_colors:
 else:
     color_str = 'False'
 SHOW_LONG = """
-abbrev: False             # Accept abbreviated commands
 colors: {}             # Colorized output (*nix only)
 continuation_prompt: >    # On 2nd+ line of input
 debug: False              # Show full error stack on error

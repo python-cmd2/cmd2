@@ -27,7 +27,6 @@ class CmdLineApp(Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        self.abbrev = True
         self.multilineCommands = ['orate']
         self.maxrepeats = 3
 

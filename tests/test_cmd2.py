@@ -470,12 +470,10 @@ def test_load_nested_loads(base_app, request):
     expected = """
 %s
 _relative_load precmds.txt
-set abbrev on
 set colors on
 help
 shortcuts
 _relative_load postcmds.txt
-set abbrev off
 set colors off""" % initial_load
     assert run_cmd(base_app, 'history -s') == normalize(expected)
 
@@ -494,12 +492,10 @@ def test_base_runcmds_plus_hooks(base_app, request):
                                  'load ' + postfilepath])
     expected = """
 load %s
-set abbrev on
 set colors on
 help
 shortcuts
 load %s
-set abbrev off
 set colors off""" % (prefilepath, postfilepath)
     assert run_cmd(base_app, 'history -s') == normalize(expected)
 
@@ -794,6 +790,30 @@ def test_base_py_interactive(base_app):
 
     # Make sure our mock was called once and only once
     m.assert_called_once()
+
+
+def test_exclude_from_history(base_app, monkeypatch):
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    # Run edit command
+    run_cmd(base_app, 'edit')
+
+    # Run history command
+    run_cmd(base_app, 'history')
+
+    # Verify that the history is empty
+    out = run_cmd(base_app, 'history')
+    assert out == []
+
+    # Now run a command which isn't excluded from the history
+    run_cmd(base_app, 'help')
+    # And verify we have a history now ...
+    out = run_cmd(base_app, 'history')
+    expected = normalize("""-------------------------[1]
+help""")
+    assert out == expected
 
 
 def test_base_cmdloop_with_queue():
@@ -1275,49 +1295,6 @@ def test_cmdresult(cmdresult_app):
     assert cmdresult_app._last_result == cmd2.CmdResult('', arg)
 
 
-@pytest.fixture
-def abbrev_app():
-    app = cmd2.Cmd()
-    app.abbrev = True
-    app.stdout = StdOut()
-    return app
-
-def test_exclude_from_history(abbrev_app, monkeypatch):
-    # Run all variants of run
-    run_cmd(abbrev_app, 'run')
-    run_cmd(abbrev_app, 'ru')
-    run_cmd(abbrev_app, 'r')
-
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
-
-    # Run all variants of edit
-    run_cmd(abbrev_app, 'edit')
-    run_cmd(abbrev_app, 'edi')
-    run_cmd(abbrev_app, 'ed')
-
-    # Run all variants of history
-    run_cmd(abbrev_app, 'history')
-    run_cmd(abbrev_app, 'histor')
-    run_cmd(abbrev_app, 'histo')
-    run_cmd(abbrev_app, 'hist')
-    run_cmd(abbrev_app, 'his')
-    run_cmd(abbrev_app, 'hi')
-
-    # Verify that the history is empty
-    out = run_cmd(abbrev_app, 'history')
-    assert out == []
-
-    # Now run a command which isn't excluded from the history
-    run_cmd(abbrev_app, 'help')
-    # And verify we have a history now ...
-    out = run_cmd(abbrev_app, 'history')
-    expected = normalize("""-------------------------[1]
-help""")
-    assert out == expected
-
-
 def test_is_text_file_bad_input(base_app):
     # Test with a non-existent file
     file_is_valid = base_app.is_text_file('does_not_exist.txt')
@@ -1421,7 +1398,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     app, out = piped_rawinput_true(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1] == 'abbrev: False'
+    assert out[1].startswith('colors:')
 
 # using the decorator puts the original function at six.moves.input
 # back when this method returns
@@ -1431,7 +1408,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
     firstline = out.splitlines()[0]
-    assert firstline == 'abbrev: False'
+    assert firstline.startswith('colors:')
     assert not '{}{}'.format(app.prompt, command) in out
 
 # the next helper function and two tests check for piped
@@ -1442,7 +1419,6 @@ def piped_rawinput_false(capsys, echo, command):
     app = cmd2.Cmd(stdin=fakein)
     app.use_rawinput = False
     app.echo = echo
-    app.abbrev = False
     app._cmdloop()
     out, err = capsys.readouterr()
     return (app, out)
@@ -1452,13 +1428,13 @@ def test_pseudo_raw_input_piped_rawinput_false_echo_true(capsys):
     app, out = piped_rawinput_false(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1] == 'abbrev: False'
+    assert out[1].startswith('colors:')
 
 def test_pseudo_raw_input_piped_rawinput_false_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_false(capsys, False, command)
     firstline = out.splitlines()[0]
-    assert firstline == 'abbrev: False'
+    assert firstline.startswith('colors:')
     assert not '{}{}'.format(app.prompt, command) in out
 
 #
