@@ -792,6 +792,30 @@ def test_base_py_interactive(base_app):
     m.assert_called_once()
 
 
+def test_exclude_from_history(base_app, monkeypatch):
+    # Mock out the os.system call so we don't actually open an editor
+    m = mock.MagicMock(name='system')
+    monkeypatch.setattr("os.system", m)
+
+    # Run edit command
+    run_cmd(base_app, 'edit')
+
+    # Run history command
+    run_cmd(base_app, 'history')
+
+    # Verify that the history is empty
+    out = run_cmd(base_app, 'history')
+    assert out == []
+
+    # Now run a command which isn't excluded from the history
+    run_cmd(base_app, 'help')
+    # And verify we have a history now ...
+    out = run_cmd(base_app, 'history')
+    expected = normalize("""-------------------------[1]
+help""")
+    assert out == expected
+
+
 def test_base_cmdloop_with_queue():
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = cmd2.Cmd()
