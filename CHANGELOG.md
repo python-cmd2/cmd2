@@ -1,4 +1,4 @@
-## 0.8.1 (TBD, 2018)
+## 0.8.1 (March TBD, 2018)
 
 * Bug Fixes
     * Fixed a bug if a non-existent **do_*** method was added to the ``exclude_from_help`` list
@@ -16,7 +16,7 @@
     * ``exclude_from_help`` and ``excludeFromHistory`` are now instance instead of class attributes
     * Added flag and index based tab completion helper functions
         * See [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py)
-* Attributes Removed
+* Attributes Removed (**can cause breaking changes**)
     * ``abbrev`` - Removed support for abbreviated commands
         * Good tab completion makes this unnecessary
 

@@ -65,6 +65,7 @@ The tables below list all prerequisites along with the minimum required version 
 ### Optional prerequisites for enhanced unit test features
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
+| [pytest-forked](https://pypi.python.org/pypi/pytest-forked)| `0.2` |
 | [pytest-xdist](https://pypi.python.org/pypi/pytest-xdist)| `1.15` |
 | [pytest-cov](https://pypi.python.org/pypi/pytest-cov) | `1.8` |
 
@@ -201,7 +202,7 @@ pip install -U pytest mock
 pip install -U sphinx sphinx-rtd-theme
 
 # Install optional prerequisites for running unit tests in parallel and doing code coverage analysis
-pip install -U pytest-xdist pytest-cov
+pip install -U pytest-xdist pytest-cov pytest-forked
 ```
 
 For doing cmd2 development, you actually do NOT want to have cmd2 installed as a Python package.  
@@ -268,6 +269,13 @@ dramatically speed up test execution by running tests in parallel on multiple co
 py.test -n4
 ```
 where `4` should be replaced by the number of parallel threads you wish to run for testing.
+
+If you have the `pytest-forked` pytest plugin (not avilable on Windows) for running tests in isolated formed processes, 
+you can speed things up even further:
+
+```shell
+py.test -nauto --forked
+```
 
 #### Measuring code coverage
 
@@ -390,11 +398,11 @@ how to do it.
 
 6.  Indicate what local testing you have done (e.g. what OS and version(s) of Python did you run the
     unit test suite with)
-    
+
 7.  Creating the PR causes our continuous integration (CI) systems to automatically run all of the
     unit tests on all supported OSes and all supported versions of Python.  You should watch your PR
     to make sure that all unit tests pass on Both TravisCI (Linux) and AppVeyor (Windows).  
-    
+
 8.  If any unit tests fail, you should look at the details and fix the failures.  You can then push
     the fix to the same branch in your fork and the PR will automatically get updated and the CI system
     will automatically run all of the unit tests again.
