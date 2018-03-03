@@ -2674,7 +2674,7 @@ class ParserManager:
             s = self.input_source_parser.transformString(s.lstrip())
             s = self.commentGrammars.transformString(s)
             for (shortcut, expansion) in self.shortcuts:
-                if s.lower().startswith(shortcut):
+                if s.startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
             try:
