@@ -354,7 +354,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
     # If there is a single completion
     if len(completions) == 1:
-        # If it is a file and we are at the end of the line, then add a space for convenience
+        # If it is a file and we are at the end of the line, then add a space
         if os.path.isfile(path_completions[0]) and endidx == len(line):
             completions[0] += ' '
         # If tilde was expanded without a separator, prepend one
@@ -2030,22 +2030,20 @@ class Cmd(cmd.Cmd):
         proc = subprocess.Popen(command, stdout=self.stdout, shell=True)
         proc.communicate()
 
-    # noinspection PyUnusedLocal
     @staticmethod
-    def _shell_command_complete(text, line, begidx, endidx):
-        """Method called to complete an input line by environment PATH executable completion.
+    def _get_exes_in_path(starts_with, at_eol):
+        """
+        Called by complete_shell to get names of executables in a user's path
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
+        :param starts_with: str - what the exes should start with
+        :param at_eol: bool - tells if the user's cursor is at the end of the command line
         :return: List[str] - a list of possible tab completions
         """
 
         # Purposely don't match any executable containing wildcards
         wildcards = ['*', '?']
         for wildcard in wildcards:
-            if wildcard in text:
+            if wildcard in starts_with:
                 return []
 
         # Get a list of every directory in the PATH environment variable and ignore symbolic links
@@ -2054,9 +2052,9 @@ class Cmd(cmd.Cmd):
         # Use a set to store exe names since there can be duplicates
         exes = set()
 
-        # Find every executable file in the PATH that matches the pattern
+        # Find every executable file in the user's path that matches the pattern
         for path in paths:
-            full_path = os.path.join(path, text)
+            full_path = os.path.join(path, starts_with)
             matches = [f for f in glob.glob(full_path + '*') if os.path.isfile(f) and os.access(f, os.X_OK)]
 
             for match in matches:
@@ -2067,13 +2065,13 @@ class Cmd(cmd.Cmd):
         results.sort()
 
         # If there is a single completion and we are at end of the line, then add a space at the end for convenience
-        if len(results) == 1 and endidx == len(line):
+        if len(results) == 1 and at_eol:
             results[0] += ' '
 
         return results
 
     def complete_shell(self, text, line, begidx, endidx):
-        """Handles tab completion of executable commands and local file system paths.
+        """Handles tab completion of executable commands and local file system paths for the shell command
 
         :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: str - the current input line with leading whitespace removed
@@ -2106,9 +2104,10 @@ class Cmd(cmd.Cmd):
             if len(cmd_token) == 0:
                 return []
 
+            # Look for path characters in the token
             if not (cmd_token.startswith('~') or os.path.sep in cmd_token):
                 # No path characters are in this token, it is OK to try shell command completion.
-                command_completions = self._shell_command_complete(text, line, begidx, endidx)
+                command_completions = self._get_exes_in_path(text, endidx == len(line))
 
                 if command_completions:
                     return command_completions
@@ -2116,9 +2115,8 @@ class Cmd(cmd.Cmd):
             # If we have no results, try path completion to find the shell commands
             return path_complete(text, line, begidx, endidx, dir_exe_only=True)
 
-        # Shell command has been completed
+        # We are past the shell command, so do path completion
         else:
-            # Do path completion
             return path_complete(text, line, begidx, endidx)
 
     # noinspection PyBroadException
