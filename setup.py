@@ -77,7 +77,7 @@ if sys.version_info < (3, 0):
     INSTALL_REQUIRES += ['subprocess32']
 
 # unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
-TESTS_REQUIRE = ['mock', 'pytest', 'pexpect']
+TESTS_REQUIRE = ['mock', 'pytest', 'pytest-xdist', 'pytest-forked']
 DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'six']
 
 setup(
