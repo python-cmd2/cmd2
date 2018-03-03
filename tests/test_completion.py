@@ -379,6 +379,25 @@ def test_path_completion_directories_only(request):
 
     assert path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
 
+def test_path_completion_syntax_err(request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'shell cat " {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert path_complete(text, line, begidx, endidx) == []
+
+def test_path_completion_no_tokens():
+    text = ''
+    line = 'shell'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert path_complete(text, line, begidx, endidx) == []
+
 
 # List of strings used with flag and index based completion functions
 food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
@@ -456,6 +475,15 @@ def test_flag_based_completion_syntax_err():
     begidx = endidx - len(text)
 
     assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+
+def test_flag_based_completion_no_tokens():
+    text = ''
+    line = 'list_food'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+
 
 # Dictionary used with index based completion functions
 index_dict = \
