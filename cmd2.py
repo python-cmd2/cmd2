@@ -189,7 +189,6 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
         # Invalid syntax for shlex (Probably due to missing closing quote)
         return []
 
-    # Empty command line
     if len(tokens) == 0:
         return []
 
@@ -308,7 +307,6 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         # Invalid syntax for shlex (Probably due to missing closing quote)
         return []
 
-    # Empty command line
     if len(tokens) == 0:
         return []
 
@@ -2101,7 +2099,6 @@ class Cmd(cmd.Cmd):
             # Invalid syntax for shlex (Probably due to missing closing quote)
             return []
 
-        # Empty command line
         if len(tokens) == 0:
             return []
 
