@@ -4,6 +4,5 @@ include CHANGELOG.md
 include CODEOWNERS
 include CONTRIBUTING.md
 include tox.ini
-recursive-include docs *
 recursive-include examples *
 recursive-include tests *

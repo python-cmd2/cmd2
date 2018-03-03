@@ -21,6 +21,10 @@ def mkdirs(path):
 def clean():
     local("python setup.py clean")
     local("find . -name '*.pyc' -delete")
+    local("rm -rf cmd2.egg-info")
+    local("rm -rf dist")
+    local("rm -rf htmlcov")
+    local("rm -rf docs/_build")
 
 
 @task
