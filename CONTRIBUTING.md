@@ -270,8 +270,8 @@ py.test -n4
 ```
 where `4` should be replaced by the number of parallel threads you wish to run for testing.
 
-If you have the `pytest-forked` pytest plugin for running tests in isolated formed processes, you
-can speed things up even further:
+If you have the `pytest-forked` pytest plugin (not avilable on Windows) for running tests in isolated formed processes, 
+you can speed things up even further:
 
 ```shell
 py.test -nauto --forked
