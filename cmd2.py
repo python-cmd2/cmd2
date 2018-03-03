@@ -5,14 +5,12 @@
 To use, simply import cmd2.Cmd instead of cmd.Cmd; use precisely as though you
 were using the standard library's cmd, while enjoying the extra features.
 
-Searchable command history (commands: "history", "list", "run")
+Searchable command history (commands: "history")
 Load commands from file, save to file, edit commands in file
 Multi-line commands
-Case-insensitive commands
 Special-character shortcut commands (beyond cmd's "@" and "!")
 Settable environment parameters
-Optional _onchange_{paramname} called when environment parameter changes
-Parsing commands with `optparse` options (flags)
+Parsing commands with `argparse` argument parsers (flags)
 Redirection to file with >, >>; input from file with <
 Easy transcript-based testing of applications (see examples/example.py)
 Bash-style ``select`` available
@@ -991,7 +989,6 @@ class Cmd(cmd.Cmd):
     """
     # Attributes used to configure the ParserManager (all are not dynamically settable at runtime)
     blankLinesAllowed = False
-    case_insensitive = True  # Commands recognized regardless of case
     commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
     commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
     legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
@@ -1086,7 +1083,6 @@ class Cmd(cmd.Cmd):
                                             multilineCommands=self.multilineCommands,
                                             legalChars=self.legalChars, commentGrammars=self.commentGrammars,
                                             commentInProgress=self.commentInProgress,
-                                            case_insensitive=self.case_insensitive,
                                             blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
                                             preparse=self.preparse, postparse=self.postparse, shortcuts=self.shortcuts)
         self._transcript_files = transcript_files
@@ -1216,12 +1212,8 @@ class Cmd(cmd.Cmd):
     # noinspection PyMethodOverriding
     def completenames(self, text, line, begidx, endidx):
         """Override of cmd method which completes command names both for command completion and help."""
-        command = text
-        if self.case_insensitive:
-            command = text.lower()
-
         # Call super class method.  Need to do it this way for Python 2 and 3 compatibility
-        cmd_completion = cmd.Cmd.completenames(self, command)
+        cmd_completion = cmd.Cmd.completenames(self, text)
 
         # If we are completing the initial command name and get exactly 1 result and are at end of line, add a space
         if begidx == 0 and len(cmd_completion) == 1 and endidx == len(line):
@@ -1954,7 +1946,6 @@ class Cmd(cmd.Cmd):
         :return: str - summary report of read-only settings which the user cannot modify at runtime
         """
         read_only_settings = """
-        Commands are case-sensitive: {}
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
@@ -1962,7 +1953,7 @@ class Cmd(cmd.Cmd):
             Shell lexer mode for command argument splitting: {}
             Strip Quotes after splitting arguments: {}
             Argument type: {}
-        """.format(not self.case_insensitive, str(self.terminators), self.allow_cli_args, self.allow_redirection,
+        """.format(str(self.terminators), self.allow_cli_args, self.allow_redirection,
                    "POSIX" if POSIX_SHLEX else "non-POSIX",
                    "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False",
                    "List of argument strings" if USE_ARG_LIST else "string of space-separated arguments")
@@ -2575,7 +2566,7 @@ class ParserManager:
     Class which encapsulates all of the pyparsing parser functionality for cmd2 in a single location.
     """
     def __init__(self, redirector, terminators, multilineCommands, legalChars, commentGrammars, commentInProgress,
-                 case_insensitive, blankLinesAllowed, prefixParser, preparse, postparse, shortcuts):
+                 blankLinesAllowed, prefixParser, preparse, postparse, shortcuts):
         """Creates and uses parsers for user input according to app's parameters."""
 
         self.commentGrammars = commentGrammars
@@ -2586,13 +2577,12 @@ class ParserManager:
         self.main_parser = self._build_main_parser(redirector=redirector, terminators=terminators,
                                                    multilineCommands=multilineCommands, legalChars=legalChars,
                                                    commentInProgress=commentInProgress,
-                                                   case_insensitive=case_insensitive,
                                                    blankLinesAllowed=blankLinesAllowed, prefixParser=prefixParser)
         self.input_source_parser = self._build_input_source_parser(legalChars=legalChars,
                                                                    commentInProgress=commentInProgress)
 
-    def _build_main_parser(self, redirector, terminators, multilineCommands, legalChars,
-                           commentInProgress, case_insensitive, blankLinesAllowed, prefixParser):
+    def _build_main_parser(self, redirector, terminators, multilineCommands, legalChars, commentInProgress,
+                           blankLinesAllowed, prefixParser):
         """Builds a PyParsing parser for interpreting user commands."""
 
         # Build several parsing components that are eventually compiled into overall parser
@@ -2604,7 +2594,7 @@ class ParserManager:
             [(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in terminators])('terminator')
         string_end = pyparsing.stringEnd ^ '\nEOF'
         multilineCommand = pyparsing.Or(
-            [pyparsing.Keyword(c, caseless=case_insensitive) for c in multilineCommands])('multilineCommand')
+            [pyparsing.Keyword(c, caseless=False) for c in multilineCommands])('multilineCommand')
         oneline_command = (~multilineCommand + pyparsing.Word(legalChars))('command')
         pipe = pyparsing.Keyword('|', identChars='|')
         do_not_parse = self.commentGrammars | commentInProgress | pyparsing.quotedString
@@ -2614,12 +2604,9 @@ class ParserManager:
             pyparsing.Optional(output_destination_parser +
                                pyparsing.SkipTo(string_end,
                                                 ignore=do_not_parse).setParseAction(lambda x: x[0].strip())('outputTo'))
-        if case_insensitive:
-            multilineCommand.setParseAction(lambda x: x[0].lower())
-            oneline_command.setParseAction(lambda x: x[0].lower())
-        else:
-            multilineCommand.setParseAction(lambda x: x[0])
-            oneline_command.setParseAction(lambda x: x[0])
+
+        multilineCommand.setParseAction(lambda x: x[0])
+        oneline_command.setParseAction(lambda x: x[0])
 
         if blankLinesAllowed:
             blankLineTerminationParser = pyparsing.NoMatch
@@ -2687,7 +2674,7 @@ class ParserManager:
             s = self.input_source_parser.transformString(s.lstrip())
             s = self.commentGrammars.transformString(s)
             for (shortcut, expansion) in self.shortcuts:
-                if s.lower().startswith(shortcut):
+                if s.startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
                     break
             try:

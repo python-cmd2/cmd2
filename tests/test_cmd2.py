@@ -88,7 +88,6 @@ def test_base_show_readonly(base_app):
     base_app.editor = 'vim'
     out = run_cmd(base_app, 'set -a')
     expected = normalize(SHOW_TXT + '\nRead only settings:' + """
-        Commands are case-sensitive: {}
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
@@ -97,7 +96,7 @@ def test_base_show_readonly(base_app):
             Strip Quotes after splitting arguments: {}
             Argument type: {}
             
-""".format(not base_app.case_insensitive, base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
+""".format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
            "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
            "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
            "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))

@@ -18,7 +18,9 @@
         * See [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py)
 * Attributes Removed (**can cause breaking changes**)
     * ``abbrev`` - Removed support for abbreviated commands
-        * Good tab completion makes this unnecessary
+        * Good tab completion makes this unnecessary and its presence could cause harmful unintended actions
+    * ``case_insensitive`` - Removed support for case-insensitive command parsing
+        * Its presence wasn't very helpful and could cause harmful unintended actions
 
 ## 0.8.0 (February 1, 2018)
 * Bug Fixes

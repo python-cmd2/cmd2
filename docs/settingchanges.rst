@@ -8,16 +8,6 @@ A parameter can also be changed at runtime by the user *if*
 its name is included in the dictionary ``app.settable``.
 (To define your own user-settable parameters, see :ref:`parameters`)
 
-Case-insensitivity
-==================
-
-By default, all ``cmd2`` command names are case-insensitive;
-``sing the blues`` and ``SiNg the blues`` are equivalent.  To change this,
-set ``App.case_insensitive`` to False.
-
-Whether or not you set ``case_insensitive``, *please do not* define
-command method names with any uppercase letters.  ``cmd2`` expects all command methods
-to be lowercase.
 
 Shortcuts (command aliases)
 ===========================
