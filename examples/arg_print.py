@@ -34,12 +34,12 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
 
     def do_aprint(self, arg):
         """Print the argument string this basic command is called with."""
-        print('aprint was called with argument: {!r}'.format(arg))
+        self.poutput('aprint was called with argument: {!r}'.format(arg))
 
     @with_argument_list
     def do_lprint(self, arglist):
         """Print the argument list this basic command is called with."""
-        print('lprint was called with the following list of arguments: {!r}'.format(arglist))
+        self.poutput('lprint was called with the following list of arguments: {!r}'.format(arglist))
 
     oprint_parser = argparse.ArgumentParser()
     oprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
@@ -50,7 +50,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     @with_argparser(oprint_parser)
     def do_oprint(self, args):
         """Print the options and argument list this options command was called with."""
-        print('oprint was called with the following\n\toptions: {!r}'.format(args))
+        self.poutput('oprint was called with the following\n\toptions: {!r}'.format(args))
 
     pprint_parser = argparse.ArgumentParser()
     pprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
@@ -59,7 +59,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     @with_argparser_and_unknown_args(pprint_parser)
     def do_pprint(self, args, unknown):
         """Print the options and argument list this options command was called with."""
-        print('oprint was called with the following\n\toptions: {!r}\n\targuments: {}'.format(args, unknown))
+        self.poutput('oprint was called with the following\n\toptions: {!r}\n\targuments: {}'.format(args, unknown))
 
 
 
