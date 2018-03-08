@@ -1160,7 +1160,7 @@ class Cmd(cmd.Cmd):
         # Make sure settable parameters are sorted alphabetically by key
         self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
-    def poutput(self, msg, end=os.linesep):
+    def poutput(self, msg, end='\n'):
         """Convenient shortcut for self.stdout.write(); by default adds newline to end if not already present.
 
         Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
@@ -1213,7 +1213,7 @@ class Cmd(cmd.Cmd):
             else:
                 sys.stderr.write("{}\n".format(msg))
 
-    def ppaged(self, msg, end=os.linesep):
+    def ppaged(self, msg, end='\n'):
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped.
