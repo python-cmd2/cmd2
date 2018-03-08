@@ -16,6 +16,8 @@
     * ``exclude_from_help`` and ``excludeFromHistory`` are now instance instead of class attributes
     * Added flag and index based tab completion helper functions
         * See [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py)
+    * Added support for displaying output which won't fit on the screen via a pager using ``ppaged()``
+        * See [paged_output.py](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py)
 * Attributes Removed (**can cause breaking changes**)
     * ``abbrev`` - Removed support for abbreviated commands
         * Good tab completion makes this unnecessary and its presence could cause harmful unintended actions

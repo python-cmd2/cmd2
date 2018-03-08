@@ -147,21 +147,23 @@ There are a couple functions which can globally effect how arguments are parsed 
 .. _argparse: https://docs.python.org/3/library/argparse.html
 
 
-poutput, pfeedback, perror
-==========================
+poutput, pfeedback, perror, ppaged
+==================================
 
 Standard ``cmd`` applications produce their output with ``self.stdout.write('output')`` (or with ``print``,
 but ``print`` decreases output flexibility).  ``cmd2`` applications can use
-``self.poutput('output')``, ``self.pfeedback('message')``, and ``self.perror('errmsg')``
+``self.poutput('output')``, ``self.pfeedback('message')``, ``self.perror('errmsg')``, and ``self.ppaged('text')``
 instead.  These methods have these advantages:
 
 - Handle output redirection to file and/or pipe appropriately
 - More concise
     - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
+- Option to display long output using a pager via ``ppaged()``
 
 .. automethod:: cmd2.Cmd.poutput
 .. automethod:: cmd2.Cmd.perror
 .. automethod:: cmd2.Cmd.pfeedback
+.. automethod:: cmd2.Cmd.ppaged
 
 
 color

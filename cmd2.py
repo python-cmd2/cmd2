@@ -1229,14 +1229,15 @@ class Cmd(cmd.Cmd):
 
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 if not self.redirecting and not self._in_py and not self._script_dir:
-                    # Here is the meaning of the various flags we are using with the less command:
-                    # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
-                    # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
-                    # -X disables sending the termcap initialization and deinitialization strings to the terminal
-                    # -F causes less to automatically exit if the entire file can be displayed on the first screen
-                    pager_cmd = 'less -SRXF'
                     if sys.platform.startswith('win'):
                         pager_cmd = 'more'
+                    else:
+                        # Here is the meaning of the various flags we are using with the less command:
+                        # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
+                        # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
+                        # -X disables sending the termcap initialization and deinitialization strings to the terminal
+                        # -F causes less to automatically exit if the entire file can be displayed on the first screen
+                        pager_cmd = 'less -SRXF'
                     self.pipe_proc = subprocess.Popen(pager_cmd, shell=True, stdin=subprocess.PIPE)
                     try:
                         self.pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
