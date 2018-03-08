@@ -1133,6 +1133,9 @@ class Cmd(cmd.Cmd):
         # Used by complete() for readline tab completion
         self.completion_matches = []
 
+        # Used to keep track of whether we are redirecting or piping output
+        self.redirecting = False
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -1154,7 +1157,7 @@ class Cmd(cmd.Cmd):
         # Make sure settable parameters are sorted alphabetically by key
         self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
-    def poutput(self, msg, end='\n'):
+    def poutput(self, msg, end=os.linesep):
         """Convenient shortcut for self.stdout.write(); by default adds newline to end if not already present.
 
         Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
@@ -1206,6 +1209,55 @@ class Cmd(cmd.Cmd):
                 self.poutput(msg)
             else:
                 sys.stderr.write("{}\n".format(msg))
+
+    def ppaged(self, msg, end=os.linesep):
+        """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
+
+        Never uses a pager inside of a script (Python or text) or when output is being redirected or piped.
+
+        :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param end: str - string appended after the end of the message if not already present, default a newline
+        """
+        if msg is not None and msg != '':
+            try:
+                msg_str = '{}'.format(msg)
+                if not msg_str.endswith(end):
+                    msg_str += end
+
+                # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
+                if not self.redirecting and not self._in_py and not self._script_dir:
+                    # Here is the meaning of the various flags we are using with the less command:
+                    # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
+                    # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
+                    # -X disables sending the termcap initialization and deinitialization strings to the terminal
+                    # -F causes less to automatically exit if the entire file can be displayed on the first screen
+                    pager_cmd = 'less -SRXF'
+                    if sys.platform.startswith('win'):
+                        pager_cmd = 'more'
+                    self.pipe_proc = subprocess.Popen(pager_cmd, shell=True, stdin=subprocess.PIPE)
+                    try:
+                        self.pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
+                        self.pipe_proc.stdin.close()
+                    except (IOError, KeyboardInterrupt):
+                        pass
+
+                    # Less doesn't respect ^C, but catches it for its own UI purposes (aborting search etc. inside less)
+                    while True:
+                        try:
+                            self.pipe_proc.wait()
+                        except KeyboardInterrupt:
+                            pass
+                        else:
+                            break
+                    self.pipe_proc = None
+                else:
+                    self.stdout.write(msg_str)
+            except BROKEN_PIPE_ERROR:
+                # This occurs if a command's output is being piped to another process and that process closes before the
+                # command is finished.  We intentionally don't print a warning message here since we know that stdout
+                # will be restored by the _restore_output() method.  If you would like your application to print a
+                # warning message, then override this method.
+                pass
 
     def colorize(self, val, color):
         """Given a string (``val``), returns that string wrapped in UNIX-style
@@ -1599,6 +1651,7 @@ class Cmd(cmd.Cmd):
             # Open each side of the pipe and set stdout accordingly
             # noinspection PyTypeChecker
             self.stdout = io.open(write_fd, write_mode)
+            self.redirecting = True
             # noinspection PyTypeChecker
             subproc_stdin = io.open(read_fd, read_mode)
 
@@ -1612,6 +1665,7 @@ class Cmd(cmd.Cmd):
                 self.pipe_proc = None
                 self.kept_state.restore()
                 self.kept_state = None
+                self.redirecting = False
 
                 # Re-raise the exception
                 raise ex
@@ -1620,6 +1674,7 @@ class Cmd(cmd.Cmd):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
+            self.redirecting = True
             if statement.parsed.outputTo:
                 mode = 'w'
                 if statement.parsed.output == 2 * self.redirector:
@@ -1661,6 +1716,8 @@ class Cmd(cmd.Cmd):
         if self.kept_sys is not None:
             self.kept_sys.restore()
             self.kept_sys = None
+
+        self.redirecting = False
 
     def _func_named(self, arg):
         """Gets the method name associated with a given command.
