@@ -1136,6 +1136,9 @@ class Cmd(cmd.Cmd):
         # Used to keep track of whether we are redirecting or piping output
         self.redirecting = False
 
+        # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
+        self.broken_pipe_warning = ''
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -1174,10 +1177,10 @@ class Cmd(cmd.Cmd):
                     self.stdout.write(end)
             except BROKEN_PIPE_ERROR:
                 # This occurs if a command's output is being piped to another process and that process closes before the
-                # command is finished.  We intentionally don't print a warning message here since we know that stdout
-                # will be restored by the _restore_output() method.  If you would like your application to print a
-                # warning message, then override this method.
-                pass
+                # command is finished. If you would like your application to print a warning message, then set the
+                # broken_pipe_warning attribute to the message you want printed.
+                if self.broken_pipe_warning:
+                    sys.stderr.write(self.broken_pipe_warning)
 
     def perror(self, errmsg, exception_type=None, traceback_war=True):
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
@@ -1254,10 +1257,10 @@ class Cmd(cmd.Cmd):
                     self.stdout.write(msg_str)
             except BROKEN_PIPE_ERROR:
                 # This occurs if a command's output is being piped to another process and that process closes before the
-                # command is finished.  We intentionally don't print a warning message here since we know that stdout
-                # will be restored by the _restore_output() method.  If you would like your application to print a
-                # warning message, then override this method.
-                pass
+                # command is finished. If you would like your application to print a warning message, then set the
+                # broken_pipe_warning attribute to the message you want printed.
+                if self.broken_pipe_warning:
+                    sys.stderr.write(self.broken_pipe_warning)
 
     def colorize(self, val, color):
         """Given a string (``val``), returns that string wrapped in UNIX-style
