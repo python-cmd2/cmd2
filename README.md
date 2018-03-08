@@ -26,6 +26,7 @@ Main Features
 - Redirect command output to file with `>`, `>>`; input from file with `<`
 - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
 - `py` enters interactive Python console (opt-in `ipy` for IPython console)
+- Option to display long output using a pager with ``cmd2.Cmd.ppaged()``
 - Multi-line commands
 - Special-character command shortcuts (beyond cmd's `@` and `!`)
 - Settable environment parameters
