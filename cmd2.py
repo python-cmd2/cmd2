@@ -254,34 +254,34 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
         # Invalid syntax for shlex (Probably due to missing closing quote)
         return []
 
+    if len(tokens) == 0:
+        return []
+
     completions = []
 
-    # Must have at least the command
-    if len(tokens) > 0:
+    # Get the index of the token being completed
+    index = len(tokens)
 
-        # Get the index of the token being completed
-        index = len(tokens)
+    # Check if the index is in the dictionary
+    if index in index_dict:
 
-        # Check if the index is in the dictionary
-        if index in index_dict:
+        # Check if this index does completions using an Iterable
+        if isinstance(index_dict[index], collections.Iterable):
+            strs_to_match = index_dict[index]
+            completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
 
-            # Check if this index does completions using an Iterable
-            if isinstance(index_dict[index], collections.Iterable):
-                strs_to_match = index_dict[index]
-                completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
+            # If there is only 1 match and it's at the end of the line, then add a space
+            if len(completions) == 1 and endidx == len(line):
+                completions[0] += ' '
 
-                # If there is only 1 match and it's at the end of the line, then add a space
-                if len(completions) == 1 and endidx == len(line):
-                    completions[0] += ' '
+        # Otherwise check if this index does completions with a function
+        elif callable(index_dict[index]):
+            completer_func = index_dict[index]
+            completions = completer_func(text, line, begidx, endidx)
 
-            # Otherwise check if this index does completions with a function
-            elif callable(index_dict[index]):
-                completer_func = index_dict[index]
-                completions = completer_func(text, line, begidx, endidx)
-
-        # Otherwise check if there is a default completer
-        elif default_completer is not None:
-            completions = default_completer(text, line, begidx, endidx)
+    # Otherwise check if there is a default completer
+    elif default_completer is not None:
+        completions = default_completer(text, line, begidx, endidx)
 
     completions.sort()
     return completions
@@ -1350,6 +1350,7 @@ class Cmd(cmd.Cmd):
                 # Overwrite line to pass into completers
                 line = expanded_line
 
+                got_matches = False
                 if command == '':
                     compfunc = self.completedefault
                 else:
@@ -1361,16 +1362,22 @@ class Cmd(cmd.Cmd):
                         compfunc = self.completedefault
 
                     # If there are subcommands, then try completing those if the cursor is in
-                    # the correct position, otherwise default to using compfunc
+                    # index 1 of the command tokens
                     subcommands = self.get_subcommands(command)
                     if subcommands is not None:
                         index_dict = {1: subcommands}
-                        compfunc = functools.partial(index_based_complete,
-                                                     index_dict=index_dict,
-                                                     default_completer=compfunc)
+                        tmp_matches = index_based_complete(text, line, begidx, endidx, index_dict)
 
-                # Call the completer function
-                self.completion_matches = compfunc(text, line, begidx, endidx)
+                        # If we got sumcommand matches, then save them. Otherwise the cursor isn't in index 1
+                        # or there is something else there like a flag. The command specific complete function
+                        # will handle those cases.
+                        if len(tmp_matches) > 0:
+                            got_matches = True
+                            self.completion_matches = tmp_matches
+
+                # Call the command specific completer function
+                if not got_matches:
+                    self.completion_matches = compfunc(text, line, begidx, endidx)
 
             else:
                 # Complete the command against command names and shortcuts. By design, shortcuts that start with
