@@ -193,7 +193,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
         return []
 
     completions = []
-    flag_processed = False
+    flag_present = False
 
     # Must have at least the command and one argument for a flag to be present
     if len(tokens) > 1:
@@ -204,9 +204,10 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
         # Check if the flag is in the dictionary
         if flag in flag_dict:
 
+            flag_present = True
+
             # Check if this flag does completions using an Iterable
             if isinstance(flag_dict[flag], collections.Iterable):
-                flag_processed = True
                 strs_to_match = flag_dict[flag]
                 completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
 
@@ -216,12 +217,11 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
 
             # Otherwise check if this flag does completions with a function
             elif callable(flag_dict[flag]):
-                flag_processed = True
                 completer_func = flag_dict[flag]
                 completions = completer_func(text, line, begidx, endidx)
 
     # Check if we need to run the default completer
-    if default_completer is not None and not flag_processed:
+    if default_completer is not None and not flag_present:
         completions = default_completer(text, line, begidx, endidx)
 
     completions.sort()
