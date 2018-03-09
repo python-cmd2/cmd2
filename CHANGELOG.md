@@ -1,4 +1,4 @@
-## 0.8.1 (March TBD, 2018)
+## 0.8.1 (March 9, 2018)
 
 * Bug Fixes
     * Fixed a bug if a non-existent **do_*** method was added to the ``exclude_from_help`` list
