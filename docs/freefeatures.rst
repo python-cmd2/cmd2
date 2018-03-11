@@ -326,8 +326,8 @@ command, then add a line of code similar to the following to your class which in
 This will effectively define the ``complete_foo`` readline completer method in your class and make it utilize the same
 path completion logic as the built-in commands.
 
-The build-in logic allows for a few more advanced path completion capabilities, such as cases where you only want to
-match directories.  Suppose you have a custom command ``bar`` implemented by the ``do_bar`` method.  YOu can enable
+The built-in logic allows for a few more advanced path completion capabilities, such as cases where you only want to
+match directories.  Suppose you have a custom command ``bar`` implemented by the ``do_bar`` method.  You can enable
 path completion of directories only for this command by adding a line of code similar to the following to your class
 which inherits from ``cmd2.Cmd``::
 
