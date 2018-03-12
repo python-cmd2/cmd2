@@ -790,7 +790,9 @@ def _complete_from_cmd(cmd_obj, text, line, begidx, endidx):
     command_subcommand_params = line.split(None, 3)
 
     if len(command_subcommand_params) < (3 if text else 2):
-        return cmd_obj.completenames(text)
+        n = len(command_subcommand_params[0])
+        n += sum(1 for _ in takewhile(str.isspace, line[n:]))
+        return cmd_obj.completenames(text, line[n:], begidx - n, endidx - n)
 
     command, subcommand = command_subcommand_params[:2]
     n = len(command) + sum(1 for _ in takewhile(str.isspace, line))
