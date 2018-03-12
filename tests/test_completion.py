@@ -756,9 +756,81 @@ def test_cmd2_subcommand_completion_after_subcommand(sc_app):
 
     assert first_match is None
 
-def test_complete_subcommand_single_end(sc_app):
+
+def test_cmd2_help_subcommand_completion_single_end(sc_app):
+    text = 'base'
+    line = 'help base'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Commands with subcommands have a space at the end when the cursor is at the end of the line
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['base ']
+
+
+def test_cmd2_help_subcommand_completion_single_mid(sc_app):
+    text = 'ba'
+    line = 'help base'
+    begidx = 5
+    endidx = 6
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['base']
+
+
+def test_cmd2_help_subcommand_completion_multiple(sc_app):
+    text = ''
+    line = 'help base '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo']
+
+
+def test_cmd2_help_subcommand_completion_nomatch(sc_app):
+    text = 'z'
+    line = 'help base z'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sc_app.complete_help(text, line, begidx, endidx) == []
+
+
+class SecondLevel(cmd2.Cmd):
+    """To be used as a second level command class. """
+
+    def __init__(self, *args, **kwargs):
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+        self.prompt = '2ndLevel '
+
+    def do_foo(self, line):
+        self.poutput("You called a command in SecondLevel with '%s'. " % line)
+
+    def help_foo(self):
+        self.poutput("This is a second level menu. Options are qwe, asd, zxc")
+
+    def complete_foo(self, text, line, begidx, endidx):
+        return [s for s in ['qwe', 'asd', 'zxc'] if s.startswith(text)]
+
+
+second_level_cmd = SecondLevel()
+
+
+@cmd2.AddSubmenu(second_level_cmd,
+                 command='second',
+                 require_predefined_shares=False)
+class SubmenuApp(cmd2.Cmd):
+    """To be used as the main / top level command class that will contain other submenus."""
+
+    def __init__(self, *args, **kwargs):
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+        self.prompt = 'TopLevel '
+
+
+@pytest.fixture
+def sb_app():
+    app = SubmenuApp()
+    return app
+
+
+def test_cmd2_submenu_completion_single_end(sb_app):
     text = 'f'
-    line = 'base f'
+    line = 'second f'
     endidx = len(line)
     begidx = endidx - len(text)
     state = 0
@@ -776,37 +848,209 @@ def test_complete_subcommand_single_end(sc_app):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 # Run the readline tab-completion function with readline mocks in place
-                first_match = sc_app.complete(text, state)
+                first_match = sb_app.complete(text, state)
 
-    assert first_match is not None and sc_app.completion_matches == ['foo ']
+    # It is at end of line, so extra space is present
+    assert first_match is not None and sb_app.completion_matches == ['foo ']
 
 
-def test_cmd2_help_subcommand_completion_single_end(sc_app):
-    text = 'base'
-    line = 'help base'
-    endidx = len(line)
+def test_cmd2_submenu_completion_single_mid(sb_app):
+    text = 'f'
+    line = 'second fo'
+    endidx = len(line) - 1
     begidx = endidx - len(text)
+    state = 0
 
-    # Commands with subcommands have a space at the end when the cursor is at the end of the line
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['base ']
+    def get_line():
+        return line
 
-def test_cmd2_help_subcommand_completion_single_mid(sc_app):
-    text = 'ba'
-    line = 'help base'
-    begidx = 5
-    endidx = 6
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['base']
+    def get_begidx():
+        return begidx
 
-def test_cmd2_help_subcommand_completion_multiple(sc_app):
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sb_app.complete(text, state)
+
+    assert first_match is not None and sb_app.completion_matches == ['foo']
+
+
+def test_cmd2_submenu_completion_multiple(sb_app):
     text = ''
-    line = 'help base '
+    line = 'second '
     endidx = len(line)
     begidx = endidx - len(text)
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo']
+    state = 0
 
-def test_cmd2_help_subcommand_completion_nomatch(sc_app):
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sb_app.complete(text, state)
+
+    assert first_match is not None and sb_app.completion_matches == [
+        '_relative_load',
+        'edit',
+        'eof',
+        'eos',
+        'foo',
+        'help',
+        'history',
+        'load',
+        'py',
+        'pyscript',
+        'quit',
+        'set',
+        'shell',
+        'shortcuts'
+    ]
+
+
+def test_cmd2_submenu_completion_nomatch(sb_app):
     text = 'z'
-    line = 'help base z'
+    line = 'second z'
     endidx = len(line)
     begidx = endidx - len(text)
-    assert sc_app.complete_help(text, line, begidx, endidx) == []
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sb_app.complete(text, state)
+
+    assert first_match is None
+
+
+def test_cmd2_submenu_completion_after_submenu_match(sb_app):
+    text = 'a'
+    line = 'second foo a'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sb_app.complete(text, state)
+
+    assert first_match is not None and sb_app.completion_matches == ['asd']
+
+
+def test_cmd2_submenu_completion_after_submenu_nomatch(sb_app):
+    text = 'b'
+    line = 'second foo b'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = sb_app.complete(text, state)
+
+    assert first_match is None
+
+
+def test_cmd2_help_submenu_completion_single_mid(sb_app):
+    text = 'sec'
+    line = 'help sec'
+    begidx = 5
+    endidx = 8
+    assert sb_app.complete_help(text, line, begidx, endidx) == ['second']
+
+
+def test_cmd2_help_submenu_completion_multiple(sb_app):
+    text = ''
+    line = 'help second '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sb_app.complete_help(text, line, begidx, endidx) == [
+        '_relative_load',
+        'edit',
+        'eof',
+        'eos',
+        'foo',
+        'help',
+        'history',
+        'load',
+        'py',
+        'pyscript',
+        'quit',
+        'set',
+        'shell',
+        'shortcuts'
+    ]
+
+
+def test_cmd2_help_submenu_completion_nomatch(sb_app):
+    text = 'b'
+    line = 'help second b'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sb_app.complete_help(text, line, begidx, endidx) == []
+
+
+def test_cmd2_help_submenu_completion_subcommands(sb_app):
+    text = ''
+    line = 'help second '
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sb_app.complete_help(text, line, begidx, endidx) == [
+        '_relative_load',
+        'edit',
+        'eof',
+        'eos',
+        'foo',
+        'help',
+        'history',
+        'load',
+        'py',
+        'pyscript',
+        'quit',
+        'set',
+        'shell',
+        'shortcuts'
+    ]
