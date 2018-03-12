@@ -95,11 +95,12 @@ try:
 except ImportError:
     pass
 
-# BrokenPipeError is only in Python 3. Use IOError for Python 2.
+# BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
 if six.PY3:
     BROKEN_PIPE_ERROR = BrokenPipeError
+    FILE_NOT_FOUND_ERROR = FileNotFoundError
 else:
-    BROKEN_PIPE_ERROR = IOError
+    BROKEN_PIPE_ERROR = FILE_NOT_FOUND_ERROR = IOError
 
 # On some systems, pyperclip will import gtk for its clipboard functionality.
 # The following code is a workaround for gtk interfering with printing from a background
@@ -1075,7 +1076,7 @@ class Cmd(cmd.Cmd):
                 readline.read_history_file(persistent_history_file)
                 # default history len is -1 (infinite), which may grow unruly
                 readline.set_history_length(persistent_history_length)
-            except FileNotFoundError:
+            except FILE_NOT_FOUND_ERROR:
                 pass
             atexit.register(readline.write_history_file, persistent_history_file)
 
