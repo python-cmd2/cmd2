@@ -867,14 +867,14 @@ class AddSubmenu(object):
             raise ValueError("reformat_prompt should be either a format string or None")
         self.reformat_prompt = reformat_prompt
 
+        self.shared_attributes = {} if shared_attributes is None else shared_attributes
         if require_predefined_shares:
-            for attr in shared_attributes.keys():
+            for attr in self.shared_attributes.keys():
                 if not hasattr(submenu, attr):
                     raise AttributeError("The shared attribute '{attr}' is not defined in {cmd}. Either define {attr} "
                                          "in {cmd} or set require_predefined_shares=False."
                                          .format(cmd=submenu.__class__.__name__, attr=attr))
 
-        self.shared_attributes = {} if shared_attributes is None else shared_attributes
         self.create_subclass = create_subclass
 
     def __call__(self, cmd_obj):

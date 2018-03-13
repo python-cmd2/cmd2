@@ -8,8 +8,17 @@ import cmd2
 from conftest import run_cmd, StdOut, normalize
 
 
+class SecondLevelB(cmd2.Cmd):
+    """To be used as a second level command class. """
+
+    def __init__(self, *args, **kwargs):
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+        self.prompt = '2ndLevel B '
+
+
 class SecondLevel(cmd2.Cmd):
     """To be used as a second level command class. """
+
     def __init__(self, *args, **kwargs):
         cmd2.Cmd.__init__(self, *args, **kwargs)
         self.prompt = '2ndLevel '
@@ -32,8 +41,10 @@ class SecondLevel(cmd2.Cmd):
 
 
 second_level_cmd = SecondLevel()
+second_level_b_cmd = SecondLevelB()
 
 
+@cmd2.AddSubmenu(second_level_b_cmd, command='secondb')
 @cmd2.AddSubmenu(second_level_cmd,
                  command='second',
                  aliases=('second_alias',),
@@ -63,6 +74,7 @@ def submenu_app():
     second_level_cmd.stdout = StdOut()
     return app
 
+
 @pytest.fixture
 def secondlevel_app():
     app = SecondLevel()
@@ -89,6 +101,7 @@ def test_submenu_say_from_top_level(submenu_app):
     assert len(out2) == 0
     assert out1[0] == "You called a command in TopLevel with {!r}.".format(line)
 
+
 def test_submenu_second_say_from_top_level(submenu_app):
     line = 'testing'
     out1, out2 = run_submenu_cmd(submenu_app, 'second say ' + line)
@@ -99,6 +112,7 @@ def test_submenu_second_say_from_top_level(submenu_app):
     # Output expected from the second level
     assert len(out2) == 1
     assert out2[0] == "You called a command in SecondLevel with {!r}.".format(line)
+
 
 def test_submenu_say_from_second_level(secondlevel_app):
     line = 'testing'
@@ -135,4 +149,3 @@ def test_submenu_from_top_help_second_say(submenu_app):
 def test_submenu_shared_attribute(submenu_app):
     out1, out2 = run_submenu_cmd(submenu_app, 'second get_top_level_attr')
     assert out2 == [str(submenu_app.top_level_attr)]
-
