@@ -832,6 +832,7 @@ class AddSubmenu(object):
                  reformat_prompt="{super_prompt}>> {sub_prompt}",
                  shared_attributes=None,
                  require_predefined_shares=True,
+                 preserve_shares=False,
                  create_subclass=False
                  ):
         """Set up the class decorator
@@ -876,6 +877,28 @@ class AddSubmenu(object):
 
         self.shared_attributes = {} if shared_attributes is None else shared_attributes
         self.create_subclass = create_subclass
+        self.preserve_shares = preserve_shares
+
+    def _get_original_attributes(self):
+        return {
+            attr: getattr(self.submenu, attr, AddSubmenu._Nonexistent)
+            for attr in self.shared_attributes.keys()
+        }
+
+    def _copy_in_shared_attrs(self, parent_cmd):
+        for sub_attr, par_attr in self.shared_attributes.items():
+            setattr(self.submenu, sub_attr, getattr(parent_cmd, par_attr))
+
+    def _copy_out_shared_attrs(self, parent_cmd, original_attributes):
+        if self.preserve_shares:
+            for sub_attr, par_attr in self.shared_attributes.items():
+                setattr(parent_cmd, par_attr, getattr(self.submenu, sub_attr))
+        else:
+            for attr, value in original_attributes.items():
+                if attr is not AddSubmenu._Nonexistent:
+                    setattr(self.submenu, attr, value)
+                else:
+                    delattr(self.submenu, attr)
 
     def __call__(self, cmd_obj):
         """Creates a subclass of Cmd wherein the given submenu can be accessed via the given command"""
@@ -885,13 +908,11 @@ class AddSubmenu(object):
             submenu.
             """
             submenu = self.submenu
-            original_attributes = {attr: getattr(submenu, attr, AddSubmenu._Nonexistent)
-                                   for attr in self.shared_attributes.keys()
-                                   }
+            original_attributes = self._get_original_attributes()
+
             try:
                 # copy over any shared attributes
-                for sub_attr, par_attr in self.shared_attributes.items():
-                    setattr(submenu, sub_attr, getattr(parent_cmd, par_attr))
+                self._copy_in_shared_attrs(parent_cmd)
 
                 if line.parsed.args:
                     # Remove the menu argument and execute the command in the submenu
@@ -915,34 +936,21 @@ class AddSubmenu(object):
                     _push_readline_history(history)
             finally:
                 # copy back original attributes
-                for attr, value in original_attributes.items():
-                    if attr is not AddSubmenu._Nonexistent:
-                        setattr(submenu, attr, value)
-                    else:
-                        delattr(submenu, attr)
+                self._copy_out_shared_attrs(parent_cmd, original_attributes)
 
         def complete_submenu(_self, text, line, begidx, endidx):
             """
             This function will be bound to complete_<submenu> and will perform the complete commands of the submenu.
             """
             submenu = self.submenu
-            original_attributes = {
-                attr: getattr(submenu, attr, AddSubmenu._Nonexistent)
-                for attr in self.shared_attributes.keys()
-            }
+            original_attributes = self._get_original_attributes()
             try:
                 # copy over any shared attributes
-                for sub_attr, par_attr in self.shared_attributes.items():
-                    setattr(submenu, sub_attr, getattr(_self, par_attr))
-
+                self._copy_in_shared_attrs(_self)
                 return _complete_from_cmd(submenu, text, line, begidx, endidx)
             finally:
                 # copy back original attributes
-                for attr, value in original_attributes.items():
-                    if attr is not AddSubmenu._Nonexistent:
-                        setattr(submenu, attr, value)
-                    else:
-                        delattr(submenu, attr)
+                self._copy_out_shared_attrs(_self, original_attributes)
 
         original_do_help = cmd_obj.do_help
         original_complete_help = cmd_obj.complete_help
