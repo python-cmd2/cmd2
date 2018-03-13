@@ -1357,12 +1357,14 @@ class Cmd(cmd.Cmd):
                 if command == '':
                     compfunc = self.completedefault
                 else:
-
                     # Get the completion function for this command
                     try:
                         compfunc = getattr(self, 'complete_' + command)
                     except AttributeError:
-                        compfunc = self.completedefault
+                        if self.default_to_shell and command in self._get_exes_in_path(command, False):
+                            compfunc = functools.partial(path_complete)
+                        else:
+                            compfunc = self.completedefault
 
                     # If there are subcommands, then try completing those if the cursor is in
                     # index 1 of the command tokens
