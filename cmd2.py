@@ -1016,6 +1016,7 @@ class Cmd(cmd.Cmd):
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
     allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
+    quit_on_sigint = True       # Quit the loop on interrupt instead of just resetting prompt
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
@@ -1889,7 +1890,14 @@ class Cmd(cmd.Cmd):
                         self.poutput('{}{}'.format(self.prompt, line))
                 else:
                     # Otherwise, read a command from stdin
-                    line = self.pseudo_raw_input(self.prompt)
+                    if not self.quit_on_sigint:
+                        try:
+                            line = self.pseudo_raw_input(self.prompt)
+                        except KeyboardInterrupt:
+                            self.poutput('^C')
+                            line = ''
+                    else:
+                        line = self.pseudo_raw_input(self.prompt)
 
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
