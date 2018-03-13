@@ -900,6 +900,47 @@ def test_precmd_hook_failure(hook_failure):
     assert out == True
 
 
+class SayApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+
+    def do_say(self, arg):
+        self.poutput(arg)
+
+@pytest.fixture
+def say_app():
+    app = SayApp()
+    app.stdout = StdOut()
+    return app
+
+def test_interrupt_quit(say_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input')
+    m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
+    sm.input = m
+
+    say_app.cmdloop()
+
+    # And verify the expected output to stdout
+    out = say_app.stdout.buffer
+    assert out == 'hello\n'
+
+def test_interrupt_noquit(say_app):
+    say_app.quit_on_sigint = False
+
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input')
+    m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
+    sm.input = m
+
+    say_app.cmdloop()
+
+    # And verify the expected output to stdout
+    out = say_app.stdout.buffer
+    assert out == 'hello\n^C\ngoodbye\n'
+
+
 class ShellApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
