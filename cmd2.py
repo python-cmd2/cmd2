@@ -832,8 +832,9 @@ class AddSubmenu(object):
                  reformat_prompt="{super_prompt}>> {sub_prompt}",
                  shared_attributes=None,
                  require_predefined_shares=True,
+                 create_subclass=False,
                  preserve_shares=False,
-                 create_subclass=False
+                 persistent_history_file=None
                  ):
         """Set up the class decorator
 
@@ -863,6 +864,10 @@ class AddSubmenu(object):
         self.submenu = submenu
         self.command = command
         self.aliases = aliases
+        if persistent_history_file:
+            self.persistent_history_file = os.path.expanduser(persistent_history_file)
+        else:
+            self.persistent_history_file = None
 
         if reformat_prompt is not None and not isinstance(reformat_prompt, str):
             raise ValueError("reformat_prompt should be either a format string or None")
@@ -909,6 +914,13 @@ class AddSubmenu(object):
             """
             submenu = self.submenu
             original_attributes = self._get_original_attributes()
+            history = _pop_readline_history()
+
+            if self.persistent_history_file:
+                try:
+                    readline.read_history_file(self.persistent_history_file)
+                except FILE_NOT_FOUND_ERROR:
+                    pass
 
             try:
                 # copy over any shared attributes
@@ -921,7 +933,6 @@ class AddSubmenu(object):
                     ret = submenu.onecmd(line)
                     submenu.postcmd(ret, line)
                 else:
-                    history = _pop_readline_history()
                     if self.reformat_prompt is not None:
                         prompt = submenu.prompt
                         submenu.prompt = self.reformat_prompt.format(
@@ -933,10 +944,16 @@ class AddSubmenu(object):
                     if self.reformat_prompt is not None:
                         # noinspection PyUnboundLocalVariable
                         self.submenu.prompt = prompt
-                    _push_readline_history(history)
             finally:
                 # copy back original attributes
                 self._copy_out_shared_attrs(parent_cmd, original_attributes)
+
+                # write submenu history
+                if self.persistent_history_file:
+                    readline.write_history_file(self.persistent_history_file)
+                # reset main app history before exit
+                _push_readline_history(history)
+
 
         def complete_submenu(_self, text, line, begidx, endidx):
             """
