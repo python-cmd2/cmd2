@@ -15,6 +15,12 @@ class SecondLevelB(cmd2.Cmd):
         cmd2.Cmd.__init__(self, *args, **kwargs)
         self.prompt = '2ndLevel B '
 
+    def do_get_top_level_attr(self, line):
+        self.poutput(str(self.top_level_attr))
+
+    def do_set_top_level_attr(self, line):
+        self.top_level_attr = 987654321
+
 
 class SecondLevel(cmd2.Cmd):
     """To be used as a second level command class. """
@@ -44,7 +50,14 @@ second_level_cmd = SecondLevel()
 second_level_b_cmd = SecondLevelB()
 
 
-@cmd2.AddSubmenu(second_level_b_cmd, command='secondb')
+@cmd2.AddSubmenu(SecondLevelB(),
+                 command='should_work_with_default_kwargs')
+@cmd2.AddSubmenu(second_level_b_cmd,
+                 command='secondb',
+                 shared_attributes=dict(top_level_attr='top_level_attr'),
+                 require_predefined_shares=False,
+                 preserve_shares=True
+                 )
 @cmd2.AddSubmenu(second_level_cmd,
                  command='second',
                  aliases=('second_alias',),
@@ -72,6 +85,7 @@ def submenu_app():
     app = SubmenuApp()
     app.stdout = StdOut()
     second_level_cmd.stdout = StdOut()
+    second_level_b_cmd.stdout = StdOut()
     return app
 
 
@@ -82,21 +96,28 @@ def secondlevel_app():
     return app
 
 
-def run_submenu_cmd(app, cmd):
+@pytest.fixture
+def secondlevel_app_b():
+    app = SecondLevelB()
+    app.stdout = StdOut()
+    return app
+
+
+def run_submenu_cmd(app, second_level_app, cmd):
     """ Clear StdOut buffers, run the command, extract the buffer contents."""
     app.stdout.clear()
-    second_level_cmd.stdout.clear()
+    second_level_app.stdout.clear()
     app.onecmd_plus_hooks(cmd)
     out1 = app.stdout.buffer
-    out2 = second_level_cmd.stdout.buffer
+    out2 = second_level_app.stdout.buffer
     app.stdout.clear()
-    second_level_cmd.stdout.clear()
+    second_level_app.stdout.clear()
     return normalize(out1), normalize(out2)
 
 
 def test_submenu_say_from_top_level(submenu_app):
     line = 'testing'
-    out1, out2 = run_submenu_cmd(submenu_app, 'say ' + line)
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_cmd, 'say ' + line)
     assert len(out1) == 1
     assert len(out2) == 0
     assert out1[0] == "You called a command in TopLevel with {!r}.".format(line)
@@ -104,7 +125,7 @@ def test_submenu_say_from_top_level(submenu_app):
 
 def test_submenu_second_say_from_top_level(submenu_app):
     line = 'testing'
-    out1, out2 = run_submenu_cmd(submenu_app, 'second say ' + line)
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_cmd, 'second say ' + line)
 
     # No output expected from the top level
     assert out1 == []
@@ -121,7 +142,7 @@ def test_submenu_say_from_second_level(secondlevel_app):
 
 
 def test_submenu_help_second_say_from_top_level(submenu_app):
-    out1, out2 = run_submenu_cmd(submenu_app, 'help second say')
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_cmd, 'help second say')
     # No output expected from the top level
     assert out1 == []
 
@@ -135,17 +156,26 @@ def test_submenu_help_say_from_second_level(secondlevel_app):
 
 
 def test_submenu_help_second(submenu_app):
-    out1, out2 = run_submenu_cmd(submenu_app, 'help second')
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_cmd, 'help second')
     out3 = run_cmd(second_level_cmd, 'help')
     assert out2 == out3
 
 
 def test_submenu_from_top_help_second_say(submenu_app):
-    out1, out2 = run_submenu_cmd(submenu_app, 'help second say')
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_cmd, 'help second say')
     out3 = run_cmd(second_level_cmd, 'help say')
     assert out2 == out3
 
 
 def test_submenu_shared_attribute(submenu_app):
-    out1, out2 = run_submenu_cmd(submenu_app, 'second get_top_level_attr')
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_cmd, 'second get_top_level_attr')
     assert out2 == [str(submenu_app.top_level_attr)]
+
+
+def test_submenu_shared_attribute_preserve(submenu_app):
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_b_cmd, 'secondb get_top_level_attr')
+    assert out2 == [str(submenu_app.top_level_attr)]
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_b_cmd, 'secondb set_top_level_attr')
+    assert submenu_app.top_level_attr == 987654321
+    out1, out2 = run_submenu_cmd(submenu_app, second_level_b_cmd, 'secondb get_top_level_attr')
+    assert out2 == [str(987654321)]
