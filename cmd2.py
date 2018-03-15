@@ -1378,14 +1378,14 @@ class Cmd(cmd.Cmd):
                     except AttributeError:
                         compfunc = self.completedefault
 
-                        # If there are subcommands, then try completing those if the cursor is in
-                        # the token at index 1, otherwise default to using compfunc
-                        subcommands = self.get_subcommands(command)
-                        if subcommands is not None:
-                            index_dict = {1: subcommands}
-                            compfunc = functools.partial(index_based_complete,
-                                                         index_dict=index_dict,
-                                                         all_else=compfunc)
+                    # If there are subcommands, then try completing those if the cursor is in
+                    # the token at index 1, otherwise default to using compfunc
+                    subcommands = self.get_subcommands(command)
+                    if subcommands is not None:
+                        index_dict = {1: subcommands}
+                        compfunc = functools.partial(index_based_complete,
+                                                     index_dict=index_dict,
+                                                     all_else=compfunc)
 
                 # Call the completer function
                 self.completion_matches = compfunc(text, line, begidx, endidx)
