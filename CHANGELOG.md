@@ -1,3 +1,14 @@
+## 0.8.2 (March TBD, 2018)
+
+* Bug Fixes
+    * Fixed a bug in tab-completion of command names within sub-menus
+    * Fixed a bug when using persistent readline history in Python 2.7
+    * Fixed a bug where the ``AddSubmenu`` decorator didn't work with a default value for ``shared_attributes``
+* Enhancements
+    * Added [quit_on_sigint](http://cmd2.readthedocs.io/en/latest/settingchanges.html#quit-on-sigint) attribute to enable canceling current line instead of quitting when Ctrl+C is typed
+    * Added possibility of having readline history preservation in a SubMenu
+    * Added [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py) example to demonstrate how to display tabular data
+    
 ## 0.8.1 (March 9, 2018)
 
 * Bug Fixes
