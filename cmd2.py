@@ -2046,6 +2046,9 @@ class Cmd(cmd.Cmd):
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
             response = sm.input(prompt)
+            hlen = readline.get_current_history_length()
+            if hlen >= 1 and response != '':
+                readline.remove_history_item(hlen - 1)
             try:
                 response = int(response)
                 result = fulloptions[response - 1][0]
