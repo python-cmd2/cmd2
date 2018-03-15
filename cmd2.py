@@ -1369,7 +1369,6 @@ class Cmd(cmd.Cmd):
                 # Overwrite line to pass into completers
                 line = expanded_line
 
-                got_matches = False
                 if command == '':
                     compfunc = self.completedefault
                 else:
@@ -1380,23 +1379,17 @@ class Cmd(cmd.Cmd):
                     except AttributeError:
                         compfunc = self.completedefault
 
-                    # If there are subcommands, then try completing those if the cursor is in
-                    # index 1 of the command tokens
-                    subcommands = self.get_subcommands(command)
-                    if subcommands is not None:
-                        index_dict = {1: subcommands}
-                        tmp_matches = index_based_complete(text, line, begidx, endidx, index_dict)
+                        # If there are subcommands, then try completing those if the cursor is in
+                        # the token at index 1, otherwise default to using compfunc
+                        subcommands = self.get_subcommands(command)
+                        if subcommands is not None:
+                            index_dict = {1: subcommands}
+                            compfunc = functools.partial(index_based_complete,
+                                                         index_dict=index_dict,
+                                                         all_else=compfunc)
 
-                        # If we got sumcommand matches, then save them. Otherwise the cursor isn't in index 1
-                        # or there is something else there like a flag. The command specific complete function
-                        # will handle those cases.
-                        if len(tmp_matches) > 0:
-                            got_matches = True
-                            self.completion_matches = tmp_matches
-
-                # Call the command specific completer function
-                if not got_matches:
-                    self.completion_matches = compfunc(text, line, begidx, endidx)
+                # Call the completer function
+                self.completion_matches = compfunc(text, line, begidx, endidx)
 
             else:
                 # Complete the command against command names and shortcuts. By design, shortcuts that start with
@@ -2197,7 +2190,7 @@ class Cmd(cmd.Cmd):
             return []
 
         # Check if we are still completing the shell command
-        elif len(tokens) == 1:
+        if len(tokens) == 1:
 
             # Readline places begidx after ~ and path separators (/) so we need to get the whole token
             # and see if it begins with a possible path in case we need to do path completion
@@ -2222,6 +2215,91 @@ class Cmd(cmd.Cmd):
         # We are past the shell command, so do path completion
         else:
             return path_complete(text, line, begidx, endidx)
+
+    def cmd_with_subs_completer(self, text, line, begidx, endidx, base):
+        """
+        This is a function provided for convenience to those who want an easy way to add
+        tab completion to functions that implement subcommands. By setting this as the
+        completer of the base command function, the correct completer for the chosen subcommand
+        will be called.
+
+        The use of this function requires a particular naming scheme.
+        Example:
+            A command called print has 2 subcommands [names, addresses]
+            The tab-completion functions for the subcommands must be called:
+            names      -> complete_print_names
+            addresses  -> complete_print_addresses
+
+            To make sure these functions get called, set the tab-completer for the print function
+            in a similar fashion to what follows where base is the name of the root command (print)
+
+            complete_print = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='print')
+
+            When the subcommand's completer is called, this function will have stripped off all content from the
+            beginning of he command line before the subcommand, meaning the line parameter always starts with the
+            subcommand name and the index parameters reflect this change.
+
+            For instance, the command "print names -d 2" becomes "names -d 2"
+            begidx and endidx are incremented accordingly
+
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: int - the beginning index of the prefix text
+        :param endidx: int - the ending index of the prefix text
+        :param base: str - the name of the base command that owns the subcommands
+        :return: List[str] - a list of possible tab completions
+        """
+
+        # The subcommand is the token at index 1 in the command line
+        subcmd_index = 1
+
+        # Get all tokens prior to token being completed
+        try:
+            prev_space_index = max(line.rfind(' ', 0, begidx), 0)
+            tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
+        except ValueError:
+            # Invalid syntax for shlex (Probably due to missing closing quote)
+            return []
+
+        if len(tokens) == 0:
+            return []
+
+        # Get the index of the token being completed
+        index = len(tokens)
+
+        # If the token being completed is past the subcommand name, then do subcommand specific tab-completion
+        if index > subcmd_index:
+
+            # Get the subcommand name
+            subcommand = tokens[subcmd_index]
+
+            # Find the offset into line where the subcommand name begins
+            subcmd_start = 0
+            for cur_index in range(0, subcmd_index + 1):
+                cur_token = tokens[cur_index]
+                subcmd_start = line.find(cur_token, subcmd_start)
+
+                if cur_index != subcmd_index:
+                    subcmd_start += len(cur_token)
+
+            # Strip off everything before subcommand name
+            orig_line = line
+            line = line[subcmd_start:]
+
+            # Update the indexes
+            diff = len(orig_line) - len(line)
+            begidx -= diff
+            endidx -= diff
+
+            # Call the subcommand specific completer
+            completer = 'complete_{}_{}'.format(base, subcommand)
+            try:
+                compfunc = getattr(self, completer)
+                completions = compfunc(text, line, begidx, endidx)
+            except AttributeError:
+                pass
+
+        return completions
 
     # noinspection PyBroadException
     def do_py(self, arg):
