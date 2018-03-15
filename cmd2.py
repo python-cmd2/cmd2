@@ -164,7 +164,7 @@ def set_use_arg_list(val):
     USE_ARG_LIST = val
 
 
-def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer=None):
+def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     """
     Tab completes based on a particular flag preceding the token being completed
     :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
@@ -177,8 +177,8 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
                              values - there are two types of values
                                 1. iterable list of strings to match against (dictionaries, lists, etc.)
                                 2. function that performs tab completion (ex: path_complete)
-    :param default_completer: callable - an optional completer to use if no flags in flag_dict precede the text
-                                         being completed
+    :param all_else: iterable or function - an optional parameter for tab completing any token that isn't preceded
+                                            by a flag in flag_dict
     :return: List[str] - a list of possible tab completions
     """
 
@@ -194,42 +194,32 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
         return []
 
     completions = []
-    flag_present = False
+    match_against = all_else
 
     # Must have at least the command and one argument for a flag to be present
     if len(tokens) > 1:
-
-        # Get the argument that precedes the token being completed
         flag = tokens[-1]
 
-        # Check if the flag is in the dictionary
         if flag in flag_dict:
+            match_against = flag_dict[flag]
 
-            flag_present = True
+    # Perform tab completion using an iterable
+    if isinstance(match_against, collections.Iterable):
+        completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-            # Check if this flag does completions using an Iterable
-            if isinstance(flag_dict[flag], collections.Iterable):
-                strs_to_match = flag_dict[flag]
-                completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
+        # If there is only 1 match and it's at the end of the line, then add a space
+        if len(completions) == 1 and endidx == len(line):
+            completions[0] += ' '
 
-                # If there is only 1 match and it's at the end of the line, then add a space
-                if len(completions) == 1 and endidx == len(line):
-                    completions[0] += ' '
-
-            # Otherwise check if this flag does completions with a function
-            elif callable(flag_dict[flag]):
-                completer_func = flag_dict[flag]
-                completions = completer_func(text, line, begidx, endidx)
-
-    # Check if we need to run the default completer
-    if default_completer is not None and not flag_present:
-        completions = default_completer(text, line, begidx, endidx)
+    # Perform tab completion using a function
+    elif callable(match_against):
+        completions = match_against(text, line, begidx, endidx)
 
     completions.sort()
     return completions
 
 
-def index_based_complete(text, line, begidx, endidx, index_dict, default_completer=None):
+def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     """
     Tab completes based on a fixed position in the input string
     :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
@@ -242,8 +232,8 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
                              values - there are two types of values
                                 1. iterable list of strings to match against (dictionaries, lists, etc.)
                                 2. function that performs tab completion (ex: path_complete)
-    :param default_completer: callable - an optional completer to use if the token being completed is not at
-                                         any index in index_dict
+    :param all_else: iterable or function - an optional parameter for tab completing any token that isn't at an
+                                            index in index_dict
     :return: List[str] - a list of possible tab completions
     """
 
@@ -265,24 +255,21 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
 
     # Check if the index is in the dictionary
     if index in index_dict:
+        match_against = index_dict[index]
+    else:
+        match_against = all_else
 
-        # Check if this index does completions using an Iterable
-        if isinstance(index_dict[index], collections.Iterable):
-            strs_to_match = index_dict[index]
-            completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
+    # Perform tab completion using an iterable
+    if isinstance(match_against, collections.Iterable):
+        completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-            # If there is only 1 match and it's at the end of the line, then add a space
-            if len(completions) == 1 and endidx == len(line):
-                completions[0] += ' '
+        # If there is only 1 match and it's at the end of the line, then add a space
+        if len(completions) == 1 and endidx == len(line):
+            completions[0] += ' '
 
-        # Otherwise check if this index does completions with a function
-        elif callable(index_dict[index]):
-            completer_func = index_dict[index]
-            completions = completer_func(text, line, begidx, endidx)
-
-    # Otherwise check if there is a default completer
-    elif default_completer is not None:
-        completions = default_completer(text, line, begidx, endidx)
+    # Perform tab completion using a function
+    elif callable(match_against):
+        completions = match_against(text, line, begidx, endidx)
 
     completions.sort()
     return completions
@@ -953,7 +940,6 @@ class AddSubmenu(object):
                     readline.write_history_file(self.persistent_history_file)
                 # reset main app history before exit
                 _push_readline_history(history)
-
 
         def complete_submenu(_self, text, line, begidx, endidx):
             """
