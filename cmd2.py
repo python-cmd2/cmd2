@@ -164,7 +164,7 @@ def set_use_arg_list(val):
     USE_ARG_LIST = val
 
 
-def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer=None):
+def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     """
     Tab completes based on a particular flag preceding the token being completed
     :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
@@ -177,8 +177,8 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
                              values - there are two types of values
                                 1. iterable list of strings to match against (dictionaries, lists, etc.)
                                 2. function that performs tab completion (ex: path_complete)
-    :param default_completer: callable - an optional completer to use if no flags in flag_dict precede the text
-                                         being completed
+    :param all_else: iterable or function - an optional parameter for tab completing any token that isn't preceded
+                                            by a flag in flag_dict
     :return: List[str] - a list of possible tab completions
     """
 
@@ -194,42 +194,31 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, default_completer
         return []
 
     completions = []
-    flag_present = False
+    match_against = all_else
 
     # Must have at least the command and one argument for a flag to be present
     if len(tokens) > 1:
-
-        # Get the argument that precedes the token being completed
         flag = tokens[-1]
-
-        # Check if the flag is in the dictionary
         if flag in flag_dict:
+            match_against = flag_dict[flag]
 
-            flag_present = True
+    # Perform tab completion using an iterable
+    if isinstance(match_against, collections.Iterable):
+        completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-            # Check if this flag does completions using an Iterable
-            if isinstance(flag_dict[flag], collections.Iterable):
-                strs_to_match = flag_dict[flag]
-                completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
+        # If there is only 1 match and it's at the end of the line, then add a space
+        if len(completions) == 1 and endidx == len(line):
+            completions[0] += ' '
 
-                # If there is only 1 match and it's at the end of the line, then add a space
-                if len(completions) == 1 and endidx == len(line):
-                    completions[0] += ' '
-
-            # Otherwise check if this flag does completions with a function
-            elif callable(flag_dict[flag]):
-                completer_func = flag_dict[flag]
-                completions = completer_func(text, line, begidx, endidx)
-
-    # Check if we need to run the default completer
-    if default_completer is not None and not flag_present:
-        completions = default_completer(text, line, begidx, endidx)
+    # Perform tab completion using a function
+    elif callable(match_against):
+        completions = match_against(text, line, begidx, endidx)
 
     completions.sort()
     return completions
 
 
-def index_based_complete(text, line, begidx, endidx, index_dict, default_completer=None):
+def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     """
     Tab completes based on a fixed position in the input string
     :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
@@ -242,8 +231,8 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
                              values - there are two types of values
                                 1. iterable list of strings to match against (dictionaries, lists, etc.)
                                 2. function that performs tab completion (ex: path_complete)
-    :param default_completer: callable - an optional completer to use if the token being completed is not at
-                                         any index in index_dict
+    :param all_else: iterable or function - an optional parameter for tab completing any token that isn't at an
+                                            index in index_dict
     :return: List[str] - a list of possible tab completions
     """
 
@@ -263,26 +252,23 @@ def index_based_complete(text, line, begidx, endidx, index_dict, default_complet
     # Get the index of the token being completed
     index = len(tokens)
 
-    # Check if the index is in the dictionary
+    # Check if token is at an index in the dictionary
     if index in index_dict:
+        match_against = index_dict[index]
+    else:
+        match_against = all_else
 
-        # Check if this index does completions using an Iterable
-        if isinstance(index_dict[index], collections.Iterable):
-            strs_to_match = index_dict[index]
-            completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
+    # Perform tab completion using an iterable
+    if isinstance(match_against, collections.Iterable):
+        completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-            # If there is only 1 match and it's at the end of the line, then add a space
-            if len(completions) == 1 and endidx == len(line):
-                completions[0] += ' '
+        # If there is only 1 match and it's at the end of the line, then add a space
+        if len(completions) == 1 and endidx == len(line):
+            completions[0] += ' '
 
-        # Otherwise check if this index does completions with a function
-        elif callable(index_dict[index]):
-            completer_func = index_dict[index]
-            completions = completer_func(text, line, begidx, endidx)
-
-    # Otherwise check if there is a default completer
-    elif default_completer is not None:
-        completions = default_completer(text, line, begidx, endidx)
+    # Perform tab completion using a function
+    elif callable(match_against):
+        completions = match_against(text, line, begidx, endidx)
 
     completions.sort()
     return completions
@@ -493,14 +479,15 @@ def with_argument_list(func):
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser, subcommand_names=None):
+def with_argparser_and_unknown_args(argparser):
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
-    :param subcommand_names: List[str] - list of subcommand names for this parser (used for tab-completion)
     :return: function that gets passed parsed args and a list of unknown args
     """
+
+    # noinspection PyProtectedMember
     def arg_decorator(func):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
@@ -512,8 +499,8 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
         # we want it to be the name of our command
         argparser.prog = func.__name__[3:]
 
-        # put the help message in the method docstring
-        if func.__doc__:
+        # If the description has not been set, then use the method docstring if one exists
+        if not argparser.description and func.__doc__:
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
@@ -521,8 +508,9 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
         # Mark this function as having an argparse ArgumentParser (used by do_help)
         cmd_wrapper.__dict__['has_parser'] = True
 
-        # If there are subcommands, store their names to support tab-completion of subcommand names
-        if subcommand_names is not None:
+        # If there are subcommands, store their names in a list to support tab-completion of subcommand names
+        if argparser._subparsers is not None:
+            subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
             cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
 
         return cmd_wrapper
@@ -530,14 +518,15 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
     return arg_decorator
 
 
-def with_argparser(argparser, subcommand_names=None):
+def with_argparser(argparser):
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
-    :param subcommand_names: List[str] - list of subcommand names for this parser (used for tab-completion)
     :return: function that gets passed parsed args
     """
+
+    # noinspection PyProtectedMember
     def arg_decorator(func):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
@@ -549,8 +538,8 @@ def with_argparser(argparser, subcommand_names=None):
         # we want it to be the name of our command
         argparser.prog = func.__name__[3:]
 
-        # put the help message in the method docstring
-        if func.__doc__:
+        # If the description has not been set, then use the method docstring if one exists
+        if not argparser.description and func.__doc__:
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
@@ -558,8 +547,9 @@ def with_argparser(argparser, subcommand_names=None):
         # Mark this function as having an argparse ArgumentParser (used by do_help)
         cmd_wrapper.__dict__['has_parser'] = True
 
-        # If there are subcommands, store their names to support tab-completion of subcommand names
-        if subcommand_names is not None:
+        # If there are subcommands, store their names in a list to support tab-completion of subcommand names
+        if argparser._subparsers is not None:
+            subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
             cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
 
         return cmd_wrapper
@@ -953,7 +943,6 @@ class AddSubmenu(object):
                     readline.write_history_file(self.persistent_history_file)
                 # reset main app history before exit
                 _push_readline_history(history)
-
 
         def complete_submenu(_self, text, line, begidx, endidx):
             """
@@ -1379,7 +1368,6 @@ class Cmd(cmd.Cmd):
                 # Overwrite line to pass into completers
                 line = expanded_line
 
-                got_matches = False
                 if command == '':
                     compfunc = self.completedefault
                 else:
@@ -1391,22 +1379,16 @@ class Cmd(cmd.Cmd):
                         compfunc = self.completedefault
 
                     # If there are subcommands, then try completing those if the cursor is in
-                    # index 1 of the command tokens
+                    # the token at index 1, otherwise default to using compfunc
                     subcommands = self.get_subcommands(command)
                     if subcommands is not None:
                         index_dict = {1: subcommands}
-                        tmp_matches = index_based_complete(text, line, begidx, endidx, index_dict)
+                        compfunc = functools.partial(index_based_complete,
+                                                     index_dict=index_dict,
+                                                     all_else=compfunc)
 
-                        # If we got sumcommand matches, then save them. Otherwise the cursor isn't in index 1
-                        # or there is something else there like a flag. The command specific complete function
-                        # will handle those cases.
-                        if len(tmp_matches) > 0:
-                            got_matches = True
-                            self.completion_matches = tmp_matches
-
-                # Call the command specific completer function
-                if not got_matches:
-                    self.completion_matches = compfunc(text, line, begidx, endidx)
+                # Call the completer function
+                self.completion_matches = compfunc(text, line, begidx, endidx)
 
             else:
                 # Complete the command against command names and shortcuts. By design, shortcuts that start with
@@ -2210,7 +2192,7 @@ class Cmd(cmd.Cmd):
             return []
 
         # Check if we are still completing the shell command
-        elif len(tokens) == 1:
+        if len(tokens) == 1:
 
             # Readline places begidx after ~ and path separators (/) so we need to get the whole token
             # and see if it begins with a possible path in case we need to do path completion
@@ -2235,6 +2217,90 @@ class Cmd(cmd.Cmd):
         # We are past the shell command, so do path completion
         else:
             return path_complete(text, line, begidx, endidx)
+
+    def cmd_with_subs_completer(self, text, line, begidx, endidx, base):
+        """
+        This is a function provided for convenience to those who want an easy way to add
+        tab completion to functions that implement subcommands. By setting this as the
+        completer of the base command function, the correct completer for the chosen subcommand
+        will be called.
+
+        The use of this function requires a particular naming scheme.
+        Example:
+            A command called print has 2 subcommands [names, addresses]
+            The tab-completion functions for the subcommands must be called:
+            names      -> complete_print_names
+            addresses  -> complete_print_addresses
+
+            To make sure these functions get called, set the tab-completer for the print function
+            in a similar fashion to what follows where base is the name of the root command (print)
+
+            complete_print = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='print')
+
+            When the subcommand's completer is called, this function will have stripped off all content from the
+            beginning of he command line before the subcommand, meaning the line parameter always starts with the
+            subcommand name and the index parameters reflect this change.
+
+            For instance, the command "print names -d 2" becomes "names -d 2"
+            begidx and endidx are incremented accordingly
+
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: int - the beginning index of the prefix text
+        :param endidx: int - the ending index of the prefix text
+        :param base: str - the name of the base command that owns the subcommands
+        :return: List[str] - a list of possible tab completions
+        """
+
+        # The subcommand is the token at index 1 in the command line
+        subcmd_index = 1
+
+        # Get all tokens prior to token being completed
+        try:
+            prev_space_index = max(line.rfind(' ', 0, begidx), 0)
+            tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
+        except ValueError:
+            # Invalid syntax for shlex (Probably due to missing closing quote)
+            return []
+
+        completions = []
+
+        # Get the index of the token being completed
+        index = len(tokens)
+
+        # If the token being completed is past the subcommand name, then do subcommand specific tab-completion
+        if index > subcmd_index:
+
+            # Get the subcommand name
+            subcommand = tokens[subcmd_index]
+
+            # Find the offset into line where the subcommand name begins
+            subcmd_start = 0
+            for cur_index in range(0, subcmd_index + 1):
+                cur_token = tokens[cur_index]
+                subcmd_start = line.find(cur_token, subcmd_start)
+
+                if cur_index != subcmd_index:
+                    subcmd_start += len(cur_token)
+
+            # Strip off everything before subcommand name
+            orig_line = line
+            line = line[subcmd_start:]
+
+            # Update the indexes
+            diff = len(orig_line) - len(line)
+            begidx -= diff
+            endidx -= diff
+
+            # Call the subcommand specific completer
+            completer = 'complete_{}_{}'.format(base, subcommand)
+            try:
+                compfunc = getattr(self, completer)
+                completions = compfunc(text, line, begidx, endidx)
+            except AttributeError:
+                pass
+
+        return completions
 
     # noinspection PyBroadException
     def do_py(self, arg):
