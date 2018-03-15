@@ -199,7 +199,6 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     # Must have at least the command and one argument for a flag to be present
     if len(tokens) > 1:
         flag = tokens[-1]
-
         if flag in flag_dict:
             match_against = flag_dict[flag]
 
@@ -253,7 +252,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     # Get the index of the token being completed
     index = len(tokens)
 
-    # Check if the index is in the dictionary
+    # Check if token is at an index in the dictionary
     if index in index_dict:
         match_against = index_dict[index]
     else:
@@ -509,7 +508,7 @@ def with_argparser_and_unknown_args(argparser):
         # Mark this function as having an argparse ArgumentParser (used by do_help)
         cmd_wrapper.__dict__['has_parser'] = True
 
-        # If there are subcommands, store their names to support tab-completion of subcommand names
+        # If there are subcommands, store their names in a list to support tab-completion of subcommand names
         if argparser._subparsers is not None:
             subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
             cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
@@ -548,7 +547,7 @@ def with_argparser(argparser):
         # Mark this function as having an argparse ArgumentParser (used by do_help)
         cmd_wrapper.__dict__['has_parser'] = True
 
-        # If there are subcommands, store their names to support tab-completion of subcommand names
+        # If there are subcommands, store their names in a list to support tab-completion of subcommand names
         if argparser._subparsers is not None:
             subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
             cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
@@ -2264,8 +2263,7 @@ class Cmd(cmd.Cmd):
             # Invalid syntax for shlex (Probably due to missing closing quote)
             return []
 
-        if len(tokens) == 0:
-            return []
+        completions = []
 
         # Get the index of the token being completed
         index = len(tokens)
