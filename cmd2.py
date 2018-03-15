@@ -480,14 +480,15 @@ def with_argument_list(func):
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser, subcommand_names=None):
+def with_argparser_and_unknown_args(argparser):
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
-    :param subcommand_names: List[str] - list of subcommand names for this parser (used for tab-completion)
     :return: function that gets passed parsed args and a list of unknown args
     """
+
+    # noinspection PyProtectedMember
     def arg_decorator(func):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
@@ -499,8 +500,8 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
         # we want it to be the name of our command
         argparser.prog = func.__name__[3:]
 
-        # put the help message in the method docstring
-        if func.__doc__:
+        # If the description has not been set, then use the method docstring if one exists
+        if not argparser.description and func.__doc__:
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
@@ -509,7 +510,8 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
         cmd_wrapper.__dict__['has_parser'] = True
 
         # If there are subcommands, store their names to support tab-completion of subcommand names
-        if subcommand_names is not None:
+        if argparser._subparsers is not None:
+            subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
             cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
 
         return cmd_wrapper
@@ -517,14 +519,15 @@ def with_argparser_and_unknown_args(argparser, subcommand_names=None):
     return arg_decorator
 
 
-def with_argparser(argparser, subcommand_names=None):
+def with_argparser(argparser):
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
-    :param subcommand_names: List[str] - list of subcommand names for this parser (used for tab-completion)
     :return: function that gets passed parsed args
     """
+
+    # noinspection PyProtectedMember
     def arg_decorator(func):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
@@ -536,8 +539,8 @@ def with_argparser(argparser, subcommand_names=None):
         # we want it to be the name of our command
         argparser.prog = func.__name__[3:]
 
-        # put the help message in the method docstring
-        if func.__doc__:
+        # If the description has not been set, then use the method docstring if one exists
+        if not argparser.description and func.__doc__:
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
@@ -546,7 +549,8 @@ def with_argparser(argparser, subcommand_names=None):
         cmd_wrapper.__dict__['has_parser'] = True
 
         # If there are subcommands, store their names to support tab-completion of subcommand names
-        if subcommand_names is not None:
+        if argparser._subparsers is not None:
+            subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
             cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
 
         return cmd_wrapper

@@ -195,10 +195,7 @@ class SubcommandApp(cmd2.Cmd):
     parser_bar.add_argument('z', help='string')
     parser_bar.set_defaults(func=base_bar)
 
-    # Create a list of subcommand names, which is used to enable tab-completion of sub-commands
-    subcommands = ['foo', 'bar']
-
-    @cmd2.with_argparser_and_unknown_args(base_parser, subcommands)
+    @cmd2.with_argparser_and_unknown_args(base_parser)
     def do_base(self, args, arglist):
         """Base command help"""
         try:
