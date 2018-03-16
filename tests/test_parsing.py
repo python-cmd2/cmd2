@@ -43,7 +43,7 @@ def cs_pm():
                                           commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
                                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
                                           preparse=c.preparse, postparse=c.postparse, aliases=c.aliases,
-                                          c.shortcuts)
+                                          shortcuts=c.shortcuts)
     return c.parser_manager
 
 
