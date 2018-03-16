@@ -129,8 +129,8 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-edit  history  mumble  py        quit  set    shortcuts
-help  load     orate   pyscript  say   shell  speak
+alias  help     load    orate  pyscript  say  shell      speak  
+edit   history  mumble  py     quit      set  shortcuts  unalias
 
 (Cmd) help say
 Repeats what you tell me to.

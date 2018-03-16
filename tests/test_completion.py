@@ -900,6 +900,7 @@ def test_cmd2_submenu_completion_multiple(sb_app):
 
     assert first_match is not None and sb_app.completion_matches == [
         '_relative_load',
+        'alias',
         'edit',
         'eof',
         'eos',
@@ -912,7 +913,8 @@ def test_cmd2_submenu_completion_multiple(sb_app):
         'quit',
         'set',
         'shell',
-        'shortcuts'
+        'shortcuts',
+        'unalias'
     ]
 
 
@@ -1006,6 +1008,7 @@ def test_cmd2_help_submenu_completion_multiple(sb_app):
     begidx = endidx - len(text)
     assert sb_app.complete_help(text, line, begidx, endidx) == [
         '_relative_load',
+        'alias',
         'edit',
         'eof',
         'eos',
@@ -1018,7 +1021,8 @@ def test_cmd2_help_submenu_completion_multiple(sb_app):
         'quit',
         'set',
         'shell',
-        'shortcuts'
+        'shortcuts',
+        'unalias'
     ]
 
 
@@ -1037,6 +1041,7 @@ def test_cmd2_help_submenu_completion_subcommands(sb_app):
     begidx = endidx - len(text)
     assert sb_app.complete_help(text, line, begidx, endidx) == [
         '_relative_load',
+        'alias',
         'edit',
         'eof',
         'eos',
@@ -1049,5 +1054,6 @@ def test_cmd2_help_submenu_completion_subcommands(sb_app):
         'quit',
         'set',
         'shell',
-        'shortcuts'
+        'shortcuts',
+        'unalias'
     ]
