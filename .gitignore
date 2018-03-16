@@ -8,3 +8,4 @@ cmd2.egg-info
 .coverage
 .tox
 htmlcov
+.pytest_cache

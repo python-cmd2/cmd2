@@ -25,6 +25,7 @@ def clean():
     local("rm -rf dist")
     local("rm -rf htmlcov")
     local("rm -rf docs/_build")
+    local("rm -rf .pytest_cache")
 
 
 @task
