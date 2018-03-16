@@ -1044,7 +1044,8 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-edit  help  history  load  py  pyscript  quit  set  shell  shortcuts  squat
+alias  help     load  pyscript  set    shortcuts  unalias
+edit   history  py    quit      shell  squat
 
 Undocumented commands:
 ======================
