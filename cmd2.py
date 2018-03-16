@@ -1024,6 +1024,7 @@ class Cmd(cmd.Cmd):
     prefixParser = pyparsing.Empty()
     redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
+    aliases = {}
     terminators = [';']     # make sure your terminators are not in legalChars!
 
     # Attributes which are NOT dynamically settable at runtime
@@ -1113,7 +1114,8 @@ class Cmd(cmd.Cmd):
                                             legalChars=self.legalChars, commentGrammars=self.commentGrammars,
                                             commentInProgress=self.commentInProgress,
                                             blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
-                                            preparse=self.preparse, postparse=self.postparse, shortcuts=self.shortcuts)
+                                            preparse=self.preparse, postparse=self.postparse, aliases=self.aliases,
+                                            shortcuts=self.shortcuts)
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -1391,16 +1393,8 @@ class Cmd(cmd.Cmd):
                 self.completion_matches = compfunc(text, line, begidx, endidx)
 
             else:
-                # Complete the command against command names and shortcuts. By design, shortcuts that start with
-                # symbols not in self.identchars won't be tab completed since they are handled in the above if
-                # statement. This includes shortcuts like: ?, !, @, @@
-                strs_to_match = []
-
-                # If a command has been started, then match against shortcuts. This keeps shortcuts out of the
-                # full list of commands that show up when tab completion is done on an empty line.
-                if len(line) > 0:
-                    for (shortcut, expansion) in self.shortcuts:
-                        strs_to_match.append(shortcut)
+                # Complete the command against aliases and command names
+                strs_to_match = list(self.aliases.keys())
 
                 # Get command names
                 do_text = 'do_' + text
@@ -1537,6 +1531,17 @@ class Cmd(cmd.Cmd):
         if not line:
             # Deal with empty line or all whitespace line
             return None, None, line
+
+        # Handle aliases
+        for cur_alias in self.aliases:
+            alias_len = len(cur_alias)
+
+            # If the line starts with this alias and it is the only thing on
+            # it or is followed by a space, then expand it
+            if line.startswith(cur_alias) and ((len(line) == alias_len) or line[alias_len] == ' '):
+                # Expand the alias
+                line = line.replace(cur_alias, self.aliases[cur_alias], 1)
+                break
 
         # Expand command shortcuts to the full command name
         for (shortcut, expansion) in self.shortcuts:
@@ -1921,6 +1926,33 @@ class Cmd(cmd.Cmd):
             self._script_dir = []
 
             return stop
+
+    @with_argument_list
+    def do_alias(self, arglist):
+        """ Views and creates aliases """
+
+        # If no args were given, then print a list of current aliases
+        if len(arglist) == 0:
+            for cur_alias in self.aliases:
+                self.poutput("{}: {}".format(cur_alias, self.aliases[cur_alias]))
+
+        # The user is creating an alias
+        elif len(arglist) == 2:
+            name = arglist[0]
+            value = arglist[1]
+
+            # Check for a valid name
+            for cur_char in name:
+                if cur_char not in self.identchars:
+                    self.perror("Alias names can only contain the following characters: {}".format(self.identchars),
+                                traceback_war=False)
+
+            # Set the alias
+            self.aliases[name] = value
+            self.poutput("Alias created: {}: {}".format(name, value))
+
+        else:
+            self.do_help('alias')
 
     @with_argument_list
     def do_help(self, arglist):
@@ -2747,12 +2779,13 @@ class ParserManager:
     Class which encapsulates all of the pyparsing parser functionality for cmd2 in a single location.
     """
     def __init__(self, redirector, terminators, multilineCommands, legalChars, commentGrammars, commentInProgress,
-                 blankLinesAllowed, prefixParser, preparse, postparse, shortcuts):
+                 blankLinesAllowed, prefixParser, preparse, postparse, aliases, shortcuts):
         """Creates and uses parsers for user input according to app's parameters."""
 
         self.commentGrammars = commentGrammars
         self.preparse = preparse
         self.postparse = postparse
+        self.aliases = aliases
         self.shortcuts = shortcuts
 
         self.main_parser = self._build_main_parser(redirector=redirector, terminators=terminators,
@@ -2854,6 +2887,18 @@ class ParserManager:
             s = self.preparse(raw)
             s = self.input_source_parser.transformString(s.lstrip())
             s = self.commentGrammars.transformString(s)
+
+            # Handle aliases
+            for cur_alias in self.aliases:
+                alias_len = len(cur_alias)
+
+                # If the line starts with this alias and it is the only thing on
+                # it or is followed by a space, then expand it
+                if s.startswith(cur_alias) and ((len(s) == alias_len) or s[alias_len] == ' '):
+                    # Expand the alias
+                    s = s.replace(cur_alias, self.aliases[cur_alias], 1)
+                    break
+
             for (shortcut, expansion) in self.shortcuts:
                 if s.startswith(shortcut):
                     s = s.replace(shortcut, expansion + ' ', 1)
