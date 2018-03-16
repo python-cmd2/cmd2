@@ -53,7 +53,7 @@ Aliases
 In addition to shortcuts, ``cmd2`` provides a full alias feature via the ``alias`` command which is similar to the
 ``alias`` command in Bash.
 
-The syntax to create an alias is, ``alias <name> <value>``. ``value`` can contain spaces and does not need
+The syntax to create an alias is ``alias <name> <value>``. ``value`` can contain spaces and does not need
 to be quoted. Ex: ``alias ls !ls -lF``
 
 If ``alias`` is run without arguments, then a list of all aliases will be printed to stdout and are in the proper
