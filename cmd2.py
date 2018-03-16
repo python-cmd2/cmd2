@@ -1399,7 +1399,10 @@ class Cmd(cmd.Cmd):
                     try:
                         compfunc = getattr(self, 'complete_' + command)
                     except AttributeError:
-                        compfunc = self.completedefault
+                        if self.default_to_shell and command in self._get_exes_in_path(command):
+                            compfunc = functools.partial(path_complete)
+                        else:
+                            compfunc = self.completedefault
 
                     # If there are subcommands, then try completing those if the cursor is in
                     # the token at index 1, otherwise default to using compfunc
@@ -2241,13 +2244,11 @@ Usage:  Usage: unalias [-a] name [name ...]
         proc.communicate()
 
     @staticmethod
-    def _get_exes_in_path(starts_with, at_eol):
+    def _get_exes_in_path(starts_with):
         """
-        Called by complete_shell to get names of executables in a user's path
-
-        :param starts_with: str - what the exes should start with
-        :param at_eol: bool - tells if the user's cursor is at the end of the command line
-        :return: List[str] - a list of possible tab completions
+        Returns names of executables in a user's path
+        :param starts_with: str - what the exes should start with. leave blank for all exes in path.
+        :return: List[str] - a list of matching exe names
         """
 
         # Purposely don't match any executable containing wildcards
@@ -2273,11 +2274,6 @@ Usage:  Usage: unalias [-a] name [name ...]
         # Sort the exes alphabetically
         results = list(exes)
         results.sort()
-
-        # If there is a single completion and we are at end of the line, then add a space at the end for convenience
-        if len(results) == 1 and at_eol:
-            results[0] += ' '
-
         return results
 
     def complete_shell(self, text, line, begidx, endidx):
@@ -2316,9 +2312,12 @@ Usage:  Usage: unalias [-a] name [name ...]
             # Look for path characters in the token
             if not (cmd_token.startswith('~') or os.path.sep in cmd_token):
                 # No path characters are in this token, it is OK to try shell command completion.
-                command_completions = self._get_exes_in_path(text, endidx == len(line))
+                command_completions = self._get_exes_in_path(text)
 
                 if command_completions:
+                    # If there is only 1 match and it's at the end of the line, then add a space
+                    if len(command_completions) == 1 and endidx == len(line):
+                        command_completions[0] += ' '
                     return command_completions
 
             # If we have no results, try path completion to find the shell commands
