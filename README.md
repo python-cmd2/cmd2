@@ -29,6 +29,7 @@ Main Features
 - Option to display long output using a pager with ``cmd2.Cmd.ppaged()``
 - Multi-line commands
 - Special-character command shortcuts (beyond cmd's `@` and `!`)
+- Command aliasing
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
 - Sub-menu support via the ``AddSubmenu`` decorator
