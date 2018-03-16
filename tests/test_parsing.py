@@ -29,7 +29,8 @@ def parser():
                                           multilineCommands=c.multilineCommands, legalChars=c.legalChars,
                                           commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
                                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+                                          preparse=c.preparse, postparse=c.postparse, aliases=c.aliases,
+                                          shortcuts=c.shortcuts)
     return c.parser_manager.main_parser
 
 # Case-sensitive ParserManager
@@ -41,7 +42,8 @@ def cs_pm():
                                           multilineCommands=c.multilineCommands, legalChars=c.legalChars,
                                           commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
                                           blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                                          preparse=c.preparse, postparse=c.postparse, shortcuts=c.shortcuts)
+                                          preparse=c.preparse, postparse=c.postparse, aliases=c.aliases,
+                                          c.shortcuts)
     return c.parser_manager
 
 
