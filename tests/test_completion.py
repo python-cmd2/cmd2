@@ -209,6 +209,45 @@ def test_shell_command_completion(cmd2_app):
     begidx = endidx - len(text)
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == expected
 
+def test_default_to_shell_command_completion(request):
+    app = cmd2.Cmd()
+    app.default_to_shell = True
+
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    state = 0
+    path = os.path.join(test_dir, text)
+
+    if sys.platform == "win32":
+        command = 'calc.exe'
+    else:
+        command = 'egrep'
+
+    # Make sure the command is on the testing system
+    assert command in cmd2.Cmd._get_exes_in_path(command, False)
+    line = '{} {}'.format(command, path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = app.complete(text, state)
+
+    assert first_match is not None and app.completion_matches == ['conftest.py ']
+
 def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
     if sys.platform == "win32":
         text = 'c*'
