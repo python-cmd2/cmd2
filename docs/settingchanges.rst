@@ -9,12 +9,12 @@ its name is included in the dictionary ``app.settable``.
 (To define your own user-settable parameters, see :ref:`parameters`)
 
 
-Shortcuts (command aliases)
+Shortcuts
 ===========================
 
-Command aliases for long command names such as special-character shortcuts for common commands can make life more
-convenient for your users.  Shortcuts are used without a space separating them from their arguments,
-like ``!ls``.  By default, the following shortcuts are defined:
+Command shortcuts for long command names and common commands can make life more convenient for your users.
+Shortcuts are used without a space separating them from their arguments, like ``!ls``.  By default, the
+following shortcuts are defined:
 
   ``?``
     help
@@ -41,10 +41,26 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
 
 .. warning::
 
-  Command aliases needed to be created by updating the ``shortcuts`` dictionary attribute prior to calling the
+  Shortcuts need to be created by updating the ``shortcuts`` dictionary attribute prior to calling the
   ``cmd2.Cmd`` super class ``__init__()`` method.  Moreover, that super class init method needs to be called after
   updating the ``shortcuts`` attribute  This warning applies in general to many other attributes which are not
   settable at runtime such as ``commentGrammars``, ``multilineCommands``, etc.
+
+
+Aliases
+================
+
+In addition to shortcuts, ``cmd2`` provides a full alias feature via the ``alias`` command which is similar to the
+``alias`` command in Bash.
+
+The syntax to create an alias is ``alias <name> <value>``. ``value`` can contain spaces and does not need
+to be quoted. Ex: ``alias ls !ls -lF``
+
+If ``alias`` is run without arguments, then a list of all aliases will be printed to stdout and are in the proper
+``alias`` command syntax, meaning they can easily be reused.
+
+The ``unalias`` is used to clear aliases. Using the ``-a`` flag will clear all aliases. Otherwise provide a list of
+aliases to clear. Ex: ``unalias ls cd pwd`` will clear the aliases called ls, cd, and pwd.
 
 
 Default to shell

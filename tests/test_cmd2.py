@@ -1044,7 +1044,8 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-edit  help  history  load  py  pyscript  quit  set  shell  shortcuts  squat
+alias  help     load  pyscript  set    shortcuts  unalias
+edit   history  py    quit      shell  squat
 
 Undocumented commands:
 ======================
@@ -1541,3 +1542,46 @@ def test_poutput_none(base_app):
     out = base_app.stdout.buffer
     expected = ''
     assert out == expected
+
+
+def test_alias(base_app, capsys):
+    # Create the alias
+    out = run_cmd(base_app, 'alias fake pyscript')
+    assert out == normalize("Alias created")
+
+    # Use the alias
+    run_cmd(base_app, 'fake')
+    out, err = capsys.readouterr()
+    assert "pyscript command requires at least 1 argument" in err
+
+    # See a list of aliases
+    out = run_cmd(base_app, 'alias')
+    assert out == normalize('alias fake pyscript')
+
+def test_alias_with_cmd_name(base_app, capsys):
+    run_cmd(base_app, 'alias help eos')
+    out, err = capsys.readouterr()
+    assert "cannot match an existing command" in err
+
+def test_alias_with_invalid_name(base_app, capsys):
+    run_cmd(base_app, 'alias @ help')
+    out, err = capsys.readouterr()
+    assert "can only contain the following characters" in err
+
+
+def test_unalias(base_app):
+    # Create an alias
+    run_cmd(base_app, 'alias fake pyscript')
+
+    # Remove the alias
+    out = run_cmd(base_app, 'unalias fake')
+    assert out == normalize("Alias 'fake' cleared")
+
+def test_unalias_all(base_app):
+    out = run_cmd(base_app, 'unalias -a')
+    assert out == normalize("All aliases cleared")
+
+def test_unalias_non_existing(base_app, capsys):
+    run_cmd(base_app, 'unalias fake')
+    out, err = capsys.readouterr()
+    assert "does not exist" in err

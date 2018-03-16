@@ -15,7 +15,8 @@ import cmd2
 # Help text for base cmd2.Cmd application
 BASE_HELP = """Documented commands (type help <topic>):
 ========================================
-edit  help  history  load  py  pyscript  quit  set  shell  shortcuts
+alias  help     load  pyscript  set    shortcuts
+edit   history  py    quit      shell  unalias
 """
 
 # Help text for the history command

@@ -17,7 +17,7 @@ import cmd2
 import mock
 import pytest
 
-from cmd2 import path_complete, flag_based_complete, index_based_complete
+from cmd2 import path_complete, basic_complete, flag_based_complete, index_based_complete
 
 @pytest.fixture
 def cmd2_app():
@@ -399,7 +399,7 @@ def test_path_completion_no_tokens():
     assert path_complete(text, line, begidx, endidx) == []
 
 
-# List of strings used with flag and index based completion functions
+# List of strings used with basic, flag, and index based completion functions
 food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
 
@@ -413,6 +413,39 @@ flag_dict = \
         '-o': path_complete,         # Tab-complete using path_complete function after -o flag in command line
         '--other': path_complete,    # Tab-complete using path_complete function after --other flag in command line
     }
+
+def test_basic_completion_single_end():
+    text = 'Pi'
+    line = 'list_food -f Pi'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza ']
+
+def test_basic_completion_single_mid():
+    text = 'Pi'
+    line = 'list_food -f Pi'
+    begidx = len(line) - len(text)
+    endidx = begidx + 1
+
+    assert basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
+
+def test_basic_completion_multiple():
+    text = ''
+    line = 'list_food -f '
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert basic_complete(text, line, begidx, endidx, food_item_strs) == sorted(food_item_strs)
+
+def test_basic_completion_nomatch():
+    text = 'q'
+    line = 'list_food -f q'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert basic_complete(text, line, begidx, endidx, food_item_strs) == []
+
 
 def test_flag_based_completion_single_end():
     text = 'Pi'
@@ -435,6 +468,7 @@ def test_flag_based_completion_multiple():
     line = 'list_food -f '
     endidx = len(line)
     begidx = endidx - len(text)
+
     assert flag_based_complete(text, line, begidx, endidx, flag_dict) == sorted(food_item_strs)
 
 def test_flag_based_completion_nomatch():
@@ -442,6 +476,7 @@ def test_flag_based_completion_nomatch():
     line = 'list_food -f q'
     endidx = len(line)
     begidx = endidx - len(text)
+
     assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
 
 def test_flag_based_default_completer(request):
@@ -900,6 +935,7 @@ def test_cmd2_submenu_completion_multiple(sb_app):
 
     assert first_match is not None and sb_app.completion_matches == [
         '_relative_load',
+        'alias',
         'edit',
         'eof',
         'eos',
@@ -912,7 +948,8 @@ def test_cmd2_submenu_completion_multiple(sb_app):
         'quit',
         'set',
         'shell',
-        'shortcuts'
+        'shortcuts',
+        'unalias'
     ]
 
 
@@ -1006,6 +1043,7 @@ def test_cmd2_help_submenu_completion_multiple(sb_app):
     begidx = endidx - len(text)
     assert sb_app.complete_help(text, line, begidx, endidx) == [
         '_relative_load',
+        'alias',
         'edit',
         'eof',
         'eos',
@@ -1018,7 +1056,8 @@ def test_cmd2_help_submenu_completion_multiple(sb_app):
         'quit',
         'set',
         'shell',
-        'shortcuts'
+        'shortcuts',
+        'unalias'
     ]
 
 
@@ -1037,6 +1076,7 @@ def test_cmd2_help_submenu_completion_subcommands(sb_app):
     begidx = endidx - len(text)
     assert sb_app.complete_help(text, line, begidx, endidx) == [
         '_relative_load',
+        'alias',
         'edit',
         'eof',
         'eos',
@@ -1049,5 +1089,6 @@ def test_cmd2_help_submenu_completion_subcommands(sb_app):
         'quit',
         'set',
         'shell',
-        'shortcuts'
+        'shortcuts',
+        'unalias'
     ]
