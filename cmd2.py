@@ -164,6 +164,27 @@ def set_use_arg_list(val):
     USE_ARG_LIST = val
 
 
+# noinspection PyUnusedLocal
+def basic_complete(text, line, begidx, endidx, match_against):
+    """
+    Performs tab completion against a list
+    :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+    :param line: str - the current input line with leading whitespace removed
+    :param begidx: int - the beginning index of the prefix text
+    :param endidx: int - the ending index of the prefix text
+    :param match_against: iterable - the list being matched against
+    :return: List[str] - a list of possible tab completions
+    """
+    completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
+
+    # If there is only 1 match and it's at the end of the line, then add a space
+    if len(completions) == 1 and endidx == len(line):
+        completions[0] += ' '
+
+    completions.sort()
+    return completions
+
+
 def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     """
     Tab completes based on a particular flag preceding the token being completed
@@ -500,7 +521,7 @@ def with_argparser_and_unknown_args(argparser):
         argparser.prog = func.__name__[3:]
 
         # If the description has not been set, then use the method docstring if one exists
-        if not argparser.description and func.__doc__:
+        if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
@@ -539,7 +560,7 @@ def with_argparser(argparser):
         argparser.prog = func.__name__[3:]
 
         # If the description has not been set, then use the method docstring if one exists
-        if not argparser.description and func.__doc__:
+        if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
 
         cmd_wrapper.__doc__ = argparser.format_help()
@@ -1396,9 +1417,8 @@ class Cmd(cmd.Cmd):
                 # Complete the command against aliases and command names
                 strs_to_match = list(self.aliases.keys())
 
-                # Get command names
-                do_text = 'do_' + text
-                strs_to_match.extend([cur_name[3:] for cur_name in self.get_names() if cur_name.startswith(do_text)])
+                # Add command names
+                strs_to_match.extend(self.get_command_names())
 
                 # Perform matching
                 completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
@@ -1413,6 +1433,10 @@ class Cmd(cmd.Cmd):
             return self.completion_matches[state]
         except IndexError:
             return None
+
+    def get_command_names(self):
+        """ Returns a list of commands """
+        return [cur_name[3:] for cur_name in self.get_names() if cur_name.startswith('do_')]
 
     def complete_help(self, text, line, begidx, endidx):
         """
@@ -1924,30 +1948,89 @@ class Cmd(cmd.Cmd):
 
     @with_argument_list
     def do_alias(self, arglist):
-        """ Views and creates aliases """
+        """Define or display aliases
 
+Usage:  Usage: alias [<name> <value>]
+    Where:
+        name - name of the alias being added or edited
+        value - what the alias will be resolved to
+                this can contain spaces and does not need to be quoted
+
+    Without arguments, `alias' prints a list of all aliases in a resuable form
+
+    Example: alias ls !ls -lF
+"""
         # If no args were given, then print a list of current aliases
         if len(arglist) == 0:
             for cur_alias in self.aliases:
-                self.poutput("{}: {}".format(cur_alias, self.aliases[cur_alias]))
+                self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
 
         # The user is creating an alias
-        elif len(arglist) == 2:
+        elif len(arglist) >= 2:
             name = arglist[0]
-            value = arglist[1]
+            value = ' '.join(arglist[1:])
+
+            # Make sure the alias does not match an existing command
+            cmd_func = self._func_named(name)
+            if cmd_func is not None:
+                self.perror("Alias names cannot match an existing command: {!r}".format(name), traceback_war=False)
+                return
 
             # Check for a valid name
             for cur_char in name:
                 if cur_char not in self.identchars:
                     self.perror("Alias names can only contain the following characters: {}".format(self.identchars),
                                 traceback_war=False)
+                    return
 
             # Set the alias
             self.aliases[name] = value
-            self.poutput("Alias created: {}: {}".format(name, value))
+            self.poutput("Alias created")
 
         else:
             self.do_help('alias')
+
+    def complete_alias(self, text, line, begidx, endidx):
+        """ Tab completion for alias """
+        index_dict = \
+            {
+                1: self.aliases,
+                2: self.get_command_names()
+            }
+        return index_based_complete(text, line, begidx, endidx, index_dict, path_complete)
+
+    @with_argument_list
+    def do_unalias(self, arglist):
+        """Unsets aliases
+
+Usage:  Usage: unalias [-a] name [name ...]
+    Where:
+        name - name of the alias being unset
+
+    Options:
+        -a     remove all alias definitions
+"""
+        if len(arglist) == 0:
+            self.do_help('unalias')
+
+        if '-a' in arglist:
+            self.aliases.clear()
+            self.poutput("All aliases cleared")
+
+        else:
+            # Get rid of duplicates
+            arglist = list(set(arglist))
+
+            for cur_arg in arglist:
+                if cur_arg in self.aliases:
+                    del self.aliases[cur_arg]
+                    self.poutput("Alias {!r} cleared".format(cur_arg))
+                else:
+                    self.perror("Alias {!r} does not exist".format(cur_arg), traceback_war=False)
+
+    def complete_unalias(self, text, line, begidx, endidx):
+        """ Tab completion for unalias """
+        return basic_complete(text, line, begidx, endidx, self.aliases)
 
     @with_argument_list
     def do_help(self, arglist):
