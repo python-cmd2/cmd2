@@ -1024,7 +1024,7 @@ class Cmd(cmd.Cmd):
     prefixParser = pyparsing.Empty()
     redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    aliases = {}
+    aliases = dict()
     terminators = [';']     # make sure your terminators are not in legalChars!
 
     # Attributes which are NOT dynamically settable at runtime
@@ -1534,12 +1534,7 @@ class Cmd(cmd.Cmd):
 
         # Handle aliases
         for cur_alias in self.aliases:
-            alias_len = len(cur_alias)
-
-            # If the line starts with this alias and it is the only thing on
-            # it or is followed by a space, then expand it
-            if line.startswith(cur_alias) and ((len(line) == alias_len) or line[alias_len] == ' '):
-                # Expand the alias
+            if line == cur_alias or line.startswith(cur_alias + ' '):
                 line = line.replace(cur_alias, self.aliases[cur_alias], 1)
                 break
 
@@ -2890,12 +2885,7 @@ class ParserManager:
 
             # Handle aliases
             for cur_alias in self.aliases:
-                alias_len = len(cur_alias)
-
-                # If the line starts with this alias and it is the only thing on
-                # it or is followed by a space, then expand it
-                if s.startswith(cur_alias) and ((len(s) == alias_len) or s[alias_len] == ' '):
-                    # Expand the alias
+                if s == cur_alias or s.startswith(cur_alias + ' '):
                     s = s.replace(cur_alias, self.aliases[cur_alias], 1)
                     break
 
