@@ -311,6 +311,45 @@ def test_path_completion_nomatch(request):
 
     assert path_complete(text, line, begidx, endidx) == []
 
+
+def test_default_to_shell_completion(cmd2_app, request):
+    cmd2_app.default_to_shell = True
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+
+    if sys.platform == "win32":
+        command = 'calc.exe'
+    else:
+        command = 'egrep'
+
+    # Make sure the command is on the testing system
+    assert command in cmd2.Cmd._get_exes_in_path(command)
+    line = '{} {}'.format(command, path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = cmd2_app.complete(text, state)
+
+    assert first_match is not None and cmd2_app.completion_matches == ['conftest.py ']
+
+
 def test_path_completion_cwd():
     # Run path complete with no path and no search text
     text = ''

@@ -1578,14 +1578,18 @@ class Cmd(cmd.Cmd):
                 break
 
         i, n = 0, len(line)
-        while i < n and line[i] in self.identchars:
-            i += 1
-        command, arg = line[:i], line[i:].strip()
 
-        # Make sure there is a space between the command and args
-        # This can occur when a character not in self.identchars bumps against the command (ex: help@)
-        if len(command) > 0 and len(arg) > 0 and line[len(command)] != ' ':
-            line = line.replace(command, command + ' ', 1)
+        # If we are allowing shell commands, then allow any character in the command
+        if self.default_to_shell:
+            while i < n and line[i] != ' ':
+                i += 1
+
+        # Otherwise only allow those in identchars
+        else:
+            while i < n and line[i] in self.identchars:
+                i += 1
+
+        command, arg = line[:i], line[i:].strip()
 
         return command, arg, line
 
