@@ -55,11 +55,11 @@ be pointless within an interactive session.
 Startup Initialization Script
 =============================
 You can load and execute commands from a startup initialization script by passing a file path to the ``startup_script``
-argument to the ``cmd.Cmd.__init__()`` method like so::
+argument to the ``cmd2.Cmd.__init__()`` method like so::
 
-    class AliasAndStartup(cmd2.Cmd):
-    def __init__(self):
-        cmd2.Cmd.__init__(self, startup_script='.cmd2rc')
+    class StartupApp(cmd2.Cmd):
+        def __init__(self):
+            cmd2.Cmd.__init__(self, startup_script='.cmd2rc')
 
 See the AliasStartup_ example for a demonstration.
 
