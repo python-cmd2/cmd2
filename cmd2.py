@@ -1088,7 +1088,7 @@ class Cmd(cmd.Cmd):
                 'timing': 'Report execution times'}
 
     def __init__(self, completekey='tab', stdin=None, stdout=None, persistent_history_file='',
-                 persistent_history_length=1000, use_ipython=False, transcript_files=None):
+                 persistent_history_length=1000, startup_script=None, use_ipython=False, transcript_files=None):
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
         :param completekey: str - (optional) readline name of a completion key, default to Tab
@@ -1096,6 +1096,7 @@ class Cmd(cmd.Cmd):
         :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
         :param persistent_history_file: str - (optional) file path to load a persistent readline history from
         :param persistent_history_length: int - (optional) max number of lines which will be written to the history file
+        :param startup_script: str - (optional) file path to a a script to load and execute at startup
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
         :param transcript_files: str - (optional) allows running transcript tests when allow_cli_args is False
         """
@@ -1179,6 +1180,10 @@ class Cmd(cmd.Cmd):
 
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
+
+        # If a startup script is provided, then add it in the queue to load
+        if startup_script is not None:
+            self.cmdqueue.append('load {}'.format(startup_script))
 
     # -----  Methods related to presenting output to the user -----
 
