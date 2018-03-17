@@ -29,10 +29,6 @@ class Pirate(Cmd):
         self.initial_gold = self.gold
         self.prompt = 'arrr> '
 
-    def default(self, line):
-        """This handles unknown commands."""
-        self.poutput('What mean ye by "{0}"?'.format(line))
-
     def precmd(self, line):
         """Runs just before a command line is parsed, but after the prompt is presented."""
         self.initial_gold = self.gold
