@@ -1578,8 +1578,17 @@ class Cmd(cmd.Cmd):
                 break
 
         i, n = 0, len(line)
-        while i < n and line[i] in self.identchars:
-            i += 1
+
+        # If we are allowing shell commands, then allow any character in the command
+        if self.default_to_shell:
+            while i < n and line[i] != ' ':
+                i += 1
+
+        # Otherwise only allow those in identchars
+        else:
+            while i < n and line[i] in self.identchars:
+                i += 1
+
         command, arg = line[:i], line[i:].strip()
 
         return command, arg, line
