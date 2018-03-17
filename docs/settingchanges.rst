@@ -10,7 +10,7 @@ its name is included in the dictionary ``app.settable``.
 
 
 Shortcuts
-===========================
+=========
 
 Command shortcuts for long command names and common commands can make life more convenient for your users.
 Shortcuts are used without a space separating them from their arguments, like ``!ls``.  By default, the
@@ -48,7 +48,7 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
 
 
 Aliases
-================
+=======
 
 In addition to shortcuts, ``cmd2`` provides a full alias feature via the ``alias`` command which is similar to the
 ``alias`` command in Bash.

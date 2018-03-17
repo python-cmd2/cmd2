@@ -52,6 +52,19 @@ be pointless within an interactive session.
 .. _pyparsing: http://pyparsing.wikispaces.com/
 .. _arg_print: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
 
+Startup Initialization Script
+=============================
+You can load and execute commands from a startup initialization script by passing a file path to the ``startup_script``
+argument to the ``cmd.Cmd.__init__()`` method like so::
+
+    class AliasAndStartup(cmd2.Cmd):
+    def __init__(self):
+        cmd2.Cmd.__init__(self, startup_script='.cmd2rc')
+
+See the AliasStartup_ example for a demonstration.
+
+.. _AliasStartup: https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py
+
 Commands at invocation
 ======================
 
