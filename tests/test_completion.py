@@ -311,18 +311,15 @@ def test_path_completion_nomatch(request):
 
     assert path_complete(text, line, begidx, endidx) == []
 
-
+@pytest.mark.skipif(sys.platform == 'win32',
+                    reason="cmd command parsing only supports ascii characters and digits as part of a command name")
 def test_default_to_shell_completion(cmd2_app, request):
     cmd2_app.default_to_shell = True
     test_dir = os.path.dirname(request.module.__file__)
 
     text = 'c'
     path = os.path.join(test_dir, text)
-
-    if sys.platform == "win32":
-        command = 'calc.exe'
-    else:
-        command = 'egrep'
+    command = 'egrep'
 
     # Make sure the command is on the testing system
     assert command in cmd2.Cmd._get_exes_in_path(command)
