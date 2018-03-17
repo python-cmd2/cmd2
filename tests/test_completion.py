@@ -434,7 +434,7 @@ def test_path_completion_no_tokens():
     text = ''
     line = 'shell'
     endidx = len(line)
-    begidx = endidx - len(text)
+    begidx = 0
     assert path_complete(text, line, begidx, endidx) == []
 
 
@@ -542,13 +542,13 @@ def test_flag_based_callable_completer(request):
 
     assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
 
-def test_flag_based_completion_syntax_err():
+def test_flag_based_completion_quotes():
     text = 'Pi'
-    line = 'list_food -f " Pi'
+    line = 'list_food -f "Pi'
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
 
 def test_flag_based_completion_no_tokens():
     text = ''
@@ -621,13 +621,13 @@ def test_index_based_callable_completer(request):
 
     assert index_based_complete(text, line, begidx, endidx, index_dict) == ['conftest.py ']
 
-def test_index_based_completion_syntax_err():
-    text = 'Foo'
-    line = 'command "Pizza Foo'
+def test_index_based_completion_quotes():
+    text = 'Piz'
+    line = "command 'Piz"
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == []
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Pizza']
 
 
 def test_parseline_command_and_args(cmd2_app):

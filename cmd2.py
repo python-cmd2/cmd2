@@ -164,6 +164,64 @@ def set_use_arg_list(val):
     USE_ARG_LIST = val
 
 
+def tokenize_line(line, begidx, endidx):
+    """
+    Used by tab completion functions to get all tokens through the one being completed
+    This also handles tab-completion within quotes
+    :param line: str - the current input line with leading whitespace removed
+    :param begidx: int - the beginning index of the prefix text
+    :param endidx: int - the ending index of the prefix text
+    :return: A list of tokens and whether or not the token being completed was quoted on the command line
+    """
+    tokens = []
+    in_quotes = False
+    quotes_to_try = ['"', "'"]
+
+    tmp_line = line[:endidx]
+    tmp_endidx = endidx
+
+    while True:
+        try:
+            tokens = shlex.split(tmp_line[:tmp_endidx], posix=POSIX_SHLEX)
+            break
+        except ValueError:
+            # ValueError is caused by missing closing quote
+            if len(quotes_to_try) == 0:
+                break
+
+            # Add a closing quote and try to parse again
+            in_quotes = True
+
+            tmp_line = line[:endidx]
+            tmp_endidx = endidx + 1
+
+            tmp_line += quotes_to_try[0]
+            quotes_to_try = quotes_to_try[1:]
+
+    # No tokens were parsed
+    if len(tokens) == 0:
+        in_quotes = False
+
+    # Unquote all tokens
+    for index, cur_token in enumerate(tokens):
+        tokens[index] = strip_quotes(cur_token)
+
+    # If begidx is equal to endidx, then the readline text variable is blank.
+    # Check if begidx is preceded by a string. This can happen in things like paths.
+    # For example, in "/home/user/" begidx would be the index right after the last slash given
+    # how readline separation characters work. If begidx is preceded by a string, then the final
+    # token in tokens is the token being completed. If begidx is not preceded by a string, then
+    # we need to add a blank entry to tokens to be the token being completed.
+    if begidx == endidx and not in_quotes:
+        # If begidx is the first character in the line, or is preceded by a space
+        # then we need to add the blank entry to tokens.
+        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
+        if prev_space_index == 0 or prev_space_index == begidx - 1:
+            tokens.append('')
+
+    return tokens, in_quotes
+
+
 # noinspection PyUnusedLocal
 def basic_complete(text, line, begidx, endidx, match_against):
     """
@@ -175,10 +233,15 @@ def basic_complete(text, line, begidx, endidx, match_against):
     :param match_against: iterable - the list being matched against
     :return: List[str] - a list of possible tab completions
     """
+    # Get all tokens through the one being completed
+    tokens, in_quotes = tokenize_line(line, begidx, endidx)
+    if len(tokens) == 0:
+        return []
+
     completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-    # If there is only 1 match and it's at the end of the line, then add a space
-    if len(completions) == 1 and endidx == len(line):
+    # Only add a space if there is one completion not in quotes and the end of the line
+    if len(completions) == 1 and not in_quotes and endidx == len(line):
         completions[0] += ' '
 
     completions.sort()
@@ -203,23 +266,17 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     :return: List[str] - a list of possible tab completions
     """
 
-    # Get all tokens prior to token being completed
-    try:
-        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
-        tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
-    except ValueError:
-        # Invalid syntax for shlex (Probably due to missing closing quote)
-        return []
-
+    # Get all tokens through the one being completed
+    tokens, in_quotes = tokenize_line(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
     completions = []
     match_against = all_else
 
-    # Must have at least the command and one argument for a flag to be present
+    # Must have at least 2 args for a flag to precede the token being completed
     if len(tokens) > 1:
-        flag = tokens[-1]
+        flag = tokens[-2]
         if flag in flag_dict:
             match_against = flag_dict[flag]
 
@@ -227,8 +284,8 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     if isinstance(match_against, collections.Iterable):
         completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-        # If there is only 1 match and it's at the end of the line, then add a space
-        if len(completions) == 1 and endidx == len(line):
+        # Only add a space if there is one completion not in quotes and the end of the line
+        if len(completions) == 1 and not in_quotes and endidx == len(line):
             completions[0] += ' '
 
     # Perform tab completion using a function
@@ -257,21 +314,15 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     :return: List[str] - a list of possible tab completions
     """
 
-    # Get all tokens prior to token being completed
-    try:
-        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
-        tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
-    except ValueError:
-        # Invalid syntax for shlex (Probably due to missing closing quote)
-        return []
-
+    # Get all tokens through the one being completed
+    tokens, in_quotes = tokenize_line(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
     completions = []
 
     # Get the index of the token being completed
-    index = len(tokens)
+    index = len(tokens) - 1
 
     # Check if token is at an index in the dictionary
     if index in index_dict:
@@ -283,8 +334,8 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     if isinstance(match_against, collections.Iterable):
         completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-        # If there is only 1 match and it's at the end of the line, then add a space
-        if len(completions) == 1 and endidx == len(line):
+        # Only add a space if there is one completion not in quotes and the end of the line
+        if len(completions) == 1 and not in_quotes and endidx == len(line):
             completions[0] += ' '
 
     # Perform tab completion using a function
@@ -307,14 +358,8 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     :return: List[str] - a list of possible tab completions
     """
 
-    # Get all tokens prior to token being completed
-    try:
-        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
-        tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
-    except ValueError:
-        # Invalid syntax for shlex (Probably due to missing closing quote)
-        return []
-
+    # Get all tokens through the one being completed
+    tokens, in_quotes = tokenize_line(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
@@ -327,7 +372,9 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
     # Readline places begidx after ~ and path separators (/) so we need to extract any directory
     # path that appears before the search text
-    dirname = line[prev_space_index + 1:begidx]
+    token_being_completed = tokens[-1]
+    dirname_len = len(token_being_completed) - len(text)
+    dirname = token_being_completed[:dirname_len]
 
     # If no directory path and no search text has been entered, then search in the CWD for *
     if not dirname and not text:
@@ -373,8 +420,8 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
     # If there is a single completion
     if len(completions) == 1:
-        # If it is a file and we are at the end of the line, then add a space
-        if os.path.isfile(path_completions[0]) and endidx == len(line):
+        # If it is an unquoted file and we are at the end of the line, then add a space
+        if not in_quotes and os.path.isfile(path_completions[0]) and endidx == len(line):
             completions[0] += ' '
         # If tilde was expanded without a separator, prepend one
         elif os.path.isdir(path_completions[0]) and add_sep_after_tilde:
@@ -1446,21 +1493,25 @@ class Cmd(cmd.Cmd):
         Override of parent class method to handle tab completing subcommands
         """
 
-        # Get all tokens prior to token being completed
-        try:
-            prev_space_index = max(line.rfind(' ', 0, begidx), 0)
-            tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
-        except ValueError:
-            # Invalid syntax for shlex (Probably due to missing closing quote)
+        # The subcommand is the token at index 2 in the command line
+        subcmd_index = 2
+
+        # Get all tokens through the one being completed
+        tokens, in_quotes = tokenize_line(line, begidx, endidx)
+        if len(tokens) == 0:
             return []
 
         completions = []
 
-        # If we have "help" and a completed command token, then attempt to match subcommands
-        if len(tokens) == 2:
+        # Get the index of the token being completed
+        index = len(tokens) - 1
+
+        # Check if we are completing a subcommand
+        if index == subcmd_index:
 
             # Match subcommands if any exist
-            subcommands = self.get_subcommands(tokens[1])
+            command = tokens[subcmd_index - 1]
+            subcommands = self.get_subcommands(command)
             if subcommands is not None:
                 completions = [cur_sub for cur_sub in subcommands if cur_sub.startswith(text)]
 
@@ -1468,9 +1519,10 @@ class Cmd(cmd.Cmd):
         else:
             completions = cmd.Cmd.complete_help(self, text, line, begidx, endidx)
 
-            # If only 1 command has been matched and it's at the end of the line,
+            # If only 1 command has been matched and it's unquoted and at the end of the line,
             # then add a space if it has subcommands
-            if len(completions) == 1 and endidx == len(line) and self.get_subcommands(completions[0]) is not None:
+            if len(completions) == 1 and not in_quotes and endidx == len(line) and \
+                    self.get_subcommands(completions[0]) is not None:
                 completions[0] += ' '
 
         completions.sort()
@@ -2290,24 +2342,24 @@ Usage:  Usage: unalias [-a] name [name ...]
         :return: List[str] - a list of possible tab completions
         """
 
-        # Get all tokens prior to token being completed
-        try:
-            prev_space_index = max(line.rfind(' ', 0, begidx), 0)
-            tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
-        except ValueError:
-            # Invalid syntax for shlex (Probably due to missing closing quote)
-            return []
+        # The shell command is the token at index 1 in the command line
+        shell_cmd_index = 1
 
+        # Get all tokens through the one being completed
+        tokens, in_quotes = tokenize_line(line, begidx, endidx)
         if len(tokens) == 0:
             return []
 
+        # Get the index of the token being completed
+        index = len(tokens) - 1
+
         # Check if we are still completing the shell command
-        if len(tokens) == 1:
+        if index == shell_cmd_index:
 
             # Readline places begidx after ~ and path separators (/) so we need to get the whole token
             # and see if it begins with a possible path in case we need to do path completion
             # to find the shell command executables
-            cmd_token = line[prev_space_index + 1:begidx + 1]
+            cmd_token = tokens[-1]
 
             # Don't tab complete anything if no shell command has been started
             if len(cmd_token) == 0:
@@ -2319,7 +2371,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 command_completions = self._get_exes_in_path(text)
 
                 if command_completions:
-                    # If there is only 1 match and it's at the end of the line, then add a space
+                    # Only add a space if there is one completion not in quotes and the end of the line
                     if len(command_completions) == 1 and endidx == len(line):
                         command_completions[0] += ' '
                     return command_completions
@@ -2328,7 +2380,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             return path_complete(text, line, begidx, endidx, dir_exe_only=True)
 
         # We are past the shell command, so do path completion
-        else:
+        elif index > shell_cmd_index:
             return path_complete(text, line, begidx, endidx)
 
     def cmd_with_subs_completer(self, text, line, begidx, endidx, base):
@@ -2368,18 +2420,15 @@ Usage:  Usage: unalias [-a] name [name ...]
         # The subcommand is the token at index 1 in the command line
         subcmd_index = 1
 
-        # Get all tokens prior to token being completed
-        try:
-            prev_space_index = max(line.rfind(' ', 0, begidx), 0)
-            tokens = shlex.split(line[:prev_space_index], posix=POSIX_SHLEX)
-        except ValueError:
-            # Invalid syntax for shlex (Probably due to missing closing quote)
+        # Get all tokens through the one being completed
+        tokens, in_quotes = tokenize_line(line, begidx, endidx)
+        if len(tokens) == 0:
             return []
 
         completions = []
 
         # Get the index of the token being completed
-        index = len(tokens)
+        index = len(tokens) - 1
 
         # If the token being completed is past the subcommand name, then do subcommand specific tab-completion
         if index > subcmd_index:
