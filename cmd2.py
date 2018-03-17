@@ -1582,11 +1582,6 @@ class Cmd(cmd.Cmd):
             i += 1
         command, arg = line[:i], line[i:].strip()
 
-        # Make sure there is a space between the command and args
-        # This can occur when a character not in self.identchars bumps against the command (ex: help@)
-        if len(command) > 0 and len(arg) > 0 and line[len(command)] != ' ':
-            line = line.replace(command, command + ' ', 1)
-
         return command, arg, line
 
     def onecmd_plus_hooks(self, line):
