@@ -8,7 +8,9 @@
     * Added [quit_on_sigint](http://cmd2.readthedocs.io/en/latest/settingchanges.html#quit-on-sigint) attribute to enable canceling current line instead of quitting when Ctrl+C is typed
     * Added possibility of having readline history preservation in a SubMenu
     * Added [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py) example to demonstrate how to display tabular data
-    * Added command aliasing with ``alias`` command
+    * Added command aliasing with ``alias`` and ``unalias`` commands
+    * Added the ability to load an initialization script at startup
+        * See [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py) for an example
     
 ## 0.8.1 (March 9, 2018)
 

@@ -1,0 +1,2 @@
+alias ls !ls -hal
+alias pwd !pwd
