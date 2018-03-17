@@ -2377,7 +2377,7 @@ Usage:  Usage: unalias [-a] name [name ...]
 
                 if command_completions:
                     # Only add a space if there is one completion not in quotes and the end of the line
-                    if len(command_completions) == 1 and endidx == len(line):
+                    if len(command_completions) == 1 and not in_quotes and endidx == len(line):
                         command_completions[0] += ' '
                     return command_completions
 
