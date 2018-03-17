@@ -8,6 +8,7 @@ and provides separate contextual help.
 """
 import argparse
 import functools
+import sys
 
 import cmd2
 from cmd2 import with_argparser, index_based_complete
@@ -69,8 +70,10 @@ class SubcommandsExample(cmd2.Cmd):
             # No subcommand was provided, so as called
             self.do_help('base')
 
-    # This makes sure correct tab completion functions are called based on the selected subcommand
-    complete_base = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='base')
+    # functools.partialmethod was added in Python 3.4
+    if sys.version_info >= (3, 4):
+        # This makes sure correct tab completion functions are called based on the selected subcommand
+        complete_base = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='base')
 
 
 if __name__ == '__main__':

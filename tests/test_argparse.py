@@ -6,9 +6,12 @@ import argparse
 import functools
 import pytest
 import readline
+import sys
 
 import cmd2
 import mock
+import six
+
 from conftest import run_cmd, StdOut
 
 
@@ -224,8 +227,10 @@ class SubcommandApp(cmd2.Cmd):
             # No subcommand was provided, so as called
             self.do_help('base')
 
-    # This makes sure correct tab completion functions are called based on the selected subcommand
-    complete_base = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='base')
+    # functools.partialmethod was added in Python 3.4
+    if six.PY3:
+        # This makes sure correct tab completion functions are called based on the selected subcommand
+        complete_base = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='base')
 
 @pytest.fixture
 def subcommand_app():
@@ -268,7 +273,8 @@ def test_subcommand_invalid_help(subcommand_app):
     assert out[0].startswith('usage: base')
     assert out[1].startswith("base: error: invalid choice: 'baz'")
 
-def test_sumcommand_tab_completion(subcommand_app):
+@pytest.mark.skipif(sys.version_info < (3,0), reason="functools.partialmethod requires Python 3.4+")
+def test_subcommand_tab_completion(subcommand_app):
     # This makes sure the correct completer for the sport subcommand is called
     text = 'Foot'
     line = 'base sport Foot'
@@ -294,7 +300,8 @@ def test_sumcommand_tab_completion(subcommand_app):
     # It is at end of line, so extra space is present
     assert first_match is not None and subcommand_app.completion_matches == ['Football ']
 
-def test_sumcommand_tab_completion_with_no_completer(subcommand_app):
+@pytest.mark.skipif(sys.version_info < (3,0), reason="functools.partialmethod requires Python 3.4+")
+def test_subcommand_tab_completion_with_no_completer(subcommand_app):
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
     text = 'Foot'
