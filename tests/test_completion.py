@@ -247,7 +247,7 @@ def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app):
     line = 'shell'
 
     endidx = len(line)
-    begidx = endidx - len(text)
+    begidx = 0
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
 
 def test_shell_command_completion_does_path_completion_when_after_command(cmd2_app, request):
@@ -563,7 +563,7 @@ def test_flag_based_completion_no_tokens():
     text = ''
     line = 'list_food'
     endidx = len(line)
-    begidx = endidx - len(text)
+    begidx = 0
 
     assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
 
