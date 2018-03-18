@@ -171,10 +171,10 @@ def tokenize_line(line, begidx, endidx):
     :param line: str - the current input line with leading whitespace removed
     :param begidx: int - the beginning index of the prefix text
     :param endidx: int - the ending index of the prefix text
-    :return: A list of tokens and whether or not the token being completed was quoted on the command line
+    :return: A list of tokens and whether or not the token being completed has an unclosed quote
     """
     tokens = []
-    in_quotes = False
+    unclosed_quote = ''
     quotes_to_try = ['"', "'"]
 
     tmp_line = line[:endidx]
@@ -190,17 +190,16 @@ def tokenize_line(line, begidx, endidx):
                 break
 
             # Add a closing quote and try to parse again
-            in_quotes = True
+            unclosed_quote = quotes_to_try[0]
+            quotes_to_try = quotes_to_try[1:]
 
             tmp_line = line[:endidx]
             tmp_endidx = endidx + 1
-
-            tmp_line += quotes_to_try[0]
-            quotes_to_try = quotes_to_try[1:]
+            tmp_line += unclosed_quote
 
     # No tokens were parsed
     if len(tokens) == 0:
-        in_quotes = False
+        unclosed_quote = ''
 
     # Unquote all tokens
     for index, cur_token in enumerate(tokens):
@@ -212,14 +211,14 @@ def tokenize_line(line, begidx, endidx):
     # how readline separation characters work. If begidx is preceded by a string, then the final
     # token in tokens is the token being completed. If begidx is not preceded by a string, then
     # we need to add a blank entry to tokens to be the token being completed.
-    if begidx == endidx and not in_quotes:
+    if begidx == endidx and not unclosed_quote:
         # If begidx is the first character in the line, or is preceded by a space
         # then we need to add the blank entry to tokens.
         prev_space_index = max(line.rfind(' ', 0, begidx), 0)
         if prev_space_index == 0 or prev_space_index == begidx - 1:
             tokens.append('')
 
-    return tokens, in_quotes
+    return tokens, unclosed_quote
 
 
 # noinspection PyUnusedLocal
@@ -234,14 +233,14 @@ def basic_complete(text, line, begidx, endidx, match_against):
     :return: List[str] - a list of possible tab completions
     """
     # Get all tokens through the one being completed
-    tokens, in_quotes = tokenize_line(line, begidx, endidx)
+    tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
     completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-    # Only add a space if there is one completion not in quotes and the end of the line
-    if len(completions) == 1 and not in_quotes and endidx == len(line):
+    # Check if we should add a space to the end of the line
+    if len(completions) == 1 and not unclosed_quote and endidx == len(line):
         completions[0] += ' '
 
     completions.sort()
@@ -267,7 +266,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     """
 
     # Get all tokens through the one being completed
-    tokens, in_quotes = tokenize_line(line, begidx, endidx)
+    tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
@@ -284,8 +283,8 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     if isinstance(match_against, collections.Iterable):
         completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-        # Only add a space if there is one completion not in quotes and the end of the line
-        if len(completions) == 1 and not in_quotes and endidx == len(line):
+        # Check if we should add a space to the end of the line
+        if len(completions) == 1 and not unclosed_quote and endidx == len(line):
             completions[0] += ' '
 
     # Perform tab completion using a function
@@ -315,7 +314,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     """
 
     # Get all tokens through the one being completed
-    tokens, in_quotes = tokenize_line(line, begidx, endidx)
+    tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
@@ -334,8 +333,8 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     if isinstance(match_against, collections.Iterable):
         completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
 
-        # Only add a space if there is one completion not in quotes and the end of the line
-        if len(completions) == 1 and not in_quotes and endidx == len(line):
+        # Check if we should add a space to the end of the line
+        if len(completions) == 1 and not unclosed_quote and endidx == len(line):
             completions[0] += ' '
 
     # Perform tab completion using a function
@@ -359,7 +358,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     """
 
     # Get all tokens through the one being completed
-    tokens, in_quotes = tokenize_line(line, begidx, endidx)
+    tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
@@ -368,10 +367,9 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
         add_trailing_sep_if_dir = True
 
-    add_sep_after_tilde = False
     token_being_completed = tokens[-1]
 
-    # If no the token being completed is blank, then search in the CWD for *
+    # If the token being completed is blank, then search in the CWD for *
     if not token_being_completed:
         search_str = os.path.join(os.getcwd(), '*')
     else:
@@ -410,16 +408,12 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     elif dir_only:
         path_completions = [c for c in path_completions if os.path.isdir(c)]
 
-    # Don't add a slash if the completed token is in quotes
-    if len(path_completions) == 1 and in_quotes:
-        add_trailing_sep_if_dir = False
-
     # Extract just the completed text portion of the paths
     completions = []
-    prefix_length = len(token_being_completed) - len(text)
+    starting_index = len(os.path.basename(token_being_completed)) - len(text)
 
     for c in path_completions:
-        return_str = os.path.basename(c)[prefix_length:]
+        return_str = os.path.basename(c)[starting_index:]
 
         # Add a separator after directories if the next character isn't already a separator
         if os.path.isdir(c) and add_trailing_sep_if_dir:
@@ -429,9 +423,19 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
     # If there is a single completion
     if len(completions) == 1:
-        # If it is an unquoted file and we are at the end of the line, then add a space
-        if not in_quotes and os.path.isfile(path_completions[0]) and endidx == len(line):
-            completions[0] += ' '
+
+        # Check if we should add a closing quote/space to a file at end of the line
+        if os.path.isfile(path_completions[0]) and endidx == len(line):
+
+            # Readline on Linux/Mac will add a closing quote if the completed token had no slashes
+            # If that isn't the case, then we will add a closing quote and a space to the file
+            delims = readline.get_completer_delims()
+            if unclosed_quote and (os.path.sep in token_being_completed or sys.platform.startswith('win')):
+                completions[0] += unclosed_quote + ' '
+
+            # If there isn't an unclosed quote, then just add a space
+            elif not unclosed_quote:
+                completions[0] += ' '
 
     completions.sort()
     return completions
@@ -1509,7 +1513,7 @@ class Cmd(cmd.Cmd):
         subcmd_index = 2
 
         # Get all tokens through the one being completed
-        tokens, in_quotes = tokenize_line(line, begidx, endidx)
+        tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
         if len(tokens) == 0:
             return []
 
@@ -1531,9 +1535,8 @@ class Cmd(cmd.Cmd):
         else:
             completions = cmd.Cmd.complete_help(self, text, line, begidx, endidx)
 
-            # If only 1 command has been matched and it's unquoted and at the end of the line,
-            # then add a space if it has subcommands
-            if len(completions) == 1 and not in_quotes and endidx == len(line) and \
+            # Check if we should add a space to the end of the line
+            if len(completions) == 1 and not unclosed_quote and endidx == len(line) and \
                     self.get_subcommands(completions[0]) is not None:
                 completions[0] += ' '
 
@@ -2358,7 +2361,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         shell_cmd_index = 1
 
         # Get all tokens through the one being completed
-        tokens, in_quotes = tokenize_line(line, begidx, endidx)
+        tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
         if len(tokens) == 0:
             return []
 
@@ -2383,8 +2386,8 @@ Usage:  Usage: unalias [-a] name [name ...]
                 command_completions = self._get_exes_in_path(text)
 
                 if command_completions:
-                    # Only add a space if there is one completion not in quotes and the end of the line
-                    if len(command_completions) == 1 and not in_quotes and endidx == len(line):
+                    # Check if we should add a space to the end of the line
+                    if len(command_completions) == 1 and not unclosed_quote and endidx == len(line):
                         command_completions[0] += ' '
                     return command_completions
 
@@ -2433,7 +2436,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         subcmd_index = 1
 
         # Get all tokens through the one being completed
-        tokens, in_quotes = tokenize_line(line, begidx, endidx)
+        tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
         if len(tokens) == 0:
             return []
 

@@ -353,13 +353,13 @@ def test_default_to_shell_completion(cmd2_app, request):
 def test_path_completion_cwd():
     # Run path complete with no path and no search text
     text = ''
-    line = 'shell ls {}'.format(text)
+    line = 'shell ls '
     endidx = len(line)
     begidx = endidx - len(text)
     completions_empty = path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
-    cwd = os.getcwd()
+    cwd = os.getcwd() + os.path.sep
     line = 'shell ls {}'.format(cwd)
     endidx = len(line)
     begidx = endidx - len(text)
@@ -368,6 +368,15 @@ def test_path_completion_cwd():
     # Verify that the results are the same in both cases and that there is something there
     assert completions_empty == completions_cwd
     assert completions_cwd
+
+def test_path_completion_invalid_syntax():
+    text = ''
+    line = 'shell ls ~'
+    endidx = len(line)
+    begidx = endidx
+
+    # Can't have a ~ without a separating slash
+    assert path_complete(text, line, begidx, endidx) == []
 
 def test_path_completion_doesnt_match_wildcards(request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -386,19 +395,19 @@ def test_path_completion_user_expansion():
     # Run path with just a tilde
     text = ''
     if sys.platform.startswith('win'):
-        line = 'shell dir ~{}'.format(text)
+        cmd = 'dir'
     else:
-        line = 'shell ls ~{}'.format(text)
+        cmd = 'ls'
+
+    line = 'shell {} ~{}'.format(cmd, os.path.sep)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde = path_complete(text, line, begidx, endidx)
 
     # Run path complete on the user's home directory
-    user_dir = os.path.expanduser('~')
-    if sys.platform.startswith('win'):
-        line = 'shell dir {}'.format(user_dir)
-    else:
-        line = 'shell ls {}'.format(user_dir)
+    user_dir = os.path.expanduser('~') + os.path.sep
+
+    line = 'shell {} {}'.format(cmd, user_dir)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_home = path_complete(text, line, begidx, endidx)
