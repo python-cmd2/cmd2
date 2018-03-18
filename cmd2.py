@@ -382,10 +382,13 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         # Used if we need to prepend a directory to the search string
         dirname = ''
 
-        # Handle ~ in search text
-        if token_being_completed.startswith('~'):
+        # If the user only entered a '~', then complete it with a slash
+        if token_being_completed == '~':
+            return [os.path.sep]
 
-            # Tilde without separator is invalid
+        elif token_being_completed.startswith('~'):
+
+            # Tilde without separator between path is invalid
             if not token_being_completed.startswith('~' + os.path.sep):
                 return []
 
