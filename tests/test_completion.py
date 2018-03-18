@@ -359,7 +359,7 @@ def test_path_completion_cwd():
     completions_empty = path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
-    cwd = os.getcwd()
+    cwd = os.getcwd() + os.path.sep
     line = 'shell ls {}'.format(cwd)
     endidx = len(line)
     begidx = endidx - len(text)
