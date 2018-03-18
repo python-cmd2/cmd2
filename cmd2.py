@@ -369,34 +369,37 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         add_trailing_sep_if_dir = True
 
     add_sep_after_tilde = False
-
-    # Readline places begidx after ~ and path separators (/) so we need to extract any directory
-    # path that appears before the search text
     token_being_completed = tokens[-1]
-    dirname_len = len(token_being_completed) - len(text)
-    dirname = token_being_completed[:dirname_len]
 
-    # If no directory path and no search text has been entered, then search in the CWD for *
-    if not dirname and not text:
+    # If no the token being completed is blank, then search in the CWD for *
+    if not token_being_completed:
         search_str = os.path.join(os.getcwd(), '*')
     else:
         # Purposely don't match any path containing wildcards - what we are doing is complicated enough!
         wildcards = ['*', '?']
         for wildcard in wildcards:
-            if wildcard in dirname or wildcard in text:
+            if wildcard in token_being_completed:
                 return []
 
-        if not dirname:
+        # Used if we need to prepend a directory to the search string
+        dirname = ''
+
+        # Handle ~ in search text
+        if token_being_completed.startswith('~'):
+
+            # Tilde without separator is invalid
+            if not token_being_completed.startswith('~' + os.path.sep):
+                return []
+
+            # Expand "~" to the real user directory
+            token_being_completed = os.path.expanduser(token_being_completed)
+
+        # If the token does not have a directory, then use the cwd
+        elif not os.path.dirname(token_being_completed):
             dirname = os.getcwd()
-        elif dirname == '~':
-            # If tilde was used without separator, add a separator after the tilde in the completions
-            add_sep_after_tilde = True
 
         # Build the search string
-        search_str = os.path.join(dirname, text + '*')
-
-    # Expand "~" to the real user directory
-    search_str = os.path.expanduser(search_str)
+        search_str = os.path.join(dirname, token_being_completed + '*')
 
     # Find all matching path completions
     path_completions = glob.glob(search_str)
@@ -407,25 +410,28 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     elif dir_only:
         path_completions = [c for c in path_completions if os.path.isdir(c)]
 
-    # Get the basename of the paths
+    # Don't add a slash if the completed token is in quotes
+    if len(path_completions) == 1 and in_quotes:
+        add_trailing_sep_if_dir = False
+
+    # Extract just the completed text portion of the paths
     completions = []
+    prefix_length = len(token_being_completed) - len(text)
+
     for c in path_completions:
-        basename = os.path.basename(c)
+        return_str = os.path.basename(c)[prefix_length:]
 
         # Add a separator after directories if the next character isn't already a separator
         if os.path.isdir(c) and add_trailing_sep_if_dir:
-            basename += os.path.sep
+            return_str += os.path.sep
 
-        completions.append(basename)
+        completions.append(return_str)
 
     # If there is a single completion
     if len(completions) == 1:
         # If it is an unquoted file and we are at the end of the line, then add a space
         if not in_quotes and os.path.isfile(path_completions[0]) and endidx == len(line):
             completions[0] += ' '
-        # If tilde was expanded without a separator, prepend one
-        elif os.path.isdir(path_completions[0]) and add_sep_after_tilde:
-            completions[0] = os.path.sep + completions[0]
 
     completions.sort()
     return completions
@@ -1414,6 +1420,7 @@ class Cmd(cmd.Cmd):
         :param text: str - the current word that user is typing
         :param state: int - non-negative integer
         """
+
         if state == 0:
             import readline
             origline = readline.get_line_buffer()
