@@ -429,7 +429,6 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
             # Readline on Linux/Mac will add a closing quote if the completed token had no slashes
             # If that isn't the case, then we will add a closing quote and a space to the file
-            delims = readline.get_completer_delims()
             if unclosed_quote and (os.path.sep in token_being_completed or sys.platform.startswith('win')):
                 completions[0] += unclosed_quote + ' '
 
@@ -1427,6 +1426,16 @@ class Cmd(cmd.Cmd):
 
         if state == 0:
             import readline
+
+            import ctypes
+            from ctypes.util import find_library
+            libname = find_library("readline")
+            readline_lib = ctypes.CDLL(libname)
+            suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
+            suppress_quote.value = 1
+            suppress_append = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_append")
+            suppress_append.value = 1
+
             origline = readline.get_line_buffer()
             line = origline.lstrip()
             stripped = len(origline) - len(line)
