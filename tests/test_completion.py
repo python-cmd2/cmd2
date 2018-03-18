@@ -382,6 +382,15 @@ def test_path_completion_doesnt_match_wildcards(request):
     # Currently path completion doesn't accept wildcards, so will always return empty results
     assert path_complete(text, line, begidx, endidx) == []
 
+def test_path_completion_invalid_syntax():
+    # Test a missing separator between a ~ and path
+    text = ''
+    line = 'shell fake ~Desktop'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert path_complete(text, line, begidx, endidx) == []
+
 def test_path_completion_just_tilde():
     # Run path with just a tilde
     text = ''
@@ -403,14 +412,14 @@ def test_path_completion_user_expansion():
 
     line = 'shell {} ~{}'.format(cmd, os.path.sep)
     endidx = len(line)
-    begidx = endidx
+    begidx = endidx - len(text)
     completions_tilde_slash = path_complete(text, line, begidx, endidx)
 
     # Run path complete on the user's home directory
     user_dir = os.path.expanduser('~') + os.path.sep
     line = 'shell {} {}'.format(cmd, user_dir)
     endidx = len(line)
-    begidx = endidx
+    begidx = endidx - len(text)
     completions_home = path_complete(text, line, begidx, endidx)
 
     # Verify that the results are the same in both cases
