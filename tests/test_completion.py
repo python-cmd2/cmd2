@@ -403,17 +403,14 @@ def test_path_completion_user_expansion():
 
     line = 'shell {} ~{}'.format(cmd, os.path.sep)
     endidx = len(line)
-    begidx = endidx - len(text)
+    begidx = endidx
     completions_tilde_slash = path_complete(text, line, begidx, endidx)
 
     # Run path complete on the user's home directory
-    user_dir = os.path.expanduser('~')
-    if sys.platform.startswith('win'):
-        line = 'shell dir {}'.format(user_dir)
-    else:
-        line = 'shell ls {}'.format(user_dir)
+    user_dir = os.path.expanduser('~') + os.path.sep
+    line = 'shell {} {}'.format(cmd, user_dir)
     endidx = len(line)
-    begidx = endidx - len(text)
+    begidx = endidx
     completions_home = path_complete(text, line, begidx, endidx)
 
     # Verify that the results are the same in both cases
