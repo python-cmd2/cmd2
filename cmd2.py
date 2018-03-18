@@ -2380,17 +2380,17 @@ Usage:  Usage: unalias [-a] name [name ...]
         # Get the index of the token being completed
         index = len(tokens) - 1
 
-        # Check if we are still completing the shell command
-        if index == shell_cmd_index:
+        # Don't tab complete anything if no shell command has been started
+        if index < shell_cmd_index:
+            return []
+
+        # Complete the shell command
+        elif index == shell_cmd_index:
 
             # Readline places begidx after ~ and path separators (/) so we need to get the whole token
             # and see if it begins with a possible path in case we need to do path completion
             # to find the shell command executables
-            cmd_token = tokens[-1]
-
-            # Don't tab complete anything if no shell command has been started
-            if len(cmd_token) == 0:
-                return []
+            cmd_token = tokens[index]
 
             # Look for path characters in the token
             if not (cmd_token.startswith('~') or os.path.sep in cmd_token):
