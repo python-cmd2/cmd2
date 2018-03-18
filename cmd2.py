@@ -323,8 +323,6 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
         add_trailing_sep_if_dir = True
 
-    add_sep_after_tilde = False
-
     # Readline places begidx after ~ and path separators (/) so we need to extract any directory
     # path that appears before the search text
     dirname = line[prev_space_index + 1:begidx]
@@ -342,8 +340,12 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         if not dirname:
             dirname = os.getcwd()
         elif dirname == '~':
-            # If tilde was used without separator, add a separator after the tilde in the completions
-            add_sep_after_tilde = True
+            # If a ~ was used without a separator between text, then this is invalid
+            if text:
+                return []
+            # If only a ~ was entered, then complete it with a slash
+            else:
+                return [os.path.sep]
 
         # Build the search string
         search_str = os.path.join(dirname, text + '*')
@@ -376,9 +378,6 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         # If it is a file and we are at the end of the line, then add a space
         if os.path.isfile(path_completions[0]) and endidx == len(line):
             completions[0] += ' '
-        # If tilde was expanded without a separator, prepend one
-        elif os.path.isdir(path_completions[0]) and add_sep_after_tilde:
-            completions[0] = os.path.sep + completions[0]
 
     completions.sort()
     return completions

@@ -382,16 +382,29 @@ def test_path_completion_doesnt_match_wildcards(request):
     # Currently path completion doesn't accept wildcards, so will always return empty results
     assert path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_user_expansion():
+def test_path_completion_just_tilde():
     # Run path with just a tilde
     text = ''
-    if sys.platform.startswith('win'):
-        line = 'shell dir ~{}'.format(text)
-    else:
-        line = 'shell ls ~{}'.format(text)
+    line = 'shell fake ~'
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde = path_complete(text, line, begidx, endidx)
+
+    # Path complete should return a slash
+    assert completions_tilde == [os.path.sep]
+
+def test_path_completion_user_expansion():
+    # Run path with a tilde and a slash
+    text = ''
+    if sys.platform.startswith('win'):
+        cmd = 'dir'
+    else:
+        cmd = 'ls'
+
+    line = 'shell {} ~{}'.format(cmd, os.path.sep)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    completions_tilde_slash = path_complete(text, line, begidx, endidx)
 
     # Run path complete on the user's home directory
     user_dir = os.path.expanduser('~')
@@ -404,7 +417,7 @@ def test_path_completion_user_expansion():
     completions_home = path_complete(text, line, begidx, endidx)
 
     # Verify that the results are the same in both cases
-    assert completions_tilde == completions_home
+    assert completions_tilde_slash == completions_home
 
 def test_path_completion_directories_only(request):
     test_dir = os.path.dirname(request.module.__file__)
