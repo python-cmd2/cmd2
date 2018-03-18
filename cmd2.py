@@ -350,8 +350,8 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         # Build the search string
         search_str = os.path.join(dirname, text + '*')
 
-    # Expand "~" to the real user directory
-    search_str = os.path.expanduser(search_str)
+        # Expand "~" to the real user directory
+        search_str = os.path.expanduser(search_str)
 
     # Find all matching path completions
     path_completions = glob.glob(search_str)
