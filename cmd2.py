@@ -1471,7 +1471,6 @@ class Cmd(cmd.Cmd):
         """
 
         if state == 0:
-            import readline
 
             if readline_lib is not None:
                 # Set GNU readline's rl_completion_suppress_quote to 1 so it won't automatically add a closing quote
@@ -1571,6 +1570,9 @@ class Cmd(cmd.Cmd):
         Override of parent class method to handle tab completing subcommands
         """
 
+        # The command is the token at index 1 in the command line
+        cmd_index = 1
+
         # The subcommand is the token at index 2 in the command line
         subcmd_index = 2
 
@@ -1584,22 +1586,28 @@ class Cmd(cmd.Cmd):
         # Get the index of the token being completed
         index = len(tokens) - 1
 
+        # Check if we are completing a command
+        if index == cmd_index:
+            completions = cmd.Cmd.complete_help(self, text, line, begidx, endidx)
+
         # Check if we are completing a subcommand
-        if index == subcmd_index:
+        elif index == subcmd_index:
 
             # Match subcommands if any exist
-            command = tokens[subcmd_index - 1]
+            command = tokens[cmd_index]
             subcommands = self.get_subcommands(command)
             if subcommands is not None:
                 completions = [cur_sub for cur_sub in subcommands if cur_sub.startswith(text)]
 
-        # Run normal help completion from the parent class
-        else:
-            completions = cmd.Cmd.complete_help(self, text, line, begidx, endidx)
+        # Handle a single completion
+        if len(completions) == 1:
 
-            # Check if we should add a space to the end of the line
-            if len(completions) == 1 and not unclosed_quote and endidx == len(line) and \
-                    self.get_subcommands(completions[0]) is not None:
+            # Close the quote
+            if unclosed_quote:
+                completions[0] += unclosed_quote
+
+            # If we are at the end of the line, then add a space
+            if endidx == len(line):
                 completions[0] += ' '
 
         completions.sort()

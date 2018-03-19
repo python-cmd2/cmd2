@@ -171,8 +171,7 @@ def test_cmd2_help_completion_single_end(cmd2_app):
     line = 'help he'
     endidx = len(line)
     begidx = endidx - len(text)
-    # Even though it is at end of line, no extra space is present when tab completing a command name to get help on
-    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help']
+    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help ']
 
 def test_cmd2_help_completion_single_mid(cmd2_app):
     text = 'he'
@@ -1117,9 +1116,9 @@ def test_cmd2_submenu_completion_after_submenu_nomatch(sb_app):
 
 def test_cmd2_help_submenu_completion_single_mid(sb_app):
     text = 'sec'
-    line = 'help sec'
-    begidx = 5
-    endidx = 8
+    line = 'help seco'
+    begidx = len(line) - 4
+    endidx = begidx + len(text)
     assert sb_app.complete_help(text, line, begidx, endidx) == ['second']
 
 
