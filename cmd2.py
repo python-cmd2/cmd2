@@ -92,6 +92,18 @@ except ImportError:
 try:
     # noinspection PyUnresolvedReferences
     import readline
+
+    if not sys.platform.startswith('win'):
+        import ctypes
+        from ctypes.util import find_library
+
+        libname = find_library("readline")
+        readline_lib = ctypes.CDLL(libname)
+
+        # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
+        rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+        rl_basic_quote_characters.value = None
+
 except ImportError:
     pass
 
@@ -430,14 +442,10 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         # Check if we should add a closing quote/space to a file at end of the line
         if os.path.isfile(path_completions[0]) and endidx == len(line):
 
-            # Readline on Linux/Mac will add a closing quote if the completed token had no slashes
-            # If that isn't the case, then we will add a closing quote and a space to the file
-            if unclosed_quote and (os.path.sep in token_being_completed or sys.platform.startswith('win')):
-                completions[0] += unclosed_quote + ' '
-
-            # If there isn't an unclosed quote, then just add a space
-            elif not unclosed_quote:
-                completions[0] += ' '
+            # Check if we need to close the quote
+            if unclosed_quote:
+                completions[0] += unclosed_quote
+            completions[0] += ' '
 
     completions.sort()
     return completions
@@ -1430,14 +1438,17 @@ class Cmd(cmd.Cmd):
         if state == 0:
             import readline
 
-            import ctypes
-            from ctypes.util import find_library
-            libname = find_library("readline")
-            readline_lib = ctypes.CDLL(libname)
-            suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
-            suppress_quote.value = 1
-            suppress_append = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_append")
-            suppress_append.value = 1
+            if not sys.platform.startswith('win'):
+                import ctypes
+                from ctypes.util import find_library
+
+                libname = find_library("readline")
+                readline_lib = ctypes.CDLL(libname)
+
+                # Set GNU readline's rl_completion_suppress_quote to 1 so it won't automatically add a closing quote
+                # This gets reset before complete() is called, so we have to set it each time
+                suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
+                suppress_quote.value = 1
 
             origline = readline.get_line_buffer()
             line = origline.lstrip()
