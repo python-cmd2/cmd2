@@ -905,10 +905,14 @@ def test_cmd2_help_subcommand_completion_single_end(sc_app):
     line = 'help base'
     endidx = len(line)
     begidx = endidx - len(text)
-
-    # Commands with subcommands have a space at the end when the cursor is at the end of the line
     assert sc_app.complete_help(text, line, begidx, endidx) == ['base ']
 
+def test_cmd2_help_subcommand_completion_quotes(sc_app):
+    text = 'base'
+    line = 'help "base'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['base" ']
 
 def test_cmd2_help_subcommand_completion_single_mid(sc_app):
     text = 'ba'
