@@ -2657,7 +2657,8 @@ Paths or arguments that contain spaces must be enclosed in quotes
         sys.argv = orig_args
 
     # Enable tab-completion for pyscript command
-    def complete_pyscript(self, text, line, begidx, endidx):
+    @staticmethod
+    def complete_pyscript(text, line, begidx, endidx):
         index_dict = {1: path_complete}
         return index_based_complete(text, line, begidx, endidx, index_dict)
 
@@ -2801,7 +2802,8 @@ The editor used is determined by the ``editor`` settable parameter.
             os.system('"{}"'.format(self.editor))
 
     # Enable tab-completion for edit command
-    def complete_edit(self, text, line, begidx, endidx):
+    @staticmethod
+    def complete_edit(text, line, begidx, endidx):
         index_dict = {1: path_complete}
         return index_based_complete(text, line, begidx, endidx, index_dict)
 
@@ -2892,7 +2894,8 @@ Script should contain one command per line, just like command would be typed in 
         self._script_dir.append(os.path.dirname(expanded_path))
 
     # Enable tab-completion for load command
-    def complete_load(self, text, line, begidx, endidx):
+    @staticmethod
+    def complete_load(text, line, begidx, endidx):
         index_dict = {1: path_complete}
         return index_based_complete(text, line, begidx, endidx, index_dict)
 
