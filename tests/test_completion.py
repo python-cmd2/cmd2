@@ -678,6 +678,35 @@ def test_parseline_expands_shortcuts(cmd2_app):
     assert line.replace('!', 'shell ') == out_line
 
 
+# Test command completer functions to extend testing coverage
+def test_edit_completer(cmd2_app):
+    text = ''
+    line = 'edit '
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Verify there are results
+    assert cmd2_app.complete_edit(text, line, begidx, endidx)
+
+def test_load_completer(cmd2_app):
+    text = ''
+    line = 'load '
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Verify there are results
+    assert cmd2_app.complete_load(text, line, begidx, endidx)
+
+def test_pyscript_completer(cmd2_app):
+    text = ''
+    line = 'pyscript '
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Verify there are results
+    assert cmd2_app.complete_pyscript(text, line, begidx, endidx)
+
+
 class SubcommandsExample(cmd2.Cmd):
     """ Example cmd2 application where we a base command which has a couple subcommands."""
 
