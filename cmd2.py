@@ -1501,7 +1501,7 @@ class Cmd(cmd.Cmd):
     def preloop(self):
         """Hook method executed once when the cmdloop() method is called."""
         # Register a default SIGINT signal handler for Ctrl+C
-        signal.signal(signalnum=signal.SIGINT, handler=self.sigint_handler)
+        signal.signal(signal.SIGINT, self.sigint_handler)
 
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
