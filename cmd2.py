@@ -257,12 +257,16 @@ def basic_complete(text, line, begidx, endidx, match_against):
     starting_index = len(completion_token) - len(text)
     completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
 
-    # Check if we should add a closing quote/space to a match at end of the line
-    if len(completions) == 1 and endidx == len(line):
-        # Check if we need to close the quote
+    # Handle a single completion
+    if len(completions) == 1:
+
+        # Close the quote
         if unclosed_quote:
             completions[0] += unclosed_quote
-        completions[0] += ' '
+
+        # If we are at the end of the line, then add a space
+        if endidx == len(line):
+            completions[0] += ' '
 
     completions.sort()
     return completions
@@ -308,12 +312,16 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
         starting_index = len(completion_token) - len(text)
         completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
 
-        # Check if we should add a closing quote/space to a match at end of the line
-        if len(completions) == 1 and endidx == len(line):
-            # Check if we need to close the quote
+        # Handle a single completion
+        if len(completions) == 1:
+
+            # Close the quote
             if unclosed_quote:
                 completions[0] += unclosed_quote
-            completions[0] += ' '
+
+            # If we are at the end of the line, then add a space
+            if endidx == len(line):
+                completions[0] += ' '
 
     # Perform tab completion using a function
     elif callable(match_against):
@@ -365,12 +373,16 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
         starting_index = len(completion_token) - len(text)
         completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
 
-        # Check if we should add a closing quote/space to a match at end of the line
-        if len(completions) == 1 and endidx == len(line):
-            # Check if we need to close the quote
+        # Handle a single completion
+        if len(completions) == 1:
+
+            # Close the quote
             if unclosed_quote:
                 completions[0] += unclosed_quote
-            completions[0] += ' '
+
+            # If we are at the end of the line, then add a space
+            if endidx == len(line):
+                completions[0] += ' '
 
     # Perform tab completion using a function
     elif callable(match_against):
@@ -459,15 +471,15 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
         completions.append(return_str)
 
-    # If there is a single completion
-    if len(completions) == 1:
+    # Handle a single file completion
+    if len(completions) == 1 and os.path.isfile(path_completions[0]):
 
-        # Check if we should add a closing quote/space to a file at end of the line
-        if os.path.isfile(path_completions[0]) and endidx == len(line):
+        # Close the quote
+        if unclosed_quote:
+            completions[0] += unclosed_quote
 
-            # Check if we need to close the quote
-            if unclosed_quote:
-                completions[0] += unclosed_quote
+        # If we are at the end of the line, then add a space
+        if endidx == len(line):
             completions[0] += ' '
 
     completions.sort()
@@ -2418,21 +2430,25 @@ Usage:  Usage: unalias [-a] name [name ...]
             # Readline places begidx after ~ and path separators (/) so we need to get the whole token
             # and see if it begins with a possible path in case we need to do path completion
             # to find the shell command executables
-            cmd_token = tokens[index]
+            completion_token = tokens[index]
 
             # If there are no path characters are in this token, it is OK to try shell command completion.
-            if not (cmd_token.startswith('~') or os.path.sep in cmd_token):
+            if not (completion_token.startswith('~') or os.path.sep in completion_token):
                 # We will only keep where the text value starts
-                starting_index = len(cmd_token) - len(text)
-                completions = [cur_str[starting_index:] for cur_str in self._get_exes_in_path(cmd_token)]
+                starting_index = len(completion_token) - len(text)
+                completions = [cur_str[starting_index:] for cur_str in self._get_exes_in_path(completion_token)]
 
                 if completions:
-                    # Check if we should add a closing quote/space to a shell command at end of the line
-                    if len(completions) == 1 and endidx == len(line):
-                        # Check if we need to close the quote
+                    # Handle a single completion
+                    if len(completions) == 1:
+
+                        # Close the quote
                         if unclosed_quote:
                             completions[0] += unclosed_quote
-                        completions[0] += ' '
+
+                        # If we are at the end of the line, then add a space
+                        if endidx == len(line):
+                            completions[0] += ' '
 
                     return completions
 
@@ -2631,7 +2647,9 @@ Paths or arguments that contain spaces must be enclosed in quotes
         sys.argv = orig_args
 
     # Enable tab-completion for pyscript command
-    complete_pyscript = functools.partial(path_complete)
+    def complete_pyscript(self, text, line, begidx, endidx):
+        index_dict = {1: path_complete}
+        return index_based_complete(text, line, begidx, endidx, index_dict)
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:
@@ -2773,7 +2791,9 @@ The editor used is determined by the ``editor`` settable parameter.
             os.system('"{}"'.format(self.editor))
 
     # Enable tab-completion for edit command
-    complete_edit = functools.partial(path_complete)
+    def complete_edit(self, text, line, begidx, endidx):
+        index_dict = {1: path_complete}
+        return index_based_complete(text, line, begidx, endidx, index_dict)
 
     @property
     def _current_script_dir(self):
@@ -2862,7 +2882,9 @@ Script should contain one command per line, just like command would be typed in 
         self._script_dir.append(os.path.dirname(expanded_path))
 
     # Enable tab-completion for load command
-    complete_load = functools.partial(path_complete)
+    def complete_load(self, text, line, begidx, endidx):
+        index_dict = {1: path_complete}
+        return index_based_complete(text, line, begidx, endidx, index_dict)
 
     @staticmethod
     def is_text_file(file_path):
