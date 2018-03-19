@@ -482,9 +482,9 @@ def test_basic_completion_single_end():
 
 def test_basic_completion_single_mid():
     text = 'Pi'
-    line = 'list_food -f Pi'
-    begidx = len(line) - len(text)
-    endidx = begidx + 1
+    line = 'list_food -f Piz'
+    begidx = len(line) - 3
+    endidx = begidx + len(text)
 
     assert basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
@@ -515,9 +515,9 @@ def test_flag_based_completion_single_end():
 
 def test_flag_based_completion_single_mid():
     text = 'Pi'
-    line = 'list_food -f Pi'
-    begidx = len(line) - len(text)
-    endidx = begidx + 1
+    line = 'list_food -f Piz'
+    begidx = len(line) - 3
+    endidx = begidx + len(text)
 
     assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
 
@@ -567,7 +567,7 @@ def test_flag_based_completion_quotes():
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza" ']
 
 def test_flag_based_completion_no_tokens():
     text = ''
@@ -595,10 +595,10 @@ def test_index_based_completion_single_end():
     assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football ']
 
 def test_index_based_completion_single_mid():
-    text = 'Foo'
+    text = 'Fo'
     line = 'command Pizza Foo'
-    begidx = len(line) - len(text)
-    endidx = begidx + 1
+    begidx = len(line) - 3
+    endidx = begidx + len(text)
 
     assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football']
 
@@ -646,7 +646,7 @@ def test_index_based_completion_quotes():
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Pizza']
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ["Pizza' "]
 
 
 def test_parseline_command_and_args(cmd2_app):

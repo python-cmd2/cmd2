@@ -249,10 +249,17 @@ def basic_complete(text, line, begidx, endidx, match_against):
     if len(tokens) == 0:
         return []
 
-    completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
+    completion_token = tokens[-1]
 
-    # Check if we should add a space to the end of the line
-    if len(completions) == 1 and not unclosed_quote and endidx == len(line):
+    # We will only keep where the text value starts
+    starting_index = len(completion_token) - len(text)
+    completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
+
+    # Check if we should add a closing quote/space to a match at end of the line
+    if len(completions) == 1 and endidx == len(line):
+        # Check if we need to close the quote
+        if unclosed_quote:
+            completions[0] += unclosed_quote
         completions[0] += ' '
 
     completions.sort()
@@ -293,10 +300,17 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
 
     # Perform tab completion using an iterable
     if isinstance(match_against, collections.Iterable):
-        completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
+        completion_token = tokens[-1]
 
-        # Check if we should add a space to the end of the line
-        if len(completions) == 1 and not unclosed_quote and endidx == len(line):
+        # We will only keep where the text value starts
+        starting_index = len(completion_token) - len(text)
+        completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
+
+        # Check if we should add a closing quote/space to a match at end of the line
+        if len(completions) == 1 and endidx == len(line):
+            # Check if we need to close the quote
+            if unclosed_quote:
+                completions[0] += unclosed_quote
             completions[0] += ' '
 
     # Perform tab completion using a function
@@ -343,10 +357,17 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
 
     # Perform tab completion using an iterable
     if isinstance(match_against, collections.Iterable):
-        completions = [cur_str for cur_str in match_against if cur_str.startswith(text)]
+        completion_token = tokens[-1]
 
-        # Check if we should add a space to the end of the line
-        if len(completions) == 1 and not unclosed_quote and endidx == len(line):
+        # We will only keep where the text value starts
+        starting_index = len(completion_token) - len(text)
+        completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
+
+        # Check if we should add a closing quote/space to a match at end of the line
+        if len(completions) == 1 and endidx == len(line):
+            # Check if we need to close the quote
+            if unclosed_quote:
+                completions[0] += unclosed_quote
             completions[0] += ' '
 
     # Perform tab completion using a function
@@ -379,40 +400,40 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
         add_trailing_sep_if_dir = True
 
-    token_being_completed = tokens[-1]
+    completion_token = tokens[-1]
 
     # If the token being completed is blank, then search in the CWD for *
-    if not token_being_completed:
+    if not completion_token:
         search_str = os.path.join(os.getcwd(), '*')
     else:
         # Purposely don't match any path containing wildcards - what we are doing is complicated enough!
         wildcards = ['*', '?']
         for wildcard in wildcards:
-            if wildcard in token_being_completed:
+            if wildcard in completion_token:
                 return []
 
         # Used if we need to prepend a directory to the search string
         dirname = ''
 
         # If the user only entered a '~', then complete it with a slash
-        if token_being_completed == '~':
+        if completion_token == '~':
             return [os.path.sep]
 
-        elif token_being_completed.startswith('~'):
+        elif completion_token.startswith('~'):
 
             # Tilde without separator between path is invalid
-            if not token_being_completed.startswith('~' + os.path.sep):
+            if not completion_token.startswith('~' + os.path.sep):
                 return []
 
             # Expand "~" to the real user directory
-            token_being_completed = os.path.expanduser(token_being_completed)
+            completion_token = os.path.expanduser(completion_token)
 
         # If the token does not have a directory, then use the cwd
-        elif not os.path.dirname(token_being_completed):
+        elif not os.path.dirname(completion_token):
             dirname = os.getcwd()
 
         # Build the search string
-        search_str = os.path.join(dirname, token_being_completed + '*')
+        search_str = os.path.join(dirname, completion_token + '*')
 
     # Find all matching path completions
     path_completions = glob.glob(search_str)
@@ -425,7 +446,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
     # Extract just the completed text portion of the paths
     completions = []
-    starting_index = len(os.path.basename(token_being_completed)) - len(text)
+    starting_index = len(os.path.basename(completion_token)) - len(text)
 
     for c in path_completions:
         return_str = os.path.basename(c)[starting_index:]
@@ -2403,16 +2424,13 @@ Usage:  Usage: unalias [-a] name [name ...]
             # to find the shell command executables
             cmd_token = tokens[index]
 
-            # Look for path characters in the token
+            # If there are no path characters are in this token, it is OK to try shell command completion.
             if not (cmd_token.startswith('~') or os.path.sep in cmd_token):
-                # No path characters are in this token, it is OK to try shell command completion.
-                exes = self._get_exes_in_path(cmd_token)
+                # We will only keep where the text value starts
+                starting_index = len(cmd_token) - len(text)
+                completions = [cur_str[starting_index:] for cur_str in self._get_exes_in_path(cmd_token)]
 
-                if exes:
-                    # Extract just the completed text portion of the exes
-                    starting_index = len(cmd_token) - len(text)
-                    completions = [c[starting_index:] for c in exes]
-
+                if completions:
                     # Check if we should add a closing quote/space to a shell command at end of the line
                     if len(completions) == 1 and endidx == len(line):
                         # Check if we need to close the quote
