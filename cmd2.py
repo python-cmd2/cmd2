@@ -92,20 +92,22 @@ except ImportError:
 try:
     # noinspection PyUnresolvedReferences
     import readline
+except ImportError:
+    pass
 
-    if not sys.platform.startswith('win'):
-        import ctypes
-        from ctypes.util import find_library
+# Make some changes to GNU readline
+readline_lib = None
+if not sys.platform.startswith('win'):
+    import ctypes
+    from ctypes.util import find_library
 
-        libname = find_library("readline")
-        readline_lib = ctypes.CDLL(libname)
+    readline_lib_name = find_library("readline")
+    if readline_lib_name is not None and readline_lib_name:
+        readline_lib = ctypes.CDLL(readline_lib_name)
 
         # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
         rl_basic_quote_characters.value = None
-
-except ImportError:
-    pass
 
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
 if six.PY3:
@@ -1459,13 +1461,7 @@ class Cmd(cmd.Cmd):
         if state == 0:
             import readline
 
-            if not sys.platform.startswith('win'):
-                import ctypes
-                from ctypes.util import find_library
-
-                libname = find_library("readline")
-                readline_lib = ctypes.CDLL(libname)
-
+            if readline_lib is not None:
                 # Set GNU readline's rl_completion_suppress_quote to 1 so it won't automatically add a closing quote
                 # This gets reset before complete() is called, so we have to set it each time
                 suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
