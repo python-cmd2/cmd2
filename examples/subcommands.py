@@ -63,11 +63,11 @@ class SubcommandsExample(cmd2.Cmd):
     @with_argparser(base_parser)
     def do_base(self, args):
         """Base command help"""
-        try:
+        if args.func is not None:
             # Call whatever subcommand function was selected
             args.func(self, args)
-        except AttributeError:
-            # No subcommand was provided, so as called
+        else:
+            # No subcommand was provided, so call help
             self.do_help('base')
 
     # functools.partialmethod was added in Python 3.4

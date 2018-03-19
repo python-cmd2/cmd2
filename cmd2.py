@@ -36,6 +36,7 @@ import os
 import platform
 import re
 import shlex
+import signal
 import six
 import sys
 import tempfile
@@ -1051,7 +1052,7 @@ class Cmd(cmd.Cmd):
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
     allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    quit_on_sigint = True       # Quit the loop on interrupt instead of just resetting prompt
+    quit_on_sigint = False      # Quit the loop on interrupt instead of just resetting prompt
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
@@ -1479,6 +1480,28 @@ class Cmd(cmd.Cmd):
 
         completions.sort()
         return completions
+
+    # noinspection PyUnusedLocal
+    def sigint_handler(self, signum, frame):
+        """Signal handler for SIGINTs which typically come from Ctrl-C events.
+
+        If you need custom SIGINT behavior, then override this function.
+
+        :param signum: int - signal number
+        :param frame
+        """
+        # Save copy of pipe_proc since it could theoretically change while this is running
+        pipe_proc = self.pipe_proc
+        if pipe_proc is not None:
+            pipe_proc.terminate()
+
+        # Re-raise a KeyboardInterrupt so other parts of the code can catch it
+        raise KeyboardInterrupt("Got a keyboard interrupt within a Python script")
+
+    def preloop(self):
+        """Hook method executed once when the cmdloop() method is called."""
+        # Register a default SIGINT signal handler for Ctrl+C
+        signal.signal(signalnum=signal.SIGINT, handler=self.sigint_handler)
 
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
