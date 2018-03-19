@@ -208,6 +208,19 @@ def test_shell_command_completion(cmd2_app):
     begidx = endidx - len(text)
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == expected
 
+def test_shell_command_completion_quotes(cmd2_app):
+    if sys.platform == "win32":
+        text = 'calc'
+        expected = ['calc.exe" ']
+    else:
+        text = 'egr'
+        expected = ['egrep" ']
+
+    line = 'shell "{}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert cmd2_app.complete_shell(text, line, begidx, endidx) == expected
+
 def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
     if sys.platform == "win32":
         text = 'c*'
@@ -273,6 +286,18 @@ def test_path_completion_single_end(request):
     begidx = endidx - len(text)
 
     assert path_complete(text, line, begidx, endidx) == ['conftest.py ']
+
+def test_path_completion_quotes(request):
+    test_dir = '"' + os.path.dirname(request.module.__file__)
+
+    text = 'c'
+    path = os.path.join(test_dir, text)
+    line = 'shell cat {}'.format(path)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert path_complete(text, line, begidx, endidx) == ['conftest.py" ']
 
 def test_path_completion_single_mid(request):
     test_dir = os.path.dirname(request.module.__file__)
