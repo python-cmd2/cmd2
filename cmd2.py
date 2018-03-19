@@ -2406,13 +2406,21 @@ Usage:  Usage: unalias [-a] name [name ...]
             # Look for path characters in the token
             if not (cmd_token.startswith('~') or os.path.sep in cmd_token):
                 # No path characters are in this token, it is OK to try shell command completion.
-                command_completions = self._get_exes_in_path(text)
+                exes = self._get_exes_in_path(cmd_token)
 
-                if command_completions:
-                    # Check if we should add a space to the end of the line
-                    if len(command_completions) == 1 and not unclosed_quote and endidx == len(line):
-                        command_completions[0] += ' '
-                    return command_completions
+                if exes:
+                    # Extract just the completed text portion of the exes
+                    starting_index = len(cmd_token) - len(text)
+                    completions = [c[starting_index:] for c in exes]
+
+                    # Check if we should add a closing quote/space to a shell command at end of the line
+                    if len(completions) == 1 and endidx == len(line):
+                        # Check if we need to close the quote
+                        if unclosed_quote:
+                            completions[0] += unclosed_quote
+                        completions[0] += ' '
+
+                    return completions
 
             # If we have no results, try path completion to find the shell commands
             return path_complete(text, line, begidx, endidx, dir_exe_only=True)
