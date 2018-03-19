@@ -1506,11 +1506,21 @@ class Cmd(cmd.Cmd):
                 # Overwrite line to pass into completers
                 line = expanded_line
 
+                # If the cursor is right after a closed quote, then insert a space
+                tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+                prior_char = line[begidx - 1]
+                quotes = ['"', "'"]
+
+                if not unclosed_quote and prior_char in quotes:
+                    self.completion_matches = [' ']
+                    return self.completion_matches[state]
+
+                # Otherwise select a completer function
                 if command == '':
                     compfunc = self.completedefault
                 else:
 
-                    # Get the completion function for this command
+                    # Get the completer function for this command
                     try:
                         compfunc = getattr(self, 'complete_' + command)
                     except AttributeError:
