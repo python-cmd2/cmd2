@@ -194,6 +194,33 @@ def test_cmd2_help_completion_nomatch(cmd2_app):
     begidx = endidx - len(text)
     assert cmd2_app.complete_help(text, line, begidx, endidx) == []
 
+
+def test_complete_cursor_by_closing_quote(cmd2_app):
+    text = ''
+    line = 'fake ""'
+    endidx = len(line)
+    begidx = endidx - len(text)
+    state = 0
+
+    def get_line():
+        return line
+
+    def get_begidx():
+        return begidx
+
+    def get_endidx():
+        return endidx
+
+    with mock.patch.object(readline, 'get_line_buffer', get_line):
+        with mock.patch.object(readline, 'get_begidx', get_begidx):
+            with mock.patch.object(readline, 'get_endidx', get_endidx):
+                # Run the readline tab-completion function with readline mocks in place
+                first_match = cmd2_app.complete(text, state)
+
+    # If the cursor is right after a closing quote, then a space is returned
+    assert first_match is not None and cmd2_app.completion_matches == [' ']
+
+
 def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
         text = 'calc'
