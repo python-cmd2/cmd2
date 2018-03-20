@@ -471,12 +471,18 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
     completion_token = tokens[-1]
 
+    # Used to replace cwd in the final results
+    cwd = os.getcwd()
+    cwd_added = False
+
     # Used to replace ~ in the final results
-    user_path = ''
+    user_path = os.path.expanduser('~')
+    tilde_expanded = False
 
     # If the token being completed is blank, then search in the CWD for *
     if not completion_token:
         search_str = os.path.join(os.getcwd(), '*')
+        cwd_added = True
     else:
         # Purposely don't match any path containing wildcards - what we are doing is complicated enough!
         wildcards = ['*', '?']
@@ -499,18 +505,27 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
             if not completion_token.startswith('~' + os.path.sep):
                 return []
 
-            # Save the user path
-            user_path = os.path.expanduser('~')
+            # Mark that we are expanding a tilde
+            tilde_expanded = True
 
         # If the token does not have a directory, then use the cwd
         elif not os.path.dirname(completion_token):
             dirname = os.getcwd()
+            cwd_added = True
 
         # Build the search string
         search_str = os.path.join(dirname, completion_token + '*')
 
         # Expand "~" to the real user directory
         search_str = os.path.expanduser(search_str)
+
+    # If the text being completed does not appear at the beginning of the token being completed,
+    # which can happen if there are spaces, save off the index where our search text begins in the
+    # search string so we can return only that portion of the completed paths to readline
+    if len(completion_token) - len(text) > 0:
+        starting_index = search_str.rfind(text + '*')
+    else:
+        starting_index = 0
 
     # Find all matching path completions
     path_completions = glob.glob(search_str)
@@ -521,35 +536,31 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     elif dir_only:
         path_completions = [c for c in path_completions if os.path.isdir(c)]
 
+    # Don't append a space or closing quote to directory
+    if len(path_completions) == 1 and not os.path.isfile(path_completions[0]):
+        set_allow_appended_space(False)
+        set_allow_closing_quote(False)
+
     # Will will display only the basename of paths in the tab-completion suggestions
-    display_matches = []
+    display_matches = [os.path.basename(cur_completion) for cur_completion in path_completions]
 
     # Extract just the completed text portion of the paths for completions
     completions = []
-    starting_index = len(completion_token) - len(text)
-
     for cur_completion in path_completions:
 
-        # The match that will display in the suggestions
-        display_matches.append(os.path.basename(cur_completion))
-
-        # The actual tab completion
-        completion = cur_completion
-
         # Add a separator after directories if the next character isn't already a separator
-        if os.path.isdir(completion) and add_trailing_sep_if_dir:
-            completion += os.path.sep
+        if os.path.isdir(cur_completion) and add_trailing_sep_if_dir:
+            cur_completion += os.path.sep
 
         # Only keep where text started
         completions.append(cur_completion[starting_index:])
 
-    # Don't append a space or closing quote to directory
-    if len(completions) == 1 and not os.path.isfile(path_completions[0]):
-        set_allow_appended_space(False)
-        set_allow_closing_quote(False)
+    # Remove cwd if it was added
+    if cwd_added:
+        completions = [cur_path.replace(cwd + os.path.sep, '', 1) for cur_path in completions]
 
     # Restore a tilde if we expanded one
-    if user_path:
+    if tilde_expanded:
         completions = [cur_path.replace(user_path, '~', 1) for cur_path in completions]
         display_matches = [cur_path.replace(user_path, '~', 1) for cur_path in display_matches]
 
