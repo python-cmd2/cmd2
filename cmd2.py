@@ -1586,8 +1586,8 @@ class Cmd(cmd.Cmd):
                         shortcut_to_restore = shortcut
 
                         # Adjust text and where it begins
-                        text = text[len(shortcut):]
-                        begidx += len(shortcut)
+                        text = text[len(shortcut_to_restore):]
+                        begidx += len(shortcut_to_restore)
                         break
 
             # If begidx is greater than 0, then we are no longer completing the command
@@ -1682,9 +1682,15 @@ class Cmd(cmd.Cmd):
                                 if token_index < len(tokens) - 1:
                                     starting_index += len(cur_token)
 
+                            # Get where text started in the original line.
+                            # Account for whether we shifted begidx due to a shortcut.
+                            orig_begidx = readline.get_begidx()
+                            if shortcut_to_restore:
+                                orig_begidx += len(shortcut_to_restore)
+
                             # If the token started at begidx, then all we have to do is prepend
                             # an opening quote to all the completions. Readline will do the rest.
-                            if starting_index == readline.get_begidx():
+                            if starting_index == orig_begidx:
                                 self.completion_matches = ['"' + match for match in self.completion_matches]
 
                             # The token started after begidx, therefore we need to manually insert an
