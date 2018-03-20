@@ -460,14 +460,9 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
             set_allow_closing_quote(False)
             return [os.path.sep]
 
-        elif completion_token.startswith('~'):
-
-            # Tilde without separator between path is invalid
-            if not completion_token.startswith('~' + os.path.sep):
-                return []
-
-            # Expand "~" to the real user directory
-            completion_token = os.path.expanduser(completion_token)
+        # Tilde without separator between path is invalid
+        elif completion_token.startswith('~') and not completion_token.startswith('~' + os.path.sep):
+            return []
 
         # If the token does not have a directory, then use the cwd
         elif not os.path.dirname(completion_token):
@@ -475,6 +470,9 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
         # Build the search string
         search_str = os.path.join(dirname, completion_token + '*')
+
+        # Expand "~" to the real user directory
+        search_str = os.path.expanduser(search_str)
 
     # Find all matching path completions
     path_completions = glob.glob(search_str)
