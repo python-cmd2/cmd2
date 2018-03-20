@@ -381,7 +381,7 @@ def test_path_completion_doesnt_match_wildcards(request):
 
 def test_path_completion_invalid_syntax():
     # Test a missing separator between a ~ and path
-    text = ''
+    text = '~Desktop'
     line = 'shell fake ~Desktop'
     endidx = len(line)
     begidx = endidx - len(text)
@@ -390,14 +390,14 @@ def test_path_completion_invalid_syntax():
 
 def test_path_completion_just_tilde():
     # Run path with just a tilde
-    text = ''
+    text = '~'
     line = 'shell fake ~'
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde = path_complete(text, line, begidx, endidx)
 
     # Path complete should return a slash
-    assert completions_tilde == [os.path.sep]
+    assert completions_tilde == ['~' + os.path.sep]
 
 def test_path_completion_user_expansion():
     # Run path with a tilde and a slash

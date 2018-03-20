@@ -1578,12 +1578,12 @@ class Cmd(cmd.Cmd):
 
             # If the line starts with a shortcut that has no break between the search text,
             # then the text variable will start with the shortcut if its not a completer delimiter
-            text_shortcut = ''
+            shortcut_to_restore = ''
             if begidx == 0:
                 for (shortcut, expansion) in self.shortcuts:
                     if text.startswith(shortcut):
                         # Save the shortcut to adjust the line later
-                        text_shortcut = shortcut
+                        shortcut_to_restore = shortcut
 
                         # Adjust text and where it begins
                         text = text[len(shortcut):]
@@ -1726,14 +1726,14 @@ class Cmd(cmd.Cmd):
                                     readline.rl.mode.endidx += 1
 
                     # If a shortcut started text, then we need to make sure it doesn't get erased on the command line
-                    if text_shortcut:
+                    if shortcut_to_restore:
                         # If matches_to_display has not been set, then display the actual matches
                         # that do not show the shortcut character at the beginning of each match.
                         if matches_to_display is None:
                             set_matches_to_display(self.completion_matches)
 
                         # Given readline the restored shortcut character since that's what its expecting
-                        self.completion_matches = [text_shortcut + match for match in self.completion_matches]
+                        self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
 
                 # Handle single result
                 if len(self.completion_matches) == 1:
@@ -2637,8 +2637,11 @@ Usage:  Usage: unalias [-a] name [name ...]
         # Get the index of the token being completed
         index = len(tokens) - 1
 
+        if index < shell_cmd_index:
+            return []
+
         # Complete the shell command
-        if index == shell_cmd_index:
+        elif index == shell_cmd_index:
 
             completion_token = tokens[index]
 
@@ -2665,7 +2668,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             return path_complete(text, line, begidx, endidx, dir_exe_only=True)
 
         # We are past the shell command, so do path completion
-        elif index > shell_cmd_index:
+        else:
             return path_complete(text, line, begidx, endidx)
 
     def cmd_with_subs_completer(self, text, line, begidx, endidx, base):
