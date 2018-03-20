@@ -17,6 +17,10 @@ class PagedOutput(cmd2.Cmd):
     @with_argument_list
     def do_page_file(self, args):
         """Read in a text file and display its output in a pager."""
+        if not args:
+            self.perror('page_file requires a path to a file as an argument', traceback_war=False)
+            return
+
         with open(args[0], 'r') as f:
             text = f.read()
         self.ppaged(text)
