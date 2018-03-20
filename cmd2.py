@@ -95,7 +95,7 @@ try:
 except ImportError:
     pass
 
-# Make some changes to GNU readline
+# Load the GNU readline lib so we can make changes to it
 readline_lib = None
 if not sys.platform.startswith('win'):
     import ctypes
@@ -105,9 +105,55 @@ if not sys.platform.startswith('win'):
     if readline_lib_name is not None and readline_lib_name:
         readline_lib = ctypes.CDLL(readline_lib_name)
 
+############################################################################################################
+# The following variables are used by tab-completion functions. They are reset each time complete()
+# is run, and it is up to the completer functions to set them on a case-by-case basis
+############################################################################################################
+
+# If true and a single match is returned to complete(), then a space will be appended
+# if the match appears at the end of the line
+allow_appended_space = True
+
+# If true and a single match is returned to complete(), then a closing quote
+# will be added if there is an umatched opening quote
+allow_closing_quote = True
+
+
+def set_allow_appended_space(allow):
+    """
+    Sets allow_appended_space flag
+    :param allow: bool - the new value for allow_appended_space
+    """
+    global allow_appended_space
+    allow_appended_space = allow
+
+
+def set_allow_closing_quote(allow):
+    """
+    Sets allow_closing_quote flag
+    :param allow: bool - the new value for allow_closing_quote
+    """
+    global allow_closing_quote
+    allow_closing_quote = allow
+
+
+def set_completion_defaults():
+    """
+    Resets tab completion settings
+    Called each time complete() is called
+    """
+    set_allow_appended_space(True)
+    set_allow_closing_quote(True)
+
+    if readline_lib is not None:
         # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
         rl_basic_quote_characters.value = None
+
+        # Set GNU readline's rl_completion_suppress_quote to 1 so it won't automatically add a closing quote
+        suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
+        suppress_quote.value = 1
+
 
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
 if six.PY3:
@@ -257,17 +303,6 @@ def basic_complete(text, line, begidx, endidx, match_against):
     starting_index = len(completion_token) - len(text)
     completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
 
-    # Handle a single completion
-    if len(completions) == 1:
-
-        # Close the quote
-        if unclosed_quote:
-            completions[0] += unclosed_quote
-
-        # If we are at the end of the line, then add a space
-        if endidx == len(line):
-            completions[0] += ' '
-
     completions.sort()
     return completions
 
@@ -311,17 +346,6 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
         # We will only keep where the text value starts
         starting_index = len(completion_token) - len(text)
         completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
-
-        # Handle a single completion
-        if len(completions) == 1:
-
-            # Close the quote
-            if unclosed_quote:
-                completions[0] += unclosed_quote
-
-            # If we are at the end of the line, then add a space
-            if endidx == len(line):
-                completions[0] += ' '
 
     # Perform tab completion using a function
     elif callable(match_against):
@@ -372,17 +396,6 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
         # We will only keep where the text value starts
         starting_index = len(completion_token) - len(text)
         completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
-
-        # Handle a single completion
-        if len(completions) == 1:
-
-            # Close the quote
-            if unclosed_quote:
-                completions[0] += unclosed_quote
-
-            # If we are at the end of the line, then add a space
-            if endidx == len(line):
-                completions[0] += ' '
 
     # Perform tab completion using a function
     elif callable(match_against):
@@ -471,16 +484,10 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
         completions.append(return_str)
 
-    # Handle a single file completion
-    if len(completions) == 1 and os.path.isfile(path_completions[0]):
-
-        # Close the quote
-        if unclosed_quote:
-            completions[0] += unclosed_quote
-
-        # If we are at the end of the line, then add a space
-        if endidx == len(line):
-            completions[0] += ' '
+    # Don't append a space or closing quote to directory
+    if len(completions) == 1 and not os.path.isfile(path_completions[0]):
+        set_allow_appended_space(False)
+        set_allow_closing_quote(False)
 
     completions.sort()
     return completions
@@ -1422,20 +1429,6 @@ class Cmd(cmd.Cmd):
             return self._colorcodes[color][True] + val + self._colorcodes[color][False]
         return val
 
-    # -----  Methods which override stuff in cmd -----
-
-    # noinspection PyMethodOverriding
-    def completenames(self, text, line, begidx, endidx):
-        """Override of cmd method which completes command names both for command completion and help."""
-        # Call super class method.  Need to do it this way for Python 2 and 3 compatibility
-        cmd_completion = cmd.Cmd.completenames(self, text)
-
-        # If we are completing the initial command name and get exactly 1 result and are at end of line, add a space
-        if begidx == 0 and len(cmd_completion) == 1 and endidx == len(line):
-            cmd_completion[0] += ' '
-
-        return cmd_completion
-
     def get_subcommands(self, command):
         """
         Returns a list of a command's subcommands if they exist
@@ -1455,6 +1448,8 @@ class Cmd(cmd.Cmd):
 
         return subcommand_names
 
+    # -----  Methods which override stuff in cmd -----
+
     def complete(self, text, state):
         """Override of command method which returns the next possible completion for 'text'.
 
@@ -1471,12 +1466,7 @@ class Cmd(cmd.Cmd):
         """
 
         if state == 0:
-
-            if readline_lib is not None:
-                # Set GNU readline's rl_completion_suppress_quote to 1 so it won't automatically add a closing quote
-                # This gets reset before complete() is called, so we have to set it each time
-                suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
-                suppress_quote.value = 1
+            set_completion_defaults()
 
             origline = readline.get_line_buffer()
             line = origline.lstrip()
@@ -1487,13 +1477,23 @@ class Cmd(cmd.Cmd):
             # If begidx is greater than 0, then the cursor is past the command
             if begidx > 0:
 
+                # Get all tokens through the one being completed
+                tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+
+                # If the cursor is right after a closed quote, then insert a space
+                quotes = ['"', "'"]
+                prior_char = line[begidx - 1]
+                if not unclosed_quote and prior_char in quotes:
+                    self.completion_matches = [' ']
+                    return self.completion_matches[state]
+
                 # Parse the command line
                 command, args, expanded_line = self.parseline(line)
 
                 # We overwrote line with a properly formatted but fully stripped version
-                # Restore the end spaces from the original since line is only supposed to be
-                # lstripped when passed to completer functions according to Python docs
-                rstripped_len = len(origline) - len(origline.rstrip())
+                # Restore the end spaces since line is only supposed to be lstripped when
+                # passed to completer functions according to Python docs
+                rstripped_len = len(line) - len(line.rstrip())
                 expanded_line += ' ' * rstripped_len
 
                 # Fix the index values if expanded_line has a different size than line
@@ -1504,15 +1504,6 @@ class Cmd(cmd.Cmd):
 
                 # Overwrite line to pass into completers
                 line = expanded_line
-
-                # If the cursor is right after a closed quote, then insert a space
-                tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
-                prior_char = line[begidx - 1]
-                quotes = ['"', "'"]
-
-                if not unclosed_quote and prior_char in quotes:
-                    self.completion_matches = [' ']
-                    return self.completion_matches[state]
 
                 # Otherwise select a completer function
                 if command == '':
@@ -1598,17 +1589,6 @@ class Cmd(cmd.Cmd):
             subcommands = self.get_subcommands(command)
             if subcommands is not None:
                 completions = [cur_sub for cur_sub in subcommands if cur_sub.startswith(text)]
-
-        # Handle a single completion
-        if len(completions) == 1:
-
-            # Close the quote
-            if unclosed_quote:
-                completions[0] += unclosed_quote
-
-            # If we are at the end of the line, then add a space
-            if endidx == len(line):
-                completions[0] += ' '
 
         completions.sort()
         return completions
@@ -2457,17 +2437,6 @@ Usage:  Usage: unalias [-a] name [name ...]
                 completions = [cur_str[starting_index:] for cur_str in self._get_exes_in_path(completion_token)]
 
                 if completions:
-                    # Handle a single completion
-                    if len(completions) == 1:
-
-                        # Close the quote
-                        if unclosed_quote:
-                            completions[0] += unclosed_quote
-
-                        # If we are at the end of the line, then add a space
-                        if endidx == len(line):
-                            completions[0] += ' '
-
                     return completions
 
             # If we have no results, try path completion to find the shell commands
