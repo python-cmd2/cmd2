@@ -30,15 +30,14 @@ def cs_app():
     return c
 
 
-def test_cmd2_command_completion_single_end(cmd2_app):
+def test_cmd2_command_completion_single(cmd2_app):
     text = 'he'
     line = 'he'
     endidx = len(line)
     begidx = endidx - len(text)
-    # It is at end of line, so extra space is present
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help ']
+    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
 
-def test_complete_command_single_end(cmd2_app):
+def test_complete_command_single(cmd2_app):
     text = 'he'
     line = 'he'
     state = 0
@@ -140,16 +139,7 @@ def test_cmd2_command_completion_is_case_sensitive(cmd2_app):
     line = 'HE'
     endidx = len(line)
     begidx = endidx - len(text)
-    # It is at end of line, so extra space is present
     assert cmd2_app.completenames(text, line, begidx, endidx) == []
-
-def test_cmd2_command_completion_single_mid(cmd2_app):
-    text = 'he'
-    line = 'he'
-    begidx = 0
-    endidx = 1
-    # It is not at end of line, so no extra space
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
 
 def test_cmd2_command_completion_multiple(cmd2_app):
     text = 'h'
@@ -166,18 +156,11 @@ def test_cmd2_command_completion_nomatch(cmd2_app):
     begidx = endidx - len(text)
     assert cmd2_app.completenames(text, line, begidx, endidx) == []
 
-def test_cmd2_help_completion_single_end(cmd2_app):
+def test_cmd2_help_completion_single(cmd2_app):
     text = 'he'
     line = 'help he'
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help ']
-
-def test_cmd2_help_completion_single_mid(cmd2_app):
-    text = 'he'
-    line = 'help he'
-    begidx = 5
-    endidx = 6
     assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help']
 
 def test_cmd2_help_completion_multiple(cmd2_app):
@@ -225,25 +208,12 @@ def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
         text = 'calc'
         line = 'shell {}'.format(text)
-        expected = ['calc.exe ']
+        expected = ['calc.exe']
     else:
         text = 'egr'
         line = 'shell {}'.format(text)
-        expected = ['egrep ']
+        expected = ['egrep']
 
-    endidx = len(line)
-    begidx = endidx - len(text)
-    assert cmd2_app.complete_shell(text, line, begidx, endidx) == expected
-
-def test_shell_command_completion_quotes(cmd2_app):
-    if sys.platform == "win32":
-        text = 'calc'
-        expected = ['calc.exe" ']
-    else:
-        text = 'egr'
-        expected = ['egrep" ']
-
-    line = 'shell "{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == expected
@@ -299,7 +269,7 @@ def test_shell_command_completion_does_path_completion_when_after_command(cmd2_a
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['conftest.py ']
+    assert cmd2_app.complete_shell(text, line, begidx, endidx) == ['conftest.py']
 
 
 def test_path_completion_single_end(request):
@@ -312,31 +282,7 @@ def test_path_completion_single_end(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert path_complete(text, line, begidx, endidx) == ['conftest.py ']
-
-def test_path_completion_quotes(request):
-    test_dir = '"' + os.path.dirname(request.module.__file__)
-
-    text = 'c'
-    path = os.path.join(test_dir, text)
-    line = 'shell cat {}'.format(path)
-
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    assert path_complete(text, line, begidx, endidx) == ['conftest.py" ']
-
-def test_path_completion_single_mid(request):
-    test_dir = os.path.dirname(request.module.__file__)
-
-    text = 'tes'
-    path = os.path.join(test_dir, 'c')
-    line = 'shell cat {}'.format(path)
-
-    begidx = line.find(text)
-    endidx = begidx + len(text)
-
-    assert path_complete(text, line, begidx, endidx) == ['tests' + os.path.sep]
+    assert path_complete(text, line, begidx, endidx) == ['conftest.py']
 
 def test_path_completion_multiple(request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -523,19 +469,11 @@ flag_dict = \
         '--other': path_complete,    # Tab-complete using path_complete function after --other flag in command line
     }
 
-def test_basic_completion_single_end():
+def test_basic_completion_single():
     text = 'Pi'
     line = 'list_food -f Pi'
     endidx = len(line)
     begidx = endidx - len(text)
-
-    assert basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza ']
-
-def test_basic_completion_single_mid():
-    text = 'Pi'
-    line = 'list_food -f Piz'
-    begidx = len(line) - 3
-    endidx = begidx + len(text)
 
     assert basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
@@ -556,19 +494,11 @@ def test_basic_completion_nomatch():
     assert basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
 
-def test_flag_based_completion_single_end():
+def test_flag_based_completion_single():
     text = 'Pi'
     line = 'list_food -f Pi'
     endidx = len(line)
     begidx = endidx - len(text)
-
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza ']
-
-def test_flag_based_completion_single_mid():
-    text = 'Pi'
-    line = 'list_food -f Piz'
-    begidx = len(line) - 3
-    endidx = begidx + len(text)
 
     assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
 
@@ -598,7 +528,7 @@ def test_flag_based_default_completer(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py']
 
 def test_flag_based_callable_completer(request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -610,15 +540,7 @@ def test_flag_based_callable_completer(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py ']
-
-def test_flag_based_completion_quotes():
-    text = 'Pi'
-    line = 'list_food -f "Pi'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza" ']
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py']
 
 def test_flag_based_completion_no_tokens():
     text = ''
@@ -637,19 +559,11 @@ index_dict = \
         3: path_complete,    # Tab-complete using path_complete function at index 3 in command line
     }
 
-def test_index_based_completion_single_end():
+def test_index_based_completion_single():
     text = 'Foo'
     line = 'command Pizza Foo'
     endidx = len(line)
     begidx = endidx - len(text)
-
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football ']
-
-def test_index_based_completion_single_mid():
-    text = 'Fo'
-    line = 'command Pizza Foo'
-    begidx = len(line) - 3
-    endidx = begidx + len(text)
 
     assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football']
 
@@ -677,7 +591,7 @@ def test_index_based_default_completer(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict, path_complete) == ['conftest.py ']
+    assert index_based_complete(text, line, begidx, endidx, index_dict, path_complete) == ['conftest.py']
 
 def test_index_based_callable_completer(request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -689,15 +603,7 @@ def test_index_based_callable_completer(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['conftest.py ']
-
-def test_index_based_completion_quotes():
-    text = 'Piz'
-    line = "command 'Piz"
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == ["Pizza' "]
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['conftest.py']
 
 
 def test_parseline_command_and_args(cmd2_app):
@@ -830,30 +736,6 @@ def test_cmd2_subcommand_completion_single_end(sc_app):
     # It is at end of line, so extra space is present
     assert first_match is not None and sc_app.completion_matches == ['foo ']
 
-def test_cmd2_subcommand_completion_single_mid(sc_app):
-    text = 'f'
-    line = 'base fo'
-    endidx = len(line) - 1
-    begidx = endidx - len(text)
-    state = 0
-
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = sc_app.complete(text, state)
-
-    assert first_match is not None and sc_app.completion_matches == ['foo']
-
 def test_cmd2_subcommand_completion_multiple(sc_app):
     text = ''
     line = 'base '
@@ -927,27 +809,12 @@ def test_cmd2_subcommand_completion_after_subcommand(sc_app):
     assert first_match is None
 
 
-def test_cmd2_help_subcommand_completion_single_end(sc_app):
+def test_cmd2_help_subcommand_completion_single(sc_app):
     text = 'base'
     line = 'help base'
     endidx = len(line)
     begidx = endidx - len(text)
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['base ']
-
-def test_cmd2_help_subcommand_completion_quotes(sc_app):
-    text = 'base'
-    line = 'help "base'
-    endidx = len(line)
-    begidx = endidx - len(text)
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['base" ']
-
-def test_cmd2_help_subcommand_completion_single_mid(sc_app):
-    text = 'ba'
-    line = 'help base'
-    begidx = 5
-    endidx = 6
     assert sc_app.complete_help(text, line, begidx, endidx) == ['base']
-
 
 def test_cmd2_help_subcommand_completion_multiple(sc_app):
     text = ''
