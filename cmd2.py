@@ -1496,7 +1496,7 @@ class Cmd(cmd.Cmd):
             pipe_proc.terminate()
 
         # Re-raise a KeyboardInterrupt so other parts of the code can catch it
-        raise KeyboardInterrupt("Got a keyboard interrupt within a Python script")
+        raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def preloop(self):
         """Hook method executed once when the cmdloop() method is called."""
