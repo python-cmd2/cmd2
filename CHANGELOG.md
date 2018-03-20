@@ -4,6 +4,7 @@
     * Fixed a bug in tab-completion of command names within sub-menus
     * Fixed a bug when using persistent readline history in Python 2.7
     * Fixed a bug where the ``AddSubmenu`` decorator didn't work with a default value for ``shared_attributes``
+    * Added a check to ``ppaged()`` to only use a pager when running in a real fully functional terminal
 * Enhancements
     * Added [quit_on_sigint](http://cmd2.readthedocs.io/en/latest/settingchanges.html#quit-on-sigint) attribute to enable canceling current line instead of quitting when Ctrl+C is typed
     * Added possibility of having readline history preservation in a SubMenu
@@ -11,6 +12,7 @@
     * Added command aliasing with ``alias`` and ``unalias`` commands
     * Added the ability to load an initialization script at startup
         * See [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py) for an example
+    * Added a default SIGINT handler which terminates any open pipe subprocesses and re-raises a KeyboardInterrupt
     
 ## 0.8.1 (March 9, 2018)
 
