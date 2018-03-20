@@ -224,14 +224,19 @@ def set_use_arg_list(val):
     USE_ARG_LIST = val
 
 
-def tokenize_line(line, begidx, endidx):
+def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
     """
     Used by tab completion functions to get all tokens through the one being completed
     This also handles tab-completion within quotes
     :param line: str - the current input line with leading whitespace removed
     :param begidx: int - the beginning index of the prefix text
     :param endidx: int - the ending index of the prefix text
-    :return: A list of tokens and whether or not the token being completed has an unclosed quote
+    :param preserve_quotes - if True, then the tokens will be returned still wrapped in whatever quotes
+                             appeared on the command line. This defaults to False since tab completion routines
+                             generally need the tokens unquoted. The only reason to set this to True would
+                             be to check if the token being completed has an unclosed quote. complete() is the
+                             only functions that does this.
+    :return: A list of tokens
     """
     tokens = []
     unclosed_quote = ''
@@ -259,11 +264,17 @@ def tokenize_line(line, begidx, endidx):
 
     # No tokens were parsed
     if len(tokens) == 0:
-        unclosed_quote = ''
+        return tokens
+
+    if preserve_quotes:
+        # If the token being completed had an unclosed quote, we need remove the closing quote that was added
+        if unclosed_quote:
+            tokens[-1] = tokens[-1][:-1]
 
     # Unquote all tokens
-    for index, cur_token in enumerate(tokens):
-        tokens[index] = strip_quotes(cur_token)
+    else:
+        for index, cur_token in enumerate(tokens):
+            tokens[index] = strip_quotes(cur_token)
 
     # If begidx is equal to endidx, then the readline text variable is blank.
     # Check if begidx is preceded by a string. This can happen in things like paths.
@@ -278,7 +289,7 @@ def tokenize_line(line, begidx, endidx):
         if prev_space_index == 0 or prev_space_index == begidx - 1:
             tokens.append('')
 
-    return tokens, unclosed_quote
+    return tokens
 
 
 # noinspection PyUnusedLocal
@@ -293,7 +304,7 @@ def basic_complete(text, line, begidx, endidx, match_against):
     :return: List[str] - a list of possible tab completions
     """
     # Get all tokens through the one being completed
-    tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+    tokens = tokens_for_completion(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
@@ -326,7 +337,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     """
 
     # Get all tokens through the one being completed
-    tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+    tokens = tokens_for_completion(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
@@ -374,7 +385,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     """
 
     # Get all tokens through the one being completed
-    tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+    tokens = tokens_for_completion(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
@@ -418,7 +429,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     """
 
     # Get all tokens through the one being completed
-    tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+    tokens = tokens_for_completion(line, begidx, endidx)
     if len(tokens) == 0:
         return []
 
@@ -444,6 +455,9 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
         # If the user only entered a '~', then complete it with a slash
         if completion_token == '~':
+            # This is a directory, so don't add a space or quote
+            set_allow_appended_space(False)
+            set_allow_closing_quote(False)
             return [os.path.sep]
 
         elif completion_token.startswith('~'):
@@ -1478,14 +1492,25 @@ class Cmd(cmd.Cmd):
             if begidx > 0:
 
                 # Get all tokens through the one being completed
-                tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+                tokens = tokens_for_completion(line, begidx, endidx, preserve_quotes=True)
 
-                # If the cursor is right after a closed quote, then insert a space
-                quotes = ['"', "'"]
-                prior_char = line[begidx - 1]
-                if not unclosed_quote and prior_char in quotes:
-                    self.completion_matches = [' ']
-                    return self.completion_matches[state]
+                # Check if the token being complete has an unclosed quote
+                token_being_completed = tokens[-1]
+                unclosed_quote = ''
+
+                if len(token_being_completed) > 1:
+                    first_char = token_being_completed[0]
+                    last_char = token_being_completed[-1]
+                    quotes = ['"', "'"]
+
+                    if first_char in quotes and first_char != last_char:
+                        unclosed_quote = first_char
+
+                    # If the cursor is right after a closed quote, then insert a space
+                    prior_char = line[begidx - 1]
+                    if not unclosed_quote and prior_char in quotes:
+                        self.completion_matches = [' ']
+                        return self.completion_matches[state]
 
                 # Parse the command line
                 command, args, expanded_line = self.parseline(line)
@@ -1582,7 +1607,7 @@ class Cmd(cmd.Cmd):
         subcmd_index = 2
 
         # Get all tokens through the one being completed
-        tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+        tokens = tokens_for_completion(line, begidx, endidx)
         if len(tokens) == 0:
             return []
 
@@ -2425,7 +2450,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         shell_cmd_index = 1
 
         # Get all tokens through the one being completed
-        tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+        tokens = tokens_for_completion(line, begidx, endidx)
         if len(tokens) == 0:
             return []
 
@@ -2498,7 +2523,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         subcmd_index = 1
 
         # Get all tokens through the one being completed
-        tokens, unclosed_quote = tokenize_line(line, begidx, endidx)
+        tokens = tokens_for_completion(line, begidx, endidx)
         if len(tokens) == 0:
             return []
 
