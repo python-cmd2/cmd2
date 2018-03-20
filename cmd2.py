@@ -1531,6 +1531,20 @@ class Cmd(cmd.Cmd):
                 # Call the completer function
                 self.completion_matches = compfunc(text, line, begidx, endidx)
 
+                # Handle single result
+                if len(self.completion_matches) == 1:
+                    str_to_append = ''
+
+                    # Add a closing quote if needed
+                    if allow_closing_quote and unclosed_quote:
+                        str_to_append += unclosed_quote
+
+                    # If we are at the end of the line, then add a space
+                    if allow_appended_space and endidx == len(line):
+                        str_to_append += ' '
+
+                    self.completion_matches[0] = self.completion_matches[0] + str_to_append
+
             else:
                 # Complete the command against aliases and command names
                 strs_to_match = list(self.aliases.keys())
