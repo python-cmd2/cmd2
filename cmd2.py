@@ -1512,12 +1512,12 @@ class Cmd(cmd.Cmd):
 
                 # Get the status of quotes in the token being completed
                 quotes = ['"', "'"]
-                token_being_completed = tokens[-1]
+                completion_token = tokens[-1]
                 unclosed_quote = ''
 
-                if len(token_being_completed) > 1:
-                    first_char = token_being_completed[0]
-                    last_char = token_being_completed[-1]
+                if len(completion_token) > 1:
+                    first_char = completion_token[0]
+                    last_char = completion_token[-1]
 
                     # Check if the token being completed has an unclosed quote
                     if first_char in quotes and first_char != last_char:
@@ -1558,13 +1558,13 @@ class Cmd(cmd.Cmd):
 
                 # Check if we need to add an opening quote
                 if len(self.completion_matches) > 0 and \
-                        (len(token_being_completed) == 0 or token_being_completed[0] not in quotes):
+                        (len(completion_token) == 0 or completion_token[0] not in quotes):
                     # Get the common prefix of all matches. This is what is added to the token being completed.
                     common_prefix = os.path.commonprefix(self.completion_matches)
 
                     # If anything that will be in the token being completed contains a space, then
                     # we must add an opening quote to the token on screen
-                    if ' ' in token_being_completed or ' ' in common_prefix:
+                    if ' ' in completion_token or ' ' in common_prefix:
 
                         # Mark that there is now an unclosed quote
                         unclosed_quote = '"'
@@ -1602,7 +1602,7 @@ class Cmd(cmd.Cmd):
                                 # the original values of begidx and endidx and we can't change them. Therefore we must
                                 # prepend to every match the character right before the text variable so it doesn't
                                 # get erased.
-                                saved_char = token_being_completed[(len(text) + 1) * -1]
+                                saved_char = completion_token[(len(text) + 1) * -1]
                                 self.completion_matches = [saved_char + match for match in self.completion_matches]
 
                             # pyreadline specific way to insert an opening quote
