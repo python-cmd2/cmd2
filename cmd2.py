@@ -106,6 +106,10 @@ if not sys.platform.startswith('win'):
     if readline_lib_name is not None and readline_lib_name:
         readline_lib = ctypes.CDLL(readline_lib_name)
 
+# On Windows, we save the original pyreadline display completion function since we have to override it
+else:
+    orig_pyreadline_display = readline.rl.mode._display_completions
+
 ############################################################################################################
 # The following variables are used by tab-completion functions. They are reset each time complete()
 # is run, and it is up to the completer functions to set them on a case-by-case basis
@@ -1527,9 +1531,9 @@ class Cmd(cmd.Cmd):
         return subcommand_names
 
     # noinspection PyUnusedLocal
-    def display_matches(self, substitution, matches, longest_match_length):
+    def _display_matches_gnu(self, substitution, matches, longest_match_length):
         """
-        A custom completion match display function
+        A custom completion match display function for use with GNU readline
         :param substitution: the search text that was replaced
         :param matches: the tab completion matches to display
         :param longest_match_length: length of the longest match
@@ -1548,6 +1552,20 @@ class Cmd(cmd.Cmd):
         # Print the prompt
         self.poutput(self.prompt, readline.get_line_buffer())
         sys.stdout.flush()
+
+    @staticmethod
+    def _display_matches_pyreadline(matches):
+        """
+        A custom completion match display function for use with pyreadline
+        :param matches: the tab completion matches to display
+        """
+        if orig_pyreadline_display is not None:
+            matches.sort()
+
+            if matches_to_display is None:
+                orig_pyreadline_display(matches)
+            else:
+                orig_pyreadline_display(matches_to_display)
 
     # -----  Methods which override stuff in cmd -----
 
@@ -1568,7 +1586,14 @@ class Cmd(cmd.Cmd):
 
         if state == 0:
             set_completion_defaults()
-            readline.set_completion_display_matches_hook(self.display_matches)
+
+            # GNU readline specific way to override the completions display function
+            if readline_lib:
+                readline.set_completion_display_matches_hook(self._display_matches_gnu)
+
+            # pyreadline specific way to override the completions display function
+            elif sys.platform.startswith('win'):
+                readline.rl.mode._display_completions = self._display_matches_pyreadline
 
             origline = readline.get_line_buffer()
             line = origline.lstrip()
