@@ -1009,7 +1009,7 @@ def test_cmd2_submenu_completion_after_submenu_match(sb_app):
                 # Run the readline tab-completion function with readline mocks in place
                 first_match = sb_app.complete(text, state)
 
-    assert first_match is not None and sb_app.completion_matches == ['asd']
+    assert first_match is not None and sb_app.completion_matches == ['asd ']
 
 
 def test_cmd2_submenu_completion_after_submenu_nomatch(sb_app):
