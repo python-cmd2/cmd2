@@ -1495,13 +1495,13 @@ class Cmd(cmd.Cmd):
                 tokens = tokens_for_completion(line, begidx, endidx, preserve_quotes=True)
 
                 # Check if the token being complete has an unclosed quote
+                quotes = ['"', "'"]
                 token_being_completed = tokens[-1]
                 unclosed_quote = ''
 
                 if len(token_being_completed) > 1:
                     first_char = token_being_completed[0]
                     last_char = token_being_completed[-1]
-                    quotes = ['"', "'"]
 
                     if first_char in quotes and first_char != last_char:
                         unclosed_quote = first_char
@@ -1555,6 +1555,52 @@ class Cmd(cmd.Cmd):
 
                 # Call the completer function
                 self.completion_matches = compfunc(text, line, begidx, endidx)
+
+                # Check if we need to add an opening quote
+                if len(self.completion_matches) > 0:
+                    first_char = token_being_completed[0]
+
+                    if first_char not in quotes:
+                        # Get the common prefix of all matches. This is what is added to the token being completed.
+                        common_prefix = os.path.commonprefix(self.completion_matches)
+
+                        # If anything that will be in the token being completed contains a space, then
+                        # we must add an opening quote to the token on screen
+                        if ' ' in token_being_completed or ' ' in common_prefix:
+                            # Find in the original line on screen where our token starts
+                            starting_index = 0
+                            for token_index, cur_token in enumerate(tokens):
+                                starting_index = origline.find(cur_token)
+                                if token_index < len(tokens) - 1:
+                                    starting_index += len(cur_token)
+
+                            # If the token started at begidx, then all we have to do is prepend
+                            # an opening quote to all the completions. Readline will do the rest.
+                            if starting_index == readline.get_begidx():
+                                self.completion_matches = ['"' + match for match in self.completion_matches]
+
+                            # The token started after begidx, therefore we need to manually insert an
+                            # opening quote before the token in the readline buffer.
+                            else:
+                                # GNU readline specific way to insert an opening quote
+                                if readline_lib:
+                                    # Get and save the current cursor position
+                                    rl_point = ctypes.c_int.in_dll(readline_lib, "rl_point")
+                                    orig_rl_point = rl_point.value
+
+                                    # Move the cursor where the token being completed begins to insert the opening quote
+                                    rl_point.value = starting_index
+                                    readline.insert_text('"')
+
+                                    # Restore the cursor 1 past where it was the since we shifted everything
+                                    rl_point.value = orig_rl_point + 1
+
+                                    # Since we just shifted the whole command line over by one, readline will begin
+                                    # inserting the text one spot to the left of where we want it since it still is
+                                    # using the original index. Therefore we must prepend the original character that
+                                    # is 1 spot before where text begins to make sure it doesn't get erased.
+                                    saved_char = token_being_completed[(len(text) + 1) * -1]
+                                    self.completion_matches = [saved_char + match for match in self.completion_matches]
 
                 # Handle single result
                 if len(self.completion_matches) == 1:
