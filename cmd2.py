@@ -1262,7 +1262,8 @@ class Cmd(cmd.Cmd):
     def ppaged(self, msg, end='\n'):
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
-        Never uses a pager inside of a script (Python or text) or when output is being redirected or piped.
+        Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
+        stdout or stdin are not a fully functional terminal.
 
         :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
         :param end: str - string appended after the end of the message if not already present, default a newline
@@ -1273,8 +1274,16 @@ class Cmd(cmd.Cmd):
                 if not msg_str.endswith(end):
                     msg_str += end
 
+                # Attempt to detect if we are not running within a fully functional terminal.
+                # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
+                functional_terminal = False
+                if self.stdin.isatty() and self.stdout.isatty():
+                    if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
+                        functional_terminal = True
+
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
-                if not self.redirecting and not self._in_py and not self._script_dir:
+                # Also only attempt to use a pager if actually running in a real fully functional terminal
+                if functional_terminal and not self.redirecting and not self._in_py and not self._script_dir:
                     if sys.platform.startswith('win'):
                         pager_cmd = 'more'
                     else:
