@@ -36,6 +36,7 @@ import os
 import platform
 import re
 import shlex
+import shutil
 import six
 import sys
 import tempfile
@@ -118,7 +119,18 @@ allow_appended_space = True
 # will be added if there is an umatched opening quote
 allow_closing_quote = True
 
+# If this is True, then the tab completion suggestions will be the entire token that was matched.
+# If False, then only the basename of the completions will be shown.
+# For things like paths, this should be set to False.
+# complete_shell and path_complete ignore this flag and only show basenames by default
+display_entire_match = True
 
+# If the tab-completion matches should be displayed in a way that is different than the actual match values,
+# then place those results in this list.
+matches_to_display = None
+
+
+# Use these functions to set the readline variables
 def set_allow_appended_space(allow):
     """
     Sets allow_appended_space flag
@@ -137,6 +149,24 @@ def set_allow_closing_quote(allow):
     allow_closing_quote = allow
 
 
+def set_display_entire_match(entire):
+    """
+    Sets display_entire_match flag
+    :param entire: bool - the new value for display_entire_match
+    """
+    global display_entire_match
+    display_entire_match = entire
+
+
+def set_matches_to_display(matches):
+    """
+    Sets the tab-completion matches that will be displayed to the screen
+    :param matches: the matches to display
+    """
+    global matches_to_display
+    matches_to_display = matches
+
+
 def set_completion_defaults():
     """
     Resets tab completion settings
@@ -144,6 +174,8 @@ def set_completion_defaults():
     """
     set_allow_appended_space(True)
     set_allow_closing_quote(True)
+    set_display_entire_match(True)
+    set_matches_to_display(None)
 
     if readline_lib is not None:
         # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
@@ -309,10 +341,17 @@ def basic_complete(text, line, begidx, endidx, match_against):
         return []
 
     completion_token = tokens[-1]
+    matches = [cur_match for cur_match in match_against if cur_match.startswith(completion_token)]
 
     # We will only keep where the text value starts
     starting_index = len(completion_token) - len(text)
-    completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
+    completions = [cur_match[starting_index:] for cur_match in matches]
+
+    # Set the matches how they will display
+    if display_entire_match:
+        display_matches = matches
+    else:
+        display_matches = [os.path.basename(cur_match) for cur_match in matches]
 
     completions.sort()
     return completions
@@ -352,11 +391,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
 
     # Perform tab completion using an iterable
     if isinstance(match_against, collections.Iterable):
-        completion_token = tokens[-1]
-
-        # We will only keep where the text value starts
-        starting_index = len(completion_token) - len(text)
-        completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
+        completions = basic_complete(text, line, begidx, endidx, match_against)
 
     # Perform tab completion using a function
     elif callable(match_against):
@@ -402,11 +437,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
 
     # Perform tab completion using an iterable
     if isinstance(match_against, collections.Iterable):
-        completion_token = tokens[-1]
-
-        # We will only keep where the text value starts
-        starting_index = len(completion_token) - len(text)
-        completions = [cur_str[starting_index:] for cur_str in match_against if cur_str.startswith(completion_token)]
+        completions = basic_complete(text, line, begidx, endidx, match_against)
 
     # Perform tab completion using a function
     elif callable(match_against):
@@ -440,6 +471,9 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
     completion_token = tokens[-1]
 
+    # Used to replace ~ in the final results
+    user_path = ''
+
     # If the token being completed is blank, then search in the CWD for *
     if not completion_token:
         search_str = os.path.join(os.getcwd(), '*')
@@ -458,11 +492,15 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
             # This is a directory, so don't add a space or quote
             set_allow_appended_space(False)
             set_allow_closing_quote(False)
-            return [os.path.sep]
+            return ["~" + os.path.sep]
 
-        # Tilde without separator between path is invalid
-        elif completion_token.startswith('~') and not completion_token.startswith('~' + os.path.sep):
-            return []
+        elif completion_token.startswith('~'):
+            # Tilde without separator between path is invalid
+            if not completion_token.startswith('~' + os.path.sep):
+                return []
+
+            # Save the user path
+            user_path = os.path.expanduser('~')
 
         # If the token does not have a directory, then use the cwd
         elif not os.path.dirname(completion_token):
@@ -483,23 +521,40 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     elif dir_only:
         path_completions = [c for c in path_completions if os.path.isdir(c)]
 
-    # Extract just the completed text portion of the paths
-    completions = []
-    starting_index = len(os.path.basename(completion_token)) - len(text)
+    # Will will display only the basename of paths in the tab-completion suggestions
+    display_matches = []
 
-    for c in path_completions:
-        return_str = os.path.basename(c)[starting_index:]
+    # Extract just the completed text portion of the paths for completions
+    completions = []
+    starting_index = len(completion_token) - len(text)
+
+    for cur_completion in path_completions:
+
+        # The match that will display in the suggestions
+        display_matches.append(os.path.basename(cur_completion))
+
+        # The actual tab completion
+        completion = cur_completion
 
         # Add a separator after directories if the next character isn't already a separator
-        if os.path.isdir(c) and add_trailing_sep_if_dir:
-            return_str += os.path.sep
+        if os.path.isdir(completion) and add_trailing_sep_if_dir:
+            completion += os.path.sep
 
-        completions.append(return_str)
+        # Only keep where text started
+        completions.append(cur_completion[starting_index:])
 
     # Don't append a space or closing quote to directory
     if len(completions) == 1 and not os.path.isfile(path_completions[0]):
         set_allow_appended_space(False)
         set_allow_closing_quote(False)
+
+    # Restore a tilde if we expanded one
+    if user_path:
+        completions = [cur_path.replace(user_path, '~', 1) for cur_path in completions]
+        display_matches = [cur_path.replace(user_path, '~', 1) for cur_path in display_matches]
+
+    # Set the matches that will display as tab-completion suggestions
+    set_matches_to_display(display_matches)
 
     completions.sort()
     return completions
@@ -1460,6 +1515,29 @@ class Cmd(cmd.Cmd):
 
         return subcommand_names
 
+    # noinspection PyUnusedLocal
+    def display_matches(self, substitution, matches, longest_match_length):
+        """
+        A custom completion match display function
+        :param substitution: the search text that was replaced
+        :param matches: the tab completion matches to display
+        :param longest_match_length: length of the longest match
+        """
+        # Print the matches
+        matches.sort()
+        self.poutput("\n")
+
+        num_cols = shutil.get_terminal_size().columns
+
+        if matches_to_display is None:
+            self.columnize(matches, num_cols)
+        else:
+            self.columnize(matches_to_display, num_cols)
+
+        # Print the prompt
+        self.poutput(self.prompt, readline.get_line_buffer())
+        sys.stdout.flush()
+
     # -----  Methods which override stuff in cmd -----
 
     def complete(self, text, state):
@@ -1479,6 +1557,7 @@ class Cmd(cmd.Cmd):
 
         if state == 0:
             set_completion_defaults()
+            readline.set_completion_display_matches_hook(self.display_matches)
 
             origline = readline.get_line_buffer()
             line = origline.lstrip()
@@ -1486,7 +1565,21 @@ class Cmd(cmd.Cmd):
             begidx = readline.get_begidx() - stripped
             endidx = readline.get_endidx() - stripped
 
-            # If begidx is greater than 0, then the cursor is past the command
+            # If the line starts with a shortcut that has no break between the search text,
+            # then the text variable will start with the shortcut if its not a completer delimiter
+            text_shortcut = ''
+            if begidx == 0:
+                for (shortcut, expansion) in self.shortcuts:
+                    if text.startswith(shortcut):
+                        # Save the shortcut to adjust the line later
+                        text_shortcut = shortcut
+
+                        # Adjust text and where it begins
+                        text = text[len(shortcut):]
+                        begidx += len(shortcut)
+                        break
+
+            # If begidx is greater than 0, then we are no longer completing the command
             if begidx > 0:
 
                 # Parse the command line
@@ -1556,68 +1649,80 @@ class Cmd(cmd.Cmd):
                 # Call the completer function
                 self.completion_matches = compfunc(text, line, begidx, endidx)
 
-                # Check if we need to add an opening quote
-                if len(self.completion_matches) > 0 and \
-                        (len(completion_token) == 0 or completion_token[0] not in quotes):
+                if len(self.completion_matches) > 0:
+
                     # Get the common prefix of all matches. This is what is added to the token being completed.
                     common_prefix = os.path.commonprefix(self.completion_matches)
 
-                    # If anything that will be in the token being completed contains a space, then
-                    # we must add an opening quote to the token on screen
-                    if ' ' in completion_token or ' ' in common_prefix:
+                    # Check if we need to add an opening quote
+                    if len(completion_token) == 0 or completion_token[0] not in quotes:
 
-                        # Mark that there is now an unclosed quote
-                        unclosed_quote = '"'
+                        # If anything that will be in the token being completed contains a space, then
+                        # we must add an opening quote to the token on screen
+                        if ' ' in completion_token or ' ' in common_prefix:
 
-                        # Find in the original line on screen where our token starts
-                        starting_index = 0
-                        for token_index, cur_token in enumerate(tokens):
-                            starting_index = origline.find(cur_token)
-                            if token_index < len(tokens) - 1:
-                                starting_index += len(cur_token)
+                            # Mark that there is now an unclosed quote
+                            unclosed_quote = '"'
 
-                        # If the token started at begidx, then all we have to do is prepend
-                        # an opening quote to all the completions. Readline will do the rest.
-                        if starting_index == readline.get_begidx():
-                            self.completion_matches = ['"' + match for match in self.completion_matches]
+                            # Find in the original line on screen where our token starts
+                            starting_index = 0
+                            for token_index, cur_token in enumerate(tokens):
+                                starting_index = origline.find(cur_token)
+                                if token_index < len(tokens) - 1:
+                                    starting_index += len(cur_token)
 
-                        # The token started after begidx, therefore we need to manually insert an
-                        # opening quote before the token in the readline buffer.
-                        else:
-                            # GNU readline specific way to insert an opening quote
-                            if readline_lib:
-                                # Get and save the current cursor position
-                                rl_point = ctypes.c_int.in_dll(readline_lib, "rl_point")
-                                orig_rl_point = rl_point.value
+                            # If the token started at begidx, then all we have to do is prepend
+                            # an opening quote to all the completions. Readline will do the rest.
+                            if starting_index == readline.get_begidx():
+                                self.completion_matches = ['"' + match for match in self.completion_matches]
 
-                                # Move the cursor where the token being completed begins to insert the opening quote
-                                rl_point.value = starting_index
-                                readline.insert_text('"')
+                            # The token started after begidx, therefore we need to manually insert an
+                            # opening quote before the token in the readline buffer.
+                            else:
+                                # GNU readline specific way to insert an opening quote
+                                if readline_lib:
+                                    # Get and save the current cursor position
+                                    rl_point = ctypes.c_int.in_dll(readline_lib, "rl_point")
+                                    orig_rl_point = rl_point.value
 
-                                # Restore the cursor 1 past where it was the since we shifted everything
-                                rl_point.value = orig_rl_point + 1
+                                    # Move the cursor where the token being completed begins to insert the opening quote
+                                    rl_point.value = starting_index
+                                    readline.insert_text('"')
 
-                                # Since we just shifted the whole command line over by one, readline will begin
-                                # inserting the text one spot to the left of where we want it since it still has
-                                # the original values of begidx and endidx and we can't change them. Therefore we must
-                                # prepend to every match the character right before the text variable so it doesn't
-                                # get erased.
-                                saved_char = completion_token[(len(text) + 1) * -1]
-                                self.completion_matches = [saved_char + match for match in self.completion_matches]
+                                    # Restore the cursor 1 past where it was the since we shifted everything
+                                    rl_point.value = orig_rl_point + 1
 
-                            # pyreadline specific way to insert an opening quote
-                            elif sys.platform.startswith('win'):
-                                # Save the current cursor position
-                                orig_rl_point = readline.rl.mode.l_buffer.point
+                                    # Since we just shifted the whole command line over by one, readline will begin
+                                    # inserting the text one spot to the left of where we want it since it still has
+                                    # the original values of begidx and endidx and we can't change them. Therefore we
+                                    # must prepend to every match the character right before the text variable so it
+                                    # doesn't get erased.
+                                    saved_char = completion_token[(len(text) + 1) * -1]
+                                    self.completion_matches = [saved_char + match for match in self.completion_matches]
 
-                                # Move the cursor where the token being completed begins to insert the opening quote
-                                readline.rl.mode.l_buffer.point = starting_index
-                                readline.insert_text('"')
+                                # pyreadline specific way to insert an opening quote
+                                elif sys.platform.startswith('win'):
+                                    # Save the current cursor position
+                                    orig_rl_point = readline.rl.mode.l_buffer.point
 
-                                # Shift the cursor and completion indexes by 1 to account for the added quote
-                                readline.rl.mode.l_buffer.point = orig_rl_point + 1
-                                readline.rl.mode.begidx += 1
-                                readline.rl.mode.endidx += 1
+                                    # Move the cursor where the token being completed begins to insert the opening quote
+                                    readline.rl.mode.l_buffer.point = starting_index
+                                    readline.insert_text('"')
+
+                                    # Shift the cursor and completion indexes by 1 to account for the added quote
+                                    readline.rl.mode.l_buffer.point = orig_rl_point + 1
+                                    readline.rl.mode.begidx += 1
+                                    readline.rl.mode.endidx += 1
+
+                    # If a shortcut started text, then we need to make sure it doesn't get erased on the command line
+                    if text_shortcut:
+                        # If matches_to_display has not been set, then display the actual matches
+                        # that do not show the shortcut character at the beginning of each match.
+                        if matches_to_display is None:
+                            set_matches_to_display(self.completion_matches)
+
+                        # Given readline the restored shortcut character since that's what its expecting
+                        self.completion_matches = [text_shortcut + match for match in self.completion_matches]
 
                 # Handle single result
                 if len(self.completion_matches) == 1:
@@ -2131,8 +2236,9 @@ class Cmd(cmd.Cmd):
                 self.old_completer = readline.get_completer()
                 self.old_delims = readline.get_completer_delims()
                 readline.set_completer(self.complete)
-                # Don't treat "-" as a readline delimiter since it is commonly used in filesystem paths
-                readline.set_completer_delims(self.old_delims.replace('-', ''))
+
+                # Use the same completer delimiters as Bash
+                readline.set_completer_delims(" \t\n\"'@><=;|&(:")
                 readline.parse_and_bind(self.completekey + ": complete")
             except NameError:
                 pass
@@ -2520,23 +2626,26 @@ Usage:  Usage: unalias [-a] name [name ...]
         # Get the index of the token being completed
         index = len(tokens) - 1
 
-        # Don't tab complete anything if no shell command has been started
-        if index < shell_cmd_index:
-            return []
-
         # Complete the shell command
-        elif index == shell_cmd_index:
+        if index == shell_cmd_index:
 
-            # Readline places begidx after ~ and path separators (/) so we need to get the whole token
-            # and see if it begins with a possible path in case we need to do path completion
-            # to find the shell command executables
             completion_token = tokens[index]
+
+            # Don't tab complete anything if no shell command has been started
+            if len(completion_token) == 0:
+                return []
 
             # If there are no path characters are in this token, it is OK to try shell command completion.
             if not (completion_token.startswith('~') or os.path.sep in completion_token):
-                # We will only keep where the text value starts
+                exes = self._get_exes_in_path(completion_token)
+
+                # We will only keep where the text value starts for the tab completions
                 starting_index = len(completion_token) - len(text)
-                completions = [cur_str[starting_index:] for cur_str in self._get_exes_in_path(completion_token)]
+                completions = [cur_exe[starting_index:] for cur_exe in exes]
+
+                # Use the full name of the executables for the completions that are displayed
+                display_matches = exes
+                set_matches_to_display(display_matches)
 
                 if completions:
                     return completions
