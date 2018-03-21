@@ -1,4 +1,4 @@
-## 0.8.2 (March TBD, 2018)
+## 0.8.2 (March 21, 2018)
 
 * Bug Fixes
     * Fixed a bug in tab-completion of command names within sub-menus
@@ -13,6 +13,7 @@
     * Added the ability to load an initialization script at startup
         * See [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py) for an example
     * Added a default SIGINT handler which terminates any open pipe subprocesses and re-raises a KeyboardInterrupt
+    * For macOS, will load the ``gnureadline`` module if available and ``readline`` if not
     
 ## 0.8.1 (March 9, 2018)
 
