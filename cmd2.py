@@ -2659,7 +2659,8 @@ Usage:  Usage: unalias [-a] name [name ...]
             tokens[index] = strip_quotes(tokens[index])
             tokens[index] = os.path.expandvars(tokens[index])
             tokens[index] = os.path.expanduser(tokens[index])
-            tokens[index] = shlex.quote(tokens[index])
+            if six.PY3:
+                tokens[index] = shlex.quote(tokens[index])
 
         expanded_command = ' '.join(tokens)
         proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
