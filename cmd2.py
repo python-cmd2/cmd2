@@ -49,6 +49,29 @@ from code import InteractiveConsole
 import pyparsing
 import pyperclip
 
+# Collection is a container that is sizable and iterable
+# It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
+try:
+    from collections.abc import Collection
+except ImportError:
+    import collections.abc as abc
+
+    # noinspection PyAbstractClass
+    class Collection(abc.Sized, abc.Iterable, abc.Container):
+
+        __slots__ = ()
+
+        # noinspection PyPep8Naming
+        @classmethod
+        def __subclasshook__(cls, C):
+            if cls is Collection:
+                if any("__len__" in B.__dict__ for B in C.__mro__) and \
+                        any("__iter__" in B.__dict__ for B in C.__mro__) and \
+                        any("__contains__" in B.__dict__ for B in C.__mro__):
+                    return True
+            return NotImplemented
+
+
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
     from pyperclip.exceptions import PyperclipException
@@ -110,6 +133,7 @@ if not sys.platform.startswith('win'):
 
 # On Windows, we save the original pyreadline display completion function since we have to override it
 else:
+    # noinspection PyProtectedMember
     orig_pyreadline_display = readline.rl.mode._display_completions
 
 ############################################################################################################
@@ -360,11 +384,11 @@ def basic_complete(text, line, begidx, endidx, match_against):
     :param line: str - the current input line with leading whitespace removed
     :param begidx: int - the beginning index of the prefix text
     :param endidx: int - the ending index of the prefix text
-    :param match_against: iterable - the list being matched against
+    :param match_against: Collection - the list being matched against
     :return: List[str] - a list of possible tab completions
     """
-    # Make sure we were given an Iterable with items to match against
-    if not isinstance(match_against, collections.Iterable) or len(match_against) == 0:
+    # Make sure we were given an Collection with items to match against
+    if not isinstance(match_against, Collection) or len(match_against) == 0:
         return []
 
     # Get all tokens through the one being completed
@@ -430,8 +454,8 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
                              values - there are two types of values
                                 1. iterable list of strings to match against (dictionaries, lists, etc.)
                                 2. function that performs tab completion (ex: path_complete)
-    :param all_else: iterable or function - an optional parameter for tab completing any token that isn't preceded
-                                            by a flag in flag_dict
+    :param all_else: Collection or function - an optional parameter for tab completing any token that isn't preceded
+                                              by a flag in flag_dict
     :return: List[str] - a list of possible tab completions
     """
 
@@ -449,8 +473,8 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
         if flag in flag_dict:
             match_against = flag_dict[flag]
 
-    # Perform tab completion using an iterable
-    if isinstance(match_against, collections.Iterable):
+    # Perform tab completion using an Collection
+    if isinstance(match_against, Collection):
         completions = basic_complete(text, line, begidx, endidx, match_against)
 
     # Perform tab completion using a function
@@ -473,8 +497,8 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
                              values - there are two types of values
                                 1. iterable list of strings to match against (dictionaries, lists, etc.)
                                 2. function that performs tab completion (ex: path_complete)
-    :param all_else: iterable or function - an optional parameter for tab completing any token that isn't at an
-                                            index in index_dict
+    :param all_else: Collection or function - an optional parameter for tab completing any token that isn't at an
+                                              index in index_dict
     :return: List[str] - a list of possible tab completions
     """
 
@@ -494,8 +518,8 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     else:
         match_against = all_else
 
-    # Perform tab completion using an iterable
-    if isinstance(match_against, collections.Iterable):
+    # Perform tab completion using an Collection
+    if isinstance(match_against, Collection):
         completions = basic_complete(text, line, begidx, endidx, match_against)
 
     # Perform tab completion using a function
