@@ -1381,7 +1381,6 @@ class Cmd(cmd.Cmd):
         :param state: int - non-negative integer
         """
         if state == 0:
-            import readline
             origline = readline.get_line_buffer()
             line = origline.lstrip()
             stripped = len(origline) - len(line)
