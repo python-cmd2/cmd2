@@ -1557,7 +1557,10 @@ class Cmd(cmd.Cmd):
         matches.sort()
         self.poutput("\n")
 
-        num_cols = shutil.get_terminal_size().columns
+        if sys.version_info >= (3, 3):
+            num_cols = shutil.get_terminal_size().columns
+        else:
+            num_cols = 80
 
         if matches_to_display is None:
             self.columnize(matches, num_cols)
