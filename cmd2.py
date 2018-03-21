@@ -1728,7 +1728,13 @@ class Cmd(cmd.Cmd):
                 # Get the status of quotes in the token being completed
                 completion_token = tokens[-1]
 
-                if len(completion_token) > 1:
+                if len(completion_token) == 1:
+                    # Check if the token being completed has an unclosed quote
+                    first_char = completion_token[0]
+                    if first_char in QUOTES:
+                        unclosed_quote = first_char
+
+                elif len(completion_token) > 1:
                     first_char = completion_token[0]
                     last_char = completion_token[-1]
 
