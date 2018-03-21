@@ -115,6 +115,7 @@ else:
 ############################################################################################################
 # The following variables are used by tab-completion functions. They are reset each time complete()
 # is run, and it is up to the completer functions to set them on a case-by-case basis
+# For convenience, use the setter functions for these variables. The setters appear after the variables.
 ############################################################################################################
 
 # If true and a single match is returned to complete(), then a space will be appended
@@ -125,11 +126,26 @@ allow_appended_space = True
 # will be added if there is an umatched opening quote
 allow_closing_quote = True
 
+###########################################################################################################
+# display_entire_match
 # If this is True, then the tab completion suggestions will be the entire token that was matched.
-# If False, then only the basename of the completions will be shown.
-# For things like paths, this should be set to False.
-# complete_shell and path_complete ignore this flag and only show basenames by default
+# If False, then this works like path matching where only the portion of the completion being matched
+# is shown as tab completion suggestions. See the documentation for display_match_delimiter below
+# to use a delimiter other than a path slash to determine what portion of the completion to display.
+#
+# Note: complete_shell() and path_complete() always behave as if this flag is False
+#
+# display_match_delimiter
+# This delimiter can be used to separate matches with something other than a path slash. For instance,
+# if you are matching against strings formatted like name::address::zip, you could set the delimiter to '::'.
+# That way, the tab completion suggestions will only display the part of that string being completed instead
+# of showing the entire string for each completion suggestions.
+
+# Note: Defaults to os.path.sep (OS specific path slash)
+# Note: Only applies when display_entire_match is False
+###########################################################################################################
 display_entire_match = True
+display_match_delimiter = os.path.sep
 
 # If the tab-completion matches should be displayed in a way that is different than the actual match values,
 # then place those results in this list.
@@ -155,13 +171,17 @@ def set_allow_closing_quote(allow):
     allow_closing_quote = allow
 
 
-def set_display_entire_match(entire):
+def set_display_entire_match(entire, delim=os.path.sep):
     """
     Sets display_entire_match flag
     :param entire: bool - the new value for display_entire_match
+    :param delim: str - the new value for display_match_delimiter
     """
     global display_entire_match
+    global display_match_delimiter
+
     display_entire_match = entire
+    display_match_delimiter = delim
 
 
 def set_matches_to_display(matches):
@@ -332,6 +352,10 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
 def basic_complete(text, line, begidx, endidx, match_against):
     """
     Performs tab completion against a list
+    This is ultimately called by many completer functions like flag_based_complete and index_based_complete.
+    It can also be used by custom completer functions and that is the suggested approach since this function
+    handles things like tab completions with spaces as well as the display_entire_match flag.
+
     :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
     :param line: str - the current input line with leading whitespace removed
     :param begidx: int - the beginning index of the prefix text
@@ -348,22 +372,48 @@ def basic_complete(text, line, begidx, endidx, match_against):
     if len(tokens) == 0:
         return []
 
+    # Perform matching
     completion_token = tokens[-1]
     matches = [cur_match for cur_match in match_against if cur_match.startswith(completion_token)]
+    if len(matches) == 0:
+        return []
+
+    # Eliminate duplicates
+    matches_set = set(matches)
+    matches = list(matches_set)
 
     # We will only keep where the text value starts
     starting_index = len(completion_token) - len(text)
     completions = [cur_match[starting_index:] for cur_match in matches]
 
-    # Set the matches that will display as tab-completion suggestions
+    # The tab-completion suggestions that will be displayed
+    display_matches = []
+
+    # Tab-completion suggestions will show the entire match
     if display_entire_match:
         display_matches = matches
-    else:
-        display_matches = [os.path.basename(cur_match) for cur_match in matches]
 
+    # Display only the portion of the match that's still being completed based on delimiter
+    elif len(matches) > 0:
+        # Get the common beginning for the matches
+        common_prefix = os.path.commonprefix(matches)
+        prefix_tokens = common_prefix.split(display_match_delimiter)
+
+        display_token_index = 0
+        if len(prefix_tokens) > 0:
+            display_token_index = len(prefix_tokens) - 1
+
+        # Build the display match list
+        for cur_match in matches:
+            match_tokens = cur_match.split(display_match_delimiter)
+            display_token = match_tokens[display_token_index]
+            if len(display_token) == 0:
+                display_token = display_match_delimiter
+            display_matches.append(display_token)
+
+    # Set what matches will display
     set_matches_to_display(display_matches)
 
-    completions.sort()
     return completions
 
 
@@ -407,7 +457,6 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     elif callable(match_against):
         completions = match_against(text, line, begidx, endidx)
 
-    completions.sort()
     return completions
 
 
@@ -453,7 +502,6 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     elif callable(match_against):
         completions = match_against(text, line, begidx, endidx)
 
-    completions.sort()
     return completions
 
 
@@ -577,7 +625,6 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     # Set the matches that will display as tab-completion suggestions
     set_matches_to_display(display_matches)
 
-    completions.sort()
     return completions
 
 
@@ -1555,8 +1602,17 @@ class Cmd(cmd.Cmd):
         :param matches: the tab completion matches to display
         :param longest_match_length: length of the longest match
         """
+        if matches_to_display is None:
+            display_list = matches
+        else:
+            display_list = matches_to_display
+
+        # Eliminate duplicates and sort
+        display_set = set(display_list)
+        display_list = list(display_set)
+        display_list.sort()
+
         # Print the matches
-        matches.sort()
         self.poutput("\n")
 
         if sys.version_info >= (3, 3):
@@ -1570,10 +1626,7 @@ class Cmd(cmd.Cmd):
                 rows, columns = out.decode().split()
             num_cols = int(columns)
 
-        if matches_to_display is None:
-            self.columnize(matches, num_cols)
-        else:
-            self.columnize(matches_to_display, num_cols)
+        self.columnize(display_list, num_cols)
 
         # Print the prompt
         self.poutput(self.prompt, readline.get_line_buffer())
@@ -1586,12 +1639,18 @@ class Cmd(cmd.Cmd):
         :param matches: the tab completion matches to display
         """
         if orig_pyreadline_display is not None:
-            matches.sort()
-
             if matches_to_display is None:
-                orig_pyreadline_display(matches)
+                display_list = matches
             else:
-                orig_pyreadline_display(matches_to_display)
+                display_list = matches_to_display
+
+            # Eliminate duplicates and sort
+            display_set = set(display_list)
+            display_list = list(display_set)
+            display_list.sort()
+
+            # Display the matches
+            orig_pyreadline_display(display_list)
 
     # -----  Methods which override stuff in cmd -----
 
@@ -1611,6 +1670,7 @@ class Cmd(cmd.Cmd):
         """
 
         if state == 0:
+            unclosed_quote = ''
             set_completion_defaults()
 
             # GNU readline specific way to override the completions display function
@@ -1667,7 +1727,6 @@ class Cmd(cmd.Cmd):
 
                 # Get the status of quotes in the token being completed
                 completion_token = tokens[-1]
-                unclosed_quote = ''
 
                 if len(completion_token) > 1:
                     first_char = completion_token[0]
@@ -1793,35 +1852,30 @@ class Cmd(cmd.Cmd):
                         # Prepend all tab completions with the shortcut so it doesn't get erased from the command line
                         self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
 
-                # Handle single result
-                if len(self.completion_matches) == 1:
-                    str_to_append = ''
-
-                    # Add a closing quote if needed
-                    if allow_closing_quote and unclosed_quote:
-                        str_to_append += unclosed_quote
-
-                    # If we are at the end of the line, then add a space
-                    if allow_appended_space and endidx == len(line):
-                        str_to_append += ' '
-
-                    self.completion_matches[0] = self.completion_matches[0] + str_to_append
-
             else:
                 # Complete the command against aliases and command names
                 strs_to_match = list(self.aliases.keys())
-
-                # Add command names
                 strs_to_match.extend(self.get_command_names())
+                self.completion_matches = basic_complete(text, line, begidx, endidx, strs_to_match)
 
-                # Perform matching
-                completions = [cur_str for cur_str in strs_to_match if cur_str.startswith(text)]
+            # Eliminate duplicates and sort
+            matches_set = set(self.completion_matches)
+            self.completion_matches = list(matches_set)
+            self.completion_matches.sort()
 
-                # If there is only 1 match and it's at the end of the line, then add a space
-                if len(completions) == 1 and endidx == len(line):
-                    completions[0] += ' '
+            # Handle single result
+            if len(self.completion_matches) == 1:
+                str_to_append = ''
 
-                self.completion_matches = completions
+                # Add a closing quote if needed
+                if allow_closing_quote and unclosed_quote:
+                    str_to_append += unclosed_quote
+
+                # If we are at the end of the line, then add a space
+                if allow_appended_space and endidx == len(line):
+                    str_to_append += ' '
+
+                self.completion_matches[0] = self.completion_matches[0] + str_to_append
 
         try:
             return self.completion_matches[state]
@@ -1864,7 +1918,6 @@ class Cmd(cmd.Cmd):
             command = tokens[cmd_index]
             completions = basic_complete(text, line, begidx, endidx, self.get_subcommands(command))
 
-        completions.sort()
         return completions
 
     # noinspection PyUnusedLocal
