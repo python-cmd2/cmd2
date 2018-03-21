@@ -37,6 +37,7 @@ import platform
 import re
 import shlex
 import shutil
+import signal
 import six
 import sys
 import tempfile
@@ -1243,7 +1244,7 @@ class Cmd(cmd.Cmd):
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
     allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    quit_on_sigint = True       # Quit the loop on interrupt instead of just resetting prompt
+    quit_on_sigint = False      # Quit the loop on interrupt instead of just resetting prompt
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
@@ -1453,7 +1454,8 @@ class Cmd(cmd.Cmd):
     def ppaged(self, msg, end='\n'):
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
-        Never uses a pager inside of a script (Python or text) or when output is being redirected or piped.
+        Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
+        stdout or stdin are not a fully functional terminal.
 
         :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
         :param end: str - string appended after the end of the message if not already present, default a newline
@@ -1464,8 +1466,18 @@ class Cmd(cmd.Cmd):
                 if not msg_str.endswith(end):
                     msg_str += end
 
+                # Attempt to detect if we are not running within a fully functional terminal.
+                # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
+                functional_terminal = False
+
+                if self.stdin.isatty() and self.stdout.isatty():
+                    if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
+                        functional_terminal = True
+
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
-                if not self.redirecting and not self._in_py and not self._script_dir:
+                # Also only attempt to use a pager if actually running in a real fully functional terminal
+                if functional_terminal and not self.redirecting and not self._in_py and not self._script_dir:
+
                     if sys.platform.startswith('win'):
                         pager_cmd = 'more'
                     else:
@@ -1841,6 +1853,31 @@ class Cmd(cmd.Cmd):
 
         completions.sort()
         return completions
+
+    # noinspection PyUnusedLocal
+    def sigint_handler(self, signum, frame):
+        """Signal handler for SIGINTs which typically come from Ctrl-C events.
+
+        If you need custom SIGINT behavior, then override this function.
+
+        :param signum: int - signal number
+        :param frame
+        """
+
+        # Save copy of pipe_proc since it could theoretically change while this is running
+        pipe_proc = self.pipe_proc
+
+        if pipe_proc is not None:
+            pipe_proc.terminate()
+
+        # Re-raise a KeyboardInterrupt so other parts of the code can catch it
+        raise KeyboardInterrupt("Got a keyboard interrupt")
+
+    def preloop(self):
+        """"Hook method executed once when the cmdloop() method is called."""
+
+        # Register a default SIGINT signal handler for Ctrl+C
+        signal.signal(signal.SIGINT, self.sigint_handler)
 
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.

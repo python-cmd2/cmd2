@@ -915,6 +915,8 @@ def say_app():
     return app
 
 def test_interrupt_quit(say_app):
+    say_app.quit_on_sigint = True
+
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
