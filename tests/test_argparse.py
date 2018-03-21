@@ -5,7 +5,6 @@ Cmd2 testing for argument parsing
 import argparse
 import functools
 import pytest
-import readline
 import sys
 
 import cmd2
@@ -13,6 +12,18 @@ import mock
 import six
 
 from conftest import run_cmd, StdOut
+
+# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
+try:
+    import gnureadline as readline
+except ImportError:
+    # Try to import readline, but allow failure for convenience in Windows unit testing
+    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
+    try:
+        # noinspection PyUnresolvedReferences
+        import readline
+    except ImportError:
+        pass
 
 
 class ArgparseApp(cmd2.Cmd):
