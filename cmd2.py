@@ -355,11 +355,13 @@ def basic_complete(text, line, begidx, endidx, match_against):
     starting_index = len(completion_token) - len(text)
     completions = [cur_match[starting_index:] for cur_match in matches]
 
-    # Set the matches how they will display
+    # Set the matches that will display as tab-completion suggestions
     if display_entire_match:
         display_matches = matches
     else:
         display_matches = [os.path.basename(cur_match) for cur_match in matches]
+
+    set_matches_to_display(display_matches)
 
     completions.sort()
     return completions
@@ -549,7 +551,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         set_allow_appended_space(False)
         set_allow_closing_quote(False)
 
-    # Will will display only the basename of paths in the tab-completion suggestions
+    # We will display only the basename of paths in the tab-completion suggestions
     display_matches = [os.path.basename(cur_completion) for cur_completion in path_completions]
 
     # Extract just the completed text portion of the paths for completions
@@ -2751,7 +2753,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             if len(completion_token) == 0:
                 return []
 
-            # If there are no path characters are in this token, it is OK to try shell command completion.
+            # If there are no path characters in this token, it is OK to try shell command completion.
             if not (completion_token.startswith('~') or os.path.sep in completion_token):
                 exes = self._get_exes_in_path(completion_token)
 
