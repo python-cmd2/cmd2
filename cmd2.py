@@ -1729,6 +1729,7 @@ class Cmd(cmd.Cmd):
 
                             # If the token started at begidx, then all we have to do is prepend
                             # an opening quote to all the completions. Readline will do the rest.
+                            # This is always true in the case where there is a shortcut to restore.
                             if starting_index == orig_begidx:
                                 self.completion_matches = ['"' + match for match in self.completion_matches]
 
@@ -1770,14 +1771,15 @@ class Cmd(cmd.Cmd):
                                     readline.rl.mode.begidx += 1
                                     readline.rl.mode.endidx += 1
 
-                    # If a shortcut started text, then we need to make sure it doesn't get erased on the command line
+                    # Check if we need to restore a shortcut in the tab completions
                     if shortcut_to_restore:
-                        # If matches_to_display has not been set, then display the actual matches
-                        # that do not show the shortcut character at the beginning of each match.
+                        # If matches_to_display has not been set, then set it to self.completion_matches
+                        # before we restore the shortcut so the tab completion suggestions that display to
+                        # the user don't have the shortcut character.
                         if matches_to_display is None:
                             set_matches_to_display(self.completion_matches)
 
-                        # Given readline the restored shortcut character since that's what its expecting
+                        # Prepend all tab completions with the shortcut so it doesn't get erased from the command line
                         self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
 
                 # Handle single result
