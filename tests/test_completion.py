@@ -36,7 +36,7 @@ def cmd2_app():
     c = cmd2.Cmd()
     return c
 
-def complete_tester(text, line, endidx, begidx, app):
+def complete_tester(text, line, begidx, endidx, app):
     """
     This is a convenience function to test cmd2.complete() since
     in a unit test environment there is no actual console readline
@@ -83,7 +83,7 @@ def test_complete_command_single(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, endidx, begidx, cmd2_app)
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == ['help ']
 
 def test_complete_empty_arg(cmd2_app):
@@ -95,7 +95,7 @@ def test_complete_empty_arg(cmd2_app):
     expected = cmd2_app.complete_help(text, line, begidx, endidx)
     expected.sort()
 
-    first_match = complete_tester(text, line, endidx, begidx, cmd2_app)
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
     assert first_match is not None and \
         cmd2_app.completion_matches == expected
@@ -106,7 +106,7 @@ def test_complete_bogus_command(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, endidx, begidx, cmd2_app)
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is None
 
 
@@ -161,20 +161,19 @@ def test_complete_cursor_by_closing_quote(cmd2_app):
     begidx = endidx - len(text)
 
     # If the cursor is right after a closing quote, then a space is returned
-    first_match = complete_tester(text, line, endidx, begidx, cmd2_app)
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == [' ']
 
 
 def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
         text = 'calc'
-        line = 'shell {}'.format(text)
         expected = ['calc.exe']
     else:
         text = 'egr'
-        line = 'shell {}'.format(text)
         expected = ['egrep']
 
+    line = 'shell {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == expected
@@ -273,8 +272,7 @@ def test_default_to_shell_completion(cmd2_app, request):
     cmd2_app.default_to_shell = True
     test_dir = os.path.dirname(request.module.__file__)
 
-    text = 'c'
-    path = os.path.join(test_dir, text)
+    text = os.path.join(test_dir, 'conftest')
 
     if sys.platform == "win32":
         command = 'calc.exe'
@@ -283,28 +281,13 @@ def test_default_to_shell_completion(cmd2_app, request):
 
     # Make sure the command is on the testing system
     assert command in cmd2.Cmd._get_exes_in_path(command)
-    line = '{} {}'.format(command, path)
+    line = '{} {}'.format(command, text)
 
     endidx = len(line)
     begidx = endidx - len(text)
-    state = 0
 
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = cmd2_app.complete(text, state)
-
-    assert first_match is not None and cmd2_app.completion_matches == ['conftest.py ']
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == [text + '.py ']
 
 
 def test_path_completion_cwd():
