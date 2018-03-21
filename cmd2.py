@@ -1560,7 +1560,13 @@ class Cmd(cmd.Cmd):
         if sys.version_info >= (3, 3):
             num_cols = shutil.get_terminal_size().columns
         else:
-            num_cols = 80
+            proc = subprocess.Popen('stty size', shell=True, stdout=subprocess.PIPE)
+            out, err = proc.communicate()
+            if six.PY2:
+                rows, columns = out.split()
+            else:
+                rows, columns = out.decode().split()
+            num_cols = int(columns)
 
         if matches_to_display is None:
             self.columnize(matches, num_cols)
