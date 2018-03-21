@@ -1,5 +1,4 @@
 
-=========================
 Installation Instructions
 =========================
 
@@ -138,5 +137,33 @@ Extra requirement for Python 2.7 only
 If you want to be able to pipe the output of commands to a shell command on Python 2.7, then you will need one
 additional package installed:
 
-  * subprocess32
+  * subprocess32gNU
 
+Extra requirement for macOS
+===========================
+macOS comes with the `libedit <http://thrysoee.dk/editline/>`_ library which is similar, but not identical, to GNU Readline.
+Tab-completion for ``cmd2`` applications is only tested against GNU Readline.
+
+There are several ways GNU Readline can be installed within a Python environment on a Mac, detailed in the following subsections.
+
+gnureadline Python module
+-------------------------
+Install the `gnureadline <https://pypi.python.org/pypi/gnureadline>`_ Python module which is statically linked against a specific compatible version of GNU Readline::
+
+  pip install -U gnureadline
+
+readline via conda
+------------------
+Install the **readline** package using the ``conda`` package manager included with the Anaconda Python distribution::
+
+  conda install readline
+
+readline via brew
+-----------------
+Install the **readline** package using the Homebrew package manager (compiles from source)::
+
+  brew install openssl
+  brew install pyenv
+  brew install readline
+
+Then use pyenv to compile Python and link against the installed readline
