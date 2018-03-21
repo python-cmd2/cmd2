@@ -584,7 +584,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
             # This is a directory, so don't add a space or quote
             set_allow_appended_space(False)
             set_allow_closing_quote(False)
-            return ["~" + os.path.sep]
+            return [completion_token + os.path.sep]
 
         elif completion_token.startswith('~'):
             # Tilde without separator between path is invalid

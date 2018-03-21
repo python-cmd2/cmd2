@@ -291,30 +291,31 @@ def test_default_to_shell_completion(cmd2_app, request):
 
 
 def test_path_completion_cwd():
-    # Run path complete with no path and no search text
+    # Run path complete with no search text
     text = ''
     line = 'shell ls {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_empty = path_complete(text, line, begidx, endidx)
+    completions_no_text = path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
-    cwd = os.getcwd() + os.path.sep
-    line = 'shell ls {}'.format(cwd)
+    text = os.getcwd() + os.path.sep
+    line = 'shell ls {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_cwd = path_complete(text, line, begidx, endidx)
 
-    # Verify that the results are the same in both cases and that there is something there
-    assert completions_empty == completions_cwd
+    # We have to strip off the text from the beginning since the matches are entire paths
+    completions_cwd = [match.replace(text, '', 1) for match in path_complete(text, line, begidx, endidx)]
+
+    # Verify that the first test gave results for entries in the cwd
+    assert completions_no_text == completions_cwd
     assert completions_cwd
 
 def test_path_completion_doesnt_match_wildcards(request):
     test_dir = os.path.dirname(request.module.__file__)
 
-    text = 'c*'
-    path = os.path.join(test_dir, text)
-    line = 'shell cat {}'.format(path)
+    text = os.path.join(test_dir, 'c*')
+    line = 'shell cat {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
@@ -325,7 +326,7 @@ def test_path_completion_doesnt_match_wildcards(request):
 def test_path_completion_invalid_syntax():
     # Test a missing separator between a ~ and path
     text = '~Desktop'
-    line = 'shell fake ~Desktop'
+    line = 'shell fake {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -334,30 +335,30 @@ def test_path_completion_invalid_syntax():
 def test_path_completion_just_tilde():
     # Run path with just a tilde
     text = '~'
-    line = 'shell fake ~'
+    line = 'shell fake {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde = path_complete(text, line, begidx, endidx)
 
-    # Path complete should return a slash
-    assert completions_tilde == ['~' + os.path.sep]
+    # Path complete should complete the tilde with a slash
+    assert completions_tilde == [text + os.path.sep]
 
 def test_path_completion_user_expansion():
     # Run path with a tilde and a slash
-    text = ''
     if sys.platform.startswith('win'):
         cmd = 'dir'
     else:
         cmd = 'ls'
 
-    line = 'shell {} ~{}'.format(cmd, os.path.sep)
+    text = '~{}'.format(os.path.sep)
+    line = 'shell {} {}'.format(cmd, text)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_tilde_slash = path_complete(text, line, begidx, endidx)
 
     # Run path complete on the user's home directory
-    user_dir = os.path.expanduser('~') + os.path.sep
-    line = 'shell {} {}'.format(cmd, user_dir)
+    text = os.path.expanduser('~') + os.path.sep
+    line = 'shell {} {}'.format(cmd, text)
     endidx = len(line)
     begidx = endidx - len(text)
     completions_home = path_complete(text, line, begidx, endidx)
