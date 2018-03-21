@@ -1546,7 +1546,7 @@ class Cmd(cmd.Cmd):
         return subcommand_names
 
     # noinspection PyUnusedLocal
-    def _display_matches_gnu(self, substitution, matches, longest_match_length):
+    def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):
         """
         A custom completion match display function for use with GNU readline
         :param substitution: the search text that was replaced
@@ -1604,7 +1604,7 @@ class Cmd(cmd.Cmd):
 
             # GNU readline specific way to override the completions display function
             if readline_lib:
-                readline.set_completion_display_matches_hook(self._display_matches_gnu)
+                readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
 
             # pyreadline specific way to override the completions display function
             elif sys.platform.startswith('win'):
