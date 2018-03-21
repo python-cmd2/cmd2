@@ -2653,6 +2653,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             tokens = shlex.split(command, posix=POSIX_SHLEX)
         except ValueError as err:
             self.perror(err, traceback_war=False)
+            return
 
         for index, token in enumerate(tokens):
             tokens[index] = strip_quotes(tokens[index])
