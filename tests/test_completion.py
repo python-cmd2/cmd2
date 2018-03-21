@@ -10,7 +10,6 @@ Released under MIT license, see LICENSE file
 """
 import argparse
 import os
-import readline
 import sys
 
 import cmd2
@@ -18,6 +17,19 @@ import mock
 import pytest
 
 from cmd2 import path_complete, basic_complete, flag_based_complete, index_based_complete
+
+# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
+try:
+    import gnureadline as readline
+except ImportError:
+    # Try to import readline, but allow failure for convenience in Windows unit testing
+    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
+    try:
+        # noinspection PyUnresolvedReferences
+        import readline
+    except ImportError:
+        pass
+
 
 @pytest.fixture
 def cmd2_app():
