@@ -88,13 +88,17 @@ try:
 except ImportError:
     ipython_available = False
 
-# Try to import readline, but allow failure for convenience in Windows unit testing
-# Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
+# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
-    # noinspection PyUnresolvedReferences
-    import readline
+    import gnureadline as readline
 except ImportError:
-    pass
+    # Try to import readline, but allow failure for convenience in Windows unit testing
+    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
+    try:
+        # noinspection PyUnresolvedReferences
+        import readline
+    except ImportError:
+        pass
 
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
 if six.PY3:
@@ -1377,7 +1381,6 @@ class Cmd(cmd.Cmd):
         :param state: int - non-negative integer
         """
         if state == 0:
-            import readline
             origline = readline.get_line_buffer()
             line = origline.lstrip()
             stripped = len(origline) - len(line)
