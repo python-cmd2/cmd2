@@ -27,6 +27,7 @@ import atexit
 import cmd
 import codecs
 import collections
+import copy
 import datetime
 import functools
 import glob
@@ -192,6 +193,8 @@ def set_completion_defaults():
         suppress_quote.value = 1
 
 
+QUOTES = ['"', "'"]
+
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
 if six.PY3:
     BROKEN_PIPE_ERROR = BrokenPipeError
@@ -277,7 +280,7 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
     """
     tokens = []
     unclosed_quote = ''
-    quotes_to_try = ['"', "'"]
+    quotes_to_try = copy.copy(QUOTES)
 
     tmp_line = line[:endidx]
     tmp_endidx = endidx
@@ -313,13 +316,9 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
         for index, cur_token in enumerate(tokens):
             tokens[index] = strip_quotes(cur_token)
 
-    # If begidx is equal to endidx, then the readline text variable is blank.
-    # Check if begidx is preceded by a string. This can happen in things like paths.
-    # For example, in "/home/user/" begidx would be the index right after the last slash given
-    # how readline separation characters work. If begidx is preceded by a string, then the final
-    # token in tokens is the token being completed. If begidx is not preceded by a string, then
-    # we need to add a blank entry to tokens to be the token being completed.
+    # Check if we need to append an empty entry as the token being completed
     if begidx == endidx and not unclosed_quote:
+
         # If begidx is the first character in the line, or is preceded by a space
         # then we need to add the blank entry to tokens.
         prev_space_index = max(line.rfind(' ', 0, begidx), 0)
@@ -340,6 +339,10 @@ def basic_complete(text, line, begidx, endidx, match_against):
     :param match_against: iterable - the list being matched against
     :return: List[str] - a list of possible tab completions
     """
+    # Make sure we were given an Iterable with items to match against
+    if not isinstance(match_against, collections.Iterable) or len(match_against) == 0:
+        return []
+
     # Get all tokens through the one being completed
     tokens = tokens_for_completion(line, begidx, endidx)
     if len(tokens) == 0:
@@ -1652,7 +1655,6 @@ class Cmd(cmd.Cmd):
                 tokens = tokens_for_completion(line, begidx, endidx, preserve_quotes=True)
 
                 # Get the status of quotes in the token being completed
-                quotes = ['"', "'"]
                 completion_token = tokens[-1]
                 unclosed_quote = ''
 
@@ -1661,13 +1663,13 @@ class Cmd(cmd.Cmd):
                     last_char = completion_token[-1]
 
                     # Check if the token being completed has an unclosed quote
-                    if first_char in quotes and first_char != last_char:
+                    if first_char in QUOTES and first_char != last_char:
                         unclosed_quote = first_char
 
                     # If the cursor is right after a closed quote, then insert a space
                     else:
                         prior_char = line[begidx - 1]
-                        if not unclosed_quote and prior_char in quotes:
+                        if not unclosed_quote and prior_char in QUOTES:
                             self.completion_matches = [' ']
                             return self.completion_matches[state]
 
@@ -1703,7 +1705,7 @@ class Cmd(cmd.Cmd):
                     common_prefix = os.path.commonprefix(self.completion_matches)
 
                     # Check if we need to add an opening quote
-                    if len(completion_token) == 0 or completion_token[0] not in quotes:
+                    if len(completion_token) == 0 or completion_token[0] not in QUOTES:
 
                         # If anything that will be in the token being completed contains a space, then
                         # we must add an opening quote to the token on screen
@@ -1847,9 +1849,7 @@ class Cmd(cmd.Cmd):
 
             # Match subcommands if any exist
             command = tokens[cmd_index]
-            subcommands = self.get_subcommands(command)
-            if subcommands is not None:
-                completions = [cur_sub for cur_sub in subcommands if cur_sub.startswith(text)]
+            completions = basic_complete(text, line, begidx, endidx, self.get_subcommands(command))
 
         completions.sort()
         return completions
@@ -2655,12 +2655,20 @@ Usage:  Usage: unalias [-a] name [name ...]
             self.perror(err, traceback_war=False)
             return
 
-        for index, token in enumerate(tokens):
-            tokens[index] = strip_quotes(tokens[index])
-            tokens[index] = os.path.expandvars(tokens[index])
-            tokens[index] = os.path.expanduser(tokens[index])
-            if six.PY3:
-                tokens[index] = shlex.quote(tokens[index])
+        for index, _ in enumerate(tokens):
+            if len(tokens[index]) > 0:
+                # Check if the token is quoted. Since shlex.split() passed, there isn't
+                # an unclosed quote, so we only need to check the first character.
+                first_char = tokens[index][0]
+                if first_char in QUOTES:
+                    tokens[index] = strip_quotes(tokens[index])
+
+                tokens[index] = os.path.expandvars(tokens[index])
+                tokens[index] = os.path.expanduser(tokens[index])
+
+                # Restore the quotes
+                if first_char in QUOTES:
+                    tokens[index] = first_char + tokens[index] + first_char
 
         expanded_command = ' '.join(tokens)
         proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
