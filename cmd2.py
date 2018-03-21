@@ -2611,7 +2611,20 @@ Usage:  Usage: unalias [-a] name [name ...]
         """Execute a command as if at the OS prompt.
 
     Usage:  shell <command> [arguments]"""
-        proc = subprocess.Popen(command, stdout=self.stdout, shell=True)
+
+        try:
+            tokens = shlex.split(command, posix=POSIX_SHLEX)
+        except ValueError as err:
+            self.perror(err, traceback_war=False)
+
+        for index, token in enumerate(tokens):
+            tokens[index] = strip_quotes(tokens[index])
+            tokens[index] = os.path.expandvars(tokens[index])
+            tokens[index] = os.path.expanduser(tokens[index])
+            tokens[index] = shlex.quote(tokens[index])
+
+        expanded_command = ' '.join(tokens)
+        proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
         proc.communicate()
 
     @staticmethod
