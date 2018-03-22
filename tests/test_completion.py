@@ -49,7 +49,8 @@ def complete_tester(text, line, begidx, endidx, app):
     :param endidx: int - the ending index of the prefix text
     :param app: the cmd2 app that will run completions
     :return: The first matched string or None if there are no matches
-             All matches will be a member in app called completion_matches
+             Matches are stored in app.completion_matches
+             These matches have been sorted by complete()
     """
     def get_line():
         return line
@@ -92,6 +93,7 @@ def test_complete_empty_arg(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
+    # These matches would normally be sorted by complete()
     expected = cmd2_app.complete_help(text, line, begidx, endidx)
     expected.sort()
 
@@ -144,7 +146,12 @@ def test_cmd2_help_completion_multiple(cmd2_app):
     line = 'help h'
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help', 'history']
+
+    # These matches would normally be sorted by complete()
+    matches = cmd2_app.complete_help(text, line, begidx, endidx)
+    matches.sort()
+
+    assert matches == ['help', 'history']
 
 def test_cmd2_help_completion_nomatch(cmd2_app):
     text = 'fakecommand'
@@ -251,6 +258,7 @@ def test_path_completion_multiple(request):
     expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
     expected.sort()
 
+    # These matches would normally be sorted by complete()
     matches = path_complete(text, line, begidx, endidx)
     matches.sort()
 
@@ -409,6 +417,7 @@ def test_basic_completion_multiple():
     endidx = len(line)
     begidx = endidx - len(text)
 
+    # These matches would normally be sorted by complete()
     matches = basic_complete(text, line, begidx, endidx, food_item_strs)
     matches.sort()
 
@@ -437,6 +446,7 @@ def test_flag_based_completion_multiple():
     endidx = len(line)
     begidx = endidx - len(text)
 
+    # These matches would normally be sorted by complete()
     matches = flag_based_complete(text, line, begidx, endidx, flag_dict)
     matches.sort()
 
@@ -495,6 +505,7 @@ def test_index_based_completion_multiple():
     endidx = len(line)
     begidx = endidx - len(text)
 
+    # These matches would normally be sorted by complete()
     matches = index_based_complete(text, line, begidx, endidx, index_dict)
     matches.sort()
 
@@ -608,120 +619,57 @@ def sc_app():
 
 def test_cmd2_subcommand_completion_single_end(sc_app):
     text = 'f'
-    line = 'base f'
+    line = 'base {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    state = 0
 
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = sc_app.complete(text, state)
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
 
     # It is at end of line, so extra space is present
     assert first_match is not None and sc_app.completion_matches == ['foo ']
 
 def test_cmd2_subcommand_completion_multiple(sc_app):
     text = ''
-    line = 'base '
+    line = 'base {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    state = 0
 
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = sc_app.complete(text, state)
-
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
     assert first_match is not None and sc_app.completion_matches == ['bar', 'foo']
 
 def test_cmd2_subcommand_completion_nomatch(sc_app):
     text = 'z'
-    line = 'base z'
+    line = 'base {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    state = 0
 
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = sc_app.complete(text, state)
-
-    assert first_match is None
-
-def test_cmd2_subcommand_completion_after_subcommand(sc_app):
-    text = 'f'
-    line = 'base foo f'
-    endidx = len(line)
-    begidx = endidx - len(text)
-    state = 0
-
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = sc_app.complete(text, state)
-
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
     assert first_match is None
 
 
 def test_cmd2_help_subcommand_completion_single(sc_app):
     text = 'base'
-    line = 'help base'
+    line = 'help {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     assert sc_app.complete_help(text, line, begidx, endidx) == ['base']
 
 def test_cmd2_help_subcommand_completion_multiple(sc_app):
     text = ''
-    line = 'help base '
+    line = 'help base {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo']
+
+    # These matches would normally be sorted by complete()
+    matches = sc_app.complete_help(text, line, begidx, endidx)
+    matches.sort()
+
+    assert matches == ['bar', 'foo']
 
 
 def test_cmd2_help_subcommand_completion_nomatch(sc_app):
     text = 'z'
-    line = 'help base z'
+    line = 'help base {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     assert sc_app.complete_help(text, line, begidx, endidx) == []
