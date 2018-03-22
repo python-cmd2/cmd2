@@ -62,7 +62,7 @@ Programming Language :: Python :: Implementation :: PyPy
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
-INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'pyperclip', 'six']
+INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'ply', 'pyperclip', 'six']
 
 # Windows also requires pyreadline to ensure tab completion works
 if sys.platform.startswith('win'):
