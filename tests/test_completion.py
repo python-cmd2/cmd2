@@ -33,6 +33,7 @@ except ImportError:
 
 # List of strings used with basic, flag, and index based completion functions
 weird_strings = ['string with space', '@a symbol']
+delimited_strings = ['bob::tampa::car', 'bill::tampa::truck', 'frank::atlanta::motorcycle']
 food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
 
@@ -57,7 +58,7 @@ index_dict = \
 
 
 class Cmd2App(cmd2.Cmd):
-    """ Example cmd2 application with a command for completion tests """
+    """ Example cmd2 application with commands for completion tests """
 
     def __init__(self):
         cmd2.Cmd.__init__(self)
@@ -67,6 +68,10 @@ class Cmd2App(cmd2.Cmd):
 
     def complete_completion_cmd(self, text, line, begidx, endidx):
         return basic_complete(text, line, begidx, endidx, weird_strings)
+
+    def do_delimited_completion(self, args):
+        pass
+
 
 @pytest.fixture
 def cmd2_app():
@@ -834,12 +839,12 @@ def test_cmd2_submenu_completion_after_submenu_nomatch(sb_app):
 
 
 def test_cmd2_help_submenu_completion_multiple(sb_app):
-    text = 'e'
+    text = 'p'
     line = 'help second {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = ['edit', 'eof', 'eos']
+    expected = ['py', 'pyscript']
 
     # These matches would normally be sorted by complete()
     matches = sb_app.complete_help(text, line, begidx, endidx)
@@ -857,12 +862,12 @@ def test_cmd2_help_submenu_completion_nomatch(sb_app):
 
 
 def test_cmd2_help_submenu_completion_subcommands(sb_app):
-    text = 'e'
+    text = 'p'
     line = 'help second {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = ['edit', 'eof', 'eos']
+    expected = ['py', 'pyscript']
 
     # These matches would normally be sorted by complete()
     matches = sb_app.complete_help(text, line, begidx, endidx)
