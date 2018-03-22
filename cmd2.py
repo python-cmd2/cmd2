@@ -403,7 +403,7 @@ def basic_complete(text, line, begidx, endidx, match_against):
 
     # Get all tokens through the one being completed
     tokens = tokens_for_completion(line, begidx, endidx)
-    if len(tokens) == 0:
+    if tokens is None:
         return []
 
     # Perform matching and eliminate duplicates
@@ -1782,7 +1782,7 @@ class Cmd(cmd.Cmd):
                             return self.completion_matches[state]
 
                 # Check if a valid command was entered
-                if command not in self.get_visible_command_names():
+                if command not in self.get_all_commands():
                     # Check if this command should be run as a shell command
                     if self.default_to_shell and command in self._get_exes_in_path(command):
                         compfunc = functools.partial(path_complete)
@@ -1895,7 +1895,7 @@ class Cmd(cmd.Cmd):
             else:
                 # Complete token against aliases and command names
                 alias_names = set(self.aliases.keys())
-                visible_commands = set(self.get_visible_command_names())
+                visible_commands = set(self.get_visible_commands())
                 strs_to_match = list(alias_names | visible_commands)
                 self.completion_matches = basic_complete(text, line, begidx, endidx, strs_to_match)
 
@@ -1923,19 +1923,28 @@ class Cmd(cmd.Cmd):
         except IndexError:
             return None
 
-    def get_visible_command_names(self):
+    def get_all_commands(self):
+        """
+        Returns a sorted list of all commands
+        Any duplicates have been removed as well
+        """
+        commands = [cur_name[3:] for cur_name in set(self.get_names()) if cur_name.startswith('do_')]
+        commands.sort()
+        return commands
+
+    def get_visible_commands(self):
         """
         Returns a sorted list of commands that have not been hidden
         Any duplicates have been removed as well
         """
-        commands = [cur_name[3:] for cur_name in set(self.get_names()) if cur_name.startswith('do_')]
+        # This list is already sorted and has no duplicates
+        commands = self.get_all_commands()
 
         # Remove the hidden commands
         for name in self.hidden_commands:
             if name in commands:
                 commands.remove(name)
 
-        commands.sort()
         return commands
 
     def get_help_topics(self):
@@ -1968,7 +1977,7 @@ class Cmd(cmd.Cmd):
 
             # Complete token against topics and visible commands
             topics = set(self.get_help_topics())
-            visible_commands = set(self.get_visible_command_names())
+            visible_commands = set(self.get_visible_commands())
             strs_to_match = list(topics | visible_commands)
             completions = basic_complete(text, line, begidx, endidx, strs_to_match)
 
@@ -2533,7 +2542,7 @@ Usage:  Usage: alias [<name> <value>]
         index_dict = \
             {
                 1: self.aliases,
-                2: self.get_visible_command_names()
+                2: self.get_visible_commands()
             }
         return index_based_complete(text, line, begidx, endidx, index_dict, path_complete)
 
@@ -2608,7 +2617,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         cmds_undoc = []
 
         # Get a sorted list of visible command names
-        visible_commands = self.get_visible_command_names()
+        visible_commands = self.get_visible_commands()
 
         for command in visible_commands:
             if command in help_topics:
