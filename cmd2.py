@@ -629,19 +629,22 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         set_allow_appended_space(False)
         set_allow_closing_quote(False)
 
-    # We will display only the basename of paths in the tab-completion suggestions
-    display_matches = [os.path.basename(cur_completion) for cur_completion in path_completions]
-
-    # Extract just the completed text portion of the paths for completions
+    # Build the completion lists
     completions = []
+    display_matches = []
+
     for cur_completion in path_completions:
+
+        # Only keep where text started for the tab completion
+        completions.append(cur_completion[starting_index:])
+
+        # Display only the basename of this path in the tab-completion suggestions
+        display_matches.append(os.path.basename(cur_completion))
 
         # Add a separator after directories if the next character isn't already a separator
         if os.path.isdir(cur_completion) and add_trailing_sep_if_dir:
-            cur_completion += os.path.sep
-
-        # Only keep where text started
-        completions.append(cur_completion[starting_index:])
+            completions[-1] += os.path.sep
+            display_matches[-1] += os.path.sep
 
     # Remove cwd if it was added
     if cwd_added:
@@ -650,7 +653,6 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     # Restore a tilde if we expanded one
     if tilde_expanded:
         completions = [cur_path.replace(user_path, '~', 1) for cur_path in completions]
-        display_matches = [cur_path.replace(user_path, '~', 1) for cur_path in display_matches]
 
     # Set the matches that will display as tab-completion suggestions
     set_matches_to_display(display_matches)
@@ -1634,35 +1636,36 @@ class Cmd(cmd.Cmd):
         :param matches: the tab completion matches to display
         :param longest_match_length: length of the longest match
         """
-        if matches_to_display is None:
-            display_list = matches
-        else:
-            display_list = matches_to_display
-
-        # Eliminate duplicates and sort
-        display_set = set(display_list)
-        display_list = list(display_set)
-        display_list.sort()
-
-        # Print the matches
-        self.poutput("\n")
-
-        if sys.version_info >= (3, 3):
-            num_cols = shutil.get_terminal_size().columns
-        else:
-            proc = subprocess.Popen('stty size', shell=True, stdout=subprocess.PIPE)
-            out, err = proc.communicate()
-            if six.PY2:
-                rows, columns = out.split()
+        if readline_lib is not None:
+            if matches_to_display is None:
+                display_list = matches
             else:
-                rows, columns = out.decode().split()
-            num_cols = int(columns)
+                display_list = matches_to_display
 
-        self.columnize(display_list, num_cols)
+            # Eliminate duplicates and sort
+            display_set = set(display_list)
+            display_list = list(display_set)
+            display_list.sort()
 
-        # Print the prompt
-        self.poutput(self.prompt, readline.get_line_buffer())
-        sys.stdout.flush()
+            # Print the matches
+            self.poutput("\n")
+
+            if sys.version_info >= (3, 3):
+                num_cols = shutil.get_terminal_size().columns
+            else:
+                proc = subprocess.Popen('stty size', shell=True, stdout=subprocess.PIPE)
+                out, err = proc.communicate()
+                if six.PY2:
+                    rows, columns = out.split()
+                else:
+                    rows, columns = out.decode().split()
+                num_cols = int(columns)
+
+            self.columnize(display_list, num_cols)
+
+            # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
+            # have to use ctypes to do it since Python's readline API does not wrap the function
+            readline_lib.rl_forced_update_display()
 
     @staticmethod
     def _display_matches_pyreadline(matches):
