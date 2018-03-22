@@ -54,10 +54,14 @@ import pyperclip
 try:
     from collections.abc import Collection
 except ImportError:
-    import collections.abc as abc
+
+    if six.PY3:
+        from collections.abc import Sized, Iterable, Container
+    else:
+        from collections import Sized, Iterable, Container
 
     # noinspection PyAbstractClass
-    class Collection(abc.Sized, abc.Iterable, abc.Container):
+    class Collection(Sized, Iterable, Container):
 
         __slots__ = ()
 
