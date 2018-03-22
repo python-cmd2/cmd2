@@ -1777,32 +1777,30 @@ class Cmd(cmd.Cmd):
                             self.completion_matches = [' ']
                             return self.completion_matches[state]
 
-                # Otherwise select a completer function
-                if command == '':
-                    compfunc = self.completedefault
-                else:
+                # Check if a valid command was entered
+                if command not in self.get_command_names():
+                    # Check if this command should be run as a shell command
+                    if self.default_to_shell and command in self._get_exes_in_path(command):
+                        compfunc = functools.partial(path_complete)
+                    else:
+                        compfunc = self.completedefault
 
+                # A valid command was entered
+                else:
                     # Get the completer function for this command
-                    is_shell_command = False
                     try:
                         compfunc = getattr(self, 'complete_' + command)
                     except AttributeError:
-                        # Check if this command should be run as a shell command
-                        if self.default_to_shell and command in self._get_exes_in_path(command):
-                            compfunc = functools.partial(path_complete)
-                            is_shell_command = True
-                        else:
-                            compfunc = self.completedefault
+                        compfunc = self.completedefault
 
-                    if not is_shell_command:
-                        # If there are subcommands, then try completing those if the cursor is in
-                        # the token at index 1, otherwise default to using compfunc
-                        subcommands = self.get_subcommands(command)
-                        if subcommands is not None:
-                            index_dict = {1: subcommands}
-                            compfunc = functools.partial(index_based_complete,
-                                                         index_dict=index_dict,
-                                                         all_else=compfunc)
+                    # If there are subcommands, then try completing those if the cursor is in
+                    # the token at index 1, otherwise default to using compfunc
+                    subcommands = self.get_subcommands(command)
+                    if subcommands is not None:
+                        index_dict = {1: subcommands}
+                        compfunc = functools.partial(index_based_complete,
+                                                     index_dict=index_dict,
+                                                     all_else=compfunc)
 
                 # Call the completer function
                 self.completion_matches = compfunc(text, line, begidx, endidx)
