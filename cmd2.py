@@ -1667,6 +1667,10 @@ class Cmd(cmd.Cmd):
             # have to use ctypes to do it since Python's readline API does not wrap the function
             readline_lib.rl_forced_update_display()
 
+            # Let readline know that we manually did a redisplay
+            display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
+            display_fixed.value = 1
+
     @staticmethod
     def _display_matches_pyreadline(matches):
         """
