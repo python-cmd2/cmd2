@@ -397,7 +397,7 @@ flag_dict = \
 
 def test_basic_completion_single():
     text = 'Pi'
-    line = 'list_food -f Pi'
+    line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -405,15 +405,18 @@ def test_basic_completion_single():
 
 def test_basic_completion_multiple():
     text = ''
-    line = 'list_food -f '
+    line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert basic_complete(text, line, begidx, endidx, food_item_strs) == sorted(food_item_strs)
+    matches = basic_complete(text, line, begidx, endidx, food_item_strs)
+    matches.sort()
+
+    assert matches == sorted(food_item_strs)
 
 def test_basic_completion_nomatch():
     text = 'q'
-    line = 'list_food -f q'
+    line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -422,7 +425,7 @@ def test_basic_completion_nomatch():
 
 def test_flag_based_completion_single():
     text = 'Pi'
-    line = 'list_food -f Pi'
+    line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -430,15 +433,18 @@ def test_flag_based_completion_single():
 
 def test_flag_based_completion_multiple():
     text = ''
-    line = 'list_food -f '
+    line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == sorted(food_item_strs)
+    matches = flag_based_complete(text, line, begidx, endidx, flag_dict)
+    matches.sort()
+
+    assert matches == sorted(food_item_strs)
 
 def test_flag_based_completion_nomatch():
     text = 'q'
-    line = 'list_food -f q'
+    line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -447,34 +453,24 @@ def test_flag_based_completion_nomatch():
 def test_flag_based_default_completer(request):
     test_dir = os.path.dirname(request.module.__file__)
 
-    text = 'c'
-    path = os.path.join(test_dir, text)
-    line = 'list_food {}'.format(path)
+    text = os.path.join(test_dir, 'c')
+    line = 'list_food {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py']
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == [text + 'onftest.py']
 
 def test_flag_based_callable_completer(request):
     test_dir = os.path.dirname(request.module.__file__)
 
-    text = 'c'
-    path = os.path.join(test_dir, text)
-    line = 'list_food -o {}'.format(path)
+    text = os.path.join(test_dir, 'c')
+    line = 'list_food -o {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == ['conftest.py']
-
-def test_flag_based_completion_no_tokens():
-    text = ''
-    line = 'list_food'
-    endidx = len(line)
-    begidx = 0
-
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == [text + 'onftest.py']
 
 
 # Dictionary used with index based completion functions
@@ -487,7 +483,7 @@ index_dict = \
 
 def test_index_based_completion_single():
     text = 'Foo'
-    line = 'command Pizza Foo'
+    line = 'command Pizza {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -495,14 +491,18 @@ def test_index_based_completion_single():
 
 def test_index_based_completion_multiple():
     text = ''
-    line = 'command Pizza '
+    line = 'command Pizza {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == sorted(sport_item_strs)
+
+    matches = index_based_complete(text, line, begidx, endidx, index_dict)
+    matches.sort()
+
+    assert matches == sorted(sport_item_strs)
 
 def test_index_based_completion_nomatch():
     text = 'q'
-    line = 'command q'
+    line = 'command {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
     assert index_based_complete(text, line, begidx, endidx, index_dict) == []
@@ -510,26 +510,24 @@ def test_index_based_completion_nomatch():
 def test_index_based_default_completer(request):
     test_dir = os.path.dirname(request.module.__file__)
 
-    text = 'c'
-    path = os.path.join(test_dir, text)
-    line = 'command Pizza Bat Computer {}'.format(path)
+    text = os.path.join(test_dir, 'c')
+    line = 'command Pizza Bat Computer {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict, path_complete) == ['conftest.py']
+    assert index_based_complete(text, line, begidx, endidx, index_dict, path_complete) == [text + 'onftest.py']
 
 def test_index_based_callable_completer(request):
     test_dir = os.path.dirname(request.module.__file__)
 
-    text = 'c'
-    path = os.path.join(test_dir, text)
-    line = 'command Pizza Bat {}'.format(path)
+    text = os.path.join(test_dir, 'c')
+    line = 'command Pizza Bat {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['conftest.py']
+    assert index_based_complete(text, line, begidx, endidx, index_dict) == [text + 'onftest.py']
 
 
 def test_parseline_command_and_args(cmd2_app):
@@ -559,35 +557,6 @@ def test_parseline_expands_shortcuts(cmd2_app):
     assert command == 'shell'
     assert args == 'cat foobar.txt'
     assert line.replace('!', 'shell ') == out_line
-
-
-# Test command completer functions to extend testing coverage
-def test_edit_completer(cmd2_app):
-    text = ''
-    line = 'edit '
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # Verify there are results
-    assert cmd2_app.complete_edit(text, line, begidx, endidx)
-
-def test_load_completer(cmd2_app):
-    text = ''
-    line = 'load '
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # Verify there are results
-    assert cmd2_app.complete_load(text, line, begidx, endidx)
-
-def test_pyscript_completer(cmd2_app):
-    text = ''
-    line = 'pyscript '
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # Verify there are results
-    assert cmd2_app.complete_pyscript(text, line, begidx, endidx)
 
 
 class SubcommandsExample(cmd2.Cmd):
@@ -623,10 +592,10 @@ class SubcommandsExample(cmd2.Cmd):
     @cmd2.with_argparser(base_parser)
     def do_base(self, args):
         """Base command help"""
-        try:
+        if args.func is not None:
             # Call whatever sub-command function was selected
             args.func(self, args)
-        except AttributeError:
+        else:
             # No sub-command was provided, so as called
             self.do_help('base')
 
