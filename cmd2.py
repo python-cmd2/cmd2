@@ -328,9 +328,8 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
                              generally need the tokens unquoted. The only reason to set this to True would
                              be to check if the token being completed has an unclosed quote. complete() is the
                              only functions that does this.
-    :return: A list of tokens
+    :return: A list of tokens that is never empty on success or None on error
     """
-    tokens = []
     unclosed_quote = ''
     quotes_to_try = copy.copy(QUOTES)
 
@@ -342,9 +341,12 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
             tokens = shlex.split(tmp_line[:tmp_endidx], posix=POSIX_SHLEX)
             break
         except ValueError:
-            # ValueError is caused by missing closing quote
+            # ValueError can be caused by missing closing quote
             if len(quotes_to_try) == 0:
-                break
+                # Since we have no more quotes to try, something else
+                # is causing the parsing error. Return None since
+                # this means the line is malformed.
+                return None
 
             # Add a closing quote and try to parse again
             unclosed_quote = quotes_to_try[0]
@@ -354,9 +356,9 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
             tmp_endidx = endidx + 1
             tmp_line += unclosed_quote
 
-    # No tokens were parsed
+    # No tokens were parsed. Pass back an empty token as the token being completed.
     if len(tokens) == 0:
-        return tokens
+        return ['']
 
     if preserve_quotes:
         # If the token being completed had an unclosed quote, we need remove the closing quote that was added
@@ -469,7 +471,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
 
     # Get all tokens through the one being completed
     tokens = tokens_for_completion(line, begidx, endidx)
-    if len(tokens) == 0:
+    if tokens is None:
         return []
 
     completions = []
@@ -512,7 +514,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
 
     # Get all tokens through the one being completed
     tokens = tokens_for_completion(line, begidx, endidx)
-    if len(tokens) == 0:
+    if tokens is None:
         return []
 
     completions = []
@@ -551,7 +553,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
 
     # Get all tokens through the one being completed
     tokens = tokens_for_completion(line, begidx, endidx)
-    if len(tokens) == 0:
+    if tokens is None:
         return []
 
     # Determine if a trailing separator should be appended to directory completions
@@ -1939,7 +1941,7 @@ class Cmd(cmd.Cmd):
 
         # Get all tokens through the one being completed
         tokens = tokens_for_completion(line, begidx, endidx)
-        if len(tokens) == 0:
+        if tokens is None:
             return []
 
         completions = []
@@ -2828,7 +2830,7 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         # Get all tokens through the one being completed
         tokens = tokens_for_completion(line, begidx, endidx)
-        if len(tokens) == 0:
+        if tokens is None:
             return []
 
         # Get the index of the token being completed
@@ -2907,7 +2909,7 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         # Get all tokens through the one being completed
         tokens = tokens_for_completion(line, begidx, endidx)
-        if len(tokens) == 0:
+        if tokens is None:
             return []
 
         completions = []
