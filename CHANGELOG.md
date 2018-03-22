@@ -1,3 +1,21 @@
+## 0.8.3 (TBD)
+* Bug Fixes
+    * Fixed ``help`` command not calling functions for help topics
+
+* Enhancements
+    * Tab completion has been overhauled and now supports completion of strings with quotes and spaces.
+    * Tab completion will automatically add an opening quote if a string with a space is completed.
+    * Added more control over tab completion behavior including the following flags. The use of these flags is documented in cmd2.py
+        * ``allow_appended_space``
+        * ``allow_closing_quote``
+        * ``display_entire_match``
+        * ``display_match_delimiter``
+        
+* Attributes Changes
+    * ``exclude_from_help`` is now called ``hidden_commands`` since these commands hidden from things other than help, including tab completion
+    * ``excludeFromHistory`` is now called ``exclude_from_history``
+
+
 ## 0.8.2 (March 21, 2018)
 
 * Bug Fixes

@@ -145,8 +145,8 @@ else:
     orig_pyreadline_display = readline.rl.mode._display_completions
 
 ############################################################################################################
-# The following variables are used by tab-completion functions. They are reset each time complete()
-# is run, and it is up to the completer functions to set them on a case-by-case basis
+# The following variables are used by tab-completion functions. They are reset each time complete() is run
+# using set_completion_defaults() and it is up to completer functions to set them before returning results.
 # For convenience, use the setter functions for these variables. The setters appear after the variables.
 ############################################################################################################
 
@@ -406,15 +406,11 @@ def basic_complete(text, line, begidx, endidx, match_against):
     if len(tokens) == 0:
         return []
 
-    # Perform matching
+    # Perform matching and eliminate duplicates
     completion_token = tokens[-1]
-    matches = [cur_match for cur_match in match_against if cur_match.startswith(completion_token)]
+    matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(completion_token)]
     if len(matches) == 0:
         return []
-
-    # Eliminate duplicates
-    matches_set = set(matches)
-    matches = list(matches_set)
 
     # We will only keep where the text value starts
     starting_index = len(completion_token) - len(text)
@@ -1399,9 +1395,11 @@ class Cmd(cmd.Cmd):
         # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
         cmd.Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
 
-        # Commands to exclude from the help menu or history command
-        self.exclude_from_help = ['do_eof', 'do_eos', 'do__relative_load']
-        self.excludeFromHistory = '''history edit eof eos'''.split()
+        # Commands to exclude from the help menu and tab completion
+        self.hidden_commands = ['eof', 'eos', '_relative_load']
+
+        # Commands to exclude from the history command
+        self.exclude_from_history = '''history edit eof eos'''.split()
 
         self._finalize_app_parameters()
 
@@ -1784,7 +1782,7 @@ class Cmd(cmd.Cmd):
                             return self.completion_matches[state]
 
                 # Check if a valid command was entered
-                if command not in self.get_command_names():
+                if command not in self.get_visible_command_names():
                     # Check if this command should be run as a shell command
                     if self.default_to_shell and command in self._get_exes_in_path(command):
                         compfunc = functools.partial(path_complete)
@@ -1895,9 +1893,10 @@ class Cmd(cmd.Cmd):
                         self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
 
             else:
-                # Complete the command against aliases and command names
-                strs_to_match = list(self.aliases.keys())
-                strs_to_match.extend(self.get_command_names())
+                # Complete token against aliases and command names
+                alias_names = set(self.aliases.keys())
+                visible_commands = set(self.get_visible_command_names())
+                strs_to_match = list(alias_names | visible_commands)
                 self.completion_matches = basic_complete(text, line, begidx, endidx, strs_to_match)
 
             # Eliminate duplicates and sort
@@ -1924,13 +1923,28 @@ class Cmd(cmd.Cmd):
         except IndexError:
             return None
 
-    def get_command_names(self):
-        """ Returns a list of commands """
-        return [cur_name[3:] for cur_name in self.get_names() if cur_name.startswith('do_')]
+    def get_visible_command_names(self):
+        """
+        Returns a sorted list of commands that have not been hidden
+        Any duplicates have been removed as well
+        """
+        commands = [cur_name[3:] for cur_name in set(self.get_names()) if cur_name.startswith('do_')]
+
+        # Remove the hidden commands
+        for name in self.hidden_commands:
+            if name in commands:
+                commands.remove(name)
+
+        commands.sort()
+        return commands
+
+    def get_help_topics(self):
+        """ Returns a sorted list of help topics with all duplicates removed """
+        return [name[5:] for name in set(self.get_names()) if name.startswith('help_')]
 
     def complete_help(self, text, line, begidx, endidx):
         """
-        Override of parent class method to handle tab completing subcommands
+        Override of parent class method to handle tab completing subcommands and not showing hidden commands
         """
 
         # The command is the token at index 1 in the command line
@@ -1949,9 +1963,14 @@ class Cmd(cmd.Cmd):
         # Get the index of the token being completed
         index = len(tokens) - 1
 
-        # Check if we are completing a command
+        # Check if we are completing a command or help topic
         if index == cmd_index:
-            completions = cmd.Cmd.complete_help(self, text, line, begidx, endidx)
+
+            # Complete token against topics and visible commands
+            topics = set(self.get_help_topics())
+            visible_commands = set(self.get_visible_command_names())
+            strs_to_match = list(topics | visible_commands)
+            completions = basic_complete(text, line, begidx, endidx, strs_to_match)
 
         # Check if we are completing a subcommand
         elif index == subcmd_index:
@@ -2309,7 +2328,7 @@ class Cmd(cmd.Cmd):
             return self.default(statement)
 
         # Since we have a valid command store it in the history
-        if statement.parsed.command not in self.excludeFromHistory:
+        if statement.parsed.command not in self.exclude_from_history:
             self.history.append(statement.parsed.raw)
 
         try:
@@ -2514,7 +2533,7 @@ Usage:  Usage: alias [<name> <value>]
         index_dict = \
             {
                 1: self.aliases,
-                2: self.get_command_names()
+                2: self.get_visible_command_names()
             }
         return index_based_complete(text, line, begidx, endidx, index_dict, path_complete)
 
@@ -2572,6 +2591,9 @@ Usage:  Usage: unalias [-a] name [name ...]
                 else:
                     # No special behavior needed, delegate to cmd base class do_help()
                     cmd.Cmd.do_help(self, funcname[3:])
+            else:
+                # This could be a help topic
+                cmd.Cmd.do_help(self, arglist[0])
         else:
             # Show a menu of what commands help can be gotten for
             self._help_menu()
@@ -2579,39 +2601,27 @@ Usage:  Usage: unalias [-a] name [name ...]
     def _help_menu(self):
         """Show a list of commands which help can be displayed for.
         """
-        # Get a list of all method names
-        names = self.get_names()
-
-        # Remove any command names which are explicitly excluded from the help menu
-        for name in self.exclude_from_help:
-            if name in names:
-                names.remove(name)
+        # Get a sorted list of help topics
+        help_topics = self.get_help_topics()
 
         cmds_doc = []
         cmds_undoc = []
-        help_dict = {}
-        for name in names:
-            if name[:5] == 'help_':
-                help_dict[name[5:]] = 1
-        names.sort()
-        # There can be duplicates if routines overridden
-        prevname = ''
-        for name in names:
-            if name[:3] == 'do_':
-                if name == prevname:
-                    continue
-                prevname = name
-                command = name[3:]
-                if command in help_dict:
-                    cmds_doc.append(command)
-                    del help_dict[command]
-                elif getattr(self, name).__doc__:
-                    cmds_doc.append(command)
-                else:
-                    cmds_undoc.append(command)
+
+        # Get a sorted list of visible command names
+        visible_commands = self.get_visible_command_names()
+
+        for command in visible_commands:
+            if command in help_topics:
+                cmds_doc.append(command)
+                help_topics.remove(command)
+            elif getattr(self, self._func_named(command)).__doc__:
+                cmds_doc.append(command)
+            else:
+                cmds_undoc.append(command)
+
         self.poutput("%s\n" % str(self.doc_leader))
         self.print_topics(self.doc_header, cmds_doc, 15, 80)
-        self.print_topics(self.misc_header, list(help_dict.keys()), 15, 80)
+        self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
     def do_shortcuts(self, _):
