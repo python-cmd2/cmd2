@@ -350,52 +350,34 @@ def test_path_completion_user_expansion():
     else:
         cmd = 'ls'
 
+    # Use a ~ which will be expanded into the user's home directory
     text = '~{}'.format(os.path.sep)
     line = 'shell {} {}'.format(cmd, text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_tilde_slash = path_complete(text, line, begidx, endidx)
+    completions_tilde_slash = [match.replace(text, '', 1) for match in path_complete(text, line, begidx, endidx)]
 
     # Run path complete on the user's home directory
     text = os.path.expanduser('~') + os.path.sep
     line = 'shell {} {}'.format(cmd, text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_home = path_complete(text, line, begidx, endidx)
+    completions_home = [match.replace(text, '', 1) for match in path_complete(text, line, begidx, endidx)]
 
-    # Verify that the results are the same in both cases
     assert completions_tilde_slash == completions_home
 
 def test_path_completion_directories_only(request):
     test_dir = os.path.dirname(request.module.__file__)
 
-    text = 's'
-    path = os.path.join(test_dir, text)
-    line = 'shell cat {}'.format(path)
+    text = os.path.join(test_dir, 's')
+    line = 'shell cat {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert path_complete(text, line, begidx, endidx, dir_only=True) == ['scripts' + os.path.sep]
+    expected = [text + 'cripts' + os.path.sep]
 
-def test_path_completion_syntax_err(request):
-    test_dir = os.path.dirname(request.module.__file__)
-
-    text = 'c'
-    path = os.path.join(test_dir, text)
-    line = 'shell cat " {}'.format(path)
-
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    assert path_complete(text, line, begidx, endidx) == []
-
-def test_path_completion_no_tokens():
-    text = ''
-    line = 'shell'
-    endidx = len(line)
-    begidx = 0
-    assert path_complete(text, line, begidx, endidx) == []
+    assert path_complete(text, line, begidx, endidx, dir_only=True) == expected
 
 
 # List of strings used with basic, flag, and index based completion functions
