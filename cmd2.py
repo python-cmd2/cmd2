@@ -164,7 +164,7 @@ allow_closing_quote = True
 # is shown as tab completion suggestions. See the documentation for display_match_delimiter below
 # to use a delimiter other than a path slash to determine what portion of the completion to display.
 #
-# Note: complete_shell() and path_complete() always behave as if this flag is False
+# Note: path_complete() and shell_cmd_complete() always behave as if this flag is False
 #
 # display_match_delimiter
 # This delimiter can be used to separate matches with something other than a path slash. For instance,
@@ -293,75 +293,12 @@ def display_match_list_pyreadline(matches):
         orig_pyreadline_display(matches)
 
 
+############################################################################################################
+# The following functions are tab-completion routines that can be imported from this module
+# and have no dependence on a cmd2 instance.
+############################################################################################################
+
 QUOTES = ['"', "'"]
-
-# BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
-if six.PY3:
-    BROKEN_PIPE_ERROR = BrokenPipeError
-    FILE_NOT_FOUND_ERROR = FileNotFoundError
-else:
-    BROKEN_PIPE_ERROR = FILE_NOT_FOUND_ERROR = IOError
-
-# On some systems, pyperclip will import gtk for its clipboard functionality.
-# The following code is a workaround for gtk interfering with printing from a background
-# thread while the CLI thread is blocking in raw_input() in Python 2 on Linux.
-if six.PY2 and sys.platform.startswith('lin'):
-    try:
-        # noinspection PyUnresolvedReferences
-        import gtk
-        gtk.set_interactive(0)
-    except ImportError:
-        pass
-
-__version__ = '0.8.2'
-
-# Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
-pyparsing.ParserElement.enablePackrat()
-
-# Override the default whitespace chars in Pyparsing so that newlines are not treated as whitespace
-pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
-
-
-# The next 3 variables and associated setter functions effect how arguments are parsed for decorated commands
-#   which use one of the decorators such as @with_argument_list or @with_argparser
-# The defaults are sane and maximize ease of use for new applications based on cmd2.
-# To maximize backwards compatibility, we recommend setting USE_ARG_LIST to "False"
-
-# Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
-POSIX_SHLEX = False
-
-# Strip outer quotes for convenience if POSIX_SHLEX = False
-STRIP_QUOTES_FOR_NON_POSIX = True
-
-# For @options commands, pass a list of argument strings instead of a single argument string to the do_* methods
-USE_ARG_LIST = True
-
-
-def set_posix_shlex(val):
-    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for decorated commands.
-
-    :param val: bool - True => POSIX,  False => Non-POSIX
-    """
-    global POSIX_SHLEX
-    POSIX_SHLEX = val
-
-
-def set_strip_quotes(val):
-    """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
-
-    :param val: bool - True => strip quotes on args for decorated commands if POSIX_SHLEX is False.
-    """
-    global STRIP_QUOTES_FOR_NON_POSIX
-    STRIP_QUOTES_FOR_NON_POSIX = val
-
-
-def set_use_arg_list(val):
-    """ Allows user of cmd2 to choose between passing @options commands an argument string or list of arg strings.
-
-    :param val: bool - True => arg is a list of strings,  False => arg is a string (for @options commands)
-    """
-    global USE_ARG_LIST
-    USE_ARG_LIST = val
 
 
 def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
@@ -430,7 +367,6 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
     return tokens
 
 
-# noinspection PyUnusedLocal
 def basic_complete(text, line, begidx, endidx, match_against):
     """
     Performs tab completion against a list
@@ -443,7 +379,7 @@ def basic_complete(text, line, begidx, endidx, match_against):
     :param begidx: int - the beginning index of the prefix text
     :param endidx: int - the ending index of the prefix text
     :param match_against: Collection - the list being matched against
-    :return: List[str] - a list of possible tab completions
+    :return: List[str] - a sorted list of possible tab completions
     """
     # Make sure we were given an Collection with items to match against
     if not isinstance(match_against, Collection) or len(match_against) == 0:
@@ -492,6 +428,7 @@ def basic_complete(text, line, begidx, endidx, match_against):
     # Set what matches will display
     set_matches_to_display(display_matches)
 
+    completion_matches.sort()
     return completion_matches
 
 
@@ -510,7 +447,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
                                 2. function that performs tab completion (ex: path_complete)
     :param all_else: Collection or function - an optional parameter for tab completing any token that isn't preceded
                                               by a flag in flag_dict
-    :return: List[str] - a list of possible tab completions
+    :return: List[str] - a sorted list of possible tab completions
     """
 
     # Get all tokens through the one being completed
@@ -527,13 +464,14 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
         if flag in flag_dict:
             match_against = flag_dict[flag]
 
-    # Perform tab completion using an Collection
+    # Perform tab completion using an Collection. These matches are already sorted.
     if isinstance(match_against, Collection):
         completions_matches = basic_complete(text, line, begidx, endidx, match_against)
 
     # Perform tab completion using a function
     elif callable(match_against):
         completions_matches = match_against(text, line, begidx, endidx)
+        completions_matches.sort()
 
     return completions_matches
 
@@ -553,7 +491,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
                                 2. function that performs tab completion (ex: path_complete)
     :param all_else: Collection or function - an optional parameter for tab completing any token that isn't at an
                                               index in index_dict
-    :return: List[str] - a list of possible tab completions
+    :return: List[str] - a sorted list of possible tab completions
     """
 
     # Get all tokens through the one being completed
@@ -572,19 +510,20 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     else:
         match_against = all_else
 
-    # Perform tab completion using an Collection
+    # Perform tab completion using an Collection. These matches are already sorted.
     if isinstance(match_against, Collection):
         completion_matches = basic_complete(text, line, begidx, endidx, match_against)
 
     # Perform tab completion using a function
     elif callable(match_against):
         completion_matches = match_against(text, line, begidx, endidx)
+        completion_matches.sort()
 
     return completion_matches
 
 
 def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
-    """Method called to complete an input line by local file system path completion.
+    """Performs completion of local file system paths
 
     :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
     :param line: str - the current input line with leading whitespace removed
@@ -592,7 +531,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     :param endidx: int - the ending index of the prefix text
     :param dir_exe_only: bool - only return directories and executables, not non-executable files
     :param dir_only: bool - only return directories
-    :return: List[str] - a list of possible tab completions
+    :return: List[str] - a sorted list of possible tab completions
     """
 
     # Get all tokens through the one being completed
@@ -705,7 +644,152 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     # Set the matches that will display as tab-completion suggestions
     set_matches_to_display(display_matches)
 
+    completion_matches.sort()
     return completion_matches
+
+
+def get_exes_in_path(starts_with):
+    """
+    Returns names of executables in a user's path
+    :param starts_with: str - what the exes should start with. leave blank for all exes in path.
+    :return: List[str] - a sorted list of matching exe names
+    """
+
+    # Purposely don't match any executable containing wildcards
+    wildcards = ['*', '?']
+    for wildcard in wildcards:
+        if wildcard in starts_with:
+            return []
+
+    # Get a list of every directory in the PATH environment variable and ignore symbolic links
+    paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
+
+    # Use a set to store exe names since there can be duplicates
+    exes_set = set()
+
+    # Find every executable file in the user's path that matches the pattern
+    for path in paths:
+        full_path = os.path.join(path, starts_with)
+        matches = [f for f in glob.glob(full_path + '*') if os.path.isfile(f) and os.access(f, os.X_OK)]
+
+        for match in matches:
+            exes_set.add(os.path.basename(match))
+
+    exes_list = list(exes_set)
+    exes_list.sort()
+    return exes_list
+
+
+def shell_cmd_complete(text, line, begidx, endidx, complete_blank=False):
+    """Performs completion of executables either in a user's path or a given path
+    :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+    :param line: str - the current input line with leading whitespace removed
+    :param begidx: int - the beginning index of the prefix text
+    :param endidx: int - the ending index of the prefix text
+    :param complete_blank: bool - If True, then a blank will complete all shell commands in a user's path
+                                  If False, then no completion is performed
+                                  Defaults to False to match Bash shell behavior
+    :return: List[str] - a sorted list of possible tab completions
+    """
+
+    # Get all tokens through the one being completed
+    tokens = tokens_for_completion(line, begidx, endidx)
+    if tokens is None:
+        return []
+
+    completion_token = tokens[-1]
+
+    # Don't tab complete anything if no shell command has been started
+    if not complete_blank and len(completion_token) == 0:
+        return []
+
+    # If there are no path characters in this token, then do shell command completion in the user's path
+    if os.path.sep not in completion_token:
+        # These matches are already sorted
+        full_matches = get_exes_in_path(completion_token)
+
+        # We will only keep where the text value starts for the tab completions
+        starting_index = len(completion_token) - len(text)
+        completion_matches = [cur_exe[starting_index:] for cur_exe in full_matches]
+
+        # Use the full name of the executables for the completions that are displayed
+        display_matches = full_matches
+        set_matches_to_display(display_matches)
+
+        return completion_matches
+
+    # Otherwise look for executables in the given path
+    else:
+        return path_complete(text, line, begidx, endidx, dir_exe_only=True)
+
+
+# BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
+if six.PY3:
+    BROKEN_PIPE_ERROR = BrokenPipeError
+    FILE_NOT_FOUND_ERROR = FileNotFoundError
+else:
+    BROKEN_PIPE_ERROR = FILE_NOT_FOUND_ERROR = IOError
+
+# On some systems, pyperclip will import gtk for its clipboard functionality.
+# The following code is a workaround for gtk interfering with printing from a background
+# thread while the CLI thread is blocking in raw_input() in Python 2 on Linux.
+if six.PY2 and sys.platform.startswith('lin'):
+    try:
+        # noinspection PyUnresolvedReferences
+        import gtk
+        gtk.set_interactive(0)
+    except ImportError:
+        pass
+
+__version__ = '0.8.2'
+
+# Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
+pyparsing.ParserElement.enablePackrat()
+
+# Override the default whitespace chars in Pyparsing so that newlines are not treated as whitespace
+pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
+
+
+# The next 3 variables and associated setter functions effect how arguments are parsed for decorated commands
+# which use one of the decorators such as @with_argument_list or @with_argparser
+# The defaults are sane and maximize ease of use for new applications based on cmd2.
+# To maximize backwards compatibility, we recommend setting USE_ARG_LIST to "False"
+
+# Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
+POSIX_SHLEX = False
+
+# Strip outer quotes for convenience if POSIX_SHLEX = False
+STRIP_QUOTES_FOR_NON_POSIX = True
+
+# For @options commands, pass a list of argument strings instead of a single argument string to the do_* methods
+USE_ARG_LIST = True
+
+
+def set_posix_shlex(val):
+    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for decorated commands.
+
+    :param val: bool - True => POSIX,  False => Non-POSIX
+    """
+    global POSIX_SHLEX
+    POSIX_SHLEX = val
+
+
+def set_strip_quotes(val):
+    """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
+
+    :param val: bool - True => strip quotes on args for decorated commands if POSIX_SHLEX is False.
+    """
+    global STRIP_QUOTES_FOR_NON_POSIX
+    STRIP_QUOTES_FOR_NON_POSIX = val
+
+
+def set_use_arg_list(val):
+    """ Allows user of cmd2 to choose between passing @options commands an argument string or list of arg strings.
+
+    :param val: bool - True => arg is a list of strings,  False => arg is a string (for @options commands)
+    """
+    global USE_ARG_LIST
+    USE_ARG_LIST = val
 
 
 class OptionParser(optparse.OptionParser):
@@ -1830,7 +1914,7 @@ class Cmd(cmd.Cmd):
                 # Check if a valid command was entered
                 if command not in self.get_all_commands():
                     # Check if this command should be run as a shell command
-                    if self.default_to_shell and command in self._get_exes_in_path(command):
+                    if self.default_to_shell and command in get_exes_in_path(command):
                         compfunc = functools.partial(path_complete)
                     else:
                         compfunc = self.completedefault
@@ -2000,6 +2084,7 @@ class Cmd(cmd.Cmd):
     def complete_help(self, text, line, begidx, endidx):
         """
         Override of parent class method to handle tab completing subcommands and not showing hidden commands
+        Returns a sorted list of possible tab completions
         """
 
         # The command is the token at index 1 in the command line
@@ -2848,92 +2933,17 @@ Usage:  Usage: unalias [-a] name [name ...]
         proc.communicate()
 
     @staticmethod
-    def _get_exes_in_path(starts_with):
-        """
-        Returns names of executables in a user's path
-        :param starts_with: str - what the exes should start with. leave blank for all exes in path.
-        :return: List[str] - a list of matching exe names
-        """
-
-        # Purposely don't match any executable containing wildcards
-        wildcards = ['*', '?']
-        for wildcard in wildcards:
-            if wildcard in starts_with:
-                return []
-
-        # Get a list of every directory in the PATH environment variable and ignore symbolic links
-        paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
-
-        # Use a set to store exe names since there can be duplicates
-        exes_set = set()
-
-        # Find every executable file in the user's path that matches the pattern
-        for path in paths:
-            full_path = os.path.join(path, starts_with)
-            matches = [f for f in glob.glob(full_path + '*') if os.path.isfile(f) and os.access(f, os.X_OK)]
-
-            for match in matches:
-                exes_set.add(os.path.basename(match))
-
-        # Sort the exes alphabetically
-        exes_list = list(exes_set)
-        exes_list.sort()
-        return exes_list
-
-    def complete_shell(self, text, line, begidx, endidx):
+    def complete_shell(text, line, begidx, endidx):
         """Handles tab completion of executable commands and local file system paths for the shell command
 
         :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: str - the current input line with leading whitespace removed
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
-        :return: List[str] - a list of possible tab completions
+        :return: List[str] - a sorted list of possible tab completions
         """
-
-        # The shell command is the token at index 1 in the command line
-        shell_cmd_index = 1
-
-        # Get all tokens through the one being completed
-        tokens = tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
-            return []
-
-        # Get the index of the token being completed
-        index = len(tokens) - 1
-
-        if index < shell_cmd_index:
-            return []
-
-        # Complete the shell command
-        elif index == shell_cmd_index:
-
-            completion_token = tokens[index]
-
-            # Don't tab complete anything if no shell command has been started
-            if len(completion_token) == 0:
-                return []
-
-            # If there are no path characters in this token, it is OK to try shell command completion.
-            if not (completion_token.startswith('~') or os.path.sep in completion_token):
-                exes = self._get_exes_in_path(completion_token)
-
-                # We will only keep where the text value starts for the tab completions
-                starting_index = len(completion_token) - len(text)
-                completion_matches = [cur_exe[starting_index:] for cur_exe in exes]
-
-                # Use the full name of the executables for the completions that are displayed
-                display_matches = exes
-                set_matches_to_display(display_matches)
-
-                if completion_matches:
-                    return completion_matches
-
-            # If we have no results, try path completion to find the shell commands
-            return path_complete(text, line, begidx, endidx, dir_exe_only=True)
-
-        # We are past the shell command, so do path completion
-        else:
-            return path_complete(text, line, begidx, endidx)
+        index_dict = {1: shell_cmd_complete}
+        return index_based_complete(text, line, begidx, endidx, index_dict, path_complete)
 
     def cmd_with_subs_completer(self, text, line, begidx, endidx, base):
         """
@@ -2966,7 +2976,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
         :param base: str - the name of the base command that owns the subcommands
-        :return: List[str] - a list of possible tab completions
+        :return: List[str] - a sorted list of possible tab completions
         """
 
         # The subcommand is the token at index 1 in the command line
