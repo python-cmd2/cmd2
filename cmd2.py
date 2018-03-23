@@ -37,7 +37,6 @@ import os
 import platform
 import re
 import shlex
-import shutil
 import signal
 import six
 import sys
@@ -243,6 +242,55 @@ def set_completion_defaults():
         # Set GNU readline's rl_completion_suppress_quote to 1 so it won't automatically add a closing quote
         suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
         suppress_quote.value = 1
+
+
+def display_match_list_gnu_readline(substitution, matches, longest_match_length):
+    """
+    Prints a match list using GNU readline's rl_display_match_list()
+    :param substitution: str - the substitution written to the command line
+    :param matches: list[str] - the tab completion matches to display
+    :param longest_match_length: int - longest printed length of the matches
+    """
+    if readline_lib is not None:
+        # We will use readline's display function (rl_display_match_list()), so we
+        # need to encode our string as bytes to place in a C array.
+        if six.PY3:
+            encoded_substitution = bytes(substitution, encoding='utf-8')
+            encoded_matches = [bytes(cur_match, encoding='utf-8') for cur_match in matches]
+        else:
+            encoded_substitution = bytes(substitution)
+            encoded_matches = [bytes(cur_match) for cur_match in matches]
+
+        # rl_display_match_list() expects matches to be in argv format where
+        # substitution is the first element, followed by the matches, and then a NULL.
+        # noinspection PyCallingNonCallable,PyTypeChecker
+        strings_array = (ctypes.c_char_p * (1 + len(encoded_matches) + 1))()
+
+        # Copy in the encoded strings and add a NULL to the end
+        strings_array[0] = encoded_substitution
+        strings_array[1:-1] = encoded_matches
+        strings_array[-1] = None
+
+        # Call readline's display function
+        # rl_display_match_list(strings_array, number of completion matches, longest match length)
+        readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
+
+        # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
+        # have to use ctypes to do it since Python's readline API does not wrap the function
+        readline_lib.rl_forced_update_display()
+
+        # Since we updated the display, readline asks that rl_display_fixed be set for efficiency
+        display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
+        display_fixed.value = 1
+
+
+def display_match_list_pyreadline(matches):
+    """
+    Prints a match list using pyreadline's _display_completions()
+    :param matches: list[str] - the tab completion matches to display
+    """
+    if orig_pyreadline_display is not None:
+        orig_pyreadline_display(matches)
 
 
 QUOTES = ['"', "'"]
@@ -1628,68 +1676,59 @@ class Cmd(cmd.Cmd):
 
         return subcommand_names
 
-    # noinspection PyUnusedLocal
-    def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):
+    @staticmethod
+    def _display_matches_gnu_readline(substitution, matches, longest_match_length):
         """
-        A custom completion match display function for use with GNU readline
-        :param substitution: the search text that was replaced
-        :param matches: the tab completion matches to display
-        :param longest_match_length: length of the longest match
+        cmd2's default GNU readline function that prints tab-completion matches to the screen
+        This exists to allow the printing of matches_to_display if it is set. Otherwise matches prints.
+        The actual printing is done by display_match_list_gnu_readline().
+
+        If you need a custom match display function for a particular completion type, then set it by calling
+        readline.set_completion_display_matches_hook() during the completer routine.
+        Your custom display function should ultimately call display_match_list_gnu_readline() to print.
+
+        :param substitution: str - the substitution written to the command line
+        :param matches: list[str] - the tab completion matches to display
+        :param longest_match_length: int - longest printed length of the matches
         """
-        if readline_lib is not None:
-            if matches_to_display is None:
-                display_list = matches
-            else:
-                display_list = matches_to_display
+        if matches_to_display is None:
+            display_matches = matches
+        else:
+            display_matches = matches_to_display
 
-            # Eliminate duplicates and sort
-            display_set = set(display_list)
-            display_list = list(display_set)
-            display_list.sort()
+        # Eliminate duplicates and sort
+        display_set = set(display_matches)
+        display_matches = list(display_set)
+        display_matches.sort()
 
-            # Print the matches
-            self.poutput("\n")
-
-            if sys.version_info >= (3, 3):
-                num_cols = shutil.get_terminal_size().columns
-            else:
-                proc = subprocess.Popen('stty size', shell=True, stdout=subprocess.PIPE)
-                out, err = proc.communicate()
-                if six.PY2:
-                    rows, columns = out.split()
-                else:
-                    rows, columns = out.decode().split()
-                num_cols = int(columns)
-
-            self.columnize(display_list, num_cols)
-
-            # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
-            # have to use ctypes to do it since Python's readline API does not wrap the function
-            readline_lib.rl_forced_update_display()
-
-            # Let readline know that we manually did a redisplay
-            display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
-            display_fixed.value = 1
+        # Display the matches
+        display_match_list_gnu_readline(substitution, display_matches, longest_match_length)
 
     @staticmethod
     def _display_matches_pyreadline(matches):
         """
-        A custom completion match display function for use with pyreadline
-        :param matches: the tab completion matches to display
+        cmd2's default pyreadline function that prints tab-completion matches to the screen
+        This exists to allow the printing of matches_to_display if it is set. Otherwise matches prints.
+        The actual printing is done by display_match_list_pyreadline().
+
+        If you need a custom match display function for a particular completion type, then set
+        readline.rl.mode._display_completions to that function during the completer routine.
+        Your custom display function should ultimately call display_match_list_pyreadline() to print.
+
+        :param matches: list[str] - the tab completion matches to display
         """
-        if orig_pyreadline_display is not None:
-            if matches_to_display is None:
-                display_list = matches
-            else:
-                display_list = matches_to_display
+        if matches_to_display is None:
+            display_matches = matches
+        else:
+            display_matches = matches_to_display
 
-            # Eliminate duplicates and sort
-            display_set = set(display_list)
-            display_list = list(display_set)
-            display_list.sort()
+        # Eliminate duplicates and sort
+        display_set = set(display_matches)
+        display_matches = list(display_set)
+        display_matches.sort()
 
-            # Display the matches
-            orig_pyreadline_display(display_list)
+        # Display the matches
+        display_match_list_pyreadline(display_matches)
 
     # -----  Methods which override stuff in cmd -----
 
