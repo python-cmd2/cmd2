@@ -325,16 +325,7 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
         try:
             # This type of parsing works better than shlex.split() which doesn't seem to treat > as an individual token.
             # Use non-POSIX parsing to keep the quotes around the tokens.
-            parser = shlex.shlex(tmp_line[:tmp_endidx], posix=False)
-
-            # Get the tokens
-            tokens = []
-            while True:
-                cur_token = parser.get_token()
-                if cur_token:
-                    tokens.append(cur_token)
-                else:
-                    break
+            tokens = list(shlex.shlex(tmp_line[:tmp_endidx], posix=False))
             break
         except ValueError:
             # ValueError can be caused by missing closing quote
@@ -352,12 +343,18 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
             tmp_endidx = endidx + 1
             tmp_line += unclosed_quote
 
-    # No tokens were parsed. Pass back an empty token as the token being completed.
-    if len(tokens) == 0:
-        return ['']
+    # Check if the cursor is at the end of the line and not within a quoted string
+    if begidx == endidx and not unclosed_quote:
+
+        # If the line is blank or the cursor is preceded by a space, then the actual
+        # token being completed is blank. Add this to the token list.
+        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
+        if prev_space_index == 0 or prev_space_index == begidx - 1:
+            tokens.append('')
 
     if preserve_quotes:
-        # If the token being completed had an unclosed quote, we need remove the closing quote that was added
+        # If the token being completed had an unclosed quote,
+        # we need remove the closing quote that was added
         if unclosed_quote:
             tokens[-1] = tokens[-1][:-1]
 
@@ -365,18 +362,6 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
     else:
         for index, cur_token in enumerate(tokens):
             tokens[index] = strip_quotes(cur_token)
-
-    # Check if the cursor is at the end of the line and not within a quoted string
-    if begidx == endidx and not unclosed_quote:
-
-        # Get character before the cursor. This math is safe since begidx has
-        # to be greater than 0 if it equals endidx and there were tokens.
-        prev_char = line[begidx - 1]
-
-        # If there is a space before the cursor and we are not in a quoted string, then the
-        # actual token being completed is blank right now. Add this to the token list.
-        if prev_char == ' ':
-            tokens.append('')
 
     return tokens
 
@@ -1857,19 +1842,24 @@ class Cmd(cmd.Cmd):
             elif sys.platform.startswith('win'):
                 readline.rl.mode._display_completions = self._display_matches_pyreadline
 
+            # lstrip the original line
             origline = readline.get_line_buffer()
             line = origline.lstrip()
             stripped = len(origline) - len(line)
-            begidx = readline.get_begidx() - stripped
-            endidx = readline.get_endidx() - stripped
 
-            # If the line starts with a shortcut that has no break between the search text,
-            # then the text variable will start with the shortcut if its not a completer delimiter
+            # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
+            # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
+            begidx = max(readline.get_begidx() - stripped, 0)
+            endidx = max(readline.get_endidx() - stripped, 0)
+
+            # Not all of our shortcuts are readline word break delimiters. '!' is an example of this.
+            # Therefore those shortcuts become part of the text variable. We need to remove it from text
+            # and update the indexes. This only applies if we are at the beginning of the line.
             shortcut_to_restore = ''
             if begidx == 0:
                 for (shortcut, expansion) in self.shortcuts:
                     if text.startswith(shortcut):
-                        # Save the shortcut to adjust the line later
+                        # Save the shortcut to restore later
                         shortcut_to_restore = shortcut
 
                         # Adjust text and where it begins
