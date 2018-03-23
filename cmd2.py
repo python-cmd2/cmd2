@@ -1887,6 +1887,13 @@ class Cmd(cmd.Cmd):
                 # Get all tokens through the one being completed
                 tokens = tokens_for_completion(line, begidx, endidx, preserve_quotes=True)
 
+                # Either had a parsing error or are trying to complete the command token
+                # The latter can happen if default_to_shell is True and parseline() allowed
+                # assumed something like " or ' was a command.
+                if tokens is None or len(tokens) == 1:
+                    self.completion_matches = []
+                    return None
+
                 # Get the status of quotes in the token being completed
                 completion_token = tokens[-1]
 
