@@ -63,9 +63,10 @@ class SubcommandsExample(cmd2.Cmd):
     @with_argparser(base_parser)
     def do_base(self, args):
         """Base command help"""
-        if args.func is not None:
+        func = getattr(args, 'func', None)
+        if func is not None:
             # Call whatever subcommand function was selected
-            args.func(self, args)
+            func(self, args)
         else:
             # No subcommand was provided, so call help
             self.do_help('base')
