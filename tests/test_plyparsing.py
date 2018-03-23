@@ -16,7 +16,7 @@ class Cmd2Lexer():
     should be moved into cmd2.Cmd()
     """
     def __init__(self):
-        self.command = Cmd2Command()
+        self.results = Cmd2Command()
 
     tokens = (
         'WORD',
@@ -33,13 +33,13 @@ class Cmd2Lexer():
 
     def p_command_and_args(self, p):
         'command_and_args : command arglist'
-        self.command.command = p[1]
-        self.command.args = p[2]
-        p[0] = self.command
+        self.results.command = p[1]
+        self.results.args = p[2]
+        p[0] = self.results
 
     def p_command(self, p):
         'command : WORD'
-        self.command.command = p[1]
+        self.results.command = p[1]
         p[0] = p[1]
 
     def p_arglist(self, p):
@@ -84,9 +84,9 @@ def test_lex_command_with_args(cl):
 
 def test_parse_single_word(cl):
     cl.parser.parse('plainword')
-    assert cl.command.command == 'plainword'
+    assert cl.results.command == 'plainword'
 
 def test_parse_command_with_args(cl):
     cl.parser.parse('command with args')
-    assert cl.command.command == 'command'
-    assert cl.command.args == 'with args'
+    assert cl.results.command == 'command'
+    assert cl.results.args == 'with args'
