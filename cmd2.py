@@ -456,25 +456,25 @@ def basic_complete(text, line, begidx, endidx, match_against):
 
     # Perform matching and eliminate duplicates
     completion_token = tokens[-1]
-    matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(completion_token)]
-    if len(matches) == 0:
+    full_matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(completion_token)]
+    if len(full_matches) == 0:
         return []
 
     # We will only keep where the text value starts
     starting_index = len(completion_token) - len(text)
-    completions = [cur_match[starting_index:] for cur_match in matches]
+    completion_matches = [cur_match[starting_index:] for cur_match in full_matches]
 
     # The tab-completion suggestions that will be displayed
     display_matches = []
 
     # Tab-completion suggestions will show the entire match
     if display_entire_match:
-        display_matches = matches
+        display_matches = full_matches
 
     # Display only the portion of the match that's still being completed based on delimiter
-    elif len(matches) > 0:
+    elif len(full_matches) > 0:
         # Get the common beginning for the matches
-        common_prefix = os.path.commonprefix(matches)
+        common_prefix = os.path.commonprefix(full_matches)
         prefix_tokens = common_prefix.split(display_match_delimiter)
 
         display_token_index = 0
@@ -482,7 +482,7 @@ def basic_complete(text, line, begidx, endidx, match_against):
             display_token_index = len(prefix_tokens) - 1
 
         # Build the display match list
-        for cur_match in matches:
+        for cur_match in full_matches:
             match_tokens = cur_match.split(display_match_delimiter)
             display_token = match_tokens[display_token_index]
             if len(display_token) == 0:
@@ -492,7 +492,7 @@ def basic_complete(text, line, begidx, endidx, match_against):
     # Set what matches will display
     set_matches_to_display(display_matches)
 
-    return completions
+    return completion_matches
 
 
 def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
@@ -518,7 +518,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     if tokens is None:
         return []
 
-    completions = []
+    completions_matches = []
     match_against = all_else
 
     # Must have at least 2 args for a flag to precede the token being completed
@@ -529,13 +529,13 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
 
     # Perform tab completion using an Collection
     if isinstance(match_against, Collection):
-        completions = basic_complete(text, line, begidx, endidx, match_against)
+        completions_matches = basic_complete(text, line, begidx, endidx, match_against)
 
     # Perform tab completion using a function
     elif callable(match_against):
-        completions = match_against(text, line, begidx, endidx)
+        completions_matches = match_against(text, line, begidx, endidx)
 
-    return completions
+    return completions_matches
 
 
 def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
@@ -561,7 +561,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     if tokens is None:
         return []
 
-    completions = []
+    completion_matches = []
 
     # Get the index of the token being completed
     index = len(tokens) - 1
@@ -574,13 +574,13 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
 
     # Perform tab completion using an Collection
     if isinstance(match_against, Collection):
-        completions = basic_complete(text, line, begidx, endidx, match_against)
+        completion_matches = basic_complete(text, line, begidx, endidx, match_against)
 
     # Perform tab completion using a function
     elif callable(match_against):
-        completions = match_against(text, line, begidx, endidx)
+        completion_matches = match_against(text, line, begidx, endidx)
 
-    return completions
+    return completion_matches
 
 
 def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
@@ -664,48 +664,48 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
         starting_index = 0
 
     # Find all matching path completions
-    path_completions = glob.glob(search_str)
+    full_matches = glob.glob(search_str)
 
     # If we only want directories and executables, filter everything else out first
     if dir_exe_only:
-        path_completions = [c for c in path_completions if os.path.isdir(c) or os.access(c, os.X_OK)]
+        full_matches = [c for c in full_matches if os.path.isdir(c) or os.access(c, os.X_OK)]
     elif dir_only:
-        path_completions = [c for c in path_completions if os.path.isdir(c)]
+        full_matches = [c for c in full_matches if os.path.isdir(c)]
 
     # Don't append a space or closing quote to directory
-    if len(path_completions) == 1 and not os.path.isfile(path_completions[0]):
+    if len(full_matches) == 1 and not os.path.isfile(full_matches[0]):
         set_allow_appended_space(False)
         set_allow_closing_quote(False)
 
     # Build the completion lists
-    completions = []
+    completion_matches = []
     display_matches = []
 
-    for cur_completion in path_completions:
+    for cur_match in full_matches:
 
         # Only keep where text started for the tab completion
-        completions.append(cur_completion[starting_index:])
+        completion_matches.append(cur_match[starting_index:])
 
         # Display only the basename of this path in the tab-completion suggestions
-        display_matches.append(os.path.basename(cur_completion))
+        display_matches.append(os.path.basename(cur_match))
 
         # Add a separator after directories if the next character isn't already a separator
-        if os.path.isdir(cur_completion) and add_trailing_sep_if_dir:
-            completions[-1] += os.path.sep
+        if os.path.isdir(cur_match) and add_trailing_sep_if_dir:
+            completion_matches[-1] += os.path.sep
             display_matches[-1] += os.path.sep
 
     # Remove cwd if it was added
     if cwd_added:
-        completions = [cur_path.replace(cwd + os.path.sep, '', 1) for cur_path in completions]
+        completion_matches = [cur_path.replace(cwd + os.path.sep, '', 1) for cur_path in completion_matches]
 
     # Restore a tilde if we expanded one
     if tilde_expanded:
-        completions = [cur_path.replace(user_path, '~', 1) for cur_path in completions]
+        completion_matches = [cur_path.replace(user_path, '~', 1) for cur_path in completion_matches]
 
     # Set the matches that will display as tab-completion suggestions
     set_matches_to_display(display_matches)
 
-    return completions
+    return completion_matches
 
 
 class OptionParser(optparse.OptionParser):
@@ -2013,7 +2013,7 @@ class Cmd(cmd.Cmd):
         if tokens is None:
             return []
 
-        completions = []
+        completion_matches = []
 
         # Get the index of the token being completed
         index = len(tokens) - 1
@@ -2025,16 +2025,16 @@ class Cmd(cmd.Cmd):
             topics = set(self.get_help_topics())
             visible_commands = set(self.get_visible_commands())
             strs_to_match = list(topics | visible_commands)
-            completions = basic_complete(text, line, begidx, endidx, strs_to_match)
+            completion_matches = basic_complete(text, line, begidx, endidx, strs_to_match)
 
         # Check if we are completing a subcommand
         elif index == subcmd_index:
 
             # Match subcommands if any exist
             command = tokens[cmd_index]
-            completions = basic_complete(text, line, begidx, endidx, self.get_subcommands(command))
+            completion_matches = basic_complete(text, line, begidx, endidx, self.get_subcommands(command))
 
-        return completions
+        return completion_matches
 
     # noinspection PyUnusedLocal
     def sigint_handler(self, signum, frame):
@@ -2865,7 +2865,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
 
         # Use a set to store exe names since there can be duplicates
-        exes = set()
+        exes_set = set()
 
         # Find every executable file in the user's path that matches the pattern
         for path in paths:
@@ -2873,12 +2873,12 @@ Usage:  Usage: unalias [-a] name [name ...]
             matches = [f for f in glob.glob(full_path + '*') if os.path.isfile(f) and os.access(f, os.X_OK)]
 
             for match in matches:
-                exes.add(os.path.basename(match))
+                exes_set.add(os.path.basename(match))
 
         # Sort the exes alphabetically
-        results = list(exes)
-        results.sort()
-        return results
+        exes_list = list(exes_set)
+        exes_list.sort()
+        return exes_list
 
     def complete_shell(self, text, line, begidx, endidx):
         """Handles tab completion of executable commands and local file system paths for the shell command
@@ -2919,14 +2919,14 @@ Usage:  Usage: unalias [-a] name [name ...]
 
                 # We will only keep where the text value starts for the tab completions
                 starting_index = len(completion_token) - len(text)
-                completions = [cur_exe[starting_index:] for cur_exe in exes]
+                completion_matches = [cur_exe[starting_index:] for cur_exe in exes]
 
                 # Use the full name of the executables for the completions that are displayed
                 display_matches = exes
                 set_matches_to_display(display_matches)
 
-                if completions:
-                    return completions
+                if completion_matches:
+                    return completion_matches
 
             # If we have no results, try path completion to find the shell commands
             return path_complete(text, line, begidx, endidx, dir_exe_only=True)
@@ -2977,7 +2977,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         if tokens is None:
             return []
 
-        completions = []
+        completion_matches = []
 
         # Get the index of the token being completed
         index = len(tokens) - 1
@@ -3010,11 +3010,11 @@ Usage:  Usage: unalias [-a] name [name ...]
             completer = 'complete_{}_{}'.format(base, subcommand)
             try:
                 compfunc = getattr(self, completer)
-                completions = compfunc(text, line, begidx, endidx)
+                completion_matches = compfunc(text, line, begidx, endidx)
             except AttributeError:
                 pass
 
-        return completions
+        return completion_matches
 
     # noinspection PyBroadException
     def do_py(self, arg):
