@@ -323,9 +323,8 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
 
     while True:
         try:
-            # This type of parsing works better than shlex.split() which doesn't seem to treat > as an individual token.
             # Use non-POSIX parsing to keep the quotes around the tokens.
-            tokens = list(shlex.shlex(tmp_line[:tmp_endidx], posix=False))
+            tokens = shlex.split(tmp_line[:tmp_endidx], posix=False)
             break
         except ValueError:
             # ValueError can be caused by missing closing quote
