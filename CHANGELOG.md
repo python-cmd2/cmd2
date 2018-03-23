@@ -11,8 +11,9 @@
         * ``display_entire_match``
         * ``display_match_delimiter``
         
-* Attributes Changes
-    * ``exclude_from_help`` is now called ``hidden_commands`` since these commands hidden from things other than help, including tab completion
+* Attribute Changes (Breaks backward compatibility)
+    * ``exclude_from_help`` is now called ``hidden_commands`` since these commands are hidden from things other than help, including tab completion
+        * This list also no longer takes the function names of commands (``do_history``), but instead uses the command names themselves (``history``)
     * ``excludeFromHistory`` is now called ``exclude_from_history``
 
 
