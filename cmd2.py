@@ -309,11 +309,11 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
     :param begidx: int - the beginning index of the prefix text
     :param endidx: int - the ending index of the prefix text
     :param preserve_quotes - if True, then the tokens will be returned still wrapped in whatever quotes
-                             appeared on the command line. This defaults to False since tab completion routines
-                             generally need the tokens unquoted. The only reason to set this to True would
-                             be to check if the token being completed has an unclosed quote. complete() is the
-                             only functions that does this.
-    :return: A list of tokens that is never empty on success or None on error
+                             appeared on the command line. This defaults to False since tab-completion routines
+                             generally need the tokens unquoted.
+    :return: If successful parsing occurs, then a non-empty list of tokens is returned where the last token
+             in the list is the one being tab completed.
+             None is returned if parsing fails due to a malformed line.
     """
     unclosed_quote = ''
     quotes_to_try = copy.copy(QUOTES)
@@ -323,7 +323,18 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
 
     while True:
         try:
-            tokens = shlex.split(tmp_line[:tmp_endidx], posix=POSIX_SHLEX)
+            # This type of parsing works better than shlex.split() which doesn't seem to treat > as an individual token.
+            # Use non-POSIX parsing to keep the quotes around the tokens.
+            parser = shlex.shlex(tmp_line[:tmp_endidx], posix=False)
+
+            # Get the tokens
+            tokens = []
+            while True:
+                cur_token = parser.get_token()
+                if cur_token:
+                    tokens.append(cur_token)
+                else:
+                    break
             break
         except ValueError:
             # ValueError can be caused by missing closing quote
@@ -355,13 +366,16 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
         for index, cur_token in enumerate(tokens):
             tokens[index] = strip_quotes(cur_token)
 
-    # Check if we need to append an empty entry as the token being completed
+    # Check if the cursor is at the end of the line and not within a quoted string
     if begidx == endidx and not unclosed_quote:
 
-        # If begidx is the first character in the line, or is preceded by a space
-        # then we need to add the blank entry to tokens.
-        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
-        if prev_space_index == 0 or prev_space_index == begidx - 1:
+        # Get character before the cursor. This math is safe since begidx has
+        # to be greater than 0 if it equals endidx and there were tokens.
+        prev_char = line[begidx - 1]
+
+        # If there is a space before the cursor and we are not in a quoted string, then the
+        # actual token being completed is blank right now. Add this to the token list.
+        if prev_char == ' ':
             tokens.append('')
 
     return tokens
