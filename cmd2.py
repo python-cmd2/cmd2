@@ -1878,7 +1878,6 @@ class Cmd(cmd.Cmd):
         :return: None
         """
         orig_line = readline.get_line_buffer()
-        begidx = readline.get_begidx()
         endidx = readline.get_endidx()
 
         starting_index = orig_line[:endidx].rfind(raw_completion_token)
