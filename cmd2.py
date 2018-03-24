@@ -1906,17 +1906,17 @@ class Cmd(cmd.Cmd):
                     return None
 
                 # Get the status of quotes in the token being completed
-                completion_token = raw_tokens[-1]
+                raw_completion_token = raw_tokens[-1]
 
-                if len(completion_token) == 1:
+                if len(raw_completion_token) == 1:
                     # Check if the token being completed has an unclosed quote
-                    first_char = completion_token[0]
+                    first_char = raw_completion_token[0]
                     if first_char in QUOTES:
                         unclosed_quote = first_char
 
-                elif len(completion_token) > 1:
-                    first_char = completion_token[0]
-                    last_char = completion_token[-1]
+                elif len(raw_completion_token) > 1:
+                    first_char = raw_completion_token[0]
+                    last_char = raw_completion_token[-1]
 
                     # Check if the token being completed has an unclosed quote
                     if first_char in QUOTES and first_char != last_char:
@@ -1925,7 +1925,7 @@ class Cmd(cmd.Cmd):
                     # If the cursor is right after a closed quote, then insert a space
                     else:
                         prior_char = line[begidx - 1]
-                        if not unclosed_quote and prior_char in QUOTES:
+                        if prior_char in QUOTES:
                             self.completion_matches = [' ']
                             return self.completion_matches[state]
 
@@ -1963,11 +1963,11 @@ class Cmd(cmd.Cmd):
                     common_prefix = os.path.commonprefix(self.completion_matches)
 
                     # Check if we need to add an opening quote
-                    if len(completion_token) == 0 or completion_token[0] not in QUOTES:
+                    if len(raw_completion_token) == 0 or raw_completion_token[0] not in QUOTES:
 
                         # If anything that will be in the token being completed contains a space, then
                         # we must add an opening quote to the token on screen
-                        if ' ' in completion_token or ' ' in common_prefix:
+                        if ' ' in raw_completion_token or ' ' in common_prefix:
 
                             # Mark that there is now an unclosed quote
                             unclosed_quote = '"'
@@ -2012,7 +2012,7 @@ class Cmd(cmd.Cmd):
                                     # the original values of begidx and endidx and we can't change them. Therefore we
                                     # must prepend to every match the character right before the text variable so it
                                     # doesn't get erased.
-                                    saved_char = completion_token[(len(text) + 1) * -1]
+                                    saved_char = raw_completion_token[(len(text) + 1) * -1]
                                     self.completion_matches = [saved_char + match for match in self.completion_matches]
 
                                 # pyreadline specific way to insert an opening quote
