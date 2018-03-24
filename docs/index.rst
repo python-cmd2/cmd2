@@ -47,8 +47,7 @@ Resources
 * cmd_
 * `cmd2 project page`_
 * `project bug tracker`_
-* Florida PyCon 2017: `slides <https://docs.google.com/presentation/d/1LRmpfBt3V-pYQfgQHdczf16F3hcXmhK83tl77R6IJtE>`_
-* PyOhio 2011: `video <https://archive.org/details/pyvideo_541___pyohio-2011-interactive-command-line-interpreters-with-cmd-and-cmd2>`_
+* Florida PyCon 2017: `slides <https://docs.google.com/presentation/d/1LRmpfBt3V-pYQfgQHdczf16F3hcXmhK83tl77R6IJtE>`_, `video <https://www.youtube.com/watch?v=6m0RdpITaeY>`_
 
 These docs will refer to ``App`` as your ``cmd2.Cmd``
 subclass, and ``app`` as an instance of ``App``.  Of
