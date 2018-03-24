@@ -298,7 +298,9 @@ def display_match_list_pyreadline(matches):
 # and have no dependence on a cmd2 instance.
 ############################################################################################################
 
+# Used for tab completion. Do not change.
 QUOTES = ['"', "'"]
+REDIRECTION_CHARS = ['|', '<', '>']
 
 
 def tokens_for_completion(line, begidx, endidx):
@@ -1820,6 +1822,97 @@ class Cmd(cmd.Cmd):
         # Display the matches
         display_match_list_pyreadline(display_matches)
 
+    def _handle_completion_token_quote(self, raw_completion_token):
+        """
+        This is called by complete() to add an opening quote to the token being completed if it is needed
+        The readline input buffer is then updated with the new string
+        :param raw_completion_token: str - the token being completed as it appears on the command line
+        :return: True if a quote was added, False otherwise
+        """
+        if len(self.completion_matches) == 0:
+            return False
+
+        quote_added = False
+
+        # Check if token on screen is already quoted
+        if len(raw_completion_token) == 0 or raw_completion_token[0] not in QUOTES:
+
+            # Get the common prefix of all matches. This is what be written to the screen.
+            common_prefix = os.path.commonprefix(self.completion_matches)
+
+            # If common_prefix contains a space, then we must add an opening quote to it
+            if ' ' in common_prefix:
+
+                new_completion_token = '"' + common_prefix
+
+                # Handle a single result
+                if len(self.completion_matches) == 1:
+                    str_to_append = ''
+
+                    # Add a closing quote if allowed
+                    if allow_closing_quote:
+                        str_to_append += '"'
+
+                    orig_line = readline.get_line_buffer()
+                    endidx = readline.get_endidx()
+
+                    # If we are at the end of the line, then add a space
+                    if allow_appended_space and endidx == len(orig_line):
+                        str_to_append += ' '
+
+                    new_completion_token += str_to_append
+
+                # Update the line
+                quote_added = True
+                self._replace_completion_token(raw_completion_token, new_completion_token)
+
+        return quote_added
+
+    @staticmethod
+    def _replace_completion_token(raw_completion_token, new_completion_token):
+        """
+        Replaces the token being completed in the readline line buffer which updates the screen
+        This is used for things like adding an opening quote for completions with spaces
+        :param raw_completion_token: str - the original token being completed as it appears on the command line
+        :param new_completion_token: str- the replacement token
+        :return: None
+        """
+        orig_line = readline.get_line_buffer()
+        begidx = readline.get_begidx()
+        endidx = readline.get_endidx()
+
+        starting_index = orig_line[:endidx].rfind(raw_completion_token)
+
+        if starting_index != -1:
+            # Build the new line
+            new_line = orig_line[:starting_index]
+            new_line += new_completion_token
+            new_line += orig_line[endidx:]
+
+            # Calculate the new cursor position
+            len_diff = len(new_completion_token) - len(raw_completion_token)
+            new_cursor_loc = endidx + len_diff
+
+            # GNU readline specific way to update line buffer
+            if readline_lib:
+                # Byte encode the new line
+                if six.PY3:
+                    encoded_line = bytes(new_line, encoding='utf-8')
+                else:
+                    encoded_line = bytes(new_line)
+
+                # Replace the line
+                readline_lib.rl_replace_line(encoded_line, 0)
+
+                # Update the cursor location
+                rl_point = ctypes.c_int.in_dll(readline_lib, "rl_point")
+                rl_point.value = new_cursor_loc
+
+            # pyreadline specific way to update line buffer
+            elif sys.platform.startswith('win'):
+                readline.rl.mode.l_buffer.set_line(new_line)
+                readline.rl.mode.l_buffer.point = new_cursor_loc
+
     # -----  Methods which override stuff in cmd -----
 
     def complete(self, text, state):
@@ -1850,18 +1943,19 @@ class Cmd(cmd.Cmd):
                 readline.rl.mode._display_completions = self._display_matches_pyreadline
 
             # lstrip the original line
-            origline = readline.get_line_buffer()
-            line = origline.lstrip()
-            stripped = len(origline) - len(line)
+            orig_line = readline.get_line_buffer()
+            line = orig_line.lstrip()
+            stripped = len(orig_line) - len(line)
 
             # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
             # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
             begidx = max(readline.get_begidx() - stripped, 0)
             endidx = max(readline.get_endidx() - stripped, 0)
 
-            # Not all of our shortcuts are readline word break delimiters. '!' is an example of this.
-            # Therefore those shortcuts become part of the text variable. We need to remove it from text
-            # and update the indexes. This only applies if we are at the beginning of the line.
+            # We only break words on whitespace and quotes when tab completing.
+            # Therefore shortcuts become part of the text variable if there isn't a space after it.
+            # We need to remove it from text and update the indexes. This only applies if we are at
+            # the beginning of the line.
             shortcut_to_restore = ''
             if begidx == 0:
                 for (shortcut, expansion) in self.shortcuts:
@@ -1908,8 +2002,8 @@ class Cmd(cmd.Cmd):
                 # Get the status of quotes in the token being completed
                 raw_completion_token = raw_tokens[-1]
 
+                # Check if the token being completed has an unclosed quote
                 if len(raw_completion_token) == 1:
-                    # Check if the token being completed has an unclosed quote
                     first_char = raw_completion_token[0]
                     if first_char in QUOTES:
                         unclosed_quote = first_char
@@ -1917,17 +2011,20 @@ class Cmd(cmd.Cmd):
                 elif len(raw_completion_token) > 1:
                     first_char = raw_completion_token[0]
                     last_char = raw_completion_token[-1]
-
-                    # Check if the token being completed has an unclosed quote
                     if first_char in QUOTES and first_char != last_char:
                         unclosed_quote = first_char
 
-                    # If the cursor is right after a closed quote, then insert a space
-                    else:
-                        prior_char = line[begidx - 1]
-                        if prior_char in QUOTES:
-                            self.completion_matches = [' ']
-                            return self.completion_matches[state]
+                # Check what character appears before the token being completed
+                starting_index = line[:endidx].rfind(raw_completion_token)
+                if starting_index > 0:
+                    prior_char = line[starting_index - 1]
+
+                    # If the completion token is bumped up against a closing quote or redirection
+                    # character, we will insert a space between them before allowing tab completion.
+                    if prior_char in QUOTES or (self.allow_redirection and prior_char in REDIRECTION_CHARS):
+                        self._replace_completion_token(raw_completion_token, ' ' + raw_completion_token)
+                        self.completion_matches = []
+                        return None
 
                 # Check if a valid command was entered
                 if command in self.get_all_commands():
@@ -1959,75 +2056,11 @@ class Cmd(cmd.Cmd):
 
                 if len(self.completion_matches) > 0:
 
-                    # Get the common prefix of all matches. This is what is added to the token being completed.
-                    common_prefix = os.path.commonprefix(self.completion_matches)
-
-                    # Check if we need to add an opening quote
-                    if len(raw_completion_token) == 0 or raw_completion_token[0] not in QUOTES:
-
-                        # If anything that will be in the token being completed contains a space, then
-                        # we must add an opening quote to the token on screen
-                        if ' ' in raw_completion_token or ' ' in common_prefix:
-
-                            # Mark that there is now an unclosed quote
-                            unclosed_quote = '"'
-
-                            # Find in the original line on screen where our token starts
-                            starting_index = 0
-                            for token_index, cur_token in enumerate(tokens):
-                                starting_index = origline.find(cur_token)
-                                if token_index < len(tokens) - 1:
-                                    starting_index += len(cur_token)
-
-                            # Get where text started in the original line.
-                            # Account for whether we shifted begidx due to a shortcut.
-                            orig_begidx = readline.get_begidx()
-                            if shortcut_to_restore:
-                                orig_begidx += len(shortcut_to_restore)
-
-                            # If the token started at begidx, then all we have to do is prepend
-                            # an opening quote to all the completions. Readline will do the rest.
-                            # This is always true in the case where there is a shortcut to restore.
-                            if starting_index == orig_begidx:
-                                self.completion_matches = ['"' + match for match in self.completion_matches]
-
-                            # The token started after begidx, therefore we need to manually insert an
-                            # opening quote before the token in the readline buffer.
-                            else:
-                                # GNU readline specific way to insert an opening quote
-                                if readline_lib:
-                                    # Get and save the current cursor position
-                                    rl_point = ctypes.c_int.in_dll(readline_lib, "rl_point")
-                                    orig_rl_point = rl_point.value
-
-                                    # Move the cursor where the token being completed begins to insert the opening quote
-                                    rl_point.value = starting_index
-                                    readline.insert_text('"')
-
-                                    # Restore the cursor 1 past where it was the since we shifted everything
-                                    rl_point.value = orig_rl_point + 1
-
-                                    # Since we just shifted the whole command line over by one, readline will begin
-                                    # inserting the text one spot to the left of where we want it since it still has
-                                    # the original values of begidx and endidx and we can't change them. Therefore we
-                                    # must prepend to every match the character right before the text variable so it
-                                    # doesn't get erased.
-                                    saved_char = raw_completion_token[(len(text) + 1) * -1]
-                                    self.completion_matches = [saved_char + match for match in self.completion_matches]
-
-                                # pyreadline specific way to insert an opening quote
-                                elif sys.platform.startswith('win'):
-                                    # Save the current cursor position
-                                    orig_rl_point = readline.rl.mode.l_buffer.point
-
-                                    # Move the cursor where the token being completed begins to insert the opening quote
-                                    readline.rl.mode.l_buffer.point = starting_index
-                                    readline.insert_text('"')
-
-                                    # Shift the cursor and completion indexes by 1 to account for the added quote
-                                    readline.rl.mode.l_buffer.point = orig_rl_point + 1
-                                    readline.rl.mode.begidx += 1
-                                    readline.rl.mode.endidx += 1
+                    # Add an opening quote if needed
+                    if self._handle_completion_token_quote(raw_completion_token):
+                        # An opening quote was added and the screen was updated. Return no results
+                        self.completion_matches = []
+                        return None
 
                     # Check if we need to restore a shortcut in the tab completions
                     if shortcut_to_restore:
@@ -2601,8 +2634,8 @@ class Cmd(cmd.Cmd):
                 self.old_delims = readline.get_completer_delims()
                 readline.set_completer(self.complete)
 
-                # Use the same completer delimiters as Bash
-                readline.set_completer_delims(" \t\n\"'@><=;|&(:")
+                # For tab completion, break words on whitespace and quotes
+                readline.set_completer_delims(" \t\n\"'")
                 readline.parse_and_bind(self.completekey + ": complete")
             except NameError:
                 pass
