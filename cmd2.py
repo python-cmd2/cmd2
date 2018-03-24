@@ -1856,7 +1856,7 @@ class Cmd(cmd.Cmd):
                     orig_line = readline.get_line_buffer()
                     endidx = readline.get_endidx()
 
-                    # If we are at the end of the line, then add a space
+                    # If we are at the end of the line, then add a space if allowed
                     if allow_appended_space and endidx == len(orig_line):
                         str_to_append += ' '
 
@@ -1999,20 +1999,7 @@ class Cmd(cmd.Cmd):
                     self.completion_matches = []
                     return None
 
-                # Get the status of quotes in the token being completed
                 raw_completion_token = raw_tokens[-1]
-
-                # Check if the token being completed has an unclosed quote
-                if len(raw_completion_token) == 1:
-                    first_char = raw_completion_token[0]
-                    if first_char in QUOTES:
-                        unclosed_quote = first_char
-
-                elif len(raw_completion_token) > 1:
-                    first_char = raw_completion_token[0]
-                    last_char = raw_completion_token[-1]
-                    if first_char in QUOTES and first_char != last_char:
-                        unclosed_quote = first_char
 
                 # Check what character appears before the token being completed
                 starting_index = line[:endidx].rfind(raw_completion_token)
@@ -2073,6 +2060,18 @@ class Cmd(cmd.Cmd):
                         # Prepend all tab completions with the shortcut so it doesn't get erased from the command line
                         self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
 
+                    # Check if the token being completed has an unclosed quote
+                    if len(raw_completion_token) == 1:
+                        first_char = raw_completion_token[0]
+                        if first_char in QUOTES:
+                            unclosed_quote = first_char
+
+                    elif len(raw_completion_token) > 1:
+                        first_char = raw_completion_token[0]
+                        last_char = raw_completion_token[-1]
+                        if first_char in QUOTES and first_char != last_char:
+                            unclosed_quote = first_char
+
             else:
                 # Complete token against aliases and command names
                 alias_names = set(self.aliases.keys())
@@ -2089,11 +2088,11 @@ class Cmd(cmd.Cmd):
             if len(self.completion_matches) == 1:
                 str_to_append = ''
 
-                # Add a closing quote if needed
+                # Add a closing quote if needed and allowed
                 if allow_closing_quote and unclosed_quote:
                     str_to_append += unclosed_quote
 
-                # If we are at the end of the line, then add a space
+                # If we are at the end of the line, then add a space if allowed
                 if allow_appended_space and endidx == len(line):
                     str_to_append += ' '
 
@@ -2635,7 +2634,10 @@ class Cmd(cmd.Cmd):
                 readline.set_completer(self.complete)
 
                 # For tab completion, break words on whitespace and quotes
+                # We will perform further delimitation later
                 readline.set_completer_delims(" \t\n\"'")
+
+                # Enable tab completion
                 readline.parse_and_bind(self.completekey + ": complete")
             except NameError:
                 pass
