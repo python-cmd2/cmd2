@@ -1924,7 +1924,7 @@ class Cmd(cmd.Cmd):
                 else:
                     # Check if this command should be run as a shell command
                     if self.default_to_shell and command in self.get_exes_in_path(command):
-                        compfunc = functools.partial(self.path_complete)
+                        compfunc = self.path_complete
                     else:
                         compfunc = self.completedefault
 
