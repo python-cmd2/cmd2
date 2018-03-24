@@ -1911,14 +1911,14 @@ class Cmd(cmd.Cmd):
                     except AttributeError:
                         compfunc = self.completedefault
 
-                    # If there are subcommands, then try completing those if the cursor is in
-                    # the token at index 1, otherwise default to using compfunc
                     subcommands = self.get_subcommands(command)
                     if subcommands is not None:
+                        # Since there are subcommands, then try completing those if the cursor is in
+                        # the token at index 1, otherwise default to using compfunc
                         index_dict = {1: subcommands}
-                        compfunc = functools.partialmethod(self.index_based_complete,
-                                                           index_dict=index_dict,
-                                                           all_else=compfunc)
+                        compfunc = functools.partial(self.index_based_complete,
+                                                     index_dict=index_dict,
+                                                     all_else=compfunc)
 
                 # A valid command was not entered
                 else:
@@ -2904,10 +2904,11 @@ Usage:  Usage: unalias [-a] name [name ...]
             To make sure these functions get called, set the tab-completer for the print function
             in a similar fashion to what follows where base is the name of the root command (print)
 
-            complete_print = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='print')
+            def complete_print(self, text, line, begidx, endidx):
+                return self.cmd_with_subs_completer(text, line, begidx, endidx, base='print')
 
             When the subcommand's completer is called, this function will have stripped off all content from the
-            beginning of he command line before the subcommand, meaning the line parameter always starts with the
+            beginning of the command line before the subcommand, meaning the line parameter always starts with the
             subcommand name and the index parameters reflect this change.
 
             For instance, the command "print names -d 2" becomes "names -d 2"

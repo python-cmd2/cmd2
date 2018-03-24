@@ -11,7 +11,7 @@ import functools
 import sys
 
 import cmd2
-from cmd2 import with_argparser, index_based_complete
+from cmd2 import with_argparser
 
 
 class SubcommandsExample(cmd2.Cmd):
@@ -38,7 +38,7 @@ class SubcommandsExample(cmd2.Cmd):
         """ Adds tab completion to base sport subcommand """
         sports = ['Football', 'Hockey', 'Soccer', 'Baseball']
         index_dict = {1: sports}
-        return index_based_complete(text, line, begidx, endidx, index_dict)
+        return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
@@ -71,10 +71,8 @@ class SubcommandsExample(cmd2.Cmd):
             # No subcommand was provided, so call help
             self.do_help('base')
 
-    # functools.partialmethod was added in Python 3.4
-    if sys.version_info >= (3, 4):
-        # This makes sure correct tab completion functions are called based on the selected subcommand
-        complete_base = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='base')
+    def complete_base(self, text, line, begidx, endidx):
+        return self.cmd_with_subs_completer(text, line, begidx, endidx, base='base')
 
 
 if __name__ == '__main__':
