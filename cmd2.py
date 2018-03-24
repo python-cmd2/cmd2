@@ -301,30 +301,39 @@ def display_match_list_pyreadline(matches):
 QUOTES = ['"', "'"]
 
 
-def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
+def tokens_for_completion(line, begidx, endidx):
     """
     Used by tab completion functions to get all tokens through the one being completed
-    This also handles tab-completion within quotes
     :param line: str - the current input line with leading whitespace removed
     :param begidx: int - the beginning index of the prefix text
     :param endidx: int - the ending index of the prefix text
-    :param preserve_quotes - if True, then the tokens will be returned still wrapped in whatever quotes
-                             appeared on the command line. This defaults to False since tab-completion routines
-                             generally need the tokens unquoted.
-    :return: If successful parsing occurs, then a non-empty list of tokens is returned where the last token
-             in the list is the one being tab completed.
-             None is returned if parsing fails due to a malformed line.
+    :return: A 2 item tuple where the items are
+             On Success
+                 tokens: list of unquoted tokens
+                         this is generally the list needed for tab completion functions
+                 raw_tokens: list of tokens as they appear on the command line, meaning their quotes are preserved
+                             this can be used to know if a token was quoted or is missing a closing quote
+
+                 Both lists are guaranteed to have at least 1 item
+                 The last item in both lists is the token being tab completed
+
+             On Failure
+                Both items are None
     """
+    if len(line) == 0:
+        return [''], ['']
+
     unclosed_quote = ''
     quotes_to_try = copy.copy(QUOTES)
 
     tmp_line = line[:endidx]
     tmp_endidx = endidx
 
+    # Parse the raw tokens
     while True:
         try:
-            # Use non-POSIX parsing to keep the quotes around the tokens.
-            tokens = shlex.split(tmp_line[:tmp_endidx], posix=False)
+            # Use non-POSIX parsing to keep the quotes around the tokens
+            raw_tokens = shlex.split(tmp_line[:tmp_endidx], posix=False)
             break
         except ValueError:
             # ValueError can be caused by missing closing quote
@@ -332,7 +341,7 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
                 # Since we have no more quotes to try, something else
                 # is causing the parsing error. Return None since
                 # this means the line is malformed.
-                return None
+                return None, None
 
             # Add a closing quote and try to parse again
             unclosed_quote = quotes_to_try[0]
@@ -342,27 +351,26 @@ def tokens_for_completion(line, begidx, endidx, preserve_quotes=False):
             tmp_endidx = endidx + 1
             tmp_line += unclosed_quote
 
-    # Check if the cursor is at the end of the line and not within a quoted string
-    if begidx == endidx and not unclosed_quote:
+    # Save the unquoted tokens
+    tokens = [strip_quotes(cur_token) for cur_token in raw_tokens]
 
-        # If the line is blank or the cursor is preceded by a space, then the actual
-        # token being completed is blank. Add this to the token list.
-        prev_space_index = max(line.rfind(' ', 0, begidx), 0)
-        if prev_space_index == 0 or prev_space_index == begidx - 1:
+    # If the token being completed had an unclosed quote, we need
+    # to remove the closing quote that was added in order for it
+    # to match what was on the command line.
+    if unclosed_quote:
+        raw_tokens[-1] = raw_tokens[-1][:-1]
+
+    # Since the cursor is not after an opening quote, check if it's at the end of the line
+    elif begidx == endidx:
+
+        # If the cursor is preceded by a space, then the actual
+        # token being completed is blank. Add this to both lists.
+        prev_space_index = line.rfind(' ', 0, begidx)
+        if prev_space_index == begidx - 1:
             tokens.append('')
+            raw_tokens.append('')
 
-    if preserve_quotes:
-        # If the token being completed had an unclosed quote,
-        # we need remove the closing quote that was added
-        if unclosed_quote:
-            tokens[-1] = tokens[-1][:-1]
-
-    # Unquote all tokens
-    else:
-        for index, cur_token in enumerate(tokens):
-            tokens[index] = strip_quotes(cur_token)
-
-    return tokens
+    return tokens, raw_tokens
 
 
 def basic_complete(text, line, begidx, endidx, match_against):
@@ -384,7 +392,7 @@ def basic_complete(text, line, begidx, endidx, match_against):
         return []
 
     # Get all tokens through the one being completed
-    tokens = tokens_for_completion(line, begidx, endidx)
+    tokens, _ = tokens_for_completion(line, begidx, endidx)
     if tokens is None:
         return []
 
@@ -449,7 +457,7 @@ def flag_based_complete(text, line, begidx, endidx, flag_dict, all_else=None):
     """
 
     # Get all tokens through the one being completed
-    tokens = tokens_for_completion(line, begidx, endidx)
+    tokens, _ = tokens_for_completion(line, begidx, endidx)
     if tokens is None:
         return []
 
@@ -493,7 +501,7 @@ def index_based_complete(text, line, begidx, endidx, index_dict, all_else=None):
     """
 
     # Get all tokens through the one being completed
-    tokens = tokens_for_completion(line, begidx, endidx)
+    tokens, _ = tokens_for_completion(line, begidx, endidx)
     if tokens is None:
         return []
 
@@ -533,7 +541,7 @@ def path_complete(text, line, begidx, endidx, dir_exe_only=False, dir_only=False
     """
 
     # Get all tokens through the one being completed
-    tokens = tokens_for_completion(line, begidx, endidx)
+    tokens, _ = tokens_for_completion(line, begidx, endidx)
     if tokens is None:
         return []
 
@@ -691,7 +699,7 @@ def shell_cmd_complete(text, line, begidx, endidx, complete_blank=False):
     """
 
     # Get all tokens through the one being completed
-    tokens = tokens_for_completion(line, begidx, endidx)
+    tokens, _ = tokens_for_completion(line, begidx, endidx)
     if tokens is None:
         return []
 
@@ -1888,7 +1896,7 @@ class Cmd(cmd.Cmd):
                 line = expanded_line
 
                 # Get all tokens through the one being completed
-                tokens = tokens_for_completion(line, begidx, endidx, preserve_quotes=True)
+                tokens, raw_tokens = tokens_for_completion(line, begidx, endidx)
 
                 # Either had a parsing error or are trying to complete the command token
                 # The latter can happen if default_to_shell is True and parseline() allowed
@@ -1898,7 +1906,7 @@ class Cmd(cmd.Cmd):
                     return None
 
                 # Get the status of quotes in the token being completed
-                completion_token = tokens[-1]
+                completion_token = raw_tokens[-1]
 
                 if len(completion_token) == 1:
                     # Check if the token being completed has an unclosed quote
@@ -2104,7 +2112,7 @@ class Cmd(cmd.Cmd):
         subcmd_index = 2
 
         # Get all tokens through the one being completed
-        tokens = tokens_for_completion(line, begidx, endidx)
+        tokens, _ = tokens_for_completion(line, begidx, endidx)
         if tokens is None:
             return []
 
@@ -2993,7 +3001,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         subcmd_index = 1
 
         # Get all tokens through the one being completed
-        tokens = tokens_for_completion(line, begidx, endidx)
+        tokens, _ = tokens_for_completion(line, begidx, endidx)
         if tokens is None:
             return []
 
