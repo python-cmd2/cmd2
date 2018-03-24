@@ -1930,15 +1930,7 @@ class Cmd(cmd.Cmd):
                             return self.completion_matches[state]
 
                 # Check if a valid command was entered
-                if command not in self.get_all_commands():
-                    # Check if this command should be run as a shell command
-                    if self.default_to_shell and command in get_exes_in_path(command):
-                        compfunc = functools.partial(path_complete)
-                    else:
-                        compfunc = self.completedefault
-
-                # A valid command was entered
-                else:
+                if command in self.get_all_commands():
                     # Get the completer function for this command
                     try:
                         compfunc = getattr(self, 'complete_' + command)
@@ -1953,6 +1945,14 @@ class Cmd(cmd.Cmd):
                         compfunc = functools.partial(index_based_complete,
                                                      index_dict=index_dict,
                                                      all_else=compfunc)
+
+                # A valid command was not entered
+                else:
+                    # Check if this command should be run as a shell command
+                    if self.default_to_shell and command in get_exes_in_path(command):
+                        compfunc = functools.partial(path_complete)
+                    else:
+                        compfunc = self.completedefault
 
                 # Call the completer function
                 self.completion_matches = compfunc(text, line, begidx, endidx)
