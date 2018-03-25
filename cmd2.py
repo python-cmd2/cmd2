@@ -1289,20 +1289,22 @@ class Cmd(cmd.Cmd):
                  On Failure
                     Both items are None
         """
-        if len(line) == 0:
-            return [''], ['']
-
         unclosed_quote = ''
         quotes_to_try = copy.copy(QUOTES)
 
         tmp_line = line[:endidx]
         tmp_endidx = endidx
 
-        # Parse the raw tokens
+        # Parse the line into tokens
         while True:
             try:
                 # Use non-POSIX parsing to keep the quotes around the tokens
-                raw_tokens = shlex.split(tmp_line[:tmp_endidx], posix=False)
+                initial_tokens = shlex.split(tmp_line[:tmp_endidx], posix=False)
+
+                # If the cursor is at the end of the line and not in a quoted string, then the actual
+                # token being completed is blank. Add this to our list.
+                if not unclosed_quote and begidx == tmp_endidx:
+                    initial_tokens.append('')
                 break
             except ValueError:
                 # ValueError can be caused by missing closing quote
@@ -1317,8 +1319,64 @@ class Cmd(cmd.Cmd):
                 quotes_to_try = quotes_to_try[1:]
 
                 tmp_line = line[:endidx]
-                tmp_endidx = endidx + 1
                 tmp_line += unclosed_quote
+                tmp_endidx = endidx + 1
+
+        if self.allow_redirection:
+
+            # Since redirection is enabled, we need to treat redirection characters (|, <, >)
+            # as word breaks when they are in unquoted strings. Go through each token
+            # and further split them these characters. Each run of redirect characters
+            # is treated as a single token.
+            raw_tokens = []
+
+            for cur_initial_token in initial_tokens:
+
+                # Keep empty and quoted tokens
+                if len(cur_initial_token) == 0 or cur_initial_token[0] in QUOTES:
+                    raw_tokens.append(cur_initial_token)
+                    continue
+
+                # Keep track of the current token we are building
+                cur_raw_token = ''
+
+                # Iterate over each character in this token
+                cur_index = 0
+                cur_char = cur_initial_token[cur_index]
+
+                while True:
+                    if cur_char not in REDIRECTION_CHARS:
+
+                        # Keep appending to cur_raw_token until we hit a redirect char
+                        while cur_char not in REDIRECTION_CHARS:
+                            cur_raw_token += cur_char
+                            cur_index += 1
+                            if cur_index < len(cur_initial_token):
+                                cur_char = cur_initial_token[cur_index]
+                            else:
+                                break
+
+                    else:
+                        redirect_char = cur_char
+
+                        # Keep appending to cur_raw_token until we hit something other than redirect_char
+                        while cur_char == redirect_char:
+                            cur_raw_token += cur_char
+                            cur_index += 1
+                            if cur_index < len(cur_initial_token):
+                                cur_char = cur_initial_token[cur_index]
+                            else:
+                                break
+
+                    # Save the current token
+                    raw_tokens.append(cur_raw_token)
+                    cur_raw_token = ''
+
+                    # Check if we've viewed all characters
+                    if cur_index >= len(cur_initial_token):
+                        break
+        else:
+            raw_tokens = initial_tokens
 
         # Save the unquoted tokens
         tokens = [strip_quotes(cur_token) for cur_token in raw_tokens]
@@ -1328,16 +1386,6 @@ class Cmd(cmd.Cmd):
         # to match what was on the command line.
         if unclosed_quote:
             raw_tokens[-1] = raw_tokens[-1][:-1]
-
-        # Since the cursor is not after an opening quote, check if it's at the end of the line
-        elif begidx == endidx:
-
-            # If the cursor is preceded by a space, then the actual
-            # token being completed is blank. Add this to both lists.
-            prev_space_index = line.rfind(' ', 0, begidx)
-            if prev_space_index == begidx - 1:
-                tokens.append('')
-                raw_tokens.append('')
 
         return tokens, raw_tokens
 
