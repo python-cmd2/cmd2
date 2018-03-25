@@ -1346,7 +1346,7 @@ class Cmd(cmd.Cmd):
         Performs tab completion against a list
         This is ultimately called by many completer functions like flag_based_complete and index_based_complete.
         It can also be used by custom completer functions and that is the suggested approach since this function
-        handles things like tab completions with spaces as well as the display_entire_match flag.
+        handles things like tab completions with spaces.
 
         :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: str - the current input line with leading whitespace removed

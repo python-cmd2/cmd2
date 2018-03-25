@@ -1,6 +1,7 @@
 ## 0.8.3 (TBD)
 * Bug Fixes
     * Fixed ``help`` command not calling functions for help topics
+    * Fixed not being able to use quoted paths when redirecting with ``<`` and ``>``
 
 * Enhancements
     * Tab completion has been overhauled and now supports completion of strings with quotes and spaces.
@@ -8,9 +9,7 @@
     * Added more control over tab completion behavior including the following flags. The use of these flags is documented in cmd2.py
         * ``allow_appended_space``
         * ``allow_closing_quote``
-        * ``display_entire_match``
-        * ``display_match_delimiter``
-        
+
 * Attribute Changes (Breaks backward compatibility)
     * ``exclude_from_help`` is now called ``hidden_commands`` since these commands are hidden from things other than help, including tab completion
         * This list also no longer takes the function names of commands (``do_history``), but instead uses the command names themselves (``history``)
@@ -33,7 +32,7 @@
         * See [alias_startup.py](https://github.com/python-cmd2/cmd2/blob/master/examples/alias_startup.py) for an example
     * Added a default SIGINT handler which terminates any open pipe subprocesses and re-raises a KeyboardInterrupt
     * For macOS, will load the ``gnureadline`` module if available and ``readline`` if not
-    
+
 ## 0.8.1 (March 9, 2018)
 
 * Bug Fixes
