@@ -1214,11 +1214,8 @@ class Cmd(cmd.Cmd):
         self.display_matches = []
 
         if readline_lib is not None:
-            # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
-            rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-            rl_basic_quote_characters.value = None
-
             # Set GNU readline's rl_completion_suppress_quote to 1 so it won't automatically add a closing quote
+            # This gets reset with each completion so we need to keep setting it.
             suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
             suppress_quote.value = 1
 
@@ -1271,8 +1268,7 @@ class Cmd(cmd.Cmd):
         if orig_pyreadline_display is not None:
             orig_pyreadline_display(matches)
 
-    @staticmethod
-    def tokens_for_completion(line, begidx, endidx):
+    def tokens_for_completion(self, line, begidx, endidx):
         """
         Used by tab completion functions to get all tokens through the one being completed
         :param line: str - the current input line with leading whitespace removed
@@ -1889,19 +1885,26 @@ class Cmd(cmd.Cmd):
                     self.completion_matches = []
                     return None
 
+                # We may add to the beginning of our search text. Save this text because we
+                # need to remove it from tab completions later since readline isn't expecting it
+                text_to_remove = ''
+
+                if self.allow_redirection:
+                    # Readline may have split a string with an opening quote because of a redirect
+                    # character like <. Therefore the original begidx would be wrong since a redirect
+                    # character in a quoted string should not be a word break. Update begidx to where
+                    # the token being completed actually starts.
+                    actual_begidx = line[:endidx].rfind(tokens[-1])
+
+                    if actual_begidx != begidx:
+                        text_to_remove = line[actual_begidx:begidx]
+
+                        # Adjust text and where it begins
+                        text = text_to_remove + text
+                        begidx = actual_begidx
+
+                # Get the tokens with preserved quotes
                 raw_completion_token = raw_tokens[-1]
-
-                # Check what character appears before the token being completed
-                starting_index = line[:endidx].rfind(raw_completion_token)
-                if starting_index > 0:
-                    prior_char = line[starting_index - 1]
-
-                    # If the completion token is bumped up against a closing quote or redirection
-                    # character, we will insert a space between them before allowing tab completion.
-                    if prior_char in QUOTES or (self.allow_redirection and prior_char in REDIRECTION_CHARS):
-                        self._replace_completion_token(raw_completion_token, ' ' + raw_completion_token)
-                        self.completion_matches = []
-                        return None
 
                 # Check if a valid command was entered
                 if command in self.get_all_commands():
@@ -1938,6 +1941,10 @@ class Cmd(cmd.Cmd):
                         # An opening quote was added and the screen was updated. Return no results
                         self.completion_matches = []
                         return None
+
+                    # Check if we need to remove text from the beginning of tab completions
+                    if text_to_remove:
+                        self.completion_matches = [m.replace(text_to_remove, '', 1) for m in self.completion_matches]
 
                     # Check if we need to restore a shortcut in the tab completions
                     if shortcut_to_restore:
@@ -2523,9 +2530,12 @@ class Cmd(cmd.Cmd):
                 self.old_delims = readline.get_completer_delims()
                 readline.set_completer(self.complete)
 
-                # For tab completion, break words on whitespace and quotes
-                # We will perform further delimitation later
-                readline.set_completer_delims(" \t\n\"'")
+                # Break words on whitespace and quotes when tab completing
+                completer_delims = " \t\n\"'"
+                if self.allow_redirection:
+                    # If redirection is allowed, then break words on those characters too
+                    completer_delims += ''.join(REDIRECTION_CHARS)
+                readline.set_completer_delims(completer_delims)
 
                 # Enable tab completion
                 readline.parse_and_bind(self.completekey + ": complete")
