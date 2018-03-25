@@ -577,7 +577,9 @@ def replace_with_file_contents(fname):
     :return: str - contents of file "fname"
     """
     try:
-        with open(os.path.expanduser(fname[0])) as source_file:
+        # Any outer quotes are not part of the filename
+        unquoted_file = strip_quotes(fname[0])
+        with open(os.path.expanduser(unquoted_file)) as source_file:
             result = source_file.read()
     except IOError:
         result = '< %s' % fname[0]  # wasn't a file after all
@@ -3467,8 +3469,8 @@ class ParserManager:
             pyparsing.Optional(pipe + pyparsing.SkipTo(output_destination_parser ^ string_end,
                                                        ignore=do_not_parse)('pipeTo')) + \
             pyparsing.Optional(output_destination_parser +
-                               pyparsing.SkipTo(string_end,
-                                                ignore=do_not_parse).setParseAction(lambda x: x[0].strip())('outputTo'))
+                               pyparsing.SkipTo(string_end, ignore=do_not_parse).
+                               setParseAction(lambda x: strip_quotes(x[0].strip()))('outputTo'))
 
         multilineCommand.setParseAction(lambda x: x[0])
         oneline_command.setParseAction(lambda x: x[0])
@@ -3515,7 +3517,10 @@ class ParserManager:
 
         input_mark = pyparsing.Literal('<')
         input_mark.setParseAction(lambda x: '')
-        file_name = pyparsing.Word(legalChars + '/\\')
+
+        # Also allow spaces, slashes, and quotes
+        file_name = pyparsing.Word(legalChars + ' /\\"\'')
+
         input_from = file_name('inputFrom')
         input_from.setParseAction(replace_with_file_contents)
         # a not-entirely-satisfactory way of distinguishing < as in "import from" from <
