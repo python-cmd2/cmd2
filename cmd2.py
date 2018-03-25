@@ -1708,6 +1708,60 @@ class Cmd(cmd.Cmd):
         else:
             return self.path_complete(text, line, begidx, endidx, dir_exe_only=True)
 
+    def _redirect_complete(self, text, line, begidx, endidx, compfunc):
+        """
+        Called by complete() as the first tab completion function for all commands
+        It determines if it should tab complete for redirection (|, <, >, >>) or use the
+        completer function for the current command
+
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: int - the beginning index of the prefix text
+        :param endidx: int - the ending index of the prefix text
+        :param compfunc: Callable - the completer function for the current command
+                                    this will be called if we aren't completing for redirection
+        :return: List[str] - a sorted list of possible tab completions
+        """
+
+        if self.allow_redirection:
+
+            # Get all tokens through the one being completed. We want the raw tokens
+            # since we need to know if the redirection characters are quoted.
+            _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
+            if raw_tokens is None:
+                return []
+
+            if len(raw_tokens) > 1:
+
+                # Build a list of all redirection tokens
+                all_redirects = REDIRECTION_CHARS + ['>>']
+
+                # Examine each token up to the prior one to see if a redirector has already appeared
+                for cur_token in raw_tokens[:-2]:
+                    if cur_token in all_redirects:
+                        # If a pipe has appeared, then perform path completion for arguments to the pipe process.
+                        if cur_token == '|':
+                            return self.path_complete(text, line, begidx, endidx)
+
+                        # Some other redirector has already appeared. No more completion is needed.
+                        else:
+                            return []
+
+                # If the prior token is a redirector then perform completion based on that
+                if raw_tokens[-2] in all_redirects:
+
+                    flag_dict = \
+                        {
+                            '|': self.shell_cmd_complete,
+                            '>': self.path_complete,
+                            '>>': self.path_complete,
+                            '<': self.path_complete
+                        }
+                    return self.flag_based_complete(text, line, begidx, endidx, flag_dict)
+
+        # Call the command's completer function
+        return compfunc(text, line, begidx, endidx)
+
     def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):
         """
         cmd2's default GNU readline function that prints tab-completion matches to the screen
@@ -2001,8 +2055,9 @@ class Cmd(cmd.Cmd):
                     else:
                         compfunc = self.completedefault
 
-                # Call the completer function
-                self.completion_matches = compfunc(text, line, begidx, endidx)
+                # Attempt tab completion for redirection first, and if that isn't occurring,
+                # call the completer function for the current command
+                self.completion_matches = self._redirect_complete(text, line, begidx, endidx, compfunc)
 
                 if len(self.completion_matches) > 0:
 
