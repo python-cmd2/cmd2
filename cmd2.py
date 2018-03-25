@@ -1302,8 +1302,8 @@ class Cmd(cmd.Cmd):
                 # Use non-POSIX parsing to keep the quotes around the tokens
                 initial_tokens = shlex.split(tmp_line[:tmp_endidx], posix=False)
 
-                # If the cursor is at the end of the line and not in a quoted string, then the actual
-                # token being completed is blank. Add this to our list.
+                # If the cursor is at an empty token outside of a quoted string,
+                # then that is the token being completed. Add it to the list.
                 if not unclosed_quote and begidx == tmp_endidx:
                     initial_tokens.append('')
                 break
@@ -1736,28 +1736,30 @@ class Cmd(cmd.Cmd):
                 # Build a list of all redirection tokens
                 all_redirects = REDIRECTION_CHARS + ['>>']
 
-                # Examine each token up to the prior one to see if a redirector has already appeared
-                for cur_token in raw_tokens[:-2]:
-                    if cur_token in all_redirects:
-                        # If a pipe has appeared, then perform path completion for arguments to the pipe process.
-                        if cur_token == '|':
-                            return self.path_complete(text, line, begidx, endidx)
+                # Check how many redirectors have appeared before the token being completed
+                seen_pipe = False
+                num_redirectors = 0
 
-                        # Some other redirector has already appeared. No more completion is needed.
-                        else:
+                for cur_token in raw_tokens[:-1]:
+                    if cur_token in all_redirects:
+                        num_redirectors += 1
+                        if num_redirectors > 1:
+                            # Too many redirectors on the line for tab completion
                             return []
 
-                # If the prior token is a redirector then perform completion based on that
-                if raw_tokens[-2] in all_redirects:
+                        if cur_token == '|':
+                            seen_pipe = True
 
-                    flag_dict = \
-                        {
-                            '|': self.shell_cmd_complete,
-                            '>': self.path_complete,
-                            '>>': self.path_complete,
-                            '<': self.path_complete
-                        }
-                    return self.flag_based_complete(text, line, begidx, endidx, flag_dict)
+                # Get token prior to the one being completed
+                prior_token = raw_tokens[-2]
+
+                # If a pipe is right before the token being completed, complete a shell command as the piped process
+                if prior_token == '|':
+                    return self.shell_cmd_complete(text, line, begidx, endidx)
+
+                # Otherwise do path completion either as files to redirectors or arguments to the piped process
+                elif prior_token in all_redirects or seen_pipe:
+                    return self.path_complete(text, line, begidx, endidx)
 
         # Call the command's completer function
         return compfunc(text, line, begidx, endidx)
