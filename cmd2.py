@@ -1216,10 +1216,11 @@ class Cmd(cmd.Cmd):
         self.display_matches = []
 
         if readline_lib is not None:
-            # Set GNU readline's rl_completion_suppress_quote to 1 so it won't automatically add a closing quote
-            # This gets reset with each completion so we need to keep setting it.
-            suppress_quote = ctypes.c_int.in_dll(readline_lib, "rl_completion_suppress_quote")
-            suppress_quote.value = 1
+            # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
+            # We don't need to worry about setting rl_completion_suppress_quote since we never declared
+            # rl_completer_quote_characters.
+            rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+            rl_basic_quote_characters.value = None
 
     @staticmethod
     def display_match_list_gnu_readline(substitution, matches, longest_match_length):
@@ -1805,8 +1806,7 @@ class Cmd(cmd.Cmd):
 
         return quote_added
 
-    @staticmethod
-    def _replace_completion_token(raw_completion_token, new_completion_token):
+    def _replace_completion_token(self, raw_completion_token, new_completion_token):
         """
         Replaces the token being completed in the readline line buffer which updates the screen
         This is used for things like adding an opening quote for completions with spaces
@@ -1825,29 +1825,49 @@ class Cmd(cmd.Cmd):
             new_line += new_completion_token
             new_line += orig_line[endidx:]
 
-            # Calculate the new cursor position
+            # Calculate the new cursor offset
             len_diff = len(new_completion_token) - len(raw_completion_token)
-            new_cursor_loc = endidx + len_diff
+            new_point = endidx + len_diff
 
-            # GNU readline specific way to update line buffer
-            if readline_lib:
-                # Byte encode the new line
-                if six.PY3:
-                    encoded_line = bytes(new_line, encoding='utf-8')
-                else:
-                    encoded_line = bytes(new_line)
+            # Replace the line and update the cursor offset
+            self._set_readline_line(new_line)
+            self._set_readline_point(new_point)
 
-                # Replace the line
-                readline_lib.rl_replace_line(encoded_line, 0)
+    @staticmethod
+    def _set_readline_line(new_line):
+        """
+        Sets the readline line buffer
+        :param new_line: str - the new line contents
+        """
+        # GNU readline specific way to update line buffer
+        if readline_lib is not None:
+            # Byte encode the new line
+            if six.PY3:
+                encoded_line = bytes(new_line, encoding='utf-8')
+            else:
+                encoded_line = bytes(new_line)
 
-                # Update the cursor location
-                rl_point = ctypes.c_int.in_dll(readline_lib, "rl_point")
-                rl_point.value = new_cursor_loc
+            # Replace the line
+            readline_lib.rl_replace_line(encoded_line, 0)
 
-            # pyreadline specific way to update line buffer
-            elif sys.platform.startswith('win'):
-                readline.rl.mode.l_buffer.set_line(new_line)
-                readline.rl.mode.l_buffer.point = new_cursor_loc
+        # pyreadline specific way to update line buffer
+        elif sys.platform.startswith('win'):
+            readline.rl.mode.l_buffer.set_line(new_line)
+
+    @staticmethod
+    def _set_readline_point(new_point):
+        """
+        Sets the cursor offset in the readline line buffer
+        :param new_point: int - the new cursor offset
+        """
+        # GNU readline specific way to update line point
+        if readline_lib is not None:
+            rl_point = ctypes.c_int.in_dll(readline_lib, "rl_point")
+            rl_point.value = new_point
+
+        # pyreadline specific way to update line point
+        elif sys.platform.startswith('win'):
+            readline.rl.mode.l_buffer.point = new_point
 
     # -----  Methods which override stuff in cmd -----
 
@@ -1871,7 +1891,7 @@ class Cmd(cmd.Cmd):
             self.set_completion_defaults()
 
             # GNU readline specific way to override the completions display function
-            if readline_lib:
+            if readline_lib is not None:
                 readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
 
             # pyreadline specific way to override the completions display function
