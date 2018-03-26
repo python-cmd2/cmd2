@@ -222,9 +222,9 @@ def test_shell_command_completion_nomatch(cmd2_app):
 
 def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app):
     text = ''
-    line = 'shell'
+    line = 'shell {}'.format(text)
     endidx = len(line)
-    begidx = 0
+    begidx = endidx - len(text)
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
 
 def test_shell_command_completion_does_path_completion_when_after_command(cmd2_app, request):

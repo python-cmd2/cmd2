@@ -1576,15 +1576,15 @@ class Cmd(cmd.Cmd):
             self.allow_closing_quote = False
 
         # Build display_matches and add a slash to directories
-        for cur_match in completion_matches:
+        for index, cur_match in enumerate(completion_matches):
 
             # Display only the basename of this path in the tab-completion suggestions
             self.display_matches.append(os.path.basename(cur_match))
 
             # Add a separator after directories if the next character isn't already a separator
             if os.path.isdir(cur_match) and add_trailing_sep_if_dir:
-                completion_matches[-1] += os.path.sep
-                self.display_matches[-1] += os.path.sep
+                completion_matches[index] += os.path.sep
+                self.display_matches[index] += os.path.sep
 
         # Remove cwd if it was added
         if cwd_added:
