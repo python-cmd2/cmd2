@@ -7,8 +7,6 @@ This example shows an easy way for a single command to have many subcommands, ea
 and provides separate contextual help.
 """
 import argparse
-import functools
-import sys
 
 import cmd2
 from cmd2 import with_argparser
