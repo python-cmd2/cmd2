@@ -92,17 +92,6 @@ def complete_tester(text, line, begidx, endidx, app):
 
     return first_match
 
-def test_complete_add_opening_quote(cmd2_app):
-    text = 'Space'
-    line = 'command -f {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    import readline
-    new_line = readline.get_line_buffer()
-
-    assert new_line == cmd2_app.flag_based_complete(text, line, begidx, endidx, index_dict) == ['Football"']
-
 
 def test_cmd2_command_completion_single(cmd2_app):
     text = 'he'
