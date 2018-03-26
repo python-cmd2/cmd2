@@ -1393,9 +1393,6 @@ class Cmd(cmd.Cmd):
     def basic_complete(self, text, line, begidx, endidx, match_against):
         """
         Performs tab completion against a list
-        This is ultimately called by many completer functions like flag_based_complete and index_based_complete.
-        It can also be used by custom completer functions and that is the suggested approach since this function
-        handles things like tab completions with spaces.
 
         :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: str - the current input line with leading whitespace removed
@@ -1404,24 +1401,12 @@ class Cmd(cmd.Cmd):
         :param match_against: Collection - the list being matched against
         :return: List[str] - a sorted list of possible tab completions
         """
-        # Make sure we were given an Collection with items to match against
+        # Make sure we were given a Collection with items to match against
         if not isinstance(match_against, Collection) or len(match_against) == 0:
             return []
 
-        # Get all tokens through the one being completed
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
-            return []
-
         # Perform matching and eliminate duplicates
-        completion_token = tokens[-1]
-        full_matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(completion_token)]
-        if len(full_matches) == 0:
-            return []
-
-        # We will only keep where the text value starts
-        starting_index = len(completion_token) - len(text)
-        completion_matches = [cur_match[starting_index:] for cur_match in full_matches]
+        completion_matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(text)]
 
         completion_matches.sort()
         return completion_matches
@@ -1443,7 +1428,6 @@ class Cmd(cmd.Cmd):
                                                   by a flag in flag_dict
         :return: List[str] - a sorted list of possible tab completions
         """
-
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         if tokens is None:
@@ -1486,7 +1470,6 @@ class Cmd(cmd.Cmd):
                                                   index in index_dict
         :return: List[str] - a sorted list of possible tab completions
         """
-
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         if tokens is None:
@@ -1525,18 +1508,10 @@ class Cmd(cmd.Cmd):
         :param dir_only: bool - only return directories
         :return: List[str] - a sorted list of possible tab completions
         """
-
-        # Get all tokens through the one being completed
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
-            return []
-
         # Determine if a trailing separator should be appended to directory completions
         add_trailing_sep_if_dir = False
         if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
             add_trailing_sep_if_dir = True
-
-        completion_token = tokens[-1]
 
         # Used to replace cwd in the final results
         cwd = os.getcwd()
@@ -1546,75 +1521,62 @@ class Cmd(cmd.Cmd):
         user_path = os.path.expanduser('~')
         tilde_expanded = False
 
-        # If the token being completed is blank, then search in the CWD for *
-        if not completion_token:
+        # If the search text is blank, then search in the CWD for *
+        if not text:
             search_str = os.path.join(os.getcwd(), '*')
             cwd_added = True
         else:
             # Purposely don't match any path containing wildcards - what we are doing is complicated enough!
             wildcards = ['*', '?']
             for wildcard in wildcards:
-                if wildcard in completion_token:
+                if wildcard in text:
                     return []
 
             # Used if we need to prepend a directory to the search string
             dirname = ''
 
             # If the user only entered a '~', then complete it with a slash
-            if completion_token == '~':
+            if text == '~':
                 # This is a directory, so don't add a space or quote
                 self.allow_appended_space = False
                 self.allow_closing_quote = False
-                return [completion_token + os.path.sep]
+                return [text + os.path.sep]
 
-            elif completion_token.startswith('~'):
+            elif text.startswith('~'):
                 # Tilde without separator between path is invalid
-                if not completion_token.startswith('~' + os.path.sep):
+                if not text.startswith('~' + os.path.sep):
                     return []
 
                 # Mark that we are expanding a tilde
                 tilde_expanded = True
 
-            # If the token does not have a directory, then use the cwd
-            elif not os.path.dirname(completion_token):
+            # If the search text does not have a directory, then use the cwd
+            elif not os.path.dirname(text):
                 dirname = os.getcwd()
                 cwd_added = True
 
             # Build the search string
-            search_str = os.path.join(dirname, completion_token + '*')
+            search_str = os.path.join(dirname, text + '*')
 
             # Expand "~" to the real user directory
             search_str = os.path.expanduser(search_str)
 
-        # If the text being completed does not appear at the beginning of the token being completed,
-        # which can happen if there are spaces, save off the index where our search text begins in the
-        # search string so we can return only that portion of the completed paths to readline
-        if len(completion_token) - len(text) > 0:
-            starting_index = search_str.rfind(text + '*')
-        else:
-            starting_index = 0
-
         # Find all matching path completions
-        full_matches = glob.glob(search_str)
+        completion_matches = glob.glob(search_str)
 
-        # If we only want directories and executables, filter everything else out first
+        # Filter based on type
         if dir_exe_only:
-            full_matches = [c for c in full_matches if os.path.isdir(c) or os.access(c, os.X_OK)]
+            completion_matches = [c for c in completion_matches if os.path.isdir(c) or os.access(c, os.X_OK)]
         elif dir_only:
-            full_matches = [c for c in full_matches if os.path.isdir(c)]
+            completion_matches = [c for c in completion_matches if os.path.isdir(c)]
 
         # Don't append a space or closing quote to directory
-        if len(full_matches) == 1 and not os.path.isfile(full_matches[0]):
+        if len(completion_matches) == 1 and not os.path.isfile(completion_matches[0]):
             self.allow_appended_space = False
             self.allow_closing_quote = False
 
-        # Build the completion lists
-        completion_matches = []
-
-        for cur_match in full_matches:
-
-            # Only keep where text started for the tab completion
-            completion_matches.append(cur_match[starting_index:])
+        # Build display_matches and add a slash to directories
+        for cur_match in completion_matches:
 
             # Display only the basename of this path in the tab-completion suggestions
             self.display_matches.append(os.path.basename(cur_match))
@@ -1642,7 +1604,6 @@ class Cmd(cmd.Cmd):
         :param starts_with: str - what the exes should start with. leave blank for all exes in path.
         :return: List[str] - a sorted list of matching exe names
         """
-
         # Purposely don't match any executable containing wildcards
         wildcards = ['*', '?']
         for wildcard in wildcards:
@@ -1678,31 +1639,13 @@ class Cmd(cmd.Cmd):
                                       Defaults to False to match Bash shell behavior
         :return: List[str] - a sorted list of possible tab completions
         """
-
-        # Get all tokens through the one being completed
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
-            return []
-
-        completion_token = tokens[-1]
-
         # Don't tab complete anything if no shell command has been started
-        if not complete_blank and len(completion_token) == 0:
+        if not complete_blank and len(text) == 0:
             return []
 
-        # If there are no path characters in this token, then do shell command completion in the user's path
-        if os.path.sep not in completion_token:
-            # These matches are already sorted
-            full_matches = self.get_exes_in_path(completion_token)
-
-            # We will only keep where the text value starts for the tab completions
-            starting_index = len(completion_token) - len(text)
-            completion_matches = [cur_exe[starting_index:] for cur_exe in full_matches]
-
-            # Use the full name of the executables for the completions that are displayed
-            self.display_matches = full_matches
-
-            return completion_matches
+        # If there are no path characters in the search text, then do shell command completion in the user's path
+        if os.path.sep not in text:
+            return self.get_exes_in_path(text)
 
         # Otherwise look for executables in the given path
         else:
@@ -1722,7 +1665,6 @@ class Cmd(cmd.Cmd):
                                     this will be called if we aren't completing for redirection
         :return: List[str] - a sorted list of possible tab completions
         """
-
         if self.allow_redirection:
 
             # Get all tokens through the one being completed. We want the raw tokens
@@ -1941,7 +1883,6 @@ class Cmd(cmd.Cmd):
         :param text: str - the current word that user is typing
         :param state: int - non-negative integer
         """
-
         if state == 0:
             unclosed_quote = ''
             self.set_completion_defaults()
@@ -2011,23 +1952,23 @@ class Cmd(cmd.Cmd):
                     self.completion_matches = []
                     return None
 
-                # We may add to the beginning of our search text. Save this text because we
-                # need to remove it from tab completions later since readline isn't expecting it
+                # readline still performs word breaks in quotes. Therefore quoted search text with
+                # a space would have resulted in begidx pointing to the middle of the token we want
+                # to complete. Figure out where that token actually begins.
+                actual_begidx = line[:endidx].rfind(tokens[-1])
+
+                # If actual_begidx is different than what readline gave us, save the beginning portion
+                # of the completion token that does not belong in text. We will remove it from the
+                # completions later since readline expects our completions to start with the original text.
                 text_to_remove = ''
 
-                if self.allow_redirection:
-                    # Readline may have split a string with an opening quote because of a redirect
-                    # character like <. Therefore the original begidx would be wrong since a redirect
-                    # character in a quoted string should not be a word break. Update begidx to where
-                    # the token being completed actually starts.
-                    actual_begidx = line[:endidx].rfind(tokens[-1])
+                if actual_begidx != begidx:
+                    text_to_remove = line[actual_begidx:begidx]
 
-                    if actual_begidx != begidx:
-                        text_to_remove = line[actual_begidx:begidx]
-
-                        # Adjust text and where it begins
-                        text = text_to_remove + text
-                        begidx = actual_begidx
+                    # Adjust text and where it begins so the completer routines
+                    # get unbroken search text to complete on.
+                    text = text_to_remove + text
+                    begidx = actual_begidx
 
                 # Get the tokens with preserved quotes
                 raw_completion_token = raw_tokens[-1]
