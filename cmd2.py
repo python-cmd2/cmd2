@@ -1779,7 +1779,13 @@ class Cmd(cmd.Cmd):
             # If common_prefix contains a space, then we must add an opening quote to it
             if ' ' in common_prefix:
 
-                new_completion_token = '"' + common_prefix
+                # Figure out what kind of quote to add
+                if '"' in common_prefix:
+                    quote = "'"
+                else:
+                    quote = '"'
+
+                new_completion_token = quote + common_prefix
 
                 # Handle a single result
                 if len(self.completion_matches) == 1:
@@ -1787,7 +1793,7 @@ class Cmd(cmd.Cmd):
 
                     # Add a closing quote if allowed
                     if self.allow_closing_quote:
-                        str_to_append += '"'
+                        str_to_append += quote
 
                     orig_line = readline.get_line_buffer()
                     endidx = readline.get_endidx()
