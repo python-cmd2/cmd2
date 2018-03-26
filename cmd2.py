@@ -1036,7 +1036,7 @@ class Cmd(cmd.Cmd):
         self.allow_closing_quote = True
 
         # If the tab-completion matches should be displayed in a way that is different than the actual match values,
-        # then place those results in this list.
+        # then place those results in this list. path_complete uses this to show only the basename of completions.
         self.display_matches = []
 
     # -----  Methods related to presenting output to the user -----
