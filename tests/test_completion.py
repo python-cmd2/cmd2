@@ -16,8 +16,6 @@ import cmd2
 import mock
 import pytest
 
-from cmd2 import path_complete, basic_complete, flag_based_complete, index_based_complete
-
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
     import gnureadline as readline
@@ -31,52 +29,34 @@ except ImportError:
         pass
 
 
+@pytest.fixture
+def cmd2_app():
+    c = cmd2.Cmd()
+    return c
+
+
 # List of strings used with basic, flag, and index based completion functions
-weird_strings = ['string with space', '@a symbol']
-delimited_strings = ['bob::tampa::car', 'bill::tampa::truck', 'frank::atlanta::motorcycle']
-food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
+food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato', 'Space Food']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
 
 # Dictionary used with flag based completion functions
 flag_dict = \
     {
-        '-f': food_item_strs,        # Tab-complete food items after -f flag in command line
-        '--food': food_item_strs,    # Tab-complete food items after --food flag in command line
-        '-s': sport_item_strs,       # Tab-complete sport items after -s flag in command line
-        '--sport': sport_item_strs,  # Tab-complete sport items after --sport flag in command line
-        '-o': path_complete,         # Tab-complete using path_complete function after -o flag in command line
-        '--other': path_complete,    # Tab-complete using path_complete function after --other flag in command line
+        # Tab-complete food items after -f and --food flag in command line
+        '-f': food_item_strs,
+        '--food': food_item_strs,
+
+        # Tab-complete sport items after -s and --sport flag in command line
+        '-s': sport_item_strs,
+        '--sport': sport_item_strs,
     }
 
 # Dictionary used with index based completion functions
 index_dict = \
     {
-        1: food_item_strs,   # Tab-complete food items at index 1 in command line
-        2: sport_item_strs,  # Tab-complete sport items at index 2 in command line
-        3: path_complete,    # Tab-complete using path_complete function at index 3 in command line
+        1: food_item_strs,            # Tab-complete food items at index 1 in command line
+        2: sport_item_strs,           # Tab-complete sport items at index 2 in command line
     }
-
-
-class Cmd2App(cmd2.Cmd):
-    """ Example cmd2 application with commands for completion tests """
-
-    def __init__(self):
-        cmd2.Cmd.__init__(self)
-
-    def do_completion_cmd(self, args):
-        pass
-
-    def complete_completion_cmd(self, text, line, begidx, endidx):
-        return basic_complete(text, line, begidx, endidx, weird_strings)
-
-    def do_delimited_completion(self, args):
-        pass
-
-
-@pytest.fixture
-def cmd2_app():
-    c = Cmd2App()
-    return c
 
 def complete_tester(text, line, begidx, endidx, app):
     """
@@ -112,45 +92,17 @@ def complete_tester(text, line, begidx, endidx, app):
 
     return first_match
 
-def test_complete_unclosed_quote(cmd2_app):
-    text = 's'
-    line = 'completion_cmd "string with {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == ['space" ']
-
-
 def test_complete_add_opening_quote(cmd2_app):
-    text = 'string'
-    line = 'completion_cmd {}'.format(text)
+    text = 'Space'
+    line = 'command -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    expected = ['"' + 'string with space' + '" ']
+    import readline
+    new_line = readline.get_line_buffer()
 
-    assert first_match is not None and cmd2_app.completion_matches == expected
+    assert new_line == cmd2_app.flag_based_complete(text, line, begidx, endidx, index_dict) == ['Football"']
 
-def test_complete_add_opening_quote_symbol(cmd2_app):
-    """
-    This tests adding an opening quote to a string with spaces when begidx comes
-    after a readline word delimiting character. In this case, the opening quote
-    is only printed to the screen and not the actual completion.
-    """
-    text = 'a'
-    line = 'completion_cmd @{}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-
-    # Since there is one match at the end of the line, the added opening
-    # quote is closed and a space is added
-    expected = ['@a symbol" ']
-
-    assert first_match is not None and cmd2_app.completion_matches == expected
 
 def test_cmd2_command_completion_single(cmd2_app):
     text = 'he'
@@ -235,17 +187,6 @@ def test_cmd2_help_completion_nomatch(cmd2_app):
     assert cmd2_app.complete_help(text, line, begidx, endidx) == []
 
 
-def test_complete_cursor_by_closing_quote(cmd2_app):
-    text = ''
-    line = 'fake ""{}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # If the cursor is right after a closing quote, then a space is returned
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == [' ']
-
-
 def test_shell_command_completion(cmd2_app):
     if sys.platform == "win32":
         text = 'calc'
@@ -309,7 +250,7 @@ def test_shell_command_completion_does_path_completion_when_after_command(cmd2_a
     assert cmd2_app.complete_shell(text, line, begidx, endidx) == [text + '.py']
 
 
-def test_path_completion_single_end(request):
+def test_path_completion_single_end(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'conftest')
@@ -318,9 +259,9 @@ def test_path_completion_single_end(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert path_complete(text, line, begidx, endidx) == [text + '.py']
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == [text + '.py']
 
-def test_path_completion_multiple(request):
+def test_path_completion_multiple(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 's')
@@ -330,9 +271,9 @@ def test_path_completion_multiple(request):
     begidx = endidx - len(text)
 
     expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
-    assert expected == path_complete(text, line, begidx, endidx)
+    assert expected == cmd2_app.path_complete(text, line, begidx, endidx)
 
-def test_path_completion_nomatch(request):
+def test_path_completion_nomatch(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'fakepath')
@@ -341,7 +282,7 @@ def test_path_completion_nomatch(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert path_complete(text, line, begidx, endidx) == []
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
 
 def test_default_to_shell_completion(cmd2_app, request):
@@ -356,7 +297,7 @@ def test_default_to_shell_completion(cmd2_app, request):
         command = 'egrep'
 
     # Make sure the command is on the testing system
-    assert command in cmd2.get_exes_in_path(command)
+    assert command in cmd2_app.get_exes_in_path(command)
     line = '{} {}'.format(command, text)
 
     endidx = len(line)
@@ -366,13 +307,13 @@ def test_default_to_shell_completion(cmd2_app, request):
     assert first_match is not None and cmd2_app.completion_matches == [text + '.py ']
 
 
-def test_path_completion_cwd():
+def test_path_completion_cwd(cmd2_app):
     # Run path complete with no search text
     text = ''
     line = 'shell ls {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_no_text = path_complete(text, line, begidx, endidx)
+    completions_no_text = cmd2_app.path_complete(text, line, begidx, endidx)
 
     # Run path complete with path set to the CWD
     text = os.getcwd() + os.path.sep
@@ -381,13 +322,13 @@ def test_path_completion_cwd():
     begidx = endidx - len(text)
 
     # We have to strip off the text from the beginning since the matches are entire paths
-    completions_cwd = [match.replace(text, '', 1) for match in path_complete(text, line, begidx, endidx)]
+    completions_cwd = [match.replace(text, '', 1) for match in cmd2_app.path_complete(text, line, begidx, endidx)]
 
     # Verify that the first test gave results for entries in the cwd
     assert completions_no_text == completions_cwd
     assert completions_cwd
 
-def test_path_completion_doesnt_match_wildcards(request):
+def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c*')
@@ -397,29 +338,29 @@ def test_path_completion_doesnt_match_wildcards(request):
     begidx = endidx - len(text)
 
     # Currently path completion doesn't accept wildcards, so will always return empty results
-    assert path_complete(text, line, begidx, endidx) == []
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_invalid_syntax():
+def test_path_completion_invalid_syntax(cmd2_app):
     # Test a missing separator between a ~ and path
     text = '~Desktop'
     line = 'shell fake {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert path_complete(text, line, begidx, endidx) == []
+    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_just_tilde():
+def test_path_completion_just_tilde(cmd2_app):
     # Run path with just a tilde
     text = '~'
     line = 'shell fake {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_tilde = path_complete(text, line, begidx, endidx)
+    completions_tilde = cmd2_app.path_complete(text, line, begidx, endidx)
 
     # Path complete should complete the tilde with a slash
     assert completions_tilde == [text + os.path.sep]
 
-def test_path_completion_user_expansion():
+def test_path_completion_user_expansion(cmd2_app):
     # Run path with a tilde and a slash
     if sys.platform.startswith('win'):
         cmd = 'dir'
@@ -431,18 +372,19 @@ def test_path_completion_user_expansion():
     line = 'shell {} {}'.format(cmd, text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_tilde_slash = [match.replace(text, '', 1) for match in path_complete(text, line, begidx, endidx)]
+    completions_tilde_slash = [match.replace(text, '', 1) for match in cmd2_app.path_complete(text, line,
+                                                                                              begidx, endidx)]
 
     # Run path complete on the user's home directory
     text = os.path.expanduser('~') + os.path.sep
     line = 'shell {} {}'.format(cmd, text)
     endidx = len(line)
     begidx = endidx - len(text)
-    completions_home = [match.replace(text, '', 1) for match in path_complete(text, line, begidx, endidx)]
+    completions_home = [match.replace(text, '', 1) for match in cmd2_app.path_complete(text, line, begidx, endidx)]
 
     assert completions_tilde_slash == completions_home
 
-def test_path_completion_directories_only(request):
+def test_path_completion_directories_only(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 's')
@@ -453,74 +395,74 @@ def test_path_completion_directories_only(request):
 
     expected = [text + 'cripts' + os.path.sep]
 
-    assert path_complete(text, line, begidx, endidx, dir_only=True) == expected
+    assert cmd2_app.path_complete(text, line, begidx, endidx, dir_only=True) == expected
 
-def test_basic_completion_single():
+def test_basic_completion_single(cmd2_app):
     text = 'Pi'
     line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
+    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
-def test_basic_completion_multiple():
+def test_basic_completion_multiple(cmd2_app):
     text = ''
     line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert basic_complete(text, line, begidx, endidx, food_item_strs) == sorted(food_item_strs)
+    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == sorted(food_item_strs)
 
-def test_basic_completion_nomatch():
+def test_basic_completion_nomatch(cmd2_app):
     text = 'q'
     line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert basic_complete(text, line, begidx, endidx, food_item_strs) == []
+    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
-def test_basic_completion_quoted():
+def test_basic_completion_quoted(cmd2_app):
     text = 'Pi'
     line = 'list_food -f "{}"'.format(text)
     endidx = len(line) - 1
     begidx = endidx - len(text) + 1
 
-    assert basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
+    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
-def test_basic_completion_unclosed_quote():
+def test_basic_completion_unclosed_quote(cmd2_app):
     text = 'Pi'
     line = 'list_food -f "{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
+    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
 
-def test_flag_based_completion_single():
+def test_flag_based_completion_single(cmd2_app):
     text = 'Pi'
     line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
+    assert cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict) == ['Pizza']
 
-def test_flag_based_completion_multiple():
+def test_flag_based_completion_multiple(cmd2_app):
     text = ''
     line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == sorted(food_item_strs)
+    assert cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict) == sorted(food_item_strs)
 
-def test_flag_based_completion_nomatch():
+def test_flag_based_completion_nomatch(cmd2_app):
     text = 'q'
     line = 'list_food -f {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict) == []
+    assert cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict) == []
 
-def test_flag_based_default_completer(request):
+def test_flag_based_default_completer(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c')
@@ -529,9 +471,10 @@ def test_flag_based_default_completer(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == [text + 'onftest.py']
+    assert cmd2_app.flag_based_complete(text, line, begidx, endidx,
+                                        flag_dict, cmd2_app.path_complete) == [text + 'onftest.py']
 
-def test_flag_based_callable_completer(request):
+def test_flag_based_callable_completer(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c')
@@ -540,32 +483,34 @@ def test_flag_based_callable_completer(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert flag_based_complete(text, line, begidx, endidx, flag_dict, path_complete) == [text + 'onftest.py']
+    flag_dict['-o'] = cmd2_app.path_complete
+    assert cmd2_app.flag_based_complete(text, line, begidx, endidx,
+                                        flag_dict) == [text + 'onftest.py']
 
-def test_index_based_completion_single():
+def test_index_based_completion_single(cmd2_app):
     text = 'Foo'
     line = 'command Pizza {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == ['Football']
+    assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == ['Football']
 
-def test_index_based_completion_multiple():
+def test_index_based_completion_multiple(cmd2_app):
     text = ''
     line = 'command Pizza {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == sorted(sport_item_strs)
+    assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == sorted(sport_item_strs)
 
-def test_index_based_completion_nomatch():
+def test_index_based_completion_nomatch(cmd2_app):
     text = 'q'
     line = 'command {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == []
+    assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == []
 
-def test_index_based_default_completer(request):
+def test_index_based_default_completer(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c')
@@ -574,9 +519,10 @@ def test_index_based_default_completer(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict, path_complete) == [text + 'onftest.py']
+    assert cmd2_app.index_based_complete(text, line, begidx, endidx,
+                                         index_dict, cmd2_app.path_complete) == [text + 'onftest.py']
 
-def test_index_based_callable_completer(request):
+def test_index_based_callable_completer(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     text = os.path.join(test_dir, 'c')
@@ -585,7 +531,8 @@ def test_index_based_callable_completer(request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert index_based_complete(text, line, begidx, endidx, index_dict) == [text + 'onftest.py']
+    index_dict[3] = cmd2_app.path_complete
+    assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == [text + 'onftest.py']
 
 
 def test_parseline_command_and_args(cmd2_app):

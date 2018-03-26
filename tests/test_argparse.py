@@ -3,13 +3,10 @@
 Cmd2 testing for argument parsing
 """
 import argparse
-import functools
 import pytest
-import sys
 
 import cmd2
 import mock
-import six
 
 from conftest import run_cmd, StdOut
 
@@ -194,7 +191,7 @@ class SubcommandApp(cmd2.Cmd):
         self.poutput(args.x * args.y)
 
     def base_bar(self, args):
-        """bar sucommand of base command"""
+        """bar subcommand of base command"""
         self.poutput('((%s))' % args.z)
 
     def base_sport(self, args):
@@ -206,7 +203,7 @@ class SubcommandApp(cmd2.Cmd):
         """ Adds tab completion to base sport subcommand """
         sports = ['Football', 'Hockey', 'Soccer', 'Baseball']
         index_dict = {1: sports}
-        return cmd2.index_based_complete(text, line, begidx, endidx, index_dict)
+        return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
@@ -228,20 +225,19 @@ class SubcommandApp(cmd2.Cmd):
     parser_sport.add_argument('sport', help='Enter name of a sport')
     parser_sport.set_defaults(func=base_sport)
 
-    @cmd2.with_argparser_and_unknown_args(base_parser)
-    def do_base(self, args, arglist):
+    @cmd2.with_argparser(base_parser)
+    def do_base(self, args):
         """Base command help"""
-        try:
+        func = getattr(args, 'func', None)
+        if func is not None:
             # Call whatever subcommand function was selected
-            args.func(self, args)
-        except AttributeError:
-            # No subcommand was provided, so as called
+            func(self, args)
+        else:
+            # No subcommand was provided, so call help
             self.do_help('base')
 
-    # functools.partialmethod was added in Python 3.4
-    if six.PY3:
-        # This makes sure correct tab completion functions are called based on the selected subcommand
-        complete_base = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='base')
+    def complete_base(self, text, line, begidx, endidx):
+        return self.cmd_with_subs_completer(text, line, begidx, endidx, base='base')
 
 @pytest.fixture
 def subcommand_app():
@@ -284,7 +280,6 @@ def test_subcommand_invalid_help(subcommand_app):
     assert out[0].startswith('usage: base')
     assert out[1].startswith("base: error: invalid choice: 'baz'")
 
-@pytest.mark.skipif(sys.version_info < (3,0), reason="functools.partialmethod requires Python 3.4+")
 def test_subcommand_tab_completion(subcommand_app):
     # This makes sure the correct completer for the sport subcommand is called
     text = 'Foot'
@@ -311,7 +306,6 @@ def test_subcommand_tab_completion(subcommand_app):
     # It is at end of line, so extra space is present
     assert first_match is not None and subcommand_app.completion_matches == ['Football ']
 
-@pytest.mark.skipif(sys.version_info < (3,0), reason="functools.partialmethod requires Python 3.4+")
 def test_subcommand_tab_completion_with_no_completer(subcommand_app):
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
