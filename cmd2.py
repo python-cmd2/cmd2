@@ -1413,6 +1413,64 @@ class Cmd(cmd.Cmd):
         matches.sort()
         return matches
 
+    def delimiter_complete(self, text, line, begidx, endidx, match_against, delimiter):
+        """
+        Performs tab completion against a list but each match is split on a delimiter and only
+        the portion of the match being tab completed is shown as the completion suggestions.
+        This is useful if you match against strings that are hierarchical in nature and have a
+        common delimiter.
+
+        An easy way to illustrate this concept is path completion since paths are just directories/files
+        delimited by a slash. If you are tab completing items in /home/user you don't get the following
+        as suggestions:
+
+        /home/user/file.txt     /home/user/program.c
+        /home/user/maps/        /home/user/cmd2.py
+
+        Instead you are shown:
+
+        file.txt                program.c
+        maps/                   cmd2.py
+
+        For a large set of data, this can be visually more pleasing and easier to search.
+
+        Another example would be strings formatted with the following syntax: company::department::name
+        In this case the delimiter would be :: and the user could easily narrow down what they are looking
+        for if they were only shown suggestions in the category they are at in the string.
+
+        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: str - the current input line with leading whitespace removed
+        :param begidx: int - the beginning index of the prefix text
+        :param endidx: int - the ending index of the prefix text
+        :param match_against: Collection - the list being matched against
+        :param delimiter: str - what delimits each portion of the matches (ex: paths are delimited by a slash)
+        :return: List[str] - a sorted list of possible tab completions
+        """
+        matches = self.basic_complete(text, line, begidx, endidx, match_against)
+
+        # Display only the portion of the match that's being completed based on delimiter
+        if len(matches) > 0:
+
+            # Get the common beginning for the matches
+            common_prefix = os.path.commonprefix(matches)
+            prefix_tokens = common_prefix.split(delimiter)
+
+            # Calculate what portion of the match we are completing
+            display_token_index = 0
+            if len(prefix_tokens) > 0:
+                display_token_index = len(prefix_tokens) - 1
+
+            # Get this portion for each match and store them in self.display_matches
+            for cur_match in matches:
+                match_tokens = cur_match.split(delimiter)
+                display_token = match_tokens[display_token_index]
+
+                if len(display_token) == 0:
+                    display_token = delimiter
+                self.display_matches.append(display_token)
+
+        return matches
+
     def flag_based_complete(self, text, line, begidx, endidx, flag_dict, all_else=None):
         """
         Tab completes based on a particular flag preceding the token being completed
