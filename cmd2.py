@@ -1390,7 +1390,9 @@ class Cmd(cmd.Cmd):
 
         return tokens, raw_tokens
 
-    def basic_complete(self, text, line, begidx, endidx, match_against):
+    # noinspection PyUnusedLocal
+    @staticmethod
+    def basic_complete(text, line, begidx, endidx, match_against):
         """
         Performs tab completion against a list
 
@@ -1406,10 +1408,10 @@ class Cmd(cmd.Cmd):
             return []
 
         # Perform matching and eliminate duplicates
-        completion_matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(text)]
+        matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(text)]
 
-        completion_matches.sort()
-        return completion_matches
+        matches.sort()
+        return matches
 
     def flag_based_complete(self, text, line, begidx, endidx, flag_dict, all_else=None):
         """
@@ -1475,7 +1477,7 @@ class Cmd(cmd.Cmd):
         if tokens is None:
             return []
 
-        completion_matches = []
+        matches = []
 
         # Get the index of the token being completed
         index = len(tokens) - 1
@@ -1488,15 +1490,16 @@ class Cmd(cmd.Cmd):
 
         # Perform tab completion using an Collection. These matches are already sorted.
         if isinstance(match_against, Collection):
-            completion_matches = self.basic_complete(text, line, begidx, endidx, match_against)
+            matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
         elif callable(match_against):
-            completion_matches = match_against(text, line, begidx, endidx)
-            completion_matches.sort()
+            matches = match_against(text, line, begidx, endidx)
+            matches.sort()
 
-        return completion_matches
+        return matches
 
+    # noinspection PyUnusedLocal
     def path_complete(self, text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
         """Performs completion of local file system paths
 
@@ -1562,40 +1565,40 @@ class Cmd(cmd.Cmd):
             search_str = os.path.expanduser(search_str)
 
         # Find all matching path completions
-        completion_matches = glob.glob(search_str)
+        matches = glob.glob(search_str)
 
         # Filter based on type
         if dir_exe_only:
-            completion_matches = [c for c in completion_matches if os.path.isdir(c) or os.access(c, os.X_OK)]
+            matches = [c for c in matches if os.path.isdir(c) or os.access(c, os.X_OK)]
         elif dir_only:
-            completion_matches = [c for c in completion_matches if os.path.isdir(c)]
+            matches = [c for c in matches if os.path.isdir(c)]
 
         # Don't append a space or closing quote to directory
-        if len(completion_matches) == 1 and not os.path.isfile(completion_matches[0]):
+        if len(matches) == 1 and not os.path.isfile(matches[0]):
             self.allow_appended_space = False
             self.allow_closing_quote = False
 
         # Build display_matches and add a slash to directories
-        for index, cur_match in enumerate(completion_matches):
+        for index, cur_match in enumerate(matches):
 
             # Display only the basename of this path in the tab-completion suggestions
             self.display_matches.append(os.path.basename(cur_match))
 
             # Add a separator after directories if the next character isn't already a separator
             if os.path.isdir(cur_match) and add_trailing_sep_if_dir:
-                completion_matches[index] += os.path.sep
+                matches[index] += os.path.sep
                 self.display_matches[index] += os.path.sep
 
         # Remove cwd if it was added
         if cwd_added:
-            completion_matches = [cur_path.replace(cwd + os.path.sep, '', 1) for cur_path in completion_matches]
+            matches = [cur_path.replace(cwd + os.path.sep, '', 1) for cur_path in matches]
 
         # Restore a tilde if we expanded one
         if tilde_expanded:
-            completion_matches = [cur_path.replace(user_path, '~', 1) for cur_path in completion_matches]
+            matches = [cur_path.replace(user_path, '~', 1) for cur_path in matches]
 
-        completion_matches.sort()
-        return completion_matches
+        matches.sort()
+        return matches
 
     @staticmethod
     def get_exes_in_path(starts_with):
@@ -1668,7 +1671,7 @@ class Cmd(cmd.Cmd):
         if self.allow_redirection:
 
             # Get all tokens through the one being completed. We want the raw tokens
-            # since we need to know if the redirection characters are quoted.
+            # so we can tell if redirection strings are quoted and ignore them.
             _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
             if raw_tokens is None:
                 return []
@@ -1678,16 +1681,13 @@ class Cmd(cmd.Cmd):
                 # Build a list of all redirection tokens
                 all_redirects = REDIRECTION_CHARS + ['>>']
 
-                # Check how many redirectors have appeared before the token being completed
+                # Check if there are redirection strings prior to the token being completed
                 seen_pipe = False
-                num_redirectors = 0
+                has_redirection = False
 
                 for cur_token in raw_tokens[:-1]:
                     if cur_token in all_redirects:
-                        num_redirectors += 1
-                        if num_redirectors > 1:
-                            # Too many redirectors on the line for tab completion
-                            return []
+                        has_redirection = True
 
                         if cur_token == '|':
                             seen_pipe = True
@@ -1702,6 +1702,11 @@ class Cmd(cmd.Cmd):
                 # Otherwise do path completion either as files to redirectors or arguments to the piped process
                 elif prior_token in all_redirects or seen_pipe:
                     return self.path_complete(text, line, begidx, endidx)
+
+                # If there were redirection strings anywhere on the command line, then we
+                # are no longer tab completing for the current command
+                elif has_redirection:
+                    return []
 
         # Call the command's completer function
         return compfunc(text, line, begidx, endidx)
@@ -2119,7 +2124,7 @@ class Cmd(cmd.Cmd):
         if tokens is None:
             return []
 
-        completion_matches = []
+        matches = []
 
         # Get the index of the token being completed
         index = len(tokens) - 1
@@ -2131,16 +2136,16 @@ class Cmd(cmd.Cmd):
             topics = set(self.get_help_topics())
             visible_commands = set(self.get_visible_commands())
             strs_to_match = list(topics | visible_commands)
-            completion_matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
+            matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
         # Check if we are completing a subcommand
         elif index == subcmd_index:
 
             # Match subcommands if any exist
             command = tokens[cmd_index]
-            completion_matches = self.basic_complete(text, line, begidx, endidx, self.get_subcommands(command))
+            matches = self.basic_complete(text, line, begidx, endidx, self.get_subcommands(command))
 
-        return completion_matches
+        return matches
 
     # noinspection PyUnusedLocal
     def sigint_handler(self, signum, frame):
@@ -3014,7 +3019,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         if tokens is None:
             return []
 
-        completion_matches = []
+        matches = []
 
         # Get the index of the token being completed
         index = len(tokens) - 1
@@ -3047,11 +3052,11 @@ Usage:  Usage: unalias [-a] name [name ...]
             completer = 'complete_{}_{}'.format(base, subcommand)
             try:
                 compfunc = getattr(self, completer)
-                completion_matches = compfunc(text, line, begidx, endidx)
+                matches = compfunc(text, line, begidx, endidx)
             except AttributeError:
                 pass
 
-        return completion_matches
+        return matches
 
     # noinspection PyBroadException
     def do_py(self, arg):
