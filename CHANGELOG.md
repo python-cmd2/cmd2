@@ -6,6 +6,7 @@
 * Enhancements
     * Tab completion has been overhauled and now supports completion of strings with quotes and spaces.
     * Tab completion will automatically add an opening quote if a string with a space is completed.
+    * Added ``delimiter_complete`` function for tab completing delimited strings
     * Added more control over tab completion behavior including the following flags. The use of these flags is documented in cmd2.py
         * ``allow_appended_space``
         * ``allow_closing_quote``
