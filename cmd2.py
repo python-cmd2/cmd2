@@ -3106,13 +3106,12 @@ Usage:  Usage: unalias [-a] name [name ...]
             begidx -= diff
             endidx -= diff
 
-            # Call the subcommand specific completer
+            # Call the subcommand specific completer if it exists
             completer = 'complete_{}_{}'.format(base, subcommand)
-            try:
-                compfunc = getattr(self, completer)
+            compfunc = getattr(self, completer, None)
+
+            if compfunc is not None:
                 matches = compfunc(text, line, begidx, endidx)
-            except AttributeError:
-                pass
 
         return matches
 
