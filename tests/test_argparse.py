@@ -194,17 +194,6 @@ class SubcommandApp(cmd2.Cmd):
         """bar subcommand of base command"""
         self.poutput('((%s))' % args.z)
 
-    def base_sport(self, args):
-        """sport subcommand of base command"""
-        self.poutput('Sport is {}'.format(args.sport))
-
-    # noinspection PyUnusedLocal
-    def complete_base_sport(self, text, line, begidx, endidx):
-        """ Adds tab completion to base sport subcommand """
-        sports = ['Football', 'Hockey', 'Soccer', 'Baseball']
-        index_dict = {1: sports}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict)
-
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
     base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
@@ -220,11 +209,6 @@ class SubcommandApp(cmd2.Cmd):
     parser_bar.add_argument('z', help='string')
     parser_bar.set_defaults(func=base_bar)
 
-    # create the parser for the "sport" subcommand
-    parser_sport = base_subparsers.add_parser('sport', help='sport help')
-    parser_sport.add_argument('sport', help='Enter name of a sport')
-    parser_sport.set_defaults(func=base_sport)
-
     @cmd2.with_argparser(base_parser)
     def do_base(self, args):
         """Base command help"""
@@ -235,9 +219,6 @@ class SubcommandApp(cmd2.Cmd):
         else:
             # No subcommand was provided, so call help
             self.do_help('base')
-
-    def complete_base(self, text, line, begidx, endidx):
-        return self.cmd_with_subs_completer(text, line, begidx, endidx, base='base')
 
 @pytest.fixture
 def subcommand_app():
@@ -279,55 +260,3 @@ def test_subcommand_invalid_help(subcommand_app):
     out = run_cmd(subcommand_app, 'help base baz')
     assert out[0].startswith('usage: base')
     assert out[1].startswith("base: error: invalid choice: 'baz'")
-
-def test_subcommand_tab_completion(subcommand_app):
-    # This makes sure the correct completer for the sport subcommand is called
-    text = 'Foot'
-    line = 'base sport Foot'
-    endidx = len(line)
-    begidx = endidx - len(text)
-    state = 0
-
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = subcommand_app.complete(text, state)
-
-    # It is at end of line, so extra space is present
-    assert first_match is not None and subcommand_app.completion_matches == ['Football ']
-
-def test_subcommand_tab_completion_with_no_completer(subcommand_app):
-    # This tests what happens when a subcommand has no completer
-    # In this case, the foo subcommand has no completer defined
-    text = 'Foot'
-    line = 'base foo Foot'
-    endidx = len(line)
-    begidx = endidx - len(text)
-    state = 0
-
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = subcommand_app.complete(text, state)
-
-    assert first_match is None

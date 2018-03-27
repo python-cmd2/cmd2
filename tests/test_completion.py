@@ -36,8 +36,8 @@ def cmd2_app():
 
 
 # List of strings used with completion functions
-food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato', 'Space Food']
-sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
+food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
+sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 delimited_strs = ['/home/user/file.txt', '/home/user/prog.c', '/home/otheruser/maps']
 
 # Dictionary used with flag based completion functions
@@ -636,6 +636,15 @@ class SubcommandsExample(cmd2.Cmd):
         """bar subcommand of base command"""
         self.poutput('((%s))' % args.z)
 
+    def base_sport(self, args):
+        """sport subcommand of base command"""
+        self.poutput('Sport is {}'.format(args.sport))
+
+    def complete_base_sport(self, text, line, begidx, endidx):
+        """ Adds tab completion to base sport subcommand """
+        index_dict = {1: sport_item_strs}
+        return self.index_based_complete(text, line, begidx, endidx, index_dict)
+
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
     base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
@@ -651,6 +660,11 @@ class SubcommandsExample(cmd2.Cmd):
     parser_bar.add_argument('z', help='string')
     parser_bar.set_defaults(func=base_bar)
 
+    # create the parser for the "sport" subcommand
+    parser_sport = base_subparsers.add_parser('sport', help='sport help')
+    parser_sport.add_argument('sport', help='Enter name of a sport')
+    parser_sport.set_defaults(func=base_sport)
+
     @cmd2.with_argparser(base_parser)
     def do_base(self, args):
         """Base command help"""
@@ -661,6 +675,9 @@ class SubcommandsExample(cmd2.Cmd):
         else:
             # No sub-command was provided, so as called
             self.do_help('base')
+
+    def complete_base(self, text, line, begidx, endidx):
+        return self.cmd_with_subs_completer(text, line, begidx, endidx, base='base')
 
 
 @pytest.fixture
@@ -687,7 +704,7 @@ def test_cmd2_subcommand_completion_multiple(sc_app):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
-    assert first_match is not None and sc_app.completion_matches == ['bar', 'foo']
+    assert first_match is not None and sc_app.completion_matches == ['bar', 'foo', 'sport']
 
 def test_cmd2_subcommand_completion_nomatch(sc_app):
     text = 'z'
@@ -712,7 +729,7 @@ def test_cmd2_help_subcommand_completion_multiple(sc_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo']
+    assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo', 'sport']
 
 
 def test_cmd2_help_subcommand_completion_nomatch(sc_app):
@@ -722,6 +739,28 @@ def test_cmd2_help_subcommand_completion_nomatch(sc_app):
     begidx = endidx - len(text)
     assert sc_app.complete_help(text, line, begidx, endidx) == []
 
+def test_subcommand_tab_completion(sc_app):
+    # This makes sure the correct completer for the sport subcommand is called
+    text = 'Foot'
+    line = 'base sport Foot'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and sc_app.completion_matches == ['Football ']
+
+def test_subcommand_tab_completion_with_no_completer(sc_app):
+    # This tests what happens when a subcommand has no completer
+    # In this case, the foo subcommand has no completer defined
+    text = 'Foot'
+    line = 'base foo Foot'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
+    assert first_match is None
 
 class SecondLevel(cmd2.Cmd):
     """To be used as a second level command class. """
