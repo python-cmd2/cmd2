@@ -1330,8 +1330,8 @@ class Cmd(cmd.Cmd):
 
             for cur_initial_token in initial_tokens:
 
-                # Keep empty and quoted tokens
-                if len(cur_initial_token) == 0 or cur_initial_token[0] in QUOTES:
+                # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
+                if len(cur_initial_token) <= 1 or cur_initial_token[0] in QUOTES:
                     raw_tokens.append(cur_initial_token)
                     continue
 
@@ -2068,20 +2068,23 @@ class Cmd(cmd.Cmd):
                         self.completion_matches = []
                         return None
 
-                    # Check if we need to remove text from the beginning of tab completions
-                    if text_to_remove:
-                        self.completion_matches = [m.replace(text_to_remove, '', 1) for m in self.completion_matches]
-
-                    # Check if we need to restore a shortcut in the tab completions
-                    if shortcut_to_restore:
+                    if text_to_remove or shortcut_to_restore:
                         # If self.display_matches is empty, then set it to self.completion_matches
-                        # before we restore the shortcut so the tab completion suggestions that display to
-                        # the user don't have the shortcut character.
+                        # before we alter them. That way the suggestions will reflect how we parsed
+                        # the token being completed and not how readline did.
                         if len(self.display_matches) == 0:
                             self.display_matches = self.completion_matches
 
-                        # Prepend all tab completions with the shortcut so it doesn't get erased from the command line
-                        self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
+                        # Check if we need to remove text from the beginning of tab completions
+                        if text_to_remove:
+                            self.completion_matches = \
+                                [m.replace(text_to_remove, '', 1) for m in self.completion_matches]
+
+                        # Check if we need to restore a shortcut in the tab completions
+                        # so it doesn't get erased from the command line
+                        if shortcut_to_restore:
+                            self.completion_matches = \
+                                [shortcut_to_restore + match for match in self.completion_matches]
 
                     # Check if the token being completed has an unclosed quote
                     if len(raw_completion_token) == 1:

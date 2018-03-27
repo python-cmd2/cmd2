@@ -177,18 +177,27 @@ def test_cmd2_help_completion_nomatch(cmd2_app):
     assert cmd2_app.complete_help(text, line, begidx, endidx) == []
 
 
-def test_shell_command_completion(cmd2_app):
+def test_shell_command_completion_shortcut(cmd2_app):
+    # Made sure ! runs a shell command and all matches start with ! since there
+    # isn't a space between ! and the shell command. Display matches won't
+    # begin with the !.
     if sys.platform == "win32":
-        text = 'calc'
-        expected = ['calc.exe']
+        text = '!calc'
+        expected = ['!calc.exe ']
+        expected_display = ['calc.exe']
     else:
-        text = 'egr'
-        expected = ['egrep']
+        text = '!egr'
+        expected = ['!egrep ']
+        expected_display = ['egrep']
 
-    line = 'shell {}'.format(text)
+    line = text
     endidx = len(line)
-    begidx = endidx - len(text)
-    assert cmd2_app.complete_shell(text, line, begidx, endidx) == expected
+    begidx = 0
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           cmd2_app.completion_matches == expected and \
+           cmd2_app.display_matches == expected_display
 
 def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
     if sys.platform == "win32":
@@ -742,7 +751,7 @@ def test_cmd2_help_subcommand_completion_nomatch(sc_app):
 def test_subcommand_tab_completion(sc_app):
     # This makes sure the correct completer for the sport subcommand is called
     text = 'Foot'
-    line = 'base sport Foot'
+    line = 'base sport {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -755,12 +764,37 @@ def test_subcommand_tab_completion_with_no_completer(sc_app):
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
     text = 'Foot'
-    line = 'base foo Foot'
+    line = 'base foo {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
     assert first_match is None
+
+def test_subcommand_tab_completion_add_quote(sc_app):
+    # This makes sure an opening quote is added to the readline line buffer
+    text = 'Space'
+    line = 'base sport {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
+
+    # No matches are returned when an opening quote is added to the screen
+    assert first_match is None
+    assert readline.get_line_buffer() == 'base sport "Space Ball" '
+
+def test_subcommand_tab_completion_space_in_text(sc_app):
+    text = 'B'
+    line = 'base sport "Space {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
+
+    assert first_match is not None and \
+           sc_app.completion_matches == ['Ball" '] and \
+           sc_app.display_matches == ['Space Ball']
 
 class SecondLevel(cmd2.Cmd):
     """To be used as a second level command class. """
