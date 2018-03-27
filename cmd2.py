@@ -44,6 +44,7 @@ import tempfile
 import traceback
 import unittest
 from code import InteractiveConsole
+from enum import Enum
 
 import pyparsing
 import pyperclip
@@ -128,24 +129,42 @@ except ImportError:
     except ImportError:
         pass
 
-# Load the GNU readline lib so we can make changes to it
-readline_lib = None
-if not sys.platform.startswith('win'):
-    import ctypes
-    from ctypes.util import find_library
 
-    readline_lib_name = find_library("readline")
-    if readline_lib_name is not None and readline_lib_name:
-        readline_lib = ctypes.CDLL(readline_lib_name)
+# Tells what implementation of readline we are using
+class RlType(Enum):
+    GNU = 1
+    PYREADLINE = 2
+    NONE = 3
+
+
+# Check what implementation of readline we are using
+rl_type = RlType.NONE
+
+if 'pyreadline' in sys.modules:
+    rl_type = RlType.PYREADLINE
+
+    # Save the original pyreadline display completion function since we need to override it and restore it
+    # noinspection PyProtectedMember
+    orig_pyreadline_display = readline.rl.mode._display_completions
+
+else:
+    readline_lib_path = ''
+
+    if 'gnureadline' in sys.modules:
+        readline_lib_path = sys.modules['gnureadline'].__dict__['__file__']
+    elif 'readline' in sys.modules:
+        readline_lib_path = sys.modules['readline'].__dict__['__file__']
+
+    # Load the readline lib so we can make changes to it
+    if readline_lib_path:
+        rl_type = RlType.GNU
+
+        import ctypes
+        readline_lib = ctypes.CDLL(readline_lib_path)
 
         # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
         orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-
-else:
-    # Save the original pyreadline display completion function since we need to override it and restore it
-    # noinspection PyProtectedMember
-    orig_pyreadline_display = readline.rl.mode._display_completions
 
 
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
@@ -1227,7 +1246,7 @@ class Cmd(cmd.Cmd):
         :param matches: list[str] - the tab completion matches to display
         :param longest_match_length: int - longest printed length of the matches
         """
-        if readline_lib is not None:
+        if rl_type == RlType.GNU:
             # We will use readline's display function (rl_display_match_list()), so we
             # need to encode our string as bytes to place in a C array.
             if six.PY3:
@@ -1265,7 +1284,7 @@ class Cmd(cmd.Cmd):
         Prints a match list using pyreadline's _display_completions()
         :param matches: list[str] - the tab completion matches to display
         """
-        if orig_pyreadline_display is not None:
+        if rl_type == RlType.PYREADLINE:
             orig_pyreadline_display(matches)
 
     def tokens_for_completion(self, line, begidx, endidx):
@@ -1903,8 +1922,7 @@ class Cmd(cmd.Cmd):
         Sets the readline line buffer
         :param new_line: str - the new line contents
         """
-        # GNU readline specific way to update line buffer
-        if readline_lib is not None:
+        if rl_type == RlType.GNU:
             # Byte encode the new line
             if six.PY3:
                 encoded_line = bytes(new_line, encoding='utf-8')
@@ -1914,8 +1932,7 @@ class Cmd(cmd.Cmd):
             # Replace the line
             readline_lib.rl_replace_line(encoded_line, 0)
 
-        # pyreadline specific way to update line buffer
-        elif sys.platform.startswith('win'):
+        elif rl_type == RlType.PYREADLINE:
             readline.rl.mode.l_buffer.set_line(new_line)
 
     @staticmethod
@@ -1924,13 +1941,11 @@ class Cmd(cmd.Cmd):
         Sets the cursor offset in the readline line buffer
         :param new_point: int - the new cursor offset
         """
-        # GNU readline specific way to update line point
-        if readline_lib is not None:
+        if rl_type == RlType.GNU:
             rl_point = ctypes.c_int.in_dll(readline_lib, "rl_point")
             rl_point.value = new_point
 
-        # pyreadline specific way to update line point
-        elif sys.platform.startswith('win'):
+        elif rl_type == RlType.PYREADLINE:
             readline.rl.mode.l_buffer.point = new_point
 
     # -----  Methods which override stuff in cmd -----
@@ -2656,7 +2671,7 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput and self.completekey:
 
             # Set up readline for our tab completion needs
-            if readline_lib is not None:
+            if rl_type == RlType.GNU:
                 readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
 
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
@@ -2664,7 +2679,7 @@ class Cmd(cmd.Cmd):
                 # rl_completer_quote_characters.
                 rl_basic_quote_characters.value = None
 
-            elif sys.platform.startswith('win'):
+            elif rl_type == RlType.PYREADLINE:
                 readline.rl.mode._display_completions = self._display_matches_pyreadline
 
             try:
@@ -2717,11 +2732,11 @@ class Cmd(cmd.Cmd):
                 except NameError:
                     pass
 
-                if readline_lib is not None:
+                if rl_type == RlType.GNU:
                     readline.set_completion_display_matches_hook(None)
                     rl_basic_quote_characters.value = orig_rl_basic_quote_characters_addr
 
-                elif sys.platform.startswith('win'):
+                elif rl_type == RlType.PYREADLINE:
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
             # Need to set empty list this way because Python 2 doesn't support the clear() method on lists
