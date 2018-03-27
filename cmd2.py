@@ -138,8 +138,12 @@ if not sys.platform.startswith('win'):
     if readline_lib_name is not None and readline_lib_name:
         readline_lib = ctypes.CDLL(readline_lib_name)
 
-# On Windows, we save the original pyreadline display completion function since we have to override it
+        # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
+        rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+        orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+
 else:
+    # Save the original pyreadline display completion function since we need to override it and restore it
     # noinspection PyProtectedMember
     orig_pyreadline_display = readline.rl.mode._display_completions
 
@@ -1209,18 +1213,11 @@ class Cmd(cmd.Cmd):
     def set_completion_defaults(self):
         """
         Resets tab completion settings
-        Called each time complete() is called
+        Needs to be called each time readline runs tab completion
         """
         self.allow_appended_space = True
         self.allow_closing_quote = True
         self.display_matches = []
-
-        if readline_lib is not None:
-            # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
-            # We don't need to worry about setting rl_completion_suppress_quote since we never declared
-            # rl_completer_quote_characters.
-            rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-            rl_basic_quote_characters.value = None
 
     @staticmethod
     def display_match_list_gnu_readline(substitution, matches, longest_match_length):
@@ -1956,14 +1953,6 @@ class Cmd(cmd.Cmd):
             unclosed_quote = ''
             self.set_completion_defaults()
 
-            # GNU readline specific way to override the completions display function
-            if readline_lib is not None:
-                readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
-
-            # pyreadline specific way to override the completions display function
-            elif sys.platform.startswith('win'):
-                readline.rl.mode._display_completions = self._display_matches_pyreadline
-
             # lstrip the original line
             orig_line = readline.get_line_buffer()
             line = orig_line.lstrip()
@@ -2662,6 +2651,19 @@ class Cmd(cmd.Cmd):
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
         if self.use_rawinput and self.completekey:
+
+            # Set up readline for our tab completion needs
+            if readline_lib is not None:
+                readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
+
+                # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
+                # We don't need to worry about setting rl_completion_suppress_quote since we never declared
+                # rl_completer_quote_characters.
+                rl_basic_quote_characters.value = None
+
+            elif sys.platform.startswith('win'):
+                readline.rl.mode._display_completions = self._display_matches_pyreadline
+
             try:
                 self.old_completer = readline.get_completer()
                 self.old_delims = readline.get_completer_delims()
@@ -2669,9 +2671,11 @@ class Cmd(cmd.Cmd):
 
                 # Break words on whitespace and quotes when tab completing
                 completer_delims = " \t\n\"'"
+
                 if self.allow_redirection:
                     # If redirection is allowed, then break words on those characters too
                     completer_delims += ''.join(REDIRECTION_CHARS)
+
                 readline.set_completer_delims(completer_delims)
 
                 # Enable tab completion
@@ -2702,11 +2706,20 @@ class Cmd(cmd.Cmd):
                 stop = self.onecmd_plus_hooks(line)
         finally:
             if self.use_rawinput and self.completekey:
+
+                # Restore what we changed in readline
                 try:
                     readline.set_completer(self.old_completer)
                     readline.set_completer_delims(self.old_delims)
                 except NameError:
                     pass
+
+                if readline_lib is not None:
+                    readline.set_completion_display_matches_hook(None)
+                    rl_basic_quote_characters.value = orig_rl_basic_quote_characters_addr
+
+                elif sys.platform.startswith('win'):
+                    readline.rl.mode._display_completions = orig_pyreadline_display
 
             # Need to set empty list this way because Python 2 doesn't support the clear() method on lists
             self.cmdqueue = []
