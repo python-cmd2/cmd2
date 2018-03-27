@@ -35,9 +35,10 @@ def cmd2_app():
     return c
 
 
-# List of strings used with basic, flag, and index based completion functions
+# List of strings used with completion functions
 food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato', 'Space Food']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
+delimited_strs = ['/home/user/file.txt', '/home/user/prog.c', '/home/otheruser/maps']
 
 # Dictionary used with flag based completion functions
 flag_dict = \
@@ -410,6 +411,20 @@ def test_basic_completion_nomatch(cmd2_app):
 
     assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
+def test_delimiter_completion(cmd2_app):
+    text = '/home/'
+    line = 'load {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
+
+    # Remove duplicates from display_matches and sort it. This is typically done in the display function.
+    display_set = set(cmd2_app.display_matches)
+    display_list = list(display_set)
+    display_list.sort()
+
+    assert display_list == ['otheruser', 'user']
 
 def test_flag_based_completion_single(cmd2_app):
     text = 'Pi'
