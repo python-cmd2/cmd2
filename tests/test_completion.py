@@ -410,22 +410,6 @@ def test_basic_completion_nomatch(cmd2_app):
 
     assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
-def test_basic_completion_quoted(cmd2_app):
-    text = 'Pi'
-    line = 'list_food -f "{}"'.format(text)
-    endidx = len(line) - 1
-    begidx = endidx - len(text) + 1
-
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
-
-def test_basic_completion_unclosed_quote(cmd2_app):
-    text = 'Pi'
-    line = 'list_food -f "{}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
-
 
 def test_flag_based_completion_single(cmd2_app):
     text = 'Pi'
@@ -476,6 +460,7 @@ def test_flag_based_callable_completer(cmd2_app, request):
     assert cmd2_app.flag_based_complete(text, line, begidx, endidx,
                                         flag_dict) == [text + 'onftest.py']
 
+
 def test_index_based_completion_single(cmd2_app):
     text = 'Foo'
     line = 'command Pizza {}'.format(text)
@@ -523,6 +508,74 @@ def test_index_based_callable_completer(cmd2_app, request):
     index_dict[3] = cmd2_app.path_complete
     assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == [text + 'onftest.py']
 
+
+def test_tokens_for_completion_quoted(cmd2_app):
+    text = 'Pi'
+    line = 'list_food "{}"'.format(text)
+    endidx = len(line)
+    begidx = endidx
+
+    expected_tokens = ['list_food', 'Pi', '']
+    expected_raw_tokens = ['list_food', '"Pi"', '']
+
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
+    assert expected_tokens == tokens
+    assert expected_raw_tokens == raw_tokens
+
+def test_tokens_for_completion_unclosed_quote(cmd2_app):
+    text = 'Pi'
+    line = 'list_food "{}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_tokens = ['list_food', 'Pi']
+    expected_raw_tokens = ['list_food', '"Pi']
+
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
+    assert expected_tokens == tokens
+    assert expected_raw_tokens == raw_tokens
+
+def test_tokens_for_completion_redirect(cmd2_app):
+    text = '>>file'
+    line = 'command | < {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    cmd2_app.allow_redirection = True
+    expected_tokens = ['command', '|', '<', '>>', 'file']
+    expected_raw_tokens = ['command', '|', '<', '>>', 'file']
+
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
+    assert expected_tokens == tokens
+    assert expected_raw_tokens == raw_tokens
+
+def test_tokens_for_completion_quoted_redirect(cmd2_app):
+    text = '>file'
+    line = 'command "{}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    cmd2_app.allow_redirection = True
+    expected_tokens = ['command', '>file']
+    expected_raw_tokens = ['command', '">file']
+
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
+    assert expected_tokens == tokens
+    assert expected_raw_tokens == raw_tokens
+
+def test_tokens_for_completion_redirect_off(cmd2_app):
+    text = '>file'
+    line = 'command {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    cmd2_app.allow_redirection = False
+    expected_tokens = ['command', '>file']
+    expected_raw_tokens = ['command', '>file']
+
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
+    assert expected_tokens == tokens
+    assert expected_raw_tokens == raw_tokens
 
 def test_parseline_command_and_args(cmd2_app):
     line = 'help history'
