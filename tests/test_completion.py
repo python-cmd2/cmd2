@@ -631,12 +631,15 @@ def test_parseline_expands_shortcuts(cmd2_app):
 
 
 class SubcommandsExample(cmd2.Cmd):
-    """ Example cmd2 application where we a base command which has a couple subcommands."""
+    """
+    Example cmd2 application where we a base command which has a couple subcommands
+    and the "sport" subcommand has tab completion enabled.
+    """
 
     def __init__(self):
         cmd2.Cmd.__init__(self)
 
-    # sub-command functions for the base command
+    # subcommand functions for the base command
     def base_foo(self, args):
         """foo subcommand of base command"""
         self.poutput(args.x * args.y)
@@ -649,6 +652,7 @@ class SubcommandsExample(cmd2.Cmd):
         """sport subcommand of base command"""
         self.poutput('Sport is {}'.format(args.sport))
 
+    # noinspection PyUnusedLocal
     def complete_base_sport(self, text, line, begidx, endidx):
         """ Adds tab completion to base sport subcommand """
         index_dict = {1: sport_item_strs}
@@ -658,13 +662,13 @@ class SubcommandsExample(cmd2.Cmd):
     base_parser = argparse.ArgumentParser(prog='base')
     base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
 
-    # create the parser for the "foo" sub-command
+    # create the parser for the "foo" subcommand
     parser_foo = base_subparsers.add_parser('foo', help='foo help')
     parser_foo.add_argument('-x', type=int, default=1, help='integer')
     parser_foo.add_argument('y', type=float, help='float')
     parser_foo.set_defaults(func=base_foo)
 
-    # create the parser for the "bar" sub-command
+    # create the parser for the "bar" subcommand
     parser_bar = base_subparsers.add_parser('bar', help='bar help')
     parser_bar.add_argument('z', help='string')
     parser_bar.set_defaults(func=base_bar)
@@ -672,7 +676,9 @@ class SubcommandsExample(cmd2.Cmd):
     # create the parser for the "sport" subcommand
     parser_sport = base_subparsers.add_parser('sport', help='sport help')
     parser_sport.add_argument('sport', help='Enter name of a sport')
-    parser_sport.set_defaults(func=base_sport)
+
+    # Set both a function and tab completer for the "sport" subcommand
+    parser_sport.set_defaults(func=base_sport, completer=complete_base_sport)
 
     @cmd2.with_argparser(base_parser)
     def do_base(self, args):
@@ -682,11 +688,11 @@ class SubcommandsExample(cmd2.Cmd):
             # Call whatever subcommand function was selected
             func(self, args)
         else:
-            # No sub-command was provided, so as called
+            # No subcommand was provided, so call help
             self.do_help('base')
 
-    def complete_base(self, text, line, begidx, endidx):
-        return self.cmd_with_subs_completer(text, line, begidx, endidx, base='base')
+    # Enable tab completion of base to make sure the subcommands' completers get called.
+    complete_base = cmd2.Cmd.cmd_with_subs_completer
 
 
 @pytest.fixture

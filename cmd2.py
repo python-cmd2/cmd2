@@ -430,8 +430,19 @@ def with_argparser(argparser):
 
         # If there are subcommands, store their names in a list to support tab-completion of subcommand names
         if argparser._subparsers is not None:
-            subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
-            cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
+
+            # Key is subcommand name and value is completer function
+            subcommands = collections.OrderedDict()
+
+            # Get all subcommands and check if they have completer functions
+            for name, parser in argparser._subparsers._group_actions[0]._name_parser_map.items():
+                if 'completer' in parser._defaults:
+                    completer = parser._defaults['completer']
+                else:
+                    completer = None
+                subcommands[name] = completer
+
+            cmd_wrapper.__dict__['subcommands'] = subcommands
 
         return cmd_wrapper
 
@@ -1214,8 +1225,8 @@ class Cmd(cmd.Cmd):
 
     def get_subcommands(self, command):
         """
-        Returns a list of a command's subcommands if they exist
-        :param command:
+        Returns a list of a command's subcommand names if they exist
+        :param command: the command we are querying
         :return: A subcommand list or None
         """
 
@@ -1227,9 +1238,33 @@ class Cmd(cmd.Cmd):
         if funcname:
             # Check to see if this function was decorated with an argparse ArgumentParser
             func = getattr(self, funcname)
-            subcommand_names = func.__dict__.get('subcommand_names', None)
+            subcommands = func.__dict__.get('subcommands', None)
+            if subcommands is not None:
+                subcommand_names = subcommands.keys()
 
         return subcommand_names
+
+    def get_subcommand_completer(self, command, subcommand):
+        """
+        Returns a subcommand's tab completion function if one exists
+        :param command: command which owns the subcommand
+        :param subcommand: the subcommand we are querying
+        :return: A completer or None
+        """
+
+        completer = None
+
+        # Check if is a valid command
+        funcname = self._func_named(command)
+
+        if funcname:
+            # Check to see if this function was decorated with an argparse ArgumentParser
+            func = getattr(self, funcname)
+            subcommands = func.__dict__.get('subcommands', None)
+            if subcommands is not None:
+                completer = subcommands[subcommand]
+
+        return completer
 
     # -----  Methods related to tab completion -----
 
@@ -3069,40 +3104,40 @@ Usage:  Usage: unalias [-a] name [name ...]
         index_dict = {1: self.shell_cmd_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
-    def cmd_with_subs_completer(self, text, line, begidx, endidx, base):
+    def cmd_with_subs_completer(self, text, line, begidx, endidx):
         """
         This is a function provided for convenience to those who want an easy way to add
         tab completion to functions that implement subcommands. By setting this as the
         completer of the base command function, the correct completer for the chosen subcommand
         will be called.
 
-        The use of this function requires a particular naming scheme.
+        The use of this function requires assigning a completer function to the subcommand's parser
         Example:
-            A command called print has 2 subcommands [names, addresses]
-            The tab-completion functions for the subcommands must be called:
-            names      -> complete_print_names
-            addresses  -> complete_print_addresses
+            A command called print has a subcommands called 'names' that needs a tab completer
+            When you create the parser for names, include the completer function in the parser's defaults.
 
-            To make sure these functions get called, set the tab-completer for the print function
-            in a similar fashion to what follows where base is the name of the root command (print)
+            names_parser.set_defaults(func=print_names, completer=complete_print_names)
 
-            def complete_print(self, text, line, begidx, endidx):
-                return self.cmd_with_subs_completer(text, line, begidx, endidx, base='print')
+            To make sure the names completer gets called, set the completer for the print function
+            in a similar fashion to what follows.
 
-            When the subcommand's completer is called, this function will have stripped off all content from the
-            beginning of the command line before the subcommand, meaning the line parameter always starts with the
-            subcommand name and the index parameters reflect this change.
+            complete_print = cmd2.Cmd.cmd_with_subs_completer
 
-            For instance, the command "print names -d 2" becomes "names -d 2"
-            begidx and endidx are incremented accordingly
+        When the subcommand's completer is called, this function will have stripped off all content from the
+        beginning of the command line before the subcommand, meaning the line parameter always starts with the
+        subcommand name and the index parameters reflect this change.
+
+        For instance, the command "print names -d 2" becomes "names -d 2"
+        begidx and endidx are incremented accordingly
 
         :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: str - the current input line with leading whitespace removed
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
-        :param base: str - the name of the base command that owns the subcommands
         :return: List[str] - a sorted list of possible tab completions
         """
+        # The command is the token at index 0 in the command line
+        cmd_index = 0
 
         # The subcommand is the token at index 1 in the command line
         subcmd_index = 1
@@ -3119,6 +3154,9 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         # If the token being completed is past the subcommand name, then do subcommand specific tab-completion
         if index > subcmd_index:
+
+            # Get the command name
+            command = tokens[cmd_index]
 
             # Get the subcommand name
             subcommand = tokens[subcmd_index]
@@ -3142,11 +3180,9 @@ Usage:  Usage: unalias [-a] name [name ...]
             endidx -= diff
 
             # Call the subcommand specific completer if it exists
-            completer = 'complete_{}_{}'.format(base, subcommand)
-            compfunc = getattr(self, completer, None)
-
+            compfunc = self.get_subcommand_completer(command, subcommand)
             if compfunc is not None:
-                matches = compfunc(text, line, begidx, endidx)
+                matches = compfunc(self, text, line, begidx, endidx)
 
         return matches
 

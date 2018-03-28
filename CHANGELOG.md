@@ -15,6 +15,10 @@
     * ``exclude_from_help`` is now called ``hidden_commands`` since these commands are hidden from things other than help, including tab completion
         * This list also no longer takes the function names of commands (``do_history``), but instead uses the command names themselves (``history``)
     * ``excludeFromHistory`` is now called ``exclude_from_history``
+    * ``cmd_with_subs_completer()`` no longer takes an argument called ``base``. Adding tab completion to subcommands has been simplified to declaring it in the
+    subcommand parser's default settings. This easily allows arbitrary completers like path_complete to be used.
+    See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use
+    tab completion in subcommands. In addition, the docstring for ``cmd_with_subs_completer()`` offers more details.
 
 
 ## 0.8.2 (March 21, 2018)
@@ -75,7 +79,7 @@
     *  See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
         * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
         and [arg_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) examples
-    * Added support for Argpasre sub-commands when using the **with_argument_parser** or **with_argparser_and_unknown_args** decorators
+    * Added support for Argparse sub-commands when using the **with_argument_parser** or **with_argparser_and_unknown_args** decorators
         * See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use subcommands
         * Tab-completion of sub-command names is automatically supported
     * The **__relative_load** command is now hidden from the help menu by default
