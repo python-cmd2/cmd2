@@ -71,6 +71,8 @@ EXTRAS_REQUIRE = {
     ":sys_platform=='win32'": ['pyreadline'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
     ":python_version<'3.5'": ['contextlib2'],
+    # Python 3.3 and earlier require enum34 backport of enum module from Python 3.4
+    ":python_version<'3.4'": ['enum34'],
     # Python 2.7 also requires subprocess32
     ":python_version<'3.0'": ['subprocess32'],
 }
@@ -81,6 +83,8 @@ if int(setuptools.__version__.split('.')[0]) < 18:
         INSTALL_REQUIRES.append('pyreadline')
     if sys.version_info < (3, 5):
         INSTALL_REQUIRES.append('contextlib2')
+    if sys.version_info < (3, 4):
+        INSTALL_REQUIRES.append('enum34')
     if sys.version_info < (3, 0):
         INSTALL_REQUIRES.append('subprocess32')
 
