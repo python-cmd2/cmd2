@@ -345,3 +345,8 @@ which inherits from ``cmd2.Cmd``::
 
     # Make sure you have an "import functools" somewhere at the top
     complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True)
+
+    # Since Python 2 does not have functools.partialmethod(), you can achieve the
+    # same thing by implementing a tab completion function
+    def complete_bar(self, text, line, begidx, endidx):
+        return self.path_complete(text, line, begidx, endidx, dir_only=True)

@@ -44,7 +44,11 @@ import tempfile
 import traceback
 import unittest
 from code import InteractiveConsole
-from enum import Enum
+
+try:
+    from enum34 import Enum
+except ImportError:
+    from enum import Enum
 
 import pyparsing
 import pyperclip
@@ -2137,7 +2141,7 @@ class Cmd(cmd.Cmd):
                 if self.allow_appended_space and endidx == len(line):
                     str_to_append += ' '
 
-                self.completion_matches[0] = self.completion_matches[0] + str_to_append
+                self.completion_matches[0] += str_to_append
 
         try:
             return self.completion_matches[state]
