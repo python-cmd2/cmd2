@@ -134,14 +134,13 @@ except ImportError:
         pass
 
 
-# Tells what implementation of readline we are using
+# Check what implementation of readline we are using
 class RlType(Enum):
     GNU = 1
     PYREADLINE = 2
     NONE = 3
 
 
-# Check what implementation of readline we are using
 rl_type = RlType.NONE
 
 if 'pyreadline' in sys.modules:
@@ -151,24 +150,16 @@ if 'pyreadline' in sys.modules:
     # noinspection PyProtectedMember
     orig_pyreadline_display = readline.rl.mode._display_completions
 
-else:
-    readline_lib_path = ''
-
-    if 'gnureadline' in sys.modules:
-        readline_lib_path = sys.modules['gnureadline'].__dict__['__file__']
-    elif 'readline' in sys.modules:
-        readline_lib_path = sys.modules['readline'].__dict__['__file__']
+elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
+    rl_type = RlType.GNU
 
     # Load the readline lib so we can make changes to it
-    if readline_lib_path:
-        rl_type = RlType.GNU
+    import ctypes
+    readline_lib = ctypes.CDLL(readline.__file__)
 
-        import ctypes
-        readline_lib = ctypes.CDLL(readline_lib_path)
-
-        # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
-        rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-        orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+    # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
+    rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+    orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
 
 
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
