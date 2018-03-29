@@ -203,7 +203,7 @@ STRIP_QUOTES_FOR_NON_POSIX = True
 # For @options commands, pass a list of argument strings instead of a single argument string to the do_* methods
 USE_ARG_LIST = True
 
-# Used for tab completion. Do not change.
+# Used for tab completion and word breaks. Do not change.
 QUOTES = ['"', "'"]
 REDIRECTION_CHARS = ['|', '<', '>']
 
@@ -1061,7 +1061,7 @@ class Cmd(cmd.Cmd):
         self.allow_appended_space = True
 
         # If true and a single match is returned to complete(), then a closing quote
-        # will be added if there is an umatched opening quote
+        # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
         # If the tab-completion matches should be displayed in a way that is different than the actual match values,
@@ -2718,7 +2718,7 @@ class Cmd(cmd.Cmd):
                 readline.set_completer(self.complete)
 
                 # Break words on whitespace and quotes when tab completing
-                completer_delims = " \t\n\"'"
+                completer_delims = " \t\n" + ''.join(QUOTES)
 
                 if self.allow_redirection:
                     # If redirection is allowed, then break words on those characters too
