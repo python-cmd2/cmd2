@@ -1373,7 +1373,7 @@ class Cmd(cmd.Cmd):
 
             # Since redirection is enabled, we need to treat redirection characters (|, <, >)
             # as word breaks when they are in unquoted strings. Go through each token
-            # and further split them these characters. Each run of redirect characters
+            # and further split them on these characters. Each run of redirect characters
             # is treated as a single token.
             raw_tokens = []
 
