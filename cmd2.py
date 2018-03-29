@@ -2785,7 +2785,8 @@ Usage:  Usage: alias [<name> <value>]
         value - what the alias will be resolved to
                 this can contain spaces and does not need to be quoted
 
-    Without arguments, `alias' prints a list of all aliases in a resuable form
+    Without arguments, 'alias' prints a list of all aliases in a reusable form which
+    can be outputted to a startup_script to preserve aliases across sessions.
 
     Example: alias ls !ls -lF
 """
