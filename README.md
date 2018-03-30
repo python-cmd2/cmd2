@@ -82,10 +82,10 @@ Instructions for implementing each feature follow.
 
 - Searchable command history
 
-    All commands will automatically be tracked in the session's history, unless the command is listed in Cmd's excludeFromHistory attribute.
+    All commands will automatically be tracked in the session's history, unless the command is listed in Cmd's exclude_from_history attribute.
     The history is accessed through the `history` command.
     If you wish to exclude some of your custom commands from the history, append their names
-    to the list at `Cmd.ExcludeFromHistory`.
+    to the list at `Cmd.exclude_from_history`.
 
 - Load commands from file, save to file, edit commands in file
 
@@ -137,7 +137,7 @@ Tutorials
 
 A few tutorials on using cmd2 exist:
 
-* Florida PyCon 2017 talk: [slides](https://docs.google.com/presentation/d/1LRmpfBt3V-pYQfgQHdczf16F3hcXmhK83tl77R6IJtE)
+* Florida PyCon 2017 talk: [slides](https://docs.google.com/presentation/d/1LRmpfBt3V-pYQfgQHdczf16F3hcXmhK83tl77R6IJtE), [video](https://www.youtube.com/watch?v=6m0RdpITaeY)
 * PyCon 2010 talk by Catherine Devlin, the original author: [video](http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html)
 * A nice brief step-by-step tutorial: [blog](https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html)
 

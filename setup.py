@@ -4,6 +4,8 @@
 Setuptools setup file, used to install or test 'cmd2'
 """
 import sys
+
+import setuptools
 from setuptools import setup
 
 VERSION = '0.8.2'
@@ -64,17 +66,27 @@ Topic :: Software Development :: Libraries :: Python Modules
 
 INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'ply', 'pyperclip', 'six']
 
-# Windows also requires pyreadline to ensure tab completion works
-if sys.platform.startswith('win'):
-    INSTALL_REQUIRES += ['pyreadline']
+EXTRAS_REQUIRE = {
+    # Windows also requires pyreadline to ensure tab completion works
+    ":sys_platform=='win32'": ['pyreadline'],
+    # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
+    ":python_version<'3.5'": ['contextlib2'],
+    # Python 3.3 and earlier require enum34 backport of enum module from Python 3.4
+    ":python_version<'3.4'": ['enum34'],
+    # Python 2.7 also requires subprocess32
+    ":python_version<'3.0'": ['subprocess32'],
+}
 
-# Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
-if sys.version_info < (3, 5):
-    INSTALL_REQUIRES += ['contextlib2']
-
-# Python 2.7 also requires subprocess32
-if sys.version_info < (3, 0):
-    INSTALL_REQUIRES += ['subprocess32']
+if int(setuptools.__version__.split('.')[0]) < 18:
+    EXTRAS_REQUIRE = {}
+    if sys.platform.startswith('win'):
+        INSTALL_REQUIRES.append('pyreadline')
+    if sys.version_info < (3, 5):
+        INSTALL_REQUIRES.append('contextlib2')
+    if sys.version_info < (3, 4):
+        INSTALL_REQUIRES.append('enum34')
+    if sys.version_info < (3, 0):
+        INSTALL_REQUIRES.append('subprocess32')
 
 # unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
 TESTS_REQUIRE = ['mock', 'pytest', 'pytest-xdist']
@@ -94,5 +106,6 @@ setup(
     py_modules=["cmd2"],
     keywords='command prompt console cmd',
     install_requires=INSTALL_REQUIRES,
+    extras_require=EXTRAS_REQUIRE,
     tests_require=TESTS_REQUIRE,
 )

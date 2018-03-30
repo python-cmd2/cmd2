@@ -333,8 +333,7 @@ Additionally, it is trivial to add identical file system path completion to your
 have defined a custom command ``foo`` by implementing the ``do_foo`` method.  To enable path completion for the ``foo``
 command, then add a line of code similar to the following to your class which inherits from ``cmd2.Cmd``::
 
-    # Make sure you have an "import functools" somewhere at the top
-    complete_foo = functools.partial(path_complete)
+    complete_foo = self.path_complete
 
 This will effectively define the ``complete_foo`` readline completer method in your class and make it utilize the same
 path completion logic as the built-in commands.
@@ -345,4 +344,9 @@ path completion of directories only for this command by adding a line of code si
 which inherits from ``cmd2.Cmd``::
 
     # Make sure you have an "import functools" somewhere at the top
-    complete_bar = functools.partial(path_complete, dir_only=True)
+    complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True)
+
+    # Since Python 2 does not have functools.partialmethod(), you can achieve the
+    # same thing by implementing a tab completion function
+    def complete_bar(self, text, line, begidx, endidx):
+        return self.path_complete(text, line, begidx, endidx, dir_only=True)

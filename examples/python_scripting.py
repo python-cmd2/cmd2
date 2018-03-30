@@ -15,7 +15,6 @@ command and the "pyscript <script> [arguments]" syntax comes into play.
 This application and the "scripts/conditional.py" script serve as an example for one way in which this can be done.
 """
 import argparse
-import functools
 import os
 
 import cmd2
@@ -82,8 +81,9 @@ class CmdLineApp(cmd2.Cmd):
             self.perror(err, traceback_war=False)
         self._last_result = cmd2.CmdResult(out, err)
 
-    # Enable directory completion for cd command by freezing an argument to path_complete() with functools.partial
-    complete_cd = functools.partial(cmd2.path_complete, dir_only=True)
+    # Enable tab completion for cd command
+    def complete_cd(self, text, line, begidx, endidx):
+        return self.path_complete(text, line, begidx, endidx, dir_only=True)
 
     dir_parser = argparse.ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")

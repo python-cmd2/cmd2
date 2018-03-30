@@ -2,7 +2,6 @@
 # coding=utf-8
 """A simple example demonstrating the using paged output via the ppaged() method.
 """
-import functools
 
 import cmd2
 from cmd2 import with_argument_list
@@ -25,7 +24,7 @@ class PagedOutput(cmd2.Cmd):
             text = f.read()
         self.ppaged(text)
 
-    complete_page_file = functools.partial(cmd2.path_complete)
+    complete_page_file = cmd2.Cmd.path_complete
 
 
 if __name__ == '__main__':

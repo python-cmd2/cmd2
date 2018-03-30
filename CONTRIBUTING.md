@@ -282,7 +282,7 @@ py.test -nauto --forked
 Code coverage can be measured as follows:
 
 ```shell
-py.test -nauto --cov=cmd2 --cov-report=term-missing --cov-report=html
+py.test -nauto --cov=cmd2 --cov-report=term-missing --cov-report=html --forked
 ```
 
 Then use your web browser of choice to look at the results which are in `<cmd2>/htmlcov/index.html`.
