@@ -7,15 +7,17 @@ This example shows an easy way for a single command to have many subcommands, ea
 and provides separate contextual help.
 """
 import argparse
-import functools
-import sys
 
 import cmd2
-from cmd2 import with_argparser, index_based_complete
+from cmd2 import with_argparser
 
+sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
 class SubcommandsExample(cmd2.Cmd):
-    """ Example cmd2 application where we a base command which has a couple subcommands."""
+    """
+    Example cmd2 application where we a base command which has a couple subcommands
+    and the "sport" subcommand has tab completion enabled.
+    """
 
     def __init__(self):
         cmd2.Cmd.__init__(self)
@@ -36,9 +38,8 @@ class SubcommandsExample(cmd2.Cmd):
     # noinspection PyUnusedLocal
     def complete_base_sport(self, text, line, begidx, endidx):
         """ Adds tab completion to base sport subcommand """
-        sports = ['Football', 'Hockey', 'Soccer', 'Baseball']
-        index_dict = {1: sports}
-        return index_based_complete(text, line, begidx, endidx, index_dict)
+        index_dict = {1: sport_item_strs}
+        return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
@@ -58,7 +59,9 @@ class SubcommandsExample(cmd2.Cmd):
     # create the parser for the "sport" subcommand
     parser_sport = base_subparsers.add_parser('sport', help='sport help')
     parser_sport.add_argument('sport', help='Enter name of a sport')
-    parser_sport.set_defaults(func=base_sport)
+
+    # Set both a function and tab completer for the "sport" subcommand
+    parser_sport.set_defaults(func=base_sport, completer=complete_base_sport)
 
     @with_argparser(base_parser)
     def do_base(self, args):
@@ -71,10 +74,8 @@ class SubcommandsExample(cmd2.Cmd):
             # No subcommand was provided, so call help
             self.do_help('base')
 
-    # functools.partialmethod was added in Python 3.4
-    if sys.version_info >= (3, 4):
-        # This makes sure correct tab completion functions are called based on the selected subcommand
-        complete_base = functools.partialmethod(cmd2.Cmd.cmd_with_subs_completer, base='base')
+    # Enable tab completion of base to make sure the subcommands' completers get called.
+    complete_base = cmd2.Cmd.cmd_with_subs_completer
 
 
 if __name__ == '__main__':

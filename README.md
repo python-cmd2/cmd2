@@ -82,10 +82,10 @@ Instructions for implementing each feature follow.
 
 - Searchable command history
 
-    All commands will automatically be tracked in the session's history, unless the command is listed in Cmd's excludeFromHistory attribute.
+    All commands will automatically be tracked in the session's history, unless the command is listed in Cmd's exclude_from_history attribute.
     The history is accessed through the `history` command.
     If you wish to exclude some of your custom commands from the history, append their names
-    to the list at `Cmd.ExcludeFromHistory`.
+    to the list at `Cmd.exclude_from_history`.
 
 - Load commands from file, save to file, edit commands in file
 
