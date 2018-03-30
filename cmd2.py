@@ -1502,7 +1502,7 @@ class Cmd(cmd.Cmd):
             if flag in flag_dict:
                 match_against = flag_dict[flag]
 
-        # Perform tab completion using an Collection. These matches are already sorted.
+        # Perform tab completion using a Collection. These matches are already sorted.
         if isinstance(match_against, Collection):
             completions_matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
@@ -1546,7 +1546,7 @@ class Cmd(cmd.Cmd):
         else:
             match_against = all_else
 
-        # Perform tab completion using an Collection. These matches are already sorted.
+        # Perform tab completion using a Collection. These matches are already sorted.
         if isinstance(match_against, Collection):
             matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
