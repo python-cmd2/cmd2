@@ -30,11 +30,16 @@ class Cmd2Lexer():
         self.results = Cmd2Command()
 
     tokens = (
-        'HASHCOMMENT', 'WORD', 'DQWORD', 'SQWORD',
+        'HASHCOMMENT', 'CCOMMENT', 'WORD', 'DQWORD', 'SQWORD',
     )
 
     def t_HASHCOMMENT(self, t):
         r'\#.*'
+        # no return value, token discarded
+        pass
+    
+    def t_CCOMMENT(self, t):
+        r'/\*.*\*/'
         # no return value, token discarded
         pass
     
@@ -125,13 +130,23 @@ def test_lex_command_with_args(cl):
     assert tok.type == 'WORD'
     assert tok.value == 'args'
 
-def test_lex_comment(cl):
+def test_lex_hashcomment(cl):
     cl.lexer.input('hi # this is all a comment')
     tok = cl.lexer.token()
     assert tok.type == 'WORD'
     assert tok.value == 'hi'
     assert not cl.lexer.token()
 
+def test_lex_ccomment(cl):
+    cl.lexer.input('hi /* comment */ there')
+    tok = cl.lexer.token()
+    assert tok.type == 'WORD'
+    assert tok.value == 'hi'
+    tok = cl.lexer.token()
+    assert tok.type == 'WORD'
+    assert tok.value == 'there'
+    assert not cl.lexer.token()
+    
 def test_parse_command(cl):
     cl.parser.parse('plainword')
     assert cl.results.command == 'plainword'
