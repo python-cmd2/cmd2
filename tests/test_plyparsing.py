@@ -1,6 +1,13 @@
 # coding=utf-8
 """
 Unit/functional testing for ply based parsing in cmd2
+
+Notes:
+
+- Shortcuts may have to be discarded, or handled in a different way than they
+  are with pyparsing.
+- 
+
 """
 
 import pytest
@@ -23,10 +30,15 @@ class Cmd2Lexer():
         self.results = Cmd2Command()
 
     tokens = (
-        'WORD', 'DQWORD', 'SQWORD',
+        'HASHCOMMENT', 'WORD', 'DQWORD', 'SQWORD',
     )
 
-    t_WORD = r"[-A-z0-9_]+"
+    def t_HASHCOMMENT(self, t):
+        r'\#.*'
+        # no return value, token discarded
+        pass
+    
+    t_WORD = r'[-A-z0-9_$%\.:\?@!]+'
     t_DQWORD = r'"(?:[^"\\]|\\.)*"'
     t_SQWORD = r"'(?:[^'\\]|\\.)*'"
 
@@ -37,25 +49,25 @@ class Cmd2Lexer():
     def build_lexer(self, **kwargs):
         self.lexer = lex.lex(module=self, **kwargs)
 
-    def p_arglist_add_argument(self, p):
-        'command : command word'
+    def p_command_add_word(self, p):
+        'wordlist : wordlist word'
         p[0] = '{} {}'.format(p[1], p[2])
         self.results.command = p[0]
 
-    def p_arglist_argument(self, p):
-        'command : word'
+    def p_command_word(self, p):
+        'wordlist : word'
         p[0] = p[1]
         self.results.command = p[0]
 
-    def p_argument_word(self, p):
+    def p_word_word(self, p):
         'word : WORD'
         p[0] = p[1]
 
-    def p_argument_dqword(self, p):
+    def p_word_dqword(self, p):
         'word : DQWORD'
         p[0] = p[1]
 
-    def p_argument_sqword(self, p):
+    def p_word_sqword(self, p):
         'word : SQWORD'
         p[0] = p[1]
 
@@ -93,7 +105,14 @@ def test_lex_sqword(cl):
     assert tok.type == 'SQWORD'
     assert tok.value == "'one word'"
     assert not cl.lexer.token()
-    
+
+def test_lex_dotword(cl):
+    cl.lexer.input('dot.word')
+    tok = cl.lexer.token()
+    assert tok.type == 'WORD'
+    assert tok.value == 'dot.word'
+    assert not cl.lexer.token()
+        
 def test_lex_command_with_args(cl):
     cl.lexer.input('123456 with args')
     tok = cl.lexer.token()
@@ -105,6 +124,13 @@ def test_lex_command_with_args(cl):
     tok = cl.lexer.token()
     assert tok.type == 'WORD'
     assert tok.value == 'args'
+
+def test_lex_comment(cl):
+    cl.lexer.input('hi # this is all a comment')
+    tok = cl.lexer.token()
+    assert tok.type == 'WORD'
+    assert tok.value == 'hi'
+    assert not cl.lexer.token()
 
 def test_parse_command(cl):
     cl.parser.parse('plainword')
@@ -129,3 +155,7 @@ def test_parse_command_with_dqarg_and_arg(cl):
 def test_parse_command_with_sqarg_and_arg(cl):
     cl.parser.parse("command 'with   dqarg' onemore   lastone")
     assert cl.results.command == "command 'with   dqarg' onemore lastone"
+
+def test_parse_command_with_comment(cl):
+    cl.parser.parse('command # with a comment')
+    assert cl.results.command == 'command'
