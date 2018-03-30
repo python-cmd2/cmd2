@@ -2055,14 +2055,12 @@ class Cmd(cmd.Cmd):
                     self.completion_matches = []
                     return None
 
-                # readline still performs word breaks in quotes. Therefore quoted search text with
-                # a space would have resulted in begidx pointing to the middle of the token we want
-                # to complete. Figure out where that token actually begins.
+                # readline still performs word breaks after a quote. Therefore something like quoted search
+                # text with a space would have resulted in begidx pointing to the middle of the token we
+                # we want to complete. Figure out where that token actually begins and save the beginning
+                # portion of it that was not part of the text readline gave us. We will remove it from the
+                # completions later since readline expects them to start with the original text.
                 actual_begidx = line[:endidx].rfind(tokens[-1])
-
-                # If actual_begidx is different than what readline gave us, save the beginning portion
-                # of the completion token that does not belong in text. We will remove it from the
-                # completions later since readline expects our completions to start with the original text.
                 text_to_remove = ''
 
                 if actual_begidx != begidx:
@@ -2072,9 +2070,6 @@ class Cmd(cmd.Cmd):
                     # get unbroken search text to complete on.
                     text = text_to_remove + text
                     begidx = actual_begidx
-
-                # Get the tokens with preserved quotes
-                raw_completion_token = raw_tokens[-1]
 
                 # Check if a valid command was entered
                 if command in self.get_all_commands():
@@ -2107,9 +2102,12 @@ class Cmd(cmd.Cmd):
 
                 if len(self.completion_matches) > 0:
 
+                    # Get the token being completed as it appears on the command line
+                    raw_completion_token = raw_tokens[-1]
+
                     # Add an opening quote if needed
                     if self._handle_completion_token_quote(raw_completion_token):
-                        # An opening quote was added and the screen was updated. Return no results
+                        # An opening quote was added and the screen was updated. Return no results.
                         self.completion_matches = []
                         return None
 
@@ -2131,17 +2129,9 @@ class Cmd(cmd.Cmd):
                             self.completion_matches = \
                                 [shortcut_to_restore + match for match in self.completion_matches]
 
-                    # Check if the token being completed has an unclosed quote
-                    if len(raw_completion_token) == 1:
-                        first_char = raw_completion_token[0]
-                        if first_char in QUOTES:
-                            unclosed_quote = first_char
-
-                    elif len(raw_completion_token) > 1:
-                        first_char = raw_completion_token[0]
-                        last_char = raw_completion_token[-1]
-                        if first_char in QUOTES and first_char != last_char:
-                            unclosed_quote = first_char
+                    # If the token being completed starts with a quote then we know it has an unclosed quote
+                    if len(raw_completion_token) > 0 and raw_completion_token[0] in QUOTES:
+                        unclosed_quote = raw_completion_token[0]
 
             else:
                 # Complete token against aliases and command names
