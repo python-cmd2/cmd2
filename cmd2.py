@@ -2105,9 +2105,9 @@ class Cmd(cmd.Cmd):
 
             else:
                 # Complete token against aliases and command names
-                alias_names = list(self.aliases.keys())
-                visible_commands = self.get_visible_commands()
-                strs_to_match = alias_names + visible_commands
+                alias_names = set(self.aliases.keys())
+                visible_commands = set(self.get_visible_commands())
+                strs_to_match = list(alias_names | visible_commands)
                 self.completion_matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
             # Handle single result
@@ -2754,12 +2754,6 @@ Usage:  Usage: alias [<name> <value>]
         elif len(arglist) >= 2:
             name = arglist[0]
             value = ' '.join(arglist[1:])
-
-            # Make sure the alias does not match an existing command
-            cmd_func = self._func_named(name)
-            if cmd_func is not None:
-                self.perror("Alias names cannot match an existing command: {!r}".format(name), traceback_war=False)
-                return
 
             # Check for a valid name
             for cur_char in name:

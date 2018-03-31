@@ -1560,11 +1560,6 @@ def test_alias(base_app, capsys):
     out = run_cmd(base_app, 'alias')
     assert out == normalize('alias fake pyscript')
 
-def test_alias_with_cmd_name(base_app, capsys):
-    run_cmd(base_app, 'alias help eos')
-    out, err = capsys.readouterr()
-    assert "cannot match an existing command" in err
-
 def test_alias_with_invalid_name(base_app, capsys):
     run_cmd(base_app, 'alias @ help')
     out, err = capsys.readouterr()
