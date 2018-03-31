@@ -10,6 +10,7 @@
     * Added more control over tab completion behavior including the following flags. The use of these flags is documented in cmd2.py
         * ``allow_appended_space``
         * ``allow_closing_quote``
+    * Due to the tab completion changes, non-Windows platforms now depend on [wcwidth](https://pypi.python.org/pypi/wcwidth).
 
 * Attribute Changes (Breaks backward compatibility)
     * ``exclude_from_help`` is now called ``hidden_commands`` since these commands are hidden from things other than help, including tab completion
