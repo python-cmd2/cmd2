@@ -2183,9 +2183,9 @@ class Cmd(cmd.Cmd):
         if index == cmd_index:
 
             # Complete token against topics and visible commands
-            topics = self.get_help_topics()
-            visible_commands = self.get_visible_commands()
-            strs_to_match = topics + visible_commands
+            topics = set(self.get_help_topics())
+            visible_commands = set(self.get_visible_commands())
+            strs_to_match = list(topics | visible_commands)
             matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
         # Check if we are completing a subcommand
