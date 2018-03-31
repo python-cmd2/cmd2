@@ -2065,6 +2065,13 @@ class Cmd(cmd.Cmd):
 
                 if len(self.completion_matches) > 0:
 
+                    # Eliminate duplicates
+                    matches_set = set(self.completion_matches)
+                    self.completion_matches = list(matches_set)
+
+                    display_matches_set = set(self.display_matches)
+                    self.display_matches = list(display_matches_set)
+
                     # Get the token being completed as it appears on the command line
                     raw_completion_token = raw_tokens[-1]
 
@@ -2103,15 +2110,6 @@ class Cmd(cmd.Cmd):
                 strs_to_match = alias_names + visible_commands
                 self.completion_matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
-            # Eliminate duplicates and sort
-            matches_set = set(self.completion_matches)
-            self.completion_matches = list(matches_set)
-            self.completion_matches.sort()
-
-            display_matches_set = set(self.display_matches)
-            self.display_matches = list(display_matches_set)
-            self.display_matches.sort()
-
             # Handle single result
             if len(self.completion_matches) == 1:
                 str_to_append = ''
@@ -2125,6 +2123,11 @@ class Cmd(cmd.Cmd):
                     str_to_append += ' '
 
                 self.completion_matches[0] += str_to_append
+
+            # Otherwise sort matches
+            elif len(self.completion_matches) > 0:
+                self.completion_matches.sort()
+                self.display_matches.sort()
 
         try:
             return self.completion_matches[state]
