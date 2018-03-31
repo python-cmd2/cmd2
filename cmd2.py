@@ -1401,17 +1401,9 @@ class Cmd(cmd.Cmd):
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
         :param match_against: Collection - the list being matched against
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
-        # Make sure we were given a Collection with items to match against
-        if not isinstance(match_against, Collection) or len(match_against) == 0:
-            return []
-
-        # Perform matching and eliminate duplicates
-        matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(text)]
-
-        matches.sort()
-        return matches
+        return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
     def delimiter_complete(self, text, line, begidx, endidx, match_against, delimiter):
         """
@@ -1444,7 +1436,7 @@ class Cmd(cmd.Cmd):
         :param endidx: int - the ending index of the prefix text
         :param match_against: Collection - the list being matched against
         :param delimiter: str - what delimits each portion of the matches (ex: paths are delimited by a slash)
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
@@ -1486,7 +1478,7 @@ class Cmd(cmd.Cmd):
                                     2. function that performs tab completion (ex: path_complete)
         :param all_else: Collection or function - an optional parameter for tab completing any token that isn't preceded
                                                   by a flag in flag_dict
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -1502,14 +1494,13 @@ class Cmd(cmd.Cmd):
             if flag in flag_dict:
                 match_against = flag_dict[flag]
 
-        # Perform tab completion using a Collection. These matches are already sorted.
+        # Perform tab completion using a Collection
         if isinstance(match_against, Collection):
             completions_matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
         elif callable(match_against):
             completions_matches = match_against(text, line, begidx, endidx)
-            completions_matches.sort()
 
         return completions_matches
 
@@ -1528,7 +1519,7 @@ class Cmd(cmd.Cmd):
                                     2. function that performs tab completion (ex: path_complete)
         :param all_else: Collection or function - an optional parameter for tab completing any token that isn't at an
                                                   index in index_dict
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -1546,14 +1537,13 @@ class Cmd(cmd.Cmd):
         else:
             match_against = all_else
 
-        # Perform tab completion using a Collection. These matches are already sorted.
+        # Perform tab completion using a Collection
         if isinstance(match_against, Collection):
             matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
         elif callable(match_against):
             matches = match_against(text, line, begidx, endidx)
-            matches.sort()
 
         return matches
 
@@ -1567,7 +1557,7 @@ class Cmd(cmd.Cmd):
         :param endidx: int - the ending index of the prefix text
         :param dir_exe_only: bool - only return directories and executables, not non-executable files
         :param dir_only: bool - only return directories
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # Determine if a trailing separator should be appended to directory completions
         add_trailing_sep_if_dir = False
@@ -1655,7 +1645,6 @@ class Cmd(cmd.Cmd):
         if tilde_expanded:
             matches = [cur_path.replace(user_path, '~', 1) for cur_path in matches]
 
-        matches.sort()
         return matches
 
     @staticmethod
@@ -1663,7 +1652,7 @@ class Cmd(cmd.Cmd):
         """
         Returns names of executables in a user's path
         :param starts_with: str - what the exes should start with. leave blank for all exes in path.
-        :return: List[str] - a sorted list of matching exe names
+        :return: List[str] - a list of matching exe names
         """
         # Purposely don't match any executable containing wildcards
         wildcards = ['*', '?']
@@ -1685,9 +1674,7 @@ class Cmd(cmd.Cmd):
             for match in matches:
                 exes_set.add(os.path.basename(match))
 
-        exes_list = list(exes_set)
-        exes_list.sort()
-        return exes_list
+        return list(exes_set)
 
     def shell_cmd_complete(self, text, line, begidx, endidx, complete_blank=False):
         """Performs completion of executables either in a user's path or a given path
@@ -1698,7 +1685,7 @@ class Cmd(cmd.Cmd):
         :param complete_blank: bool - If True, then a blank will complete all shell commands in a user's path
                                       If False, then no completion is performed
                                       Defaults to False to match Bash shell behavior
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # Don't tab complete anything if no shell command has been started
         if not complete_blank and len(text) == 0:
@@ -1724,7 +1711,7 @@ class Cmd(cmd.Cmd):
         :param endidx: int - the ending index of the prefix text
         :param compfunc: Callable - the completer function for the current command
                                     this will be called if we aren't completing for redirection
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         if self.allow_redirection:
 
@@ -1794,11 +1781,6 @@ class Cmd(cmd.Cmd):
             else:
                 matches_to_display = matches
 
-            # Eliminate duplicates and sort
-            matches_to_display_set = set(matches_to_display)
-            matches_to_display = list(matches_to_display_set)
-            matches_to_display.sort()
-
             # We will use readline's display function (rl_display_match_list()), so we
             # need to encode our string as bytes to place in a C array.
             if six.PY3:
@@ -1844,11 +1826,6 @@ class Cmd(cmd.Cmd):
                 matches_to_display = self.display_matches
             else:
                 matches_to_display = matches
-
-            # Eliminate duplicates and sort
-            matches_to_display_set = set(matches_to_display)
-            matches_to_display = list(matches_to_display_set)
-            matches_to_display.sort()
 
             # Display the matches
             orig_pyreadline_display(matches_to_display)
@@ -2121,15 +2098,19 @@ class Cmd(cmd.Cmd):
 
             else:
                 # Complete token against aliases and command names
-                alias_names = set(self.aliases.keys())
-                visible_commands = set(self.get_visible_commands())
-                strs_to_match = list(alias_names | visible_commands)
+                alias_names = list(self.aliases.keys())
+                visible_commands = self.get_visible_commands()
+                strs_to_match = alias_names + visible_commands
                 self.completion_matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
             # Eliminate duplicates and sort
             matches_set = set(self.completion_matches)
             self.completion_matches = list(matches_set)
             self.completion_matches.sort()
+
+            display_matches_set = set(self.display_matches)
+            self.display_matches = list(display_matches_set)
+            self.display_matches.sort()
 
             # Handle single result
             if len(self.completion_matches) == 1:
@@ -2152,19 +2133,14 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self):
         """
-        Returns a sorted list of all commands
-        Any duplicates have been removed as well
+        Returns a list of all commands
         """
-        commands = [cur_name[3:] for cur_name in set(self.get_names()) if cur_name.startswith('do_')]
-        commands.sort()
-        return commands
+        return [cur_name[3:] for cur_name in self.get_names() if cur_name.startswith('do_')]
 
     def get_visible_commands(self):
         """
-        Returns a sorted list of commands that have not been hidden
-        Any duplicates have been removed as well
+        Returns a list of commands that have not been hidden
         """
-        # This list is already sorted and has no duplicates
         commands = self.get_all_commands()
 
         # Remove the hidden commands
@@ -2175,13 +2151,13 @@ class Cmd(cmd.Cmd):
         return commands
 
     def get_help_topics(self):
-        """ Returns a sorted list of help topics with all duplicates removed """
-        return [name[5:] for name in set(self.get_names()) if name.startswith('help_')]
+        """ Returns a list of help topics """
+        return [name[5:] for name in self.get_names() if name.startswith('help_')]
 
     def complete_help(self, text, line, begidx, endidx):
         """
         Override of parent class method to handle tab completing subcommands and not showing hidden commands
-        Returns a sorted list of possible tab completions
+        Returns a list of possible tab completions
         """
 
         # The command is the token at index 1 in the command line
@@ -2204,9 +2180,9 @@ class Cmd(cmd.Cmd):
         if index == cmd_index:
 
             # Complete token against topics and visible commands
-            topics = set(self.get_help_topics())
-            visible_commands = set(self.get_visible_commands())
-            strs_to_match = list(topics | visible_commands)
+            topics = self.get_help_topics()
+            visible_commands = self.get_visible_commands()
+            strs_to_match = topics + visible_commands
             matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
         # Check if we are completing a subcommand
@@ -2871,12 +2847,14 @@ Usage:  Usage: unalias [-a] name [name ...]
         """
         # Get a sorted list of help topics
         help_topics = self.get_help_topics()
-
-        cmds_doc = []
-        cmds_undoc = []
+        help_topics.sort()
 
         # Get a sorted list of visible command names
         visible_commands = self.get_visible_commands()
+        visible_commands.sort()
+
+        cmds_doc = []
+        cmds_undoc = []
 
         for command in visible_commands:
             if command in help_topics:
@@ -3067,7 +3045,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         :param line: str - the current input line with leading whitespace removed
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         index_dict = {1: self.shell_cmd_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
@@ -3102,7 +3080,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         :param line: str - the current input line with leading whitespace removed
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # The command is the token at index 0 in the command line
         cmd_index = 0

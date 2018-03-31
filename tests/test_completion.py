@@ -73,7 +73,7 @@ def complete_tester(text, line, begidx, endidx, app):
     :param app: the cmd2 app that will run completions
     :return: The first matched string or None if there are no matches
              Matches are stored in app.completion_matches
-             These matches have been sorted by complete()
+             These matches also have been sorted by complete()
     """
     def get_line():
         return line
@@ -116,7 +116,7 @@ def test_complete_empty_arg(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = cmd2_app.complete_help(text, line, begidx, endidx)
+    expected = sorted(cmd2_app.complete_help(text, line, begidx, endidx))
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
     assert first_match is not None and \
@@ -167,7 +167,8 @@ def test_cmd2_help_completion_multiple(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help', 'history']
+    matches = sorted(cmd2_app.complete_help(text, line, begidx, endidx))
+    assert matches == ['help', 'history']
 
 def test_cmd2_help_completion_nomatch(cmd2_app):
     text = 'fakecommand'
@@ -269,8 +270,9 @@ def test_path_completion_multiple(cmd2_app, request):
     endidx = len(line)
     begidx = endidx - len(text)
 
+    matches = sorted(cmd2_app.path_complete(text, line, begidx, endidx))
     expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
-    assert expected == cmd2_app.path_complete(text, line, begidx, endidx)
+    assert matches == expected
 
 def test_path_completion_nomatch(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -410,7 +412,8 @@ def test_basic_completion_multiple(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == sorted(food_item_strs)
+    matches = sorted(cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs))
+    assert matches == sorted(food_item_strs)
 
 def test_basic_completion_nomatch(cmd2_app):
     text = 'q'
@@ -449,7 +452,8 @@ def test_flag_based_completion_multiple(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict) == sorted(food_item_strs)
+    matches = sorted(cmd2_app.flag_based_complete(text, line, begidx, endidx, flag_dict))
+    assert matches == sorted(food_item_strs)
 
 def test_flag_based_completion_nomatch(cmd2_app):
     text = 'q'
@@ -499,7 +503,8 @@ def test_index_based_completion_multiple(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict) == sorted(sport_item_strs)
+    matches = sorted(cmd2_app.index_based_complete(text, line, begidx, endidx, index_dict))
+    assert matches == sorted(sport_item_strs)
 
 def test_index_based_completion_nomatch(cmd2_app):
     text = 'q'
@@ -744,7 +749,8 @@ def test_cmd2_help_subcommand_completion_multiple(sc_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['bar', 'foo', 'sport']
+    matches = sorted(sc_app.complete_help(text, line, begidx, endidx))
+    assert matches == ['bar', 'foo', 'sport']
 
 
 def test_cmd2_help_subcommand_completion_nomatch(sc_app):
@@ -899,7 +905,8 @@ def test_cmd2_help_submenu_completion_multiple(sb_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert sb_app.complete_help(text, line, begidx, endidx) == ['py', 'pyscript']
+    matches = sorted(sb_app.complete_help(text, line, begidx, endidx))
+    assert matches == ['py', 'pyscript']
 
 
 def test_cmd2_help_submenu_completion_nomatch(sb_app):
@@ -916,4 +923,5 @@ def test_cmd2_help_submenu_completion_subcommands(sb_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert sb_app.complete_help(text, line, begidx, endidx) == ['py', 'pyscript']
+    matches = sorted(sb_app.complete_help(text, line, begidx, endidx))
+    assert matches == ['py', 'pyscript']
