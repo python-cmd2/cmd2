@@ -1560,6 +1560,16 @@ def test_alias(base_app, capsys):
     out = run_cmd(base_app, 'alias')
     assert out == normalize('alias fake pyscript')
 
+    # Lookup the new alias
+    out = run_cmd(base_app, 'alias fake')
+    assert out == normalize('alias fake pyscript')
+
+def test_alias_lookup_invalid_alias(base_app, capsys):
+    # Lookup invalid alias
+    out = run_cmd(base_app, 'alias invalid')
+    out, err = capsys.readouterr()
+    assert "not found" in err
+
 def test_alias_with_invalid_name(base_app, capsys):
     run_cmd(base_app, 'alias @ help')
     out, err = capsys.readouterr()

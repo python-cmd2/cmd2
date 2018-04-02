@@ -2745,14 +2745,19 @@ class Cmd(cmd.Cmd):
     def do_alias(self, arglist):
         """Define or display aliases
 
-Usage:  Usage: alias [<name> <value>]
+Usage:  Usage: alias [name] | [<name> <value>]
     Where:
-        name - name of the alias being added or edited
-        value - what the alias will be resolved to
+        name - name of the alias being looked up, added, or edited
+        value - what the alias will be resolved to (if adding or editing)
                 this can contain spaces and does not need to be quoted
 
     Without arguments, 'alias' prints a list of all aliases in a reusable form which
     can be outputted to a startup_script to preserve aliases across sessions.
+
+    With one argument, 'alias' shows the value of the specified alias.
+    Example: alias ls  (Prints the value of the alias called 'ls' if it exists)
+
+    With two or more arguments, 'alias' creates or replaces an alias.
 
     Example: alias ls !ls -lF
 
@@ -2769,8 +2774,16 @@ Usage:  Usage: alias [<name> <value>]
             for cur_alias in self.aliases:
                 self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
 
+        # The user is looking up an alias
+        elif len(arglist) == 1:
+            name = arglist[0]
+            if name in self.aliases:
+                self.poutput("alias {} {}".format(name, self.aliases[name]))
+            else:
+                self.perror("Alias '{}' not found".format(name), traceback_war=False)
+
         # The user is creating an alias
-        elif len(arglist) >= 2:
+        else:
             name = arglist[0]
             value = ' '.join(arglist[1:])
 
@@ -2784,9 +2797,6 @@ Usage:  Usage: alias [<name> <value>]
             # Set the alias
             self.aliases[name] = value
             self.poutput("Alias created")
-
-        else:
-            self.do_help('alias')
 
     def complete_alias(self, text, line, begidx, endidx):
         """ Tab completion for alias """
