@@ -627,6 +627,16 @@ def test_parseline_strips_line(cmd2_app):
     assert args == 'history'
     assert line.strip() == out_line
 
+def test_parseline_expands_alias(cmd2_app):
+    # Create the alias
+    cmd2_app.do_alias(['fake', 'pyscript'])
+
+    line = 'fake foobar.py'
+    command, args, out_line = cmd2_app.parseline(line)
+    assert command == 'pyscript'
+    assert args == 'foobar.py'
+    assert line.replace('fake', 'pyscript') == out_line
+
 def test_parseline_expands_shortcuts(cmd2_app):
     line = '!cat foobar.txt'
     command, args, out_line = cmd2_app.parseline(line)
