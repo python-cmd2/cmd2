@@ -2305,13 +2305,24 @@ class Cmd(cmd.Cmd):
             # Deal with empty line or all whitespace line
             return None, None, line
 
-        # Handle aliases
-        for cur_alias in self.aliases:
-            if line == cur_alias or line.startswith(cur_alias + ' '):
-                line = line.replace(cur_alias, self.aliases[cur_alias], 1)
-                break
+        # Make a copy of aliases so we can edit it
+        tmp_aliases = list(self.aliases.keys())
+        keep_expanding = len(tmp_aliases) > 0
 
-        # Expand command shortcuts to the full command name
+        # Expand aliases
+        while keep_expanding:
+            for cur_alias in tmp_aliases:
+                keep_expanding = False
+
+                if line == cur_alias or line.startswith(cur_alias + ' '):
+                    line = line.replace(cur_alias, self.aliases[cur_alias], 1)
+
+                    # Do not expand the same alias more than once
+                    tmp_aliases.remove(cur_alias)
+                    keep_expanding = len(tmp_aliases) > 0
+                    break
+
+        # Expand command shortcut to its full command name
         for (shortcut, expansion) in self.shortcuts:
             if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
@@ -2744,6 +2755,14 @@ Usage:  Usage: alias [<name> <value>]
     can be outputted to a startup_script to preserve aliases across sessions.
 
     Example: alias ls !ls -lF
+
+    If you want to use redirection or pipes in the alias, then either quote the tokens with these
+    characters or quote the entire alias value.
+
+    Examples:
+        alias save_results print_results ">" out.txt
+        alias save_results print_results "> out.txt"
+        alias save_results "print_results > out.txt"
 """
         # If no args were given, then print a list of current aliases
         if len(arglist) == 0:
@@ -3692,16 +3711,35 @@ class ParserManager:
             s = self.input_source_parser.transformString(s.lstrip())
             s = self.commentGrammars.transformString(s)
 
-            # Handle aliases
-            for cur_alias in self.aliases:
-                if s == cur_alias or s.startswith(cur_alias + ' '):
-                    s = s.replace(cur_alias, self.aliases[cur_alias], 1)
-                    break
+            # Make a copy of aliases so we can edit it
+            tmp_aliases = list(self.aliases.keys())
+            keep_expanding = len(tmp_aliases) > 0
 
+            # Expand aliases
+            while keep_expanding:
+                for cur_alias in tmp_aliases:
+                    keep_expanding = False
+
+                    if s == cur_alias or s.startswith(cur_alias + ' '):
+                        s = s.replace(cur_alias, self.aliases[cur_alias], 1)
+
+                        # Do not expand the same alias more than once
+                        tmp_aliases.remove(cur_alias)
+                        keep_expanding = len(tmp_aliases) > 0
+                        break
+
+            # Expand command shortcut to its full command name
             for (shortcut, expansion) in self.shortcuts:
                 if s.startswith(shortcut):
-                    s = s.replace(shortcut, expansion + ' ', 1)
+                    # If the next character after the shortcut isn't a space, then insert one
+                    shortcut_len = len(shortcut)
+                    if len(s) == shortcut_len or s[shortcut_len] != ' ':
+                        expansion += ' '
+
+                    # Expand the shortcut
+                    s = s.replace(shortcut, expansion, 1)
                     break
+
             try:
                 result = self.main_parser.parseString(s)
             except pyparsing.ParseException:
