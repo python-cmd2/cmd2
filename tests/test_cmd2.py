@@ -1549,7 +1549,7 @@ def test_poutput_none(base_app):
 def test_alias(base_app, capsys):
     # Create the alias
     out = run_cmd(base_app, 'alias fake pyscript')
-    assert out == normalize("Alias created")
+    assert out == normalize("Alias 'fake' created")
 
     # Use the alias
     run_cmd(base_app, 'fake')

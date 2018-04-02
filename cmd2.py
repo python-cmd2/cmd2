@@ -1052,7 +1052,9 @@ class Cmd(cmd.Cmd):
 
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
-            self.cmdqueue.append('load {}'.format(startup_script))
+            startup_script = os.path.expanduser(startup_script)
+            if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
+                self.cmdqueue.append('load {}'.format(startup_script))
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
@@ -2747,8 +2749,8 @@ class Cmd(cmd.Cmd):
 
 Usage:  Usage: alias [name] | [<name> <value>]
     Where:
-        name - name of the alias being looked up, added, or edited
-        value - what the alias will be resolved to (if adding or editing)
+        name - name of the alias being looked up, added, or replaced
+        value - what the alias will be resolved to (if adding or replacing)
                 this can contain spaces and does not need to be quoted
 
     Without arguments, 'alias' prints a list of all aliases in a reusable form which
@@ -2780,7 +2782,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
             if name in self.aliases:
                 self.poutput("alias {} {}".format(name, self.aliases[name]))
             else:
-                self.perror("Alias '{}' not found".format(name), traceback_war=False)
+                self.perror("Alias {!r} not found".format(name), traceback_war=False)
 
         # The user is creating an alias
         else:
@@ -2796,7 +2798,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
             # Set the alias
             self.aliases[name] = value
-            self.poutput("Alias created")
+            self.poutput("Alias {!r} created".format(name))
 
     def complete_alias(self, text, line, begidx, endidx):
         """ Tab completion for alias """
