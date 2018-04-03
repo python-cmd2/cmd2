@@ -165,15 +165,15 @@ def test_lex_ccomment(cl):
     assert tok.value == 'there'
     assert not cl.lexer.token()
 
-def test_lex_command_pipe(cl):
-    cl.parser.parse('command | pipeto')
-    tok = cl.lexer.token()
-    assert tok.type == 'WORD'
-    assert tok.value == 'command'
-    tok = cl.lexer.token()
-    assert tok.type == 'PIPETO'
-    assert tok.value == '| pipeto'
-    assert not cl.lexer.token()
+# def test_lex_command_pipe(cl):
+#     cl.parser.parse('command | pipeto')
+#     tok = cl.lexer.token()
+#     assert tok.type == 'WORD'
+#     assert tok.value == 'command'
+#     tok = cl.lexer.token()
+#     assert tok.type == 'PIPETO'
+#     assert tok.value == '| pipeto'
+#     assert not cl.lexer.token()
     
 def test_parse_command(cl):
     cl.parser.parse('plainword')
@@ -203,10 +203,10 @@ def test_parse_command_with_comment(cl):
     cl.parser.parse('command # with a comment')
     assert cl.results.command == 'command'
 
-def test_parse_command_with_simple_pipe(cl):
-    cl.parser.parse('command | pipeto')
-    assert cl.results.command == 'command'
-    assert cl.results.pipeTo == '| pipeto'
+# def test_parse_command_with_simple_pipe(cl):
+#     cl.parser.parse('command | pipeto')
+#     assert cl.results.command == 'command'
+#     assert cl.results.pipeTo == '| pipeto'
 
 # def test_parse_command_with_complex_pipe(cl):
 #     cl.parser.parse('command "with   some" args | pipeto "with  the" args')
