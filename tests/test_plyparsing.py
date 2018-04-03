@@ -42,10 +42,22 @@ class Cmd2Lexer():
         r'/\*.*\*/'
         # no return value, token discarded
         pass
+
+    def t_WORD(self, t):
+        r'[-\w$%\.:\?@!]+'
+        return t
     
-    t_WORD = r'[-A-z0-9_$%\.:\?@!]+'
-    t_DQWORD = r'"(?:[^"\\]|\\.)*"'
-    t_SQWORD = r"'(?:[^'\\]|\\.)*'"
+    def t_DQWORD(self, t):
+        r'"(?:[^"\\]|\\.)*"'
+        return t
+    
+    def t_SQWORD(self, t):
+        r"'(?:[^'\\]|\\.)*'"
+        return t
+
+    # def t_PIPE(self, t):
+    #     r'[|]'
+    #     return t
 
     def t_error(self, t):
         print("Illegal command")
@@ -54,12 +66,12 @@ class Cmd2Lexer():
     def build_lexer(self, **kwargs):
         self.lexer = lex.lex(module=self, **kwargs)
 
-    def p_command_add_word(self, p):
+    def p_wordlist_add_word(self, p):
         'wordlist : wordlist word'
         p[0] = '{} {}'.format(p[1], p[2])
         self.results.command = p[0]
 
-    def p_command_word(self, p):
+    def p_wordlist_word(self, p):
         'wordlist : word'
         p[0] = p[1]
         self.results.command = p[0]
@@ -75,6 +87,12 @@ class Cmd2Lexer():
     def p_word_sqword(self, p):
         'word : SQWORD'
         p[0] = p[1]
+
+    def p_command_and_pipe(self, p):
+        "pipeline : wordlist '|' wordlist"
+        p[0] = '{} | {}'.format(p[1], p[3])        
+        self.results.command = p[1]
+        self.results.pipeTo = p[3]
 
     def p_error(self, p):
         print("Syntax error in input!")
@@ -146,6 +164,16 @@ def test_lex_ccomment(cl):
     assert tok.type == 'WORD'
     assert tok.value == 'there'
     assert not cl.lexer.token()
+
+def test_lex_command_pipe(cl):
+    cl.parser.parse('command | pipeto')
+    tok = cl.lexer.token()
+    assert tok.type == 'WORD'
+    assert tok.value == 'command'
+    tok = cl.lexer.token()
+    assert tok.type == 'PIPETO'
+    assert tok.value == '| pipeto'
+    assert not cl.lexer.token()
     
 def test_parse_command(cl):
     cl.parser.parse('plainword')
@@ -174,3 +202,13 @@ def test_parse_command_with_sqarg_and_arg(cl):
 def test_parse_command_with_comment(cl):
     cl.parser.parse('command # with a comment')
     assert cl.results.command == 'command'
+
+def test_parse_command_with_simple_pipe(cl):
+    cl.parser.parse('command | pipeto')
+    assert cl.results.command == 'command'
+    assert cl.results.pipeTo == '| pipeto'
+
+# def test_parse_command_with_complex_pipe(cl):
+#     cl.parser.parse('command "with   some" args | pipeto "with  the" args')
+#     assert cl.results.command == 'command "with   some" args'
+#     assert cl.results.pipeTo == '| pipeto "with  the" args'
