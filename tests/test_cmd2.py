@@ -1549,7 +1549,7 @@ def test_poutput_none(base_app):
 def test_alias(base_app, capsys):
     # Create the alias
     out = run_cmd(base_app, 'alias fake pyscript')
-    assert out == normalize("Alias created")
+    assert out == normalize("Alias 'fake' created")
 
     # Use the alias
     run_cmd(base_app, 'fake')
@@ -1560,10 +1560,15 @@ def test_alias(base_app, capsys):
     out = run_cmd(base_app, 'alias')
     assert out == normalize('alias fake pyscript')
 
-def test_alias_with_cmd_name(base_app, capsys):
-    run_cmd(base_app, 'alias help eos')
+    # Lookup the new alias
+    out = run_cmd(base_app, 'alias fake')
+    assert out == normalize('alias fake pyscript')
+
+def test_alias_lookup_invalid_alias(base_app, capsys):
+    # Lookup invalid alias
+    out = run_cmd(base_app, 'alias invalid')
     out, err = capsys.readouterr()
-    assert "cannot match an existing command" in err
+    assert "not found" in err
 
 def test_alias_with_invalid_name(base_app, capsys):
     run_cmd(base_app, 'alias @ help')

@@ -153,6 +153,9 @@ if 'pyreadline' in sys.modules:
 elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
     rl_type = RlType.GNU
 
+    # We need wcswidth to calculate display width of tab completions
+    from wcwidth import wcswidth
+
     # Load the readline lib so we can make changes to it
     import ctypes
     readline_lib = ctypes.CDLL(readline.__file__)
@@ -1049,7 +1052,9 @@ class Cmd(cmd.Cmd):
 
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
-            self.cmdqueue.append('load {}'.format(startup_script))
+            startup_script = os.path.expanduser(startup_script)
+            if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
+                self.cmdqueue.append('load {}'.format(startup_script))
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
@@ -1268,55 +1273,6 @@ class Cmd(cmd.Cmd):
         self.allow_closing_quote = True
         self.display_matches = []
 
-    @staticmethod
-    def display_match_list_gnu_readline(substitution, matches, longest_match_length):
-        """
-        Prints a match list using GNU readline's rl_display_match_list()
-        :param substitution: str - the substitution written to the command line
-        :param matches: list[str] - the tab completion matches to display
-        :param longest_match_length: int - longest printed length of the matches
-        """
-        if rl_type == RlType.GNU:
-            # We will use readline's display function (rl_display_match_list()), so we
-            # need to encode our string as bytes to place in a C array.
-            if six.PY3:
-                encoded_substitution = bytes(substitution, encoding='utf-8')
-                encoded_matches = [bytes(cur_match, encoding='utf-8') for cur_match in matches]
-            else:
-                encoded_substitution = bytes(substitution)
-                encoded_matches = [bytes(cur_match) for cur_match in matches]
-
-            # rl_display_match_list() expects matches to be in argv format where
-            # substitution is the first element, followed by the matches, and then a NULL.
-            # noinspection PyCallingNonCallable,PyTypeChecker
-            strings_array = (ctypes.c_char_p * (1 + len(encoded_matches) + 1))()
-
-            # Copy in the encoded strings and add a NULL to the end
-            strings_array[0] = encoded_substitution
-            strings_array[1:-1] = encoded_matches
-            strings_array[-1] = None
-
-            # Call readline's display function
-            # rl_display_match_list(strings_array, number of completion matches, longest match length)
-            readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
-
-            # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
-            # have to use ctypes to do it since Python's readline API does not wrap the function
-            readline_lib.rl_forced_update_display()
-
-            # Since we updated the display, readline asks that rl_display_fixed be set for efficiency
-            display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
-            display_fixed.value = 1
-
-    @staticmethod
-    def display_match_list_pyreadline(matches):
-        """
-        Prints a match list using pyreadline's _display_completions()
-        :param matches: list[str] - the tab completion matches to display
-        """
-        if rl_type == RlType.PYREADLINE:
-            orig_pyreadline_display(matches)
-
     def tokens_for_completion(self, line, begidx, endidx):
         """
         Used by tab completion functions to get all tokens through the one being completed
@@ -1447,17 +1403,9 @@ class Cmd(cmd.Cmd):
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
         :param match_against: Collection - the list being matched against
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
-        # Make sure we were given a Collection with items to match against
-        if not isinstance(match_against, Collection) or len(match_against) == 0:
-            return []
-
-        # Perform matching and eliminate duplicates
-        matches = [cur_match for cur_match in set(match_against) if cur_match.startswith(text)]
-
-        matches.sort()
-        return matches
+        return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
     def delimiter_complete(self, text, line, begidx, endidx, match_against, delimiter):
         """
@@ -1490,7 +1438,7 @@ class Cmd(cmd.Cmd):
         :param endidx: int - the ending index of the prefix text
         :param match_against: Collection - the list being matched against
         :param delimiter: str - what delimits each portion of the matches (ex: paths are delimited by a slash)
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
@@ -1532,7 +1480,7 @@ class Cmd(cmd.Cmd):
                                     2. function that performs tab completion (ex: path_complete)
         :param all_else: Collection or function - an optional parameter for tab completing any token that isn't preceded
                                                   by a flag in flag_dict
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -1548,14 +1496,13 @@ class Cmd(cmd.Cmd):
             if flag in flag_dict:
                 match_against = flag_dict[flag]
 
-        # Perform tab completion using an Collection. These matches are already sorted.
+        # Perform tab completion using a Collection
         if isinstance(match_against, Collection):
             completions_matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
         elif callable(match_against):
             completions_matches = match_against(text, line, begidx, endidx)
-            completions_matches.sort()
 
         return completions_matches
 
@@ -1574,7 +1521,7 @@ class Cmd(cmd.Cmd):
                                     2. function that performs tab completion (ex: path_complete)
         :param all_else: Collection or function - an optional parameter for tab completing any token that isn't at an
                                                   index in index_dict
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -1592,14 +1539,13 @@ class Cmd(cmd.Cmd):
         else:
             match_against = all_else
 
-        # Perform tab completion using an Collection. These matches are already sorted.
+        # Perform tab completion using a Collection
         if isinstance(match_against, Collection):
             matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
         elif callable(match_against):
             matches = match_against(text, line, begidx, endidx)
-            matches.sort()
 
         return matches
 
@@ -1613,7 +1559,7 @@ class Cmd(cmd.Cmd):
         :param endidx: int - the ending index of the prefix text
         :param dir_exe_only: bool - only return directories and executables, not non-executable files
         :param dir_only: bool - only return directories
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # Determine if a trailing separator should be appended to directory completions
         add_trailing_sep_if_dir = False
@@ -1701,7 +1647,6 @@ class Cmd(cmd.Cmd):
         if tilde_expanded:
             matches = [cur_path.replace(user_path, '~', 1) for cur_path in matches]
 
-        matches.sort()
         return matches
 
     @staticmethod
@@ -1709,7 +1654,7 @@ class Cmd(cmd.Cmd):
         """
         Returns names of executables in a user's path
         :param starts_with: str - what the exes should start with. leave blank for all exes in path.
-        :return: List[str] - a sorted list of matching exe names
+        :return: List[str] - a list of matching exe names
         """
         # Purposely don't match any executable containing wildcards
         wildcards = ['*', '?']
@@ -1731,9 +1676,7 @@ class Cmd(cmd.Cmd):
             for match in matches:
                 exes_set.add(os.path.basename(match))
 
-        exes_list = list(exes_set)
-        exes_list.sort()
-        return exes_list
+        return list(exes_set)
 
     def shell_cmd_complete(self, text, line, begidx, endidx, complete_blank=False):
         """Performs completion of executables either in a user's path or a given path
@@ -1744,7 +1687,7 @@ class Cmd(cmd.Cmd):
         :param complete_blank: bool - If True, then a blank will complete all shell commands in a user's path
                                       If False, then no completion is performed
                                       Defaults to False to match Bash shell behavior
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # Don't tab complete anything if no shell command has been started
         if not complete_blank and len(text) == 0:
@@ -1770,7 +1713,7 @@ class Cmd(cmd.Cmd):
         :param endidx: int - the ending index of the prefix text
         :param compfunc: Callable - the completer function for the current command
                                     this will be called if we aren't completing for redirection
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         if self.allow_redirection:
 
@@ -1817,55 +1760,77 @@ class Cmd(cmd.Cmd):
 
     def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):
         """
-        cmd2's default GNU readline function that prints tab-completion matches to the screen
-        This exists to allow the printing of self.display_matches if it has data. Otherwise matches prints.
-        The actual printing is done by display_match_list_gnu_readline().
-
-        If you need a custom match display function for a particular completion type, then set it by calling
-        readline.set_completion_display_matches_hook() during the completer routine.
-        Your custom display function should ultimately call display_match_list_gnu_readline() to print.
+        Prints a match list using GNU readline's rl_display_match_list()
+        This exists to print self.display_matches if it has data. Otherwise matches prints.
 
         :param substitution: str - the substitution written to the command line
         :param matches: list[str] - the tab completion matches to display
         :param longest_match_length: int - longest printed length of the matches
         """
-        if len(self.display_matches) > 0:
-            matches_to_display = self.display_matches
-        else:
-            matches_to_display = matches
+        if rl_type == RlType.GNU:
 
-        # Eliminate duplicates and sort
-        matches_to_display_set = set(matches_to_display)
-        matches_to_display = list(matches_to_display_set)
-        matches_to_display.sort()
+            # Check if we should show display_matches
+            if len(self.display_matches) > 0:
+                matches_to_display = self.display_matches
 
-        # Display the matches
-        self.display_match_list_gnu_readline(substitution, matches_to_display, longest_match_length)
+                # Recalculate longest_match_length for display_matches
+                longest_match_length = 0
+
+                for cur_match in matches_to_display:
+                    cur_length = wcswidth(cur_match)
+                    if cur_length > longest_match_length:
+                        longest_match_length = cur_length
+            else:
+                matches_to_display = matches
+
+            # We will use readline's display function (rl_display_match_list()), so we
+            # need to encode our string as bytes to place in a C array.
+            if six.PY3:
+                encoded_substitution = bytes(substitution, encoding='utf-8')
+                encoded_matches = [bytes(cur_match, encoding='utf-8') for cur_match in matches_to_display]
+            else:
+                encoded_substitution = bytes(substitution)
+                encoded_matches = [bytes(cur_match) for cur_match in matches_to_display]
+
+            # rl_display_match_list() expects matches to be in argv format where
+            # substitution is the first element, followed by the matches, and then a NULL.
+            # noinspection PyCallingNonCallable,PyTypeChecker
+            strings_array = (ctypes.c_char_p * (1 + len(encoded_matches) + 1))()
+
+            # Copy in the encoded strings and add a NULL to the end
+            strings_array[0] = encoded_substitution
+            strings_array[1:-1] = encoded_matches
+            strings_array[-1] = None
+
+            # Call readline's display function
+            # rl_display_match_list(strings_array, number of completion matches, longest match length)
+            readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
+
+            # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
+            # have to use ctypes to do it since Python's readline API does not wrap the function
+            readline_lib.rl_forced_update_display()
+
+            # Since we updated the display, readline asks that rl_display_fixed be set for efficiency
+            display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
+            display_fixed.value = 1
 
     def _display_matches_pyreadline(self, matches):
         """
-        cmd2's default pyreadline function that prints tab-completion matches to the screen
-        This exists to allow the printing of self.display_matches if it has data. Otherwise matches prints.
-        The actual printing is done by display_match_list_pyreadline().
-
-        If you need a custom match display function for a particular completion type, then set
-        readline.rl.mode._display_completions to that function during the completer routine.
-        Your custom display function should ultimately call display_match_list_pyreadline() to print.
+        Prints a match list using pyreadline's _display_completions()
+        This exists to print self.display_matches if it has data. Otherwise matches prints.
 
         :param matches: list[str] - the tab completion matches to display
         """
-        if len(self.display_matches) > 0:
-            matches_to_display = self.display_matches
-        else:
-            matches_to_display = matches
+        if rl_type == RlType.PYREADLINE:
 
-        # Eliminate duplicates and sort
-        matches_to_display_set = set(matches_to_display)
-        matches_to_display = list(matches_to_display_set)
-        matches_to_display.sort()
+            # Check if we should show display_matches
+            if len(self.display_matches) > 0:
+                matches_to_display = self.display_matches
+            else:
+                matches_to_display = matches
 
-        # Display the matches
-        self.display_match_list_pyreadline(matches_to_display)
+            # Display the matches
+            orig_pyreadline_display(matches_to_display)
 
     def _handle_completion_token_quote(self, raw_completion_token):
         """
@@ -2102,6 +2067,13 @@ class Cmd(cmd.Cmd):
 
                 if len(self.completion_matches) > 0:
 
+                    # Eliminate duplicates
+                    matches_set = set(self.completion_matches)
+                    self.completion_matches = list(matches_set)
+
+                    display_matches_set = set(self.display_matches)
+                    self.display_matches = list(display_matches_set)
+
                     # Get the token being completed as it appears on the command line
                     raw_completion_token = raw_tokens[-1]
 
@@ -2140,11 +2112,6 @@ class Cmd(cmd.Cmd):
                 strs_to_match = list(alias_names | visible_commands)
                 self.completion_matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
-            # Eliminate duplicates and sort
-            matches_set = set(self.completion_matches)
-            self.completion_matches = list(matches_set)
-            self.completion_matches.sort()
-
             # Handle single result
             if len(self.completion_matches) == 1:
                 str_to_append = ''
@@ -2159,6 +2126,11 @@ class Cmd(cmd.Cmd):
 
                 self.completion_matches[0] += str_to_append
 
+            # Otherwise sort matches
+            elif len(self.completion_matches) > 0:
+                self.completion_matches.sort()
+                self.display_matches.sort()
+
         try:
             return self.completion_matches[state]
         except IndexError:
@@ -2166,19 +2138,14 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self):
         """
-        Returns a sorted list of all commands
-        Any duplicates have been removed as well
+        Returns a list of all commands
         """
-        commands = [cur_name[3:] for cur_name in set(self.get_names()) if cur_name.startswith('do_')]
-        commands.sort()
-        return commands
+        return [cur_name[3:] for cur_name in self.get_names() if cur_name.startswith('do_')]
 
     def get_visible_commands(self):
         """
-        Returns a sorted list of commands that have not been hidden
-        Any duplicates have been removed as well
+        Returns a list of commands that have not been hidden
         """
-        # This list is already sorted and has no duplicates
         commands = self.get_all_commands()
 
         # Remove the hidden commands
@@ -2189,13 +2156,13 @@ class Cmd(cmd.Cmd):
         return commands
 
     def get_help_topics(self):
-        """ Returns a sorted list of help topics with all duplicates removed """
-        return [name[5:] for name in set(self.get_names()) if name.startswith('help_')]
+        """ Returns a list of help topics """
+        return [name[5:] for name in self.get_names() if name.startswith('help_')]
 
     def complete_help(self, text, line, begidx, endidx):
         """
         Override of parent class method to handle tab completing subcommands and not showing hidden commands
-        Returns a sorted list of possible tab completions
+        Returns a list of possible tab completions
         """
 
         # The command is the token at index 1 in the command line
@@ -2340,13 +2307,24 @@ class Cmd(cmd.Cmd):
             # Deal with empty line or all whitespace line
             return None, None, line
 
-        # Handle aliases
-        for cur_alias in self.aliases:
-            if line == cur_alias or line.startswith(cur_alias + ' '):
-                line = line.replace(cur_alias, self.aliases[cur_alias], 1)
-                break
+        # Make a copy of aliases so we can edit it
+        tmp_aliases = list(self.aliases.keys())
+        keep_expanding = len(tmp_aliases) > 0
 
-        # Expand command shortcuts to the full command name
+        # Expand aliases
+        while keep_expanding:
+            for cur_alias in tmp_aliases:
+                keep_expanding = False
+
+                if line == cur_alias or line.startswith(cur_alias + ' '):
+                    line = line.replace(cur_alias, self.aliases[cur_alias], 1)
+
+                    # Do not expand the same alias more than once
+                    tmp_aliases.remove(cur_alias)
+                    keep_expanding = len(tmp_aliases) > 0
+                    break
+
+        # Expand command shortcut to its full command name
         for (shortcut, expansion) in self.shortcuts:
             if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
@@ -2769,32 +2747,47 @@ class Cmd(cmd.Cmd):
     def do_alias(self, arglist):
         """Define or display aliases
 
-Usage:  Usage: alias [<name> <value>]
+Usage:  Usage: alias [name] | [<name> <value>]
     Where:
-        name - name of the alias being added or edited
-        value - what the alias will be resolved to
+        name - name of the alias being looked up, added, or replaced
+        value - what the alias will be resolved to (if adding or replacing)
                 this can contain spaces and does not need to be quoted
 
     Without arguments, 'alias' prints a list of all aliases in a reusable form which
     can be outputted to a startup_script to preserve aliases across sessions.
 
+    With one argument, 'alias' shows the value of the specified alias.
+    Example: alias ls  (Prints the value of the alias called 'ls' if it exists)
+
+    With two or more arguments, 'alias' creates or replaces an alias.
+
     Example: alias ls !ls -lF
+
+    If you want to use redirection or pipes in the alias, then either quote the tokens with these
+    characters or quote the entire alias value.
+
+    Examples:
+        alias save_results print_results ">" out.txt
+        alias save_results print_results "> out.txt"
+        alias save_results "print_results > out.txt"
 """
         # If no args were given, then print a list of current aliases
         if len(arglist) == 0:
             for cur_alias in self.aliases:
                 self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
 
+        # The user is looking up an alias
+        elif len(arglist) == 1:
+            name = arglist[0]
+            if name in self.aliases:
+                self.poutput("alias {} {}".format(name, self.aliases[name]))
+            else:
+                self.perror("Alias {!r} not found".format(name), traceback_war=False)
+
         # The user is creating an alias
-        elif len(arglist) >= 2:
+        else:
             name = arglist[0]
             value = ' '.join(arglist[1:])
-
-            # Make sure the alias does not match an existing command
-            cmd_func = self._func_named(name)
-            if cmd_func is not None:
-                self.perror("Alias names cannot match an existing command: {!r}".format(name), traceback_war=False)
-                return
 
             # Check for a valid name
             for cur_char in name:
@@ -2805,10 +2798,7 @@ Usage:  Usage: alias [<name> <value>]
 
             # Set the alias
             self.aliases[name] = value
-            self.poutput("Alias created")
-
-        else:
-            self.do_help('alias')
+            self.poutput("Alias {!r} created".format(name))
 
     def complete_alias(self, text, line, begidx, endidx):
         """ Tab completion for alias """
@@ -2885,12 +2875,14 @@ Usage:  Usage: unalias [-a] name [name ...]
         """
         # Get a sorted list of help topics
         help_topics = self.get_help_topics()
-
-        cmds_doc = []
-        cmds_undoc = []
+        help_topics.sort()
 
         # Get a sorted list of visible command names
         visible_commands = self.get_visible_commands()
+        visible_commands.sort()
+
+        cmds_doc = []
+        cmds_undoc = []
 
         for command in visible_commands:
             if command in help_topics:
@@ -3081,7 +3073,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         :param line: str - the current input line with leading whitespace removed
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         index_dict = {1: self.shell_cmd_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
@@ -3116,7 +3108,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         :param line: str - the current input line with leading whitespace removed
         :param begidx: int - the beginning index of the prefix text
         :param endidx: int - the ending index of the prefix text
-        :return: List[str] - a sorted list of possible tab completions
+        :return: List[str] - a list of possible tab completions
         """
         # The command is the token at index 0 in the command line
         cmd_index = 0
@@ -3731,16 +3723,35 @@ class ParserManager:
             s = self.input_source_parser.transformString(s.lstrip())
             s = self.commentGrammars.transformString(s)
 
-            # Handle aliases
-            for cur_alias in self.aliases:
-                if s == cur_alias or s.startswith(cur_alias + ' '):
-                    s = s.replace(cur_alias, self.aliases[cur_alias], 1)
-                    break
+            # Make a copy of aliases so we can edit it
+            tmp_aliases = list(self.aliases.keys())
+            keep_expanding = len(tmp_aliases) > 0
 
+            # Expand aliases
+            while keep_expanding:
+                for cur_alias in tmp_aliases:
+                    keep_expanding = False
+
+                    if s == cur_alias or s.startswith(cur_alias + ' '):
+                        s = s.replace(cur_alias, self.aliases[cur_alias], 1)
+
+                        # Do not expand the same alias more than once
+                        tmp_aliases.remove(cur_alias)
+                        keep_expanding = len(tmp_aliases) > 0
+                        break
+
+            # Expand command shortcut to its full command name
             for (shortcut, expansion) in self.shortcuts:
                 if s.startswith(shortcut):
-                    s = s.replace(shortcut, expansion + ' ', 1)
+                    # If the next character after the shortcut isn't a space, then insert one
+                    shortcut_len = len(shortcut)
+                    if len(s) == shortcut_len or s[shortcut_len] != ' ':
+                        expansion += ' '
+
+                    # Expand the shortcut
+                    s = s.replace(shortcut, expansion, 1)
                     break
+
             try:
                 result = self.main_parser.parseString(s)
             except pyparsing.ParseException:

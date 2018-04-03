@@ -81,6 +81,8 @@ if int(setuptools.__version__.split('.')[0]) < 18:
     EXTRAS_REQUIRE = {}
     if sys.platform.startswith('win'):
         INSTALL_REQUIRES.append('pyreadline')
+    else:
+        INSTALL_REQUIRES.append('wcwidth')
     if sys.version_info < (3, 5):
         INSTALL_REQUIRES.append('contextlib2')
     if sys.version_info < (3, 4):
