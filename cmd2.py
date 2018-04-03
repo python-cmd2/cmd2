@@ -1052,7 +1052,9 @@ class Cmd(cmd.Cmd):
 
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
-            self.cmdqueue.append('load {}'.format(startup_script))
+            startup_script = os.path.expanduser(startup_script)
+            if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
+                self.cmdqueue.append('load {}'.format(startup_script))
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
@@ -2105,9 +2107,9 @@ class Cmd(cmd.Cmd):
 
             else:
                 # Complete token against aliases and command names
-                alias_names = list(self.aliases.keys())
-                visible_commands = self.get_visible_commands()
-                strs_to_match = alias_names + visible_commands
+                alias_names = set(self.aliases.keys())
+                visible_commands = set(self.get_visible_commands())
+                strs_to_match = list(alias_names | visible_commands)
                 self.completion_matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
             # Handle single result
@@ -2305,13 +2307,24 @@ class Cmd(cmd.Cmd):
             # Deal with empty line or all whitespace line
             return None, None, line
 
-        # Handle aliases
-        for cur_alias in self.aliases:
-            if line == cur_alias or line.startswith(cur_alias + ' '):
-                line = line.replace(cur_alias, self.aliases[cur_alias], 1)
-                break
+        # Make a copy of aliases so we can edit it
+        tmp_aliases = list(self.aliases.keys())
+        keep_expanding = len(tmp_aliases) > 0
 
-        # Expand command shortcuts to the full command name
+        # Expand aliases
+        while keep_expanding:
+            for cur_alias in tmp_aliases:
+                keep_expanding = False
+
+                if line == cur_alias or line.startswith(cur_alias + ' '):
+                    line = line.replace(cur_alias, self.aliases[cur_alias], 1)
+
+                    # Do not expand the same alias more than once
+                    tmp_aliases.remove(cur_alias)
+                    keep_expanding = len(tmp_aliases) > 0
+                    break
+
+        # Expand command shortcut to its full command name
         for (shortcut, expansion) in self.shortcuts:
             if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
@@ -2734,32 +2747,47 @@ class Cmd(cmd.Cmd):
     def do_alias(self, arglist):
         """Define or display aliases
 
-Usage:  Usage: alias [<name> <value>]
+Usage:  Usage: alias [name] | [<name> <value>]
     Where:
-        name - name of the alias being added or edited
-        value - what the alias will be resolved to
+        name - name of the alias being looked up, added, or replaced
+        value - what the alias will be resolved to (if adding or replacing)
                 this can contain spaces and does not need to be quoted
 
     Without arguments, 'alias' prints a list of all aliases in a reusable form which
     can be outputted to a startup_script to preserve aliases across sessions.
 
+    With one argument, 'alias' shows the value of the specified alias.
+    Example: alias ls  (Prints the value of the alias called 'ls' if it exists)
+
+    With two or more arguments, 'alias' creates or replaces an alias.
+
     Example: alias ls !ls -lF
+
+    If you want to use redirection or pipes in the alias, then either quote the tokens with these
+    characters or quote the entire alias value.
+
+    Examples:
+        alias save_results print_results ">" out.txt
+        alias save_results print_results "> out.txt"
+        alias save_results "print_results > out.txt"
 """
         # If no args were given, then print a list of current aliases
         if len(arglist) == 0:
             for cur_alias in self.aliases:
                 self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
 
+        # The user is looking up an alias
+        elif len(arglist) == 1:
+            name = arglist[0]
+            if name in self.aliases:
+                self.poutput("alias {} {}".format(name, self.aliases[name]))
+            else:
+                self.perror("Alias {!r} not found".format(name), traceback_war=False)
+
         # The user is creating an alias
-        elif len(arglist) >= 2:
+        else:
             name = arglist[0]
             value = ' '.join(arglist[1:])
-
-            # Make sure the alias does not match an existing command
-            cmd_func = self._func_named(name)
-            if cmd_func is not None:
-                self.perror("Alias names cannot match an existing command: {!r}".format(name), traceback_war=False)
-                return
 
             # Check for a valid name
             for cur_char in name:
@@ -2770,10 +2798,7 @@ Usage:  Usage: alias [<name> <value>]
 
             # Set the alias
             self.aliases[name] = value
-            self.poutput("Alias created")
-
-        else:
-            self.do_help('alias')
+            self.poutput("Alias {!r} created".format(name))
 
     def complete_alias(self, text, line, begidx, endidx):
         """ Tab completion for alias """
@@ -3698,16 +3723,35 @@ class ParserManager:
             s = self.input_source_parser.transformString(s.lstrip())
             s = self.commentGrammars.transformString(s)
 
-            # Handle aliases
-            for cur_alias in self.aliases:
-                if s == cur_alias or s.startswith(cur_alias + ' '):
-                    s = s.replace(cur_alias, self.aliases[cur_alias], 1)
-                    break
+            # Make a copy of aliases so we can edit it
+            tmp_aliases = list(self.aliases.keys())
+            keep_expanding = len(tmp_aliases) > 0
 
+            # Expand aliases
+            while keep_expanding:
+                for cur_alias in tmp_aliases:
+                    keep_expanding = False
+
+                    if s == cur_alias or s.startswith(cur_alias + ' '):
+                        s = s.replace(cur_alias, self.aliases[cur_alias], 1)
+
+                        # Do not expand the same alias more than once
+                        tmp_aliases.remove(cur_alias)
+                        keep_expanding = len(tmp_aliases) > 0
+                        break
+
+            # Expand command shortcut to its full command name
             for (shortcut, expansion) in self.shortcuts:
                 if s.startswith(shortcut):
-                    s = s.replace(shortcut, expansion + ' ', 1)
+                    # If the next character after the shortcut isn't a space, then insert one
+                    shortcut_len = len(shortcut)
+                    if len(s) == shortcut_len or s[shortcut_len] != ' ':
+                        expansion += ' '
+
+                    # Expand the shortcut
+                    s = s.replace(shortcut, expansion, 1)
                     break
+
             try:
                 result = self.main_parser.parseString(s)
             except pyparsing.ParseException:
