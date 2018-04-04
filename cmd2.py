@@ -1764,22 +1764,22 @@ class Cmd(cmd.Cmd):
         Adds padding to the matches being displayed as tab completion suggestions.
         The default padding of readline/pyreadine is small and not visually appealing
         especially if matches have spaces. It appears very squished together.
+
         :param matches_to_display: the matches being padded
-        :return: the padded matches and length of padding
+        :return: the padded matches and length of padding that was added
         """
+        if rl_type == RlType.NONE:
+            return matches_to_display, 0
+
         if rl_type == RlType.GNU:
             # Add 2 to the padding of 2 that readline uses for a total of 4.
             padding = 2 * ' '
-            return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
         elif rl_type == RlType.PYREADLINE:
             # Add 3 to the padding of 1 that pyreadline uses for a total of 4.
             padding = 3 * ' '
-            return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
-        else:
-            # This function is meaningless without readline
-            return matches_to_display, 0
+        return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
     def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):
         """
