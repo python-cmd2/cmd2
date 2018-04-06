@@ -29,7 +29,7 @@ Main features:
     - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
     - `py` enters interactive Python console (opt-in `ipy` for IPython console)
     - Multi-line commands
-    - Special-character command shortcuts (beyond cmd's `@` and `!`)
+    - Special-character command shortcuts (beyond cmd's `?` and `!`)
     - Settable environment parameters
     - Parsing commands with arguments using `argparse`, including support for sub-commands
     - Unicode character support (*Python 3 only*)
