@@ -3072,11 +3072,13 @@ Usage:  Usage: unalias [-a] name [name ...]
     Usage:  shell <command> [arguments]"""
 
         try:
-            tokens = shlex.split(command, posix=POSIX_SHLEX)
+            # Use non-POSIX parsing to keep the quotes around the tokens
+            tokens = shlex.split(command, posix=False)
         except ValueError as err:
             self.perror(err, traceback_war=False)
             return
 
+        # Support expanding ~ in quoted paths
         for index, _ in enumerate(tokens):
             if len(tokens[index]) > 0:
                 # Check if the token is quoted. Since shlex.split() passed, there isn't
@@ -3085,7 +3087,6 @@ Usage:  Usage: unalias [-a] name [name ...]
                 if first_char in QUOTES:
                     tokens[index] = strip_quotes(tokens[index])
 
-                tokens[index] = os.path.expandvars(tokens[index])
                 tokens[index] = os.path.expanduser(tokens[index])
 
                 # Restore the quotes
