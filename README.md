@@ -28,7 +28,7 @@ Main Features
 - `py` enters interactive Python console (opt-in `ipy` for IPython console)
 - Option to display long output using a pager with ``cmd2.Cmd.ppaged()``
 - Multi-line commands
-- Special-character command shortcuts (beyond cmd's `@` and `!`)
+- Special-character command shortcuts (beyond cmd's `?` and `!`)
 - Command aliasing similar to bash `alias` command
 - Ability to load commands at startup from an initialization script
 - Settable environment parameters
