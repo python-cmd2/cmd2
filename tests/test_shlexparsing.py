@@ -4,6 +4,8 @@ Unit/functional testing for ply based parsing in cmd2
 
 Todo List
 - multiline
+- case sensitive flag
+- figure out how to let users change the terminator character
 
 Notes:
 
@@ -30,9 +32,14 @@ class Cmd2Parser():
         result.raw = rawinput
         result.command = None
         result.args = None
+        result.terminator = None
+        result.suffix = None
         result.pipeTo = None
         result.output = None
         result.outputTo = None
+
+        # in theory we let people change this
+        terminator = ';'
 
         # strip C-style and C++-style comments
         # shlex will handle the python/shell style comments for us
@@ -52,6 +59,7 @@ class Cmd2Parser():
         rawinput = re.sub(pattern, replacer, rawinput)
 
         s = shlex.shlex(rawinput, posix=False, punctuation_chars=True)
+        s.wordchars = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_~-.,/*?='
         tokens = list(s)
 
         # check for output redirect
@@ -62,8 +70,7 @@ class Cmd2Parser():
             # remove all the tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
-            result.output = None
-            result.outputTo = None
+            pass
 
         # check for pipes
         try:
@@ -75,8 +82,22 @@ class Cmd2Parser():
             tokens = tokens[:pipe_pos]
         except ValueError:
             # no pipe in the tokens
-            result.pipeTo = None
+            pass
 
+        # look for the semicolon terminator
+        # we rely on shlex.shlex to split on the semicolon. If we let users
+        # change the termination character, this might break
+        try:
+            terminator_pos = tokens.index(';')
+            # everything after the first terminator gets put in suffix
+            result.terminator = tokens[terminator_pos]
+            result.suffix = ' '.join(tokens[terminator_pos+1:])
+            # remove all the tokens after and including the terminator
+            tokens = tokens[:terminator_pos]
+        except ValueError:
+            # no terminator in the tokens
+            pass
+        
         if tokens:
             result.command = tokens[0]
 
@@ -98,6 +119,19 @@ def parser():
 def test_single_word(parser, line):
     results = parser.parseString(line)
     assert results.command == line
+
+def test_word_plus_terminator(parser):
+    line = 'termbare;'
+    results = parser.parseString(line)
+    assert results.command == 'termbare'
+    assert results.terminator == ';'
+
+def test_suffix_after_terminator(parser):
+    line = 'termbare; suffx'
+    results = parser.parseString(line)
+    assert results.command == 'termbare'
+    assert results.terminator == ';'
+    assert results.suffix == 'suffx'
 
 def test_command_with_args(parser):
     line = 'command with args'
@@ -149,6 +183,15 @@ def test_double_pipe_is_not_a_pipe(parser):
     assert results.args == '|| is not a pipe'
     assert not results.pipeTo
 
+def test_complex_pipe(parser):
+    line = 'command with args, terminator;sufx | piped'
+    results = parser.parseString(line)
+    assert results.command == 'command'
+    assert results.args == "with args, terminator"
+    assert results.terminator == ';'
+    assert results.suffix == 'sufx'
+    assert results.pipeTo == 'piped'
+
 def test_output_redirect(parser):
     line = 'output into > afile.txt'
     results = parser.parseString(line)
@@ -164,3 +207,14 @@ def test_output_redirect_with_dash_in_path(parser):
     assert results.args == 'into'
     assert results.output == '>'
     assert results.outputTo == 'python-cmd2/afile.txt'
+
+def test_pipe_and_redirect(parser):
+    line = 'output into;sufx | pipethrume plz > afile.txt'
+    results = parser.parseString(line)
+    assert results.command == 'output'
+    assert results.args == 'into'
+    assert results.terminator == ';'
+    assert results.suffix == 'sufx'
+    assert results.pipeTo == 'pipethrume plz'
+    assert results.output == '>'
+    assert results.outputTo == 'afile.txt'
