@@ -51,11 +51,11 @@ class TabCompleteExample(cmd2.Cmd):
                 '--sport': sport_item_strs,
 
                 # Tab-complete using path_complete function after -o and --other flags in command line
-                '-o': self.path_complete,
-                '--other': self.path_complete,
+                '-o': cmd2.path_complete,
+                '--other': cmd2.path_complete,
             }
 
-        return self.flag_based_complete(text, line, begidx, endidx, flag_dict=flag_dict)
+        return cmd2.flag_based_complete(text, line, begidx, endidx, flag_dict=flag_dict)
 
     @with_argument_list
     def do_list_item(self, args):
@@ -68,10 +68,10 @@ class TabCompleteExample(cmd2.Cmd):
             {
                 1: food_item_strs,  # Tab-complete food items at index 1 in command line
                 2: sport_item_strs,  # Tab-complete sport items at index 2 in command line
-                3: self.path_complete,  # Tab-complete using path_complete function at index 3 in command line
+                3: cmd2.path_complete,  # Tab-complete using path_complete function at index 3 in command line
             }
 
-        return self.index_based_complete(text, line, begidx, endidx, index_dict=index_dict)
+        return cmd2.index_based_complete(text, line, begidx, endidx, index_dict=index_dict)
 
 
 if __name__ == '__main__':
