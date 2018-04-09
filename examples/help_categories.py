@@ -4,7 +4,7 @@
 A sample application for tagging categories on commands.
 """
 
-from cmd2 import Cmd, HELP_CATEGORY, __version__
+from cmd2 import Cmd, categorize, __version__
 
 
 class HelpCategories(Cmd):
@@ -28,8 +28,8 @@ class HelpCategories(Cmd):
         self.poutput('Which')
 
     # Tag the above command functions under the category Connecting
-    setattr(do_connect, HELP_CATEGORY, CMD_CAT_CONNECTING)
-    setattr(do_which, HELP_CATEGORY, CMD_CAT_CONNECTING)
+    categorize(do_connect, CMD_CAT_CONNECTING)
+    categorize(do_which, CMD_CAT_CONNECTING)
 
     def do_list(self, _):
         """List command"""
@@ -72,16 +72,16 @@ class HelpCategories(Cmd):
         self.poutput('Find Leakers')
 
     # Tag the above command functions under the category Application Management
-    setattr(do_list, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_deploy, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_start, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_sessions, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_redeploy, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_restart, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_expire, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_undeploy, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_stop, HELP_CATEGORY, CMD_CAT_APP_MGMT)
-    setattr(do_findleakers, HELP_CATEGORY, CMD_CAT_APP_MGMT)
+    categorize((do_list,
+                do_deploy,
+                do_start,
+                do_sessions,
+                do_redeploy,
+                do_restart,
+                do_expire,
+                do_undeploy,
+                do_stop,
+                do_findleakers), CMD_CAT_APP_MGMT)
 
     def do_resources(self, _):
         """Resources command"""
@@ -108,12 +108,12 @@ class HelpCategories(Cmd):
         self.poutput('VM Info')
 
     # Tag the above command functions under the category Server Information
-    setattr(do_resources, HELP_CATEGORY, CMD_CAT_SERVER_INFO)
-    setattr(do_status, HELP_CATEGORY, CMD_CAT_SERVER_INFO)
-    setattr(do_serverinfo, HELP_CATEGORY, CMD_CAT_SERVER_INFO)
-    setattr(do_thread_dump, HELP_CATEGORY, CMD_CAT_SERVER_INFO)
-    setattr(do_sslconnectorciphers, HELP_CATEGORY, CMD_CAT_SERVER_INFO)
-    setattr(do_vminfo, HELP_CATEGORY, CMD_CAT_SERVER_INFO)
+    categorize(do_resources, CMD_CAT_SERVER_INFO)
+    categorize(do_status, CMD_CAT_SERVER_INFO)
+    categorize(do_serverinfo, CMD_CAT_SERVER_INFO)
+    categorize(do_thread_dump, CMD_CAT_SERVER_INFO)
+    categorize(do_sslconnectorciphers, CMD_CAT_SERVER_INFO)
+    categorize(do_vminfo, CMD_CAT_SERVER_INFO)
 
     # The following command functions don't have the HELP_CATEGORY attribute set
     # and show up in the 'Other' group

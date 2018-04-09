@@ -42,6 +42,7 @@ import six
 import sys
 import tempfile
 import traceback
+from typing import Union, Callable
 import unittest
 from code import InteractiveConsole
 
@@ -210,6 +211,18 @@ USE_ARG_LIST = True
 QUOTES = ['"', "'"]
 REDIRECTION_CHARS = ['|', '<', '>']
 HELP_CATEGORY = 'help_category'
+
+
+def categorize(func: Union[Callable, Iterable], category: str):
+    """
+    Categorize a function
+    The help command output will group this function under the specified category heading
+    """
+    if isinstance(func, Iterable):
+        for item in func:
+            setattr(item, HELP_CATEGORY, category)
+    else:
+        setattr(func, HELP_CATEGORY, category)
 
 
 def set_posix_shlex(val):
