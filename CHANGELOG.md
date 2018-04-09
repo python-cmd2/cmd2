@@ -1,4 +1,4 @@
-## 0.8.3 (TBD)
+## 0.8.3 (April 09, 2018)
 * Bug Fixes
     * Fixed ``help`` command not calling functions for help topics
     * Fixed not being able to use quoted paths when redirecting with ``<`` and ``>``
