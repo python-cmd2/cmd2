@@ -209,6 +209,7 @@ USE_ARG_LIST = True
 # Used for tab completion and word breaks. Do not change.
 QUOTES = ['"', "'"]
 REDIRECTION_CHARS = ['|', '<', '>']
+HELP_CATEGORY = 'help_category'
 
 
 def set_posix_shlex(val):
@@ -2913,18 +2914,34 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         cmds_doc = []
         cmds_undoc = []
+        cmds_cats = {}
 
         for command in visible_commands:
             if command in help_topics:
                 cmds_doc.append(command)
                 help_topics.remove(command)
             elif getattr(self, self._func_named(command)).__doc__:
-                cmds_doc.append(command)
+                if hasattr(getattr(self, self._func_named(command)), HELP_CATEGORY):
+                    category = getattr(getattr(self, self._func_named(command)), HELP_CATEGORY)
+                    cmds_cats.setdefault(category, [])
+                    cmds_cats[category].append(command)
+                else:
+                    cmds_doc.append(command)
             else:
                 cmds_undoc.append(command)
 
-        self.poutput("%s\n" % str(self.doc_leader))
-        self.print_topics(self.doc_header, cmds_doc, 15, 80)
+        if len(cmds_cats) == 0:
+            # No categories found, fall back to standard behavior
+            self.poutput("%s\n" % str(self.doc_leader))
+            self.print_topics(self.doc_header, cmds_doc, 15, 80)
+        else:
+            # Categories found, Organize all commands by category
+            self.poutput("%s\n" % str(self.doc_leader))
+            self.poutput("%s\n\n" % str(self.doc_header))
+            for category in cmds_cats:
+                self.print_topics(category, cmds_cats[category], 15, 80)
+            self.print_topics('Other', cmds_doc, 15, 80)
+
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
