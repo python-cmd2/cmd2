@@ -59,8 +59,26 @@ class Cmd2Parser():
         rawinput = re.sub(pattern, replacer, rawinput)
 
         s = shlex.shlex(rawinput, posix=False, punctuation_chars=True)
+        # these characters should be included in tokens, not used to split them
+        # we need to override the default so we can include the ','
         s.wordchars = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_~-.,/*?='
         tokens = list(s)
+
+        # we rely on shlex.shlex to split on the semicolon. If we let users
+        # change the termination character, this might break
+        
+        # look for the semicolon terminator
+        try:
+            terminator_pos = tokens.index(';')
+            # everything before the first terminator is the command and the args
+            (result.command, result.args) = self._command_and_args(tokens[:terminator_pos])
+            result.terminator = tokens[terminator_pos]
+            # we will set the suffix later
+            # remove all the tokens before and including the terminator
+            tokens = tokens[terminator_pos+1:]
+        except ValueError:
+            # no terminator in the tokens
+            pass
 
         # check for output redirect
         try:
@@ -83,33 +101,45 @@ class Cmd2Parser():
         except ValueError:
             # no pipe in the tokens
             pass
-
-        # look for the semicolon terminator
-        # we rely on shlex.shlex to split on the semicolon. If we let users
-        # change the termination character, this might break
-        try:
-            terminator_pos = tokens.index(';')
-            # everything after the first terminator gets put in suffix
-            result.terminator = tokens[terminator_pos]
-            result.suffix = ' '.join(tokens[terminator_pos+1:])
-            # remove all the tokens after and including the terminator
-            tokens = tokens[:terminator_pos]
-        except ValueError:
-            # no terminator in the tokens
-            pass
         
-        if tokens:
-            result.command = tokens[0]
-
-        if len(tokens) > 1:
-            result.args = ' '.join(tokens[1:])
+        if result.terminator:
+            # whatever is left is the suffix
+            result.suffix = ' '.join(tokens)
+        else:
+            # no terminator, so whatever is left is the command and the args
+            (result.command, result.args) = self._command_and_args(tokens)            
 
         return result
+    
+    def _command_and_args(self, tokens):
+        """given a list of tokens, and return a tuple of the command
+        and the args as a string.
+        """
+        command = None
+        args = None
+
+        if tokens:
+            command = tokens[0]
+
+        if len(tokens) > 1:
+            args = ' '.join(tokens[1:])
+
+        return (command, args)
 
 @pytest.fixture
 def parser():
     parser = Cmd2Parser()
     return parser
+
+@pytest.mark.parametrize('tokens,command,args', [
+    ( [], None, None),
+    ( ['command'], 'command', None ),
+    ( ['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')
+])
+def test_command_and_args(parser, tokens, command, args):
+    (parsed_command, parsed_args) = parser._command_and_args(tokens)
+    assert command == parsed_command
+    assert args == parsed_args
 
 @pytest.mark.parametrize('line', [
     'plainword',
@@ -218,3 +248,12 @@ def test_pipe_and_redirect(parser):
     assert results.pipeTo == 'pipethrume plz'
     assert results.output == '>'
     assert results.outputTo == 'afile.txt'
+
+def test_has_redirect_inside_terminator(parser):
+    """The terminator designates the end of the commmand/arguments portion.  If a redirector
+    occurs before a terminator, then it will be treated as part of the arguments and not as a redirector."""
+    line = 'has > inside;'
+    results = parser.parseString(line)
+    assert results.command == 'has'
+    assert results.args == '> inside'
+    assert results.terminator == ';'
