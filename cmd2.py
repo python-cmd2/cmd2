@@ -209,6 +209,8 @@ USE_ARG_LIST = True
 # Used for tab completion and word breaks. Do not change.
 QUOTES = ['"', "'"]
 REDIRECTION_CHARS = ['|', '<', '>']
+
+# optional attribute, when tagged on a function, allows cmd2 to categorize commands
 HELP_CATEGORY = 'help_category'
 
 
@@ -2891,7 +2893,10 @@ Usage:  Usage: unalias [-a] name [name ...]
     @with_argument_list
     def do_help(self, arglist):
         """List available commands with "help" or detailed help with "help cmd"."""
-        if arglist:
+        if not arglist or (len(arglist) == 1 and arglist[0] in ('--verbose', '-v')):
+            verbose = len(arglist) == 1 and arglist[0] in ('--verbose', '-v')
+            self._help_menu(verbose)
+        else:
             # Getting help for a specific command
             funcname = self._func_named(arglist[0])
             if funcname:
@@ -2912,11 +2917,8 @@ Usage:  Usage: unalias [-a] name [name ...]
             else:
                 # This could be a help topic
                 cmd.Cmd.do_help(self, arglist[0])
-        else:
-            # Show a menu of what commands help can be gotten for
-            self._help_menu()
 
-    def _help_menu(self):
+    def _help_menu(self, verbose=False):
         """Show a list of commands which help can be displayed for.
         """
         # Get a sorted list of help topics
@@ -2947,18 +2949,61 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         if len(cmds_cats) == 0:
             # No categories found, fall back to standard behavior
-            self.poutput("%s\n" % str(self.doc_leader))
-            self.print_topics(self.doc_header, cmds_doc, 15, 80)
+            self.poutput("{}\n".format(str(self.doc_leader)))
+            self._print_topics(self.doc_header, cmds_doc, verbose)
         else:
             # Categories found, Organize all commands by category
-            self.poutput("%s\n" % str(self.doc_leader))
-            self.poutput("%s\n\n" % str(self.doc_header))
-            for category in cmds_cats:
-                self.print_topics(category, cmds_cats[category], 15, 80)
-            self.print_topics('Other', cmds_doc, 15, 80)
+            self.poutput('{}\n'.format(str(self.doc_leader)))
+            self.poutput('{}\n\n'.format(str(self.doc_header)))
+            for category in sorted(cmds_cats.keys()):
+                self._print_topics(category, cmds_cats[category], verbose)
+            self._print_topics('Other', cmds_doc, verbose)
+
 
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
+
+    def _print_topics(self, header, cmds, verbose):
+        """Customized version of print_topics that can switch between verbose or traditional output"""
+        if cmds:
+            if not verbose:
+                self.print_topics(header, cmds, 15, 80)
+            else:
+                self.stdout.write('{}\n'.format(str(header)))
+                widest = 0
+                # measure the commands
+                for command in cmds:
+                    width = wcswidth(command)
+                    if width > widest:
+                        widest = width
+                # add a 4-space pad
+                widest += 4
+                if widest < 20:
+                    widest = 20
+
+                if self.ruler:
+                    self.stdout.write('{:{ruler}<{width}}\n'.format('', ruler=self.ruler, width=80))
+
+                for command in cmds:
+                    # Attempt to locate the first documentation block
+                    doc = getattr(self, self._func_named(command)).__doc__
+                    doc_block = []
+                    found_first = False
+                    for doc_line in doc.splitlines():
+                        str(doc_line).strip()
+                        if len(doc_line.strip()) > 0:
+                            doc_block.append(doc_line.strip())
+                            found_first = True
+                        else:
+                            if found_first:
+                                break
+
+                    for doc_line in doc_block:
+                        self.stdout.write('{: <{col_width}}{doc}\n'.format(command,
+                                                                           col_width=widest,
+                                                                           doc=doc_line))
+                        command = ''
+                self.stdout.write("\n")
 
     def do_shortcuts(self, _):
         """Lists shortcuts (aliases) available."""
@@ -3226,6 +3271,8 @@ Usage:  Usage: unalias [-a] name [name ...]
     # noinspection PyBroadException
     def do_py(self, arg):
         """
+        Invoke python command, shell, or script
+
         py <command>: Executes a Python command.
         py: Enters interactive Python mode.
         End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.

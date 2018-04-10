@@ -100,7 +100,14 @@ class HelpCategories(Cmd):
         self.poutput('Thread Dump')
 
     def do_sslconnectorciphers(self, _):
-        """SSL Connector Ciphers command"""
+        """
+        SSL Connector Ciphers command is an example of a command that contains
+        multiple lines of help information for the user. Each line of help in a
+        contiguous set of lines will be printed and aligned in the verbose output
+        provided with 'help --verbose'
+
+        This is after a blank line and won't de displayed in the verbose help
+        """
         self.poutput('SSL Connector Ciphers')
 
     def do_vminfo(self, _):
