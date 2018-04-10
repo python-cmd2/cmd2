@@ -1,10 +1,14 @@
-## 0.8.4 (TBD, 2018)
+## 0.8.5 (TBD, 2018)
 * Deletions (potentially breaking changes)
     * Deleted all ``optparse`` code which had previously been deprecated in release 0.8.0
         * The ``options`` decorator no longer exists
         * All ``cmd2`` code should be ported to use the new ``argparse``-based decorators
         * See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
         * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
+        
+## 0.8.4 (April 10, 2018)
+* Bug Fixes
+    * Fixed conditional dependency issue in setup.py that was in 0.8.3.
 
 ## 0.8.3 (April 09, 2018)
 * Bug Fixes

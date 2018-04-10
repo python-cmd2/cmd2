@@ -69,6 +69,7 @@ INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'pyperclip', 'six']
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
     ":sys_platform=='win32'": ['pyreadline'],
+    ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
     ":python_version<'3.5'": ['contextlib2'],
     # Python 3.3 and earlier require enum34 backport of enum module from Python 3.4
