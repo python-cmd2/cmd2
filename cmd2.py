@@ -1340,12 +1340,12 @@ class Cmd(cmd.Cmd):
                     raw_tokens.append(cur_initial_token)
                     continue
 
-                # Keep track of the current token we are building
-                cur_raw_token = ''
-
                 # Iterate over each character in this token
                 cur_index = 0
                 cur_char = cur_initial_token[cur_index]
+
+                # Keep track of the token we are building
+                cur_raw_token = ''
 
                 while True:
                     if cur_char not in REDIRECTION_CHARS:
