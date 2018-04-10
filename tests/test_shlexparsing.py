@@ -4,6 +4,7 @@ Unit/functional testing for ply based parsing in cmd2
 
 Todo List
 - multiline
+- unicode
 - case sensitive flag
 - figure out how to let users change the terminator character
 
