@@ -8,7 +8,7 @@ import sys
 import setuptools
 from setuptools import setup
 
-VERSION = '0.8.3'
+VERSION = '0.8.4'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
@@ -69,6 +69,7 @@ INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'pyperclip', 'six']
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
     ":sys_platform=='win32'": ['pyreadline'],
+    ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
     ":python_version<'3.5'": ['contextlib2'],
     # Python 3.3 and earlier require enum34 backport of enum module from Python 3.4

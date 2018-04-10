@@ -1,3 +1,7 @@
+## 0.8.4 (April 10, 2018)
+* Bug Fixes
+    * Fixed conditional dependency issue in setup.py that was in 0.8.3.
+
 ## 0.8.3 (April 09, 2018)
 * Bug Fixes
     * Fixed ``help`` command not calling functions for help topics
