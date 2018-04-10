@@ -56,7 +56,7 @@ import pyperclip
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
 try:
-    from collections.abc import Collection
+    from collections.abc import Collection, Iterable
 except ImportError:
 
     if six.PY3:
