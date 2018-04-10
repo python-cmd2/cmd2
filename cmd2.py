@@ -42,7 +42,6 @@ import six
 import sys
 import tempfile
 import traceback
-from typing import Union, Callable
 import unittest
 from code import InteractiveConsole
 
@@ -213,10 +212,13 @@ REDIRECTION_CHARS = ['|', '<', '>']
 HELP_CATEGORY = 'help_category'
 
 
-def categorize(func: Union[Callable, Iterable], category: str):
-    """
-    Categorize a function
+def categorize(func, category):
+    """Categorize a function.
+
     The help command output will group this function under the specified category heading
+
+    :param func: Union[Callable, Iterable] - function to categorize
+    :param category: str - category to put it in
     """
     if isinstance(func, Iterable):
         for item in func:
