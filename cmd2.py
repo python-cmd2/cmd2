@@ -32,7 +32,6 @@ import datetime
 import functools
 import glob
 import io
-import optparse
 import os
 import platform
 import re
@@ -183,7 +182,7 @@ if six.PY2 and sys.platform.startswith('lin'):
     except ImportError:
         pass
 
-__version__ = '0.8.3'
+__version__ = '0.8.4'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -192,19 +191,15 @@ pyparsing.ParserElement.enablePackrat()
 pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
-# The next 3 variables and associated setter functions effect how arguments are parsed for decorated commands
-# which use one of the decorators such as @with_argument_list or @with_argparser
+# The next 2 variables and associated setter functions effect how arguments are parsed for decorated commands
+# which use one of the decorators: @with_argument_list, @with_argparser, or @with_argparser_and_unknown_args
 # The defaults are sane and maximize ease of use for new applications based on cmd2.
-# To maximize backwards compatibility, we recommend setting USE_ARG_LIST to "False"
 
 # Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
 POSIX_SHLEX = False
 
 # Strip outer quotes for convenience if POSIX_SHLEX = False
 STRIP_QUOTES_FOR_NON_POSIX = True
-
-# For @options commands, pass a list of argument strings instead of a single argument string to the do_* methods
-USE_ARG_LIST = True
 
 # Used for tab completion and word breaks. Do not change.
 QUOTES = ['"', "'"]
@@ -227,75 +222,6 @@ def set_strip_quotes(val):
     """
     global STRIP_QUOTES_FOR_NON_POSIX
     STRIP_QUOTES_FOR_NON_POSIX = val
-
-
-def set_use_arg_list(val):
-    """ Allows user of cmd2 to choose between passing @options commands an argument string or list of arg strings.
-
-    :param val: bool - True => arg is a list of strings,  False => arg is a string (for @options commands)
-    """
-    global USE_ARG_LIST
-    USE_ARG_LIST = val
-
-
-class OptionParser(optparse.OptionParser):
-    """Subclass of optparse.OptionParser which stores a reference to the do_* method it is parsing options for.
-
-    Used mostly for getting access to the do_* method's docstring when printing help.
-    """
-    def __init__(self):
-        # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
-        optparse.OptionParser.__init__(self)
-        # The do_* method this class is parsing options for.  Used for accessing docstring help.
-        self._func = None
-
-    def exit(self, status=0, msg=None):
-        """Called at the end of showing help when either -h is used to show help or when bad arguments are provided.
-
-        We override exit so it doesn't automatically exit the application.
-        """
-        if self.values is not None:
-            self.values._exit = True
-
-        if msg:
-            print(msg)
-
-    def print_help(self, *args, **kwargs):
-        """Called when optparse encounters either -h or --help or bad arguments.  It prints help for options.
-
-        We override it so that before the standard optparse help, it prints the do_* method docstring, if available.
-        """
-        if self._func.__doc__:
-            print(self._func.__doc__)
-
-        optparse.OptionParser.print_help(self, *args, **kwargs)
-
-    def error(self, msg):
-        """error(msg : string)
-
-        Print a usage message incorporating 'msg' to stderr and exit.
-        If you override this in a subclass, it should not return -- it
-        should either exit or raise an exception.
-        """
-        raise optparse.OptParseError(msg)
-
-
-def remaining_args(opts_plus_args, arg_list):
-    """ Preserves the spacing originally in the arguments after the removal of options.
-
-    :param opts_plus_args: str - original argument string, including options
-    :param arg_list:  List[str] - list of strings containing the non-option arguments
-    :return: str - non-option arguments as a single string, with original spacing preserved
-    """
-    pattern = '\s+'.join(re.escape(a) for a in arg_list) + '\s*$'
-    match_obj = re.search(pattern, opts_plus_args)
-    try:
-        remaining = opts_plus_args[match_obj.start():]
-    except AttributeError:
-        # Don't preserve spacing, but at least we don't crash and we do preserve args and their order
-        remaining = ' '.join(arg_list)
-
-    return remaining
 
 
 def _which(editor):
@@ -443,95 +369,6 @@ def with_argparser(argparser):
     return arg_decorator
 
 
-def options(option_list, arg_desc="arg"):
-    """Used as a decorator and passed a list of optparse-style options,
-       alters a cmd2 method to populate its ``opts`` argument from its
-       raw text argument.
-
-       Example: transform
-       def do_something(self, arg):
-
-       into
-       @options([make_option('-q', '--quick', action="store_true",
-                 help="Makes things fast")],
-                 "source dest")
-       def do_something(self, arg, opts):
-           if opts.quick:
-               self.fast_button = True
-       """
-    if not isinstance(option_list, list):
-        # If passed a single option instead of a list of options, convert it to a list with one option
-        option_list = [option_list]
-
-    def option_setup(func):
-        """Decorator function which modifies on of the do_* methods that use the @options decorator.
-
-        :param func: do_* method which uses the @options decorator
-        :return: modified version of the do_* method
-        """
-        option_parser = OptionParser()
-        for option in option_list:
-            option_parser.add_option(option)
-        # Allow reasonable help for commands defined with @options and an empty list of options
-        if len(option_list) > 0:
-            option_parser.set_usage("%s [options] %s" % (func.__name__[3:], arg_desc))
-        else:
-            option_parser.set_usage("%s %s" % (func.__name__[3:], arg_desc))
-        option_parser._func = func
-
-        @functools.wraps(func)
-        def new_func(instance, arg):
-            """For @options commands this replaces the actual do_* methods in the instance __dict__.
-
-            First it does all of the option/argument parsing.  Then it calls the underlying do_* method.
-
-            :param instance: cmd2.Cmd2 derived class application instance
-            :param arg: str - command-line arguments provided to the command
-            :return: bool - returns whatever the result of calling the underlying do_* method would be
-            """
-            try:
-                # Use shlex to split the command line into a list of arguments based on shell rules
-                opts, new_arglist = option_parser.parse_args(shlex.split(arg, posix=POSIX_SHLEX))
-
-                # If not using POSIX shlex, make sure to strip off outer quotes for convenience
-                if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
-                    temp_arglist = []
-                    for arg in new_arglist:
-                        temp_arglist.append(strip_quotes(arg))
-                    new_arglist = temp_arglist
-
-                    # Also strip off outer quotes on string option values
-                    for key, val in opts.__dict__.items():
-                        if isinstance(val, str):
-                            opts.__dict__[key] = strip_quotes(val)
-
-                # Must find the remaining args in the original argument list, but
-                # mustn't include the command itself
-                # if hasattr(arg, 'parsed') and new_arglist[0] == arg.parsed.command:
-                #    new_arglist = new_arglist[1:]
-                if USE_ARG_LIST:
-                    arg = new_arglist
-                else:
-                    new_args = remaining_args(arg, new_arglist)
-                    if isinstance(arg, ParsedString):
-                        arg = arg.with_args_replaced(new_args)
-                    else:
-                        arg = new_args
-            except optparse.OptParseError as e:
-                print(e)
-                option_parser.print_help()
-                return
-            if hasattr(opts, '_exit'):
-                return None
-            result = func(instance, arg, opts)
-            return result
-
-        new_func.__doc__ = '%s%s' % (func.__doc__ + '\n' if func.__doc__ else '', option_parser.format_help())
-        return new_func
-
-    return option_setup
-
-
 # Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
 # noinspection PyUnresolvedReferences
 try:
@@ -587,18 +424,6 @@ class ParsedString(str):
         new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
         new.parsed = self.parsed
         new.parser = self.parser
-        return new
-
-    def with_args_replaced(self, newargs):
-        """Used for @options commands when USE_ARG_LIST is False.
-
-        It helps figure out what the args are after removing options.
-        """
-        new = ParsedString(newargs)
-        new.parsed = self.parsed
-        new.parser = self.parser
-        new.parsed['args'] = newargs
-        new.parsed.statement['args'] = newargs
         return new
 
 
@@ -2992,14 +2817,12 @@ Usage:  Usage: unalias [-a] name [name ...]
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-        Parsing of @options commands:
+        Parsing of command arguments:
             Shell lexer mode for command argument splitting: {}
             Strip Quotes after splitting arguments: {}
-            Argument type: {}
         """.format(str(self.terminators), self.allow_cli_args, self.allow_redirection,
                    "POSIX" if POSIX_SHLEX else "non-POSIX",
-                   "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False",
-                   "List of argument strings" if USE_ARG_LIST else "string of space-separated arguments")
+                   "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False")
         return read_only_settings
 
     def show(self, args, parameter):
@@ -3600,11 +3423,10 @@ Script should contain one command per line, just like command would be typed in 
         :param intro: str - if provided this overrides self.intro and serves as the intro banner printed once at start
         """
         if self.allow_cli_args:
-            parser = optparse.OptionParser()
-            parser.add_option('-t', '--test', dest='test',
-                              action="store_true",
-                              help='Test against transcript(s) in FILE (wildcards OK)')
-            (callopts, callargs) = parser.parse_args()
+            parser = argparse.ArgumentParser()
+            parser.add_argument('-t', '--test', action="store_true",
+                                help='Test against transcript(s) in FILE (wildcards OK)')
+            callopts, callargs = parser.parse_known_args()
 
             # If transcript testing was called for, use other arguments as transcript files
             if callopts.test:
