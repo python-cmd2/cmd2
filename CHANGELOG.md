@@ -1,7 +1,8 @@
-## 0.8.3 (April 09, 2018)
+## 0.8.3 (April 10, 2018)
 * Bug Fixes
     * Fixed ``help`` command not calling functions for help topics
     * Fixed not being able to use quoted paths when redirecting with ``<`` and ``>``
+    * Fixed conditional dependency issue in setup.py that was in first release of 0.8.3.
 
 * Enhancements
     * Tab completion has been overhauled and now supports completion of strings with quotes and spaces.
