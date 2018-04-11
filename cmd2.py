@@ -117,7 +117,6 @@ if sys.version_info > (3, 0):
 else:
     from io import BytesIO as StringIO  # Python2
 
-
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
 try:
