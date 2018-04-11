@@ -2959,7 +2959,6 @@ Usage:  Usage: unalias [-a] name [name ...]
                 self._print_topics(category, cmds_cats[category], verbose)
             self._print_topics('Other', cmds_doc, verbose)
 
-
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
