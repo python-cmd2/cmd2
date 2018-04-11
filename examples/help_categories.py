@@ -4,7 +4,8 @@
 A sample application for tagging categories on commands.
 """
 
-from cmd2 import Cmd, categorize, __version__
+from cmd2 import Cmd, categorize, __version__, with_argparser
+import argparse
 
 
 class HelpCategories(Cmd):
@@ -51,6 +52,12 @@ class HelpCategories(Cmd):
         """Redeploy command"""
         self.poutput('Redeploy')
 
+    restart_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    restart_parser.add_argument('when', default='now',
+                                choices=['now', 'later', 'sometime', 'whenever'],
+                                help='Specify when to restart')
+
+    @with_argparser(restart_parser)
     def do_restart(self, _):
         """Restart command"""
         self.poutput('Restart')

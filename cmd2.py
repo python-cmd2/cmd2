@@ -2934,10 +2934,9 @@ Usage:  Usage: unalias [-a] name [name ...]
         cmds_cats = {}
 
         for command in visible_commands:
-            if command in help_topics:
-                cmds_doc.append(command)
-                help_topics.remove(command)
-            elif getattr(self, self._func_named(command)).__doc__:
+            if command in help_topics or getattr(self, self._func_named(command)).__doc__:
+                if command in help_topics:
+                    help_topics.remove(command)
                 if hasattr(getattr(self, self._func_named(command)), HELP_CATEGORY):
                     category = getattr(getattr(self, self._func_named(command)), HELP_CATEGORY)
                     cmds_cats.setdefault(category, [])
@@ -2972,7 +2971,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 widest = 0
                 # measure the commands
                 for command in cmds:
-                    width = wcswidth(command)
+                    width = len(command)
                     if width > widest:
                         widest = width
                 # add a 4-space pad
@@ -2983,17 +2982,23 @@ Usage:  Usage: unalias [-a] name [name ...]
                 if self.ruler:
                     self.stdout.write('{:{ruler}<{width}}\n'.format('', ruler=self.ruler, width=80))
 
+                help_topics = self.get_help_topics()
                 for command in cmds:
                     # Attempt to locate the first documentation block
                     doc = getattr(self, self._func_named(command)).__doc__
                     doc_block = []
                     found_first = False
+                    in_usage = False
                     for doc_line in doc.splitlines():
                         str(doc_line).strip()
                         if len(doc_line.strip()) > 0:
+                            if in_usage or doc_line.startswith('usage: '):
+                                in_usage = True
+                                continue
                             doc_block.append(doc_line.strip())
                             found_first = True
                         else:
+                            in_usage = False
                             if found_first:
                                 break
 
@@ -3101,7 +3106,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         else:
             raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
-    set_parser = argparse.ArgumentParser()
+    set_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
