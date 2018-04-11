@@ -21,7 +21,8 @@ from optparse import make_option
 import six.moves as sm
 
 import cmd2
-from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
+from conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
+    HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
 
 def test_ver():
@@ -38,6 +39,13 @@ def test_base_help(base_app):
     expected = normalize(BASE_HELP)
     assert out == expected
 
+def test_base_help_verbose(base_app):
+    out = run_cmd(base_app, 'help -v')
+    expected = normalize(BASE_HELP_VERBOSE)
+    assert out == expected
+
+    out = run_cmd(base_app, 'help --verbose')
+    assert out == expected
 
 def test_base_help_history(base_app):
     out = run_cmd(base_app, 'help history')
@@ -47,7 +55,7 @@ def test_base_argparse_help(base_app, capsys):
     # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
     run_cmd(base_app, 'set -h')
     out, err = capsys.readouterr()
-    out1 = out.splitlines()
+    out1 = normalize(str(out))
 
     out2 = run_cmd(base_app, 'help set')
 
@@ -1063,6 +1071,96 @@ def test_help_undocumented(help_app):
 def test_help_overridden_method(help_app):
     out = run_cmd(help_app, 'help edit')
     expected = normalize('This overrides the edit command and does nothing.')
+    assert out == expected
+
+
+class HelpCategoriesApp(cmd2.Cmd):
+    """Class for testing custom help_* methods which override docstring help."""
+    def __init__(self, *args, **kwargs):
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+
+    @cmd2.with_category('Some Category')
+    def do_diddly(self, arg):
+        """This command does diddly"""
+        pass
+
+    def do_squat(self, arg):
+        """This docstring help will never be shown because the help_squat method overrides it."""
+        pass
+
+    def help_squat(self):
+        self.stdout.write('This command does diddly squat...\n')
+
+    def do_edit(self, arg):
+        """This overrides the edit command and does nothing."""
+        pass
+
+    cmd2.categorize((do_squat, do_edit), 'Custom Category')
+
+    # This command will be in the "undocumented" section of the help menu
+    def do_undoc(self, arg):
+        pass
+
+@pytest.fixture
+def helpcat_app():
+    app = HelpCategoriesApp()
+    app.stdout = StdOut()
+    return app
+
+def test_help_cat_base(helpcat_app):
+    out = run_cmd(helpcat_app, 'help')
+    expected = normalize("""Documented commands (type help <topic>):
+
+Custom Category
+===============
+edit  squat
+
+Some Category
+=============
+diddly
+
+Other
+=====
+alias  help  history  load  py  pyscript  quit  set  shell  shortcuts  unalias
+
+Undocumented commands:
+======================
+undoc
+""")
+    assert out == expected
+
+def test_help_cat_verbose(helpcat_app):
+    out = run_cmd(helpcat_app, 'help --verbose')
+    expected = normalize("""Documented commands (type help <topic>):
+
+Custom Category
+================================================================================
+edit                This overrides the edit command and does nothing.
+squat               This command does diddly squat...
+
+Some Category
+================================================================================
+diddly              This command does diddly
+
+Other
+================================================================================
+alias               Define or display aliases
+help                List available commands with "help" or detailed help with "help cmd".
+history             View, run, edit, and save previously entered commands.
+load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+py                  Invoke python command, shell, or script
+pyscript            Runs a python script file inside the console
+quit                Exits this application.
+set                 Sets a settable parameter or shows current settings of parameters.
+shell               Execute a command as if at the OS prompt.
+shortcuts           Lists shortcuts (aliases) available.
+unalias             Unsets aliases
+
+Undocumented commands:
+======================
+undoc
+""")
     assert out == expected
 
 

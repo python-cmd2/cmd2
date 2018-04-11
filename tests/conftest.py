@@ -19,6 +19,23 @@ alias  help     load  pyscript  set    shortcuts
 edit   history  py    quit      shell  unalias
 """
 
+BASE_HELP_VERBOSE = """
+Documented commands (type help <topic>):
+================================================================================
+alias               Define or display aliases
+edit                Edit a file in a text editor.
+help                List available commands with "help" or detailed help with "help cmd".
+history             View, run, edit, and save previously entered commands.
+load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+py                  Invoke python command, shell, or script
+pyscript            Runs a python script file inside the console
+quit                Exits this application.
+set                 Sets a settable parameter or shows current settings of parameters.
+shell               Execute a command as if at the OS prompt.
+shortcuts           Lists shortcuts (aliases) available.
+unalias             Unsets aliases
+"""
+
 # Help text for the history command
 HELP_HISTORY = """usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT] [arg]
 

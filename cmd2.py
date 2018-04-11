@@ -56,7 +56,7 @@ import pyperclip
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
 try:
-    from collections.abc import Collection
+    from collections.abc import Collection, Iterable
 except ImportError:
 
     if six.PY3:
@@ -78,7 +78,6 @@ except ImportError:
                         any("__contains__" in B.__dict__ for B in C.__mro__):
                     return True
             return NotImplemented
-
 
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
@@ -112,6 +111,11 @@ if sys.version_info < (3, 5):
     from contextlib2 import redirect_stdout, redirect_stderr
 else:
     from contextlib import redirect_stdout, redirect_stderr
+
+if sys.version_info > (3, 0):
+    from io import StringIO  # Python3
+else:
+    from io import BytesIO as StringIO  # Python2
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
@@ -183,6 +187,7 @@ if six.PY2 and sys.platform.startswith('lin'):
     except ImportError:
         pass
 
+
 __version__ = '0.8.4'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
@@ -209,6 +214,25 @@ USE_ARG_LIST = True
 # Used for tab completion and word breaks. Do not change.
 QUOTES = ['"', "'"]
 REDIRECTION_CHARS = ['|', '<', '>']
+
+# optional attribute, when tagged on a function, allows cmd2 to categorize commands
+HELP_CATEGORY = 'help_category'
+HELP_SUMMARY = 'help_summary'
+
+
+def categorize(func, category):
+    """Categorize a function.
+
+    The help command output will group this function under the specified category heading
+
+    :param func: Union[Callable, Iterable] - function to categorize
+    :param category: str - category to put it in
+    """
+    if isinstance(func, Iterable):
+        for item in func:
+            setattr(item, HELP_CATEGORY, category)
+    else:
+        setattr(func, HELP_CATEGORY, category)
 
 
 def set_posix_shlex(val):
@@ -340,6 +364,14 @@ def parse_quoted_string(cmdline):
     return lexed_arglist
 
 
+def with_category(category):
+    """A decorator to apply a category to a command function"""
+    def cat_decorator(func):
+        categorize(func, category)
+        return func
+    return cat_decorator
+
+
 def with_argument_list(func):
     """A decorator to alter the arguments passed to a do_* cmd2
     method. Default passes a string of whatever the user typed.
@@ -377,6 +409,9 @@ def with_argparser_and_unknown_args(argparser):
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
+
+        if func.__doc__:
+            setattr(cmd_wrapper, HELP_SUMMARY, func.__doc__)
 
         cmd_wrapper.__doc__ = argparser.format_help()
 
@@ -416,6 +451,9 @@ def with_argparser(argparser):
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
+
+        if func.__doc__:
+            setattr(cmd_wrapper, HELP_SUMMARY, func.__doc__)
 
         cmd_wrapper.__doc__ = argparser.format_help()
 
@@ -2875,7 +2913,10 @@ Usage:  Usage: unalias [-a] name [name ...]
     @with_argument_list
     def do_help(self, arglist):
         """List available commands with "help" or detailed help with "help cmd"."""
-        if arglist:
+        if not arglist or (len(arglist) == 1 and arglist[0] in ('--verbose', '-v')):
+            verbose = len(arglist) == 1 and arglist[0] in ('--verbose', '-v')
+            self._help_menu(verbose)
+        else:
             # Getting help for a specific command
             funcname = self._func_named(arglist[0])
             if funcname:
@@ -2896,11 +2937,8 @@ Usage:  Usage: unalias [-a] name [name ...]
             else:
                 # This could be a help topic
                 cmd.Cmd.do_help(self, arglist[0])
-        else:
-            # Show a menu of what commands help can be gotten for
-            self._help_menu()
 
-    def _help_menu(self):
+    def _help_menu(self, verbose=False):
         """Show a list of commands which help can be displayed for.
         """
         # Get a sorted list of help topics
@@ -2913,20 +2951,106 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         cmds_doc = []
         cmds_undoc = []
+        cmds_cats = {}
 
         for command in visible_commands:
-            if command in help_topics:
-                cmds_doc.append(command)
-                help_topics.remove(command)
-            elif getattr(self, self._func_named(command)).__doc__:
-                cmds_doc.append(command)
+            if command in help_topics or getattr(self, self._func_named(command)).__doc__:
+                if command in help_topics:
+                    help_topics.remove(command)
+                if hasattr(getattr(self, self._func_named(command)), HELP_CATEGORY):
+                    category = getattr(getattr(self, self._func_named(command)), HELP_CATEGORY)
+                    cmds_cats.setdefault(category, [])
+                    cmds_cats[category].append(command)
+                else:
+                    cmds_doc.append(command)
             else:
                 cmds_undoc.append(command)
 
-        self.poutput("%s\n" % str(self.doc_leader))
-        self.print_topics(self.doc_header, cmds_doc, 15, 80)
+        if len(cmds_cats) == 0:
+            # No categories found, fall back to standard behavior
+            self.poutput("{}\n".format(str(self.doc_leader)))
+            self._print_topics(self.doc_header, cmds_doc, verbose)
+        else:
+            # Categories found, Organize all commands by category
+            self.poutput('{}\n'.format(str(self.doc_leader)))
+            self.poutput('{}\n\n'.format(str(self.doc_header)))
+            for category in sorted(cmds_cats.keys()):
+                self._print_topics(category, cmds_cats[category], verbose)
+            self._print_topics('Other', cmds_doc, verbose)
+
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
+
+    def _print_topics(self, header, cmds, verbose):
+        """Customized version of print_topics that can switch between verbose or traditional output"""
+        if cmds:
+            if not verbose:
+                self.print_topics(header, cmds, 15, 80)
+            else:
+                self.stdout.write('{}\n'.format(str(header)))
+                widest = 0
+                # measure the commands
+                for command in cmds:
+                    width = len(command)
+                    if width > widest:
+                        widest = width
+                # add a 4-space pad
+                widest += 4
+                if widest < 20:
+                    widest = 20
+
+                if self.ruler:
+                    self.stdout.write('{:{ruler}<{width}}\n'.format('', ruler=self.ruler, width=80))
+
+                help_topics = self.get_help_topics()
+                for command in cmds:
+                    doc = ''
+                    # Try to get the documentation string
+                    try:
+                        # first see if there's a help function implemented
+                        func = getattr(self, 'help_' + command)
+                    except AttributeError:
+                        # Couldn't find a help function
+                        try:
+                            # Now see if help_summary has been set
+                            doc = getattr(self, self._func_named(command)).help_summary
+                        except AttributeError:
+                            # Last, try to directly ac cess the function's doc-string
+                            doc = getattr(self, self._func_named(command)).__doc__
+                    else:
+                        # we found the help function
+                        result = StringIO()
+                        # try to redirect system stdout
+                        with redirect_stdout(result):
+                            # save our internal stdout
+                            stdout_orig = self.stdout
+                            try:
+                                # redirect our internal stdout
+                                self.stdout = result
+                                func()
+                            finally:
+                                # restore internal stdout
+                                self.stdout = stdout_orig
+                        doc = result.getvalue()
+
+                    # Attempt to locate the first documentation block
+                    doc_block = []
+                    found_first = False
+                    for doc_line in doc.splitlines():
+                        str(doc_line).strip()
+                        if len(doc_line.strip()) > 0:
+                            doc_block.append(doc_line.strip())
+                            found_first = True
+                        else:
+                            if found_first:
+                                break
+
+                    for doc_line in doc_block:
+                        self.stdout.write('{: <{col_width}}{doc}\n'.format(command,
+                                                                           col_width=widest,
+                                                                           doc=doc_line))
+                        command = ''
+                self.stdout.write("\n")
 
     def do_shortcuts(self, _):
         """Lists shortcuts (aliases) available."""
@@ -3025,7 +3149,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         else:
             raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
-    set_parser = argparse.ArgumentParser()
+    set_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
@@ -3194,6 +3318,8 @@ Usage:  Usage: unalias [-a] name [name ...]
     # noinspection PyBroadException
     def do_py(self, arg):
         """
+        Invoke python command, shell, or script
+
         py <command>: Executes a Python command.
         py: Enters interactive Python mode.
         End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
