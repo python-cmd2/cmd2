@@ -79,7 +79,6 @@ except ImportError:
                     return True
             return NotImplemented
 
-
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
     from pyperclip.exceptions import PyperclipException
@@ -112,6 +111,12 @@ if sys.version_info < (3, 5):
     from contextlib2 import redirect_stdout, redirect_stderr
 else:
     from contextlib import redirect_stdout, redirect_stderr
+
+if sys.version_info > (3, 0):
+    from io import StringIO  # Python3
+else:
+    from io import BytesIO as StringIO  # Python2
+
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
@@ -183,6 +188,7 @@ if six.PY2 and sys.platform.startswith('lin'):
     except ImportError:
         pass
 
+
 __version__ = '0.8.4'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
@@ -212,6 +218,7 @@ REDIRECTION_CHARS = ['|', '<', '>']
 
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
 HELP_CATEGORY = 'help_category'
+HELP_SUMMARY = 'help_summary'
 
 
 def categorize(func, category):
@@ -358,6 +365,14 @@ def parse_quoted_string(cmdline):
     return lexed_arglist
 
 
+def with_category(category):
+    """A decorator to apply a category to a command function"""
+    def cat_decorator(func):
+        categorize(func, category)
+        return func
+    return cat_decorator
+
+
 def with_argument_list(func):
     """A decorator to alter the arguments passed to a do_* cmd2
     method. Default passes a string of whatever the user typed.
@@ -395,6 +410,9 @@ def with_argparser_and_unknown_args(argparser):
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
+
+        if func.__doc__:
+            setattr(cmd_wrapper, HELP_SUMMARY, func.__doc__)
 
         cmd_wrapper.__doc__ = argparser.format_help()
 
@@ -434,6 +452,9 @@ def with_argparser(argparser):
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
+
+        if func.__doc__:
+            setattr(cmd_wrapper, HELP_SUMMARY, func.__doc__)
 
         cmd_wrapper.__doc__ = argparser.format_help()
 
@@ -2984,21 +3005,44 @@ Usage:  Usage: unalias [-a] name [name ...]
 
                 help_topics = self.get_help_topics()
                 for command in cmds:
+                    doc = ''
+                    # Try to get the documentation string
+                    try:
+                        # first see if there's a help function implemented
+                        func = getattr(self, 'help_' + command)
+                    except AttributeError:
+                        # Couldn't find a help function
+                        try:
+                            # Now see if help_summary has been set
+                            doc = getattr(self, self._func_named(command)).help_summary
+                        except AttributeError:
+                            # Last, try to directly ac cess the function's doc-string
+                            doc = getattr(self, self._func_named(command)).__doc__
+                    else:
+                        # we found the help function
+                        result = StringIO()
+                        # try to redirect system stdout
+                        with redirect_stdout(result):
+                            # save our internal stdout
+                            stdout_orig = self.stdout
+                            try:
+                                # redirect our internal stdout
+                                self.stdout = result
+                                func()
+                            finally:
+                                # restore internal stdout
+                                self.stdout = stdout_orig
+                        doc = result.getvalue()
+
                     # Attempt to locate the first documentation block
-                    doc = getattr(self, self._func_named(command)).__doc__
                     doc_block = []
                     found_first = False
-                    in_usage = False
                     for doc_line in doc.splitlines():
                         str(doc_line).strip()
                         if len(doc_line.strip()) > 0:
-                            if in_usage or doc_line.startswith('usage: '):
-                                in_usage = True
-                                continue
                             doc_block.append(doc_line.strip())
                             found_first = True
                         else:
-                            in_usage = False
                             if found_first:
                                 break
 

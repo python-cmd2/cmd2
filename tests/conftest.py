@@ -34,7 +34,6 @@ set                 Sets a settable parameter or shows current settings of param
 shell               Execute a command as if at the OS prompt.
 shortcuts           Lists shortcuts (aliases) available.
 unalias             Unsets aliases
-
 """
 
 # Help text for the history command

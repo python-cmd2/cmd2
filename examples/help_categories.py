@@ -4,7 +4,7 @@
 A sample application for tagging categories on commands.
 """
 
-from cmd2 import Cmd, categorize, __version__, with_argparser
+from cmd2 import Cmd, categorize, __version__, with_argparser, with_category
 import argparse
 
 
@@ -24,13 +24,13 @@ class HelpCategories(Cmd):
         """Connect command"""
         self.poutput('Connect')
 
+    # Tag the above command functions under the category Connecting
+    categorize(do_connect, CMD_CAT_CONNECTING)
+
+    @with_category(CMD_CAT_CONNECTING)
     def do_which(self, _):
         """Which command"""
         self.poutput('Which')
-
-    # Tag the above command functions under the category Connecting
-    categorize(do_connect, CMD_CAT_CONNECTING)
-    categorize(do_which, CMD_CAT_CONNECTING)
 
     def do_list(self, _):
         """List command"""
@@ -58,6 +58,7 @@ class HelpCategories(Cmd):
                                 help='Specify when to restart')
 
     @with_argparser(restart_parser)
+    @with_category(CMD_CAT_APP_MGMT)
     def do_restart(self, _):
         """Restart command"""
         self.poutput('Restart')
@@ -84,7 +85,6 @@ class HelpCategories(Cmd):
                 do_start,
                 do_sessions,
                 do_redeploy,
-                do_restart,
                 do_expire,
                 do_undeploy,
                 do_stop,

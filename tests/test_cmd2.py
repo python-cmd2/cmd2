@@ -55,7 +55,7 @@ def test_base_argparse_help(base_app, capsys):
     # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
     run_cmd(base_app, 'set -h')
     out, err = capsys.readouterr()
-    out1 = normalize(out)
+    out1 = normalize(str(out))
 
     out2 = run_cmd(base_app, 'help set')
 
@@ -1080,11 +1080,10 @@ class HelpCategoriesApp(cmd2.Cmd):
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
         cmd2.Cmd.__init__(self, *args, **kwargs)
 
+    @cmd2.with_category('Some Category')
     def do_diddly(self, arg):
         """This command does diddly"""
         pass
-
-    cmd2.categorize(do_diddly, "Some Category")
 
     def do_squat(self, arg):
         """This docstring help will never be shown because the help_squat method overrides it."""
@@ -1138,7 +1137,7 @@ def test_help_cat_verbose(helpcat_app):
 Custom Category
 ================================================================================
 edit                This overrides the edit command and does nothing.
-squat               This docstring help will never be shown because the help_squat method overrides it.
+squat               This command does diddly squat...
 
 Some Category
 ================================================================================
