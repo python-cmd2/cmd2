@@ -380,7 +380,7 @@ def with_argument_list(func):
     @functools.wraps(func)
     def cmd_wrapper(self, cmdline):
         lexed_arglist = parse_quoted_string(cmdline)
-        func(self, lexed_arglist)
+        return func(self, lexed_arglist)
 
     cmd_wrapper.__doc__ = func.__doc__
     return cmd_wrapper
@@ -400,7 +400,7 @@ def with_argparser_and_unknown_args(argparser):
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
             args, unknown = argparser.parse_known_args(lexed_arglist)
-            func(instance, args, unknown)
+            return func(instance, args, unknown)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -442,7 +442,7 @@ def with_argparser(argparser):
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
             args = argparser.parse_args(lexed_arglist)
-            func(instance, args)
+            return func(instance, args)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
