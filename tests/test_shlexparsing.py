@@ -21,6 +21,7 @@ Notes:
 
 import re
 import shlex
+import sys
 
 import pytest
 
@@ -59,9 +60,10 @@ class Cmd2Parser():
         )
         rawinput = re.sub(pattern, replacer, rawinput)
 
-        s = shlex.shlex(rawinput, posix=False, punctuation_chars=True)
+        s = shlex.shlex(rawinput, posix=False, punctuation_chars=';><|')
         # these characters should be included in tokens, not used to split them
         # we need to override the default so we can include the ','
+        # # s.punctuation_chars = ';><|'
         s.wordchars = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_~-.,/*?='
         tokens = list(s)
 
@@ -258,3 +260,10 @@ def test_has_redirect_inside_terminator(parser):
     assert results.command == 'has'
     assert results.args == '> inside'
     assert results.terminator == ';'
+
+@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
+def test_command_with_unicode_args(parser):
+    line = 'drink café'
+    results = parser.parseString(line)
+    assert results.command == 'drink'
+    assert results.args == 'café'
