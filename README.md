@@ -44,7 +44,7 @@ Main Features
 
 Plan for dropping Python 2.7 support
 ------------------------------------
-Support for Python 2.7 will be discontinued on Aug 31, 2018.  After that date, new releases of `cmd2` will only support
+Support for Python 2.7 will be discontinued on April 15, 2018.  After that date, new releases of `cmd2` will only support
 Python 3.  Older releases of `cmd2` will of course continue to support Python 2.7.
 
 Supporting Python 2 is an increasing burden on our limited resources.  Switching to support only Python 3 will allow
