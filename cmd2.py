@@ -112,7 +112,7 @@ if sys.version_info < (3, 5):
 else:
     from contextlib import redirect_stdout, redirect_stderr
 
-if sys.version_info > (3, 0):
+if six.PY3:
     from io import StringIO  # Python3
 else:
     from io import BytesIO as StringIO  # Python2
@@ -3044,7 +3044,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                             # Now see if help_summary has been set
                             doc = getattr(self, self._func_named(command)).help_summary
                         except AttributeError:
-                            # Last, try to directly ac cess the function's doc-string
+                            # Last, try to directly access the function's doc-string
                             doc = getattr(self, self._func_named(command)).__doc__
                     else:
                         # we found the help function
