@@ -1599,6 +1599,42 @@ class Cmd(cmd.Cmd):
         :param dir_only: bool - only return directories
         :return: List[str] - a list of possible tab completions
         """
+
+        # Used to complete ~ and ~user strings
+        def complete_users():
+
+            # We are returning ~user strings that resolve to directories,
+            # so don't append a space or quote in the case of a single result.
+            self.allow_appended_space = False
+            self.allow_closing_quote = False
+
+            users = []
+
+            # Windows lacks the pwd module so we can't get a list of users.
+            # Instead we will add a slash once the user enters text that
+            # resolves to an existing home directory.
+            if sys.platform.startswith('win'):
+                expanded_path = os.path.expanduser(text)
+                if os.path.isdir(expanded_path):
+                    users.append(text + os.path.sep)
+            else:
+                import pwd
+
+                # Iterate through a list of users from the password database
+                for cur_pw in pwd.getpwall():
+
+                    # Check if the user has an existing home dir
+                    if os.path.isdir(cur_pw.pw_dir):
+
+                        # Add a ~ to the user to match against text
+                        cur_user = '~' + cur_pw.pw_name
+                        if cur_user.startswith(text):
+                            if add_trailing_sep_if_dir:
+                                cur_user += os.path.sep
+                            users.append(cur_user)
+
+            return users
+
         # Determine if a trailing separator should be appended to directory completions
         add_trailing_sep_if_dir = False
         if endidx == len(line) or (endidx < len(line) and line[endidx] != os.path.sep):
@@ -1608,9 +1644,9 @@ class Cmd(cmd.Cmd):
         cwd = os.getcwd()
         cwd_added = False
 
-        # Used to replace ~ in the final results
-        user_path = os.path.expanduser('~')
-        tilde_expanded = False
+        # Used to replace expanded user path in final result
+        orig_tilde_path = ''
+        expanded_tilde_path = ''
 
         # If the search text is blank, then search in the CWD for *
         if not text:
@@ -1623,34 +1659,29 @@ class Cmd(cmd.Cmd):
                 if wildcard in text:
                     return []
 
-            # Used if we need to prepend a directory to the search string
-            dirname = ''
+            # Start the search string
+            search_str = text + '*'
 
-            # If the user only entered a '~', then complete it with a slash
-            if text == '~':
-                # This is a directory, so don't add a space or quote
-                self.allow_appended_space = False
-                self.allow_closing_quote = False
-                return [text + os.path.sep]
+            # Handle tilde expansion and completion
+            if text.startswith('~'):
+                sep_index = text.find(os.path.sep, 1)
 
-            elif text.startswith('~'):
-                # Tilde without separator between path is invalid
-                if not text.startswith('~' + os.path.sep):
-                    return []
+                # If there is no slash, then the user is still completing the user after the tilde
+                if sep_index == -1:
+                    return complete_users()
 
-                # Mark that we are expanding a tilde
-                tilde_expanded = True
+                # Otherwise expand the user dir
+                else:
+                    search_str = os.path.expanduser(search_str)
+
+                    # Get what we need to restore the original tilde path later
+                    orig_tilde_path = text[:sep_index]
+                    expanded_tilde_path = os.path.expanduser(orig_tilde_path)
 
             # If the search text does not have a directory, then use the cwd
             elif not os.path.dirname(text):
-                dirname = os.getcwd()
+                search_str = os.path.join(os.getcwd(), search_str)
                 cwd_added = True
-
-            # Build the search string
-            search_str = os.path.join(dirname, text + '*')
-
-            # Expand "~" to the real user directory
-            search_str = os.path.expanduser(search_str)
 
         # Find all matching path completions
         matches = glob.glob(search_str)
@@ -1662,7 +1693,7 @@ class Cmd(cmd.Cmd):
             matches = [c for c in matches if os.path.isdir(c)]
 
         # Don't append a space or closing quote to directory
-        if len(matches) == 1 and not os.path.isfile(matches[0]):
+        if len(matches) == 1 and os.path.isdir(matches[0]):
             self.allow_appended_space = False
             self.allow_closing_quote = False
 
@@ -1677,13 +1708,13 @@ class Cmd(cmd.Cmd):
                 matches[index] += os.path.sep
                 self.display_matches[index] += os.path.sep
 
-        # Remove cwd if it was added
+        # Remove cwd if it was added to match the text readline expects
         if cwd_added:
             matches = [cur_path.replace(cwd + os.path.sep, '', 1) for cur_path in matches]
 
-        # Restore a tilde if we expanded one
-        if tilde_expanded:
-            matches = [cur_path.replace(user_path, '~', 1) for cur_path in matches]
+        # Restore the tilde string if we expanded one to match the text readline expects
+        if expanded_tilde_path:
+            matches = [cur_path.replace(expanded_tilde_path, orig_tilde_path, 1) for cur_path in matches]
 
         return matches
 
@@ -1732,7 +1763,7 @@ class Cmd(cmd.Cmd):
             return []
 
         # If there are no path characters in the search text, then do shell command completion in the user's path
-        if os.path.sep not in text:
+        if not text.startswith('~') and os.path.sep not in text:
             return self.get_exes_in_path(text)
 
         # Otherwise look for executables in the given path
@@ -1806,9 +1837,6 @@ class Cmd(cmd.Cmd):
         :param matches_to_display: the matches being padded
         :return: the padded matches and length of padding that was added
         """
-        if rl_type == RlType.NONE:
-            return matches_to_display, 0
-
         if rl_type == RlType.GNU:
             # Add 2 to the padding of 2 that readline uses for a total of 4.
             padding = 2 * ' '
@@ -1816,6 +1844,9 @@ class Cmd(cmd.Cmd):
         elif rl_type == RlType.PYREADLINE:
             # Add 3 to the padding of 1 that pyreadline uses for a total of 4.
             padding = 3 * ' '
+
+        else:
+            return matches_to_display, 0
 
         return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
