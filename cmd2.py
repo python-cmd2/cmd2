@@ -1600,10 +1600,11 @@ class Cmd(cmd.Cmd):
         :return: List[str] - a list of possible tab completions
         """
 
-        # Used to complete ~ and ~user strings with a list of users that have existing home dirs
+        # Used to complete ~ and ~user strings
         def complete_users():
 
-            # We are returning ~user strings that resolve to directories, so don't append a space or quote
+            # We are returning ~user strings that resolve to directories,
+            # so don't append a space or quote in the case of a single result.
             self.allow_appended_space = False
             self.allow_closing_quote = False
 
@@ -1692,7 +1693,7 @@ class Cmd(cmd.Cmd):
             matches = [c for c in matches if os.path.isdir(c)]
 
         # Don't append a space or closing quote to directory
-        if len(matches) == 1 and not os.path.isfile(matches[0]):
+        if len(matches) == 1 and os.path.isdir(matches[0]):
             self.allow_appended_space = False
             self.allow_closing_quote = False
 
