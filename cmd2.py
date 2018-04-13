@@ -3033,9 +3033,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 if self.ruler:
                     self.stdout.write('{:{ruler}<{width}}\n'.format('', ruler=self.ruler, width=80))
 
-                help_topics = self.get_help_topics()
                 for command in cmds:
-                    doc = ''
                     # Try to get the documentation string
                     try:
                         # first see if there's a help function implemented
