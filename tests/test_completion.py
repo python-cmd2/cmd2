@@ -795,10 +795,7 @@ def test_subcommand_tab_completion_add_quote(sc_app):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
-
-    # No matches are returned when an opening quote is added to the screen
-    assert first_match is None
-    assert readline.get_line_buffer() == 'base sport "Space Ball" '
+    assert first_match is not None and sc_app.completion_matches == ['"Space Ball" ']
 
 def test_subcommand_tab_completion_space_in_text(sc_app):
     text = 'B'
