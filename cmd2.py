@@ -1602,29 +1602,35 @@ class Cmd(cmd.Cmd):
 
         # Used to complete ~ and ~user strings with a list of users that have existing home dirs
         def complete_users():
-            # Only works on Unix systems
-            try:
-                import pwd
-            except ImportError:
-                return []
 
-            # Get a list of users from password database
-            users = []
-            for cur_pw in pwd.getpwall():
-
-                # Check if the user has an existing home dir
-                if os.path.isdir(cur_pw.pw_dir):
-
-                    # Add a ~ to the user to match against text
-                    cur_user = '~' + cur_pw.pw_name
-                    if cur_user.startswith(text):
-                        if add_trailing_sep_if_dir:
-                            cur_user += os.path.sep
-                        users.append(cur_user)
-
-            # These are directories, so don't add a space or quote
+            # We are returning ~user strings that resolve to directories, so don't append a space or quote
             self.allow_appended_space = False
             self.allow_closing_quote = False
+
+            users = []
+
+            # Windows lacks the pwd module so we can't get a list of users.
+            # Instead we will add a slash once the user enters text that
+            # resolves to an existing home directory.
+            if sys.platform.startswith('win'):
+                expanded_path = os.path.expanduser(text)
+                if os.path.isdir(expanded_path):
+                    users.append(text + os.path.sep)
+            else:
+                import pwd
+
+                # Iterate through a list of users from the password database
+                for cur_pw in pwd.getpwall():
+
+                    # Check if the user has an existing home dir
+                    if os.path.isdir(cur_pw.pw_dir):
+
+                        # Add a ~ to the user to match against text
+                        cur_user = '~' + cur_pw.pw_name
+                        if cur_user.startswith(text):
+                            if add_trailing_sep_if_dir:
+                                cur_user += os.path.sep
+                            users.append(cur_user)
 
             return users
 

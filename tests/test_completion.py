@@ -352,12 +352,8 @@ def test_path_completion_expand_user_dir(cmd2_app):
     begidx = endidx - len(text)
     completions = cmd2_app.path_complete(text, line, begidx, endidx)
 
-    # On Windows there should be no results, since it lacks the pwd module
-    if sys.platform.startswith('win'):
-        assert completions == []
-    else:
-        expected = text + os.path.sep
-        assert expected in completions
+    expected = text + os.path.sep
+    assert expected in completions
 
 def test_path_completion_user_expansion(cmd2_app):
     # Run path with a tilde and a slash
