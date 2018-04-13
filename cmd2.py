@@ -1836,9 +1836,6 @@ class Cmd(cmd.Cmd):
         :param matches_to_display: the matches being padded
         :return: the padded matches and length of padding that was added
         """
-        if rl_type == RlType.NONE:
-            return matches_to_display, 0
-
         if rl_type == RlType.GNU:
             # Add 2 to the padding of 2 that readline uses for a total of 4.
             padding = 2 * ' '
@@ -1846,6 +1843,9 @@ class Cmd(cmd.Cmd):
         elif rl_type == RlType.PYREADLINE:
             # Add 3 to the padding of 1 that pyreadline uses for a total of 4.
             padding = 3 * ' '
+
+        else:
+            return matches_to_display, 0
 
         return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
