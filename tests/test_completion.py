@@ -9,7 +9,6 @@ Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import argparse
-import getpass
 import os
 import sys
 
@@ -343,8 +342,9 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
 def test_path_completion_expand_user_dir(cmd2_app):
-    # Get the current user
-    user = getpass.getuser()
+    # Get the current user. We can't use getpass.getuser() since
+    # that doesn't work when running these tests on Windows in AppVeyor.
+    user = os.path.basename(os.path.expanduser('~'))
 
     text = '~{}'.format(user)
     line = 'shell fake {}'.format(text)
