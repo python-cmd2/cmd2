@@ -9,6 +9,7 @@ Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import argparse
+import getpass
 import os
 import sys
 
@@ -341,25 +342,22 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     # Currently path completion doesn't accept wildcards, so will always return empty results
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_invalid_syntax(cmd2_app):
-    # Test a missing separator between a ~ and path
-    text = '~Desktop'
+def test_path_completion_expand_user_dir(cmd2_app):
+    # Get the current user
+    user = getpass.getuser()
+
+    text = '~{}'.format(user)
     line = 'shell fake {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
+    completions = cmd2_app.path_complete(text, line, begidx, endidx)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
-
-def test_path_completion_just_tilde(cmd2_app):
-    # Run path with just a tilde
-    text = '~'
-    line = 'shell fake {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-    completions_tilde = cmd2_app.path_complete(text, line, begidx, endidx)
-
-    # Path complete should complete the tilde with a slash
-    assert completions_tilde == [text + os.path.sep]
+    # On Windows there should be no results, since it lacks the pwd module
+    if sys.platform.startswith('win'):
+        assert completions == []
+    else:
+        expected = text + os.path.sep
+        assert expected in completions
 
 def test_path_completion_user_expansion(cmd2_app):
     # Run path with a tilde and a slash
