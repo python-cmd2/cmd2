@@ -16,7 +16,7 @@ class _RangeAction(object):
         self.nargs_max = None
 
         # pre-process special ranged nargs
-        if isinstance(nargs, Tuple):
+        if isinstance(nargs, tuple):
             if len(nargs) != 2 or not isinstance(nargs[0], int) or not isinstance(nargs[1], int):
                 raise ValueError('Ranged values for nargs must be a tuple of 2 integers')
             if nargs[0] >= nargs[1]:
@@ -122,7 +122,7 @@ class AutoCompleter(object):
 
     def __init__(self,
                  parser: argparse.ArgumentParser,
-                 token_start_index: int,
+                 token_start_index: int = 1,
                  arg_choices: Dict[str, Union[List, Tuple, Callable]] = None,
                  subcmd_args_lookup: dict = None,
                  tab_for_arg_help: bool = True):
