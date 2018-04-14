@@ -1107,8 +1107,11 @@ class Cmd(cmd.Cmd):
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
-        # If the tab-completion matches should be displayed in a way that is different than the actual match values,
-        # then place those results in this list. path_complete uses this to show only the basename of completions.
+        # Use this list if you are completing strings that contain a common delimiter and you only want to
+        # display the final portion of the matches as the tab-completion suggestions. The full matches
+        # still must be returned from your completer function. For an example, look at path_complete()
+        # which uses this to show only the basename of paths as the suggestions. delimiter_complete() also
+        # populates this list.
         self.display_matches = []
 
     # -----  Methods related to presenting output to the user -----
@@ -2081,15 +2084,17 @@ class Cmd(cmd.Cmd):
                     # Check if we need to add an opening quote
                     if not unclosed_quote:
 
-                        # Get the common prefix of all matches. This is the actual tab completion.
-                        common_prefix = os.path.commonprefix(self.completion_matches)
+                        # Get the common prefix of the matches. This is the actual tab completion.
+                        # Use display_matches instead of completion_matches to support cases of delimited
+                        # match strings since only the final part of those matches matter in these checks.
+                        common_prefix = os.path.commonprefix(self.display_matches)
 
                         # Join all matches into 1 string for ease of searching
-                        all_matches_str = ''.join(self.completion_matches)
+                        all_matches_str = ''.join(self.display_matches)
 
-                        # If the tab completion will extend the text on the command line and any of
-                        # the matches have a space, then we will add an opening quote to the matches.
-                        if len(common_prefix) > len(text) and ' ' in all_matches_str:
+                        # If there is a tab completion and any of the matches have a space,
+                        # then we will add an opening quote to the completion matches.
+                        if common_prefix and ' ' in all_matches_str:
 
                             # Figure out what kind of quote to add and save it as the unclosed_quote
                             if '"' in all_matches_str:
