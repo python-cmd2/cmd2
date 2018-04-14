@@ -2087,9 +2087,9 @@ class Cmd(cmd.Cmd):
                         # Join all matches into 1 string for ease of searching
                         all_matches_str = ''.join(self.completion_matches)
 
-                        # If there is a common_prefix and any of the matches have a space,
-                        # then we must add an opening quote to the matches.
-                        if common_prefix and ' ' in all_matches_str:
+                        # If there is a tab completion that will alter the text on the command line and
+                        # any of the matches have a space, then we must add an opening quote to the matches.
+                        if common_prefix != text and ' ' in all_matches_str:
 
                             # Figure out what kind of quote to add and save it as the unclosed_quote
                             if '"' in all_matches_str:
