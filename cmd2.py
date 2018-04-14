@@ -1961,10 +1961,9 @@ class Cmd(cmd.Cmd):
             begidx = max(readline.get_begidx() - stripped, 0)
             endidx = max(readline.get_endidx() - stripped, 0)
 
-            # We only break words on whitespace and quotes when tab completing.
-            # Therefore shortcuts become part of the text variable if there isn't a space after it.
-            # We need to remove it from text and update the indexes. This only applies if we are at
-            # the beginning of the line.
+            # Shortcuts are not word break characters when tab completing. Therefore shortcuts become part
+            # of the text variable if there isn't a word break, like a space, after it. We need to remove it
+            # from text and update the indexes. This only applies if we are at the the beginning of the line.
             shortcut_to_restore = ''
             if begidx == 0:
                 for (shortcut, expansion) in self.shortcuts:
@@ -2092,7 +2091,7 @@ class Cmd(cmd.Cmd):
                         # then we must add an opening quote to the matches.
                         if common_prefix and ' ' in all_matches_str:
 
-                            # Figure out what kind of quote to add
+                            # Figure out what kind of quote to add and save it as the unclosed_quote
                             if '"' in all_matches_str:
                                 unclosed_quote = "'"
                             else:
