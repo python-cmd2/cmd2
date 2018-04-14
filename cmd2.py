@@ -2016,6 +2016,8 @@ class Cmd(cmd.Cmd):
 
                 # Check if the token being completed has an opening quote
                 if raw_completion_token and raw_completion_token[0] in QUOTES:
+
+                    # Since the token is still being completed, we know the opening quote is unclosed
                     unclosed_quote = raw_completion_token[0]
 
                     # readline still performs word breaks after a quote. Therefore something like quoted search
@@ -2092,12 +2094,11 @@ class Cmd(cmd.Cmd):
 
                             # Figure out what kind of quote to add
                             if '"' in all_matches_str:
-                                quote = "'"
+                                unclosed_quote = "'"
                             else:
-                                quote = '"'
+                                unclosed_quote = '"'
 
-                            unclosed_quote = quote
-                            self.completion_matches = [quote + match for match in self.completion_matches]
+                            self.completion_matches = [unclosed_quote + match for match in self.completion_matches]
 
                     # Check if we need to remove text from the beginning of tab completions
                     elif text_to_remove:
