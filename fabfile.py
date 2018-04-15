@@ -30,7 +30,7 @@ def clean():
 
 @task
 def build():
-    local("python setup.py sdist")
+    local("python setup.py sdist bdist_wheel")
 
 
 @task
