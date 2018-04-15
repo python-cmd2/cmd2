@@ -736,12 +736,12 @@ def test_add_opening_quote_delimited_quote_added(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_prefix = '"/home/user/file'
+    expected_common_prefix = '"/home/user/file'
     expected_display = sorted(['file.txt', 'file space.txt'])
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           os.path.commonprefix(cmd2_app.completion_matches) == expected_prefix and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
            cmd2_app.display_matches == expected_display
 
 def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
@@ -751,12 +751,12 @@ def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_prefix = '"/home/user/file'
+    expected_common_prefix = '"/home/user/file'
     expected_display = sorted(['file.txt', 'file space.txt'])
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           os.path.commonprefix(cmd2_app.completion_matches) == expected_prefix and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
            cmd2_app.display_matches == expected_display
 
 def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
@@ -766,12 +766,12 @@ def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_prefix = '"/home/other user/'
+    expected_common_prefix = '"/home/other user/'
     expected_display = ['maps', 'tests']
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           os.path.commonprefix(cmd2_app.completion_matches) == expected_prefix and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
            cmd2_app.display_matches == expected_display
 
 class SubcommandsExample(cmd2.Cmd):
