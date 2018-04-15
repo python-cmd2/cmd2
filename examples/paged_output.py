@@ -11,7 +11,7 @@ class PagedOutput(cmd2.Cmd):
     """ Example cmd2 application where we create commands that just print the arguments they are called with."""
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        super().__init__()
 
     @with_argument_list
     def do_page_file(self, args):

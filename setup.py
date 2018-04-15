@@ -61,7 +61,7 @@ Programming Language :: Python :: Implementation :: PyPy3
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
-INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.6.0', 'six']
+INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.6.0']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
@@ -82,7 +82,7 @@ if int(setuptools.__version__.split('.')[0]) < 18:
         INSTALL_REQUIRES.append('contextlib2')
 
 TESTS_REQUIRE = ['pytest', 'pytest-xdist']
-DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'six']
+DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'wcwidth']
 
 setup(
     name="cmd2",

@@ -18,7 +18,7 @@ class HelpCategories(Cmd):
 
     def __init__(self):
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        Cmd.__init__(self, use_ipython=False)
+        super().__init__(use_ipython=False)
 
     def do_connect(self, _):
         """Connect command"""

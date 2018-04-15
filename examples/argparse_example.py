@@ -28,7 +28,7 @@ class CmdLineApp(Cmd):
         self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        Cmd.__init__(self, use_ipython=False, transcript_files=transcript_files)
+        super().__init__(use_ipython=False, transcript_files=transcript_files)
 
         # Disable cmd's usage of command-line arguments as commands to be run at invocation
         # self.allow_cli_args = False

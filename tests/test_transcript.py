@@ -33,8 +33,7 @@ class CmdLineApp(Cmd):
         # Add stuff to settable and/or shortcuts before calling base class initializer
         self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
 
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.intro = 'This is an intro banner ...'
 
         # Configure how arguments are parsed for commands using decorators
@@ -267,12 +266,8 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
     expected_end = "s\n\nOK\n"
     out, err = capsys.readouterr()
-    if six.PY3:
-        assert err.startswith(expected_start)
-        assert err.endswith(expected_end)
-    else:
-        assert err == ''
-        assert out == ''
+    assert err.startswith(expected_start)
+    assert err.endswith(expected_end)
 
 
 @pytest.mark.parametrize('expected, transformed', [

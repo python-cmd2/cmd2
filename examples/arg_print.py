@@ -28,7 +28,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         self.shortcuts.update({'$': 'aprint', '%': 'oprint'})
 
         # Make sure to call this super class __init__ *after* setting commentGrammars and/or updating shortcuts
-        cmd2.Cmd.__init__(self)
+        super().__init__()
         # NOTE: It is critical that the super class __init__ method be called AFTER updating certain parameters which
         # are not settable at runtime.  This includes the commentGrammars, shortcuts, multilineCommands, etc.
 
