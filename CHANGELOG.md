@@ -1,3 +1,7 @@
+## 0.8.6 (TBD)
+    * Bug Fixes
+        * TBD
+
 ## 0.8.5 (April 15, 2018)
 * Bug Fixes
     * Fixed a bug with all argument decorators where the wrapped function wasn't returning a value and thus couldn't cause the cmd2 app to quit
