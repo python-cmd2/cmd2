@@ -458,7 +458,7 @@ def test_delimiter_completion(cmd2_app):
     display_list = list(display_set)
     display_list.sort()
 
-    assert display_list == ['otheruser', 'user']
+    assert display_list == ['other user', 'user']
 
 def test_flag_based_completion_single(cmd2_app):
     text = 'Pi'

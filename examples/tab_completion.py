@@ -8,8 +8,8 @@ import cmd2
 from cmd2 import with_argparser, with_argument_list
 
 # List of strings used with flag and index based completion functions
-food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
-sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
+food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
+sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
 
 class TabCompleteExample(cmd2.Cmd):

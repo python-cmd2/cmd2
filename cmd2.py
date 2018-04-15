@@ -2096,6 +2096,7 @@ class Cmd(cmd.Cmd):
                         common_prefix = os.path.commonprefix(self.completion_matches)
 
                         if matches_delimited:
+                            # Check if any of the display matches are part of the tab completion text
                             display_prefix = os.path.commonprefix(self.display_matches)
 
                             # For delimited matches, we check what appears before the display
