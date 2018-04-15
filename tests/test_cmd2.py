@@ -6,19 +6,21 @@ Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import argparse
+from code import InteractiveConsole
 import os
 import sys
 import io
 import tempfile
 
-from unittest import mock
 import pytest
 import six
-
-from code import InteractiveConsole
-
-# Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
+
+# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
+try:
+    import mock
+except ImportError:
+    from unittest import mock
 
 import cmd2
 from conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
