@@ -34,18 +34,21 @@ class TabCompleteExample(cmd2.Cmd):
 
     @with_argparser(suggest_parser)
     def do_suggest(self, args):
+        """Suggest command demonstrates argparse customizations
+
+        See hybrid_suggest and orig_suggest to compare the help output.
+
+
+        """
         if not args.type:
             self.do_help('suggest')
 
     def complete_suggest(self, text, line, begidx, endidx):
         """ Adds tab completion to media"""
-        print('1')
         completer = AutoCompleter.AutoCompleter(TabCompleteExample.suggest_parser, 1)
-        print('2')
+
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        print('22')
         results = completer.complete_command(tokens, text, line, begidx, endidx)
-        print('3')
 
         return results
 
@@ -62,7 +65,7 @@ class TabCompleteExample(cmd2.Cmd):
                                             '\tsingle value - maximum duration\n'
                                             '\t[a, b] - duration range')
     @with_argparser(suggest_parser_hybrid)
-    def do_orig_suggest(self, args):
+    def do_hybrid_suggest(self, args):
         if not args.type:
             self.do_help('orig_suggest')
 
@@ -74,6 +77,10 @@ class TabCompleteExample(cmd2.Cmd):
         results = completer.complete_command(tokens, text, line, begidx, endidx)
 
         return results
+
+    # This variant demonstrates the AutoCompleter working with the orginial argparse.
+    # Base argparse is unable to specify narg ranges. Autocompleter will keep expecting additional arguments
+    # for the -d/--duration flag until you specify a new flaw or end the list it with '--'
 
     suggest_parser_orig = argparse.ArgumentParser()
 
@@ -147,7 +154,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     @with_argparser(media_parser)
     def do_media(self, args):
-        """Media management"""
+        """Media management command demonstrates multiple layers of subcommands being handled by AutoCompleter"""
         func = getattr(args, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
@@ -156,12 +163,16 @@ class TabCompleteExample(cmd2.Cmd):
             # No subcommand was provided, so call help
             self.do_help('media')
 
+    # This completer is implemented using a single dictionary to look up completion lists for all layers of
+    # subcommands. For each argument, AutoCompleter will search for completion values from the provided
+    # arg_choices dict. This requires careful naming of argparse arguments so that there are no unintentional
+    # name collisions.
     def complete_media(self, text, line, begidx, endidx):
         """ Adds tab completion to media"""
-        directors = ['J. J. Abrams', 'Irvin Kershner', 'George Lucas', 'Richard Marquand',
+        static_list_directors = ['J. J. Abrams', 'Irvin Kershner', 'George Lucas', 'Richard Marquand',
                      'Rian Johnson', 'Gareth Edwards']
         choices = {'actor': self.query_actors,
-                   'director': directors}
+                   'director': static_list_directors}
         completer = AutoCompleter.AutoCompleter(TabCompleteExample.media_parser, arg_choices=choices)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)

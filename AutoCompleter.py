@@ -2,7 +2,7 @@
 import argparse
 import re as _re
 import sys
-from argparse import OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, REMAINDER, PARSER
+from argparse import OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, REMAINDER, PARSER, ArgumentError
 from typing import List, Dict, Tuple, Callable, Union
 
 from colorama import Fore
@@ -460,14 +460,14 @@ class AutoCompleter(object):
         if action.option_strings:
             flags = ', '.join(action.option_strings)
             param = ''
-            if action.nargs is None or action.nargs > 0:
+            if action.nargs is None or action.nargs != 0:
                 param += ' ' + str(action.dest).upper()
 
             prefix = '{}{}'.format(flags, param)
         else:
             prefix = '{}'.format(str(action.dest).upper())
 
-        prefix = '  {0: <{width}}'.format(prefix, width=20)
+        prefix = '  {0: <{width}}    '.format(prefix, width=20)
         pref_len = len(prefix)
         help_lines = action.help.splitlines()
         if len(help_lines) == 1:
@@ -533,7 +533,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
 
             # build full usage string
             format = self._format_actions_usage
-            action_usage = format(positionals + optionals, groups)
+            action_usage = format(positionals + required_options + optionals, groups)
             usage = ' '.join([s for s in [prog, action_usage] if s])
 
             # wrap the usage parts if it's too long
@@ -632,7 +632,11 @@ class ACHelpFormatter(argparse.HelpFormatter):
 
     def _format_args(self, action, default_metavar):
         get_metavar = self._metavar_formatter(action, default_metavar)
-        if action.nargs is None:
+        if isinstance(action, _RangeAction) and \
+                action.nargs_min is not None and action.nargs_max is not None:
+            result = '{}{{{}..{}}}'.format('%s' % get_metavar(1), action.nargs_min, action.nargs_max)
+
+        elif action.nargs is None:
             result = '%s' % get_metavar(1)
         elif action.nargs == OPTIONAL:
             result = '[%s]' % get_metavar(1)
@@ -787,3 +791,17 @@ class ACArgumentParser(argparse.ArgumentParser):
                 nargs_pattern = nargs_pattern.replace('-', '')
             return nargs_pattern
         return super(ACArgumentParser, self)._get_nargs_pattern(action)
+
+    def _match_argument(self, action, arg_strings_pattern):
+        # match the pattern for this action to the arg strings
+        nargs_pattern = self._get_nargs_pattern(action)
+        match = _re.match(nargs_pattern, arg_strings_pattern)
+
+        # raise an exception if we weren't able to find a match
+        if match is None:
+            if isinstance(action, _RangeAction) and \
+                    action.nargs_min is not None and action.nargs_max is not None:
+                raise ArgumentError(action,
+                                    'Expected between {} and {} arguments'.format(action.nargs_min, action.nargs_max))
+
+        return super(ACArgumentParser, self)._match_argument(action, arg_strings_pattern)
