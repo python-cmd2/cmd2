@@ -29,14 +29,8 @@ except ImportError:
         pass
 
 
-@pytest.fixture
-def cmd2_app():
-    c = cmd2.Cmd()
-    return c
-
-
 # List of strings used with completion functions
-food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
+food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 delimited_strs = ['/home/user/file.txt', '/home/user/prog.c', '/home/otheruser/maps']
 
@@ -58,6 +52,33 @@ index_dict = \
         1: food_item_strs,            # Tab-complete food items at index 1 in command line
         2: sport_item_strs,           # Tab-complete sport items at index 2 in command line
     }
+
+
+class CompletionsExample(cmd2.Cmd):
+    """
+    Example cmd2 application used to exercise tab-completion tests
+    """
+    def __init__(self):
+        cmd2.Cmd.__init__(self)
+
+    def do_test_basic(self, args):
+        pass
+
+    def complete_test_basic(self, text, line, begidx, endidx):
+        return self.basic_complete(text, line, begidx, endidx, food_item_strs)
+
+    def do_test_delimited(self, args):
+        pass
+
+    def complete_test_delimited(self, text, line, begidx, endidx):
+        return self.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
+
+
+@pytest.fixture
+def cmd2_app():
+    c = CompletionsExample()
+    return c
+
 
 def complete_tester(text, line, begidx, endidx, app):
     """
@@ -425,7 +446,7 @@ def test_delimiter_completion(cmd2_app):
 
     cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
 
-    # Remove duplicates from display_matches and sort it. This is typically done in the display function.
+    # Remove duplicates from display_matches and sort it. This is typically done in complete().
     display_set = set(cmd2_app.display_matches)
     display_list = list(display_set)
     display_list.sort()
@@ -638,6 +659,45 @@ def test_parseline_expands_shortcuts(cmd2_app):
     assert args == 'cat foobar.txt'
     assert line.replace('!', 'shell ') == out_line
 
+def test_add_opening_quote_basic_no_text(cmd2_app):
+    text = ''
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The whole list will be returned with no opening quotes added
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == sorted(food_item_strs)
+
+def test_add_opening_quote_basic_nothing_added(cmd2_app):
+    text = 'P'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == ['Pizza', 'Potato']
+
+def test_add_opening_quote_basic_quote_added(cmd2_app):
+    text = 'Ha'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = ['"Ham', '"Ham Sandwich']
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
+
+def test_add_opening_quote_basic_text_is_common_prefix(cmd2_app):
+    # This tests when the text entered is the same as the common prefix of the matches
+    text = 'Ham'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = ['"Ham', '"Ham Sandwich']
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
 
 class SubcommandsExample(cmd2.Cmd):
     """
@@ -786,16 +846,6 @@ def test_subcommand_tab_completion_with_no_completer(sc_app):
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
     assert first_match is None
-
-def test_subcommand_tab_completion_add_quote(sc_app):
-    # This makes sure an opening quote is added to the readline line buffer
-    text = 'Space'
-    line = 'base sport {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, sc_app)
-    assert first_match is not None and sc_app.completion_matches == ['"Space Ball" ']
 
 def test_subcommand_tab_completion_space_in_text(sc_app):
     text = 'B'
