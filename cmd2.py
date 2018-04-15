@@ -2082,7 +2082,7 @@ class Cmd(cmd.Cmd):
                     else:
                         matches_delimited = False
 
-                        # Since self.display_matches is empty, then set it to self.completion_matches
+                        # Since self.display_matches is empty, set it to self.completion_matches
                         # before we alter them. That way the suggestions will reflect how we parsed
                         # the token being completed and not how readline did.
                         self.display_matches = copy.copy(self.completion_matches)
