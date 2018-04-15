@@ -13,7 +13,7 @@ import os
 import sys
 
 import cmd2
-import mock
+from unittest import mock
 import pytest
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)

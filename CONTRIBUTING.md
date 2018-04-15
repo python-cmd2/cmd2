@@ -44,9 +44,9 @@ The tables below list all prerequisites along with the minimum required version 
 
 | Prerequisite                                        | Minimum Version |
 | --------------------------------------------------- | --------------- |
-| [Python](https://www.python.org/downloads/)         | `3.4 or 2.7`    |
+| [Python](https://www.python.org/downloads/)         | `3.4`           |
 | [six](https://pypi.python.org/pypi/six)             | `1.8`           |
-| [pyparsing](http://pyparsing.wikispaces.com)        | `2.0.3`         |
+| [pyparsing](http://pyparsing.wikispaces.com)        | `2.1`           |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
 
 #### Additional prerequisites to run cmd2 unit tests
@@ -54,7 +54,6 @@ The tables below list all prerequisites along with the minimum required version 
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
 | [pytest](http://doc.pytest.org/en/latest/)  | `2.6.3`         |
-| [mock](https://pypi.python.org/pypi/six)    | `1.0.1`         |
 
 ### Additional prerequisites to build cmd2 documentation
 | Prerequisite                                | Minimum Version |
@@ -196,7 +195,7 @@ Once you have cmd2 cloned, before you start any cmd2 application, you first need
 pip install -U six pyparsing pyperclip
 
 # Install prerequisites for running cmd2 unit tests
-pip install -U pytest mock
+pip install -U pytest
 
 # Install prerequisites for building cmd2 documentation
 pip install -U sphinx sphinx-rtd-theme
@@ -479,6 +478,13 @@ Here is some advice regarding what makes a good pull request (PR) from the persp
 - It's good if the branch name is related to the PR contents, even if it's just "fix123" or "add_more_tests"
 - Code coverage of the unit tests matters, try not to decrease it
 - Think twice before adding dependencies to 3rd party libraries (outside of the Python standard library) because it could affect a lot of users
+
+### Developing and Debugging in an IDE
+
+We recommend using [Visual Studio Code](https://code.visualstudio.com) with the [Python extension](https://code.visualstudio.com/docs/languages/python) and it's [Integrated Terminal](https://code.visualstudio.com/docs/python/debugging) debugger for debugging since it has 
+excellent support for debugging console applications.
+
+[PyCharm](https://www.jetbrains.com/pycharm/) is also quite good and has very nice [Code Inspection](https://www.jetbrains.com/help/pycharm/code-inspection.html) capabilities.
 
 ### Acknowledgement
 Thanks to the good folks at [freeCodeCamp](https://github.com/freeCodeCamp/freeCodeCamp) for creating

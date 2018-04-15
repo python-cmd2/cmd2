@@ -11,7 +11,7 @@ import sys
 import io
 import tempfile
 
-import mock
+from unittest import mock
 import pytest
 import six
 

@@ -6,7 +6,7 @@ import argparse
 import pytest
 
 import cmd2
-import mock
+from unittest import mock
 
 from conftest import run_cmd, StdOut
 

@@ -82,8 +82,7 @@ if int(setuptools.__version__.split('.')[0]) < 18:
     if sys.version_info < (3, 5):
         INSTALL_REQUIRES.append('contextlib2')
 
-# unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
-TESTS_REQUIRE = ['mock', 'pytest', 'pytest-xdist']
+TESTS_REQUIRE = ['pytest', 'pytest-xdist']
 DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'six']
 
 setup(

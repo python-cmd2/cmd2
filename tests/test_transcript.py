@@ -11,7 +11,7 @@ import sys
 import re
 import random
 
-import mock
+from unittest import mock
 import pytest
 import six
 
