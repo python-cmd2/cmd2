@@ -2078,26 +2078,28 @@ class Cmd(cmd.Cmd):
                     # If self.display_matches is empty, then set it to self.completion_matches
                     # before we alter them. That way the suggestions will reflect how we parsed
                     # the token being completed and not how readline did.
+                    display_matches_delimited = True
                     if not self.display_matches:
+                        display_matches_delimited = False
                         self.display_matches = copy.copy(self.completion_matches)
 
                     # Check if we need to add an opening quote
                     if not unclosed_quote:
 
-                        # Get the common prefix of the matches. This is the actual tab completion.
-                        # Use display_matches instead of completion_matches to support cases of delimited
-                        # match strings since only the final part of those matches matter in these checks.
-                        common_prefix = os.path.commonprefix(self.display_matches)
+                        common_prefix = os.path.commonprefix(self.completion_matches)
 
-                        # Join all matches into 1 string for ease of searching
-                        all_matches_str = ''.join(self.display_matches)
+                        add_quote = False
+                        if display_matches_delimited:
+                            display_prefix = os.path.commonprefix(self.display_matches)
+                            if (' ' in common_prefix) or (display_prefix and ' ' in ''.join(self.display_matches)):
+                                add_quote = True
+                        else:
+                            if common_prefix and ' ' in ''.join(self.completion_matches):
+                                add_quote = True
 
-                        # If there is a tab completion and any of the matches have a space,
-                        # then we will add an opening quote to the completion matches.
-                        if common_prefix and ' ' in all_matches_str:
-
+                        if add_quote:
                             # Figure out what kind of quote to add and save it as the unclosed_quote
-                            if '"' in all_matches_str:
+                            if '"' in ''.join(self.completion_matches):
                                 unclosed_quote = "'"
                             else:
                                 unclosed_quote = '"'
