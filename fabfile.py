@@ -101,7 +101,7 @@ def release():
     build()
     print("Releasing", env.projname, "version", env.version)
     local("git tag %s" % env.version)
-    local("python setup.py sdist upload")
+    local("python setup.py sdist bdist_wheel upload")
     local("git push --tags")
 
 
