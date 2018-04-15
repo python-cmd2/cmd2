@@ -151,14 +151,11 @@ Example cmd2 application (**examples/example.py**):
 """
 A sample application for cmd2.
 """
-
-import random
 import argparse
+import random
+import cmd2
 
-from cmd2 import Cmd, with_argparser
-
-
-class CmdLineApp(Cmd):
+class CmdLineApp(cmd2.Cmd):
     """ Example cmd2 application. """
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
@@ -176,14 +173,14 @@ class CmdLineApp(Cmd):
         self.shortcuts.update({'&': 'speak'})
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        Cmd.__init__(self, use_ipython=False)
+        super().__init__(use_ipython=False)
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     speak_parser.add_argument('words', nargs='+', help='words to say')
-    @with_argparser(speak_parser)
+    @cmd2.with_argparser(speak_parser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
@@ -204,7 +201,7 @@ class CmdLineApp(Cmd):
     mumble_parser = argparse.ArgumentParser()
     mumble_parser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
     mumble_parser.add_argument('words', nargs='+', help='words to say')
-    @with_argparser(mumble_parser)
+    @cmd2.with_argparser(mumble_parser)
     def do_mumble(self, args):
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
