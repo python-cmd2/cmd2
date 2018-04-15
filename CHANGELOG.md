@@ -10,7 +10,7 @@
     * Tab completion of paths now supports ~user user path expansion
     * Simplified implementation of various tab completion functions so they no longer require ``ctypes``
     * Expanded documentation of ``display_matches`` list to clarify its purpose. See cmd2.py for this documentation.
-    * Adding opening quote to tab completion if any of the matches have a space.
+    * Adding opening quote to tab completion if any of the completion suggestions have a space.
 
 * **Python 2 EOL notice**
     * This is the last release where new features will be added to ``cmd2`` for Python 2.7
