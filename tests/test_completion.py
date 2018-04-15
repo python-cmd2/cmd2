@@ -32,7 +32,14 @@ except ImportError:
 # List of strings used with completion functions
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
-delimited_strs = ['/home/user/file.txt', '/home/user/prog.c', '/home/otheruser/maps']
+delimited_strs = \
+    [
+        '/home/user/file.txt',
+        '/home/user/file space.txt',
+        '/home/user/prog.c',
+        '/home/other user/maps',
+        '/home/other user/tests'
+    ]
 
 # Dictionary used with flag based completion functions
 flag_dict = \
@@ -684,7 +691,7 @@ def test_add_opening_quote_basic_quote_added(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = ['"Ham', '"Ham Sandwich']
+    expected = sorted(['"Ham', '"Ham Sandwich'])
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
 
@@ -695,9 +702,62 @@ def test_add_opening_quote_basic_text_is_common_prefix(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = ['"Ham', '"Ham Sandwich']
+    expected = sorted(['"Ham', '"Ham Sandwich'])
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
+
+def test_add_opening_quote_delimited_no_text(cmd2_app):
+    text = ''
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The whole list will be returned with no opening quotes added
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == sorted(delimited_strs)
+
+def test_add_opening_quote_delimited_nothing_added(cmd2_app):
+    text = '/ho'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_matches = sorted(delimited_strs)
+    expected_display = sorted(['other user', 'user'])
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           cmd2_app.completion_matches == expected_matches and \
+           cmd2_app.display_matches == expected_display
+
+def test_add_opening_quote_delimited_quote_added(cmd2_app):
+    text = '/home/oth'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_prefix = '"/home/other user/'
+    expected_display = ['maps', 'tests']
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_prefix and \
+           cmd2_app.display_matches == expected_display
+
+def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
+    # This tests when the text entered is the same as the common prefix of the matches
+    text = '/home/user/file'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_prefix = '"/home/user/file'
+    expected_display = sorted(['file.txt', 'file space.txt'])
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_prefix and \
+           cmd2_app.display_matches == expected_display
 
 class SubcommandsExample(cmd2.Cmd):
     """
