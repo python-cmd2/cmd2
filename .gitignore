@@ -1,11 +1,19 @@
+# Python development, test, and build
 __pycache__
 build
 dist
 cmd2.egg-info
-.idea
 .cache
 *.pyc
-.coverage
 .tox
-htmlcov
 .pytest_cache
+
+# Code Coverage
+.coverage
+htmlcov
+
+# PyCharm
+.idea
+
+# Visual Studio Code
+.vscode
