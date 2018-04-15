@@ -6,6 +6,7 @@ Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import argparse
+import builtins
 from code import InteractiveConsole
 import os
 import sys
@@ -13,8 +14,6 @@ import io
 import tempfile
 
 import pytest
-import six
-import six.moves as sm
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
 try:
@@ -839,7 +838,7 @@ def test_base_cmdloop_without_queue():
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
-    sm.input = m
+    builtins.input = m
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
@@ -861,7 +860,7 @@ def test_cmdloop_without_rawinput():
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
-    sm.input = m
+    builtins.input = m
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
@@ -916,7 +915,7 @@ def test_interrupt_quit(say_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
-    sm.input = m
+    builtins.input = m
 
     say_app.cmdloop()
 
@@ -930,7 +929,7 @@ def test_interrupt_noquit(say_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
-    sm.input = m
+    builtins.input = m
 
     say_app.cmdloop()
 
@@ -1189,7 +1188,7 @@ def select_app():
 def test_select_options(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     food = 'bacon'
     out = run_cmd(select_app, "eat {}".format(food))
@@ -1210,7 +1209,7 @@ def test_select_invalid_option(select_app):
     m = mock.MagicMock(name='input')
     # If side_effect is an iterable then each call to the mock will return the next value from the iterable.
     m.side_effect = ['3', '1']  # First pass and invalid selection, then pass a valid one
-    sm.input = m
+    builtins.input = m
 
     food = 'fish'
     out = run_cmd(select_app, "eat {}".format(food))
@@ -1232,7 +1231,7 @@ def test_select_invalid_option(select_app):
 def test_select_list_of_strings(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "study")
     expected = normalize("""
@@ -1250,7 +1249,7 @@ Good luck learning {}!
 def test_select_list_of_tuples(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "procrastinate")
     expected = normalize("""
@@ -1269,7 +1268,7 @@ Have fun procrasinating with {}!
 def test_select_uneven_list_of_tuples(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "play")
     expected = normalize("""
@@ -1352,7 +1351,7 @@ def test_multiline_complete_empty_statement_raises_exception(multiline_app):
 def test_multiline_complete_statement_without_terminator(multiline_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin when it looks for more input
     m = mock.MagicMock(name='input', return_value='\n')
-    sm.input = m
+    builtins.input = m
 
     command = 'orate'
     args = 'hello world'
@@ -1452,10 +1451,8 @@ def test_echo(capsys):
 def test_pseudo_raw_input_tty_rawinput_true():
     # use context managers so original functions get put back when we are done
     # we dont use decorators because we need m_input for the assertion
-    with mock.patch('sys.stdin.isatty',
-            mock.MagicMock(name='isatty', return_value=True)):
-        with mock.patch('six.moves.input',
-                mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
+    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
+        with mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
             # run the cmdloop, which should pull input from our mocks
             app = cmd2.Cmd()
             app.use_rawinput = True
@@ -1498,10 +1495,8 @@ def piped_rawinput_true(capsys, echo, command):
     out, err = capsys.readouterr()
     return (app, out)
 
-# using the decorator puts the original function at six.moves.input
-# back when this method returns
-@mock.patch('six.moves.input',
-        mock.MagicMock(name='input', side_effect=['set', EOFError]))
+# using the decorator puts the original input function back when this unit test returns
+@mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
 def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, True, command)
@@ -1509,10 +1504,8 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     assert out[0] == '{}{}'.format(app.prompt, command)
     assert out[1].startswith('colors:')
 
-# using the decorator puts the original function at six.moves.input
-# back when this method returns
-@mock.patch('six.moves.input',
-        mock.MagicMock(name='input', side_effect=['set', EOFError]))
+# using the decorator puts the original input function back when this unit test returns
+@mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
 def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
@@ -1554,7 +1547,7 @@ def test_raw_input(base_app):
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.Mock(name='input', return_value=fake_input)
-    sm.input = m
+    builtins.input = m
 
     line = base_app.pseudo_raw_input('(cmd2)')
     assert line == fake_input

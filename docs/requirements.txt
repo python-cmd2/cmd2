@@ -1,5 +1,4 @@
 pyparsing
-six
 pyperclip
 contextlib2
 enum34

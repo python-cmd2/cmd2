@@ -45,7 +45,6 @@ The tables below list all prerequisites along with the minimum required version 
 | Prerequisite                                        | Minimum Version |
 | --------------------------------------------------- | --------------- |
 | [Python](https://www.python.org/downloads/)         | `3.4`           |
-| [six](https://pypi.python.org/pypi/six)             | `1.8`           |
 | [pyparsing](http://pyparsing.wikispaces.com)        | `2.1`           |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
 
@@ -72,7 +71,6 @@ If Python is already installed in your machine, run the following commands to va
 
 ```shell
 python -V
-pip freeze | grep six
 pip freeze | grep pyparsing
 ```
 
@@ -192,7 +190,7 @@ Once you have cmd2 cloned, before you start any cmd2 application, you first need
 
 ```bash
 # Install cmd2 prerequisites
-pip install -U six pyparsing pyperclip
+pip install -U pyparsing pyperclip
 
 # Install prerequisites for running cmd2 unit tests
 pip install -U pytest

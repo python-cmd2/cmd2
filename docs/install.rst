@@ -98,7 +98,6 @@ either composition or inheritance to achieve the same goal.
 This approach will obviously NOT automatically install the required 3rd-party dependencies, so you need to make sure
 the following Python packages are installed:
 
-  * six
   * pyparsing
   * pyperclip
 

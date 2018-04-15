@@ -53,7 +53,6 @@ except ImportError:
 import pyparsing
 import pyperclip
 from pyperclip import PyperclipException
-import six.moves as sm  # Used for sm.input
 
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
@@ -2402,9 +2401,9 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
-                    line = sm.input(safe_prompt)
+                    line = input(safe_prompt)
                 else:
-                    line = sm.input()
+                    line = input()
                     if self.echo:
                         sys.stdout.write('{}{}\n'.format(safe_prompt, line))
             except EOFError:
@@ -2798,7 +2797,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         for (idx, (value, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
-            response = sm.input(prompt)
+            response = input(prompt)
             hlen = readline.get_current_history_length()
             if hlen >= 1 and response != '':
                 readline.remove_history_item(hlen - 1)

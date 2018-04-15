@@ -13,7 +13,6 @@ import random
 
 from unittest import mock
 import pytest
-import six
 
 import cmd2
 from cmd2 import Cmd, Cmd2TestCase, set_posix_shlex, set_strip_quotes
