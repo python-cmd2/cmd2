@@ -5,6 +5,7 @@ Cmd2 unit/functional testing
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import argparse
 import os
 import sys
 import io
@@ -15,7 +16,6 @@ import pytest
 import six
 
 from code import InteractiveConsole
-from optparse import make_option
 
 # Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
@@ -26,7 +26,7 @@ from conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.8.5'
+    assert cmd2.__version__ == '0.9.0'
 
 
 def test_empty_statement(base_app):
@@ -99,15 +99,13 @@ def test_base_show_readonly(base_app):
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-        Parsing of @options commands:
+        Parsing of command arguments:
             Shell lexer mode for command argument splitting: {}
             Strip Quotes after splitting arguments: {}
-            Argument type: {}
             
 """.format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
            "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
-           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
-           "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))
+           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False"))
     assert out == expected
 
 
@@ -1299,41 +1297,25 @@ Charm us with the {}...
     # And verify the expected output to stdout
     assert out == expected
 
-@pytest.fixture
-def noarglist_app():
-    cmd2.set_use_arg_list(False)
-    app = cmd2.Cmd()
-    app.stdout = StdOut()
-    return app
 
-def test_pyscript_with_noarglist(noarglist_app, capsys, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, '..', 'examples', 'scripts', 'arg_printer.py')
-    expected = """Running Python script 'arg_printer.py' which was called with 2 arguments
-arg 1: 'foo'
-arg 2: 'bar'
-"""
-    run_cmd(noarglist_app, 'pyscript {} foo bar'.format(python_script))
-    out, err = capsys.readouterr()
-    assert out == expected
-
-
-class OptionApp(cmd2.Cmd):
-    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
-    def do_greet(self, arg, opts=None):
+class HelpNoDocstringApp(cmd2.Cmd):
+    greet_parser = argparse.ArgumentParser()
+    greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
+    @cmd2.with_argparser_and_unknown_args(greet_parser)
+    def do_greet(self, opts, arg):
         arg = ''.join(arg)
         if opts.shout:
             arg = arg.upper()
         self.stdout.write(arg + '\n')
 
-def test_option_help_with_no_docstring(capsys):
-    app = OptionApp()
+def test_help_with_no_docstring(capsys):
+    app = HelpNoDocstringApp()
     app.onecmd_plus_hooks('greet -h')
     out, err = capsys.readouterr()
     assert err == ''
-    assert out == """Usage: greet [options] arg
+    assert out == """usage: greet [-h] [-s]
 
-Options:
+optional arguments:
   -h, --help   show this help message and exit
   -s, --shout  N00B EMULATION MODE
 """
@@ -1362,8 +1344,11 @@ class MultilineApp(cmd2.Cmd):
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
         cmd2.Cmd.__init__(self, *args, **kwargs)
 
-    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
-    def do_orate(self, arg, opts=None):
+    orate_parser = argparse.ArgumentParser()
+    orate_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
+
+    @cmd2.with_argparser_and_unknown_args(orate_parser)
+    def do_orate(self, opts, arg):
         arg = ''.join(arg)
         if opts.shout:
             arg = arg.upper()

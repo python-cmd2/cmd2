@@ -1,3 +1,13 @@
+## 0.9.0 (TBD, 2018)
+* Deletions (potentially breaking changes)
+    * Deleted all ``optparse`` code which had previously been deprecated in release 0.8.0
+        * The ``options`` decorator no longer exists
+        * All ``cmd2`` code should be ported to use the new ``argparse``-based decorators
+        * See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
+        * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
+* Python 2 no longer supported
+    * ``cmd2`` now supports Python 3.4+
+
 ## 0.8.5 (April 15, 2018)
 * Bug Fixes
     * Fixed a bug with all argument decorators where the wrapped function wasn't returning a value and thus couldn't cause the cmd2 app to quit

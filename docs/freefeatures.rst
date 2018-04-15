@@ -213,11 +213,10 @@ of using ``pyscript`` is shown below  along with the **examples/arg_printer.py**
 
 .. note::
 
-    If you want to be able to pass arguments with spaces to scripts, then we strongly recommend setting the
-    cmd2 global variable ``USE_ARG_LIST`` to ``True`` in your application using the ``set_use_arg_list`` function.
-    This passes all arguments to ``@options`` commands as a list of strings instead of a single string.
+    If you want to be able to pass arguments with spaces to scripts, then we strongly recommend using one of the decorators,
+    such as ``with_argument_list``.  ``cmd2`` will pass your **do_*** methods a list of arguments in this case.
 
-    Once this option is set, you can then put arguments in quotes like so::
+    When using this decorator, you can then put arguments in quotes like so (NOTE: the ``do_pyscript`` method uses this decorator::
 
         (Cmd) pyscript examples/arg_printer.py hello '23 fnord'
         Running Python script 'arg_printer.py' which was called with 2 arguments

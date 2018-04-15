@@ -137,13 +137,6 @@ There are a couple functions which can globally effect how arguments are parsed 
 
 .. autofunction:: cmd2.set_strip_quotes
 
-.. warning::::
-
-   Since optparse_ has been deprecated since Python 3.2, the ``cmd2`` developers have deprecated the old optparse-based
-   ``@options`` decorator.  This decorator still exists in the codebase, but it will be removed in a future release.
-   We recommend using one of the new argparse-based decorators.
-
-.. _optparse: https://docs.python.org/3/library/optparse.html
 .. _argparse: https://docs.python.org/3/library/argparse.html
 
 
