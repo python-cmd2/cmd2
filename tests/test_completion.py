@@ -731,13 +731,13 @@ def test_add_opening_quote_delimited_nothing_added(cmd2_app):
            cmd2_app.display_matches == expected_display
 
 def test_add_opening_quote_delimited_quote_added(cmd2_app):
-    text = '/home/oth'
+    text = '/home/user/fi'
     line = 'test_delimited {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_prefix = '"/home/other user/'
-    expected_display = ['maps', 'tests']
+    expected_prefix = '"/home/user/file'
+    expected_display = sorted(['file.txt', 'file space.txt'])
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
@@ -753,6 +753,21 @@ def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
 
     expected_prefix = '"/home/user/file'
     expected_display = sorted(['file.txt', 'file space.txt'])
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_prefix and \
+           cmd2_app.display_matches == expected_display
+
+def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
+    # This test when a space appears before the part of the string that is the display match
+    text = '/home/oth'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_prefix = '"/home/other user/'
+    expected_display = ['maps', 'tests']
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \

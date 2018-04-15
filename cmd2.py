@@ -2097,6 +2097,9 @@ class Cmd(cmd.Cmd):
 
                         if matches_delimited:
                             display_prefix = os.path.commonprefix(self.display_matches)
+
+                            # For delimited matches, we check what appears before the display
+                            # matches (common_prefix) as well as the display matches themselves.
                             if (' ' in common_prefix) or (display_prefix and ' ' in ''.join(self.display_matches)):
                                 add_quote = True
 
