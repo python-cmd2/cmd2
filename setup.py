@@ -32,10 +32,9 @@ Main features:
     - Special-character command shortcuts (beyond cmd's `?` and `!`)
     - Settable environment parameters
     - Parsing commands with arguments using `argparse`, including support for sub-commands
-    - Unicode character support (*Python 3 only*)
+    - Unicode character support
     - Good tab-completion of commands, sub-commands, file system paths, and shell commands
-    - Python 3.4+ support
-    - Linux, macOS and Windows support
+    - Support for Python 3.4+ on Windows, macOS, and Linux
     - Trivial to provide built-in help for all commands
     - Built-in regression testing framework for your applications (transcript-based testing)
     - Transcripts for use with built-in regression can be automatically generated from `history -t`
