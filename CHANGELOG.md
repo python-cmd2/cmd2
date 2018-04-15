@@ -1,3 +1,33 @@
+## 0.9.0 (TBD, 2018)
+* Deletions (potentially breaking changes)
+    * Deleted all ``optparse`` code which had previously been deprecated in release 0.8.0
+        * The ``options`` decorator no longer exists
+        * All ``cmd2`` code should be ported to use the new ``argparse``-based decorators
+        * See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
+        * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
+* Python 2 no longer supported
+    * ``cmd2`` now supports Python 3.4+
+
+## 0.8.5 (April 15, 2018)
+* Bug Fixes
+    * Fixed a bug with all argument decorators where the wrapped function wasn't returning a value and thus couldn't cause the cmd2 app to quit
+
+* Enhancements
+    * Added support for verbose help with -v where it lists a brief summary of what each command does
+    * Added support for categorizing commands into groups within the help menu
+        * See the [Grouping Commands](http://cmd2.readthedocs.io/en/latest/argument_processing.html?highlight=verbose#grouping-commands) section of the docs for more info
+        * See [help_categories.py](https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py) for an example
+    * Tab completion of paths now supports ~user user path expansion
+    * Simplified implementation of various tab completion functions so they no longer require ``ctypes``
+    * Expanded documentation of ``display_matches`` list to clarify its purpose. See cmd2.py for this documentation.
+    * Adding opening quote to tab completion if any of the completion suggestions have a space.
+
+* **Python 2 EOL notice**
+    * This is the last release where new features will be added to ``cmd2`` for Python 2.7
+    * The 0.9.0 release of ``cmd2`` will support Python 3.4+ only
+    * Additional 0.8.x releases may be created to supply bug fixes for Python 2.7 up until August 31, 2018
+    * After August 31, 2018 not even bug fixes will be provided for Python 2.7
+
 ## 0.8.4 (April 10, 2018)
 * Bug Fixes
     * Fixed conditional dependency issue in setup.py that was in 0.8.3.

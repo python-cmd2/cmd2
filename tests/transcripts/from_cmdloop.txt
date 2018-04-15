@@ -9,14 +9,15 @@ alias  help     load    orate  pyscript  say  shell      speak/ */
 edit   history  mumble  py     quit      set  shortcuts  unalias/ */
 
 (Cmd) help say
-Repeats what you tell me to.
-Usage: speak [options] (text to say)
+usage: speak [-h] [-p] [-s] [-r REPEAT]/ */
 
-Options:
-  -h, --help            show this help message and exit
-  -p, --piglatin        atinLay
-  -s, --shout           N00B EMULATION MODE
-  -r REPEAT, --repeat=REPEAT
+Repeats what you tell me to./ */
+
+optional arguments:/ */
+  -h, --help            show this help message and exit/ */
+  -p, --piglatin        atinLay/ */
+  -s, --shout           N00B EMULATION MODE/ */
+  -r REPEAT, --repeat REPEAT/ */
                         output [n] times
 
 (Cmd) say goodnight, Gracie
