@@ -29,16 +29,17 @@ except ImportError:
         pass
 
 
-@pytest.fixture
-def cmd2_app():
-    c = cmd2.Cmd()
-    return c
-
-
 # List of strings used with completion functions
-food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
+food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
-delimited_strs = ['/home/user/file.txt', '/home/user/prog.c', '/home/otheruser/maps']
+delimited_strs = \
+    [
+        '/home/user/file.txt',
+        '/home/user/file space.txt',
+        '/home/user/prog.c',
+        '/home/other user/maps',
+        '/home/other user/tests'
+    ]
 
 # Dictionary used with flag based completion functions
 flag_dict = \
@@ -58,6 +59,33 @@ index_dict = \
         1: food_item_strs,            # Tab-complete food items at index 1 in command line
         2: sport_item_strs,           # Tab-complete sport items at index 2 in command line
     }
+
+
+class CompletionsExample(cmd2.Cmd):
+    """
+    Example cmd2 application used to exercise tab-completion tests
+    """
+    def __init__(self):
+        cmd2.Cmd.__init__(self)
+
+    def do_test_basic(self, args):
+        pass
+
+    def complete_test_basic(self, text, line, begidx, endidx):
+        return self.basic_complete(text, line, begidx, endidx, food_item_strs)
+
+    def do_test_delimited(self, args):
+        pass
+
+    def complete_test_delimited(self, text, line, begidx, endidx):
+        return self.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
+
+
+@pytest.fixture
+def cmd2_app():
+    c = CompletionsExample()
+    return c
+
 
 def complete_tester(text, line, begidx, endidx, app):
     """
@@ -341,25 +369,19 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     # Currently path completion doesn't accept wildcards, so will always return empty results
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_invalid_syntax(cmd2_app):
-    # Test a missing separator between a ~ and path
-    text = '~Desktop'
+def test_path_completion_expand_user_dir(cmd2_app):
+    # Get the current user. We can't use getpass.getuser() since
+    # that doesn't work when running these tests on Windows in AppVeyor.
+    user = os.path.basename(os.path.expanduser('~'))
+
+    text = '~{}'.format(user)
     line = 'shell fake {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
+    completions = cmd2_app.path_complete(text, line, begidx, endidx)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
-
-def test_path_completion_just_tilde(cmd2_app):
-    # Run path with just a tilde
-    text = '~'
-    line = 'shell fake {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-    completions_tilde = cmd2_app.path_complete(text, line, begidx, endidx)
-
-    # Path complete should complete the tilde with a slash
-    assert completions_tilde == [text + os.path.sep]
+    expected = text + os.path.sep
+    assert expected in completions
 
 def test_path_completion_user_expansion(cmd2_app):
     # Run path with a tilde and a slash
@@ -431,12 +453,12 @@ def test_delimiter_completion(cmd2_app):
 
     cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
 
-    # Remove duplicates from display_matches and sort it. This is typically done in the display function.
+    # Remove duplicates from display_matches and sort it. This is typically done in complete().
     display_set = set(cmd2_app.display_matches)
     display_list = list(display_set)
     display_list.sort()
 
-    assert display_list == ['otheruser', 'user']
+    assert display_list == ['other user', 'user']
 
 def test_flag_based_completion_single(cmd2_app):
     text = 'Pi'
@@ -644,6 +666,113 @@ def test_parseline_expands_shortcuts(cmd2_app):
     assert args == 'cat foobar.txt'
     assert line.replace('!', 'shell ') == out_line
 
+def test_add_opening_quote_basic_no_text(cmd2_app):
+    text = ''
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The whole list will be returned with no opening quotes added
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == sorted(food_item_strs)
+
+def test_add_opening_quote_basic_nothing_added(cmd2_app):
+    text = 'P'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == ['Pizza', 'Potato']
+
+def test_add_opening_quote_basic_quote_added(cmd2_app):
+    text = 'Ha'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = sorted(['"Ham', '"Ham Sandwich'])
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
+
+def test_add_opening_quote_basic_text_is_common_prefix(cmd2_app):
+    # This tests when the text entered is the same as the common prefix of the matches
+    text = 'Ham'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = sorted(['"Ham', '"Ham Sandwich'])
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
+
+def test_add_opening_quote_delimited_no_text(cmd2_app):
+    text = ''
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # The whole list will be returned with no opening quotes added
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == sorted(delimited_strs)
+
+def test_add_opening_quote_delimited_nothing_added(cmd2_app):
+    text = '/ho'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_matches = sorted(delimited_strs)
+    expected_display = sorted(['other user', 'user'])
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           cmd2_app.completion_matches == expected_matches and \
+           cmd2_app.display_matches == expected_display
+
+def test_add_opening_quote_delimited_quote_added(cmd2_app):
+    text = '/home/user/fi'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_common_prefix = '"/home/user/file'
+    expected_display = sorted(['file.txt', 'file space.txt'])
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
+           cmd2_app.display_matches == expected_display
+
+def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
+    # This tests when the text entered is the same as the common prefix of the matches
+    text = '/home/user/file'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_common_prefix = '"/home/user/file'
+    expected_display = sorted(['file.txt', 'file space.txt'])
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
+           cmd2_app.display_matches == expected_display
+
+def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
+    # This test when a space appears before the part of the string that is the display match
+    text = '/home/oth'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_common_prefix = '"/home/other user/'
+    expected_display = ['maps', 'tests']
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
+           cmd2_app.display_matches == expected_display
 
 class SubcommandsExample(cmd2.Cmd):
     """
@@ -792,19 +921,6 @@ def test_subcommand_tab_completion_with_no_completer(sc_app):
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
     assert first_match is None
-
-def test_subcommand_tab_completion_add_quote(sc_app):
-    # This makes sure an opening quote is added to the readline line buffer
-    text = 'Space'
-    line = 'base sport {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, sc_app)
-
-    # No matches are returned when an opening quote is added to the screen
-    assert first_match is None
-    assert readline.get_line_buffer() == 'base sport "Space Ball" '
 
 def test_subcommand_tab_completion_space_in_text(sc_app):
     text = 'B'
