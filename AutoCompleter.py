@@ -2,16 +2,14 @@
 import argparse
 import re as _re
 import sys
-from argparse import OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, REMAINDER, PARSER, ArgumentError
+from argparse import OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, REMAINDER, PARSER, ArgumentError, _
 from typing import List, Dict, Tuple, Callable, Union
 
 from colorama import Fore
 
-from cmd2 import readline_lib
-
 
 class _RangeAction(object):
-    def __init__(self, nargs):
+    def __init__(self, nargs: Union[int, str, Tuple[int, int], None]):
         self.nargs_min = None
         self.nargs_max = None
 
@@ -223,17 +221,21 @@ class AutoCompleter(object):
                 if isinstance(action, argparse._SubParsersAction):
                     sub_completers = {}
                     sub_commands = []
-                    args_for_action = subcmd_args_lookup[action.dest] if action.dest in subcmd_args_lookup.keys() else {}
+                    args_for_action = subcmd_args_lookup[action.dest]\
+                        if action.dest in subcmd_args_lookup.keys() else {}
                     for subcmd in action.choices:
-                        (subcmd_args, subcmd_lookup) = args_for_action[subcmd] if subcmd in args_for_action.keys() else (arg_choices, subcmd_args_lookup) if forward_arg_choices else ({}, {})
+                        (subcmd_args, subcmd_lookup) = args_for_action[subcmd] if \
+                            subcmd in args_for_action.keys() else \
+                            (arg_choices, subcmd_args_lookup) if forward_arg_choices else ({}, {})
                         subcmd_start = token_start_index + len(self._positional_actions)
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd], subcmd_start,
-                                                               arg_choices=subcmd_args, subcmd_args_lookup=subcmd_lookup)
+                                                               arg_choices=subcmd_args,
+                                                               subcmd_args_lookup=subcmd_lookup)
                         sub_commands.append(subcmd)
                     self._positional_completers[action.dest] = sub_completers
                     self._arg_choices[action.dest] = sub_commands
 
-    def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int):
+    def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
         # Count which positional argument index we're at now. Loop through all tokens on the command line so far
         # Skip any flags or flag parameter tokens
@@ -249,7 +251,7 @@ class AutoCompleter(object):
         current_is_positional = False
         consumed_arg_values = {}  # dict(arg_name -> [values, ...])
 
-        def consume_flag_argument():
+        def consume_flag_argument() -> None:
             """Consuming token as a flag argument"""
             # we're consuming flag arguments
             # if this is not empty and is not another potential flag, count towards flag arguments
@@ -264,7 +266,7 @@ class AutoCompleter(object):
                     consumed_arg_values.setdefault(flag_action.dest, [])
                     consumed_arg_values[flag_action.dest].append(token)
 
-        def consume_positional_argument():
+        def consume_positional_argument() -> None:
             """Consuming token as positional argument"""
             pos_arg.count += 1
 
@@ -336,7 +338,8 @@ class AutoCompleter(object):
                                 if pos_name in self._positional_completers.keys():
                                     sub_completers = self._positional_completers[pos_name]
                                     if token in sub_completers.keys():
-                                        return sub_completers[token].complete_command(tokens, text, line, begidx, endidx)
+                                        return sub_completers[token].complete_command(tokens, text, line,
+                                                                                      begidx, endidx)
                                 pos_action = action
                                 self._process_action_nargs(pos_action, pos_arg)
                                 consume_positional_argument()
@@ -365,7 +368,8 @@ class AutoCompleter(object):
         elif not current_is_positional:
             # current_items = []
             if flag_action is not None:
-                consumed = consumed_arg_values[flag_action.dest] if flag_action.dest in consumed_arg_values.keys() else []
+                consumed = consumed_arg_values[flag_action.dest]\
+                    if flag_action.dest in consumed_arg_values.keys() else []
                 # current_items.extend(self._resolve_choices_for_arg(flag_action, consumed))
                 completion_results = self._complete_for_arg(flag_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
@@ -383,7 +387,7 @@ class AutoCompleter(object):
         return completion_results
 
     @staticmethod
-    def _process_action_nargs(action, arg_state):
+    def _process_action_nargs(action: argparse.Action, arg_state: _ArgumentState) -> None:
         if isinstance(action, _RangeAction):
             arg_state.min = action.nargs_min
             arg_state.max = action.nargs_max
@@ -408,7 +412,12 @@ class AutoCompleter(object):
                 arg_state.min = action.nargs
                 arg_state.max = action.nargs
 
-    def _complete_for_arg(self, action, text: str, line: str, begidx: int, endidx: int, used_values=list()):
+    def _complete_for_arg(self, action: argparse.Action,
+                          text: str,
+                          line: str,
+                          begidx: int,
+                          endidx: int,
+                          used_values=list()) -> List[str]:
         if action.dest in self._arg_choices.keys():
             arg_choices = self._arg_choices[action.dest]
 
@@ -435,7 +444,7 @@ class AutoCompleter(object):
 
         return []
 
-    def _resolve_choices_for_arg(self, action, used_values=list()):
+    def _resolve_choices_for_arg(self, action: argparse.Action, used_values=list()) -> List[str]:
         if action.dest in self._arg_choices.keys():
             args = self._arg_choices[action.dest]
             if callable(args):
@@ -454,7 +463,7 @@ class AutoCompleter(object):
 
         return []
 
-    def _print_action_help(self, action):
+    def _print_action_help(self, action: argparse.Action) -> None:
         if not self._tab_for_arg_help:
             return
         if action.option_strings:
@@ -477,11 +486,12 @@ class AutoCompleter(object):
             out_str += '\n{0: <{width}}'.format('', width=pref_len).join(help_lines)
             print('\nHint:' + out_str + '\n')
 
+        from cmd2 import readline_lib
         readline_lib.rl_forced_update_display()
 
     # noinspection PyUnusedLocal
     @staticmethod
-    def basic_complete(text, line, begidx, endidx, match_against):
+    def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against: List[str]) -> List[str]:
         """
         Performs tab completion against a list
 
@@ -495,10 +505,6 @@ class AutoCompleter(object):
         return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
 
-# Copied from argparse
-from argparse import _
-
-
 class ACHelpFormatter(argparse.HelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
@@ -508,7 +514,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
 
         # if usage is specified, use that
         if usage is not None:
-            usage = usage % dict(prog=self._prog)
+            usage %= dict(prog=self._prog)
 
         # if no optionals or positionals are available, usage is just prog
         elif usage is None and not actions:
@@ -681,7 +687,7 @@ class ACArgumentParser(argparse.ArgumentParser):
                  usage=None,
                  description=None,
                  epilog=None,
-                 parents=[],
+                 parents=None,
                  formatter_class=ACHelpFormatter,
                  prefix_chars='-',
                  fromfile_prefix_chars=None,
