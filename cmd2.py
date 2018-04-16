@@ -52,8 +52,14 @@ except ImportError:
 
 import pyparsing
 import pyperclip
-from pyperclip import PyperclipException
 
+# Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
+try:
+    from pyperclip.exceptions import PyperclipException
+except ImportError:
+    # noinspection PyUnresolvedReferences
+    from pyperclip import PyperclipException
+    
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
 try:
