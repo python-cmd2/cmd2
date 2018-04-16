@@ -32,12 +32,13 @@ import datetime
 import functools
 import glob
 import io
+from io import StringIO
 import os
 import platform
 import re
 import shlex
 import signal
-import six
+import subprocess
 import sys
 import tempfile
 import traceback
@@ -51,17 +52,14 @@ except ImportError:
 
 import pyparsing
 import pyperclip
+from pyperclip import PyperclipException
 
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
 try:
     from collections.abc import Collection, Iterable
 except ImportError:
-
-    if six.PY3:
-        from collections.abc import Sized, Iterable, Container
-    else:
-        from collections import Sized, Iterable, Container
+    from collections.abc import Sized, Iterable, Container
 
     # noinspection PyAbstractClass
     class Collection(Sized, Iterable, Container):
@@ -78,43 +76,11 @@ except ImportError:
                     return True
             return NotImplemented
 
-# Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
-try:
-    from pyperclip.exceptions import PyperclipException
-except ImportError:
-    # noinspection PyUnresolvedReferences
-    from pyperclip import PyperclipException
-
-# next(it) gets next item of iterator it. This is a replacement for calling it.next() in Python 2 and next(it) in Py3
-from six import next
-
-# Possible types for text data. This is basestring() in Python 2 and str in Python 3.
-from six import string_types
-
-# Used for sm.input: raw_input() for Python 2 or input() for Python 3
-import six.moves as sm
-
-# itertools.zip() for Python 2 or zip() for Python 3 - produces an iterator in both cases
-from six.moves import zip
-
-# If using Python 2.7, try to use the subprocess32 package backported from Python 3.2 due to various improvements
-# NOTE: The feature to pipe output to a shell command won't work correctly in Python 2.7 without this
-try:
-    # noinspection PyPackageRequirements
-    import subprocess32 as subprocess
-except ImportError:
-    import subprocess
-
-# Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
+# Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
     from contextlib2 import redirect_stdout, redirect_stderr
 else:
     from contextlib import redirect_stdout, redirect_stderr
-
-if six.PY3:
-    from io import StringIO  # Python3
-else:
-    from io import BytesIO as StringIO  # Python2
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
@@ -136,13 +102,11 @@ except ImportError:
     except ImportError:
         pass
 
-
 # Check what implementation of readline we are using
 class RlType(Enum):
     GNU = 1
     PYREADLINE = 2
     NONE = 3
-
 
 rl_type = RlType.NONE
 
@@ -166,25 +130,6 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
     # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
     rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
     orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-
-
-# BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
-if six.PY3:
-    BROKEN_PIPE_ERROR = BrokenPipeError
-    FILE_NOT_FOUND_ERROR = FileNotFoundError
-else:
-    BROKEN_PIPE_ERROR = FILE_NOT_FOUND_ERROR = IOError
-
-# On some systems, pyperclip will import gtk for its clipboard functionality.
-# The following code is a workaround for gtk interfering with printing from a background
-# thread while the CLI thread is blocking in raw_input() in Python 2 on Linux.
-if six.PY2 and sys.platform.startswith('lin'):
-    try:
-        # noinspection PyUnresolvedReferences
-        import gtk
-        gtk.set_interactive(0)
-    except ImportError:
-        pass
 
 __version__ = '0.9.0'
 
@@ -250,8 +195,7 @@ def set_strip_quotes(val):
 def _which(editor):
     try:
         editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
-        if six.PY3:
-            editor_path = editor_path.decode()
+        editor_path = editor_path.decode()
     except subprocess.CalledProcessError:
         editor_path = None
     return editor_path
@@ -431,12 +375,6 @@ def get_paste_buffer():
     :return: str - contents of the clipboard
     """
     pb_str = pyperclip.paste()
-
-    # If value returned from the clipboard is unicode and this is Python 2, convert to a "normal" Python 2 string first
-    if six.PY2 and not isinstance(pb_str, str):
-        import unicodedata
-        pb_str = unicodedata.normalize('NFKD', pb_str).encode('ascii', 'ignore')
-
     return pb_str
 
 
@@ -659,7 +597,7 @@ class AddSubmenu(object):
             if self.persistent_history_file:
                 try:
                     readline.read_history_file(self.persistent_history_file)
-                except FILE_NOT_FOUND_ERROR:
+                except FileNotFoundError:
                     pass
 
             try:
@@ -843,12 +781,12 @@ class Cmd(cmd.Cmd):
                 readline.read_history_file(persistent_history_file)
                 # default history len is -1 (infinite), which may grow unruly
                 readline.set_history_length(persistent_history_length)
-            except FILE_NOT_FOUND_ERROR:
+            except FileNotFoundError:
                 pass
             atexit.register(readline.write_history_file, persistent_history_file)
 
-        # Call super class constructor.  Need to do it in this way for Python 2 and 3 compatibility
-        cmd.Cmd.__init__(self, completekey=completekey, stdin=stdin, stdout=stdout)
+        # Call super class constructor
+        super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', 'eos', '_relative_load']
@@ -974,7 +912,7 @@ class Cmd(cmd.Cmd):
                 self.stdout.write(msg_str)
                 if not msg_str.endswith(end):
                     self.stdout.write(end)
-            except BROKEN_PIPE_ERROR:
+            except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished. If you would like your application to print a warning message, then set the
                 # broken_pipe_warning attribute to the message you want printed.
@@ -1066,7 +1004,7 @@ class Cmd(cmd.Cmd):
                     self.pipe_proc = None
                 else:
                     self.stdout.write(msg_str)
-            except BROKEN_PIPE_ERROR:
+            except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished. If you would like your application to print a warning message, then set the
                 # broken_pipe_warning attribute to the message you want printed.
@@ -1708,12 +1646,8 @@ class Cmd(cmd.Cmd):
 
             # We will use readline's display function (rl_display_match_list()), so we
             # need to encode our string as bytes to place in a C array.
-            if six.PY3:
-                encoded_substitution = bytes(substitution, encoding='utf-8')
-                encoded_matches = [bytes(cur_match, encoding='utf-8') for cur_match in matches_to_display]
-            else:
-                encoded_substitution = bytes(substitution)
-                encoded_matches = [bytes(cur_match) for cur_match in matches_to_display]
+            encoded_substitution = bytes(substitution, encoding='utf-8')
+            encoded_matches = [bytes(cur_match, encoding='utf-8') for cur_match in matches_to_display]
 
             # rl_display_match_list() expects matches to be in argv format where
             # substitution is the first element, followed by the matches, and then a NULL.
@@ -2300,19 +2234,12 @@ class Cmd(cmd.Cmd):
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
-            # Make sure that self.poutput() expects unicode strings in Python 3 and byte strings in Python 2
-            write_mode = 'w'
-            read_mode = 'r'
-            if six.PY2:
-                write_mode = 'wb'
-                read_mode = 'rb'
-
             # Open each side of the pipe and set stdout accordingly
             # noinspection PyTypeChecker
-            self.stdout = io.open(write_fd, write_mode)
+            self.stdout = io.open(write_fd, 'w')
             self.redirecting = True
             # noinspection PyTypeChecker
-            subproc_stdin = io.open(read_fd, read_mode)
+            subproc_stdin = io.open(read_fd, 'r')
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
@@ -2359,7 +2286,7 @@ class Cmd(cmd.Cmd):
             try:
                 # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
-            except BROKEN_PIPE_ERROR:
+            except BrokenPipeError:
                 pass
             finally:
                 # Restore self.stdout
@@ -2474,9 +2401,9 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
-                    line = sm.input(safe_prompt)
+                    line = input(safe_prompt)
                 else:
-                    line = sm.input()
+                    line = input()
                     if self.echo:
                         sys.stdout.write('{}{}\n'.format(safe_prompt, line))
             except EOFError:
@@ -2584,9 +2511,8 @@ class Cmd(cmd.Cmd):
                 elif rl_type == RlType.PYREADLINE:
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
-            # Need to set empty list this way because Python 2 doesn't support the clear() method on lists
-            self.cmdqueue = []
-            self._script_dir = []
+            self.cmdqueue.clear()
+            self._script_dir.clear()
 
             return stop
 
@@ -2857,11 +2783,11 @@ Usage:  Usage: unalias [-a] name [name ...]
                                    that the return value can differ from
                                    the text advertised to the user """
         local_opts = opts
-        if isinstance(opts, string_types):
+        if isinstance(opts, str):
             local_opts = list(zip(opts.split(), opts.split()))
         fulloptions = []
         for opt in local_opts:
-            if isinstance(opt, string_types):
+            if isinstance(opt, str):
                 fulloptions.append((opt, opt))
             else:
                 try:
@@ -2871,7 +2797,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         for (idx, (value, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
-            response = sm.input(prompt)
+            response = input(prompt)
             hlen = readline.get_current_history_length()
             if hlen >= 1 and response != '':
                 readline.remove_history_item(hlen - 1)
@@ -3422,10 +3348,8 @@ Script should contain one command per line, just like command would be typed in 
         try:
             # Read all lines of the script and insert into the head of the
             # command queue. Add an "end of script (eos)" command to cleanup the
-            # self._script_dir list when done. Specify file encoding in Python
-            # 3, but Python 2 doesn't allow that argument to open().
-            kwargs = {'encoding': 'utf-8'} if six.PY3 else {}
-            with open(expanded_path, **kwargs) as target:
+            # self._script_dir list when done.
+            with open(expanded_path, encoding='utf-8') as target:
                 self.cmdqueue = target.read().splitlines() + ['eos'] + self.cmdqueue
         except IOError as e:
             self.perror('Problem accessing script from {}:\n{}'.format(expanded_path, e))
@@ -4128,10 +4052,6 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
     def __bool__(self):
         """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
         return not self.err
-
-    def __nonzero__(self):
-        """Python 2 uses this method for determining Truthiness"""
-        return self.__bool__()
 
 
 if __name__ == '__main__':

@@ -32,10 +32,9 @@ Main features:
     - Special-character command shortcuts (beyond cmd's `?` and `!`)
     - Settable environment parameters
     - Parsing commands with arguments using `argparse`, including support for sub-commands
-    - Unicode character support (*Python 3 only*)
+    - Unicode character support
     - Good tab-completion of commands, sub-commands, file system paths, and shell commands
-    - Python 2.7 and 3.4+ support
-    - Linux, macOS and Windows support
+    - Support for Python 3.4+ on Windows, macOS, and Linux
     - Trivial to provide built-in help for all commands
     - Built-in regression testing framework for your applications (transcript-based testing)
     - Transcripts for use with built-in regression can be automatically generated from `history -t`
@@ -52,30 +51,25 @@ Intended Audience :: Developers
 Intended Audience :: System Administrators
 License :: OSI Approved :: MIT License
 Programming Language :: Python
-Programming Language :: Python :: 2
-Programming Language :: Python :: 2.7
 Programming Language :: Python :: 3
 Programming Language :: Python :: 3.4
 Programming Language :: Python :: 3.5
 Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
 Programming Language :: Python :: Implementation :: CPython
-Programming Language :: Python :: Implementation :: PyPy
+Programming Language :: Python :: Implementation :: PyPy3
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
-INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'pyperclip', 'six']
+INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.6.0']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
     ":sys_platform=='win32'": ['pyreadline'],
+    # POSIX OSes also require wcwidth for correctly estimating the displayed width of unicode chars
     ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
     ":python_version<'3.5'": ['contextlib2'],
-    # Python 3.3 and earlier require enum34 backport of enum module from Python 3.4
-    ":python_version<'3.4'": ['enum34'],
-    # Python 2.7 also requires subprocess32
-    ":python_version<'3.0'": ['subprocess32'],
 }
 
 if int(setuptools.__version__.split('.')[0]) < 18:
@@ -86,14 +80,9 @@ if int(setuptools.__version__.split('.')[0]) < 18:
         INSTALL_REQUIRES.append('wcwidth')
     if sys.version_info < (3, 5):
         INSTALL_REQUIRES.append('contextlib2')
-    if sys.version_info < (3, 4):
-        INSTALL_REQUIRES.append('enum34')
-    if sys.version_info < (3, 0):
-        INSTALL_REQUIRES.append('subprocess32')
 
-# unittest.mock was added in Python 3.3.  mock is a backport of unittest.mock to all versions of Python
-TESTS_REQUIRE = ['mock', 'pytest', 'pytest-xdist']
-DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'six']
+TESTS_REQUIRE = ['pytest', 'pytest-xdist']
+DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'wcwidth']
 
 setup(
     name="cmd2",

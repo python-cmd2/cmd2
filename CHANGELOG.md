@@ -1,4 +1,6 @@
 ## 0.9.0 (TBD, 2018)
+* Enhancements
+    * ``cmd2`` no longer depends on the ``six`` module
 * Deletions (potentially breaking changes)
     * Deleted all ``optparse`` code which had previously been deprecated in release 0.8.0
         * The ``options`` decorator no longer exists

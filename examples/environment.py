@@ -16,7 +16,7 @@ class EnvironmentApp(Cmd):
     def __init__(self):
         self.settable.update({'degrees_c': 'Temperature in Celsius'})
         self.settable.update({'sunny': 'Is it sunny outside?'})
-        Cmd.__init__(self)
+        super().__init__()
 
     def do_sunbathe(self, arg):
         if self.degrees_c < 20:

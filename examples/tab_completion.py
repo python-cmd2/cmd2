@@ -16,7 +16,7 @@ class TabCompleteExample(cmd2.Cmd):
     """ Example cmd2 application where we a base command which has a couple subcommands."""
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        super().__init__()
 
     add_item_parser = argparse.ArgumentParser()
     add_item_group = add_item_parser.add_mutually_exclusive_group()
