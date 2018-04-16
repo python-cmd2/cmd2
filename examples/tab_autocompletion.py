@@ -17,7 +17,7 @@ class TabCompleteExample(cmd2.Cmd):
     """ Example cmd2 application where we a base command which has a couple subcommands."""
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        super().__init__()
 
     # This demonstrates a number of customizations of the AutoCompleter version of ArgumentParser
     #  - The help output will separately group required vs optional flags
