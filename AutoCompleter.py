@@ -488,8 +488,10 @@ class AutoCompleter(object):
             out_str += '\n{0: <{width}}'.format('', width=pref_len).join(help_lines)
             print('\nHint:' + out_str + '\n')
 
-        from cmd2 import readline_lib
-        readline_lib.rl_forced_update_display()
+        # Moving this import here improves the performance when using AutoCompleter in a
+        # bash completion function. Loading cmd2 results in a lag of about half a second to a second.
+        from cmd2 import reprint_prompt
+        reprint_prompt()
 
     # noinspection PyUnusedLocal
     @staticmethod

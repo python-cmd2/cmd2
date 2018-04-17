@@ -392,6 +392,13 @@ def write_to_paste_buffer(txt):
     pyperclip.copy(txt)
 
 
+def reprint_prompt():
+    if rl_type == RlType.GNU:
+        readline_lib.rl_forced_update_display()
+    elif rl_type == RlType.PYREADLINE:
+        readline.rl.mode._print_prompt()
+
+
 class ParsedString(str):
     """Subclass of str which also stores a pyparsing.ParseResults object containing structured parse results."""
     # pyarsing.ParseResults - structured parse results, to provide multiple means of access to the parsed data
