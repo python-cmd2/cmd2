@@ -80,6 +80,7 @@ if int(setuptools.__version__.split('.')[0]) < 18:
         INSTALL_REQUIRES.append('wcwidth')
     if sys.version_info < (3, 5):
         INSTALL_REQUIRES.append('contextlib2')
+        INSTALL_REQUIRES.append('typing')
 
 TESTS_REQUIRE = ['pytest', 'pytest-xdist']
 DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'wcwidth']

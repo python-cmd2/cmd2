@@ -698,18 +698,22 @@ class ACArgumentParser(argparse.ArgumentParser):
                  add_help=True,
                  allow_abbrev=True):
 
-        super().__init__(prog=prog,
-                         usage=usage,
-                         description=description,
-                         epilog=epilog,
-                         parents=parents,
-                         formatter_class=formatter_class,
-                         prefix_chars=prefix_chars,
-                         fromfile_prefix_chars=fromfile_prefix_chars,
-                         argument_default=argument_default,
-                         conflict_handler=conflict_handler,
-                         add_help=add_help,
-                         allow_abbrev=allow_abbrev)
+        params = {'prog': prog,
+                  'usage': usage,
+                  'description': description,
+                  'epilog': epilog,
+                  'parents': parents,
+                  'formatter_class': formatter_class,
+                  'prefix_chars': prefix_chars,
+                  'fromfile_prefix_chars': fromfile_prefix_chars,
+                  'argument_default': argument_default,
+                  'conflict_handler': conflict_handler,
+                  'add_help': add_help}
+
+        if sys.version_info >= (3, 5):
+            params['allow_abbrev'] = allow_abbrev
+
+        super().__init__(**params)
         register_custom_actions(self)
 
         self._custom_error_message = ''
