@@ -4,9 +4,7 @@ Unit/functional testing for ply based parsing in cmd2
 
 Todo List
 - multiline
-- unicode
 - case sensitive flag
-- figure out how to let users change the terminator character
 
 Notes:
 
@@ -23,6 +21,8 @@ import re
 import shlex
 
 import pytest
+
+import cmd2
 
 class Cmd2Command():
     pass
@@ -91,6 +91,15 @@ class Cmd2Parser():
             result.output = '>'
             result.outputTo = ' '.join(tokens[output_pos+1:])
             # remove all the tokens after the output redirect
+            tokens = tokens[:output_pos]
+        except ValueError:
+            pass
+
+        # check for paste buffer
+        try:
+            output_pos = tokens.index('>>')
+            result.output = '>>'
+            # remove all tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
             pass
@@ -199,6 +208,10 @@ def parser():
     parser = Cmd2Parser()
     return parser
 
+def test_parse_empty_string(parser):
+    results = parser.parseString('')
+    assert not results.command
+
 @pytest.mark.parametrize('tokens,command,args', [
     ( [], None, None),
     ( ['command'], 'command', None ),
@@ -237,6 +250,14 @@ def test_command_with_args(parser):
     assert results.command == 'command'
     assert results.args == 'with args'
     assert not results.pipeTo
+
+def test_parse_command_with_args_terminator_and_suffix(parser):
+    line = 'command with args and terminator; and suffix'
+    results = parser.parseString(line)
+    assert results.command == 'command'
+    assert results.args == "with args and terminator"
+    assert results.terminator == ';'
+    assert results.suffix == 'and suffix'
 
 def test_hashcomment(parser):
     results = parser.parseString('hi # this is all a comment')
@@ -306,6 +327,16 @@ def test_output_redirect_with_dash_in_path(parser):
     assert results.output == '>'
     assert results.outputTo == 'python-cmd2/afile.txt'
 
+def test_parse_input_redirect(parser):
+    line = '< afile.txt'
+    results = parser.parseString(line)
+    assert results.inputFrom == 'afile.txt'
+
+def test_parse_input_redirect_with_dash_in_path(parser):
+    line = '< python-cmd2/afile.txt'
+    results = parser.parseString(line)
+    assert results.inputFrom == 'python-cmd2/afile.txt'
+
 def test_pipe_and_redirect(parser):
     line = 'output into;sufx | pipethrume plz > afile.txt'
     results = parser.parseString(line)
@@ -316,6 +347,13 @@ def test_pipe_and_redirect(parser):
     assert results.pipeTo == 'pipethrume plz'
     assert results.output == '>'
     assert results.outputTo == 'afile.txt'
+
+def test_parse_output_to_paste_buffer(parser):
+    line = 'output to paste buffer >> '
+    results = parser.parseString(line)
+    assert results.command == 'output'
+    assert results.args == 'to paste buffer'
+    assert results.output == '>>'
 
 def test_has_redirect_inside_terminator(parser):
     """The terminator designates the end of the commmand/arguments portion.  If a redirector
@@ -349,3 +387,11 @@ def test_parse_input_redirect_from_unicode_filename(parser):
     line = '< café'
     results = parser.parseString(line)
     assert results.inputFrom == 'café'
+
+def test_empty_statement_raises_exception():
+    app = cmd2.Cmd()
+    with pytest.raises(cmd2.EmptyStatement):
+        app._complete_statement('')
+
+    with pytest.raises(cmd2.EmptyStatement):
+        app._complete_statement(' ')
