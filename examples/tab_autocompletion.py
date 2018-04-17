@@ -9,10 +9,6 @@ from typing import List
 import cmd2
 from cmd2 import with_argparser, with_category
 
-# List of strings used with flag and index based completion functions
-food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
-sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
-
 
 class TabCompleteExample(cmd2.Cmd):
     """ Example cmd2 application where we a base command which has a couple subcommands."""
@@ -183,7 +179,7 @@ class TabCompleteExample(cmd2.Cmd):
         if not args.command:
             self.do_help('media shows')
 
-    media_parser = AutoCompleter.ACArgumentParser()
+    media_parser = AutoCompleter.ACArgumentParser(prog='media')
 
     media_types_subparsers = media_parser.add_subparsers(title='Media Types', dest='type')
 
@@ -201,10 +197,10 @@ class TabCompleteExample(cmd2.Cmd):
     movies_list_parser.add_argument('-a', '--actor', help='Actor Filter', action='append')
 
     movies_add_parser = movies_commands_subparsers.add_parser('add')
-    movies_add_parser.add_argument('-t', '--title', help='Movie Title', required=True)
-    movies_add_parser.add_argument('-r', '--rating', help='Movie Rating', choices=ratings_types, required=True)
-    movies_add_parser.add_argument('-d', '--director', help='Director', action='append', required=True)
-    movies_add_parser.add_argument('-a', '--actor', help='Actors', action='append', required=True)
+    movies_add_parser.add_argument('title', help='Movie Title')
+    movies_add_parser.add_argument('rating', help='Movie Rating', choices=ratings_types)
+    movies_add_parser.add_argument('-d', '--director', help='Director', nargs=(1, 2), required=True)
+    movies_add_parser.add_argument('actor', help='Actors', nargs='*')
 
     movies_delete_parser = movies_commands_subparsers.add_parser('delete')
 
@@ -255,8 +251,8 @@ class TabCompleteExample(cmd2.Cmd):
         if not args.type:
             self.do_help('library show')
 
-    def _query_movie_database(self, exclude=[]):
-        return list(set(TabCompleteExample.MOVIE_DATABASE_IDS).difference(set(exclude)))
+    def _query_movie_database(self):
+        return list(set(TabCompleteExample.MOVIE_DATABASE_IDS).difference(set(TabCompleteExample.USER_MOVIE_LIBRARY)))
 
     def _query_movie_user_library(self):
         return TabCompleteExample.USER_MOVIE_LIBRARY
@@ -272,6 +268,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     library_movie_add_parser = library_movie_subcommands.add_parser('add')
     library_movie_add_parser.add_argument('movie_id', help='ID of movie to add', action='append')
+    library_movie_add_parser.add_argument('-b', '--borrowed', action='store_true')
 
     library_movie_remove_parser = library_movie_subcommands.add_parser('remove')
     library_movie_remove_parser.add_argument('movie_id', help='ID of movie to remove', action='append')

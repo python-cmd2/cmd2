@@ -687,7 +687,7 @@ class ACArgumentParser(argparse.ArgumentParser):
                  usage=None,
                  description=None,
                  epilog=None,
-                 parents=None,
+                 parents=[],
                  formatter_class=ACHelpFormatter,
                  prefix_chars='-',
                  fromfile_prefix_chars=None,
