@@ -5,6 +5,7 @@ Cmd2 unit/functional testing
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import argparse
 import os
 import sys
 import io
@@ -15,17 +16,17 @@ import pytest
 import six
 
 from code import InteractiveConsole
-from optparse import make_option
 
 # Used for sm.input: raw_input() for Python 2 or input() for Python 3
 import six.moves as sm
 
 import cmd2
-from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
+from conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
+    HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.8.2'
+    assert cmd2.__version__ == '0.9.0'
 
 
 def test_empty_statement(base_app):
@@ -38,6 +39,13 @@ def test_base_help(base_app):
     expected = normalize(BASE_HELP)
     assert out == expected
 
+def test_base_help_verbose(base_app):
+    out = run_cmd(base_app, 'help -v')
+    expected = normalize(BASE_HELP_VERBOSE)
+    assert out == expected
+
+    out = run_cmd(base_app, 'help --verbose')
+    assert out == expected
 
 def test_base_help_history(base_app):
     out = run_cmd(base_app, 'help history')
@@ -47,7 +55,7 @@ def test_base_argparse_help(base_app, capsys):
     # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
     run_cmd(base_app, 'set -h')
     out, err = capsys.readouterr()
-    out1 = out.splitlines()
+    out1 = normalize(str(out))
 
     out2 = run_cmd(base_app, 'help set')
 
@@ -91,15 +99,13 @@ def test_base_show_readonly(base_app):
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-        Parsing of @options commands:
+        Parsing of command arguments:
             Shell lexer mode for command argument splitting: {}
             Strip Quotes after splitting arguments: {}
-            Argument type: {}
             
 """.format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
            "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
-           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
-           "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))
+           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False"))
     assert out == expected
 
 
@@ -1066,6 +1072,96 @@ def test_help_overridden_method(help_app):
     assert out == expected
 
 
+class HelpCategoriesApp(cmd2.Cmd):
+    """Class for testing custom help_* methods which override docstring help."""
+    def __init__(self, *args, **kwargs):
+        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
+        cmd2.Cmd.__init__(self, *args, **kwargs)
+
+    @cmd2.with_category('Some Category')
+    def do_diddly(self, arg):
+        """This command does diddly"""
+        pass
+
+    def do_squat(self, arg):
+        """This docstring help will never be shown because the help_squat method overrides it."""
+        pass
+
+    def help_squat(self):
+        self.stdout.write('This command does diddly squat...\n')
+
+    def do_edit(self, arg):
+        """This overrides the edit command and does nothing."""
+        pass
+
+    cmd2.categorize((do_squat, do_edit), 'Custom Category')
+
+    # This command will be in the "undocumented" section of the help menu
+    def do_undoc(self, arg):
+        pass
+
+@pytest.fixture
+def helpcat_app():
+    app = HelpCategoriesApp()
+    app.stdout = StdOut()
+    return app
+
+def test_help_cat_base(helpcat_app):
+    out = run_cmd(helpcat_app, 'help')
+    expected = normalize("""Documented commands (type help <topic>):
+
+Custom Category
+===============
+edit  squat
+
+Some Category
+=============
+diddly
+
+Other
+=====
+alias  help  history  load  py  pyscript  quit  set  shell  shortcuts  unalias
+
+Undocumented commands:
+======================
+undoc
+""")
+    assert out == expected
+
+def test_help_cat_verbose(helpcat_app):
+    out = run_cmd(helpcat_app, 'help --verbose')
+    expected = normalize("""Documented commands (type help <topic>):
+
+Custom Category
+================================================================================
+edit                This overrides the edit command and does nothing.
+squat               This command does diddly squat...
+
+Some Category
+================================================================================
+diddly              This command does diddly
+
+Other
+================================================================================
+alias               Define or display aliases
+help                List available commands with "help" or detailed help with "help cmd".
+history             View, run, edit, and save previously entered commands.
+load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+py                  Invoke python command, shell, or script
+pyscript            Runs a python script file inside the console
+quit                Exits this application.
+set                 Sets a settable parameter or shows current settings of parameters.
+shell               Execute a command as if at the OS prompt.
+shortcuts           Lists shortcuts (aliases) available.
+unalias             Unsets aliases
+
+Undocumented commands:
+======================
+undoc
+""")
+    assert out == expected
+
+
 class SelectApp(cmd2.Cmd):
     def do_eat(self, arg):
         """Eat something, with a selection of sauces to choose from."""
@@ -1201,41 +1297,25 @@ Charm us with the {}...
     # And verify the expected output to stdout
     assert out == expected
 
-@pytest.fixture
-def noarglist_app():
-    cmd2.set_use_arg_list(False)
-    app = cmd2.Cmd()
-    app.stdout = StdOut()
-    return app
 
-def test_pyscript_with_noarglist(noarglist_app, capsys, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, '..', 'examples', 'scripts', 'arg_printer.py')
-    expected = """Running Python script 'arg_printer.py' which was called with 2 arguments
-arg 1: 'foo'
-arg 2: 'bar'
-"""
-    run_cmd(noarglist_app, 'pyscript {} foo bar'.format(python_script))
-    out, err = capsys.readouterr()
-    assert out == expected
-
-
-class OptionApp(cmd2.Cmd):
-    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
-    def do_greet(self, arg, opts=None):
+class HelpNoDocstringApp(cmd2.Cmd):
+    greet_parser = argparse.ArgumentParser()
+    greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
+    @cmd2.with_argparser_and_unknown_args(greet_parser)
+    def do_greet(self, opts, arg):
         arg = ''.join(arg)
         if opts.shout:
             arg = arg.upper()
         self.stdout.write(arg + '\n')
 
-def test_option_help_with_no_docstring(capsys):
-    app = OptionApp()
+def test_help_with_no_docstring(capsys):
+    app = HelpNoDocstringApp()
     app.onecmd_plus_hooks('greet -h')
     out, err = capsys.readouterr()
     assert err == ''
-    assert out == """Usage: greet [options] arg
+    assert out == """usage: greet [-h] [-s]
 
-Options:
+optional arguments:
   -h, --help   show this help message and exit
   -s, --shout  N00B EMULATION MODE
 """
@@ -1264,8 +1344,11 @@ class MultilineApp(cmd2.Cmd):
         # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
         cmd2.Cmd.__init__(self, *args, **kwargs)
 
-    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
-    def do_orate(self, arg, opts=None):
+    orate_parser = argparse.ArgumentParser()
+    orate_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
+
+    @cmd2.with_argparser_and_unknown_args(orate_parser)
+    def do_orate(self, opts, arg):
         arg = ''.join(arg)
         if opts.shout:
             arg = arg.upper()

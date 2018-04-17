@@ -160,6 +160,138 @@ Which yields:
    This command can not generate tags with no content, like <br/>
 
 
+Grouping Commands
+=================
+
+By default, the ``help`` command displays::
+
+  Documented commands (type help <topic>):
+  ========================================
+  alias    findleakers  pyscript    sessions             status       vminfo
+  config   help         quit        set                  stop         which
+  connect  history      redeploy    shell                thread_dump
+  deploy   list         resources   shortcuts            unalias
+  edit     load         restart     sslconnectorciphers  undeploy
+  expire   py           serverinfo  start                version
+
+If you have a large number of commands, you can optionally group your commands into categories.
+Here's the output from the example ``help_categories.py``::
+
+  Documented commands (type help <topic>):
+
+  Application Management
+  ======================
+  deploy  findleakers  redeploy  sessions  stop
+  expire  list         restart   start     undeploy
+
+  Connecting
+  ==========
+  connect  which
+
+  Server Information
+  ==================
+  resources  serverinfo  sslconnectorciphers  status  thread_dump  vminfo
+
+  Other
+  =====
+  alias   edit  history  py        quit  shell      unalias
+  config  help  load     pyscript  set   shortcuts  version
+
+
+There are 2 methods of specifying command categories, using the ``@with_category`` decorator or with the
+``categorize()`` function. Once a single command category is detected, the help output switches to a categorized
+mode of display. All commands with an explicit category defined default to the category `Other`.
+
+Using the ``@with_category`` decorator::
+
+  @with_category(CMD_CAT_CONNECTING)
+  def do_which(self, _):
+      """Which command"""
+      self.poutput('Which')
+
+Using the ``categorize()`` function:
+
+    You can call with a single function::
+
+        def do_connect(self, _):
+            """Connect command"""
+            self.poutput('Connect')
+
+        # Tag the above command functions under the category Connecting
+        categorize(do_connect, CMD_CAT_CONNECTING)
+
+    Or with an Iterable container of functions::
+
+        def do_undeploy(self, _):
+            """Undeploy command"""
+            self.poutput('Undeploy')
+
+        def do_stop(self, _):
+            """Stop command"""
+            self.poutput('Stop')
+
+        def do_findleakers(self, _):
+            """Find Leakers command"""
+            self.poutput('Find Leakers')
+
+        # Tag the above command functions under the category Application Management
+        categorize((do_undeploy,
+                    do_stop,
+                    do_findleakers), CMD_CAT_APP_MGMT)
+
+The ``help`` command also has a verbose option (``help -v`` or ``help --verbose``) that combines
+the help categories with per-command Help Messages::
+
+    Documented commands (type help <topic>):
+
+    Application Management
+    ================================================================================
+    deploy              Deploy command
+    expire              Expire command
+    findleakers         Find Leakers command
+    list                List command
+    redeploy            Redeploy command
+    restart             usage: restart [-h] {now,later,sometime,whenever}
+    sessions            Sessions command
+    start               Start command
+    stop                Stop command
+    undeploy            Undeploy command
+
+    Connecting
+    ================================================================================
+    connect             Connect command
+    which               Which command
+
+    Server Information
+    ================================================================================
+    resources              Resources command
+    serverinfo             Server Info command
+    sslconnectorciphers    SSL Connector Ciphers command is an example of a command that contains
+                           multiple lines of help information for the user. Each line of help in a
+                           contiguous set of lines will be printed and aligned in the verbose output
+                           provided with 'help --verbose'
+    status                 Status command
+    thread_dump            Thread Dump command
+    vminfo                 VM Info command
+
+    Other
+    ================================================================================
+    alias               Define or display aliases
+    config              Config command
+    edit                Edit a file in a text editor.
+    help                List available commands with "help" or detailed help with "help cmd".
+    history             usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT] [arg]
+    load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+    py                  Invoke python command, shell, or script
+    pyscript            Runs a python script file inside the console
+    quit                Exits this application.
+    set                 usage: set [-h] [-a] [-l] [settable [settable ...]]
+    shell               Execute a command as if at the OS prompt.
+    shortcuts           Lists shortcuts (aliases) available.
+    unalias             Unsets aliases
+    version             Version command
+
+
 Receiving an argument list
 ==========================
 
@@ -223,42 +355,3 @@ This example also demonstrates usage of ``cmd_with_subs_completer``. In addition
 ``cmd_with_subs_completer`` offers more details.
 
 .. _subcommands: https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py
-
-Deprecated optparse support
-===========================
-
-The ``optparse`` library has been deprecated since Python 2.7 (released on July
-3rd 2010) and Python 3.2 (released on February 20th, 2011). ``optparse`` is
-still included in the python standard library, but the documentation
-recommends using ``argparse`` instead.
-
-``cmd2`` includes a decorator which can parse arguments using ``optparse``. This decorator is deprecated just like the ``optparse`` library.
-
-Here's an example::
-
-   from optparse import make_option
-   from cmd2 import options
-
-   opts = [make_option('-p', '--piglatin', action="store_true", help="atinLay"),
-           make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
-           make_option('-r', '--repeat', type="int", help="output [n] times")]
-
-   @options(opts, arg_desc='(text to say)')
-   def do_speak(self, arg, opts=None):
-     """Repeats what you tell me to."""
-     arg = ''.join(arg)
-     if opts.piglatin:
-         arg = '%s%say' % (arg[1:], arg[0])
-     if opts.shout:
-         arg = arg.upper()
-     repetitions = opts.repeat or 1
-     for i in range(min(repetitions, self.maxrepeats)):
-         self.poutput(arg)
-
-
-The optparse decorator performs the following key functions for you:
-
-1. Use `shlex` to split the arguments entered by the user.
-2. Parse the arguments using the given optparse options.
-3. Replace the `__doc__` string of the decorated function (i.e. do_speak) with the help string generated by optparse.
-4. Call the decorated function (i.e. do_speak) passing an additional parameter which contains the parsed options.

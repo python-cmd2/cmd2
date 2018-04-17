@@ -52,15 +52,6 @@ def input_parser():
     c = cmd2.Cmd()
     return c.parser_manager.input_source_parser
 
-@pytest.fixture
-def option_parser():
-    op = cmd2.OptionParser()
-    return op
-
-
-def test_remaining_args():
-    assert cmd2.remaining_args('-f bar   bar   cow', ['bar', 'cow']) == 'bar   cow'
-
 
 def test_history_span(hist):
     h = hist
@@ -337,14 +328,6 @@ def test_parse_input_redirect_from_unicode_filename(input_parser):
     line = '< café'
     results = input_parser.parseString(line)
     assert results.inputFrom == line
-
-
-def test_option_parser_exit_with_msg(option_parser, capsys):
-    msg = 'foo bar'
-    option_parser.exit(msg=msg)
-    out, err = capsys.readouterr()
-    assert out == msg + '\n'
-    assert err == ''
 
 
 def test_empty_statement_raises_exception():

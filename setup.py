@@ -8,7 +8,7 @@ import sys
 import setuptools
 from setuptools import setup
 
-VERSION = '0.8.2'
+VERSION = '0.9.0'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
@@ -29,7 +29,7 @@ Main features:
     - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
     - `py` enters interactive Python console (opt-in `ipy` for IPython console)
     - Multi-line commands
-    - Special-character command shortcuts (beyond cmd's `@` and `!`)
+    - Special-character command shortcuts (beyond cmd's `?` and `!`)
     - Settable environment parameters
     - Parsing commands with arguments using `argparse`, including support for sub-commands
     - Unicode character support (*Python 3 only*)
@@ -69,6 +69,7 @@ INSTALL_REQUIRES = ['pyparsing >= 2.0.1', 'ply', 'pyperclip', 'six']
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
     ":sys_platform=='win32'": ['pyreadline'],
+    ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
     ":python_version<'3.5'": ['contextlib2'],
     # Python 3.3 and earlier require enum34 backport of enum module from Python 3.4
