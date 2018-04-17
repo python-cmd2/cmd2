@@ -8,7 +8,7 @@ import pytest
 import cmd2
 from unittest import mock
 
-#from conftest import run_cmd, StdOut
+from .conftest import run_cmd, StdOut
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:

@@ -22,8 +22,8 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-#from conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
-#    HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
+from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
+    HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
 
 def test_ver():
