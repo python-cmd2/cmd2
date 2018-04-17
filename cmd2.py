@@ -668,6 +668,16 @@ class EmptyStatement(Exception):
     pass
 
 
+class ExitWithError(Exception):
+    """Custom exception class for handling exit code of CLI
+
+    Attributes:
+        code -- the exit code
+    """
+    def __init__(self, code=1):
+        self.code = code
+
+
 # Regular expression to match ANSI escape codes
 ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
 
@@ -954,10 +964,11 @@ class Cmd(cmd.Cmd):
     terminators = [';']     # make sure your terminators are not in legalChars!
 
     # Attributes which are NOT dynamically settable at runtime
-    allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
-    allow_redirection = True    # Should output redirection and pipes be allowed
-    default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    quit_on_sigint = False      # Quit the loop on interrupt instead of just resetting prompt
+    allow_cli_args = True         # Should arguments passed on the command-line be processed as commands?
+    allow_redirection = True      # Should output redirection and pipes be allowed
+    default_to_shell = False      # Attempt to run unrecognized commands as shell commands
+    quit_on_sigint = False        # Quit the loop on interrupt instead of just resetting prompt
+    exit_with_error_code = False  # Exit with a code different from zero on exceptions or sigint
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
@@ -2231,7 +2242,6 @@ class Cmd(cmd.Cmd):
         :param signum: int - signal number
         :param frame
         """
-
         # Save copy of pipe_proc since it could theoretically change while this is running
         pipe_proc = self.pipe_proc
 
@@ -2402,13 +2412,23 @@ class Cmd(cmd.Cmd):
                     self._restore_output(statement)
         except EmptyStatement:
             pass
+        except KeyboardInterrupt:
+            if self.exit_with_error_code:
+                raise ExitWithError(code=1)
+        except ExitWithError as ex:
+            # re-raise it with same code
+            raise ExitWithError(code=ex.code)
         except ValueError as ex:
             # If shlex.split failed on syntax, let user know whats going on
             self.perror("Invalid syntax: {}".format(ex), traceback_war=False)
+            if self.exit_with_error_code:
+                raise ExitWithError(code=2)
         except Exception as ex:
             self.perror(ex, type(ex).__name__)
-        finally:
-            return self.postparsing_postcmd(stop)
+            if self.exit_with_error_code:
+                raise ExitWithError(code=3)
+
+        return self.postparsing_postcmd(stop)
 
     def runcmds_plus_hooks(self, cmds):
         """Convenience method to run multiple commands by onecmd_plus_hooks.
@@ -2722,6 +2742,7 @@ class Cmd(cmd.Cmd):
             except NameError:
                 pass
         stop = None
+        should_exit = False
         try:
             while not stop:
                 if self.cmdqueue:
@@ -2743,7 +2764,13 @@ class Cmd(cmd.Cmd):
 
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
+        except ExitWithError as ex:
+            exit_code = ex.code
+            should_exit = True
         finally:
+            if should_exit:
+                sys.exit(exit_code)
+
             if self.use_rawinput and self.completekey:
 
                 # Restore what we changed in readline
