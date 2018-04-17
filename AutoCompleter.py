@@ -299,7 +299,7 @@ class AutoCompleter(object):
                         # does the token fully match a known flag?
                         if token in self._flag_to_action.keys():
                             flag_action = self._flag_to_action[token]
-                        elif self._parser.allow_abbrev:
+                        elif hasattr(self._parser, 'allow_abbrev') and self._parser.allow_abbrev:
                             candidates_flags = [flag for flag in self._flag_to_action.keys() if flag.startswith(token)]
                             if len(candidates_flags) == 1:
                                 flag_action = self._flag_to_action[candidates_flags[0]]
