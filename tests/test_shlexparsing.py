@@ -76,6 +76,15 @@ class Cmd2Parser():
             # no terminator in the tokens
             pass
 
+        # check for input from file
+        try:
+            if tokens[0] == '<':
+                result.inputFrom = ' '.join(tokens[1:])
+                tokens = []
+        except IndexError:
+            # no input from file
+            pass
+
         # check for output redirect
         try:
             output_pos = tokens.index('>')
@@ -336,3 +345,7 @@ def test_parse_redirect_to_unicode_filename(parser):
     assert results.output == '>'
     assert results.outputTo == 'café'
 
+def test_parse_input_redirect_from_unicode_filename(parser):
+    line = '< café'
+    results = parser.parseString(line)
+    assert results.inputFrom == 'café'
