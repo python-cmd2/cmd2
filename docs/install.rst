@@ -88,10 +88,10 @@ This will also install the required 3rd-party dependencies.
 Deploy cmd2.py with your project
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``cmd2`` is contained in only one Python file (**cmd2.py**), so it can be easily copied into your project.  *The
+``cmd2`` is contained in a small number of Python files, which can be easily copied into your project.  *The
 copyright and license notice must be retained*.
 
-This is an option suitable for advanced Python users.  You can simply include this file within your project's hierarchy.
+This is an option suitable for advanced Python users.  You can simply include the files within your project's hierarchy.
 If you want to modify ``cmd2``, this may be a reasonable option.  Though, we encourage you to use stock ``cmd2`` and
 either composition or inheritance to achieve the same goal.
 
