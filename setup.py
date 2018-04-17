@@ -69,7 +69,7 @@ EXTRAS_REQUIRE = {
     # POSIX OSes also require wcwidth for correctly estimating the displayed width of unicode chars
     ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
-    ":python_version<'3.5'": ['contextlib2'],
+    ":python_version<'3.5'": ['contextlib2', 'typing'],
 }
 
 if int(setuptools.__version__.split('.')[0]) < 18:
