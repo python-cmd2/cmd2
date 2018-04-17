@@ -95,7 +95,7 @@ setup(
     url='https://github.com/python-cmd2/cmd2',
     license='MIT',
     platforms=['any'],
-    packages=find_packages(),
+    py_modules=["cmd2"],
     keywords='command prompt console cmd',
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
