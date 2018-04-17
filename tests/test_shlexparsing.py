@@ -28,6 +28,13 @@ class Cmd2Command():
     pass
 
 class Cmd2Parser():
+    # settings or variables from cmd2.py
+    terminator = ';'
+    allow_redirection = True
+    REDIRECTION_CHARS = ['|', '<', '>']
+    QUOTES = ['"', "'"]
+    multilineCommands = ['multiline']
+
     def parseString(self, rawinput):
         result = Cmd2Command()
         result.raw = rawinput
@@ -38,9 +45,6 @@ class Cmd2Parser():
         result.pipeTo = None
         result.output = None
         result.outputTo = None
-
-        # in theory we let people change this
-        terminator = ';'
 
         # strip C-style and C++-style comments
         # shlex will handle the python/shell style comments for us
@@ -65,7 +69,7 @@ class Cmd2Parser():
         
         # look for the semicolon terminator
         try:
-            terminator_pos = tokens.index(terminator)
+            terminator_pos = tokens.index(self.terminator)
             # everything before the first terminator is the command and the args
             (result.command, result.args) = self._command_and_args(tokens[:terminator_pos])
             result.terminator = tokens[terminator_pos]
@@ -149,16 +153,16 @@ class Cmd2Parser():
         :param initial_tokens: the tokens as parsed by shlex
         :return: the punctuated tokens
         """
-        punctuation = [';'] # should be self.terminator from cmd2.py
-        if True:  # should be self.allow_redirection from cmd2.py
-            punctuation += ['|', '<', '>'] # should be REDIRECTION_CHARS from cmd2.py
+        punctuation = [self.terminator] # should be self.terminator from cmd2.py
+        if self.allow_redirection:  # should be self.allow_redirection from cmd2.py
+            punctuation += self.REDIRECTION_CHARS # should be REDIRECTION_CHARS from cmd2.py
 
         punctuated_tokens = []
 
         for cur_initial_token in initial_tokens:
 
             # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
-            if len(cur_initial_token) <= 1 or cur_initial_token[0] in ['"', "'"]: # should be QUOTES in cmd2.py
+            if len(cur_initial_token) <= 1 or cur_initial_token[0] in self.QUOTES: # should be QUOTES in cmd2.py
                 punctuated_tokens.append(cur_initial_token)
                 continue
 
@@ -203,6 +207,11 @@ class Cmd2Parser():
 
         return punctuated_tokens
 
+######
+#
+# unit tests
+#
+######
 @pytest.fixture
 def parser():
     parser = Cmd2Parser()
@@ -363,6 +372,53 @@ def test_has_redirect_inside_terminator(parser):
     assert results.command == 'has'
     assert results.args == '> inside'
     assert results.terminator == ';'
+
+# def test_parse_unfinished_multiliine_command(parser):
+#     line = 'multiline has > inside an unfinished command'
+#     results = parser.parseString(line)
+#     assert results.multilineCommand == 'multiline'
+#     assert not 'args' in results
+
+def test_parse_multiline_command_ignores_redirectors_within_it(parser):
+    line = 'multiline has > inside;'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'has > inside'
+    assert results.terminator == ';'
+
+# def test_parse_multiline_with_incomplete_comment(parser):
+#     """A terminator within a comment will be ignored and won't terminate a multiline command.
+#     Un-closed comments effectively comment out everything after the start."""
+#     line = 'multiline command /* with comment in progress;'
+#     results = parser.parseString(line)
+#     assert results.multilineCommand == 'multiline'
+#     assert not 'args' in results
+
+def test_parse_multiline_with_complete_comment(parser):
+    line = 'multiline command /* with comment complete */ is done;'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'command /* with comment complete */ is done'
+    assert results.terminator == ';'
+
+# def test_parse_multiline_termninated_by_empty_line(parser):
+#     line = 'multiline command ends\n\n'
+#     results = parser.parseString(line)
+#     assert results.multilineCommand == 'multiline'
+#     assert results.args == 'command ends'
+#     assert len(results.terminator) == 2
+#     assert results.terminator[0] == '\n'
+#     assert results.terminator[1] == '\n'
+
+# def test_parse_multiline_ignores_terminators_in_comments(parser):
+#     line = 'multiline command "with term; ends" now\n\n'
+#     results = parser.parseString(line)
+#     assert results.multilineCommand == 'multiline'
+#     assert results.args == 'command "with term; ends" now'
+#     assert len(results.terminator) == 2
+#     assert results.terminator[0] == '\n'
+#     assert results.terminator[1] == '\n'
+
 def test_parse_command_with_unicode_args(parser):
     line = 'drink café'
     results = parser.parseString(line)
