@@ -4,6 +4,7 @@
 """
 import argparse
 import AutoCompleter
+import itertools
 from typing import List
 
 import cmd2
@@ -20,6 +21,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     # For mocking a data source for the example commands
     ratings_types = ['G', 'PG', 'PG-13', 'R', 'NC-17']
+    show_ratings = ['TV-Y', 'TV-Y7', 'TV-G', 'TV-PG', 'TV-14', 'TV-MA']
     static_list_directors = ['J. J. Abrams', 'Irvin Kershner', 'George Lucas', 'Richard Marquand',
                              'Rian Johnson', 'Gareth Edwards']
     actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
@@ -66,6 +68,24 @@ class TabCompleteExample(cmd2.Cmd):
                                   },
 
                       }
+    USER_SHOW_LIBRARY = {'SW_REB': ['S01E01', 'S02E02']}
+    SHOW_DATABASE_IDS = ['SW_CW', 'SW_TCW', 'SW_REB']
+    SHOW_DATABASE = {'SW_CW':   {'title': 'Star Wars: Clone Wars',
+                                 'rating': 'TV-Y7',
+                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                             2: ['S02E01', 'S02E02', 'S02E03']}
+                                 },
+                     'SW_TCW':  {'title': 'Star Wars: The Clone Wars',
+                                 'rating': 'TV-PG',
+                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                             2: ['S02E01', 'S02E02', 'S02E03']}
+                                 },
+                     'SW_REB':  {'title': 'Star Wars: Rebels',
+                                 'rating': 'TV-Y7',
+                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                             2: ['S02E01', 'S02E02', 'S02E03']}
+                                 },
+                     }
 
     # This demonstrates a number of customizations of the AutoCompleter version of ArgumentParser
     #  - The help output will separately group required vs optional flags
@@ -179,6 +199,19 @@ class TabCompleteExample(cmd2.Cmd):
         if not args.command:
             self.do_help('media shows')
 
+        elif args.command == 'list':
+            for show_id in TabCompleteExample.SHOW_DATABASE:
+                show = TabCompleteExample.SHOW_DATABASE[show_id]
+                print('{}\n-----------------------------\n{}   ID: {}'
+                      .format(show['title'], show['rating'], show_id))
+                for season in show['seasons']:
+                    ep_list = show['seasons'][season]
+                    print('  Season {}:\n    {}'
+                          .format(season,
+                                  '\n    '.join(ep_list)))
+                print()
+
+
     media_parser = AutoCompleter.ACArgumentParser(prog='media')
 
     media_types_subparsers = media_parser.add_subparsers(title='Media Types', dest='type')
@@ -206,6 +239,10 @@ class TabCompleteExample(cmd2.Cmd):
 
     shows_parser = media_types_subparsers.add_parser('shows')
     shows_parser.set_defaults(func=_do_media_shows)
+
+    shows_commands_subparsers = shows_parser.add_subparsers(title='Commands', dest='command')
+
+    shows_list_parser = shows_commands_subparsers.add_parser('list')
 
     @with_category(CAT_AUTOCOMPLETE)
     @with_argparser(media_parser)
@@ -257,6 +294,10 @@ class TabCompleteExample(cmd2.Cmd):
     def _query_movie_user_library(self):
         return TabCompleteExample.USER_MOVIE_LIBRARY
 
+    def _filter_library(self, text, line, begidx, endidx, full, exclude=[]):
+        candidates = list(set(full).difference(set(exclude)))
+        return [entry for entry in candidates if entry.startswith(text)]
+
     library_parser = AutoCompleter.ACArgumentParser(prog='library')
 
     library_subcommands = library_parser.add_subparsers(title='Media Types', dest='type')
@@ -275,6 +316,32 @@ class TabCompleteExample(cmd2.Cmd):
 
     library_show_parser = library_subcommands.add_parser('show')
     library_show_parser.set_defaults(func=_do_library_show)
+
+    library_show_subcommands = library_show_parser.add_subparsers(title='Command', dest='command')
+
+    library_show_add_parser = library_show_subcommands.add_parser('add')
+    library_show_add_parser.add_argument('show_id', help='Show IDs to add')
+    library_show_add_parser.add_argument('episode_id', nargs='*', help='Show IDs to add')
+
+    library_show_rmv_parser = library_show_subcommands.add_parser('remove')
+
+    # Demonstrates a custom completion function that does more with the command line than is
+    # allowed by the standard completion functions
+    def _filter_episodes(self, text, line, begidx, endidx, show_db, user_lib):
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
+        show_id = tokens[3]
+        if show_id:
+            if show_id in show_db:
+                show = show_db[show_id]
+                all_episodes = itertools.chain(*(show['seasons'].values()))
+
+                if show_id in user_lib:
+                    user_eps = user_lib[show_id]
+                else:
+                    user_eps = []
+
+                return self._filter_library(text, line, begidx, endidx, all_episodes, user_eps)
+        return []
 
     @with_category(CAT_AUTOCOMPLETE)
     @with_argparser(library_parser)
@@ -300,21 +367,42 @@ class TabCompleteExample(cmd2.Cmd):
         movie_add_choices = {'movie_id': self._query_movie_database}
         movie_remove_choices = {'movie_id': self._query_movie_user_library}
 
+        # This demonstrates the ability to mix custom completion functions with argparse completion.
+        # By specifying a tuple for a completer, AutoCompleter expects a custom completion function
+        # with optional index-based as well as keyword based arguments. This is an alternative to using
+        # a partial function.
+
+        show_add_choices = {'show_id': (self._filter_library,  # This is a custom completion function
+                                        # This tuple represents index-based args to append to the function call
+                                        (list(TabCompleteExample.SHOW_DATABASE.keys()),)
+                                        ),
+                            'episode_id': (self._filter_episodes, # this is a custom completion function
+                                           # this list represents index-based args to append to the function call
+                                           [TabCompleteExample.SHOW_DATABASE],
+                                           # this dict contains keyword-based args to append to the function call
+                                           {'user_lib': TabCompleteExample.USER_SHOW_LIBRARY})}
+        show_remove_choices = {}
+
         # The library movie sub-parser group 'command' has 2 sub-parsers:
         #   'add' and 'remove'
         library_movie_command_params = \
             {'add': (movie_add_choices, None),
              'remove': (movie_remove_choices, None)}
 
+        library_show_command_params = \
+            {'add': (show_add_choices, None),
+             'remove': (show_remove_choices, None)}
+
         # The 'library movie' command has a sub-parser group called 'command'
         library_movie_subcommand_groups = {'command': library_movie_command_params}
+        library_show_subcommand_groups = {'command': library_show_command_params}
 
         # Mapping of a specific sub-parser of the 'type' group to a tuple. Each
         #    tuple has 2 values corresponding what's passed to the constructor
         #    parameters (arg_choices,subcmd_args_lookup) of the nested
         #    instance of AutoCompleter
         library_type_params = {'movie': (None, library_movie_subcommand_groups),
-                               'show': (None, None)}
+                               'show': (None, library_show_subcommand_groups)}
 
         # maps the a subcommand group to a dictionary mapping a specific
         # sub-command to a tuple of (arg_choices, subcmd_args_lookup)

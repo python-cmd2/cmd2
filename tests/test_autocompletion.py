@@ -298,6 +298,28 @@ def test_autcomp_pos_after_flag(cmd2_app):
            cmd2_app.completion_matches == ['John Boyega" ']
 
 
+def test_autcomp_custom_func_list_arg(cmd2_app):
+    text = 'SW_'
+    line = 'library show add {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           cmd2_app.completion_matches == ['SW_CW', 'SW_REB', 'SW_TCW']
+
+
+def test_autcomp_custom_func_list_and_dict_arg(cmd2_app):
+    text = ''
+    line = 'library show add SW_REB {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           cmd2_app.completion_matches == ['S01E02', 'S01E03', 'S02E01', 'S02E03']
+
+
 
 
 

@@ -429,7 +429,7 @@ class AutoCompleter(object):
                 list_args = None
                 kw_args = None
                 for index in range(1, len(arg_choices)):
-                    if isinstance(arg_choices[index], list):
+                    if isinstance(arg_choices[index], list) or isinstance(arg_choices[index], tuple):
                         list_args = arg_choices[index]
                     elif isinstance(arg_choices[index], dict):
                         kw_args = arg_choices[index]
