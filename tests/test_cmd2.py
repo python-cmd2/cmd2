@@ -6,19 +6,20 @@ Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import argparse
+import builtins
+from code import InteractiveConsole
 import os
 import sys
 import io
 import tempfile
 
-import mock
 import pytest
-import six
 
-from code import InteractiveConsole
-
-# Used for sm.input: raw_input() for Python 2 or input() for Python 3
-import six.moves as sm
+# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
+try:
+    import mock
+except ImportError:
+    from unittest import mock
 
 import cmd2
 from conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
@@ -143,10 +144,7 @@ now: True
 
 def test_base_shell(base_app, monkeypatch):
     m = mock.Mock()
-    subprocess = 'subprocess'
-    if six.PY2:
-        subprocess = 'subprocess32'
-    monkeypatch.setattr("{}.Popen".format(subprocess), m)
+    monkeypatch.setattr("{}.Popen".format('subprocess'), m)
     out = run_cmd(base_app, 'shell echo a')
     assert out == []
     assert m.called
@@ -640,15 +638,8 @@ def test_pipe_to_shell_error(base_app, capsys):
     # Try to pipe command output to a shell command that doesn't exist in order to produce an error
     run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
     out, err = capsys.readouterr()
-
     assert not out
-
     expected_error = 'FileNotFoundError'
-    if six.PY2:
-        if sys.platform.startswith('win'):
-            expected_error = 'WindowsError'
-        else:
-            expected_error = 'OSError'
     assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 
@@ -717,8 +708,8 @@ def test_base_colorize(base_app):
 
 def _expected_no_editor_error():
     expected_exception = 'OSError'
-    # If using Python 2 or PyPy (either 2 or 3), expect a different exception than with Python 3
-    if six.PY2 or hasattr(sys, "pypy_translation_info"):
+    # If PyPy, expect a different exception than with Python 3
+    if hasattr(sys, "pypy_translation_info"):
         expected_exception = 'EnvironmentError'
 
     expected_text = normalize("""
@@ -847,7 +838,7 @@ def test_base_cmdloop_without_queue():
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
-    sm.input = m
+    builtins.input = m
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
@@ -869,7 +860,7 @@ def test_cmdloop_without_rawinput():
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
-    sm.input = m
+    builtins.input = m
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
@@ -883,8 +874,7 @@ def test_cmdloop_without_rawinput():
 
 class HookFailureApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def postparsing_precmd(self, statement):
         """Simulate precmd hook failure."""
@@ -908,8 +898,7 @@ def test_precmd_hook_failure(hook_failure):
 
 class SayApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def do_say(self, arg):
         self.poutput(arg)
@@ -926,7 +915,7 @@ def test_interrupt_quit(say_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
-    sm.input = m
+    builtins.input = m
 
     say_app.cmdloop()
 
@@ -940,7 +929,7 @@ def test_interrupt_noquit(say_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
-    sm.input = m
+    builtins.input = m
 
     say_app.cmdloop()
 
@@ -951,8 +940,7 @@ def test_interrupt_noquit(say_app):
 
 class ShellApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.default_to_shell = True
 
 @pytest.fixture
@@ -1018,8 +1006,7 @@ def test_ansi_prompt_escaped():
 class HelpApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def do_squat(self, arg):
         """This docstring help will never be shown because the help_squat method overrides it."""
@@ -1075,8 +1062,7 @@ def test_help_overridden_method(help_app):
 class HelpCategoriesApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @cmd2.with_category('Some Category')
     def do_diddly(self, arg):
@@ -1202,7 +1188,7 @@ def select_app():
 def test_select_options(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     food = 'bacon'
     out = run_cmd(select_app, "eat {}".format(food))
@@ -1223,7 +1209,7 @@ def test_select_invalid_option(select_app):
     m = mock.MagicMock(name='input')
     # If side_effect is an iterable then each call to the mock will return the next value from the iterable.
     m.side_effect = ['3', '1']  # First pass and invalid selection, then pass a valid one
-    sm.input = m
+    builtins.input = m
 
     food = 'fish'
     out = run_cmd(select_app, "eat {}".format(food))
@@ -1245,7 +1231,7 @@ def test_select_invalid_option(select_app):
 def test_select_list_of_strings(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "study")
     expected = normalize("""
@@ -1263,7 +1249,7 @@ Good luck learning {}!
 def test_select_list_of_tuples(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "procrastinate")
     expected = normalize("""
@@ -1282,7 +1268,7 @@ Have fun procrasinating with {}!
 def test_select_uneven_list_of_tuples(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "play")
     expected = normalize("""
@@ -1340,9 +1326,7 @@ def test_which_editor_bad():
 class MultilineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         self.multilineCommands = ['orate']
-
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     orate_parser = argparse.ArgumentParser()
     orate_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
@@ -1367,7 +1351,7 @@ def test_multiline_complete_empty_statement_raises_exception(multiline_app):
 def test_multiline_complete_statement_without_terminator(multiline_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin when it looks for more input
     m = mock.MagicMock(name='input', return_value='\n')
-    sm.input = m
+    builtins.input = m
 
     command = 'orate'
     args = 'hello world'
@@ -1393,8 +1377,7 @@ def test_clipboard_failure(capsys):
 
 class CmdResultApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def do_affirmative(self, arg):
         self._last_result = cmd2.CmdResult(arg)
@@ -1468,10 +1451,8 @@ def test_echo(capsys):
 def test_pseudo_raw_input_tty_rawinput_true():
     # use context managers so original functions get put back when we are done
     # we dont use decorators because we need m_input for the assertion
-    with mock.patch('sys.stdin.isatty',
-            mock.MagicMock(name='isatty', return_value=True)):
-        with mock.patch('six.moves.input',
-                mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
+    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
+        with mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
             # run the cmdloop, which should pull input from our mocks
             app = cmd2.Cmd()
             app.use_rawinput = True
@@ -1514,10 +1495,8 @@ def piped_rawinput_true(capsys, echo, command):
     out, err = capsys.readouterr()
     return (app, out)
 
-# using the decorator puts the original function at six.moves.input
-# back when this method returns
-@mock.patch('six.moves.input',
-        mock.MagicMock(name='input', side_effect=['set', EOFError]))
+# using the decorator puts the original input function back when this unit test returns
+@mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
 def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, True, command)
@@ -1525,10 +1504,8 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     assert out[0] == '{}{}'.format(app.prompt, command)
     assert out[1].startswith('colors:')
 
-# using the decorator puts the original function at six.moves.input
-# back when this method returns
-@mock.patch('six.moves.input',
-        mock.MagicMock(name='input', side_effect=['set', EOFError]))
+# using the decorator puts the original input function back when this unit test returns
+@mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
 def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
@@ -1570,7 +1547,7 @@ def test_raw_input(base_app):
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.Mock(name='input', return_value=fake_input)
-    sm.input = m
+    builtins.input = m
 
     line = base_app.pseudo_raw_input('(cmd2)')
     assert line == fake_input

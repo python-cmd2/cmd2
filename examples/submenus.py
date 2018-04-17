@@ -19,7 +19,7 @@ class ThirdLevel(cmd2.Cmd):
     """To be used as a third level command class. """
 
     def __init__(self, *args, **kwargs):
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.prompt = '3rdLevel '
         self.top_level_attr = None
         self.second_level_attr = None

@@ -1,6 +1,6 @@
 pyparsing
-six
 pyperclip
 contextlib2
 enum34
 subprocess32
+wcwidth

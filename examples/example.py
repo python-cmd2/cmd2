@@ -35,7 +35,7 @@ class CmdLineApp(Cmd):
         self.shortcuts.update({'&': 'speak'})
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        Cmd.__init__(self, use_ipython=False)
+        super().__init__(use_ipython=False)
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')

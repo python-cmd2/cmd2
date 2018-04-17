@@ -37,7 +37,7 @@ class TableDisplay(cmd2.Cmd):
     """Example cmd2 application showing how you can display tabular data."""
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        super().__init__()
 
     def ptable(self, tabular_data, headers=()):
         """Format tabular data for pretty-printing as a fixed-width table and then display it using a pager.

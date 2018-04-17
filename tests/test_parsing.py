@@ -299,22 +299,18 @@ def test_parse_multiline_ignores_terminators_in_comments(parser):
     assert results.terminator[0] == '\n'
     assert results.terminator[1] == '\n'
 
-# Unicode support is only present in cmd2 for Python 3
-@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_command_with_unicode_args(parser):
     line = 'drink café'
     results = parser.parseString(line)
     assert results.command == 'drink'
     assert results.args == 'café'
 
-@pytest.mark.skipif(sys.version_info < (3, 0), reason="cmd2 unicode support requires python3")
 def test_parse_unicode_command(parser):
     line = 'café au lait'
     results = parser.parseString(line)
     assert results.command == 'café'
     assert results.args == 'au lait'
 
-@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_redirect_to_unicode_filename(parser):
     line = 'dir home > café'
     results = parser.parseString(line)
@@ -323,7 +319,6 @@ def test_parse_redirect_to_unicode_filename(parser):
     assert results.output == '>'
     assert results.outputTo == 'café'
 
-@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_input_redirect_from_unicode_filename(input_parser):
     line = '< café'
     results = input_parser.parseString(line)
