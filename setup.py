@@ -61,7 +61,7 @@ Programming Language :: Python :: Implementation :: PyPy3
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
-INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.5.27']
+INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.5.27', 'colorama']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
