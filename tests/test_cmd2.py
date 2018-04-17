@@ -1363,7 +1363,7 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
 
 def test_clipboard_failure(capsys):
     # Force cmd2 clipboard to be disabled
-    cmd2.can_clip = False
+    cmd2.disable_clip()
     app = cmd2.Cmd()
 
     # Redirect command output to the clipboard when a clipboard isn't present
