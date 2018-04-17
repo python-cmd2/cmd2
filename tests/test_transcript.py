@@ -16,7 +16,7 @@ import pytest
 
 import cmd2
 from cmd2 import Cmd, Cmd2TestCase, set_posix_shlex, set_strip_quotes
-from conftest import run_cmd, StdOut, normalize
+#from conftest import run_cmd, StdOut, normalize
 
 class CmdLineApp(Cmd):
 
