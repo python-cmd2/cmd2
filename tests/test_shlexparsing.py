@@ -59,18 +59,13 @@ class Cmd2Parser():
         )
         rawinput = re.sub(pattern, replacer, rawinput)
 
-        s = shlex.shlex(rawinput, posix=False, punctuation_chars=True)
-        # these characters should be included in tokens, not used to split them
-        # we need to override the default so we can include the ','
-        s.wordchars = '1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_~-.,/*?='
-        tokens = list(s)
-
-        # we rely on shlex.shlex to split on the semicolon. If we let users
-        # change the termination character, this might break
+        s = shlex.shlex(rawinput, posix=False)
+        s.whitespace_split = True
+        tokens = self.split_on_punctuation(list(s))
         
         # look for the semicolon terminator
         try:
-            terminator_pos = tokens.index(';')
+            terminator_pos = tokens.index(terminator)
             # everything before the first terminator is the command and the args
             (result.command, result.args) = self._command_and_args(tokens[:terminator_pos])
             result.terminator = tokens[terminator_pos]
@@ -126,6 +121,69 @@ class Cmd2Parser():
             args = ' '.join(tokens[1:])
 
         return (command, args)
+
+    def split_on_punctuation(self, initial_tokens):
+        """
+        # Further splits tokens from a command line using punctuation characters
+        # as word breaks when they are in unquoted strings. Each run of punctuation
+        # characters is treated as a single token.
+
+        :param initial_tokens: the tokens as parsed by shlex
+        :return: the punctuated tokens
+        """
+        punctuation = [';'] # should be self.terminator from cmd2.py
+        if True:  # should be self.allow_redirection from cmd2.py
+            punctuation += ['|', '<', '>'] # should be REDIRECTION_CHARS from cmd2.py
+
+        punctuated_tokens = []
+
+        for cur_initial_token in initial_tokens:
+
+            # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
+            if len(cur_initial_token) <= 1 or cur_initial_token[0] in ['"', "'"]: # should be QUOTES in cmd2.py
+                punctuated_tokens.append(cur_initial_token)
+                continue
+
+            # Iterate over each character in this token
+            cur_index = 0
+            cur_char = cur_initial_token[cur_index]
+
+            # Keep track of the token we are building
+            new_token = ''
+
+            while True:
+                if cur_char not in punctuation:
+
+                    # Keep appending to new_token until we hit a punctuation char
+                    while cur_char not in punctuation:
+                        new_token += cur_char
+                        cur_index += 1
+                        if cur_index < len(cur_initial_token):
+                            cur_char = cur_initial_token[cur_index]
+                        else:
+                            break
+
+                else:
+                    cur_punc = cur_char
+
+                    # Keep appending to new_token until we hit something other than cur_punc
+                    while cur_char == cur_punc:
+                        new_token += cur_char
+                        cur_index += 1
+                        if cur_index < len(cur_initial_token):
+                            cur_char = cur_initial_token[cur_index]
+                        else:
+                            break
+
+                # Save the new token
+                punctuated_tokens.append(new_token)
+                new_token = ''
+
+                # Check if we've viewed all characters
+                if cur_index >= len(cur_initial_token):
+                    break
+
+        return punctuated_tokens
 
 @pytest.fixture
 def parser():
@@ -258,3 +316,23 @@ def test_has_redirect_inside_terminator(parser):
     assert results.command == 'has'
     assert results.args == '> inside'
     assert results.terminator == ';'
+def test_parse_command_with_unicode_args(parser):
+    line = 'drink café'
+    results = parser.parseString(line)
+    assert results.command == 'drink'
+    assert results.args == 'café'
+
+def test_parse_unicode_command(parser):
+    line = 'café au lait'
+    results = parser.parseString(line)
+    assert results.command == 'café'
+    assert results.args == 'au lait'
+
+def test_parse_redirect_to_unicode_filename(parser):
+    line = 'dir home > café'
+    results = parser.parseString(line)
+    assert results.command == 'dir'
+    assert results.args == 'home'
+    assert results.output == '>'
+    assert results.outputTo == 'café'
+
