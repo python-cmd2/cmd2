@@ -3,9 +3,11 @@ import argparse
 import re as _re
 import sys
 from argparse import OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, REMAINDER, PARSER, ArgumentError, _
-from typing import List, Dict, Tuple, Callable, Union
-
-from colorama import Fore
+try:
+    from typing import List, Dict, Tuple, Callable, Union
+except:
+    pass
+# from colorama import Fore
 
 
 class _RangeAction(object):
@@ -735,7 +737,8 @@ class ACArgumentParser(argparse.ArgumentParser):
                 formatted_message += '\n       ' + line
             linum += 1
 
-        sys.stderr.write(Fore.LIGHTRED_EX + '{}\n\n'.format(formatted_message) + Fore.RESET)
+        # sys.stderr.write(Fore.LIGHTRED_EX + '{}\n\n'.format(formatted_message) + Fore.RESET)
+        sys.stderr.write('{}\n\n'.format(formatted_message))
         self.print_help()
         sys.exit(1)
 
