@@ -3,6 +3,7 @@ import argparse
 import re as _re
 import sys
 from argparse import OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, REMAINDER, PARSER, ArgumentError, _
+from rl_utils import rl_force_redisplay
 try:
     from typing import List, Dict, Tuple, Callable, Union
 except:
@@ -488,8 +489,8 @@ class AutoCompleter(object):
             out_str += '\n{0: <{width}}'.format('', width=pref_len).join(help_lines)
             print('\nHint:' + out_str + '\n')
 
-        from cmd2 import readline_lib
-        readline_lib.rl_forced_update_display()
+        # Redraw prompt and input line
+        rl_force_redisplay()
 
     # noinspection PyUnusedLocal
     @staticmethod

@@ -45,13 +45,30 @@ import traceback
 import unittest
 from code import InteractiveConsole
 
-try:
-    from enum34 import Enum
-except ImportError:
-    from enum import Enum
-
 import pyparsing
 import pyperclip
+
+# Set up readline
+from rl_utils import rl_force_redisplay, readline, rl_type, RlType
+
+if rl_type == RlType.PYREADLINE:
+
+    # Save the original pyreadline display completion function since we need to override it and restore it
+    # noinspection PyProtectedMember
+    orig_pyreadline_display = readline.rl.mode._display_completions
+
+elif rl_type == RlType.GNU:
+
+    # We need wcswidth to calculate display width of tab completions
+    from wcwidth import wcswidth
+
+    # Get the readline lib so we can make changes to it
+    import ctypes
+    from rl_utils import readline_lib
+
+    # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
+    rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+    orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
 
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
@@ -59,7 +76,7 @@ try:
 except ImportError:
     # noinspection PyUnresolvedReferences
     from pyperclip import PyperclipException
-    
+
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
 try:
@@ -95,47 +112,6 @@ try:
     from IPython import embed
 except ImportError:
     ipython_available = False
-
-# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing
-    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
-    try:
-        # noinspection PyUnresolvedReferences
-        import readline
-    except ImportError:
-        pass
-
-# Check what implementation of readline we are using
-class RlType(Enum):
-    GNU = 1
-    PYREADLINE = 2
-    NONE = 3
-
-rl_type = RlType.NONE
-
-if 'pyreadline' in sys.modules:
-    rl_type = RlType.PYREADLINE
-
-    # Save the original pyreadline display completion function since we need to override it and restore it
-    # noinspection PyProtectedMember
-    orig_pyreadline_display = readline.rl.mode._display_completions
-
-elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
-    rl_type = RlType.GNU
-
-    # We need wcswidth to calculate display width of tab completions
-    from wcwidth import wcswidth
-
-    # Load the readline lib so we can make changes to it
-    import ctypes
-    readline_lib = ctypes.CDLL(readline.__file__)
-
-    # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
-    rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-    orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
 
 __version__ = '0.9.0'
 
@@ -1669,13 +1645,8 @@ class Cmd(cmd.Cmd):
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
             readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
 
-            # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
-            # have to use ctypes to do it since Python's readline API does not wrap the function
-            readline_lib.rl_forced_update_display()
-
-            # Since we updated the display, readline asks that rl_display_fixed be set for efficiency
-            display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
-            display_fixed.value = 1
+            # Redraw prompt and input line
+            rl_force_redisplay()
 
     def _display_matches_pyreadline(self, matches):
         """
@@ -1695,7 +1666,7 @@ class Cmd(cmd.Cmd):
             # Add padding for visual appeal
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
 
-            # Display the matches
+            # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
 
     # -----  Methods which override stuff in cmd -----
