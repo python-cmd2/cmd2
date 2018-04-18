@@ -1,5 +1,4 @@
 pyparsing
 pyperclip
-contextlib2
 wcwidth
 colorama
