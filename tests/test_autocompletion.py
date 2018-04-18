@@ -145,8 +145,6 @@ def test_autocomp_flags(cmd2_app):
     assert first_match is not None and \
            cmd2_app.completion_matches == ['--duration', '--help', '--type', '-d', '-h', '-t']
 
-@pytest.mark.skipif(sys.platform == 'win32',
-                    reason="Unit test doesn't work on win32, but feature does")
 def test_autcomp_hint(cmd2_app, capsys):
     text = ''
     line = 'suggest -d {}'.format(text)
@@ -188,8 +186,6 @@ def test_autocomp_flags_choices(cmd2_app):
            cmd2_app.completion_matches == ['movie', 'show']
 
 
-@pytest.mark.skipif(sys.platform == 'win32',
-                    reason="Unit test doesn't work on win32, but feature does")
 def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
     text = ''
     line = 'suggest -d 2 {}'.format(text)

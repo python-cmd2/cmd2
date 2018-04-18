@@ -47,6 +47,8 @@ def rl_force_redisplay() -> None:
     """
     Causes readline to redraw prompt and input line
     """
+    if not sys.stdout.isatty():
+        return
     if rl_type == RlType.GNU:
         # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
         # have to use ctypes to do it since Python's readline API does not wrap the function
