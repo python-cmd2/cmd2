@@ -8,5 +8,5 @@ if __name__ == '__main__':
 
     # Set "use_ipython" to True to include the ipy command if IPython is installed, which supports advanced interactive
     # debugging of your application via introspection on self.
-    app = Cmd(use_ipython=False)
+    app = Cmd(use_ipython=True)
     app.cmdloop()
