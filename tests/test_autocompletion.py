@@ -7,30 +7,10 @@ file system paths, and shell commands.
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
-import os
-import sys
-
-from unittest import mock
 import pytest
-from .conftest import run_cmd, normalize, StdOut
-
-MY_PATH = os.path.realpath(__file__)
-sys.path.append(os.path.join(MY_PATH, '..', 'examples'))
+from .conftest import run_cmd, normalize, StdOut, complete_tester
 
 from examples.tab_autocompletion import TabCompleteExample
-
-# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing
-    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
-    try:
-        # noinspection PyUnresolvedReferences
-        import readline
-    except ImportError:
-        pass
-
 
 @pytest.fixture
 def cmd2_app():
@@ -38,41 +18,6 @@ def cmd2_app():
     c.stdout = StdOut()
 
     return c
-
-
-def complete_tester(text, line, begidx, endidx, app):
-    """
-    This is a convenience function to test cmd2.complete() since
-    in a unit test environment there is no actual console readline
-    is monitoring. Therefore we use mock to provide readline data
-    to complete().
-
-    :param text: str - the string prefix we are attempting to match
-    :param line: str - the current input line with leading whitespace removed
-    :param begidx: int - the beginning index of the prefix text
-    :param endidx: int - the ending index of the prefix text
-    :param app: the cmd2 app that will run completions
-    :return: The first matched string or None if there are no matches
-             Matches are stored in app.completion_matches
-             These matches also have been sorted by complete()
-    """
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    first_match = []
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = app.complete(text, 0)
-
-    return first_match if not None else []
 
 
 SUGGEST_HELP = '''Usage: suggest -t {movie, show} [-h] [-d DURATION{1..2}]

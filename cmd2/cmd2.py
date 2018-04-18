@@ -271,8 +271,18 @@ def with_argparser_and_unknown_args(argparser):
 
         # If there are subcommands, store their names in a list to support tab-completion of subcommand names
         if argparser._subparsers is not None:
-            subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
-            cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
+            # Key is subcommand name and value is completer function
+            subcommands = collections.OrderedDict()
+
+            # Get all subcommands and check if they have completer functions
+            for name, parser in argparser._subparsers._group_actions[0]._name_parser_map.items():
+                if 'completer' in parser._defaults:
+                    completer = parser._defaults['completer']
+                else:
+                    completer = None
+                subcommands[name] = completer
+
+            cmd_wrapper.__dict__['subcommands'] = subcommands
 
         return cmd_wrapper
 

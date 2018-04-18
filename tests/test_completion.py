@@ -13,21 +13,8 @@ import os
 import sys
 
 import cmd2
-from unittest import mock
 import pytest
-
-# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing
-    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
-    try:
-        # noinspection PyUnresolvedReferences
-        import readline
-    except ImportError:
-        pass
-
+from .conftest import complete_tester
 
 # List of strings used with completion functions
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
@@ -85,41 +72,6 @@ class CompletionsExample(cmd2.Cmd):
 def cmd2_app():
     c = CompletionsExample()
     return c
-
-
-def complete_tester(text, line, begidx, endidx, app):
-    """
-    This is a convenience function to test cmd2.complete() since
-    in a unit test environment there is no actual console readline
-    is monitoring. Therefore we use mock to provide readline data
-    to complete().
-
-    :param text: str - the string prefix we are attempting to match
-    :param line: str - the current input line with leading whitespace removed
-    :param begidx: int - the beginning index of the prefix text
-    :param endidx: int - the ending index of the prefix text
-    :param app: the cmd2 app that will run completions
-    :return: The first matched string or None if there are no matches
-             Matches are stored in app.completion_matches
-             These matches also have been sorted by complete()
-    """
-    def get_line():
-        return line
-
-    def get_begidx():
-        return begidx
-
-    def get_endidx():
-        return endidx
-
-    first_match = None
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = app.complete(text, 0)
-
-    return first_match
 
 
 def test_cmd2_command_completion_single(cmd2_app):
@@ -933,6 +885,186 @@ def test_subcommand_tab_completion_space_in_text(sc_app):
     assert first_match is not None and \
            sc_app.completion_matches == ['Ball" '] and \
            sc_app.display_matches == ['Space Ball']
+
+
+
+
+
+####################################################
+
+
+class SubcommandsWithUnknownExample(cmd2.Cmd):
+    """
+    Example cmd2 application where we a base command which has a couple subcommands
+    and the "sport" subcommand has tab completion enabled.
+    """
+
+    def __init__(self):
+        cmd2.Cmd.__init__(self)
+
+    # subcommand functions for the base command
+    def base_foo(self, args):
+        """foo subcommand of base command"""
+        self.poutput(args.x * args.y)
+
+    def base_bar(self, args):
+        """bar subcommand of base command"""
+        self.poutput('((%s))' % args.z)
+
+    def base_sport(self, args):
+        """sport subcommand of base command"""
+        self.poutput('Sport is {}'.format(args.sport))
+
+    # noinspection PyUnusedLocal
+    def complete_base_sport(self, text, line, begidx, endidx):
+        """ Adds tab completion to base sport subcommand """
+        index_dict = {1: sport_item_strs}
+        return self.index_based_complete(text, line, begidx, endidx, index_dict)
+
+    # create the top-level parser for the base command
+    base_parser = argparse.ArgumentParser(prog='base')
+    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+
+    # create the parser for the "foo" subcommand
+    parser_foo = base_subparsers.add_parser('foo', help='foo help')
+    parser_foo.add_argument('-x', type=int, default=1, help='integer')
+    parser_foo.add_argument('y', type=float, help='float')
+    parser_foo.set_defaults(func=base_foo)
+
+    # create the parser for the "bar" subcommand
+    parser_bar = base_subparsers.add_parser('bar', help='bar help')
+    parser_bar.add_argument('z', help='string')
+    parser_bar.set_defaults(func=base_bar)
+
+    # create the parser for the "sport" subcommand
+    parser_sport = base_subparsers.add_parser('sport', help='sport help')
+    parser_sport.add_argument('sport', help='Enter name of a sport')
+
+    # Set both a function and tab completer for the "sport" subcommand
+    parser_sport.set_defaults(func=base_sport, completer=complete_base_sport)
+
+    @cmd2.with_argparser_and_unknown_args(base_parser)
+    def do_base(self, args):
+        """Base command help"""
+        func = getattr(args, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, args)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help('base')
+
+    # Enable tab completion of base to make sure the subcommands' completers get called.
+    complete_base = cmd2.Cmd.cmd_with_subs_completer
+
+
+@pytest.fixture
+def scu_app():
+    app = SubcommandsWithUnknownExample()
+    return app
+
+
+def test_cmd2_subcmd_with_unknown_completion_single_end(scu_app):
+    text = 'f'
+    line = 'base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and scu_app.completion_matches == ['foo ']
+
+def test_cmd2_subcmd_with_unknown_completion_multiple(scu_app):
+    text = ''
+    line = 'base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
+
+def test_cmd2_subcmd_with_unknown_completion_nomatch(scu_app):
+    text = 'z'
+    line = 'base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is None
+
+
+def test_cmd2_help_subcommand_completion_single(scu_app):
+    text = 'base'
+    line = 'help {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert scu_app.complete_help(text, line, begidx, endidx) == ['base']
+
+def test_cmd2_help_subcommand_completion_multiple(scu_app):
+    text = ''
+    line = 'help base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    matches = sorted(scu_app.complete_help(text, line, begidx, endidx))
+    assert matches == ['bar', 'foo', 'sport']
+
+
+def test_cmd2_help_subcommand_completion_nomatch(scu_app):
+    text = 'z'
+    line = 'help base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert scu_app.complete_help(text, line, begidx, endidx) == []
+
+def test_subcommand_tab_completion(scu_app):
+    # This makes sure the correct completer for the sport subcommand is called
+    text = 'Foot'
+    line = 'base sport {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and scu_app.completion_matches == ['Football ']
+
+def test_subcommand_tab_completion_with_no_completer(scu_app):
+    # This tests what happens when a subcommand has no completer
+    # In this case, the foo subcommand has no completer defined
+    text = 'Foot'
+    line = 'base foo {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is None
+
+def test_subcommand_tab_completion_space_in_text(scu_app):
+    text = 'B'
+    line = 'base sport "Space {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+
+    assert first_match is not None and \
+           scu_app.completion_matches == ['Ball" '] and \
+           scu_app.display_matches == ['Space Ball']
+
+
+
+####################################################
+
+
+
+
+
+
+
+
+
 
 class SecondLevel(cmd2.Cmd):
     """To be used as a second level command class. """
