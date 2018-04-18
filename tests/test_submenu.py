@@ -5,7 +5,7 @@ Cmd2 testing for argument parsing
 import pytest
 
 import cmd2
-from conftest import run_cmd, StdOut, normalize
+from .conftest import run_cmd, StdOut, normalize
 
 
 class SecondLevelB(cmd2.Cmd):

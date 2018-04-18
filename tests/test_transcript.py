@@ -15,10 +15,10 @@ from unittest import mock
 import pytest
 
 import cmd2
-from cmd2 import Cmd, Cmd2TestCase, set_posix_shlex, set_strip_quotes
-from conftest import run_cmd, StdOut, normalize
+from cmd2 import set_posix_shlex, set_strip_quotes
+from .conftest import run_cmd, StdOut, normalize
 
-class CmdLineApp(Cmd):
+class CmdLineApp(cmd2.Cmd):
 
     MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
     MUMBLE_FIRST = ['so', 'like', 'well']
@@ -82,7 +82,7 @@ class CmdLineApp(Cmd):
             self.poutput(' '.join(output))
 
 
-class DemoApp(Cmd):
+class DemoApp(cmd2.Cmd):
     hello_parser = argparse.ArgumentParser()
     hello_parser.add_argument('-n', '--name', help="your name")
     @cmd2.with_argparser_and_unknown_args(hello_parser)
@@ -189,7 +189,7 @@ now: --->
         assert out == expected
 
 
-class TestMyAppCase(Cmd2TestCase):
+class TestMyAppCase(cmd2.cmd2.Cmd2TestCase):
     CmdApp = CmdLineApp
     CmdApp.testfiles = ['tests/transcript.txt']
 
@@ -293,7 +293,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
 
-    class TestMyAppCase(Cmd2TestCase):
+    class TestMyAppCase(cmd2.cmd2.Cmd2TestCase):
         cmdapp = app
 
     testcase = TestMyAppCase()

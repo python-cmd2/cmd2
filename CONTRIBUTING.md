@@ -236,7 +236,7 @@ This bit is up to you!
 #### How to find the code in the cmd2 codebase to fix/edit?
 
 The cmd2 project directory structure is pretty simple and straightforward.  All actual code for cmd2
-is located in a single file, `cmd2.py`.  The code to generate the documentation is in the `docs` directory.  Unit tests are in the `tests` directory.  The `examples` directory contains examples of how
+is located underneath the `cmd2` directory.  The code to generate the documentation is in the `docs` directory.  Unit tests are in the `tests` directory.  The `examples` directory contains examples of how
 to use cmd2.  There are various other files in the root directory, but these are primarily related to
 continuous integration and to release deployment.
 

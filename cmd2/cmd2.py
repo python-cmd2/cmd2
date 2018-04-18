@@ -375,6 +375,12 @@ else:
     can_clip = True
 
 
+def disable_clip():
+    """ Allows user of cmd2 to manually disable clipboard cut-and-paste functionality."""
+    global can_clip
+    can_clip = False
+
+
 def get_paste_buffer():
     """Get the contents of the clipboard / paste buffer.
 
