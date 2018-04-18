@@ -64,7 +64,7 @@ elif rl_type == RlType.GNU:
 
     # Get the readline lib so we can make changes to it
     import ctypes
-    from rl_utils import readline_lib
+    from .rl_utils import readline_lib
 
     # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
     rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
