@@ -3,12 +3,11 @@
 """A simple example demonstrating how to use flag and index based tab-completion functions
 """
 import argparse
-import AutoCompleter
 import itertools
 from typing import List
 
 import cmd2
-from cmd2 import with_argparser, with_category
+from cmd2 import with_argparser, with_category, AutoCompleter
 
 
 class TabCompleteExample(cmd2.Cmd):

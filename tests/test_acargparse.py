@@ -7,26 +7,8 @@ file system paths, and shell commands.
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
-import argparse
-import os
-import sys
-
-import cmd2
-from unittest import mock
 import pytest
-from AutoCompleter import ACArgumentParser
-
-# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing
-    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
-    try:
-        # noinspection PyUnresolvedReferences
-        import readline
-    except ImportError:
-        pass
+from cmd2.AutoCompleter import ACArgumentParser
 
 
 def test_acarg_narg_empty_tuple():

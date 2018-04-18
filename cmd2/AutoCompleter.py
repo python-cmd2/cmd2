@@ -3,7 +3,7 @@ import argparse
 import re as _re
 import sys
 from argparse import OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, REMAINDER, PARSER, ArgumentError, _
-from rl_utils import rl_force_redisplay
+from .rl_utils import rl_force_redisplay
 try:
     from typing import List, Dict, Tuple, Callable, Union
 except:

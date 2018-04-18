@@ -49,7 +49,7 @@ import pyparsing
 import pyperclip
 
 # Set up readline
-from rl_utils import rl_force_redisplay, readline, rl_type, RlType
+from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
 
 if rl_type == RlType.PYREADLINE:
 
@@ -69,13 +69,6 @@ elif rl_type == RlType.GNU:
     # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
     rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
     orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-
-# Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
-try:
-    from pyperclip.exceptions import PyperclipException
-except ImportError:
-    # noinspection PyUnresolvedReferences
-    from pyperclip import PyperclipException
 
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
@@ -349,6 +342,12 @@ except PyperclipException:
     can_clip = False
 else:
     can_clip = True
+
+
+def disable_clip():
+    """ Allows user of cmd2 to manually disable clipboard cut-and-paste functionality."""
+    global can_clip
+    can_clip = False
 
 
 def get_paste_buffer():

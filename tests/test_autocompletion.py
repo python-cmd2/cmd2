@@ -7,14 +7,12 @@ file system paths, and shell commands.
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
-import argparse
 import os
 import sys
 
-import cmd2
 from unittest import mock
 import pytest
-from conftest import run_cmd, normalize, StdOut
+from .conftest import run_cmd, normalize, StdOut
 
 MY_PATH = os.path.realpath(__file__)
 sys.path.append(os.path.join(MY_PATH, '..', 'examples'))
