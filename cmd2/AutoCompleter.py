@@ -685,36 +685,11 @@ class ACHelpFormatter(argparse.HelpFormatter):
 class ACArgumentParser(argparse.ArgumentParser):
     """Custom argparse class to override error method to change default help text."""
 
-    def __init__(self,
-                 prog=None,
-                 usage=None,
-                 description=None,
-                 epilog=None,
-                 parents=[],
-                 formatter_class=ACHelpFormatter,
-                 prefix_chars='-',
-                 fromfile_prefix_chars=None,
-                 argument_default=None,
-                 conflict_handler='error',
-                 add_help=True,
-                 allow_abbrev=True):
+    def __init__(self, *args, **kwargs):
+        if 'formatter_class' not in kwargs:
+            kwargs['formatter_class'] = ACHelpFormatter
 
-        params = {'prog': prog,
-                  'usage': usage,
-                  'description': description,
-                  'epilog': epilog,
-                  'parents': parents,
-                  'formatter_class': formatter_class,
-                  'prefix_chars': prefix_chars,
-                  'fromfile_prefix_chars': fromfile_prefix_chars,
-                  'argument_default': argument_default,
-                  'conflict_handler': conflict_handler,
-                  'add_help': add_help}
-
-        if sys.version_info >= (3, 5):
-            params['allow_abbrev'] = allow_abbrev
-
-        super().__init__(**params)
+        super().__init__(*args, **kwargs)
         register_custom_actions(self)
 
         self._custom_error_message = ''
