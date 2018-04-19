@@ -20,7 +20,7 @@ class SubcommandsExample(cmd2.Cmd):
     """
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        super().__init__()
 
     # subcommand functions for the base command
     def base_foo(self, args):

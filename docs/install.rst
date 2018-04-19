@@ -6,7 +6,7 @@ This section covers the basics of how to install, upgrade, and uninstall ``cmd2`
 
 Installing
 ----------
-First you need to make sure you have Python 2.7 or Python 3.4+, pip_, and setuptools_.  Then you can just use pip to
+First you need to make sure you have Python 3.4+, pip_, and setuptools_.  Then you can just use pip to
 install from PyPI_.
 
 .. _pip: https://pypi.python.org/pypi/pip
@@ -25,7 +25,7 @@ install from PyPI_.
 
 Requirements for Installing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* If you have Python 2 >=2.7.9 or Python 3 >=3.4 installed from `python.org
+* If you have Python 3 >=3.4 installed from `python.org
   <https://www.python.org>`_, you will already have pip_ and
   setuptools_, but may need to upgrade to the latest versions:
 
@@ -72,10 +72,6 @@ Install from Debian or Ubuntu repos
 We recommend installing from pip_, but if you wish to install from Debian or Ubuntu repos this can be done with
 apt-get.
 
-For Python 2::
-
-    sudo apt-get install python-cmd2
-
 For Python 3::
 
     sudo apt-get install python3-cmd2
@@ -92,17 +88,16 @@ This will also install the required 3rd-party dependencies.
 Deploy cmd2.py with your project
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``cmd2`` is contained in only one Python file (**cmd2.py**), so it can be easily copied into your project.  *The
+``cmd2`` is contained in a small number of Python files, which can be easily copied into your project.  *The
 copyright and license notice must be retained*.
 
-This is an option suitable for advanced Python users.  You can simply include this file within your project's hierarchy.
+This is an option suitable for advanced Python users.  You can simply include the files within your project's hierarchy.
 If you want to modify ``cmd2``, this may be a reasonable option.  Though, we encourage you to use stock ``cmd2`` and
 either composition or inheritance to achieve the same goal.
 
 This approach will obviously NOT automatically install the required 3rd-party dependencies, so you need to make sure
 the following Python packages are installed:
 
-  * six
   * pyparsing
   * pyperclip
 
@@ -127,17 +122,10 @@ If you wish to permanently uninstall ``cmd2``, this can also easily be done with
 
     pip uninstall cmd2
 
-Extra requirement for Python 3.4 and earlier
---------------------------------------------
-``cmd2`` requires the ``contextlib2`` module for Python 3.4 and earlier.  This is used to temporarily redirect
+Extra requirement for Python 3.4
+--------------------------------
+``cmd2`` requires the ``contextlib2`` module for Python 3.4.  This is used to temporarily redirect
 stdout and stderr.
-
-Extra requirement for Python 2.7 only
--------------------------------------
-If you want to be able to pipe the output of commands to a shell command on Python 2.7, then you will need one
-additional package installed:
-
-  * subprocess32gNU
 
 Extra requirement for macOS
 ===========================

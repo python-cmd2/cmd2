@@ -11,15 +11,14 @@ import sys
 import re
 import random
 
-import mock
+from unittest import mock
 import pytest
-import six
 
 import cmd2
-from cmd2 import Cmd, Cmd2TestCase, set_posix_shlex, set_strip_quotes
-from conftest import run_cmd, StdOut, normalize
+from cmd2 import set_posix_shlex, set_strip_quotes
+from .conftest import run_cmd, StdOut, normalize
 
-class CmdLineApp(Cmd):
+class CmdLineApp(cmd2.Cmd):
 
     MUMBLES = ['like', '...', 'um', 'er', 'hmmm', 'ahh']
     MUMBLE_FIRST = ['so', 'like', 'well']
@@ -33,8 +32,7 @@ class CmdLineApp(Cmd):
         # Add stuff to settable and/or shortcuts before calling base class initializer
         self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
 
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.intro = 'This is an intro banner ...'
 
         # Configure how arguments are parsed for commands using decorators
@@ -84,7 +82,7 @@ class CmdLineApp(Cmd):
             self.poutput(' '.join(output))
 
 
-class DemoApp(Cmd):
+class DemoApp(cmd2.Cmd):
     hello_parser = argparse.ArgumentParser()
     hello_parser.add_argument('-n', '--name', help="your name")
     @cmd2.with_argparser_and_unknown_args(hello_parser)
@@ -191,7 +189,7 @@ now: --->
         assert out == expected
 
 
-class TestMyAppCase(Cmd2TestCase):
+class TestMyAppCase(cmd2.cmd2.Cmd2TestCase):
     CmdApp = CmdLineApp
     CmdApp.testfiles = ['tests/transcript.txt']
 
@@ -267,12 +265,8 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
     expected_end = "s\n\nOK\n"
     out, err = capsys.readouterr()
-    if six.PY3:
-        assert err.startswith(expected_start)
-        assert err.endswith(expected_end)
-    else:
-        assert err == ''
-        assert out == ''
+    assert err.startswith(expected_start)
+    assert err.endswith(expected_end)
 
 
 @pytest.mark.parametrize('expected, transformed', [
@@ -299,7 +293,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
 
-    class TestMyAppCase(Cmd2TestCase):
+    class TestMyAppCase(cmd2.cmd2.Cmd2TestCase):
         cmdapp = app
 
     testcase = TestMyAppCase()

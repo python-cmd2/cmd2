@@ -16,8 +16,8 @@ import pytest
 
 @pytest.fixture
 def hist():
-    from cmd2 import HistoryItem
-    h = cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
+    from cmd2.cmd2 import HistoryItem
+    h = cmd2.cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
     return h
 
 # Case-sensitive parser
@@ -25,12 +25,12 @@ def hist():
 def parser():
     c = cmd2.Cmd()
     c.multilineCommands = ['multiline']
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
-                                          multilineCommands=c.multilineCommands, legalChars=c.legalChars,
-                                          commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
-                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                                          preparse=c.preparse, postparse=c.postparse, aliases=c.aliases,
-                                          shortcuts=c.shortcuts)
+    c.parser_manager = cmd2.cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
+                                               multilineCommands=c.multilineCommands, legalChars=c.legalChars,
+                                               commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
+                                               blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                                               preparse=c.preparse, postparse=c.postparse, aliases=c.aliases,
+                                               shortcuts=c.shortcuts)
     return c.parser_manager.main_parser
 
 # Case-sensitive ParserManager
@@ -38,12 +38,12 @@ def parser():
 def cs_pm():
     c = cmd2.Cmd()
     c.multilineCommands = ['multiline']
-    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
-                                          multilineCommands=c.multilineCommands, legalChars=c.legalChars,
-                                          commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
-                                          blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
-                                          preparse=c.preparse, postparse=c.postparse, aliases=c.aliases,
-                                          shortcuts=c.shortcuts)
+    c.parser_manager = cmd2.cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
+                                               multilineCommands=c.multilineCommands, legalChars=c.legalChars,
+                                               commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
+                                               blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
+                                               preparse=c.preparse, postparse=c.postparse, aliases=c.aliases,
+                                               shortcuts=c.shortcuts)
     return c.parser_manager
 
 
@@ -77,7 +77,7 @@ def test_history_get(hist):
 
 
 def test_cast():
-    cast = cmd2.cast
+    cast = cmd2.cmd2.cast
 
     # Boolean
     assert cast(True, True) == True
@@ -101,7 +101,7 @@ def test_cast():
 
 
 def test_cast_problems(capsys):
-    cast = cmd2.cast
+    cast = cmd2.cmd2.cast
 
     expected = 'Problem setting parameter (now {}) to {}; incorrect type?\n'
 
@@ -299,22 +299,18 @@ def test_parse_multiline_ignores_terminators_in_comments(parser):
     assert results.terminator[0] == '\n'
     assert results.terminator[1] == '\n'
 
-# Unicode support is only present in cmd2 for Python 3
-@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_command_with_unicode_args(parser):
     line = 'drink café'
     results = parser.parseString(line)
     assert results.command == 'drink'
     assert results.args == 'café'
 
-@pytest.mark.skipif(sys.version_info < (3, 0), reason="cmd2 unicode support requires python3")
 def test_parse_unicode_command(parser):
     line = 'café au lait'
     results = parser.parseString(line)
     assert results.command == 'café'
     assert results.args == 'au lait'
 
-@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_redirect_to_unicode_filename(parser):
     line = 'dir home > café'
     results = parser.parseString(line)
@@ -323,7 +319,6 @@ def test_parse_redirect_to_unicode_filename(parser):
     assert results.output == '>'
     assert results.outputTo == 'café'
 
-@pytest.mark.skipif(sys.version_info < (3,0), reason="cmd2 unicode support requires python3")
 def test_parse_input_redirect_from_unicode_filename(input_parser):
     line = '< café'
     results = input_parser.parseString(line)
@@ -332,8 +327,8 @@ def test_parse_input_redirect_from_unicode_filename(input_parser):
 
 def test_empty_statement_raises_exception():
     app = cmd2.Cmd()
-    with pytest.raises(cmd2.EmptyStatement):
+    with pytest.raises(cmd2.cmd2.EmptyStatement):
         app._complete_statement('')
 
-    with pytest.raises(cmd2.EmptyStatement):
+    with pytest.raises(cmd2.cmd2.EmptyStatement):
         app._complete_statement(' ')
