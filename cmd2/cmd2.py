@@ -45,13 +45,30 @@ import traceback
 import unittest
 from code import InteractiveConsole
 
-try:
-    from enum34 import Enum
-except ImportError:
-    from enum import Enum
-
 import pyparsing
 import pyperclip
+
+# Set up readline
+from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
+
+if rl_type == RlType.PYREADLINE:
+
+    # Save the original pyreadline display completion function since we need to override it and restore it
+    # noinspection PyProtectedMember
+    orig_pyreadline_display = readline.rl.mode._display_completions
+
+elif rl_type == RlType.GNU:
+
+    # We need wcswidth to calculate display width of tab completions
+    from wcwidth import wcswidth
+
+    # Get the readline lib so we can make changes to it
+    import ctypes
+    from .rl_utils import readline_lib
+
+    # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
+    rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+    orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
 
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
@@ -59,7 +76,7 @@ try:
 except ImportError:
     # noinspection PyUnresolvedReferences
     from pyperclip import PyperclipException
-    
+
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
 try:
@@ -95,47 +112,6 @@ try:
     from IPython import embed
 except ImportError:
     ipython_available = False
-
-# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing
-    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
-    try:
-        # noinspection PyUnresolvedReferences
-        import readline
-    except ImportError:
-        pass
-
-# Check what implementation of readline we are using
-class RlType(Enum):
-    GNU = 1
-    PYREADLINE = 2
-    NONE = 3
-
-rl_type = RlType.NONE
-
-if 'pyreadline' in sys.modules:
-    rl_type = RlType.PYREADLINE
-
-    # Save the original pyreadline display completion function since we need to override it and restore it
-    # noinspection PyProtectedMember
-    orig_pyreadline_display = readline.rl.mode._display_completions
-
-elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
-    rl_type = RlType.GNU
-
-    # We need wcswidth to calculate display width of tab completions
-    from wcwidth import wcswidth
-
-    # Load the readline lib so we can make changes to it
-    import ctypes
-    readline_lib = ctypes.CDLL(readline.__file__)
-
-    # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
-    rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-    orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
 
 __version__ = '0.9.0'
 
@@ -295,8 +271,18 @@ def with_argparser_and_unknown_args(argparser):
 
         # If there are subcommands, store their names in a list to support tab-completion of subcommand names
         if argparser._subparsers is not None:
-            subcommand_names = argparser._subparsers._group_actions[0]._name_parser_map.keys()
-            cmd_wrapper.__dict__['subcommand_names'] = subcommand_names
+            # Key is subcommand name and value is completer function
+            subcommands = collections.OrderedDict()
+
+            # Get all subcommands and check if they have completer functions
+            for name, parser in argparser._subparsers._group_actions[0]._name_parser_map.items():
+                if 'completer' in parser._defaults:
+                    completer = parser._defaults['completer']
+                else:
+                    completer = None
+                subcommands[name] = completer
+
+            cmd_wrapper.__dict__['subcommands'] = subcommands
 
         return cmd_wrapper
 
@@ -1605,7 +1591,7 @@ class Cmd(cmd.Cmd):
         return compfunc(text, line, begidx, endidx)
 
     @staticmethod
-    def _pad_matches_to_display(matches_to_display):
+    def _pad_matches_to_display(matches_to_display):  # pragma: no cover
         """
         Adds padding to the matches being displayed as tab completion suggestions.
         The default padding of readline/pyreadine is small and not visually appealing
@@ -1627,7 +1613,7 @@ class Cmd(cmd.Cmd):
 
         return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
-    def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):
+    def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):  # pragma: no cover
         """
         Prints a match list using GNU readline's rl_display_match_list()
         This exists to print self.display_matches if it has data. Otherwise matches prints.
@@ -1675,15 +1661,10 @@ class Cmd(cmd.Cmd):
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
             readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
 
-            # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
-            # have to use ctypes to do it since Python's readline API does not wrap the function
-            readline_lib.rl_forced_update_display()
+            # Redraw prompt and input line
+            rl_force_redisplay()
 
-            # Since we updated the display, readline asks that rl_display_fixed be set for efficiency
-            display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
-            display_fixed.value = 1
-
-    def _display_matches_pyreadline(self, matches):
+    def _display_matches_pyreadline(self, matches):  # pragma: no cover
         """
         Prints a match list using pyreadline's _display_completions()
         This exists to print self.display_matches if it has data. Otherwise matches prints.
@@ -1701,7 +1682,7 @@ class Cmd(cmd.Cmd):
             # Add padding for visual appeal
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
 
-            # Display the matches
+            # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
 
     # -----  Methods which override stuff in cmd -----
@@ -3363,7 +3344,7 @@ Script should contain one command per line, just like command would be typed in 
             # self._script_dir list when done.
             with open(expanded_path, encoding='utf-8') as target:
                 self.cmdqueue = target.read().splitlines() + ['eos'] + self.cmdqueue
-        except IOError as e:
+        except IOError as e:  # pragma: no cover
             self.perror('Problem accessing script from {}:\n{}'.format(expanded_path, e))
             return
 
@@ -3390,7 +3371,7 @@ Script should contain one command per line, just like command would be typed in 
                 # noinspection PyUnusedLocal
                 if sum(1 for line in f) > 0:
                     valid_text_file = True
-        except IOError:
+        except IOError:  # pragma: no cover
             pass
         except UnicodeDecodeError:
             # The file is not ASCII. Check if it is UTF-8.
@@ -3400,7 +3381,7 @@ Script should contain one command per line, just like command would be typed in 
                     # noinspection PyUnusedLocal
                     if sum(1 for line in f) > 0:
                         valid_text_file = True
-            except IOError:
+            except IOError:  # pragma: no cover
                 pass
             except UnicodeDecodeError:
                 # Not UTF-8
@@ -4066,10 +4047,3 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
         return not self.err
 
 
-if __name__ == '__main__':
-    # If run as the main application, simply start a bare-bones cmd2 application with only built-in functionality.
-
-    # Set "use_ipython" to True to include the ipy command if IPython is installed, which supports advanced interactive
-    # debugging of your application via introspection on self.
-    app = Cmd(use_ipython=False)
-    app.cmdloop()
