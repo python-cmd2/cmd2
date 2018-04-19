@@ -22,12 +22,14 @@ except ImportError:
         pass
 
 
-# Check what implementation of readline we are using
 class RlType(Enum):
+    """Readline library types we recognize"""
     GNU = 1
     PYREADLINE = 2
     NONE = 3
 
+
+# Check what implementation of readline we are using
 
 rl_type = RlType.NONE
 

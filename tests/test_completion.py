@@ -863,6 +863,7 @@ def test_subcommand_tab_completion(sc_app):
     # It is at end of line, so extra space is present
     assert first_match is not None and sc_app.completion_matches == ['Football ']
 
+
 def test_subcommand_tab_completion_with_no_completer(sc_app):
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
@@ -873,6 +874,7 @@ def test_subcommand_tab_completion_with_no_completer(sc_app):
 
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
     assert first_match is None
+
 
 def test_subcommand_tab_completion_space_in_text(sc_app):
     text = 'B'
@@ -885,10 +887,6 @@ def test_subcommand_tab_completion_space_in_text(sc_app):
     assert first_match is not None and \
            sc_app.completion_matches == ['Ball" '] and \
            sc_app.display_matches == ['Space Ball']
-
-
-
-
 
 ####################################################
 
@@ -960,6 +958,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
 
 @pytest.fixture
 def scu_app():
+    """Declare test fixture for with_argparser_and_unknown_args"""
     app = SubcommandsWithUnknownExample()
     return app
 
@@ -975,6 +974,7 @@ def test_cmd2_subcmd_with_unknown_completion_single_end(scu_app):
     # It is at end of line, so extra space is present
     assert first_match is not None and scu_app.completion_matches == ['foo ']
 
+
 def test_cmd2_subcmd_with_unknown_completion_multiple(scu_app):
     text = ''
     line = 'base {}'.format(text)
@@ -983,6 +983,7 @@ def test_cmd2_subcmd_with_unknown_completion_multiple(scu_app):
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
     assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
+
 
 def test_cmd2_subcmd_with_unknown_completion_nomatch(scu_app):
     text = 'z'
@@ -1001,6 +1002,7 @@ def test_cmd2_help_subcommand_completion_single(scu_app):
     begidx = endidx - len(text)
     assert scu_app.complete_help(text, line, begidx, endidx) == ['base']
 
+
 def test_cmd2_help_subcommand_completion_multiple(scu_app):
     text = ''
     line = 'help base {}'.format(text)
@@ -1018,6 +1020,7 @@ def test_cmd2_help_subcommand_completion_nomatch(scu_app):
     begidx = endidx - len(text)
     assert scu_app.complete_help(text, line, begidx, endidx) == []
 
+
 def test_subcommand_tab_completion(scu_app):
     # This makes sure the correct completer for the sport subcommand is called
     text = 'Foot'
@@ -1030,6 +1033,7 @@ def test_subcommand_tab_completion(scu_app):
     # It is at end of line, so extra space is present
     assert first_match is not None and scu_app.completion_matches == ['Football ']
 
+
 def test_subcommand_tab_completion_with_no_completer(scu_app):
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
@@ -1040,6 +1044,7 @@ def test_subcommand_tab_completion_with_no_completer(scu_app):
 
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
     assert first_match is None
+
 
 def test_subcommand_tab_completion_space_in_text(scu_app):
     text = 'B'
@@ -1053,17 +1058,7 @@ def test_subcommand_tab_completion_space_in_text(scu_app):
            scu_app.completion_matches == ['Ball" '] and \
            scu_app.display_matches == ['Space Ball']
 
-
-
 ####################################################
-
-
-
-
-
-
-
-
 
 
 class SecondLevel(cmd2.Cmd):

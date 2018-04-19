@@ -1,14 +1,71 @@
 # coding=utf-8
+"""
+AutoCompleter interprets the argparse.ArgumentParser internals to automatically
+generate the completion options for each argument.
+
+How to supply completion options for each argument:
+    argparse Choices
+    - pass a list of values to the choices parameter of an argparse argument.
+      ex: parser.add_argument('-o', '--options', dest='options', choices=['An Option', 'SomeOtherOption'])
+
+    arg_choices dictionary lookup
+        arg_choices is a dict() mapping from argument name to one of 3 possible values:
+          ex:
+            parser = argparse.ArgumentParser()
+            parser.add_argument('-o', '--options', dest='options')
+            choices = {}
+            mycompleter = AutoCompleter(parser, completer, 1, choices)
+
+        - static list - provide a static list for each argument name
+          ex:
+            choices['options'] = ['An Option', 'SomeOtherOption']
+
+        - choices function - provide a function that returns a list for each argument name
+          ex:
+            def generate_choices():
+                return ['An Option', 'SomeOtherOption']
+            choices['options'] = generate_choices
+
+        - custom completer function - provide a completer function that will return the list
+            of completion arguments
+          ex 1:
+            def my_completer(text: str, line: str, begidx: int, endidx:int):
+                my_choices = [...]
+                return my_choices
+            choices['options'] = (my_completer)
+          ex 2:
+            def my_completer(text: str, line: str, begidx: int, endidx:int, extra_param: str, another: int):
+                my_choices = [...]
+                return my_choices
+            completer_params = {'extra_param': 'my extra', 'another': 5}
+            choices['options'] = (my_completer, completer_params)
+
+How to supply completion choice lists or functions for sub-commands:
+    subcmd_args_lookup is used to supply a unique pair of arg_choices and subcmd_args_lookup
+    for each sub-command in an argparser subparser group.
+    This requires your subparser group to be named with the dest parameter
+        ex:
+            parser = ArgumentParser()
+            subparsers = parser.add_subparsers(title='Actions', dest='action')
+
+    subcmd_args_lookup maps a named subparser group to a subcommand group dictionary
+    The subcommand group dictionary maps subcommand names to tuple(arg_choices, subcmd_args_lookup)
+
+    For more details of this more complex approach see tab_autocompletion.py in the examples
+"""
+
 import argparse
-import re as _re
-import sys
-from argparse import OPTIONAL, ZERO_OR_MORE, ONE_OR_MORE, REMAINDER, PARSER, ArgumentError, _
-from .rl_utils import rl_force_redisplay
-try:
-    from typing import List, Dict, Tuple, Callable, Union
-except:
-    pass
 from colorama import Fore
+import sys
+from typing import List, Dict, Tuple, Callable, Union
+
+
+# imports copied from argparse to support our customized argparse functions
+from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
+import re as _re
+
+
+from .rl_utils import rl_force_redisplay
 
 
 class _RangeAction(object):
@@ -128,57 +185,7 @@ class AutoCompleter(object):
                  subcmd_args_lookup: dict = None,
                  tab_for_arg_help: bool = True):
         """
-        AutoCompleter interprets the argparse.ArgumentParser internals to automatically
-        generate the completion options for each argument.
-
-        How to supply completion options for each argument:
-            argparse Choices
-            - pass a list of values to the choices parameter of an argparse argument.
-              ex: parser.add_argument('-o', '--options', dest='options', choices=['An Option', 'SomeOtherOption'])
-
-            arg_choices dictionary lookup
-                arg_choices is a dict() mapping from argument name to one of 3 possible values:
-                  ex:
-                    parser = argparse.ArgumentParser()
-                    parser.add_argument('-o', '--options', dest='options')
-                    choices = {}
-                    mycompleter = AutoCompleter(parser, completer, 1, choices)
-
-                - static list - provide a static list for each argument name
-                  ex:
-                    choices['options'] = ['An Option', 'SomeOtherOption']
-
-                - choices function - provide a function that returns a list for each argument name
-                  ex:
-                    def generate_choices():
-                        return ['An Option', 'SomeOtherOption']
-                    choices['options'] = generate_choices
-
-                - custom completer function - provide a completer function that will return the list
-                    of completion arguments
-                  ex 1:
-                    def my_completer(text: str, line: str, begidx: int, endidx:int):
-                        my_choices = [...]
-                        return my_choices
-                    choices['options'] = (my_completer)
-                  ex 2:
-                    def my_completer(text: str, line: str, begidx: int, endidx:int, extra_param: str, another: int):
-                        my_choices = [...]
-                        return my_choices
-                    completer_params = {'extra_param': 'my extra', 'another': 5}
-                    choices['options'] = (my_completer, completer_params)
-
-        How to supply completion choice lists or functions for sub-commands:
-            subcmd_args_lookup is used to supply a unique pair of arg_choices and subcmd_args_lookup
-            for each sub-command in an argparser subparser group.
-            This requires your subparser group to be named with the dest parameter
-                ex:
-                    parser = ArgumentParser()
-                    subparsers = parser.add_subparsers(title='Actions', dest='action')
-
-            subcmd_args_lookup maps a named subparser group to a subcommand group dictionary
-            The subcommand group dictionary maps subcommand names to tuple(arg_choices, subcmd_args_lookup)
-
+        Create an AutoCompleter
 
         :param parser: ArgumentParser instance
         :param token_start_index: index of the token to start parsing at
@@ -200,8 +207,9 @@ class AutoCompleter(object):
         self._flags_without_args = []  # all flags that don't take arguments
         self._flag_to_action = {}  # maps flags to the argparse action object
         self._positional_actions = []  # argument names for positional arguments (by position index)
-        self._positional_completers = {}  # maps action name to sub-command autocompleter:
-                                          # action_name -> dict(sub_command -> completer)
+        # maps action name to sub-command autocompleter:
+        #   action_name -> dict(sub_command -> completer)
+        self._positional_completers = {}
 
         # Start digging through the argparse structures.
         #   _actions is the top level container of parameter definitions
@@ -225,10 +233,10 @@ class AutoCompleter(object):
                     sub_completers = {}
                     sub_commands = []
                     args_for_action = subcmd_args_lookup[action.dest]\
-                        if action.dest in subcmd_args_lookup.keys() else {}
+                        if action.dest in subcmd_args_lookup else {}
                     for subcmd in action.choices:
                         (subcmd_args, subcmd_lookup) = args_for_action[subcmd] if \
-                            subcmd in args_for_action.keys() else \
+                            subcmd in args_for_action else \
                             (arg_choices, subcmd_args_lookup) if forward_arg_choices else ({}, {})
                         subcmd_start = token_start_index + len(self._positional_actions)
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd], subcmd_start,
@@ -258,7 +266,7 @@ class AutoCompleter(object):
             """Consuming token as a flag argument"""
             # we're consuming flag arguments
             # if this is not empty and is not another potential flag, count towards flag arguments
-            if len(token) > 0 and not token[0] in self._parser.prefix_chars and flag_action is not None:
+            if token and token[0] not in self._parser.prefix_chars and flag_action is not None:
                 flag_arg.count += 1
 
                 # does this complete a option item for the flag
@@ -298,10 +306,10 @@ class AutoCompleter(object):
                         flag_action = None
 
                         # does the token fully match a known flag?
-                        if token in self._flag_to_action.keys():
+                        if token in self._flag_to_action:
                             flag_action = self._flag_to_action[token]
                         elif hasattr(self._parser, 'allow_abbrev') and self._parser.allow_abbrev:
-                            candidates_flags = [flag for flag in self._flag_to_action.keys() if flag.startswith(token)]
+                            candidates_flags = [flag for flag in self._flag_to_action if flag.startswith(token)]
                             if len(candidates_flags) == 1:
                                 flag_action = self._flag_to_action[candidates_flags[0]]
 
@@ -338,9 +346,9 @@ class AutoCompleter(object):
                             if pos_index < len(self._positional_actions):
                                 action = self._positional_actions[pos_index]
                                 pos_name = action.dest
-                                if pos_name in self._positional_completers.keys():
+                                if pos_name in self._positional_completers:
                                     sub_completers = self._positional_completers[pos_name]
-                                    if token in sub_completers.keys():
+                                    if token in sub_completers:
                                         return sub_completers[token].complete_command(tokens, text, line,
                                                                                       begidx, endidx)
                                 pos_action = action
@@ -372,7 +380,7 @@ class AutoCompleter(object):
             # current_items = []
             if flag_action is not None:
                 consumed = consumed_arg_values[flag_action.dest]\
-                    if flag_action.dest in consumed_arg_values.keys() else []
+                    if flag_action.dest in consumed_arg_values else []
                 # current_items.extend(self._resolve_choices_for_arg(flag_action, consumed))
                 completion_results = self._complete_for_arg(flag_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
@@ -382,7 +390,7 @@ class AutoCompleter(object):
         else:
             if pos_action is not None:
                 pos_name = pos_action.dest
-                consumed = consumed_arg_values[pos_name] if pos_name in consumed_arg_values.keys() else []
+                consumed = consumed_arg_values[pos_name] if pos_name in consumed_arg_values else []
                 completion_results = self._complete_for_arg(pos_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
                     self._print_action_help(pos_action)
@@ -420,8 +428,8 @@ class AutoCompleter(object):
                           line: str,
                           begidx: int,
                           endidx: int,
-                          used_values=list()) -> List[str]:
-        if action.dest in self._arg_choices.keys():
+                          used_values=()) -> List[str]:
+        if action.dest in self._arg_choices:
             arg_choices = self._arg_choices[action.dest]
 
             if isinstance(arg_choices, tuple) and len(arg_choices) > 0 and callable(arg_choices[0]):
@@ -447,8 +455,8 @@ class AutoCompleter(object):
 
         return []
 
-    def _resolve_choices_for_arg(self, action: argparse.Action, used_values=list()) -> List[str]:
-        if action.dest in self._arg_choices.keys():
+    def _resolve_choices_for_arg(self, action: argparse.Action, used_values=()) -> List[str]:
+        if action.dest in self._arg_choices:
             args = self._arg_choices[action.dest]
             if callable(args):
                 args = args()
@@ -508,6 +516,14 @@ class AutoCompleter(object):
         return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
 
+###############################################################################
+# Unless otherwise noted, everything below this point are copied from Python's
+# argparse implementation with minor tweaks to adjust output.
+# Changes are noted if it's buried in a block of copied code. Otherwise the
+# function will check for a special case and fall back to the parent function
+###############################################################################
+
+
 class ACHelpFormatter(argparse.HelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
@@ -529,8 +545,9 @@ class ACHelpFormatter(argparse.HelpFormatter):
 
             # split optionals from positionals
             optionals = []
-            required_options = []
             positionals = []
+            # Begin cmd2 customization (separates required and optional, applies to all changes in this function)
+            required_options = []
             for action in actions:
                 if action.option_strings:
                     if action.required:
@@ -539,6 +556,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
                         optionals.append(action)
                 else:
                     positionals.append(action)
+            # End cmd2 customization
 
             # build full usage string
             format = self._format_actions_usage
@@ -548,6 +566,8 @@ class ACHelpFormatter(argparse.HelpFormatter):
             # wrap the usage parts if it's too long
             text_width = self._width - self._current_indent
             if len(prefix) + len(usage) > text_width:
+
+                # Begin cmd2 customization
 
                 # break usage into wrappable parts
                 part_regexp = r'\(.*?\)+|\[.*?\]+|\S+'
@@ -560,6 +580,8 @@ class ACHelpFormatter(argparse.HelpFormatter):
                 assert ' '.join(opt_parts) == opt_usage
                 assert ' '.join(pos_parts) == pos_usage
                 assert ' '.join(req_parts) == req_usage
+
+                # End cmd2 customization
 
                 # helper for wrapping lines
                 def get_lines(parts, indent, prefix=None):
@@ -585,6 +607,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
                 # if prog is short, follow it with optionals or positionals
                 if len(prefix) + len(prog) <= 0.75 * text_width:
                     indent = ' ' * (len(prefix) + len(prog) + 1)
+                    # Begin cmd2 customization
                     if opt_parts:
                         lines = get_lines([prog] + pos_parts, indent, prefix)
                         lines.extend(get_lines(req_parts, indent))
@@ -594,10 +617,12 @@ class ACHelpFormatter(argparse.HelpFormatter):
                         lines.extend(get_lines(req_parts, indent))
                     else:
                         lines = [prog]
+                    # End cmd2 customization
 
                 # if prog is long, put it on its own line
                 else:
                     indent = ' ' * len(prefix)
+                    # Begin cmd2 customization
                     parts = pos_parts + req_parts + opt_parts
                     lines = get_lines(parts, indent)
                     if len(lines) > 1:
@@ -605,6 +630,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
                         lines.extend(get_lines(pos_parts, indent))
                         lines.extend(get_lines(req_parts, indent))
                         lines.extend(get_lines(opt_parts, indent))
+                    # End cmd2 customization
                     lines = [prog] + lines
 
                 # join lines into usage
@@ -628,46 +654,24 @@ class ACHelpFormatter(argparse.HelpFormatter):
                 parts.extend(action.option_strings)
                 return ', '.join(parts)
 
+            # Begin cmd2 customization (less verbose)
             # if the Optional takes a value, format is:
-            #    -s ARGS, --long ARGS
+            #    -s, --long ARGS
             else:
                 default = self._get_default_metavar_for_optional(action)
                 args_string = self._format_args(action, default)
 
-                # for option_string in action.option_strings:
-                #     parts.append('%s %s' % (option_string, args_string))
-
                 return ', '.join(action.option_strings) + ' ' + args_string
-
-    def _format_args(self, action, default_metavar):
-        get_metavar = self._metavar_formatter(action, default_metavar)
-        if isinstance(action, _RangeAction) and \
-                action.nargs_min is not None and action.nargs_max is not None:
-            result = '{}{{{}..{}}}'.format('%s' % get_metavar(1), action.nargs_min, action.nargs_max)
-
-        elif action.nargs is None:
-            result = '%s' % get_metavar(1)
-        elif action.nargs == OPTIONAL:
-            result = '[%s]' % get_metavar(1)
-        elif action.nargs == ZERO_OR_MORE:
-            result = '[%s [...]]' % get_metavar(1)
-        elif action.nargs == ONE_OR_MORE:
-            result = '%s [...]' % get_metavar(1)
-        elif action.nargs == REMAINDER:
-            result = '...'
-        elif action.nargs == PARSER:
-            result = '%s ...' % get_metavar(1)
-        else:
-            formats = ['%s' for _ in range(action.nargs)]
-            result = ' '.join(formats) % get_metavar(action.nargs)
-        return result
+            # End cmd2 customization
 
     def _metavar_formatter(self, action, default_metavar):
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
             choice_strs = [str(choice) for choice in action.choices]
+            # Begin cmd2 customization (added space after comma)
             result = '{%s}' % ', '.join(choice_strs)
+            # End cmd2 customization
         else:
             result = default_metavar
 
@@ -677,6 +681,21 @@ class ACHelpFormatter(argparse.HelpFormatter):
             else:
                 return (result, ) * tuple_size
         return format
+
+    def _format_args(self, action, default_metavar):
+        get_metavar = self._metavar_formatter(action, default_metavar)
+        # Begin cmd2 customization (less verbose)
+        if isinstance(action, _RangeAction) and \
+                action.nargs_min is not None and action.nargs_max is not None:
+            result = '{}{{{}..{}}}'.format('%s' % get_metavar(1), action.nargs_min, action.nargs_max)
+        elif action.nargs == ZERO_OR_MORE:
+            result = '[%s [...]]' % get_metavar(1)
+        elif action.nargs == ONE_OR_MORE:
+            result = '%s [...]' % get_metavar(1)
+        # End cmd2 customization
+        else:
+            result = super()._format_args(action, default_metavar)
+        return result
 
     def _split_lines(self, text, width):
         return text.splitlines()
@@ -694,15 +713,17 @@ class ACArgumentParser(argparse.ArgumentParser):
 
         self._custom_error_message = ''
 
+    # Begin cmd2 customization
     def set_custom_message(self, custom_message=''):
         """
         Allows an error message override to the error() function, useful when forcing a
         re-parse of arguments with newly required parameters
         """
         self._custom_error_message = custom_message
+    # End cmd2 customization
 
     def error(self, message):
-        """Custom error override."""
+        """Custom error override. Allows application to control the error being displayed by argparse"""
         if len(self._custom_error_message) > 0:
             message = self._custom_error_message
             self._custom_error_message = ''
@@ -733,6 +754,8 @@ class ACArgumentParser(argparse.ArgumentParser):
         # description
         formatter.add_text(self.description)
 
+        # Begin cmd2 customization (separate required and optional arguments)
+
         # positionals, optionals and user-defined groups
         for action_group in self._action_groups:
             if action_group.title == 'optional arguments':
@@ -761,6 +784,8 @@ class ACArgumentParser(argparse.ArgumentParser):
                 formatter.add_text(action_group.description)
                 formatter.add_arguments(action_group._group_actions)
                 formatter.end_section()
+
+        # End cmd2 customization
 
         # epilog
         formatter.add_text(self.epilog)

@@ -1,14 +1,11 @@
 """
-Unit/functional testing for readline tab-completion functions in the cmd2.py module.
+Unit/functional testing for argparse customizations in cmd2
 
-These are primarily tests related to readline completer functions which handle tab-completion of cmd2/cmd commands,
-file system paths, and shell commands.
-
-Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
+Copyright 2018 Eric Lin <anselor@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import pytest
-from cmd2.AutoCompleter import ACArgumentParser
+from cmd2.argparse_completer import ACArgumentParser
 
 
 def test_acarg_narg_empty_tuple():
@@ -54,5 +51,3 @@ def test_acarg_narg_tuple_zero_base():
 def test_acarg_narg_tuple_zero_to_one():
     parser = ACArgumentParser(prog='test')
     parser.add_argument('tuple', nargs=(0, 1))
-
-

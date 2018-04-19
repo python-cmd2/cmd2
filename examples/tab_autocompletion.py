@@ -7,7 +7,7 @@ import itertools
 from typing import List
 
 import cmd2
-from cmd2 import with_argparser, with_category, AutoCompleter
+from cmd2 import with_argparser, with_category, argparse_completer
 
 
 class TabCompleteExample(cmd2.Cmd):
@@ -91,7 +91,7 @@ class TabCompleteExample(cmd2.Cmd):
     #  - The help output for arguments with multiple flags or with append=True is more concise
     #  - ACArgumentParser adds the ability to specify ranges of argument counts in 'nargs'
 
-    suggest_parser = AutoCompleter.ACArgumentParser()
+    suggest_parser = argparse_completer.ACArgumentParser()
 
     suggest_parser.add_argument('-t', '--type', choices=['movie', 'show'], required=True)
     suggest_parser.add_argument('-d', '--duration', nargs=(1, 2), action='append',
@@ -113,7 +113,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     def complete_suggest(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """ Adds tab completion to media"""
-        completer = AutoCompleter.AutoCompleter(TabCompleteExample.suggest_parser, 1)
+        completer = argparse_completer.AutoCompleter(TabCompleteExample.suggest_parser, 1)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)
@@ -125,7 +125,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     suggest_parser_hybrid = argparse.ArgumentParser()
     # This registers the custom narg range handling
-    AutoCompleter.register_custom_actions(suggest_parser_hybrid)
+    argparse_completer.register_custom_actions(suggest_parser_hybrid)
 
     suggest_parser_hybrid.add_argument('-t', '--type', choices=['movie', 'show'], required=True)
     suggest_parser_hybrid.add_argument('-d', '--duration', nargs=(1, 2), action='append',
@@ -141,7 +141,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     def complete_hybrid_suggest(self, text, line, begidx, endidx):
         """ Adds tab completion to media"""
-        completer = AutoCompleter.AutoCompleter(TabCompleteExample.suggest_parser_hybrid)
+        completer = argparse_completer.AutoCompleter(TabCompleteExample.suggest_parser_hybrid)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)
@@ -168,7 +168,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     def complete_orig_suggest(self, text, line, begidx, endidx) -> List[str]:
         """ Adds tab completion to media"""
-        completer = AutoCompleter.AutoCompleter(TabCompleteExample.suggest_parser_orig)
+        completer = argparse_completer.AutoCompleter(TabCompleteExample.suggest_parser_orig)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)
@@ -211,7 +211,7 @@ class TabCompleteExample(cmd2.Cmd):
                 print()
 
 
-    media_parser = AutoCompleter.ACArgumentParser(prog='media')
+    media_parser = argparse_completer.ACArgumentParser(prog='media')
 
     media_types_subparsers = media_parser.add_subparsers(title='Media Types', dest='type')
 
@@ -264,7 +264,7 @@ class TabCompleteExample(cmd2.Cmd):
         choices = {'actor': self.query_actors,  # function
                    'director': TabCompleteExample.static_list_directors  # static list
                    }
-        completer = AutoCompleter.AutoCompleter(TabCompleteExample.media_parser, arg_choices=choices)
+        completer = argparse_completer.AutoCompleter(TabCompleteExample.media_parser, arg_choices=choices)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)
@@ -293,11 +293,11 @@ class TabCompleteExample(cmd2.Cmd):
     def _query_movie_user_library(self):
         return TabCompleteExample.USER_MOVIE_LIBRARY
 
-    def _filter_library(self, text, line, begidx, endidx, full, exclude=[]):
+    def _filter_library(self, text, line, begidx, endidx, full, exclude=()):
         candidates = list(set(full).difference(set(exclude)))
         return [entry for entry in candidates if entry.startswith(text)]
 
-    library_parser = AutoCompleter.ACArgumentParser(prog='library')
+    library_parser = argparse_completer.ACArgumentParser(prog='library')
 
     library_subcommands = library_parser.add_subparsers(title='Media Types', dest='type')
 
@@ -410,8 +410,8 @@ class TabCompleteExample(cmd2.Cmd):
         #   under the type sub-parser group, there are 2 sub-parsers: 'movie', 'show'
         library_subcommand_groups = {'type': library_type_params}
 
-        completer = AutoCompleter.AutoCompleter(TabCompleteExample.library_parser,
-                                                subcmd_args_lookup=library_subcommand_groups)
+        completer = argparse_completer.AutoCompleter(TabCompleteExample.library_parser,
+                                                     subcmd_args_lookup=library_subcommand_groups)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)

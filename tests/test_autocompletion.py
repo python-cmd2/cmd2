@@ -1,10 +1,7 @@
 """
-Unit/functional testing for readline tab-completion functions in the cmd2.py module.
+Unit/functional testing for argparse completer in cmd2
 
-These are primarily tests related to readline completer functions which handle tab-completion of cmd2/cmd commands,
-file system paths, and shell commands.
-
-Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
+Copyright 2018 Eric Lin <anselor@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import pytest
@@ -257,9 +254,3 @@ def test_autcomp_custom_func_list_and_dict_arg(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
            cmd2_app.completion_matches == ['S01E02', 'S01E03', 'S02E01', 'S02E03']
-
-
-
-
-
-
