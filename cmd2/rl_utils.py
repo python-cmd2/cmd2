@@ -18,7 +18,7 @@ except ImportError:
     try:
         # noinspection PyUnresolvedReferences
         import readline
-    except ImportError:
+    except ImportError:  # pragma: no cover
         pass
 
 
@@ -51,7 +51,8 @@ def rl_force_redisplay() -> None:
     """
     if not sys.stdout.isatty():
         return
-    if rl_type == RlType.GNU:
+
+    if rl_type == RlType.GNU:  # pragma: no cover
         # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
         # have to use ctypes to do it since Python's readline API does not wrap the function
         readline_lib.rl_forced_update_display()
@@ -60,6 +61,6 @@ def rl_force_redisplay() -> None:
         display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
         display_fixed.value = 1
 
-    elif rl_type == RlType.PYREADLINE:
+    elif rl_type == RlType.PYREADLINE:  # pragma: no cover
         # noinspection PyProtectedMember
         readline.rl.mode._print_prompt()

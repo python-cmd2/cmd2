@@ -52,6 +52,9 @@ How to supply completion choice lists or functions for sub-commands:
     The subcommand group dictionary maps subcommand names to tuple(arg_choices, subcmd_args_lookup)
 
     For more details of this more complex approach see tab_autocompletion.py in the examples
+
+Copyright 2018 Eric Lin <anselor@gmail.com>
+Released under MIT license, see LICENSE file
 """
 
 import argparse
@@ -261,6 +264,12 @@ class AutoCompleter(object):
         matched_flags = []
         current_is_positional = False
         consumed_arg_values = {}  # dict(arg_name -> [values, ...])
+
+        # the following are nested functions that have full access to all variables in the parent
+        # function including variables declared and updated after this function.  Variable values
+        # are current at the point the nested functions are invoked (as in, they do not receive a
+        # snapshot of these values, they directly access the current state of variables in the
+        # parent function)
 
         def consume_flag_argument() -> None:
             """Consuming token as a flag argument"""

@@ -1591,7 +1591,7 @@ class Cmd(cmd.Cmd):
         return compfunc(text, line, begidx, endidx)
 
     @staticmethod
-    def _pad_matches_to_display(matches_to_display):
+    def _pad_matches_to_display(matches_to_display):  # pragma: no cover
         """
         Adds padding to the matches being displayed as tab completion suggestions.
         The default padding of readline/pyreadine is small and not visually appealing
@@ -1613,7 +1613,7 @@ class Cmd(cmd.Cmd):
 
         return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
-    def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):
+    def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):  # pragma: no cover
         """
         Prints a match list using GNU readline's rl_display_match_list()
         This exists to print self.display_matches if it has data. Otherwise matches prints.
@@ -1664,7 +1664,7 @@ class Cmd(cmd.Cmd):
             # Redraw prompt and input line
             rl_force_redisplay()
 
-    def _display_matches_pyreadline(self, matches):
+    def _display_matches_pyreadline(self, matches):  # pragma: no cover
         """
         Prints a match list using pyreadline's _display_completions()
         This exists to print self.display_matches if it has data. Otherwise matches prints.
@@ -3344,7 +3344,7 @@ Script should contain one command per line, just like command would be typed in 
             # self._script_dir list when done.
             with open(expanded_path, encoding='utf-8') as target:
                 self.cmdqueue = target.read().splitlines() + ['eos'] + self.cmdqueue
-        except IOError as e:
+        except IOError as e:  # pragma: no cover
             self.perror('Problem accessing script from {}:\n{}'.format(expanded_path, e))
             return
 
@@ -3371,7 +3371,7 @@ Script should contain one command per line, just like command would be typed in 
                 # noinspection PyUnusedLocal
                 if sum(1 for line in f) > 0:
                     valid_text_file = True
-        except IOError:
+        except IOError:  # pragma: no cover
             pass
         except UnicodeDecodeError:
             # The file is not ASCII. Check if it is UTF-8.
@@ -3381,7 +3381,7 @@ Script should contain one command per line, just like command would be typed in 
                     # noinspection PyUnusedLocal
                     if sum(1 for line in f) > 0:
                         valid_text_file = True
-            except IOError:
+            except IOError:  # pragma: no cover
                 pass
             except UnicodeDecodeError:
                 # Not UTF-8

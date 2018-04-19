@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""A simple example demonstrating how to use flag and index based tab-completion functions
+"""
+A example usage of the AutoCompleter
+
+Copyright 2018 Eric Lin <anselor@gmail.com>
+Released under MIT license, see LICENSE file
 """
 import argparse
 import itertools
