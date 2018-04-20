@@ -2,12 +2,8 @@
 """
 Imports the proper readline for the platform and provides utility functions for it
 """
+from enum import Enum
 import sys
-
-try:
-    from enum34 import Enum
-except ImportError:
-    from enum import Enum
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
