@@ -1,6 +1,9 @@
 ## 0.9.0 (TBD, 2018)
 * Enhancements
+    * Automatic completion of ``argparse`` arguments via ``cmd2.argparse_completer.AutoCompleter``
+        * See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for a demonstration of how to use this feature
     * ``cmd2`` no longer depends on the ``six`` module
+    * ``cmd2`` is now a multi-file Python package instead of a single-file module
 * Deletions (potentially breaking changes)
     * Deleted all ``optparse`` code which had previously been deprecated in release 0.8.0
         * The ``options`` decorator no longer exists

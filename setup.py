@@ -61,7 +61,7 @@ Programming Language :: Python :: Implementation :: PyPy3
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
-INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.5.27']
+INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.5.27', 'colorama']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
@@ -69,7 +69,7 @@ EXTRAS_REQUIRE = {
     # POSIX OSes also require wcwidth for correctly estimating the displayed width of unicode chars
     ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
-    ":python_version<'3.5'": ['contextlib2'],
+    ":python_version<'3.5'": ['contextlib2', 'typing'],
 }
 
 if int(setuptools.__version__.split('.')[0]) < 18:
@@ -80,6 +80,7 @@ if int(setuptools.__version__.split('.')[0]) < 18:
         INSTALL_REQUIRES.append('wcwidth')
     if sys.version_info < (3, 5):
         INSTALL_REQUIRES.append('contextlib2')
+        INSTALL_REQUIRES.append('typing')
 
 TESTS_REQUIRE = ['pytest', 'pytest-xdist']
 DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'wcwidth']

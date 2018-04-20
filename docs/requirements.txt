@@ -1,3 +1,4 @@
 pyparsing
 pyperclip
 wcwidth
+colorama
