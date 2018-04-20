@@ -17,207 +17,20 @@ Notes:
 
 """
 
-import re
-import shlex
+import cmd2
+from cmd2.parsing import CommandParser
 
 import pytest
 
-import cmd2
-
-class Cmd2Command():
-    pass
-
-class Cmd2Parser():
-    # settings or variables from cmd2.py
-    terminator = ';'
-    allow_redirection = True
-    REDIRECTION_CHARS = ['|', '<', '>']
-    QUOTES = ['"', "'"]
-    multilineCommands = ['multiline']
-
-    def parseString(self, rawinput):
-        result = Cmd2Command()
-        result.raw = rawinput
-        result.command = None
-        result.multilineCommand = None
-        result.args = None
-        result.terminator = None
-        result.suffix = None
-        result.pipeTo = None
-        result.output = None
-        result.outputTo = None
-
-        # strip C-style and C++-style comments
-        # shlex will handle the python/shell style comments for us
-        def replacer(match):
-                s = match.group(0)
-                if s.startswith('/'):
-                    # treat the removed comment as a space token, not an empty string
-                    # return ' '
-                    # jk, always return nothing
-                    return ''
-                else:
-                    return s
-        pattern = re.compile(
-            r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
-            re.DOTALL | re.MULTILINE
-        )
-        rawinput = re.sub(pattern, replacer, rawinput)
-
-        s = shlex.shlex(rawinput, posix=False)
-        s.whitespace_split = True
-        tokens = self.split_on_punctuation(list(s))
-        
-        # look for the semicolon terminator
-        try:
-            terminator_pos = tokens.index(self.terminator)
-            # everything before the first terminator is the command and the args
-            (result.command, result.args) = self._command_and_args(tokens[:terminator_pos])
-            result.terminator = tokens[terminator_pos]
-            # we will set the suffix later
-            # remove all the tokens before and including the terminator
-            tokens = tokens[terminator_pos+1:]
-        except ValueError:
-            # no terminator in the tokens
-            pass
-
-        # check for input from file
-        try:
-            if tokens[0] == '<':
-                result.inputFrom = ' '.join(tokens[1:])
-                tokens = []
-        except IndexError:
-            # no input from file
-            pass
-
-        # check for output redirect
-        try:
-            output_pos = tokens.index('>')
-            result.output = '>'
-            result.outputTo = ' '.join(tokens[output_pos+1:])
-            # remove all the tokens after the output redirect
-            tokens = tokens[:output_pos]
-        except ValueError:
-            pass
-
-        # check for paste buffer
-        try:
-            output_pos = tokens.index('>>')
-            result.output = '>>'
-            # remove all tokens after the output redirect
-            tokens = tokens[:output_pos]
-        except ValueError:
-            pass
-
-        # check for pipes
-        try:
-            # find the first pipe if it exists
-            pipe_pos = tokens.index('|')
-            # set everything after the first pipe to result.pipeTo
-            result.pipeTo = ' '.join(tokens[pipe_pos+1:])
-            # remove all the tokens after the pipe
-            tokens = tokens[:pipe_pos]
-        except ValueError:
-            # no pipe in the tokens
-            pass
-        
-        if result.terminator:
-            # whatever is left is the suffix
-            result.suffix = ' '.join(tokens)
-            if result.command in self.multilineCommands:
-                result.multilineCommand = result.command
-        else:
-            # no terminator, so whatever is left is the command and the args
-            (result.command, result.args) = self._command_and_args(tokens)            
-
-        return result
-    
-    def _command_and_args(self, tokens):
-        """given a list of tokens, and return a tuple of the command
-        and the args as a string.
-        """
-        command = None
-        args = None
-
-        if tokens:
-            command = tokens[0]
-
-        if len(tokens) > 1:
-            args = ' '.join(tokens[1:])
-
-        return (command, args)
-
-    def split_on_punctuation(self, initial_tokens):
-        """
-        # Further splits tokens from a command line using punctuation characters
-        # as word breaks when they are in unquoted strings. Each run of punctuation
-        # characters is treated as a single token.
-
-        :param initial_tokens: the tokens as parsed by shlex
-        :return: the punctuated tokens
-        """
-        punctuation = [self.terminator] # should be self.terminator from cmd2.py
-        if self.allow_redirection:  # should be self.allow_redirection from cmd2.py
-            punctuation += self.REDIRECTION_CHARS # should be REDIRECTION_CHARS from cmd2.py
-
-        punctuated_tokens = []
-
-        for cur_initial_token in initial_tokens:
-
-            # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
-            if len(cur_initial_token) <= 1 or cur_initial_token[0] in self.QUOTES: # should be QUOTES in cmd2.py
-                punctuated_tokens.append(cur_initial_token)
-                continue
-
-            # Iterate over each character in this token
-            cur_index = 0
-            cur_char = cur_initial_token[cur_index]
-
-            # Keep track of the token we are building
-            new_token = ''
-
-            while True:
-                if cur_char not in punctuation:
-
-                    # Keep appending to new_token until we hit a punctuation char
-                    while cur_char not in punctuation:
-                        new_token += cur_char
-                        cur_index += 1
-                        if cur_index < len(cur_initial_token):
-                            cur_char = cur_initial_token[cur_index]
-                        else:
-                            break
-
-                else:
-                    cur_punc = cur_char
-
-                    # Keep appending to new_token until we hit something other than cur_punc
-                    while cur_char == cur_punc:
-                        new_token += cur_char
-                        cur_index += 1
-                        if cur_index < len(cur_initial_token):
-                            cur_char = cur_initial_token[cur_index]
-                        else:
-                            break
-
-                # Save the new token
-                punctuated_tokens.append(new_token)
-                new_token = ''
-
-                # Check if we've viewed all characters
-                if cur_index >= len(cur_initial_token):
-                    break
-
-        return punctuated_tokens
-
-######
-#
-# unit tests
-#
-######
 @pytest.fixture
 def parser():
-    parser = Cmd2Parser()
+    parser = CommandParser(
+        quotes=['"', "'"],
+        allow_redirection=True,
+        redirection_chars=['|', '<', '>'],        
+        terminators = [';'],
+        multilineCommands = ['multiline']
+    )
     return parser
 
 def test_parse_empty_string(parser):
@@ -397,12 +210,12 @@ def test_parse_multiline_command_ignores_redirectors_within_it(parser):
 #     assert results.multilineCommand == 'multiline'
 #     assert not 'args' in results
 
-# def test_parse_multiline_with_complete_comment(parser):
-#     line = 'multiline command /* with comment complete */ is done;'
-#     results = parser.parseString(line)
-#     assert results.multilineCommand == 'multiline'
-#     assert results.args == 'command /* with comment complete */ is done'
-#     assert results.terminator == ';'
+def test_parse_multiline_with_complete_comment(parser):
+    line = 'multiline command /* with comment complete */ is done;'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'command is done'
+    assert results.terminator == ';'
 
 # def test_parse_multiline_termninated_by_empty_line(parser):
 #     line = 'multiline command ends\n\n'
