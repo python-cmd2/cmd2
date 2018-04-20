@@ -68,8 +68,12 @@ def test_base_argparse_help(base_app, capsys):
 def test_base_invalid_option(base_app, capsys):
     run_cmd(base_app, 'set -z')
     out, err = capsys.readouterr()
-    expected = ['usage: set [-h] [-a] [-l] [settable [settable ...]]', 'set: error: unrecognized arguments: -z']
-    assert normalize(str(err)) == expected
+    out = normalize(out)
+    err = normalize(err)
+    assert len(err) == 3
+    assert len(out) == 15
+    assert 'Error: unrecognized arguments: -z' in err[0]
+    assert out[0] == 'usage: set [-h] [-a] [-l] [settable [settable ...]]'
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')

@@ -51,6 +51,7 @@ import pyperclip
 
 # Set up readline
 from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
+from .argparse_completer import AutoCompleter, ACArgumentParser
 
 if rl_type == RlType.PYREADLINE:
 
@@ -268,6 +269,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
 
         # Mark this function as having an argparse ArgumentParser (used by do_help)
         cmd_wrapper.__dict__['has_parser'] = True
+        setattr(cmd_wrapper, 'argparser', argparser)
 
         # If there are subcommands, store their names in a list to support tab-completion of subcommand names
         if argparser._subparsers is not None:
@@ -320,6 +322,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
 
         # Mark this function as having an argparse ArgumentParser (used by do_help)
         cmd_wrapper.__dict__['has_parser'] = True
+        setattr(cmd_wrapper, 'argparser', argparser)
 
         # If there are subcommands, store their names in a list to support tab-completion of subcommand names
         if argparser._subparsers is not None:
@@ -1794,16 +1797,15 @@ class Cmd(cmd.Cmd):
                     try:
                         compfunc = getattr(self, 'complete_' + command)
                     except AttributeError:
-                        compfunc = self.completedefault
 
-                    subcommands = self.get_subcommands(command)
-                    if subcommands is not None:
-                        # Since there are subcommands, then try completing those if the cursor is in
-                        # the token at index 1, otherwise default to using compfunc
-                        index_dict = {1: subcommands}
-                        compfunc = functools.partial(self.index_based_complete,
-                                                     index_dict=index_dict,
-                                                     all_else=compfunc)
+                        cmd_func = getattr(self, 'do_' + command)
+                        if hasattr(cmd_func, 'has_parser') and hasattr(cmd_func, 'argparser') and \
+                                getattr(cmd_func, 'has_parser'):
+                            argparser = getattr(cmd_func, 'argparser')
+                            compfunc = functools.partial(self._autocomplete_default,
+                                                         argparser=argparser)
+                        else:
+                            compfunc = self.completedefault
 
                 # A valid command was not entered
                 else:
@@ -1910,6 +1912,15 @@ class Cmd(cmd.Cmd):
         except IndexError:
             return None
 
+    def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
+                              argparser: argparse.ArgumentParser) -> List[str]:
+        completer = AutoCompleter(argparser)
+
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
+        results = completer.complete_command(tokens, text, line, begidx, endidx)
+
+        return results
+
     def get_all_commands(self):
         """
         Returns a list of all commands
@@ -1963,6 +1974,15 @@ class Cmd(cmd.Cmd):
             visible_commands = set(self.get_visible_commands())
             strs_to_match = list(topics | visible_commands)
             matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
+
+        elif index >= subcmd_index and hasattr(self, 'do_' + tokens[cmd_index]) and\
+                hasattr(getattr(self, 'do_' + tokens[cmd_index]), 'has_parser'):
+            command = tokens[cmd_index]
+            cmd_func = getattr(self, 'do_' + command)
+            parser = getattr(cmd_func, 'argparser')
+            completer = AutoCompleter(parser)
+            matches = completer.complete_command_help(tokens[1:], text, line, begidx, endidx)
+
 
         # Check if we are completing a subcommand
         elif index == subcmd_index:
@@ -2843,10 +2863,10 @@ Usage:  Usage: unalias [-a] name [name ...]
         else:
             raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
 
-    set_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    set_parser = ACArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    set_parser.add_argument('settable', nargs='*', help='[param_name] [value]')
+    set_parser.add_argument('settable', nargs=(0,2), help='[param_name] [value]')
 
     @with_argparser(set_parser)
     def do_set(self, args):

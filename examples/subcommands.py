@@ -53,15 +53,22 @@ class SubcommandsExample(cmd2.Cmd):
 
     # create the parser for the "bar" subcommand
     parser_bar = base_subparsers.add_parser('bar', help='bar help')
-    parser_bar.add_argument('z', help='string')
     parser_bar.set_defaults(func=base_bar)
+
+    bar_subparsers = parser_bar.add_subparsers(title='layer3', help='help for 3rd layer of commands')
+    parser_bar.add_argument('z', help='string')
+
+    bar_subparsers.add_parser('apple', help='apple help')
+    bar_subparsers.add_parser('artichoke', help='artichoke help')
+    bar_subparsers.add_parser('cranberries', help='cranberries help')
 
     # create the parser for the "sport" subcommand
     parser_sport = base_subparsers.add_parser('sport', help='sport help')
-    parser_sport.add_argument('sport', help='Enter name of a sport')
+    sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
+    setattr(sport_arg, 'arg_choices', sport_item_strs)
 
     # Set both a function and tab completer for the "sport" subcommand
-    parser_sport.set_defaults(func=base_sport, completer=complete_base_sport)
+    parser_sport.set_defaults(func=base_sport)
 
     @with_argparser(base_parser)
     def do_base(self, args):
@@ -75,7 +82,7 @@ class SubcommandsExample(cmd2.Cmd):
             self.do_help('base')
 
     # Enable tab completion of base to make sure the subcommands' completers get called.
-    complete_base = cmd2.Cmd.cmd_with_subs_completer
+    # complete_base = cmd2.Cmd.cmd_with_subs_completer
 
 
 if __name__ == '__main__':
