@@ -52,6 +52,8 @@ import pyperclip
 # Set up readline
 from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
 
+from cmd2.parsing import CommandParser
+
 if rl_type == RlType.PYREADLINE:
 
     # Save the original pyreadline display completion function since we need to override it and restore it
@@ -703,11 +705,11 @@ class Cmd(cmd.Cmd):
     """
     # Attributes used to configure the ParserManager (all are not dynamically settable at runtime)
     blankLinesAllowed = False
-    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
-    commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
-    legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
+    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment]) # deleteme
+    commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/') # deleteme
+    legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit # deleteme
     multilineCommands = []
-    prefixParser = pyparsing.Empty()
+    prefixParser = pyparsing.Empty() #deleteme
     redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
@@ -798,13 +800,20 @@ class Cmd(cmd.Cmd):
         self.history = History()
         self.pystate = {}
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
-        self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
-                                            multilineCommands=self.multilineCommands,
-                                            legalChars=self.legalChars, commentGrammars=self.commentGrammars,
-                                            commentInProgress=self.commentInProgress,
-                                            blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
-                                            preparse=self.preparse, postparse=self.postparse, aliases=self.aliases,
-                                            shortcuts=self.shortcuts)
+        self.command_parser = CommandParser(
+            quotes=QUOTES,
+            allow_redirection=self.allow_redirection,
+            redirection_chars=REDIRECTION_CHARS,
+            terminators=self.terminators,
+            multilineCommands=self.multilineCommands,
+        )
+        # self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
+        #                                     multilineCommands=self.multilineCommands,
+        #                                     legalChars=self.legalChars, commentGrammars=self.commentGrammars,
+        #                                     commentInProgress=self.commentInProgress,
+        #                                     blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
+        #                                     preparse=self.preparse, postparse=self.postparse, aliases=self.aliases,
+        #                                     shortcuts=self.shortcuts)
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -2205,14 +2214,15 @@ class Cmd(cmd.Cmd):
 
     def _complete_statement(self, line):
         """Keep accepting lines of input until the command is complete."""
-        if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
-            raise EmptyStatement()
-        statement = self.parser_manager.parsed(line)
-        while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
-            statement = '%s\n%s' % (statement.parsed.raw,
-                                    self.pseudo_raw_input(self.continuation_prompt))
-            statement = self.parser_manager.parsed(statement)
-        if not statement.parsed.command:
+        #if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
+        #    raise EmptyStatement()
+        # statement = self.parser_manager.parsed(line) # deleteme
+        statement = self.command_parser.parseString(line)
+        #while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
+        #    statement = '%s\n%s' % (statement.parsed.raw,
+        #                            self.pseudo_raw_input(self.continuation_prompt))
+        #    statement = self.parser_manager.parsed(statement)
+        if not statement.command:
             raise EmptyStatement()
         return statement
 
@@ -2221,7 +2231,7 @@ class Cmd(cmd.Cmd):
 
         :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
         """
-        if statement.parsed.pipeTo:
+        if statement.pipeTo:
             self.kept_state = Statekeeper(self, ('stdout',))
 
             # Create a pipe with read and write sides
@@ -2236,7 +2246,7 @@ class Cmd(cmd.Cmd):
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
-                self.pipe_proc = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=subproc_stdin)
+                self.pipe_proc = subprocess.Popen(shlex.split(statement.pipeTo), stdin=subproc_stdin)
             except Exception as ex:
                 # Restore stdout to what it was and close the pipe
                 self.stdout.close()
@@ -2248,20 +2258,20 @@ class Cmd(cmd.Cmd):
 
                 # Re-raise the exception
                 raise ex
-        elif statement.parsed.output:
-            if (not statement.parsed.outputTo) and (not can_clip):
+        elif statement.output:
+            if (not statement.outputTo) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
             self.redirecting = True
-            if statement.parsed.outputTo:
+            if statement.outputTo:
                 mode = 'w'
-                if statement.parsed.output == 2 * self.redirector:
+                if statement.output == 2 * self.redirector:
                     mode = 'a'
-                sys.stdout = self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)
+                sys.stdout = self.stdout = open(os.path.expanduser(statement.outputTo), mode)
             else:
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
-                if statement.parsed.output == '>>':
+                if statement.output == '>>':
                     self.poutput(get_paste_buffer())
 
     def _restore_output(self, statement):
@@ -2272,7 +2282,7 @@ class Cmd(cmd.Cmd):
         # If we have redirected output to a file or the clipboard or piped it to a shell command, then restore state
         if self.kept_state is not None:
             # If we redirected output to the clipboard
-            if statement.parsed.output and not statement.parsed.outputTo:
+            if statement.output and not statement.outputTo:
                 self.stdout.seek(0)
                 write_to_paste_buffer(self.stdout.read())
 
@@ -2310,29 +2320,29 @@ class Cmd(cmd.Cmd):
             result = target
         return result
 
-    def onecmd(self, line):
+    def onecmd(self, statement):
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes _default() instead.
 
-        :param line: ParsedString - subclass of string including the pyparsing ParseResults
+        :param line: Command - a parsed command from the input stream
         :return: bool - a flag indicating whether the interpretation of commands should stop
         """
-        statement = self.parser_manager.parsed(line)
-        funcname = self._func_named(statement.parsed.command)
+        #statement = self.parser_manager.parsed(line) # deleteme
+        funcname = self._func_named(statement.command)
         if not funcname:
             return self.default(statement)
 
         # Since we have a valid command store it in the history
-        if statement.parsed.command not in self.exclude_from_history:
-            self.history.append(statement.parsed.raw)
+        if statement.command not in self.exclude_from_history:
+            self.history.append(statement.raw)
 
         try:
             func = getattr(self, funcname)
         except AttributeError:
             return self.default(statement)
 
-        stop = func(statement)
+        stop = func("{} {}".format(statement.command, statement.args))
         return stop
 
     def default(self, statement):
