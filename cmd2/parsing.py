@@ -9,7 +9,16 @@ import cmd2
 
 class Command():
     """Store the results of a parsed command."""
-    pass
+    def __init__(self, rawinput):
+        self.raw = rawinput
+        self.command = None
+        self.multilineCommand = None
+        self.args = None
+        self.terminator = None
+        self.suffix = None
+        self.pipeTo = None
+        self.output = None
+        self.outputTo = None
 
 class CommandParser():
     """Parse raw text into command components."""
@@ -28,16 +37,7 @@ class CommandParser():
         self.multilineCommands = multilineCommands
 
     def parseString(self, rawinput):
-        result = Command()
-        result.raw = rawinput
-        result.command = None
-        result.multilineCommand = None
-        result.args = None
-        result.terminator = None
-        result.suffix = None
-        result.pipeTo = None
-        result.output = None
-        result.outputTo = None
+        result = Command(rawinput)
 
         # strip C-style and C++-style comments
         # shlex will handle the python/shell style comments for us

@@ -15,6 +15,9 @@ Notes:
     - C++-style -> // comment
     - Python/Shell style -> # comment
 
+Functions in cmd2.py to be modified:
+- _complete_statement()
+
 """
 
 import cmd2
