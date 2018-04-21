@@ -1,6 +1,6 @@
 ## 0.8.6 (TBD)
     * Bug Fixes
-        * TBD
+        * Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing help
 
 ## 0.8.5 (April 15, 2018)
 * Bug Fixes

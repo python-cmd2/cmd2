@@ -8,7 +8,10 @@ Released under MIT license, see LICENSE file
 import sys
 
 from pytest import fixture
-from unittest import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 
 import cmd2
 
