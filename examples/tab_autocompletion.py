@@ -214,7 +214,6 @@ class TabCompleteExample(cmd2.Cmd):
                                   '\n    '.join(ep_list)))
                 print()
 
-
     media_parser = argparse_completer.ACArgumentParser(prog='media')
 
     media_types_subparsers = media_parser.add_subparsers(title='Media Types', dest='type')
@@ -379,7 +378,7 @@ class TabCompleteExample(cmd2.Cmd):
                                         # This tuple represents index-based args to append to the function call
                                         (list(TabCompleteExample.SHOW_DATABASE.keys()),)
                                         ),
-                            'episode_id': (self._filter_episodes, # this is a custom completion function
+                            'episode_id': (self._filter_episodes,  # this is a custom completion function
                                            # this list represents index-based args to append to the function call
                                            [TabCompleteExample.SHOW_DATABASE],
                                            # this dict contains keyword-based args to append to the function call

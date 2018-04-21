@@ -42,6 +42,7 @@ import subprocess
 import sys
 import tempfile
 import traceback
+from typing import Callable, List, Optional, Union
 import unittest
 from code import InteractiveConsole
 
@@ -141,13 +142,13 @@ HELP_CATEGORY = 'help_category'
 HELP_SUMMARY = 'help_summary'
 
 
-def categorize(func, category):
+def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """Categorize a function.
 
     The help command output will group this function under the specified category heading
 
-    :param func: Union[Callable, Iterable] - function to categorize
-    :param category: str - category to put it in
+    :param func: function to categorize
+    :param category: category to put it in
     """
     if isinstance(func, Iterable):
         for item in func:
@@ -156,25 +157,25 @@ def categorize(func, category):
         setattr(func, HELP_CATEGORY, category)
 
 
-def set_posix_shlex(val):
+def set_posix_shlex(val: bool) -> None:
     """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for decorated commands.
 
-    :param val: bool - True => POSIX,  False => Non-POSIX
+    :param val: True => POSIX,  False => Non-POSIX
     """
     global POSIX_SHLEX
     POSIX_SHLEX = val
 
 
-def set_strip_quotes(val):
+def set_strip_quotes(val: bool) -> None:
     """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
 
-    :param val: bool - True => strip quotes on args for decorated commands if POSIX_SHLEX is False.
+    :param val: True => strip quotes on args for decorated commands if POSIX_SHLEX is False.
     """
     global STRIP_QUOTES_FOR_NON_POSIX
     STRIP_QUOTES_FOR_NON_POSIX = val
 
 
-def _which(editor):
+def _which(editor: str) -> Optional[str]:
     try:
         editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
         editor_path = editor_path.decode()
@@ -183,13 +184,13 @@ def _which(editor):
     return editor_path
 
 
-def strip_quotes(arg):
+def strip_quotes(arg: str) -> str:
     """ Strip outer quotes from a string.
 
      Applies to both single and double quotes.
 
-    :param arg: str - string to strip outer quotes from
-    :return str - same string with potentially outer quotes stripped
+    :param arg:  string to strip outer quotes from
+    :return: same string with potentially outer quotes stripped
     """
     quote_chars = '"' + "'"
 
@@ -198,7 +199,7 @@ def strip_quotes(arg):
     return arg
 
 
-def parse_quoted_string(cmdline):
+def parse_quoted_string(cmdline: str) -> List[str]:
     """Parse a quoted string into a list of arguments."""
     if isinstance(cmdline, list):
         # arguments are already a list, return the list we were passed
@@ -215,15 +216,15 @@ def parse_quoted_string(cmdline):
     return lexed_arglist
 
 
-def with_category(category):
-    """A decorator to apply a category to a command function"""
+def with_category(category: str) -> Callable:
+    """A decorator to apply a category to a command function."""
     def cat_decorator(func):
         categorize(func, category)
         return func
     return cat_decorator
 
 
-def with_argument_list(func):
+def with_argument_list(func: Callable) -> Callable:
     """A decorator to alter the arguments passed to a do_* cmd2
     method. Default passes a string of whatever the user typed.
     With this decorator, the decorated method will receive a list
@@ -237,16 +238,15 @@ def with_argument_list(func):
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser):
+def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
     :return: function that gets passed parsed args and a list of unknown args
     """
-
     # noinspection PyProtectedMember
-    def arg_decorator(func):
+    def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
@@ -289,7 +289,7 @@ def with_argparser_and_unknown_args(argparser):
     return arg_decorator
 
 
-def with_argparser(argparser):
+def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
@@ -298,7 +298,7 @@ def with_argparser(argparser):
     """
 
     # noinspection PyProtectedMember
-    def arg_decorator(func):
+    def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
@@ -361,25 +361,25 @@ else:
     can_clip = True
 
 
-def disable_clip():
+def disable_clip() -> None:
     """ Allows user of cmd2 to manually disable clipboard cut-and-paste functionality."""
     global can_clip
     can_clip = False
 
 
-def get_paste_buffer():
+def get_paste_buffer() -> str:
     """Get the contents of the clipboard / paste buffer.
 
-    :return: str - contents of the clipboard
+    :return: contents of the clipboard
     """
     pb_str = pyperclip.paste()
     return pb_str
 
 
-def write_to_paste_buffer(txt):
+def write_to_paste_buffer(txt: str) -> None:
     """Copy text to the clipboard / paste buffer.
 
-    :param txt: str - text to copy to the clipboard
+    :param txt: text to copy to the clipboard
     """
     pyperclip.copy(txt)
 
@@ -400,11 +400,11 @@ class ParsedString(str):
         return new
 
 
-def replace_with_file_contents(fname):
+def replace_with_file_contents(fname: str) -> str:
     """Action to perform when successfully matching parse element definition for inputFrom parser.
 
-    :param fname: str - filename
-    :return: str - contents of file "fname"
+    :param fname: filename
+    :return: contents of file "fname"
     """
     try:
         # Any outer quotes are not part of the filename
@@ -432,16 +432,16 @@ class EmptyStatement(Exception):
 ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
 
 
-def strip_ansi(text):
+def strip_ansi(text: str) -> str:
     """Strip ANSI escape codes from a string.
 
-    :param text: str - a string which may contain ANSI escape codes
-    :return: str - the same string with any ANSI escape codes removed
+    :param text: string which may contain ANSI escape codes
+    :return: the same string with any ANSI escape codes removed
     """
     return ANSI_ESCAPE_RE.sub('', text)
 
 
-def _pop_readline_history(clear_history=True):
+def _pop_readline_history(clear_history: bool=True) -> List[str]:
     """Returns a copy of readline's history and optionally clears it (default)"""
     # noinspection PyArgumentList
     history = [
