@@ -277,7 +277,8 @@ class TabCompleteExample(cmd2.Cmd):
 
     ###################################################################################
     # The media command demonstrates a completer with multiple layers of subcommands
-    #   - This example tags a completion attribute on each action
+    #   - This example demonstrates how to tag a completion attribute on each action, enabling argument
+    #       completion without implementing a complete_COMMAND function
 
     def _do_vid_media_movies(self, args) -> None:
         if not args.command:
@@ -320,16 +321,23 @@ class TabCompleteExample(cmd2.Cmd):
     vid_movies_list_parser.add_argument('-t', '--title', help='Title Filter')
     vid_movies_list_parser.add_argument('-r', '--rating', help='Rating Filter', nargs='+',
                                         choices=ratings_types)
+    # save a reference to the action object
     director_action = vid_movies_list_parser.add_argument('-d', '--director', help='Director Filter')
     actor_action = vid_movies_list_parser.add_argument('-a', '--actor', help='Actor Filter', action='append')
+
+    # tag the action objects with completion providers. This can be a collection or a callable
     setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
     setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, query_actors)
 
     vid_movies_add_parser = vid_movies_commands_subparsers.add_parser('add')
     vid_movies_add_parser.add_argument('title', help='Movie Title')
     vid_movies_add_parser.add_argument('rating', help='Movie Rating', choices=ratings_types)
+
+    # save a reference to the action object
     director_action = vid_movies_add_parser.add_argument('-d', '--director', help='Director', nargs=(1, 2), required=True)
     actor_action = vid_movies_add_parser.add_argument('actor', help='Actors', nargs='*')
+
+    # tag the action objects with completion providers. This can be a collection or a callable
     setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
     setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, query_actors)
 
