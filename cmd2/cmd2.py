@@ -386,20 +386,21 @@ def write_to_paste_buffer(txt: str) -> None:
     pyperclip.copy(txt)
 
 
-class ParsedString(str):
-    """Subclass of str which also stores a pyparsing.ParseResults object containing structured parse results."""
-    # pyarsing.ParseResults - structured parse results, to provide multiple means of access to the parsed data
-    parsed = None
+# deleteme
+# class ParsedString(str):
+#     """Subclass of str which also stores a pyparsing.ParseResults object containing structured parse results."""
+#     # pyarsing.ParseResults - structured parse results, to provide multiple means of access to the parsed data
+#     parsed = None
 
-    # Function which did the parsing
-    parser = None
+#     # Function which did the parsing
+#     parser = None
 
-    def full_parsed_statement(self):
-        """Used to reconstruct the full parsed statement when a command isn't recognized."""
-        new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
-        new.parsed = self.parsed
-        new.parser = self.parser
-        return new
+#     def full_parsed_statement(self):
+#         """Used to reconstruct the full parsed statement when a command isn't recognized."""
+#         new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
+#         new.parsed = self.parsed
+#         new.parser = self.parser
+#         return new
 
 
 def replace_with_file_contents(fname: str) -> str:
@@ -2010,8 +2011,8 @@ class Cmd(cmd.Cmd):
     def precmd(self, statement):
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
 
-        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
-        :return: ParsedString - a potentially modified version of the input ParsedString statement
+        :param statement: Statement - subclass of str which also contains the parsed input
+        :return: Statement - a potentially modified version of the input Statement object
         """
         return statement
 
@@ -2027,11 +2028,11 @@ class Cmd(cmd.Cmd):
         return raw
 
     # noinspection PyMethodMayBeStatic
-    def postparse(self, parse_result):
-        """Hook that runs immediately after parsing the command-line but before ``parsed()`` returns a ParsedString.
+    def postparse(self, statement):
+        """Hook that runs immediately after parsing the user input.
 
-        :param parse_result: pyparsing.ParseResults - parsing results output by the pyparsing parser
-        :return: pyparsing.ParseResults - potentially modified ParseResults object
+        :param statement: Statement object populated by parsing
+        :return: Statement - potentially modified Statement object
         """
         return parse_result
 
@@ -2048,8 +2049,8 @@ class Cmd(cmd.Cmd):
         - raise EmptyStatement - will silently fail and do nothing
         - raise <AnyOtherException> - will fail and print an error message
 
-        :param statement: - the parsed command-line statement
-        :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement
+        :param statement: - the parsed command-line statement as a Statement object
+        :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement object
         """
         stop = False
         return stop, statement
@@ -2325,10 +2326,9 @@ class Cmd(cmd.Cmd):
 
         If the command provided doesn't exist, then it executes _default() instead.
 
-        :param line: Command - a parsed command from the input stream
+        :param statement: Command - a parsed command from the input stream
         :return: bool - a flag indicating whether the interpretation of commands should stop
         """
-        #statement = self.parser_manager.parsed(line) # deleteme
         funcname = self._func_named(statement.command)
         if not funcname:
             return self.default(statement)
@@ -2342,7 +2342,7 @@ class Cmd(cmd.Cmd):
         except AttributeError:
             return self.default(statement)
 
-        stop = func("{} {}".format(statement.command, statement.args))
+        stop = func(statement)
         return stop
 
     def default(self, statement):

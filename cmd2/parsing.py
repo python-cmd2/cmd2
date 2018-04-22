@@ -7,10 +7,19 @@ import shlex
 
 import cmd2
 
-class Command():
-    """Store the results of a parsed command."""
-    def __init__(self, rawinput):
-        self.raw = rawinput
+class Statement(str):
+    """String subclass with additional attributes to store the results of parsing.
+    
+    The cmd module in the standard library passes commands around as a
+    string. To retain backwards compatibility, cmd2 does the same. However, we
+    need a place to capture the additional output of the command parsing, so we add
+    our own attributes to this subclass.
+
+    The string portion of the class contains the arguments, but not the command, nor
+    the output redirection clauses.
+    """
+    def __init__(self, object):
+        self.raw = str(object)
         self.command = None
         self.multilineCommand = None
         self.args = None
@@ -37,7 +46,7 @@ class CommandParser():
         self.multilineCommands = multilineCommands
 
     def parseString(self, rawinput):
-        result = Command(rawinput)
+        #result = Statement(rawinput)
 
         # strip C-style and C++-style comments
         # shlex will handle the python/shell style comments for us
@@ -67,6 +76,7 @@ class CommandParser():
                 if pos < terminator_pos:
                     terminator_pos = pos
                     terminator = test_terminator
+                    break
             except ValueError:
                 # the terminator is not in the tokens
                 pass
@@ -74,35 +84,37 @@ class CommandParser():
         if terminator:
             terminator_pos = tokens.index(terminator)
             # everything before the first terminator is the command and the args
-            (result.command, result.args) = self._command_and_args(tokens[:terminator_pos])
-            result.terminator = tokens[terminator_pos]
+            (command, args) = self._command_and_args(tokens[:terminator_pos])
+            #terminator = tokens[terminator_pos]
             # we will set the suffix later
             # remove all the tokens before and including the terminator
             tokens = tokens[terminator_pos+1:]
 
         # check for input from file
+        inputFrom = None
         try:
             if tokens[0] == '<':
-                result.inputFrom = ' '.join(tokens[1:])
+                inputFrom = ' '.join(tokens[1:])
                 tokens = []
         except IndexError:
-            # no input from file
             pass
+
 
         # check for output redirect
         try:
             output_pos = tokens.index('>')
-            result.output = '>'
-            result.outputTo = ' '.join(tokens[output_pos+1:])
+            output = '>'
+            outputTo = ' '.join(tokens[output_pos+1:])
             # remove all the tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
-            pass
+            output = None
+            outputTo = None
 
         # check for paste buffer
         try:
             output_pos = tokens.index('>>')
-            result.output = '>>'
+            output = '>>'
             # remove all tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
@@ -113,23 +125,36 @@ class CommandParser():
             # find the first pipe if it exists
             pipe_pos = tokens.index('|')
             # set everything after the first pipe to result.pipeTo
-            result.pipeTo = ' '.join(tokens[pipe_pos+1:])
+            pipeTo = ' '.join(tokens[pipe_pos+1:])
             # remove all the tokens after the pipe
             tokens = tokens[:pipe_pos]
         except ValueError:
             # no pipe in the tokens
-            pass
+            pipeTo = None
         
-        if result.terminator:
+        if terminator:
             # whatever is left is the suffix
-            result.suffix = ' '.join(tokens)
+            suffix = ' '.join(tokens)
         else:
             # no terminator, so whatever is left is the command and the args
-            (result.command, result.args) = self._command_and_args(tokens)
+            suffix = None
+            (command, args) = self._command_and_args(tokens)
 
-        if result.command in self.multilineCommands:
-            result.multilineCommand = result.command
+        if command in self.multilineCommands:
+            multilineCommand = command
+        else:
+            multilineCommand = None
 
+        result = Statement(args)
+        result.command = command
+        result.args = args
+        result.terminator = terminator
+        result.inputFrom = inputFrom
+        result.output = output
+        result.outputTo = outputTo
+        result.pipeTo = pipeTo
+        result.suffix = suffix
+        result.multilineCommand = multilineCommand
         return result
     
     def _command_and_args(self, tokens):

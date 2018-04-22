@@ -5,6 +5,8 @@ Unit/functional testing for ply based parsing in cmd2
 Todo List
 - multiline
 - case sensitive flag
+- checkout Cmd2.parseline() function which parses and expands shortcuts and such
+  this code should probably be included in CommandParser
 
 Notes:
 
