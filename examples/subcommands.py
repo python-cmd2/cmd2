@@ -9,7 +9,7 @@ and provides separate contextual help.
 import argparse
 
 import cmd2
-from cmd2 import with_argparser, with_argparser_and_unknown_args
+from cmd2 import with_argparser
 
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 

@@ -1841,6 +1841,7 @@ class Cmd(cmd.Cmd):
 
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
                               argparser: argparse.ArgumentParser) -> List[str]:
+        """Default completion function for argparse commands."""
         completer = AutoCompleter(argparser)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
