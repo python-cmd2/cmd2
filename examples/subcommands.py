@@ -9,7 +9,7 @@ and provides separate contextual help.
 import argparse
 
 import cmd2
-from cmd2 import with_argparser
+from cmd2 import with_argparser, with_argparser_and_unknown_args
 
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
@@ -34,12 +34,6 @@ class SubcommandsExample(cmd2.Cmd):
     def base_sport(self, args):
         """sport subcommand of base command"""
         self.poutput('Sport is {}'.format(args.sport))
-
-    # noinspection PyUnusedLocal
-    def complete_base_sport(self, text, line, begidx, endidx):
-        """ Adds tab completion to base sport subcommand """
-        index_dict = {1: sport_item_strs}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
@@ -80,9 +74,6 @@ class SubcommandsExample(cmd2.Cmd):
         else:
             # No subcommand was provided, so call help
             self.do_help('base')
-
-    # Enable tab completion of base to make sure the subcommands' completers get called.
-    # complete_base = cmd2.Cmd.cmd_with_subs_completer
 
 
 if __name__ == '__main__':
