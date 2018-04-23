@@ -2070,7 +2070,7 @@ class Cmd(cmd.Cmd):
         :param line: str - line of text read from input
         :return: bool - True if cmdloop() should exit, False otherwise
         """
-        stop = 0
+        stop = False
         try:
             statement = self._complete_statement(line)
             (stop, statement) = self.postparsing_precmd(statement)
