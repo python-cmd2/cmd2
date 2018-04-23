@@ -2348,10 +2348,10 @@ class Cmd(cmd.Cmd):
     def default(self, statement):
         """Executed when the command given isn't a recognized command implemented by a do_* method.
 
-        :param statement: ParsedString - subclass of string including the pyparsing ParseResults
+        :param statement: Statement object with parsed input
         :return:
         """
-        arg = statement.full_parsed_statement()
+        arg = statement.raw
         if self.default_to_shell:
             result = os.system(arg)
             # If os.system() succeeded, then don't print warning about unknown command
