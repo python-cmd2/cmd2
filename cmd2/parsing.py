@@ -47,9 +47,7 @@ class CommandParser():
         self.multilineCommands = multilineCommands
 
     def parseString(self, rawinput):
-        #result = Statement(rawinput)
-
-        # strip C-style and C++-style comments
+        # strip C-style comments
         # shlex will handle the python/shell style comments for us
         def replacer(match):
                 s = match.group(0)

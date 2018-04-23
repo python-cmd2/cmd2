@@ -7,6 +7,8 @@ Todo List
 - case sensitive flag
 - checkout Cmd2.parseline() function which parses and expands shortcuts and such
   this code should probably be included in CommandParser
+- get rid of legalChars
+
 
 Notes:
 
