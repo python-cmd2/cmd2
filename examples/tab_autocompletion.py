@@ -120,15 +120,6 @@ class TabCompleteExample(cmd2.Cmd):
         if not args.type:
             self.do_help('suggest')
 
-    def complete_suggest(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """ Adds tab completion to media"""
-        completer = argparse_completer.AutoCompleter(TabCompleteExample.suggest_parser, 1)
-
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        results = completer.complete_command(tokens, text, line, begidx, endidx)
-
-        return results
-
     # If you prefer the original argparse help output but would like narg ranges, it's possible
     # to enable narg ranges without the help changes using this method
 
@@ -148,15 +139,6 @@ class TabCompleteExample(cmd2.Cmd):
         if not args.type:
             self.do_help('orig_suggest')
 
-    def complete_hybrid_suggest(self, text, line, begidx, endidx):
-        """ Adds tab completion to media"""
-        completer = argparse_completer.AutoCompleter(TabCompleteExample.suggest_parser_hybrid)
-
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        results = completer.complete_command(tokens, text, line, begidx, endidx)
-
-        return results
-
     # This variant demonstrates the AutoCompleter working with the orginial argparse.
     # Base argparse is unable to specify narg ranges. Autocompleter will keep expecting additional arguments
     # for the -d/--duration flag until you specify a new flaw or end the list it with '--'
@@ -175,14 +157,93 @@ class TabCompleteExample(cmd2.Cmd):
         if not args.type:
             self.do_help('orig_suggest')
 
-    def complete_orig_suggest(self, text, line, begidx, endidx) -> List[str]:
-        """ Adds tab completion to media"""
-        completer = argparse_completer.AutoCompleter(TabCompleteExample.suggest_parser_orig)
+    ###################################################################################
+    # The media command demonstrates a completer with multiple layers of subcommands
+    #   - This example demonstrates how to tag a completion attribute on each action, enabling argument
+    #       completion without implementing a complete_COMMAND function
 
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        results = completer.complete_command(tokens, text, line, begidx, endidx)
+    def _do_vid_media_movies(self, args) -> None:
+        if not args.command:
+            self.do_help('media movies')
+        elif args.command == 'list':
+            for movie_id in TabCompleteExample.MOVIE_DATABASE:
+                movie = TabCompleteExample.MOVIE_DATABASE[movie_id]
+                print('{}\n-----------------------------\n{}   ID: {}\nDirector: {}\nCast:\n    {}\n\n'
+                      .format(movie['title'], movie['rating'], movie_id,
+                              ', '.join(movie['director']),
+                              '\n    '.join(movie['actor'])))
 
-        return results
+    def _do_vid_media_shows(self, args) -> None:
+        if not args.command:
+            self.do_help('media shows')
+
+        elif args.command == 'list':
+            for show_id in TabCompleteExample.SHOW_DATABASE:
+                show = TabCompleteExample.SHOW_DATABASE[show_id]
+                print('{}\n-----------------------------\n{}   ID: {}'
+                      .format(show['title'], show['rating'], show_id))
+                for season in show['seasons']:
+                    ep_list = show['seasons'][season]
+                    print('  Season {}:\n    {}'
+                          .format(season,
+                                  '\n    '.join(ep_list)))
+                print()
+
+    video_parser = argparse_completer.ACArgumentParser(prog='media')
+
+    video_types_subparsers = video_parser.add_subparsers(title='Media Types', dest='type')
+
+    vid_movies_parser = video_types_subparsers.add_parser('movies')
+    vid_movies_parser.set_defaults(func=_do_vid_media_movies)
+
+    vid_movies_commands_subparsers = vid_movies_parser.add_subparsers(title='Commands', dest='command')
+
+    vid_movies_list_parser = vid_movies_commands_subparsers.add_parser('list')
+
+    vid_movies_list_parser.add_argument('-t', '--title', help='Title Filter')
+    vid_movies_list_parser.add_argument('-r', '--rating', help='Rating Filter', nargs='+',
+                                        choices=ratings_types)
+    # save a reference to the action object
+    director_action = vid_movies_list_parser.add_argument('-d', '--director', help='Director Filter')
+    actor_action = vid_movies_list_parser.add_argument('-a', '--actor', help='Actor Filter', action='append')
+
+    # tag the action objects with completion providers. This can be a collection or a callable
+    setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
+    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, query_actors)
+
+    vid_movies_add_parser = vid_movies_commands_subparsers.add_parser('add')
+    vid_movies_add_parser.add_argument('title', help='Movie Title')
+    vid_movies_add_parser.add_argument('rating', help='Movie Rating', choices=ratings_types)
+
+    # save a reference to the action object
+    director_action = vid_movies_add_parser.add_argument('-d', '--director', help='Director', nargs=(1, 2),
+                                                         required=True)
+    actor_action = vid_movies_add_parser.add_argument('actor', help='Actors', nargs='*')
+
+    # tag the action objects with completion providers. This can be a collection or a callable
+    setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
+    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, query_actors)
+
+    vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
+
+    vid_shows_parser = video_types_subparsers.add_parser('shows')
+    vid_shows_parser.set_defaults(func=_do_vid_media_shows)
+
+    vid_shows_commands_subparsers = vid_shows_parser.add_subparsers(title='Commands', dest='command')
+
+    vid_shows_list_parser = vid_shows_commands_subparsers.add_parser('list')
+
+    @with_category(CAT_AUTOCOMPLETE)
+    @with_argparser(video_parser)
+    def do_video(self, args):
+        """Video management command demonstrates multiple layers of subcommands being handled by AutoCompleter"""
+        func = getattr(args, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, args)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help('video')
 
     ###################################################################################
     # The media command demonstrates a completer with multiple layers of subcommands
@@ -274,93 +335,6 @@ class TabCompleteExample(cmd2.Cmd):
         results = completer.complete_command(tokens, text, line, begidx, endidx)
 
         return results
-
-    ###################################################################################
-    # The media command demonstrates a completer with multiple layers of subcommands
-    #   - This example demonstrates how to tag a completion attribute on each action, enabling argument
-    #       completion without implementing a complete_COMMAND function
-
-    def _do_vid_media_movies(self, args) -> None:
-        if not args.command:
-            self.do_help('media movies')
-        elif args.command == 'list':
-            for movie_id in TabCompleteExample.MOVIE_DATABASE:
-                movie = TabCompleteExample.MOVIE_DATABASE[movie_id]
-                print('{}\n-----------------------------\n{}   ID: {}\nDirector: {}\nCast:\n    {}\n\n'
-                      .format(movie['title'], movie['rating'], movie_id,
-                              ', '.join(movie['director']),
-                              '\n    '.join(movie['actor'])))
-
-    def _do_vid_media_shows(self, args) -> None:
-        if not args.command:
-            self.do_help('media shows')
-
-        elif args.command == 'list':
-            for show_id in TabCompleteExample.SHOW_DATABASE:
-                show = TabCompleteExample.SHOW_DATABASE[show_id]
-                print('{}\n-----------------------------\n{}   ID: {}'
-                      .format(show['title'], show['rating'], show_id))
-                for season in show['seasons']:
-                    ep_list = show['seasons'][season]
-                    print('  Season {}:\n    {}'
-                          .format(season,
-                                  '\n    '.join(ep_list)))
-                print()
-
-    video_parser = argparse_completer.ACArgumentParser(prog='media')
-
-    video_types_subparsers = video_parser.add_subparsers(title='Media Types', dest='type')
-
-    vid_movies_parser = video_types_subparsers.add_parser('movies')
-    vid_movies_parser.set_defaults(func=_do_vid_media_movies)
-
-    vid_movies_commands_subparsers = vid_movies_parser.add_subparsers(title='Commands', dest='command')
-
-    vid_movies_list_parser = vid_movies_commands_subparsers.add_parser('list')
-
-    vid_movies_list_parser.add_argument('-t', '--title', help='Title Filter')
-    vid_movies_list_parser.add_argument('-r', '--rating', help='Rating Filter', nargs='+',
-                                        choices=ratings_types)
-    # save a reference to the action object
-    director_action = vid_movies_list_parser.add_argument('-d', '--director', help='Director Filter')
-    actor_action = vid_movies_list_parser.add_argument('-a', '--actor', help='Actor Filter', action='append')
-
-    # tag the action objects with completion providers. This can be a collection or a callable
-    setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
-    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, query_actors)
-
-    vid_movies_add_parser = vid_movies_commands_subparsers.add_parser('add')
-    vid_movies_add_parser.add_argument('title', help='Movie Title')
-    vid_movies_add_parser.add_argument('rating', help='Movie Rating', choices=ratings_types)
-
-    # save a reference to the action object
-    director_action = vid_movies_add_parser.add_argument('-d', '--director', help='Director', nargs=(1, 2), required=True)
-    actor_action = vid_movies_add_parser.add_argument('actor', help='Actors', nargs='*')
-
-    # tag the action objects with completion providers. This can be a collection or a callable
-    setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
-    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, query_actors)
-
-    vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
-
-    vid_shows_parser = video_types_subparsers.add_parser('shows')
-    vid_shows_parser.set_defaults(func=_do_vid_media_shows)
-
-    vid_shows_commands_subparsers = vid_shows_parser.add_subparsers(title='Commands', dest='command')
-
-    vid_shows_list_parser = vid_shows_commands_subparsers.add_parser('list')
-
-    @with_category(CAT_AUTOCOMPLETE)
-    @with_argparser(video_parser)
-    def do_video(self, args):
-        """Video management command demonstrates multiple layers of subcommands being handled by AutoCompleter"""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # No subcommand was provided, so call help
-            self.do_help('video')
 
     ###################################################################################
     # The library command demonstrates a completer with multiple layers of subcommands

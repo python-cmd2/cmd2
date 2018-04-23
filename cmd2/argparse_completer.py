@@ -415,7 +415,7 @@ class AutoCompleter(object):
         return completion_results
 
     def complete_command_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Supports the completion of sub-commands for commands thhrough the cmd2 help command."""
+        """Supports the completion of sub-commands for commands through the cmd2 help command."""
         for idx, token in enumerate(tokens):
             if idx >= self._token_start_index:
                 if self._positional_completers:

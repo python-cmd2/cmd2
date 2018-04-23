@@ -267,8 +267,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
 
         cmd_wrapper.__doc__ = argparser.format_help()
 
-        # Mark this function as having an argparse ArgumentParser (used by do_help)
-        cmd_wrapper.__dict__['has_parser'] = True
+        # Mark this function as having an argparse ArgumentParser
         setattr(cmd_wrapper, 'argparser', argparser)
 
         return cmd_wrapper
@@ -305,8 +304,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
 
         cmd_wrapper.__doc__ = argparser.format_help()
 
-        # Mark this function as having an argparse ArgumentParser (used by do_help)
-        cmd_wrapper.__dict__['has_parser'] = True
+        # Mark this function as having an argparse ArgumentParser
         setattr(cmd_wrapper, 'argparser', argparser)
 
         return cmd_wrapper
@@ -1724,14 +1722,12 @@ class Cmd(cmd.Cmd):
                         compfunc = getattr(self, 'complete_' + command)
                     except AttributeError:
                         # There's no completer function, next see if the command uses argparser
-                        cmd_func = getattr(self, 'do_' + command)
-                        if hasattr(cmd_func, 'has_parser') and hasattr(cmd_func, 'argparser') and \
-                                getattr(cmd_func, 'has_parser'):
-                            # Command uses argparser, switch to the default argparse completer
+                        try:
+                            cmd_func = getattr(self, 'do_' + command)
                             argparser = getattr(cmd_func, 'argparser')
-                            compfunc = functools.partial(self._autocomplete_default,
-                                                         argparser=argparser)
-                        else:
+                            # Command uses argparser, switch to the default argparse completer
+                            compfunc = functools.partial(self._autocomplete_default, argparser=argparser)
+                        except AttributeError:
                             compfunc = self.completedefault
 
                 # A valid command was not entered
@@ -1904,13 +1900,14 @@ class Cmd(cmd.Cmd):
             matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
         # check if the command uses argparser
-        elif index >= subcmd_index and hasattr(self, 'do_' + tokens[cmd_index]) and\
-                hasattr(getattr(self, 'do_' + tokens[cmd_index]), 'has_parser'):
-            command = tokens[cmd_index]
-            cmd_func = getattr(self, 'do_' + command)
-            parser = getattr(cmd_func, 'argparser')
-            completer = AutoCompleter(parser)
-            matches = completer.complete_command_help(tokens[1:], text, line, begidx, endidx)
+        elif index >= subcmd_index:
+            try:
+                cmd_func = getattr(self, 'do_' + tokens[cmd_index])
+                parser = getattr(cmd_func, 'argparser')
+                completer = AutoCompleter(parser)
+                matches = completer.complete_command_help(tokens[1:], text, line, begidx, endidx)
+            except AttributeError:
+                pass
 
         return matches
 
@@ -2561,7 +2558,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             if funcname:
                 # Check to see if this function was decorated with an argparse ArgumentParser
                 func = getattr(self, funcname)
-                if func.__dict__.get('has_parser', False):
+                if hasattr(func, 'argparser'):
                     # Function has an argparser, so get help based on all the arguments in case there are sub-commands
                     new_arglist = arglist[1:]
                     new_arglist.append('-h')
