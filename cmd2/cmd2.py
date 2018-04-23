@@ -586,7 +586,7 @@ class AddSubmenu(object):
 
     def __call__(self, cmd_obj):
         """Creates a subclass of Cmd wherein the given submenu can be accessed via the given command"""
-        def enter_submenu(parent_cmd, line):
+        def enter_submenu(parent_cmd, statement):
             """
             This function will be bound to do_<submenu> and will change the scope of the CLI to that of the
             submenu.
@@ -605,12 +605,13 @@ class AddSubmenu(object):
                 # copy over any shared attributes
                 self._copy_in_shared_attrs(parent_cmd)
 
-                if line.parsed.args:
+                if statement.args:
                     # Remove the menu argument and execute the command in the submenu
-                    line = submenu.parser_manager.parsed(line.parsed.args)
-                    submenu.precmd(line)
-                    ret = submenu.onecmd(line)
-                    submenu.postcmd(ret, line)
+                    submenu.onecmd_plus_hooks(statement.args)
+                    # statement = parent_cmd.command_parser.parseLine(statement.args)
+                    # submenu.precmd(statement)
+                    # ret = submenu.onecmd(statement)
+                    # submenu.postcmd(ret, statement)
                 else:
                     if self.reformat_prompt is not None:
                         prompt = submenu.prompt

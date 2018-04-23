@@ -18,10 +18,14 @@ Notes:
 
 Functions in cmd2.py to be modified:
 - _complete_statement()
+- parsed() - expands aliases and shortcuts
 
 Changelog Items:
 - if self.default_to_shell is true, then redirection and piping is now properly passed to the shell, previously it was truncated
 - object passed to do_* methods has changed. It no longer is the pyparsing object, it's a new Statement object. A side effect of this is that we now have a clean interface between the parsing logic and the rest of cmd2. If we need to change the parser in the future, we can do it without breaking anything.
+
+Bugs fixed:
+- submenus now all all hooks, it used to just call precmd and postcmd
 """
 
 import cmd2
