@@ -22,7 +22,8 @@ class Statement(str):
         self.raw = str(object)
         self.command = None
         self.multilineCommand = None
-        self.args = None
+        # has to be an empty string for compatibility with standard library cmd
+        self.args = ''
         self.terminator = None
         self.suffix = None
         self.pipeTo = None
@@ -58,7 +59,8 @@ class CommandParser():
                 else:
                     return s
         pattern = re.compile(
-            r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+            #r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+            r'/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE
         )
         rawinput = re.sub(pattern, replacer, rawinput)
@@ -146,6 +148,7 @@ class CommandParser():
             multilineCommand = None
 
         result = Statement(args)
+        result.raw = rawinput
         result.command = command
         result.args = args
         result.terminator = terminator
@@ -162,7 +165,7 @@ class CommandParser():
         and the args as a string.
         """
         command = None
-        args = None
+        args = ''
 
         if tokens:
             command = tokens[0]

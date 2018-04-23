@@ -14,7 +14,6 @@ Notes:
   are with pyparsing.
 - valid comment styles:
     - C-style -> /* comment */
-    - C++-style -> // comment
     - Python/Shell style -> # comment
 
 Functions in cmd2.py to be modified:
@@ -43,8 +42,8 @@ def test_parse_empty_string(parser):
     assert not results.command
 
 @pytest.mark.parametrize('tokens,command,args', [
-    ( [], None, None),
-    ( ['command'], 'command', None ),
+    ( [], None, ''),
+    ( ['command'], 'command', '' ),
     ( ['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')
 ])
 def test_command_and_args(parser, tokens, command, args):
@@ -111,12 +110,6 @@ def test_parse_what_if_quoted_strings_seem_to_start_comments(parser):
     results = parser.parseString('what if "quoted strings /* seem to " start comments?')
     assert results.command == 'what'
     assert results.args == 'if "quoted strings /* seem to " start comments?'
-    assert not results.pipeTo
-
-def test_cpp_comment(parser):
-    results = parser.parseString('hi // this is | all a comment */')
-    assert results.command == 'hi'
-    assert not results.args
     assert not results.pipeTo
 
 def test_simple_piped(parser):
