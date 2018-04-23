@@ -190,7 +190,8 @@ class AutoCompleter(object):
                  token_start_index: int = 1,
                  arg_choices: Dict[str, Union[List, Tuple, Callable]] = None,
                  subcmd_args_lookup: dict = None,
-                 tab_for_arg_help: bool = True):
+                 tab_for_arg_help: bool = True,
+                 cmd2_app=None):
         """
         Create an AutoCompleter
 
@@ -199,6 +200,8 @@ class AutoCompleter(object):
         :param arg_choices: dictionary mapping from argparse argument 'dest' name to list of choices
         :param subcmd_args_lookup: mapping a sub-command group name to a tuple to fill the child\
         AutoCompleter's arg_choices and subcmd_args_lookup parameters
+        :param tab_for_arg_help: Enable of disable argument help when there's no completion result
+        :param cmd2_app: reference to the Cmd2 application. Enables argparse argument completion with class methods
         """
         if not subcmd_args_lookup:
             subcmd_args_lookup = {}
@@ -209,6 +212,7 @@ class AutoCompleter(object):
         self._arg_choices = arg_choices.copy() if arg_choices is not None else {}
         self._token_start_index = token_start_index
         self._tab_for_arg_help = tab_for_arg_help
+        self._cmd2_app = cmd2_app
 
         self._flags = []  # all flags in this command
         self._flags_without_args = []  # all flags that don't take arguments
@@ -252,7 +256,8 @@ class AutoCompleter(object):
                         subcmd_start = token_start_index + len(self._positional_actions)
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd], subcmd_start,
                                                                arg_choices=subcmd_args,
-                                                               subcmd_args_lookup=subcmd_lookup)
+                                                               subcmd_args_lookup=subcmd_lookup,
+                                                               cmd2_app=cmd2_app)
                         sub_commands.append(subcmd)
                     self._positional_completers[action.dest] = sub_completers
                     self._arg_choices[action.dest] = sub_commands
@@ -492,7 +497,16 @@ class AutoCompleter(object):
             args = self._arg_choices[action.dest]
 
             if callable(args):
-                args = args()
+                try:
+                    if self._cmd2_app is not None:
+                        try:
+                            args = args(self._cmd2_app)
+                        except TypeError:
+                            args = args()
+                    else:
+                        args = args()
+                except TypeError:
+                    return []
 
             try:
                 iter(args)

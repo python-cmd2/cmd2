@@ -95,6 +95,10 @@ class TabCompleteExample(cmd2.Cmd):
                                  },
                      }
 
+    def instance_query_actors(self) -> List[str]:
+        """Simulating a function that queries and returns a completion values"""
+        return actors
+
     # This demonstrates a number of customizations of the AutoCompleter version of ArgumentParser
     #  - The help output will separately group required vs optional flags
     #  - The help output for arguments with multiple flags or with append=True is more concise
@@ -222,7 +226,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     # tag the action objects with completion providers. This can be a collection or a callable
     setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
-    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, query_actors)
+    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, instance_query_actors)
 
     vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
 

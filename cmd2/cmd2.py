@@ -1838,7 +1838,7 @@ class Cmd(cmd.Cmd):
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
                               argparser: argparse.ArgumentParser) -> List[str]:
         """Default completion function for argparse commands."""
-        completer = AutoCompleter(argparser)
+        completer = AutoCompleter(argparser, cmd2_app=self)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)
@@ -2070,7 +2070,7 @@ class Cmd(cmd.Cmd):
         :param line: str - line of text read from input
         :return: bool - True if cmdloop() should exit, False otherwise
         """
-        stop = 0
+        stop = False
         try:
             statement = self._complete_statement(line)
             (stop, statement) = self.postparsing_precmd(statement)
