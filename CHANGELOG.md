@@ -10,6 +10,8 @@
         * All ``cmd2`` code should be ported to use the new ``argparse``-based decorators
         * See the [Argument Processing](http://cmd2.readthedocs.io/en/latest/argument_processing.html) section of the documentation for more information on these decorators
         * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
+    * Deleted ``cmd_with_subs_completer``, ``get_subcommands``, and ``get_subcommand_completer``
+        * Replaced by default AutoCompleter implementation for all commands using argparse
 * Python 2 no longer supported
     * ``cmd2`` now supports Python 3.4+
 

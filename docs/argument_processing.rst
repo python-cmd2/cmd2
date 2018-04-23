@@ -346,12 +346,10 @@ Sub-commands
 Sub-commands are supported for commands using either the ``@with_argparser`` or
 ``@with_argparser_and_unknown_args`` decorator.  The syntax for supporting them is based on argparse sub-parsers.
 
-Also, a convenience function called ``cmd_with_subs_completer`` is available to easily add tab completion to functions
-that implement subcommands. By setting this as the completer of the base command function, the correct completer for
-the chosen subcommand will be called.
+You may add multiple layers of sub-commands for your command. Cmd2 will automatically traverse and tab-complete
+sub-commands for all commands using argparse.
 
-See the subcommands_ example to learn more about how to use sub-commands in your ``cmd2`` application.
-This example also demonstrates usage of ``cmd_with_subs_completer``. In addition, the docstring for
-``cmd_with_subs_completer`` offers more details.
+See the subcommands_ and tab_autocompletion_ example to learn more about how to use sub-commands in your ``cmd2`` application.
 
 .. _subcommands: https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py
+.. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
