@@ -200,6 +200,8 @@ class AutoCompleter(object):
         :param arg_choices: dictionary mapping from argparse argument 'dest' name to list of choices
         :param subcmd_args_lookup: mapping a sub-command group name to a tuple to fill the child\
         AutoCompleter's arg_choices and subcmd_args_lookup parameters
+        :param tab_for_arg_help: Enable of disable argument help when there's no completion result
+        :param cmd2_app: reference to the Cmd2 application. Enables argparse argument completion with class methods
         """
         if not subcmd_args_lookup:
             subcmd_args_lookup = {}
