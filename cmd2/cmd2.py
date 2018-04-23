@@ -608,10 +608,6 @@ class AddSubmenu(object):
                 if statement.args:
                     # Remove the menu argument and execute the command in the submenu
                     submenu.onecmd_plus_hooks(statement.args)
-                    # statement = parent_cmd.command_parser.parseLine(statement.args)
-                    # submenu.precmd(statement)
-                    # ret = submenu.onecmd(statement)
-                    # submenu.postcmd(ret, statement)
                 else:
                     if self.reformat_prompt is not None:
                         prompt = submenu.prompt
@@ -2035,7 +2031,7 @@ class Cmd(cmd.Cmd):
         :param statement: Statement object populated by parsing
         :return: Statement - potentially modified Statement object
         """
-        return parse_result
+        return statement
 
     # noinspection PyMethodMayBeStatic
     def postparsing_precmd(self, statement):

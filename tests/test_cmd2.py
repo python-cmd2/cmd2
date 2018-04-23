@@ -961,7 +961,7 @@ def test_default_to_shell_good(capsys):
         line = 'dir'
     else:
         line = 'ls'
-    statement = app.parser_manager.parsed(line)
+    statement = app.command_parser.parseString(line)
     retval = app.default(statement)
     assert not retval
     out, err = capsys.readouterr()
@@ -971,7 +971,7 @@ def test_default_to_shell_failure(capsys):
     app = cmd2.Cmd()
     app.default_to_shell = True
     line = 'ls does_not_exist.xyz'
-    statement = app.parser_manager.parsed(line)
+    statement = app.command_parser.parseString(line)
     retval = app.default(statement)
     assert not retval
     out, err = capsys.readouterr()
