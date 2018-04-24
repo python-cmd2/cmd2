@@ -607,7 +607,7 @@ def test_input_redirection(base_app, request):
 
     # NOTE: File 'redirect.txt" contains 1 word "history"
 
-    # Verify that redirecting input ffom a file works
+    # Verify that redirecting input from a file works
     out = run_cmd(base_app, 'help < {}'.format(filename))
     assert out == normalize(HELP_HISTORY)
 

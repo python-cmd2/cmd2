@@ -115,14 +115,16 @@ class CommandParser():
         # check for input from file
         inputFrom = None
         try:
-            if tokens[0] == '<':
-                inputFrom = ' '.join(tokens[1:])
-                tokens = []
-        except IndexError:
+            input_pos = tokens.index('<')
+            inputFrom = ' '.join(tokens[input_pos+1:])
+            tokens = tokens[:input_pos]
+        except ValueError:
             pass
 
 
         # check for output redirect
+        output = None
+        outputTo = None
         try:
             output_pos = tokens.index('>')
             output = '>'
@@ -130,13 +132,12 @@ class CommandParser():
             # remove all the tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
-            output = None
-            outputTo = None
+            pass
 
-        # check for paste buffer
         try:
             output_pos = tokens.index('>>')
             output = '>>'
+            outputTo = ' '.join(tokens[output_pos+1:])
             # remove all tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:

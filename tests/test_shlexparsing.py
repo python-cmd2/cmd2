@@ -8,7 +8,8 @@ Todo List
 - checkout Cmd2.parseline() function which parses and expands shortcuts and such
   this code should probably be included in CommandParser
 - get rid of legalChars
-
+- move remaining tests in test_parsing.py to test_cmd2.py
+- rename test_shlexparsing.py to test_parsing.py
 
 Notes:
 
@@ -160,9 +161,24 @@ def test_output_redirect_with_dash_in_path(parser):
     assert results.output == '>'
     assert results.outputTo == 'python-cmd2/afile.txt'
 
+def test_output_redirect_append(parser):
+    line = 'output appended to >> /tmp/afile.txt'
+    results = parser.parseString(line)
+    assert results.command == 'output'
+    assert results.args == 'appended to'
+    assert results.output == '>>'
+    assert results.outputTo == '/tmp/afile.txt'
+
 def test_parse_input_redirect(parser):
     line = '< afile.txt'
     results = parser.parseString(line)
+    assert results.inputFrom == 'afile.txt'
+
+def test_parse_input_redirect_after_command(parser):
+    line = 'help < afile.txt'
+    results = parser.parseString(line)
+    assert results.command == 'help'
+    assert results.args == ''
     assert results.inputFrom == 'afile.txt'
 
 def test_parse_input_redirect_with_dash_in_path(parser):
