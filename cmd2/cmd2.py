@@ -2176,7 +2176,13 @@ class Cmd(cmd.Cmd):
             return stop
 
     def _complete_statement(self, line):
-        """Keep accepting lines of input until the command is complete."""
+        """Keep accepting lines of input until the command is complete.
+        
+        There is some pretty hacky code here to handle some quirks of
+        self.pseudo_raw_input(). It returns a literal 'eof' if the input
+        pipe runs out. We can't refactor it because we need to retain
+        backwards compatibility with the standard library version of cmd.
+        """
         #if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
         #    raise EmptyStatement()
         # statement = self.parser_manager.parsed(line) # deleteme
@@ -2192,7 +2198,7 @@ class Cmd(cmd.Cmd):
                         # terminator
                         newline = '\n'
                         self.poutput(newline)
-                    line = '%s\n%s' % (statement.raw, newline)
+                    line = '{}\n{}\n'.format(statement.raw, newline)
                 except KeyboardInterrupt:
                     self.poutput('^C')
                     statement = self.command_parser.parseString('')
@@ -2206,7 +2212,7 @@ class Cmd(cmd.Cmd):
                     # terminator
                     newline = '\n'
                     self.poutput(newline)
-                line = '%s\n%s' % (statement.raw, newline)
+                line = '{}\n{}\n'.format(statement.raw, newline)
             statement = self.command_parser.parseString(line)
 
         if not statement.command:
