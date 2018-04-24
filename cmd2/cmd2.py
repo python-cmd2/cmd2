@@ -2181,7 +2181,7 @@ class Cmd(cmd.Cmd):
         #    raise EmptyStatement()
         # statement = self.parser_manager.parsed(line) # deleteme
         statement = self.command_parser.parseString(line)
-        while statement.multilineCommand and (statement.terminator == ''):
+        while statement.multilineCommand and not statement.terminator:
             line = '%s\n%s' % (statement.raw,
                                     self.pseudo_raw_input(self.continuation_prompt))
             statement = self.command_parser.parseString(line)

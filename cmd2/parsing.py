@@ -7,6 +7,8 @@ import shlex
 
 import cmd2
 
+BLANK_LINE = '\n\n'
+
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
     
@@ -85,13 +87,19 @@ class CommandParser():
                 line = line.replace(shortcut, expansion, 1)
                 break
 
+        # handle the special case/hardcoded terminator of a blank line
+        # we have to do this before we shlex on whitespace because it
+        # destroys all unquoted whitespace in the input
+        terminator = None
+        if line[-2:] == BLANK_LINE:
+            terminator = BLANK_LINE
+
         s = shlex.shlex(line, posix=False)
         s.whitespace_split = True
         tokens = self.split_on_punctuation(list(s))
         
         # of the valid terminators, find the first one to occur in the input
         terminator_pos = len(tokens)+1
-        terminator = None
         for test_terminator in self.terminators:
             try:
                 pos = tokens.index(test_terminator)
@@ -104,7 +112,10 @@ class CommandParser():
                 pass
 
         if terminator:
-            terminator_pos = tokens.index(terminator)
+            if terminator == BLANK_LINE:
+                terminator_pos = len(tokens)+1
+            else:
+                terminator_pos = tokens.index(terminator)
             # everything before the first terminator is the command and the args
             (command, args) = self._command_and_args(tokens[:terminator_pos])
             #terminator = tokens[terminator_pos]

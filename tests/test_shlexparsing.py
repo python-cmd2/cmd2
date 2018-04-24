@@ -232,9 +232,10 @@ def test_parse_multiline_command_ignores_redirectors_within_it(parser):
 #     """A terminator within a comment will be ignored and won't terminate a multiline command.
 #     Un-closed comments effectively comment out everything after the start."""
 #     line = 'multiline command /* with comment in progress;'
-#     results = parser.parseString(line)
-#     assert results.multilineCommand == 'multiline'
-#     assert not 'args' in results
+#     statement = parser.parseString(line)
+#     assert statement.multilineCommand == 'multiline'
+#     assert statement.args == 'command'
+#     assert not statement.terminator
 
 def test_parse_multiline_with_complete_comment(parser):
     line = 'multiline command /* with comment complete */ is done;'
@@ -243,23 +244,23 @@ def test_parse_multiline_with_complete_comment(parser):
     assert results.args == 'command is done'
     assert results.terminator == ';'
 
-# def test_parse_multiline_termninated_by_empty_line(parser):
-#     line = 'multiline command ends\n\n'
-#     results = parser.parseString(line)
-#     assert results.multilineCommand == 'multiline'
-#     assert results.args == 'command ends'
-#     assert len(results.terminator) == 2
-#     assert results.terminator[0] == '\n'
-#     assert results.terminator[1] == '\n'
+def test_parse_multiline_termninated_by_empty_line(parser):
+    line = 'multiline command ends\n\n'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'command ends'
+    assert len(results.terminator) == 2
+    assert results.terminator[0] == '\n'
+    assert results.terminator[1] == '\n'
 
-# def test_parse_multiline_ignores_terminators_in_comments(parser):
-#     line = 'multiline command "with term; ends" now\n\n'
-#     results = parser.parseString(line)
-#     assert results.multilineCommand == 'multiline'
-#     assert results.args == 'command "with term; ends" now'
-#     assert len(results.terminator) == 2
-#     assert results.terminator[0] == '\n'
-#     assert results.terminator[1] == '\n'
+def test_parse_multiline_ignores_terminators_in_comments(parser):
+    line = 'multiline command "with term; ends" now\n\n'
+    results = parser.parseString(line)
+    assert results.multilineCommand == 'multiline'
+    assert results.args == 'command "with term; ends" now'
+    assert len(results.terminator) == 2
+    assert results.terminator[0] == '\n'
+    assert results.terminator[1] == '\n'
 
 def test_parse_command_with_unicode_args(parser):
     line = 'drink café'

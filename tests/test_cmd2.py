@@ -1358,7 +1358,7 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
     line = '{} {}'.format(command, args)
     statement = multiline_app._complete_statement(line)
     assert statement == args
-    assert statement.parsed.command == command
+    assert statement.command == command
 
 
 def test_clipboard_failure(capsys):
