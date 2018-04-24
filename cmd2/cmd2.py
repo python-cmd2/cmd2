@@ -2182,9 +2182,33 @@ class Cmd(cmd.Cmd):
         # statement = self.parser_manager.parsed(line) # deleteme
         statement = self.command_parser.parseString(line)
         while statement.multilineCommand and not statement.terminator:
-            line = '%s\n%s' % (statement.raw,
-                                    self.pseudo_raw_input(self.continuation_prompt))
+            if not self.quit_on_sigint:
+                try:
+                    newline = self.pseudo_raw_input(self.continuation_prompt)
+                    if newline == 'eof':
+                        # they entered either a blank line, or we hit an EOF
+                        # for some other reason. Turn the literal 'eof'
+                        # into a blank line, which serves as a command
+                        # terminator
+                        newline = '\n'
+                        self.poutput(newline)
+                    line = '%s\n%s' % (statement.raw, newline)
+                except KeyboardInterrupt:
+                    self.poutput('^C')
+                    statement = self.command_parser.parseString('')
+                    break
+            else:
+                newline = self.pseudo_raw_input(self.continuation_prompt)
+                if newline == 'eof':
+                    # they entered either a blank line, or we hit an EOF
+                    # for some other reason. Turn the literal 'eof'
+                    # into a blank line, which serves as a command
+                    # terminator
+                    newline = '\n'
+                    self.poutput(newline)
+                line = '%s\n%s' % (statement.raw, newline)
             statement = self.command_parser.parseString(line)
+
         if not statement.command:
             raise EmptyStatement()
         return statement
