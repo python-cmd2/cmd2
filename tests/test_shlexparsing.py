@@ -3,7 +3,7 @@
 Unit/functional testing for ply based parsing in cmd2
 
 Todo List
-- multiline
+- implement input redirection
 - case sensitive flag
 - checkout Cmd2.parseline() function which parses and expands shortcuts and such
   this code should probably be included in CommandParser
@@ -19,7 +19,6 @@ Notes:
 - we now ignore self.identchars, which breaks backwards compatibility with the cmd in the standard library
 
 Functions in cmd2.py to be modified:
-- _complete_statement()
 - parsed() - expands aliases and shortcuts
 
 Changelog Items:
