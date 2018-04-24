@@ -135,8 +135,7 @@ POSIX_SHLEX = False
 STRIP_QUOTES_FOR_NON_POSIX = True
 
 # Used for tab completion and word breaks. Do not change.
-QUOTES = ['"', "'"]
-REDIRECTION_CHARS = ['|', '<', '>']
+from . import strip_quotes, QUOTES, REDIRECTION_CHARS
 
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
 HELP_CATEGORY = 'help_category'
@@ -183,21 +182,6 @@ def _which(editor: str) -> Optional[str]:
     except subprocess.CalledProcessError:
         editor_path = None
     return editor_path
-
-
-def strip_quotes(arg: str) -> str:
-    """ Strip outer quotes from a string.
-
-     Applies to both single and double quotes.
-
-    :param arg:  string to strip outer quotes from
-    :return: same string with potentially outer quotes stripped
-    """
-    quote_chars = '"' + "'"
-
-    if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in quote_chars:
-        arg = arg[1:-1]
-    return arg
 
 
 def parse_quoted_string(cmdline: str) -> List[str]:
