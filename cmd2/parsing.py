@@ -53,7 +53,7 @@ class CommandParser():
         self.aliases = aliases
         self.shortcuts = shortcuts
 
-    def parseString(self, line):
+    def parseString(self, rawinput):
         # strip C-style comments
         # shlex will handle the python/shell style comments for us
         def replacer(match):
@@ -68,24 +68,24 @@ class CommandParser():
             r'/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE
         )
-        line = re.sub(pattern, replacer, line)
-        rawinput = line
+        rawinput = re.sub(pattern, replacer, rawinput)
+        line = rawinput
 
         # expand shortcuts, have to do this first because
         # a shortcut can expand into multiple tokens, ie '!ls' becomes
         # 'shell ls'
         for (shortcut, expansion) in self.shortcuts:
-            if  rawinput.startswith(shortcut):
+            if  line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
                 shortcut_len = len(shortcut)
-                if len(rawinput) == shortcut_len or rawinput[shortcut_len] != ' ':
+                if len(line) == shortcut_len or line[shortcut_len] != ' ':
                     expansion += ' '
 
                 # Expand the shortcut
-                rawinput = rawinput.replace(shortcut, expansion, 1)
+                line = line.replace(shortcut, expansion, 1)
                 break
 
-        s = shlex.shlex(rawinput, posix=False)
+        s = shlex.shlex(line, posix=False)
         s.whitespace_split = True
         tokens = self.split_on_punctuation(list(s))
         

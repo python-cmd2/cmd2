@@ -804,6 +804,8 @@ class Cmd(cmd.Cmd):
             redirection_chars=REDIRECTION_CHARS,
             terminators=self.terminators,
             multilineCommands=self.multilineCommands,
+            aliases=self.aliases,
+            shortcuts=self.shortcuts,
         )
         # self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
         #                                     multilineCommands=self.multilineCommands,
