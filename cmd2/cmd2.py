@@ -46,7 +46,6 @@ from typing import Callable, List, Optional, Union
 import unittest
 from code import InteractiveConsole
 
-import pyparsing
 import pyperclip
 
 # Set up readline
@@ -117,12 +116,6 @@ except ImportError:
     ipython_available = False
 
 __version__ = '0.9.0'
-
-# Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
-pyparsing.ParserElement.enablePackrat()
-
-# Override the default whitespace chars in Pyparsing so that newlines are not treated as whitespace
-pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
 
 
 # The next 2 variables and associated setter functions effect how arguments are parsed for decorated commands
@@ -384,24 +377,6 @@ def write_to_paste_buffer(txt: str) -> None:
     :param txt: text to copy to the clipboard
     """
     pyperclip.copy(txt)
-
-
-# deleteme
-# class ParsedString(str):
-#     """Subclass of str which also stores a pyparsing.ParseResults object containing structured parse results."""
-#     # pyarsing.ParseResults - structured parse results, to provide multiple means of access to the parsed data
-#     parsed = None
-
-#     # Function which did the parsing
-#     parser = None
-
-#     def full_parsed_statement(self):
-#         """Used to reconstruct the full parsed statement when a command isn't recognized."""
-#         new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
-#         new.parsed = self.parsed
-#         new.parser = self.parser
-#         return new
-
 
 def replace_with_file_contents(fname: str) -> str:
     """Action to perform when successfully matching parse element definition for inputFrom parser.
@@ -703,11 +678,7 @@ class Cmd(cmd.Cmd):
     """
     # Attributes used to configure the ParserManager (all are not dynamically settable at runtime)
     blankLinesAllowed = False
-    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment]) # deleteme
-    commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/') # deleteme
-    legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit # deleteme
     multilineCommands = []
-    prefixParser = pyparsing.Empty() #deleteme
     redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
@@ -807,13 +778,6 @@ class Cmd(cmd.Cmd):
             aliases=self.aliases,
             shortcuts=self.shortcuts,
         )
-        # self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
-        #                                     multilineCommands=self.multilineCommands,
-        #                                     legalChars=self.legalChars, commentGrammars=self.commentGrammars,
-        #                                     commentInProgress=self.commentInProgress,
-        #                                     blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
-        #                                     preparse=self.preparse, postparse=self.postparse, aliases=self.aliases,
-        #                                     shortcuts=self.shortcuts)
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -897,7 +861,6 @@ class Cmd(cmd.Cmd):
         return strip_ansi(self.prompt)
 
     def _finalize_app_parameters(self):
-        self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
         # noinspection PyUnresolvedReferences
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
 
