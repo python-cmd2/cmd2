@@ -249,18 +249,14 @@ def test_parse_multiline_termninated_by_empty_line(parser):
     results = parser.parseString(line)
     assert results.multilineCommand == 'multiline'
     assert results.args == 'command ends'
-    assert len(results.terminator) == 2
-    assert results.terminator[0] == '\n'
-    assert results.terminator[1] == '\n'
+    assert results.terminator == '\n'
 
 def test_parse_multiline_ignores_terminators_in_comments(parser):
     line = 'multiline command "with term; ends" now\n\n'
     results = parser.parseString(line)
     assert results.multilineCommand == 'multiline'
     assert results.args == 'command "with term; ends" now'
-    assert len(results.terminator) == 2
-    assert results.terminator[0] == '\n'
-    assert results.terminator[1] == '\n'
+    assert results.terminator == '\n'
 
 def test_parse_command_with_unicode_args(parser):
     line = 'drink café'

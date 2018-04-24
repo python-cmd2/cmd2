@@ -2198,7 +2198,7 @@ class Cmd(cmd.Cmd):
                         # terminator
                         newline = '\n'
                         self.poutput(newline)
-                    line = '{}\n{}\n'.format(statement.raw, newline)
+                    line = '{}\n{}'.format(statement.raw, newline)
                 except KeyboardInterrupt:
                     self.poutput('^C')
                     statement = self.command_parser.parseString('')
@@ -2212,7 +2212,7 @@ class Cmd(cmd.Cmd):
                     # terminator
                     newline = '\n'
                     self.poutput(newline)
-                line = '{}\n{}\n'.format(statement.raw, newline)
+                line = '{}\n{}'.format(statement.raw, newline)
             statement = self.command_parser.parseString(line)
 
         if not statement.command:

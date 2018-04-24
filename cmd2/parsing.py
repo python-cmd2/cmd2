@@ -7,7 +7,7 @@ import shlex
 
 import cmd2
 
-BLANK_LINE = '\n\n'
+BLANK_LINE = '\n'
 
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
@@ -91,7 +91,7 @@ class CommandParser():
         # we have to do this before we shlex on whitespace because it
         # destroys all unquoted whitespace in the input
         terminator = None
-        if line[-2:] == BLANK_LINE:
+        if line[-1:] == BLANK_LINE:
             terminator = BLANK_LINE
 
         s = shlex.shlex(line, posix=False)
