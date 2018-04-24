@@ -180,6 +180,10 @@ class CommandParser():
         # set multiline
         if command in self.multilineCommands:
             multilineCommand = command
+            # return no arguments if this is a "partial" command,
+            # i.e. we have a multiline command but no terminator yet
+            if not terminator:
+                args = ''
         else:
             multilineCommand = None
 

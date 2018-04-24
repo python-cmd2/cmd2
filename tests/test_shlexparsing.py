@@ -213,11 +213,13 @@ def test_has_redirect_inside_terminator(parser):
     assert results.args == '> inside'
     assert results.terminator == ';'
 
-# def test_parse_unfinished_multiliine_command(parser):
-#     line = 'multiline has > inside an unfinished command'
-#     results = parser.parseString(line)
-#     assert results.multilineCommand == 'multiline'
-#     assert not 'args' in results
+def test_parse_unfinished_multiliine_command(parser):
+    line = 'multiline has > inside an unfinished command'
+    statement = parser.parseString(line)
+    assert statement.multilineCommand == 'multiline'
+    assert not statement.args
+    assert not statement.terminator
+    
 
 def test_parse_multiline_command_ignores_redirectors_within_it(parser):
     line = 'multiline has > inside;'

@@ -2181,10 +2181,10 @@ class Cmd(cmd.Cmd):
         #    raise EmptyStatement()
         # statement = self.parser_manager.parsed(line) # deleteme
         statement = self.command_parser.parseString(line)
-        #while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
-        #    statement = '%s\n%s' % (statement.parsed.raw,
-        #                            self.pseudo_raw_input(self.continuation_prompt))
-        #    statement = self.parser_manager.parsed(statement)
+        while statement.multilineCommand and (statement.terminator == ''):
+            line = '%s\n%s' % (statement.raw,
+                                    self.pseudo_raw_input(self.continuation_prompt))
+            statement = self.command_parser.parseString(line)
         if not statement.command:
             raise EmptyStatement()
         return statement
