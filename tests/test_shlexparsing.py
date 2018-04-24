@@ -12,11 +12,10 @@ Todo List
 
 Notes:
 
-- Shortcuts may have to be discarded, or handled in a different way than they
-  are with pyparsing.
 - valid comment styles:
     - C-style -> /* comment */
     - Python/Shell style -> # comment
+- we now ignore self.identchars, which breaks backwards compatibility with the cmd in the standard library
 
 Functions in cmd2.py to be modified:
 - _complete_statement()
@@ -42,7 +41,9 @@ def parser():
         allow_redirection=True,
         redirection_chars=['|', '<', '>'],        
         terminators = [';'],
-        multilineCommands = ['multiline']
+        multilineCommands = ['multiline'],
+        aliases = {'helpalias': 'help', '42': 'theanswer'},
+        shortcuts = [('?', 'help'), ('!', 'shell')]
     )
     return parser
 
@@ -274,3 +275,16 @@ def test_empty_statement_raises_exception():
 
     with pytest.raises(cmd2.cmd2.EmptyStatement):
         app._complete_statement(' ')
+
+@pytest.mark.parametrize('line,command,args', [
+    ('helpalias', 'help', ''),
+    ('helpalias mycommand', 'help', 'mycommand'),
+    ('42', 'theanswer', ''),
+    ('42 arg1 arg2', 'theanswer', 'arg1 arg2'),
+    ('!ls', 'shell', 'ls'),
+    ('!ls -al /tmp', 'shell', 'ls -al /tmp'),
+])
+def test_alias_and_shortcut_expansion(parser, line, command, args):
+    statement = parser.parseString(line)
+    assert statement.command == command
+    assert statement.args == args

@@ -31,7 +31,10 @@ class Statement(str):
         self.outputTo = None
 
 class CommandParser():
-    """Parse raw text into command components."""
+    """Parse raw text into command components.
+    
+    Shortcuts is a list of tuples with each tuple containing the shortcut and the expansion.
+    """
     def __init__(
             self,
             quotes=['"', "'"],
@@ -39,14 +42,18 @@ class CommandParser():
             redirection_chars=['|', '<', '>'],
             terminators=[';'],
             multilineCommands = [],
+            aliases = {},
+            shortcuts = [],
         ):
         self.quotes = quotes
         self.allow_redirection = allow_redirection
         self.redirection_chars = redirection_chars
         self.terminators = terminators
         self.multilineCommands = multilineCommands
+        self.aliases = aliases
+        self.shortcuts = shortcuts
 
-    def parseString(self, rawinput):
+    def parseString(self, line):
         # strip C-style comments
         # shlex will handle the python/shell style comments for us
         def replacer(match):
@@ -61,7 +68,22 @@ class CommandParser():
             r'/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE
         )
-        rawinput = re.sub(pattern, replacer, rawinput)
+        line = re.sub(pattern, replacer, line)
+        rawinput = line
+
+        # expand shortcuts, have to do this first because
+        # a shortcut can expand into multiple tokens, ie '!ls' becomes
+        # 'shell ls'
+        for (shortcut, expansion) in self.shortcuts:
+            if  rawinput.startswith(shortcut):
+                # If the next character after the shortcut isn't a space, then insert one
+                shortcut_len = len(shortcut)
+                if len(rawinput) == shortcut_len or rawinput[shortcut_len] != ' ':
+                    expansion += ' '
+
+                # Expand the shortcut
+                rawinput = rawinput.replace(shortcut, expansion, 1)
+                break
 
         s = shlex.shlex(rawinput, posix=False)
         s.whitespace_split = True
@@ -140,11 +162,27 @@ class CommandParser():
             suffix = None
             (command, args) = self._command_and_args(tokens)
 
+        # expand aliases
+        # make a copy of aliases so we can edit it
+        tmp_aliases = list(self.aliases.keys())
+        keep_expanding = len(tmp_aliases) > 0
+
+        while keep_expanding:
+            for cur_alias in tmp_aliases:
+                keep_expanding = False
+                if command == cur_alias:
+                    command = self.aliases[cur_alias]
+                    tmp_aliases.remove(cur_alias)
+                    keep_expanding = len(tmp_aliases) > 0
+                    break
+
+        # set multiline
         if command in self.multilineCommands:
             multilineCommand = command
         else:
             multilineCommand = None
 
+        # build Statement object
         result = Statement(args)
         result.raw = rawinput
         result.command = command
