@@ -75,6 +75,7 @@ from .rl_utils import rl_force_redisplay
 # define the completion choices for the argument. You may provide a Collection or a Function.
 ACTION_ARG_CHOICES = 'arg_choices'
 
+
 class _RangeAction(object):
     def __init__(self, nargs: Union[int, str, Tuple[int, int], None]):
         self.nargs_min = None
@@ -103,6 +104,7 @@ class _RangeAction(object):
             self.nargs_adjusted = nargs
 
 
+# noinspection PyShadowingBuiltins,PyShadowingBuiltins
 class _StoreRangeAction(argparse._StoreAction, _RangeAction):
     def __init__(self,
                  option_strings,
@@ -131,6 +133,7 @@ class _StoreRangeAction(argparse._StoreAction, _RangeAction):
                                        metavar=metavar)
 
 
+# noinspection PyShadowingBuiltins,PyShadowingBuiltins
 class _AppendRangeAction(argparse._AppendAction, _RangeAction):
     def __init__(self,
                  option_strings,
@@ -433,7 +436,6 @@ class AutoCompleter(object):
                             return self.basic_complete(text, line, begidx, endidx, completers.keys())
         return []
 
-
     @staticmethod
     def _process_action_nargs(action: argparse.Action, arg_state: _ArgumentState) -> None:
         if isinstance(action, _RangeAction):
@@ -571,6 +573,7 @@ class AutoCompleter(object):
 ###############################################################################
 
 
+# noinspection PyCompatibility,PyShadowingBuiltins,PyShadowingBuiltins
 class ACHelpFormatter(argparse.HelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
@@ -631,6 +634,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
                 # End cmd2 customization
 
                 # helper for wrapping lines
+                # noinspection PyMissingOrEmptyDocstring,PyShadowingNames
                 def get_lines(parts, indent, prefix=None):
                     lines = []
                     line = []
@@ -722,6 +726,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
         else:
             result = default_metavar
 
+        # noinspection PyMissingOrEmptyDocstring
         def format(tuple_size):
             if isinstance(result, tuple):
                 return result
@@ -748,6 +753,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
         return text.splitlines()
 
 
+# noinspection PyCompatibility
 class ACArgumentParser(argparse.ArgumentParser):
     """Custom argparse class to override error method to change default help text."""
 

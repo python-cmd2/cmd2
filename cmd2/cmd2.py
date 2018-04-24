@@ -2877,13 +2877,13 @@ Usage:  Usage: unalias [-a] name [name ...]
         Non-python commands can be issued with ``cmd("your command")``.
         Run python code from external script files with ``run("script.py")``
         """
+        from .pyscript_bridge import PyscriptBridge
         if self._in_py:
             self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
             return
         self._in_py = True
 
         try:
-            self.pystate['self'] = self
             arg = arg.strip()
 
             # Support the run command even if called prior to invoking an interactive interpreter
@@ -2906,8 +2906,11 @@ Usage:  Usage: unalias [-a] name [name ...]
                 """
                 return self.onecmd_plus_hooks(cmd_plus_args + '\n')
 
+            bridge = PyscriptBridge(self)
+            self.pystate['self'] = bridge
             self.pystate['run'] = run
-            self.pystate['cmd'] = onecmd_plus_hooks
+            self.pystate['cmd'] = bridge
+            self.pystate['app'] = bridge
 
             localvars = (self.locals_in_py and self.pystate) or {}
             interp = InteractiveConsole(locals=localvars)
