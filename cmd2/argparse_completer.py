@@ -71,6 +71,10 @@ import re as _re
 from .rl_utils import rl_force_redisplay
 
 
+# attribute that can optionally added to an argparse argument (called an Action) to
+# define the completion choices for the argument. You may provide a Collection or a Function.
+ACTION_ARG_CHOICES = 'arg_choices'
+
 class _RangeAction(object):
     def __init__(self, nargs: Union[int, str, Tuple[int, int], None]):
         self.nargs_min = None
@@ -186,7 +190,8 @@ class AutoCompleter(object):
                  token_start_index: int = 1,
                  arg_choices: Dict[str, Union[List, Tuple, Callable]] = None,
                  subcmd_args_lookup: dict = None,
-                 tab_for_arg_help: bool = True):
+                 tab_for_arg_help: bool = True,
+                 cmd2_app=None):
         """
         Create an AutoCompleter
 
@@ -195,6 +200,8 @@ class AutoCompleter(object):
         :param arg_choices: dictionary mapping from argparse argument 'dest' name to list of choices
         :param subcmd_args_lookup: mapping a sub-command group name to a tuple to fill the child\
         AutoCompleter's arg_choices and subcmd_args_lookup parameters
+        :param tab_for_arg_help: Enable of disable argument help when there's no completion result
+        :param cmd2_app: reference to the Cmd2 application. Enables argparse argument completion with class methods
         """
         if not subcmd_args_lookup:
             subcmd_args_lookup = {}
@@ -205,6 +212,7 @@ class AutoCompleter(object):
         self._arg_choices = arg_choices.copy() if arg_choices is not None else {}
         self._token_start_index = token_start_index
         self._tab_for_arg_help = tab_for_arg_help
+        self._cmd2_app = cmd2_app
 
         self._flags = []  # all flags in this command
         self._flags_without_args = []  # all flags that don't take arguments
@@ -220,6 +228,10 @@ class AutoCompleter(object):
             # if there are choices defined, record them in the arguments dictionary
             if action.choices is not None:
                 self._arg_choices[action.dest] = action.choices
+            # if completion choices are tagged on the action, record them
+            elif hasattr(action, ACTION_ARG_CHOICES):
+                action_arg_choices = getattr(action, ACTION_ARG_CHOICES)
+                self._arg_choices[action.dest] = action_arg_choices
 
             # if the parameter is flag based, it will have option_strings
             if action.option_strings:
@@ -244,7 +256,8 @@ class AutoCompleter(object):
                         subcmd_start = token_start_index + len(self._positional_actions)
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd], subcmd_start,
                                                                arg_choices=subcmd_args,
-                                                               subcmd_args_lookup=subcmd_lookup)
+                                                               subcmd_args_lookup=subcmd_lookup,
+                                                               cmd2_app=cmd2_app)
                         sub_commands.append(subcmd)
                     self._positional_completers[action.dest] = sub_completers
                     self._arg_choices[action.dest] = sub_commands
@@ -406,6 +419,21 @@ class AutoCompleter(object):
 
         return completion_results
 
+    def complete_command_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Supports the completion of sub-commands for commands through the cmd2 help command."""
+        for idx, token in enumerate(tokens):
+            if idx >= self._token_start_index:
+                if self._positional_completers:
+                    # For now argparse only allows 1 sub-command group per level
+                    # so this will only loop once.
+                    for completers in self._positional_completers.values():
+                        if token in completers:
+                            return completers[token].complete_command_help(tokens, text, line, begidx, endidx)
+                        else:
+                            return self.basic_complete(text, line, begidx, endidx, completers.keys())
+        return []
+
+
     @staticmethod
     def _process_action_nargs(action: argparse.Action, arg_state: _ArgumentState) -> None:
         if isinstance(action, _RangeAction):
@@ -467,8 +495,18 @@ class AutoCompleter(object):
     def _resolve_choices_for_arg(self, action: argparse.Action, used_values=()) -> List[str]:
         if action.dest in self._arg_choices:
             args = self._arg_choices[action.dest]
+
             if callable(args):
-                args = args()
+                try:
+                    if self._cmd2_app is not None:
+                        try:
+                            args = args(self._cmd2_app)
+                        except TypeError:
+                            args = args()
+                    else:
+                        args = args()
+                except TypeError:
+                    return []
 
             try:
                 iter(args)

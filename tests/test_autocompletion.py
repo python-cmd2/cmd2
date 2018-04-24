@@ -213,6 +213,27 @@ def test_autocomp_subcmd_flag_comp_list(cmd2_app):
     assert first_match is not None and first_match == '"Gareth Edwards'
 
 
+def test_autocomp_subcmd_flag_comp_func_attr(cmd2_app):
+    text = 'A'
+    line = 'video movies list -a "{}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           cmd2_app.completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
+
+
+def test_autocomp_subcmd_flag_comp_list_attr(cmd2_app):
+    text = 'G'
+    line = 'video movies list -d {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and first_match == '"Gareth Edwards'
+
+
 def test_autcomp_pos_consumed(cmd2_app):
     text = ''
     line = 'library movie add SW_EP01 {}'.format(text)
@@ -254,3 +275,5 @@ def test_autcomp_custom_func_list_and_dict_arg(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
            cmd2_app.completion_matches == ['S01E02', 'S01E03', 'S02E01', 'S02E03']
+
+
