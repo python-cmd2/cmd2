@@ -4,7 +4,8 @@ Notes on conversion from pyparsing to shlex taking place in the ply branch
 Todo List:
 - case sensitive flag
 - refactor Cmd2.parseline() to use StatementParser.parse()
-- delete test_shlexparsing.py once I have all this data captured elsewhere
+- refactor tab completion to use StatementParser instead of parseline()
+- delete SHLEX_TODO.txt once I have all this data captured elsewhere
 - we now ignore self.identchars, which breaks backwards compatibility with the cmd in the standard library
 
 Questions:
@@ -18,4 +19,6 @@ Changelog Items:
 - object passed to do_* methods has changed. It no longer is the pyparsing object, it's a new Statement object. A side effect of this is that we now have a clean interface between the parsing logic and the rest of cmd2. If we need to change the parser in the future, we can do it without breaking anything. The parser is now self.statement_parser instead of self.command_parser.
 - input redirection no longer supported. Use the load command instead.
 - submenus now call all hooks, it used to just call precmd and postcmd
+- cmd2 ignores identchars. The standard library cmd uses those characters to split the first "word" of the input, but cmd2 hasn't used those for a while, and the new parsing logic parses on whitespace, which has the added benefit of full unicode support, unlike cmd or prior versions of cmd2.
+
 
