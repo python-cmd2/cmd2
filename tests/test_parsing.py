@@ -19,7 +19,7 @@ def parser():
         redirection_chars=['|', '<', '>'],        
         terminators = [';'],
         multilineCommands = ['multiline'],
-        aliases = {'helpalias': 'help', '42': 'theanswer'},
+        aliases = {'helpalias': 'help', '42': 'theanswer', 'anothermultiline': 'multiline'},
         shortcuts = [('?', 'help'), ('!', 'shell')]
     )
     return parser
@@ -193,9 +193,9 @@ def test_parse_unfinished_multiliine_command(parser):
     line = 'multiline has > inside an unfinished command'
     statement = parser.parse(line)
     assert statement.multilineCommand == 'multiline'
-    assert not statement.args
+    assert statement.command == 'multiline'
+    assert statement.args == 'has > inside an unfinished command'
     assert not statement.terminator
-    
 
 def test_parse_multiline_command_ignores_redirectors_within_it(parser):
     line = 'multiline has > inside;'
@@ -204,14 +204,14 @@ def test_parse_multiline_command_ignores_redirectors_within_it(parser):
     assert statement.args == 'has > inside'
     assert statement.terminator == ';'
 
-# def test_parse_multiline_with_incomplete_comment(parser):
-#     """A terminator within a comment will be ignored and won't terminate a multiline command.
-#     Un-closed comments effectively comment out everything after the start."""
-#     line = 'multiline command /* with comment in progress;'
-#     statement = parser.parse(line)
-#     assert statement.multilineCommand == 'multiline'
-#     assert statement.args == 'command'
-#     assert not statement.terminator
+def test_parse_multiline_with_incomplete_comment(parser):
+    """A terminator within a comment will be ignored and won't terminate a multiline command.
+    Un-closed comments effectively comment out everything after the start."""
+    line = 'multiline command /* with comment in progress;'
+    statement = parser.parse(line)
+    assert statement.multilineCommand == 'multiline'
+    assert statement.args == 'command'
+    assert not statement.terminator
 
 def test_parse_multiline_with_complete_comment(parser):
     line = 'multiline command /* with comment complete */ is done;'
@@ -280,10 +280,10 @@ def test_alias_and_shortcut_expansion(parser, line, command, args):
     assert statement.command == command
     assert statement.args == args
 
-def test_empty_statement_raises_exception():
-    app = cmd2.Cmd()
-    with pytest.raises(cmd2.cmd2.EmptyStatement):
-        app._complete_statement('')
-
-    with pytest.raises(cmd2.cmd2.EmptyStatement):
-        app._complete_statement(' ')
+def test_alias_on_multiline_command(parser):
+    line = 'anothermultiline has > inside an unfinished command'
+    statement = parser.parse(line)
+    assert statement.multilineCommand == 'multiline'
+    assert statement.command == 'multiline'
+    assert statement.args == 'has > inside an unfinished command'
+    assert not statement.terminator

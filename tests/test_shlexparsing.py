@@ -11,6 +11,13 @@ Todo List
 - rename test_shlexparsing.py to test_parsing.py
 - look at parsed() - expands aliases and shortcuts, see if it can be refactored
 
+Questions:
+- say I have a command called 'fred' which is a multiline command. If I make an alias
+  for fred called 'george' is george a multiline command? I think the answer is yes.
+  If you want a multi-line synonym for a command that isn't multiline, do it like
+  example.py does. If the answer is no, then I need to rework StatementParser.parse()
+- 
+
 Notes:
 
 - valid comment styles:
