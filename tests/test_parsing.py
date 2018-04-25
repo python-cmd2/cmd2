@@ -8,16 +8,14 @@ problematic because they worked properly for some versions of pyparsing but not 
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
-import sys
-
-import cmd2
+from cmd2 import cmd2
 import pytest
 
 
 @pytest.fixture
 def hist():
     from cmd2.cmd2 import HistoryItem
-    h = cmd2.cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
+    h = cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
     return h
 
 # Case-sensitive parser
@@ -25,7 +23,7 @@ def hist():
 def parser():
     c = cmd2.Cmd()
     c.multilineCommands = ['multiline']
-    c.parser_manager = cmd2.cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
                                                multilineCommands=c.multilineCommands, legalChars=c.legalChars,
                                                commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
                                                blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
@@ -38,7 +36,7 @@ def parser():
 def cs_pm():
     c = cmd2.Cmd()
     c.multilineCommands = ['multiline']
-    c.parser_manager = cmd2.cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
+    c.parser_manager = cmd2.ParserManager(redirector=c.redirector, terminators=c.terminators,
                                                multilineCommands=c.multilineCommands, legalChars=c.legalChars,
                                                commentGrammars=c.commentGrammars, commentInProgress=c.commentInProgress,
                                                blankLinesAllowed=c.blankLinesAllowed, prefixParser=c.prefixParser,
@@ -77,7 +75,7 @@ def test_history_get(hist):
 
 
 def test_cast():
-    cast = cmd2.cmd2.cast
+    cast = cmd2.cast
 
     # Boolean
     assert cast(True, True) == True
@@ -101,7 +99,7 @@ def test_cast():
 
 
 def test_cast_problems(capsys):
-    cast = cmd2.cmd2.cast
+    cast = cmd2.cast
 
     expected = 'Problem setting parameter (now {}) to {}; incorrect type?\n'
 
@@ -327,8 +325,8 @@ def test_parse_input_redirect_from_unicode_filename(input_parser):
 
 def test_empty_statement_raises_exception():
     app = cmd2.Cmd()
-    with pytest.raises(cmd2.cmd2.EmptyStatement):
+    with pytest.raises(cmd2.EmptyStatement):
         app._complete_statement('')
 
-    with pytest.raises(cmd2.cmd2.EmptyStatement):
+    with pytest.raises(cmd2.EmptyStatement):
         app._complete_statement(' ')

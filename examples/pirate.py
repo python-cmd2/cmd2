@@ -7,7 +7,7 @@ presented as part of her PyCon 2010 talk.
 It demonstrates many features of cmd2.
 """
 import argparse
-from cmd2 import Cmd, with_argparser
+from cmd2.cmd2 import Cmd, with_argparser
 
 
 class Pirate(Cmd):

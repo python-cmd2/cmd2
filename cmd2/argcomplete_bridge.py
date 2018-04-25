@@ -2,7 +2,9 @@
 """Hijack the ArgComplete's bash completion handler to return AutoCompleter results"""
 
 import argcomplete
+from contextlib import redirect_stdout
 import copy
+from io import StringIO
 import os
 import shlex
 import sys
@@ -162,7 +164,13 @@ class CompletionFinder(argcomplete.CompletionFinder):
         comp_point = int(os.environ["COMP_POINT"])
 
         comp_line = argcomplete.ensure_str(comp_line)
-        ### SWAPPED FOR AUTOCOMPLETER
+
+        ##############################
+        # SWAPPED FOR AUTOCOMPLETER
+        #
+        # Replaced with our own tokenizer function
+        ##############################
+
         # cword_prequote, cword_prefix, cword_suffix, comp_words, last_wordbreak_pos = split_line(comp_line, comp_point)
         tokens, _, begidx, endidx = tokens_for_completion(comp_line, comp_point)
 
@@ -172,7 +180,11 @@ class CompletionFinder(argcomplete.CompletionFinder):
         # 2: python <script> [args]
         # 3: python -m <module> [args]
         start = int(os.environ["_ARGCOMPLETE"]) - 1
-        ### SWAPPED FOR AUTOCOMPLETER
+        ##############################
+        # SWAPPED FOR AUTOCOMPLETER
+        #
+        # Applying the same token dropping to our tokens
+        ##############################
         # comp_words = comp_words[start:]
         tokens = tokens[start:]
 
@@ -183,11 +195,20 @@ class CompletionFinder(argcomplete.CompletionFinder):
         #       "\nSUFFIX: {!r}".format(cword_suffix),
         #       "\nWORDS:", comp_words)
 
-        ### SWAPPED FOR AUTOCOMPLETER
+        ##############################
+        # SWAPPED FOR AUTOCOMPLETER
+        #
+        # Replaced with our own completion function and customizing the returned values
+        ##############################
         # completions = self._get_completions(comp_words, cword_prefix, cword_prequote, last_wordbreak_pos)
-        completions = completer.complete_command(tokens, tokens[-1], comp_line, begidx, endidx)
 
-        if completions is not None:
+        # capture stdout from the autocompleter
+        result = StringIO()
+        with redirect_stdout(result):
+            completions = completer.complete_command(tokens, tokens[-1], comp_line, begidx, endidx)
+        outstr = result.getvalue()
+
+        if completions:
             # If any completion has a space in it, then quote all completions
             # this improves the user experience so they don't nede to go back and add a quote
             if ' ' in ''.join(completions):
@@ -196,6 +217,17 @@ class CompletionFinder(argcomplete.CompletionFinder):
             argcomplete.debug("\nReturning completions:", completions)
 
             output_stream.write(ifs.join(completions).encode(argcomplete.sys_encoding))
+        elif outstr:
+            # if there are no completions, but we got something from stdout, try to print help
+
+            # trick the bash completion into thinking there are 2 completions that are unlikely
+            # to ever match.
+            outstr = outstr.replace('\n', ' ').replace('\t', ' ').replace('    ', ' ').strip()
+            # generate a filler entry that should always sort first
+            filler = ' {0:><{width}}'.format('', width=len(outstr))
+            outstr = ifs.join([filler, outstr])
+
+            output_stream.write(outstr.encode(argcomplete.sys_encoding))
         else:
             # if completions is None we assume we don't know how to handle it so let bash
             # go forward with normal filesystem completion

@@ -6,10 +6,10 @@
 """
 import argparse
 
-import cmd2
+from cmd2 import cmd2
 import pyparsing
 
-from cmd2 import with_argument_list, with_argparser, with_argparser_and_unknown_args
+from cmd2.cmd2 import with_argument_list, with_argparser, with_argparser_and_unknown_args
 
 
 class AliasAndStartup(cmd2.Cmd):

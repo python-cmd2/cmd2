@@ -17,7 +17,7 @@ This application and the "scripts/conditional.py" script serve as an example for
 import argparse
 import os
 
-import cmd2
+from cmd2 import cmd2
 
 
 class CmdLineApp(cmd2.Cmd):

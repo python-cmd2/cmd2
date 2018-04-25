@@ -4,7 +4,7 @@
 A sample application for cmd2 demonstrating customized environment parameters
 """
 
-from cmd2 import Cmd
+from cmd2.cmd2 import Cmd
 
 
 class EnvironmentApp(Cmd):

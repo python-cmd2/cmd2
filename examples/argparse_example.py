@@ -14,7 +14,7 @@ verifying that the output produced matches the transcript.
 import argparse
 import sys
 
-from cmd2 import Cmd, with_argparser, with_argument_list
+from cmd2.cmd2 import Cmd, with_argparser, with_argument_list
 
 
 class CmdLineApp(Cmd):

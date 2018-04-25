@@ -11,7 +11,7 @@ of the submenu. Nesting of the submenus is done with the cmd2.AddSubmenu() decor
 from __future__ import print_function
 import sys
 
-import cmd2
+from cmd2 import cmd2
 from IPython import embed
 
 
