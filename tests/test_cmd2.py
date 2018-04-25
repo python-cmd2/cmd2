@@ -114,6 +114,49 @@ def test_base_show_readonly(base_app):
     assert out == expected
 
 
+def test_cast():
+    cast = cmd2.cmd2.cast
+
+    # Boolean
+    assert cast(True, True) == True
+    assert cast(True, False) == False
+    assert cast(True, 0) == False
+    assert cast(True, 1) == True
+    assert cast(True, 'on') == True
+    assert cast(True, 'off') == False
+    assert cast(True, 'ON') == True
+    assert cast(True, 'OFF') == False
+    assert cast(True, 'y') == True
+    assert cast(True, 'n') == False
+    assert cast(True, 't') == True
+    assert cast(True, 'f') == False
+
+    # Non-boolean same type
+    assert cast(1, 5) == 5
+    assert cast(3.4, 2.7) == 2.7
+    assert cast('foo', 'bar') == 'bar'
+    assert cast([1,2], [3,4]) == [3,4]
+
+def test_cast_problems(capsys):
+    cast = cmd2.cmd2.cast
+
+    expected = 'Problem setting parameter (now {}) to {}; incorrect type?\n'
+
+    # Boolean current, with new value not convertible to bool
+    current = True
+    new = [True, True]
+    assert cast(current, new) == current
+    out, err = capsys.readouterr()
+    assert out == expected.format(current, new)
+
+    # Non-boolean current, with new value not convertible to current type
+    current = 1
+    new = 'octopus'
+    assert cast(current, new) == current
+    out, err = capsys.readouterr()
+    assert out == expected.format(current, new)
+
+
 def test_base_set(base_app):
     out = run_cmd(base_app, 'set quiet True')
     expected = normalize("""
@@ -216,6 +259,34 @@ def test_base_error(base_app):
     out = run_cmd(base_app, 'meow')
     assert out == ["*** Unknown syntax: meow"]
 
+
+@pytest.fixture
+def hist():
+    from cmd2.cmd2 import HistoryItem
+    h = cmd2.cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
+    return h
+
+def test_history_span(hist):
+    h = hist
+    assert h == ['first', 'second', 'third', 'fourth']
+    assert h.span('-2..') == ['third', 'fourth']
+    assert h.span('2..3') == ['second', 'third']    # Inclusive of end
+    assert h.span('3') == ['third']
+    assert h.span(':') == h
+    assert h.span('2..') == ['second', 'third', 'fourth']
+    assert h.span('-1') == ['fourth']
+    assert h.span('-2..-3') == ['third', 'second']
+    assert h.span('*') == h
+
+def test_history_get(hist):
+    h = hist
+    assert h == ['first', 'second', 'third', 'fourth']
+    assert h.get('') == h
+    assert h.get('-2') == h[:-2]
+    assert h.get('5') == []
+    assert h.get('2-3') == ['second']           # Exclusive of end
+    assert h.get('ir') == ['first', 'third']    # Normal string search for all elements containing "ir"
+    assert h.get('/i.*d/') == ['third']         # Regex string search "i", then anything, then "d"
 
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
@@ -604,18 +675,6 @@ def test_allow_redirection(base_app):
     # Verify that no file got created
     assert not os.path.exists(filename)
 
-
-def test_input_redirection(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    filename = os.path.join(test_dir, 'redirect.txt')
-
-    # NOTE: File 'redirect.txt" contains 1 word "history"
-
-    # Verify that redirecting input from a file works
-    out = run_cmd(base_app, 'help < {}'.format(filename))
-    assert out == normalize(HELP_HISTORY)
-
-
 def test_pipe_to_shell(base_app, capsys):
     if sys.platform == "win32":
         # Windows
@@ -965,7 +1024,7 @@ def test_default_to_shell_good(capsys):
         line = 'dir'
     else:
         line = 'ls'
-    statement = app.command_parser.parseString(line)
+    statement = app.statement_parser.parse(line)
     retval = app.default(statement)
     assert not retval
     out, err = capsys.readouterr()
@@ -975,7 +1034,7 @@ def test_default_to_shell_failure(capsys):
     app = cmd2.Cmd()
     app.default_to_shell = True
     line = 'ls does_not_exist.xyz'
-    statement = app.command_parser.parseString(line)
+    statement = app.statement_parser.parse(line)
     retval = app.default(statement)
     assert not retval
     out, err = capsys.readouterr()

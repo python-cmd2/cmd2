@@ -1,6 +1,6 @@
 #
 # -*- coding: utf-8 -*-
-"""Command parsing classes for cmd2"""
+"""Statement parsing classes for cmd2"""
 
 import re
 import shlex
@@ -32,7 +32,7 @@ class Statement(str):
         self.output = None
         self.outputTo = None
 
-class CommandParser():
+class StatementParser():
     """Parse raw text into command components.
     
     Shortcuts is a list of tuples with each tuple containing the shortcut and the expansion.
@@ -55,7 +55,7 @@ class CommandParser():
         self.aliases = aliases
         self.shortcuts = shortcuts
 
-    def parseString(self, rawinput):
+    def parse(self, rawinput):
         # strip C-style comments
         # shlex will handle the python/shell style comments for us
         def replacer(match):
