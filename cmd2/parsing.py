@@ -4,6 +4,7 @@
 
 import re
 import shlex
+from typing import List, Tuple
 
 import cmd2
 
@@ -55,7 +56,7 @@ class StatementParser():
         self.aliases = aliases
         self.shortcuts = shortcuts
 
-    def parse(self, rawinput):
+    def parse(self, rawinput: str) -> Statement:
         # strip C-style comments
         # shlex will handle the python/shell style comments for us
         def replacer(match):
@@ -67,11 +68,14 @@ class StatementParser():
                     return s
         pattern = re.compile(
             #r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
-            r'/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+            r'/\*.*?(\*/|$)|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE
         )
         rawinput = re.sub(pattern, replacer, rawinput)
         line = rawinput
+
+        command = None
+        args = ''
 
         # expand shortcuts, have to do this first because
         # a shortcut can expand into multiple tokens, ie '!ls' becomes
@@ -97,7 +101,11 @@ class StatementParser():
         s = shlex.shlex(line, posix=False)
         s.whitespace_split = True
         tokens = self.split_on_punctuation(list(s))
-        
+
+        if tokens:
+            command_to_expand = tokens[0]
+            tokens[0] = self.expand_aliases(command_to_expand)
+
         # of the valid terminators, find the first one to occur in the input
         terminator_pos = len(tokens)+1
         for test_terminator in self.terminators:
@@ -118,10 +126,18 @@ class StatementParser():
                 terminator_pos = tokens.index(terminator)
             # everything before the first terminator is the command and the args
             (command, args) = self._command_and_args(tokens[:terminator_pos])
-            #terminator = tokens[terminator_pos]
             # we will set the suffix later
             # remove all the tokens before and including the terminator
             tokens = tokens[terminator_pos+1:]
+        else:
+            (testcommand, testargs) = self._command_and_args(tokens)
+            if testcommand in self.multilineCommands:
+                # no terminator on this line but we have a multiline command
+                # everything else on the line is part of the args
+                # because redirectors can only be after a terminator
+                command = testcommand
+                args = testargs
+                tokens = []
 
         # check for input from file
         inputFrom = None
@@ -131,7 +147,6 @@ class StatementParser():
             tokens = tokens[:input_pos]
         except ValueError:
             pass
-
 
         # check for output redirect
         output = None
@@ -172,29 +187,13 @@ class StatementParser():
         else:
             # no terminator, so whatever is left is the command and the args
             suffix = None
-            (command, args) = self._command_and_args(tokens)
-
-        # expand aliases
-        # make a copy of aliases so we can edit it
-        tmp_aliases = list(self.aliases.keys())
-        keep_expanding = len(tmp_aliases) > 0
-
-        while keep_expanding:
-            for cur_alias in tmp_aliases:
-                keep_expanding = False
-                if command == cur_alias:
-                    command = self.aliases[cur_alias]
-                    tmp_aliases.remove(cur_alias)
-                    keep_expanding = len(tmp_aliases) > 0
-                    break
+            if not command:
+                # command could already have been set, if so, don't set it again
+                (command, args) = self._command_and_args(tokens)
 
         # set multiline
         if command in self.multilineCommands:
             multilineCommand = command
-            # return no arguments if this is a "partial" command,
-            # i.e. we have a multiline command but no terminator yet
-            if not terminator:
-                args = ''
         else:
             multilineCommand = None
 
@@ -211,8 +210,24 @@ class StatementParser():
         result.suffix = suffix
         result.multilineCommand = multilineCommand
         return result
-    
-    def _command_and_args(self, tokens):
+
+    def expand_aliases(self, command: str) -> str:
+        """Given a command, expand any aliases for the command"""
+        # make a copy of aliases so we can edit it
+        tmp_aliases = list(self.aliases.keys())
+        keep_expanding = len(tmp_aliases) > 0
+
+        while keep_expanding:
+            for cur_alias in tmp_aliases:
+                keep_expanding = False
+                if command == cur_alias:
+                    command = self.aliases[cur_alias]
+                    tmp_aliases.remove(cur_alias)
+                    keep_expanding = len(tmp_aliases) > 0
+                    break
+        return command
+
+    def _command_and_args(self, tokens: List[str]) -> Tuple[str, str]:
         """given a list of tokens, and return a tuple of the command
         and the args as a string.
         """
@@ -227,7 +242,7 @@ class StatementParser():
 
         return (command, args)
 
-    def split_on_punctuation(self, initial_tokens):
+    def split_on_punctuation(self, tokens: List[str]) -> List[str]:
         """
         # Further splits tokens from a command line using punctuation characters
         # as word breaks when they are in unquoted strings. Each run of punctuation
@@ -243,7 +258,7 @@ class StatementParser():
 
         punctuated_tokens = []
 
-        for cur_initial_token in initial_tokens:
+        for cur_initial_token in tokens:
 
             # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
             if len(cur_initial_token) <= 1 or cur_initial_token[0] in self.quotes:
