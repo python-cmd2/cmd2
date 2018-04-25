@@ -7,8 +7,6 @@
 This example shows an easy way for a single command to have many subcommands, each of which takes different arguments
 and provides separate contextual help.
 """
-from cmd2.argcomplete_bridge import CompletionFinder
-from cmd2.argparse_completer import AutoCompleter
 import argparse
 
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
@@ -37,16 +35,22 @@ parser_sport = base_subparsers.add_parser('sport', help='sport help')
 sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
 setattr(sport_arg, 'arg_choices', sport_item_strs)
 
-# Set both a function and tab completer for the "sport" subcommand
+# Handle bash completion if it's installed
+try:
+    # only move forward if we can import CompletionFinder and AutoCompleter
+    from cmd2.argcomplete_bridge import CompletionFinder
+    from cmd2.argparse_completer import AutoCompleter
+    if __name__ == '__main__':
+        with open('out.txt', 'a') as f:
+            f.write('Here 1')
+            f.flush()
+        completer = CompletionFinder()
+        completer(base_parser, AutoCompleter(base_parser))
+except ImportError:
+    pass
 
-if __name__ == '__main__':
-    with open('out.txt', 'a') as f:
-        f.write('Here 1')
-        f.flush()
-    completer = CompletionFinder()
-    completer(base_parser, AutoCompleter(base_parser))
 
-
+# Intentionally below the bash completion code to reduce tab completion lag
 from cmd2 import cmd2
 from cmd2.cmd2 import with_argparser
 
@@ -73,6 +77,7 @@ class SubcommandsExample(cmd2.Cmd):
         """sport subcommand of base command"""
         self.poutput('Sport is {}'.format(args.sport))
 
+    # Set handler functions for the subcommands
     parser_foo.set_defaults(func=base_foo)
     parser_bar.set_defaults(func=base_bar)
     parser_sport.set_defaults(func=base_sport)
