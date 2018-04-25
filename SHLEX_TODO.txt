@@ -1,30 +1,18 @@
-# coding=utf-8
-"""
-Unit/functional testing for ply based parsing in cmd2
 
-Todo List
+Notes on conversion from pyparsing to shlex taking place in the ply branch
+
+Todo List:
 - case sensitive flag
-- checkout Cmd2.parseline() function which parses and expands shortcuts and such
-  this code should probably be included in CommandParser
+- refactor Cmd2.parseline() to use StatementParser.parse()
 - get rid of legalChars
-- move remaining tests in test_parsing.py to test_cmd2.py
-- rename test_shlexparsing.py to test_parsing.py
-- look at parsed() - expands aliases and shortcuts, see if it can be refactored
+- delete test_shlexparsing.py once I have all this data captured elsewhere
+- we now ignore self.identchars, which breaks backwards compatibility with the cmd in the standard library
 
 Questions:
 - say I have a command called 'fred' which is a multiline command. If I make an alias
   for fred called 'george' is george a multiline command? I think the answer is yes.
   If you want a multi-line synonym for a command that isn't multiline, do it like
   example.py does. If the answer is no, then I need to rework StatementParser.parse()
-- 
-
-Notes:
-
-- valid comment styles:
-    - C-style -> /* comment */
-    - Python/Shell style -> # comment
-- we now ignore self.identchars, which breaks backwards compatibility with the cmd in the standard library
-
 
 Changelog Items:
 - if self.default_to_shell is true, then redirection and piping is now properly passed to the shell, previously it was truncated
@@ -32,4 +20,3 @@ Changelog Items:
 - input redirection no longer supported. Use the load command instead.
 - submenus now call all hooks, it used to just call precmd and postcmd
 
-"""
