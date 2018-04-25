@@ -4,7 +4,6 @@ Notes on conversion from pyparsing to shlex taking place in the ply branch
 Todo List:
 - case sensitive flag
 - refactor Cmd2.parseline() to use StatementParser.parse()
-- get rid of legalChars
 - delete test_shlexparsing.py once I have all this data captured elsewhere
 - we now ignore self.identchars, which breaks backwards compatibility with the cmd in the standard library
 

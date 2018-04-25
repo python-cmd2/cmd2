@@ -635,7 +635,7 @@ class Cmd(cmd.Cmd):
     redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
-    terminators = [';']     # make sure your terminators are not in legalChars!
+    terminators = [';']
 
     # Attributes which are NOT dynamically settable at runtime
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
