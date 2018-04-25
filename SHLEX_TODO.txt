@@ -5,8 +5,9 @@ Todo List:
 - case sensitive flag
 - refactor Cmd2.parseline() to use StatementParser.parse()
 - get rid of legalChars
-- delete test_shlexparsing.py once I have all this data captured elsewhere
+- get rid of POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX - those options should be ignored
 - we now ignore self.identchars, which breaks backwards compatibility with the cmd in the standard library
+- delete SHLEX_TODO.txt once everything is done
 
 Questions:
 - say I have a command called 'fred' which is a multiline command. If I make an alias
