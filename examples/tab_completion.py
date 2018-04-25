@@ -8,15 +8,15 @@ import cmd2
 from cmd2 import with_argparser, with_argument_list
 
 # List of strings used with flag and index based completion functions
-food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
-sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football']
+food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
+sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
 
 class TabCompleteExample(cmd2.Cmd):
     """ Example cmd2 application where we a base command which has a couple subcommands."""
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        super().__init__()
 
     add_item_parser = argparse.ArgumentParser()
     add_item_group = add_item_parser.add_mutually_exclusive_group()

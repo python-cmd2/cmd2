@@ -16,7 +16,7 @@ class AliasAndStartup(cmd2.Cmd):
     """ Example cmd2 application where we create commands that just print the arguments they are called with."""
 
     def __init__(self):
-        cmd2.Cmd.__init__(self, startup_script='.cmd2rc')
+        super().__init__(startup_script='.cmd2rc')
 
 
 if __name__ == '__main__':

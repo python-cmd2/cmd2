@@ -14,8 +14,7 @@ verifying that the output produced matches the transcript.
 import argparse
 import sys
 
-from cmd2 import Cmd, options, with_argparser, with_argument_list
-from optparse import make_option
+from cmd2 import Cmd, with_argparser, with_argument_list
 
 
 class CmdLineApp(Cmd):
@@ -29,7 +28,7 @@ class CmdLineApp(Cmd):
         self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        Cmd.__init__(self, use_ipython=False, transcript_files=transcript_files)
+        super().__init__(use_ipython=False, transcript_files=transcript_files)
 
         # Disable cmd's usage of command-line arguments as commands to be run at invocation
         # self.allow_cli_args = False
@@ -83,30 +82,6 @@ class CmdLineApp(Cmd):
             self.poutput('<{0}>{1}</{0}>'.format(tag, ' '.join(content)))
         else:
             self.perror("tagg requires at least 2 arguments")
-
-
-    # @options uses the python optparse module which has been deprecated
-    # since 2011. Use @with_argument_parser instead, which utilizes the
-    # python argparse module
-    @options([make_option('-p', '--piglatin', action="store_true", help="atinLay"),
-              make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE"),
-              make_option('-r', '--repeat', type="int", help="output [n] times")
-              ])
-    def do_deprecated_speak(self, arg, opts=None):
-        """Repeats what you tell me to."""
-        words = []
-        for word in arg:
-            if opts.piglatin:
-                word = '%s%say' % (word[1:], word[0])
-            if opts.shout:
-                arg = arg.upper()
-            words.append(word)
-        repetitions = opts.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(' '.join(words))
-            self.stdout.write('\n')
-            # self.stdout.write is better than "print", because Cmd can be
-            # initialized with a non-standard output destination
 
 
 if __name__ == '__main__':

@@ -5,27 +5,29 @@ Cmd2 unit/functional testing
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import argparse
+import builtins
+from code import InteractiveConsole
 import os
 import sys
 import io
 import tempfile
 
-import mock
 import pytest
-import six
 
-from code import InteractiveConsole
-from optparse import make_option
-
-# Used for sm.input: raw_input() for Python 2 or input() for Python 3
-import six.moves as sm
+# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
+try:
+    import mock
+except ImportError:
+    from unittest import mock
 
 import cmd2
-from conftest import run_cmd, normalize, BASE_HELP, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
+from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
+    HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.8.2'
+    assert cmd2.__version__ == '0.9.0'
 
 
 def test_empty_statement(base_app):
@@ -38,6 +40,13 @@ def test_base_help(base_app):
     expected = normalize(BASE_HELP)
     assert out == expected
 
+def test_base_help_verbose(base_app):
+    out = run_cmd(base_app, 'help -v')
+    expected = normalize(BASE_HELP_VERBOSE)
+    assert out == expected
+
+    out = run_cmd(base_app, 'help --verbose')
+    assert out == expected
 
 def test_base_help_history(base_app):
     out = run_cmd(base_app, 'help history')
@@ -47,7 +56,7 @@ def test_base_argparse_help(base_app, capsys):
     # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
     run_cmd(base_app, 'set -h')
     out, err = capsys.readouterr()
-    out1 = out.splitlines()
+    out1 = normalize(str(out))
 
     out2 = run_cmd(base_app, 'help set')
 
@@ -59,8 +68,12 @@ def test_base_argparse_help(base_app, capsys):
 def test_base_invalid_option(base_app, capsys):
     run_cmd(base_app, 'set -z')
     out, err = capsys.readouterr()
-    expected = ['usage: set [-h] [-a] [-l] [settable [settable ...]]', 'set: error: unrecognized arguments: -z']
-    assert normalize(str(err)) == expected
+    out = normalize(out)
+    err = normalize(err)
+    assert len(err) == 3
+    assert len(out) == 15
+    assert 'Error: unrecognized arguments: -z' in err[0]
+    assert out[0] == 'usage: set [-h] [-a] [-l] [settable [settable ...]]'
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')
@@ -91,16 +104,57 @@ def test_base_show_readonly(base_app):
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-        Parsing of @options commands:
+        Parsing of command arguments:
             Shell lexer mode for command argument splitting: {}
             Strip Quotes after splitting arguments: {}
-            Argument type: {}
             
 """.format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
-           "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
-           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False",
-           "List of argument strings" if cmd2.USE_ARG_LIST else "string of space-separated arguments"))
+           "POSIX" if cmd2.cmd2.POSIX_SHLEX else "non-POSIX",
+           "True" if cmd2.cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.cmd2.POSIX_SHLEX else "False"))
     assert out == expected
+
+
+def test_cast():
+    cast = cmd2.cmd2.cast
+
+    # Boolean
+    assert cast(True, True) == True
+    assert cast(True, False) == False
+    assert cast(True, 0) == False
+    assert cast(True, 1) == True
+    assert cast(True, 'on') == True
+    assert cast(True, 'off') == False
+    assert cast(True, 'ON') == True
+    assert cast(True, 'OFF') == False
+    assert cast(True, 'y') == True
+    assert cast(True, 'n') == False
+    assert cast(True, 't') == True
+    assert cast(True, 'f') == False
+
+    # Non-boolean same type
+    assert cast(1, 5) == 5
+    assert cast(3.4, 2.7) == 2.7
+    assert cast('foo', 'bar') == 'bar'
+    assert cast([1,2], [3,4]) == [3,4]
+
+def test_cast_problems(capsys):
+    cast = cmd2.cmd2.cast
+
+    expected = 'Problem setting parameter (now {}) to {}; incorrect type?\n'
+
+    # Boolean current, with new value not convertible to bool
+    current = True
+    new = [True, True]
+    assert cast(current, new) == current
+    out, err = capsys.readouterr()
+    assert out == expected.format(current, new)
+
+    # Non-boolean current, with new value not convertible to current type
+    current = 1
+    new = 'octopus'
+    assert cast(current, new) == current
+    out, err = capsys.readouterr()
+    assert out == expected.format(current, new)
 
 
 def test_base_set(base_app):
@@ -137,10 +191,7 @@ now: True
 
 def test_base_shell(base_app, monkeypatch):
     m = mock.Mock()
-    subprocess = 'subprocess'
-    if six.PY2:
-        subprocess = 'subprocess32'
-    monkeypatch.setattr("{}.Popen".format(subprocess), m)
+    monkeypatch.setattr("{}.Popen".format('subprocess'), m)
     out = run_cmd(base_app, 'shell echo a')
     assert out == []
     assert m.called
@@ -208,6 +259,34 @@ def test_base_error(base_app):
     out = run_cmd(base_app, 'meow')
     assert out == ["*** Unknown syntax: meow"]
 
+
+@pytest.fixture
+def hist():
+    from cmd2.cmd2 import HistoryItem
+    h = cmd2.cmd2.History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
+    return h
+
+def test_history_span(hist):
+    h = hist
+    assert h == ['first', 'second', 'third', 'fourth']
+    assert h.span('-2..') == ['third', 'fourth']
+    assert h.span('2..3') == ['second', 'third']    # Inclusive of end
+    assert h.span('3') == ['third']
+    assert h.span(':') == h
+    assert h.span('2..') == ['second', 'third', 'fourth']
+    assert h.span('-1') == ['fourth']
+    assert h.span('-2..-3') == ['third', 'second']
+    assert h.span('*') == h
+
+def test_history_get(hist):
+    h = hist
+    assert h == ['first', 'second', 'third', 'fourth']
+    assert h.get('') == h
+    assert h.get('-2') == h[:-2]
+    assert h.get('5') == []
+    assert h.get('2-3') == ['second']           # Exclusive of end
+    assert h.get('ir') == ['first', 'third']    # Normal string search for all elements containing "ir"
+    assert h.get('/i.*d/') == ['third']         # Regex string search "i", then anything, then "d"
 
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
@@ -596,18 +675,6 @@ def test_allow_redirection(base_app):
     # Verify that no file got created
     assert not os.path.exists(filename)
 
-
-def test_input_redirection(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    filename = os.path.join(test_dir, 'redirect.txt')
-
-    # NOTE: File 'redirect.txt" contains 1 word "history"
-
-    # Verify that redirecting input ffom a file works
-    out = run_cmd(base_app, 'help < {}'.format(filename))
-    assert out == normalize(HELP_HISTORY)
-
-
 def test_pipe_to_shell(base_app, capsys):
     if sys.platform == "win32":
         # Windows
@@ -634,30 +701,23 @@ def test_pipe_to_shell_error(base_app, capsys):
     # Try to pipe command output to a shell command that doesn't exist in order to produce an error
     run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
     out, err = capsys.readouterr()
-
     assert not out
-
     expected_error = 'FileNotFoundError'
-    if six.PY2:
-        if sys.platform.startswith('win'):
-            expected_error = 'WindowsError'
-        else:
-            expected_error = 'OSError'
     assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 
-@pytest.mark.skipif(not cmd2.can_clip,
+@pytest.mark.skipif(not cmd2.cmd2.can_clip,
                     reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
     expected = normalize(BASE_HELP)
-    assert normalize(cmd2.get_paste_buffer()) == expected
+    assert normalize(cmd2.cmd2.get_paste_buffer()) == expected
 
     # Test appending to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help history >>')
     expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
-    assert normalize(cmd2.get_paste_buffer()) == expected
+    assert normalize(cmd2.cmd2.get_paste_buffer()) == expected
 
 
 def test_base_timing(base_app, capsys):
@@ -711,8 +771,8 @@ def test_base_colorize(base_app):
 
 def _expected_no_editor_error():
     expected_exception = 'OSError'
-    # If using Python 2 or PyPy (either 2 or 3), expect a different exception than with Python 3
-    if six.PY2 or hasattr(sys, "pypy_translation_info"):
+    # If PyPy, expect a different exception than with Python 3
+    if hasattr(sys, "pypy_translation_info"):
         expected_exception = 'EnvironmentError'
 
     expected_text = normalize("""
@@ -841,7 +901,7 @@ def test_base_cmdloop_without_queue():
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
-    sm.input = m
+    builtins.input = m
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
@@ -863,7 +923,7 @@ def test_cmdloop_without_rawinput():
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
-    sm.input = m
+    builtins.input = m
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
@@ -877,8 +937,7 @@ def test_cmdloop_without_rawinput():
 
 class HookFailureApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def postparsing_precmd(self, statement):
         """Simulate precmd hook failure."""
@@ -902,8 +961,7 @@ def test_precmd_hook_failure(hook_failure):
 
 class SayApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def do_say(self, arg):
         self.poutput(arg)
@@ -920,7 +978,7 @@ def test_interrupt_quit(say_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
-    sm.input = m
+    builtins.input = m
 
     say_app.cmdloop()
 
@@ -934,7 +992,7 @@ def test_interrupt_noquit(say_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
-    sm.input = m
+    builtins.input = m
 
     say_app.cmdloop()
 
@@ -945,8 +1003,7 @@ def test_interrupt_noquit(say_app):
 
 class ShellApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.default_to_shell = True
 
 @pytest.fixture
@@ -967,7 +1024,7 @@ def test_default_to_shell_good(capsys):
         line = 'dir'
     else:
         line = 'ls'
-    statement = app.parser_manager.parsed(line)
+    statement = app.statement_parser.parse(line)
     retval = app.default(statement)
     assert not retval
     out, err = capsys.readouterr()
@@ -977,7 +1034,7 @@ def test_default_to_shell_failure(capsys):
     app = cmd2.Cmd()
     app.default_to_shell = True
     line = 'ls does_not_exist.xyz'
-    statement = app.parser_manager.parsed(line)
+    statement = app.statement_parser.parse(line)
     retval = app.default(statement)
     assert not retval
     out, err = capsys.readouterr()
@@ -1012,8 +1069,7 @@ def test_ansi_prompt_escaped():
 class HelpApp(cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def do_squat(self, arg):
         """This docstring help will never be shown because the help_squat method overrides it."""
@@ -1066,6 +1122,95 @@ def test_help_overridden_method(help_app):
     assert out == expected
 
 
+class HelpCategoriesApp(cmd2.Cmd):
+    """Class for testing custom help_* methods which override docstring help."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @cmd2.with_category('Some Category')
+    def do_diddly(self, arg):
+        """This command does diddly"""
+        pass
+
+    def do_squat(self, arg):
+        """This docstring help will never be shown because the help_squat method overrides it."""
+        pass
+
+    def help_squat(self):
+        self.stdout.write('This command does diddly squat...\n')
+
+    def do_edit(self, arg):
+        """This overrides the edit command and does nothing."""
+        pass
+
+    cmd2.categorize((do_squat, do_edit), 'Custom Category')
+
+    # This command will be in the "undocumented" section of the help menu
+    def do_undoc(self, arg):
+        pass
+
+@pytest.fixture
+def helpcat_app():
+    app = HelpCategoriesApp()
+    app.stdout = StdOut()
+    return app
+
+def test_help_cat_base(helpcat_app):
+    out = run_cmd(helpcat_app, 'help')
+    expected = normalize("""Documented commands (type help <topic>):
+
+Custom Category
+===============
+edit  squat
+
+Some Category
+=============
+diddly
+
+Other
+=====
+alias  help  history  load  py  pyscript  quit  set  shell  shortcuts  unalias
+
+Undocumented commands:
+======================
+undoc
+""")
+    assert out == expected
+
+def test_help_cat_verbose(helpcat_app):
+    out = run_cmd(helpcat_app, 'help --verbose')
+    expected = normalize("""Documented commands (type help <topic>):
+
+Custom Category
+================================================================================
+edit                This overrides the edit command and does nothing.
+squat               This command does diddly squat...
+
+Some Category
+================================================================================
+diddly              This command does diddly
+
+Other
+================================================================================
+alias               Define or display aliases
+help                List available commands with "help" or detailed help with "help cmd".
+history             View, run, edit, and save previously entered commands.
+load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+py                  Invoke python command, shell, or script
+pyscript            Runs a python script file inside the console
+quit                Exits this application.
+set                 Sets a settable parameter or shows current settings of parameters.
+shell               Execute a command as if at the OS prompt.
+shortcuts           Lists shortcuts (aliases) available.
+unalias             Unsets aliases
+
+Undocumented commands:
+======================
+undoc
+""")
+    assert out == expected
+
+
 class SelectApp(cmd2.Cmd):
     def do_eat(self, arg):
         """Eat something, with a selection of sauces to choose from."""
@@ -1106,7 +1251,7 @@ def select_app():
 def test_select_options(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     food = 'bacon'
     out = run_cmd(select_app, "eat {}".format(food))
@@ -1127,7 +1272,7 @@ def test_select_invalid_option(select_app):
     m = mock.MagicMock(name='input')
     # If side_effect is an iterable then each call to the mock will return the next value from the iterable.
     m.side_effect = ['3', '1']  # First pass and invalid selection, then pass a valid one
-    sm.input = m
+    builtins.input = m
 
     food = 'fish'
     out = run_cmd(select_app, "eat {}".format(food))
@@ -1149,7 +1294,7 @@ def test_select_invalid_option(select_app):
 def test_select_list_of_strings(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "study")
     expected = normalize("""
@@ -1167,7 +1312,7 @@ Good luck learning {}!
 def test_select_list_of_tuples(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "procrastinate")
     expected = normalize("""
@@ -1186,7 +1331,7 @@ Have fun procrasinating with {}!
 def test_select_uneven_list_of_tuples(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='2')
-    sm.input = m
+    builtins.input = m
 
     out = run_cmd(select_app, "play")
     expected = normalize("""
@@ -1201,41 +1346,25 @@ Charm us with the {}...
     # And verify the expected output to stdout
     assert out == expected
 
-@pytest.fixture
-def noarglist_app():
-    cmd2.set_use_arg_list(False)
-    app = cmd2.Cmd()
-    app.stdout = StdOut()
-    return app
 
-def test_pyscript_with_noarglist(noarglist_app, capsys, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, '..', 'examples', 'scripts', 'arg_printer.py')
-    expected = """Running Python script 'arg_printer.py' which was called with 2 arguments
-arg 1: 'foo'
-arg 2: 'bar'
-"""
-    run_cmd(noarglist_app, 'pyscript {} foo bar'.format(python_script))
-    out, err = capsys.readouterr()
-    assert out == expected
-
-
-class OptionApp(cmd2.Cmd):
-    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
-    def do_greet(self, arg, opts=None):
+class HelpNoDocstringApp(cmd2.Cmd):
+    greet_parser = argparse.ArgumentParser()
+    greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
+    @cmd2.with_argparser_and_unknown_args(greet_parser)
+    def do_greet(self, opts, arg):
         arg = ''.join(arg)
         if opts.shout:
             arg = arg.upper()
         self.stdout.write(arg + '\n')
 
-def test_option_help_with_no_docstring(capsys):
-    app = OptionApp()
+def test_help_with_no_docstring(capsys):
+    app = HelpNoDocstringApp()
     app.onecmd_plus_hooks('greet -h')
     out, err = capsys.readouterr()
     assert err == ''
-    assert out == """Usage: greet [options] arg
+    assert out == """usage: greet [-h] [-s]
 
-Options:
+optional arguments:
   -h, --help   show this help message and exit
   -s, --shout  N00B EMULATION MODE
 """
@@ -1244,7 +1373,7 @@ Options:
                     reason="cmd2._which function only used on Mac and Linux")
 def test_which_editor_good():
     editor = 'vi'
-    path = cmd2._which(editor)
+    path = cmd2.cmd2._which(editor)
     # Assert that the vi editor was found because it should exist on all Mac and Linux systems
     assert path
 
@@ -1252,7 +1381,7 @@ def test_which_editor_good():
                     reason="cmd2._which function only used on Mac and Linux")
 def test_which_editor_bad():
     editor = 'notepad.exe'
-    path = cmd2._which(editor)
+    path = cmd2.cmd2._which(editor)
     # Assert that the editor wasn't found because no notepad.exe on non-Windows systems ;-)
     assert path is None
 
@@ -1260,12 +1389,13 @@ def test_which_editor_bad():
 class MultilineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         self.multilineCommands = ['orate']
+        super().__init__(*args, **kwargs)
 
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+    orate_parser = argparse.ArgumentParser()
+    orate_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
 
-    @cmd2.options([make_option('-s', '--shout', action="store_true", help="N00B EMULATION MODE")])
-    def do_orate(self, arg, opts=None):
+    @cmd2.with_argparser_and_unknown_args(orate_parser)
+    def do_orate(self, opts, arg):
         arg = ''.join(arg)
         if opts.shout:
             arg = arg.upper()
@@ -1278,25 +1408,25 @@ def multiline_app():
     return app
 
 def test_multiline_complete_empty_statement_raises_exception(multiline_app):
-    with pytest.raises(cmd2.EmptyStatement):
+    with pytest.raises(cmd2.cmd2.EmptyStatement):
         multiline_app._complete_statement('')
 
 def test_multiline_complete_statement_without_terminator(multiline_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin when it looks for more input
     m = mock.MagicMock(name='input', return_value='\n')
-    sm.input = m
+    builtins.input = m
 
     command = 'orate'
     args = 'hello world'
     line = '{} {}'.format(command, args)
     statement = multiline_app._complete_statement(line)
     assert statement == args
-    assert statement.parsed.command == command
+    assert statement.command == command
 
 
 def test_clipboard_failure(capsys):
     # Force cmd2 clipboard to be disabled
-    cmd2.can_clip = False
+    cmd2.cmd2.disable_clip()
     app = cmd2.Cmd()
 
     # Redirect command output to the clipboard when a clipboard isn't present
@@ -1310,8 +1440,7 @@ def test_clipboard_failure(capsys):
 
 class CmdResultApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        # Need to use this older form of invoking super class constructor to support Python 2.x and Python 3.x
-        cmd2.Cmd.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def do_affirmative(self, arg):
         self._last_result = cmd2.CmdResult(arg)
@@ -1385,10 +1514,8 @@ def test_echo(capsys):
 def test_pseudo_raw_input_tty_rawinput_true():
     # use context managers so original functions get put back when we are done
     # we dont use decorators because we need m_input for the assertion
-    with mock.patch('sys.stdin.isatty',
-            mock.MagicMock(name='isatty', return_value=True)):
-        with mock.patch('six.moves.input',
-                mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
+    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
+        with mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
             # run the cmdloop, which should pull input from our mocks
             app = cmd2.Cmd()
             app.use_rawinput = True
@@ -1431,10 +1558,8 @@ def piped_rawinput_true(capsys, echo, command):
     out, err = capsys.readouterr()
     return (app, out)
 
-# using the decorator puts the original function at six.moves.input
-# back when this method returns
-@mock.patch('six.moves.input',
-        mock.MagicMock(name='input', side_effect=['set', EOFError]))
+# using the decorator puts the original input function back when this unit test returns
+@mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
 def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, True, command)
@@ -1442,10 +1567,8 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     assert out[0] == '{}{}'.format(app.prompt, command)
     assert out[1].startswith('colors:')
 
-# using the decorator puts the original function at six.moves.input
-# back when this method returns
-@mock.patch('six.moves.input',
-        mock.MagicMock(name='input', side_effect=['set', EOFError]))
+# using the decorator puts the original input function back when this unit test returns
+@mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
 def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
@@ -1487,7 +1610,7 @@ def test_raw_input(base_app):
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.Mock(name='input', return_value=fake_input)
-    sm.input = m
+    builtins.input = m
 
     line = base_app.pseudo_raw_input('(cmd2)')
     assert line == fake_input

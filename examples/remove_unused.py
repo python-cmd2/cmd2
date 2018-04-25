@@ -16,7 +16,7 @@ class RemoveUnusedBuiltinCommands(cmd2.Cmd):
     """ Example cmd2 application where we remove some unused built-in commands."""
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        super().__init__()
 
         # To hide commands from displaying in the help menu, add them to the hidden_commands list
         self.hidden_commands.append('py')

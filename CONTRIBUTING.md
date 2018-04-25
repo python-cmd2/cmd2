@@ -44,9 +44,8 @@ The tables below list all prerequisites along with the minimum required version 
 
 | Prerequisite                                        | Minimum Version |
 | --------------------------------------------------- | --------------- |
-| [Python](https://www.python.org/downloads/)         | `3.4 or 2.7`    |
-| [six](https://pypi.python.org/pypi/six)             | `1.8`           |
-| [pyparsing](http://pyparsing.wikispaces.com)        | `2.0.3`         |
+| [Python](https://www.python.org/downloads/)         | `3.4`           |
+| [pyparsing](http://pyparsing.wikispaces.com)        | `2.1`           |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
 
 #### Additional prerequisites to run cmd2 unit tests
@@ -54,7 +53,6 @@ The tables below list all prerequisites along with the minimum required version 
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
 | [pytest](http://doc.pytest.org/en/latest/)  | `2.6.3`         |
-| [mock](https://pypi.python.org/pypi/six)    | `1.0.1`         |
 
 ### Additional prerequisites to build cmd2 documentation
 | Prerequisite                                | Minimum Version |
@@ -73,7 +71,6 @@ If Python is already installed in your machine, run the following commands to va
 
 ```shell
 python -V
-pip freeze | grep six
 pip freeze | grep pyparsing
 ```
 
@@ -193,10 +190,10 @@ Once you have cmd2 cloned, before you start any cmd2 application, you first need
 
 ```bash
 # Install cmd2 prerequisites
-pip install -U six pyparsing pyperclip
+pip install -U pyparsing pyperclip
 
 # Install prerequisites for running cmd2 unit tests
-pip install -U pytest mock
+pip install -U pytest
 
 # Install prerequisites for building cmd2 documentation
 pip install -U sphinx sphinx-rtd-theme
@@ -239,7 +236,7 @@ This bit is up to you!
 #### How to find the code in the cmd2 codebase to fix/edit?
 
 The cmd2 project directory structure is pretty simple and straightforward.  All actual code for cmd2
-is located in a single file, `cmd2.py`.  The code to generate the documentation is in the `docs` directory.  Unit tests are in the `tests` directory.  The `examples` directory contains examples of how
+is located underneath the `cmd2` directory.  The code to generate the documentation is in the `docs` directory.  Unit tests are in the `tests` directory.  The `examples` directory contains examples of how
 to use cmd2.  There are various other files in the root directory, but these are primarily related to
 continuous integration and to release deployment.
 
@@ -479,6 +476,13 @@ Here is some advice regarding what makes a good pull request (PR) from the persp
 - It's good if the branch name is related to the PR contents, even if it's just "fix123" or "add_more_tests"
 - Code coverage of the unit tests matters, try not to decrease it
 - Think twice before adding dependencies to 3rd party libraries (outside of the Python standard library) because it could affect a lot of users
+
+### Developing and Debugging in an IDE
+
+We recommend using [Visual Studio Code](https://code.visualstudio.com) with the [Python extension](https://code.visualstudio.com/docs/languages/python) and it's [Integrated Terminal](https://code.visualstudio.com/docs/python/debugging) debugger for debugging since it has 
+excellent support for debugging console applications.
+
+[PyCharm](https://www.jetbrains.com/pycharm/) is also quite good and has very nice [Code Inspection](https://www.jetbrains.com/help/pycharm/code-inspection.html) capabilities.
 
 ### Acknowledgement
 Thanks to the good folks at [freeCodeCamp](https://github.com/freeCodeCamp/freeCodeCamp) for creating

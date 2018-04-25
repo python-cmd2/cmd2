@@ -13,32 +13,21 @@ import os
 import sys
 
 import cmd2
-import mock
 import pytest
-
-# Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
-try:
-    import gnureadline as readline
-except ImportError:
-    # Try to import readline, but allow failure for convenience in Windows unit testing
-    # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
-    try:
-        # noinspection PyUnresolvedReferences
-        import readline
-    except ImportError:
-        pass
-
-
-@pytest.fixture
-def cmd2_app():
-    c = cmd2.Cmd()
-    return c
-
+from .conftest import complete_tester, StdOut
+from examples.subcommands import SubcommandsExample
 
 # List of strings used with completion functions
-food_item_strs = ['Pizza', 'Hamburger', 'Ham', 'Potato']
+food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
-delimited_strs = ['/home/user/file.txt', '/home/user/prog.c', '/home/otheruser/maps']
+delimited_strs = \
+    [
+        '/home/user/file.txt',
+        '/home/user/file space.txt',
+        '/home/user/prog.c',
+        '/home/other user/maps',
+        '/home/other user/tests'
+    ]
 
 # Dictionary used with flag based completion functions
 flag_dict = \
@@ -59,39 +48,31 @@ index_dict = \
         2: sport_item_strs,           # Tab-complete sport items at index 2 in command line
     }
 
-def complete_tester(text, line, begidx, endidx, app):
+
+class CompletionsExample(cmd2.Cmd):
     """
-    This is a convenience function to test cmd2.complete() since
-    in a unit test environment there is no actual console readline
-    is monitoring. Therefore we use mock to provide readline data
-    to complete().
-
-    :param text: str - the string prefix we are attempting to match
-    :param line: str - the current input line with leading whitespace removed
-    :param begidx: int - the beginning index of the prefix text
-    :param endidx: int - the ending index of the prefix text
-    :param app: the cmd2 app that will run completions
-    :return: The first matched string or None if there are no matches
-             Matches are stored in app.completion_matches
-             These matches also have been sorted by complete()
+    Example cmd2 application used to exercise tab-completion tests
     """
-    def get_line():
-        return line
+    def __init__(self):
+        cmd2.Cmd.__init__(self)
 
-    def get_begidx():
-        return begidx
+    def do_test_basic(self, args):
+        pass
 
-    def get_endidx():
-        return endidx
+    def complete_test_basic(self, text, line, begidx, endidx):
+        return self.basic_complete(text, line, begidx, endidx, food_item_strs)
 
-    first_match = None
-    with mock.patch.object(readline, 'get_line_buffer', get_line):
-        with mock.patch.object(readline, 'get_begidx', get_begidx):
-            with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = app.complete(text, 0)
+    def do_test_delimited(self, args):
+        pass
 
-    return first_match
+    def complete_test_delimited(self, text, line, begidx, endidx):
+        return self.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
+
+
+@pytest.fixture
+def cmd2_app():
+    c = CompletionsExample()
+    return c
 
 
 def test_cmd2_command_completion_single(cmd2_app):
@@ -341,25 +322,19 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     # Currently path completion doesn't accept wildcards, so will always return empty results
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_invalid_syntax(cmd2_app):
-    # Test a missing separator between a ~ and path
-    text = '~Desktop'
+def test_path_completion_expand_user_dir(cmd2_app):
+    # Get the current user. We can't use getpass.getuser() since
+    # that doesn't work when running these tests on Windows in AppVeyor.
+    user = os.path.basename(os.path.expanduser('~'))
+
+    text = '~{}'.format(user)
     line = 'shell fake {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
+    completions = cmd2_app.path_complete(text, line, begidx, endidx)
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx) == []
-
-def test_path_completion_just_tilde(cmd2_app):
-    # Run path with just a tilde
-    text = '~'
-    line = 'shell fake {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-    completions_tilde = cmd2_app.path_complete(text, line, begidx, endidx)
-
-    # Path complete should complete the tilde with a slash
-    assert completions_tilde == [text + os.path.sep]
+    expected = text + os.path.sep
+    assert expected in completions
 
 def test_path_completion_user_expansion(cmd2_app):
     # Run path with a tilde and a slash
@@ -431,12 +406,12 @@ def test_delimiter_completion(cmd2_app):
 
     cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
 
-    # Remove duplicates from display_matches and sort it. This is typically done in the display function.
+    # Remove duplicates from display_matches and sort it. This is typically done in complete().
     display_set = set(cmd2_app.display_matches)
     display_list = list(display_set)
     display_list.sort()
 
-    assert display_list == ['otheruser', 'user']
+    assert display_list == ['other user', 'user']
 
 def test_flag_based_completion_single(cmd2_app):
     text = 'Pi'
@@ -644,77 +619,121 @@ def test_parseline_expands_shortcuts(cmd2_app):
     assert args == 'cat foobar.txt'
     assert line.replace('!', 'shell ') == out_line
 
+def test_add_opening_quote_basic_no_text(cmd2_app):
+    text = ''
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
 
-class SubcommandsExample(cmd2.Cmd):
-    """
-    Example cmd2 application where we a base command which has a couple subcommands
-    and the "sport" subcommand has tab completion enabled.
-    """
+    # The whole list will be returned with no opening quotes added
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == sorted(food_item_strs)
 
-    def __init__(self):
-        cmd2.Cmd.__init__(self)
+def test_add_opening_quote_basic_nothing_added(cmd2_app):
+    text = 'P'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
 
-    # subcommand functions for the base command
-    def base_foo(self, args):
-        """foo subcommand of base command"""
-        self.poutput(args.x * args.y)
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == ['Pizza', 'Potato']
 
-    def base_bar(self, args):
-        """bar subcommand of base command"""
-        self.poutput('((%s))' % args.z)
+def test_add_opening_quote_basic_quote_added(cmd2_app):
+    text = 'Ha'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
 
-    def base_sport(self, args):
-        """sport subcommand of base command"""
-        self.poutput('Sport is {}'.format(args.sport))
+    expected = sorted(['"Ham', '"Ham Sandwich'])
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
 
-    # noinspection PyUnusedLocal
-    def complete_base_sport(self, text, line, begidx, endidx):
-        """ Adds tab completion to base sport subcommand """
-        index_dict = {1: sport_item_strs}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict)
+def test_add_opening_quote_basic_text_is_common_prefix(cmd2_app):
+    # This tests when the text entered is the same as the common prefix of the matches
+    text = 'Ham'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
 
-    # create the top-level parser for the base command
-    base_parser = argparse.ArgumentParser(prog='base')
-    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+    expected = sorted(['"Ham', '"Ham Sandwich'])
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
 
-    # create the parser for the "foo" subcommand
-    parser_foo = base_subparsers.add_parser('foo', help='foo help')
-    parser_foo.add_argument('-x', type=int, default=1, help='integer')
-    parser_foo.add_argument('y', type=float, help='float')
-    parser_foo.set_defaults(func=base_foo)
+def test_add_opening_quote_delimited_no_text(cmd2_app):
+    text = ''
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
 
-    # create the parser for the "bar" subcommand
-    parser_bar = base_subparsers.add_parser('bar', help='bar help')
-    parser_bar.add_argument('z', help='string')
-    parser_bar.set_defaults(func=base_bar)
+    # The whole list will be returned with no opening quotes added
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == sorted(delimited_strs)
 
-    # create the parser for the "sport" subcommand
-    parser_sport = base_subparsers.add_parser('sport', help='sport help')
-    parser_sport.add_argument('sport', help='Enter name of a sport')
+def test_add_opening_quote_delimited_nothing_added(cmd2_app):
+    text = '/ho'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
 
-    # Set both a function and tab completer for the "sport" subcommand
-    parser_sport.set_defaults(func=base_sport, completer=complete_base_sport)
+    expected_matches = sorted(delimited_strs)
+    expected_display = sorted(['other user', 'user'])
 
-    @cmd2.with_argparser(base_parser)
-    def do_base(self, args):
-        """Base command help"""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # No subcommand was provided, so call help
-            self.do_help('base')
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           cmd2_app.completion_matches == expected_matches and \
+           cmd2_app.display_matches == expected_display
 
-    # Enable tab completion of base to make sure the subcommands' completers get called.
-    complete_base = cmd2.Cmd.cmd_with_subs_completer
+def test_add_opening_quote_delimited_quote_added(cmd2_app):
+    text = '/home/user/fi'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_common_prefix = '"/home/user/file'
+    expected_display = sorted(['file.txt', 'file space.txt'])
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
+           cmd2_app.display_matches == expected_display
+
+def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
+    # This tests when the text entered is the same as the common prefix of the matches
+    text = '/home/user/file'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_common_prefix = '"/home/user/file'
+    expected_display = sorted(['file.txt', 'file space.txt'])
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
+           cmd2_app.display_matches == expected_display
+
+def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
+    # This test when a space appears before the part of the string that is the display match
+    text = '/home/oth'
+    line = 'test_delimited {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected_common_prefix = '"/home/other user/'
+    expected_display = ['maps', 'tests']
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and \
+           os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
+           cmd2_app.display_matches == expected_display
 
 
 @pytest.fixture
 def sc_app():
-    app = SubcommandsExample()
-    return app
+    c = SubcommandsExample()
+    c.stdout = StdOut()
 
+    return c
 
 def test_cmd2_subcommand_completion_single_end(sc_app):
     text = 'f'
@@ -782,6 +801,7 @@ def test_subcommand_tab_completion(sc_app):
     # It is at end of line, so extra space is present
     assert first_match is not None and sc_app.completion_matches == ['Football ']
 
+
 def test_subcommand_tab_completion_with_no_completer(sc_app):
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
@@ -793,18 +813,6 @@ def test_subcommand_tab_completion_with_no_completer(sc_app):
     first_match = complete_tester(text, line, begidx, endidx, sc_app)
     assert first_match is None
 
-def test_subcommand_tab_completion_add_quote(sc_app):
-    # This makes sure an opening quote is added to the readline line buffer
-    text = 'Space'
-    line = 'base sport {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, sc_app)
-
-    # No matches are returned when an opening quote is added to the screen
-    assert first_match is None
-    assert readline.get_line_buffer() == 'base sport "Space Ball" '
 
 def test_subcommand_tab_completion_space_in_text(sc_app):
     text = 'B'
@@ -817,6 +825,170 @@ def test_subcommand_tab_completion_space_in_text(sc_app):
     assert first_match is not None and \
            sc_app.completion_matches == ['Ball" '] and \
            sc_app.display_matches == ['Space Ball']
+
+####################################################
+
+
+class SubcommandsWithUnknownExample(cmd2.Cmd):
+    """
+    Example cmd2 application where we a base command which has a couple subcommands
+    and the "sport" subcommand has tab completion enabled.
+    """
+
+    def __init__(self):
+        cmd2.Cmd.__init__(self)
+
+    # subcommand functions for the base command
+    def base_foo(self, args):
+        """foo subcommand of base command"""
+        self.poutput(args.x * args.y)
+
+    def base_bar(self, args):
+        """bar subcommand of base command"""
+        self.poutput('((%s))' % args.z)
+
+    def base_sport(self, args):
+        """sport subcommand of base command"""
+        self.poutput('Sport is {}'.format(args.sport))
+
+    # create the top-level parser for the base command
+    base_parser = argparse.ArgumentParser(prog='base')
+    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+
+    # create the parser for the "foo" subcommand
+    parser_foo = base_subparsers.add_parser('foo', help='foo help')
+    parser_foo.add_argument('-x', type=int, default=1, help='integer')
+    parser_foo.add_argument('y', type=float, help='float')
+    parser_foo.set_defaults(func=base_foo)
+
+    # create the parser for the "bar" subcommand
+    parser_bar = base_subparsers.add_parser('bar', help='bar help')
+    parser_bar.add_argument('z', help='string')
+    parser_bar.set_defaults(func=base_bar)
+
+    # create the parser for the "sport" subcommand
+    parser_sport = base_subparsers.add_parser('sport', help='sport help')
+    sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
+    setattr(sport_arg, 'arg_choices', sport_item_strs)
+
+    @cmd2.with_argparser_and_unknown_args(base_parser)
+    def do_base(self, args):
+        """Base command help"""
+        func = getattr(args, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, args)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help('base')
+
+
+@pytest.fixture
+def scu_app():
+    """Declare test fixture for with_argparser_and_unknown_args"""
+    app = SubcommandsWithUnknownExample()
+    return app
+
+
+def test_cmd2_subcmd_with_unknown_completion_single_end(scu_app):
+    text = 'f'
+    line = 'base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+
+    print('first_match: {}'.format(first_match))
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and scu_app.completion_matches == ['foo ']
+
+
+def test_cmd2_subcmd_with_unknown_completion_multiple(scu_app):
+    text = ''
+    line = 'base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
+
+
+def test_cmd2_subcmd_with_unknown_completion_nomatch(scu_app):
+    text = 'z'
+    line = 'base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is None
+
+
+def test_cmd2_help_subcommand_completion_single(scu_app):
+    text = 'base'
+    line = 'help {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert scu_app.complete_help(text, line, begidx, endidx) == ['base']
+
+
+def test_cmd2_help_subcommand_completion_multiple(scu_app):
+    text = ''
+    line = 'help base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    matches = sorted(scu_app.complete_help(text, line, begidx, endidx))
+    assert matches == ['bar', 'foo', 'sport']
+
+
+def test_cmd2_help_subcommand_completion_nomatch(scu_app):
+    text = 'z'
+    line = 'help base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert scu_app.complete_help(text, line, begidx, endidx) == []
+
+
+def test_subcommand_tab_completion(scu_app):
+    # This makes sure the correct completer for the sport subcommand is called
+    text = 'Foot'
+    line = 'base sport {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and scu_app.completion_matches == ['Football ']
+
+
+def test_subcommand_tab_completion_with_no_completer(scu_app):
+    # This tests what happens when a subcommand has no completer
+    # In this case, the foo subcommand has no completer defined
+    text = 'Foot'
+    line = 'base foo {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is None
+
+
+def test_subcommand_tab_completion_space_in_text(scu_app):
+    text = 'B'
+    line = 'base sport "Space {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+
+    assert first_match is not None and \
+           scu_app.completion_matches == ['Ball" '] and \
+           scu_app.display_matches == ['Space Ball']
+
+####################################################
+
 
 class SecondLevel(cmd2.Cmd):
     """To be used as a second level command class. """

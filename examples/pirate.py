@@ -23,7 +23,7 @@ class Pirate(Cmd):
         self.shortcuts.update({'~': 'sing'})
 
         """Initialize the base class as well as this one"""
-        Cmd.__init__(self)
+        super().__init__()
         # prompts and defaults
         self.gold = 0
         self.initial_gold = self.gold

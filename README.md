@@ -28,26 +28,24 @@ Main Features
 - `py` enters interactive Python console (opt-in `ipy` for IPython console)
 - Option to display long output using a pager with ``cmd2.Cmd.ppaged()``
 - Multi-line commands
-- Special-character command shortcuts (beyond cmd's `@` and `!`)
+- Special-character command shortcuts (beyond cmd's `?` and `!`)
 - Command aliasing similar to bash `alias` command
 - Ability to load commands at startup from an initialization script
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
 - Sub-menu support via the ``AddSubmenu`` decorator
-- Unicode character support (*Python 3 only*)
+- Unicode character support
 - Good tab-completion of commands, sub-commands, file system paths, and shell commands
-- Python 2.7 and 3.4+ support
-- Windows, macOS, and Linux support
+- Support for Python 3.4+ on Windows, macOS, and Linux
 - Trivial to provide built-in help for all commands
 - Built-in regression testing framework for your applications (transcript-based testing)
 - Transcripts for use with built-in regression can be automatically generated from `history -t`
 
-Plan for dropping Python 2.7 support
-------------------------------------
-Support for Python 2.7 will be discontinued on Aug 31, 2018.  After that date, new releases of `cmd2` will only support
-Python 3.  Older releases of `cmd2` will of course continue to support Python 2.7.
+Python 2.7 support is EOL
+-------------------------
+Support for adding new features to the Python 2.7 release of ``cmd2`` was discontinued on April 15, 2018.  Bug fixes will be supported for Python 2.7 via 0.8.x until August 31, 2018.
 
-Supporting Python 2 is an increasing burden on our limited resources.  Switching to support only Python 3 will allow
+Supporting Python 2 was an increasing burden on our limited resources.  Switching to support only Python 3 will allow
 us to clean up the codebase, remove some cruft, and focus on developing new features.
 
 Installation
@@ -58,12 +56,11 @@ On all operating systems, the latest stable version of `cmd2` can be installed u
 pip install -U cmd2
 ```
 
-cmd2 works with Python 2.7 and Python 3.4+ on Windows, macOS, and Linux. It is pure Python code with
-the only 3rd-party dependencies being on [six](https://pypi.python.org/pypi/six),
-[pyparsing](http://pyparsing.wikispaces.com), and [pyperclip](https://github.com/asweigart/pyperclip).
+cmd2 works with Python 3.4+ on Windows, macOS, and Linux. It is pure Python code with
+the only 3rd-party dependencies being on [pyparsing](http://pyparsing.wikispaces.com), and [pyperclip](https://github.com/asweigart/pyperclip).
 Windows has an additional dependency on [pyreadline](https://pypi.python.org/pypi/pyreadline). Non-Windows platforms
 have an additional dependency on [wcwidth](https://pypi.python.org/pypi/wcwidth). Finally, Python
-3.4 and earlier have an additional dependency on [contextlib2](https://pypi.python.org/pypi/contextlib2).
+3.4 has an additional dependency on [contextlib2](https://pypi.python.org/pypi/contextlib2).
 
 For information on other installation options, see
 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2
@@ -154,14 +151,11 @@ Example cmd2 application (**examples/example.py**):
 """
 A sample application for cmd2.
 """
-
-import random
 import argparse
+import random
+import cmd2
 
-from cmd2 import Cmd, with_argparser
-
-
-class CmdLineApp(Cmd):
+class CmdLineApp(cmd2.Cmd):
     """ Example cmd2 application. """
 
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
@@ -179,14 +173,14 @@ class CmdLineApp(Cmd):
         self.shortcuts.update({'&': 'speak'})
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        Cmd.__init__(self, use_ipython=False)
+        super().__init__(use_ipython=False)
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     speak_parser.add_argument('words', nargs='+', help='words to say')
-    @with_argparser(speak_parser)
+    @cmd2.with_argparser(speak_parser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
@@ -207,7 +201,7 @@ class CmdLineApp(Cmd):
     mumble_parser = argparse.ArgumentParser()
     mumble_parser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
     mumble_parser.add_argument('words', nargs='+', help='words to say')
-    @with_argparser(mumble_parser)
+    @cmd2.with_argparser(mumble_parser)
     def do_mumble(self, args):
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
