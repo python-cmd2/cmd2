@@ -251,8 +251,12 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
-            args, unknown = argparser.parse_known_args(lexed_arglist)
-            return func(instance, args, unknown)
+            try:
+                args, unknown = argparser.parse_known_args(lexed_arglist)
+            except SystemExit:
+                return
+            else:
+                return func(instance, args, unknown)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -288,8 +292,12 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
-            args = argparser.parse_args(lexed_arglist)
-            return func(instance, args)
+            try:
+                args = argparser.parse_args(lexed_arglist)
+            except SystemExit:
+                return
+            else:
+                return func(instance, args)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
