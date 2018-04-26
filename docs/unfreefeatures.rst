@@ -129,16 +129,6 @@ that module.
 ``cmd2`` defines a few decorators which change the behavior of
 how arguments get parsed for and passed to a ``do_`` method.  See the section :ref:`decorators` for more information.
 
-Controlling how arguments are parsed for commands with flags
-------------------------------------------------------------
-There are a couple functions which can globally effect how arguments are parsed for commands with flags:
-
-.. autofunction:: cmd2.set_posix_shlex
-
-.. autofunction:: cmd2.set_strip_quotes
-
-.. _argparse: https://docs.python.org/3/library/argparse.html
-
 
 poutput, pfeedback, perror, ppaged
 ==================================

@@ -119,16 +119,6 @@ except ImportError:
 __version__ = '0.9.0'
 
 
-# The next 2 variables and associated setter functions effect how arguments are parsed for decorated commands
-# which use one of the decorators: @with_argument_list, @with_argparser, or @with_argparser_and_unknown_args
-# The defaults are sane and maximize ease of use for new applications based on cmd2.
-
-# Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
-POSIX_SHLEX = False
-
-# Strip outer quotes for convenience if POSIX_SHLEX = False
-STRIP_QUOTES_FOR_NON_POSIX = True
-
 # Used for tab completion and word breaks. Do not change.
 QUOTES = ['"', "'"]
 REDIRECTION_CHARS = ['|', '<', '>']
@@ -151,24 +141,6 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
             setattr(item, HELP_CATEGORY, category)
     else:
         setattr(func, HELP_CATEGORY, category)
-
-
-def set_posix_shlex(val: bool) -> None:
-    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for decorated commands.
-
-    :param val: True => POSIX,  False => Non-POSIX
-    """
-    global POSIX_SHLEX
-    POSIX_SHLEX = val
-
-
-def set_strip_quotes(val: bool) -> None:
-    """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
-
-    :param val: True => strip quotes on args for decorated commands if POSIX_SHLEX is False.
-    """
-    global STRIP_QUOTES_FOR_NON_POSIX
-    STRIP_QUOTES_FOR_NON_POSIX = val
 
 
 def _which(editor: str) -> Optional[str]:
@@ -202,13 +174,12 @@ def parse_quoted_string(cmdline: str) -> List[str]:
         lexed_arglist = cmdline
     else:
         # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
-        # If not using POSIX shlex, make sure to strip off outer quotes for convenience
-        if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
-            temp_arglist = []
-            for arg in lexed_arglist:
-                temp_arglist.append(strip_quotes(arg))
-            lexed_arglist = temp_arglist
+        lexed_arglist = shlex.split(cmdline, posix=False)
+        # strip off outer quotes for convenience
+        temp_arglist = []
+        for arg in lexed_arglist:
+            temp_arglist.append(strip_quotes(arg))
+        lexed_arglist = temp_arglist
     return lexed_arglist
 
 
@@ -2732,12 +2703,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-        Parsing of command arguments:
-            Shell lexer mode for command argument splitting: {}
-            Strip Quotes after splitting arguments: {}
-        """.format(str(self.terminators), self.allow_cli_args, self.allow_redirection,
-                   "POSIX" if POSIX_SHLEX else "non-POSIX",
-                   "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False")
+        """.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
         return read_only_settings
 
     def show(self, args, parameter):

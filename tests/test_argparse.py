@@ -124,8 +124,6 @@ def test_argparse_basic_command(argparse_app):
     assert out == ['hello']
 
 def test_argparse_quoted_arguments(argparse_app):
-    argparse_app.POSIX = False
-    argparse_app.STRIP_QUOTES_FOR_NON_POSIX = True
     out = run_cmd(argparse_app, 'say "hello there"')
     assert out == ['hello there']
 
@@ -138,20 +136,8 @@ def test_argparse_with_list_and_empty_doc(argparse_app):
     assert out == ['HELLO WORLD!']
 
 def test_argparse_quoted_arguments_multiple(argparse_app):
-    argparse_app.POSIX = False
-    argparse_app.STRIP_QUOTES_FOR_NON_POSIX = True
     out = run_cmd(argparse_app, 'say "hello  there" "rick & morty"')
     assert out == ['hello  there rick & morty']
-
-def test_argparse_quoted_arguments_posix(argparse_app):
-    argparse_app.POSIX = True
-    out = run_cmd(argparse_app, 'tag strong this should be loud')
-    assert out == ['<strong>this should be loud</strong>']
-
-def test_argparse_quoted_arguments_posix_multiple(argparse_app):
-    argparse_app.POSIX = True
-    out = run_cmd(argparse_app, 'tag strong this "should  be" loud')
-    assert out == ['<strong>this should  be loud</strong>']
 
 def test_argparse_help_docstring(argparse_app):
     out = run_cmd(argparse_app, 'help say')

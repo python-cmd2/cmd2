@@ -15,7 +15,6 @@ from unittest import mock
 import pytest
 
 import cmd2
-from cmd2 import set_posix_shlex, set_strip_quotes
 from .conftest import run_cmd, StdOut, normalize
 
 class CmdLineApp(cmd2.Cmd):
@@ -34,10 +33,6 @@ class CmdLineApp(cmd2.Cmd):
 
         super().__init__(*args, **kwargs)
         self.intro = 'This is an intro banner ...'
-
-        # Configure how arguments are parsed for commands using decorators
-        set_posix_shlex(False)
-        set_strip_quotes(True)
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action="store_true", help="atinLay")

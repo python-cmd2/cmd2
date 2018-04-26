@@ -104,13 +104,8 @@ def test_base_show_readonly(base_app):
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-        Parsing of command arguments:
-            Shell lexer mode for command argument splitting: {}
-            Strip Quotes after splitting arguments: {}
             
-""".format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
-           "POSIX" if cmd2.cmd2.POSIX_SHLEX else "non-POSIX",
-           "True" if cmd2.cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.cmd2.POSIX_SHLEX else "False"))
+""".format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection))
     assert out == expected
 
 
