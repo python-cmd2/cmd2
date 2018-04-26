@@ -322,10 +322,11 @@ def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     # Currently path completion doesn't accept wildcards, so will always return empty results
     assert cmd2_app.path_complete(text, line, begidx, endidx) == []
 
-def test_path_completion_expand_user_dir(cmd2_app):
-    # Get the current user. We can't use getpass.getuser() since
-    # that doesn't work when running these tests on Windows in AppVeyor.
-    user = os.path.basename(os.path.expanduser('~'))
+@pytest.mark.skipif(sys.platform == 'win32', reason="getpass.getuser() does not work on Windows in AppVeyor because "
+                                                    "no user name environment variables are set")
+def test_path_completion_complete_user(cmd2_app):
+    import getpass
+    user = getpass.getuser()
 
     text = '~{}'.format(user)
     line = 'shell fake {}'.format(text)
@@ -336,7 +337,7 @@ def test_path_completion_expand_user_dir(cmd2_app):
     expected = text + os.path.sep
     assert expected in completions
 
-def test_path_completion_user_expansion(cmd2_app):
+def test_path_completion_user_path_expansion(cmd2_app):
     # Run path with a tilde and a slash
     if sys.platform.startswith('win'):
         cmd = 'dir'
