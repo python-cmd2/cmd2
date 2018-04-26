@@ -2,17 +2,12 @@
 Notes on conversion from pyparsing to shlex taking place in the ply branch
 
 Todo List:
-- case sensitive flag
 - refactor Cmd2.parseline() to use StatementParser.parse()
 - refactor tab completion to use StatementParser instead of parseline()
 - delete SHLEX_TODO.txt once I have all this data captured elsewhere
-- we now ignore self.identchars, which breaks backwards compatibility with the cmd in the standard library
 
 Questions:
-- say I have a command called 'fred' which is a multiline command. If I make an alias
-  for fred called 'george' is george a multiline command? I think the answer is yes.
-  If you want a multi-line synonym for a command that isn't multiline, do it like
-  example.py does. If the answer is no, then I need to rework StatementParser.parse()
+
 
 Changelog Items:
 - if self.default_to_shell is true, then redirection and piping is now properly passed to the shell, previously it was truncated
