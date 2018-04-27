@@ -49,7 +49,8 @@ from code import InteractiveConsole
 import pyparsing
 import pyperclip
 
-import cmd2.constants as constants
+from . import constants
+from . import utils
 
 # Set up readline
 from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
@@ -394,19 +395,6 @@ class EmbeddedConsoleExit(SystemExit):
 class EmptyStatement(Exception):
     """Custom exception class for handling behavior when the user just presses <Enter>."""
     pass
-
-
-# Regular expression to match ANSI escape codes
-ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
-
-
-def strip_ansi(text: str) -> str:
-    """Strip ANSI escape codes from a string.
-
-    :param text: string which may contain ANSI escape codes
-    :return: the same string with any ANSI escape codes removed
-    """
-    return ANSI_ESCAPE_RE.sub('', text)
 
 
 def _pop_readline_history(clear_history: bool=True) -> List[str]:
@@ -853,7 +841,7 @@ class Cmd(cmd.Cmd):
 
         :return: str - prompt stripped of any ANSI escape codes
         """
-        return strip_ansi(self.prompt)
+        return utils.strip_ansi(self.prompt)
 
     def _finalize_app_parameters(self):
         self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
@@ -3711,13 +3699,13 @@ class Cmd2TestCase(unittest.TestCase):
     def _test_transcript(self, fname, transcript):
         line_num = 0
         finished = False
-        line = strip_ansi(next(transcript))
+        line = utils.strip_ansi(next(transcript))
         line_num += 1
         while not finished:
             # Scroll forward to where actual commands begin
             while not line.startswith(self.cmdapp.visible_prompt):
                 try:
-                    line = strip_ansi(next(transcript))
+                    line = utils.strip_ansi(next(transcript))
                 except StopIteration:
                     finished = True
                     break
@@ -3741,13 +3729,13 @@ class Cmd2TestCase(unittest.TestCase):
             self.cmdapp.onecmd_plus_hooks(command)
             result = self.cmdapp.stdout.read()
             # Read the expected result from transcript
-            if strip_ansi(line).startswith(self.cmdapp.visible_prompt):
+            if utils.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
                 message = '\nFile {}, line {}\nCommand was:\n{}\nExpected: (nothing)\nGot:\n{}\n'.format(
                           fname, line_num, command, result)
                 self.assert_(not (result.strip()), message)
                 continue
             expected = []
-            while not strip_ansi(line).startswith(self.cmdapp.visible_prompt):
+            while not utils.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
                 expected.append(line)
                 try:
                     line = next(transcript)
