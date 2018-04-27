@@ -69,6 +69,30 @@ class StatementParser():
         self.aliases = aliases
         self.shortcuts = shortcuts
 
+        # this regular expression matches C-style comments and quoted
+        # strings, i.e. stuff between single or double quote marks
+        # it's used with _comment_replacer() to strip out the C-style
+        # comments, while leaving C-style comments that are inside either
+        # double or single quotes.
+        #
+        # this big regular expression can be broken down into 3 regular
+        # expressions that are OR'ed together.
+        #
+        # /\*.*?(\*/|$)          matches C-style comments, with an optional
+        #                        closing '*/'. The optional closing '*/' is
+        #                        there to retain backward compatibility with
+        #                        the pyparsing implementation of cmd2 < 0.9.0
+        # \'(?:\\.|[^\\\'])*\'   matches a single quoted string, allowing
+        #                        for embedded backslash escaped single quote
+        #                        marks
+        # "(?:\\.|[^\\"])*"      matches a double quoted string, allowing
+        #                        for embedded backslash escaped double quote
+        #                        marks
+        #
+        # by way of reminder the (?:...) regular expression syntax is just
+        # a non-capturing version of regular parenthesis. We need the non-
+        # capturing syntax because _comment_replacer() looks at match
+        # groups
         self.comment_pattern = re.compile(
             r'/\*.*?(\*/|$)|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE
