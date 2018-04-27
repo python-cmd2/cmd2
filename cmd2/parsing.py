@@ -10,6 +10,14 @@ import cmd2
 
 BLANK_LINE = '\n'
 
+def _comment_replacer(match):
+    s = match.group(0)
+    if s.startswith('/'):
+        # treat the removed comment as an empty string
+        return ''
+    else:
+        return s
+
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
     
@@ -32,6 +40,11 @@ class Statement(str):
         self.pipeTo = None
         self.output = None
         self.outputTo = None
+    
+    @property
+    def command_and_args(self):
+        """Combine command and args with a space separating them"""
+        return '{} {}'.format('' if self.command is None else self.command, self.args).strip()
 
 class StatementParser():
     """Parse raw text into command components.
@@ -56,40 +69,28 @@ class StatementParser():
         self.aliases = aliases
         self.shortcuts = shortcuts
 
-    def parse(self, rawinput: str) -> Statement:
-        # strip C-style comments
-        # shlex will handle the python/shell style comments for us
-        def replacer(match):
-                s = match.group(0)
-                if s.startswith('/'):
-                    # treat the removed comment as an empty string
-                    return ''
-                else:
-                    return s
-        pattern = re.compile(
-            #r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+        self.comment_pattern = re.compile(
             r'/\*.*?(\*/|$)|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE
         )
-        rawinput = re.sub(pattern, replacer, rawinput)
-        line = rawinput
 
+    def parse(self, rawinput: str) -> Statement:
+        """Parse input into a Statement object, stripping comments, expanding
+        aliases and shortcuts, and extracting output redirection directives.
+        """
+        # strip C-style comments
+        # shlex will handle the python/shell style comments for us
+        # save rawinput for later
+        rawinput = re.sub(self.comment_pattern, _comment_replacer, rawinput)
+        # we are going to modify line, so create a copy of the raw input
+        line = rawinput
         command = None
         args = ''
 
         # expand shortcuts, have to do this first because
         # a shortcut can expand into multiple tokens, ie '!ls' becomes
         # 'shell ls'
-        for (shortcut, expansion) in self.shortcuts:
-            if  line.startswith(shortcut):
-                # If the next character after the shortcut isn't a space, then insert one
-                shortcut_len = len(shortcut)
-                if len(line) == shortcut_len or line[shortcut_len] != ' ':
-                    expansion += ' '
-
-                # Expand the shortcut
-                line = line.replace(shortcut, expansion, 1)
-                break
+        line = self.expand_shortcuts(line)
 
         # handle the special case/hardcoded terminator of a blank line
         # we have to do this before we shlex on whitespace because it
@@ -98,10 +99,12 @@ class StatementParser():
         if line[-1:] == BLANK_LINE:
             terminator = BLANK_LINE
 
+        # split the input on whitespace
         s = shlex.shlex(line, posix=False)
         s.whitespace_split = True
         tokens = self.split_on_punctuation(list(s))
 
+        # expand aliases
         if tokens:
             command_to_expand = tokens[0]
             tokens[0] = self.expand_aliases(command_to_expand)
@@ -210,6 +213,59 @@ class StatementParser():
         result.suffix = suffix
         result.multilineCommand = multilineCommand
         return result
+
+    def parse_command_only(self, rawinput: str) -> Statement:
+        """Partially parse input into a Statement object. The command is
+        identified, and shortcuts and aliases are expanded.
+        Terminators, multiline commands, and output redirection are not
+        parsed.
+        """
+        # strip C-style comments
+        # shlex will handle the python/shell style comments for us
+        # save rawinput for later
+        rawinput = re.sub(self.comment_pattern, _comment_replacer, rawinput)
+        # we are going to modify line, so create a copy of the raw input
+        line = rawinput
+        command = None
+        args = ''
+
+        # expand shortcuts, have to do this first because
+        # a shortcut can expand into multiple tokens, ie '!ls' becomes
+        # 'shell ls'
+        line = self.expand_shortcuts(line)
+
+        # split the input on whitespace
+        s = shlex.shlex(line, posix=False)
+        s.whitespace_split = True
+        tokens = self.split_on_punctuation(list(s))
+
+        # expand aliases
+        if tokens:
+            command_to_expand = tokens[0]
+            tokens[0] = self.expand_aliases(command_to_expand)
+
+        (command, args) = self._command_and_args(tokens)
+
+        # build Statement object
+        result = Statement(args)
+        result.raw = rawinput
+        result.command = command
+        result.args = args
+        return result
+
+    def expand_shortcuts(self, line: str) -> str:
+        """Expand shortcuts at the beginning of input."""
+        for (shortcut, expansion) in self.shortcuts:
+            if  line.startswith(shortcut):
+                # If the next character after the shortcut isn't a space, then insert one
+                shortcut_len = len(shortcut)
+                if len(line) == shortcut_len or line[shortcut_len] != ' ':
+                    expansion += ' '
+
+                # Expand the shortcut
+                line = line.replace(shortcut, expansion, 1)
+                break
+        return line
 
     def expand_aliases(self, command: str) -> str:
         """Given a command, expand any aliases for the command"""

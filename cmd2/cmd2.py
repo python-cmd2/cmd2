@@ -1588,6 +1588,11 @@ class Cmd(cmd.Cmd):
 
                 # Parse the command line
                 command, args, expanded_line = self.parseline(line)
+                
+                # use these lines instead of the one above
+                # statement = self.command_parser.parse_command_only(line)
+                # command = statement.command
+                # expanded_line = statement.command_and_args
 
                 # We overwrote line with a properly formatted but fully stripped version
                 # Restore the end spaces since line is only supposed to be lstripped when

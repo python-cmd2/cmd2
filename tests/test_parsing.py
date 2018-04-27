@@ -19,7 +19,7 @@ def parser():
         redirection_chars=['|', '<', '>'],        
         terminators = [';'],
         multilineCommands = ['multiline'],
-        aliases = {'helpalias': 'help', '42': 'theanswer', 'anothermultiline': 'multiline'},
+        aliases = {'helpalias': 'help', '42': 'theanswer', 'anothermultiline': 'multiline', 'fake': 'pyscript'},
         shortcuts = [('?', 'help'), ('!', 'shell')]
     )
     return parser
@@ -27,6 +27,8 @@ def parser():
 def test_parse_empty_string(parser):
     statement = parser.parse('')
     assert not statement.command
+    assert not statement.args
+    assert statement.raw == ''
 
 @pytest.mark.parametrize('tokens,command,args', [
     ( [], None, ''),
@@ -287,3 +289,37 @@ def test_alias_on_multiline_command(parser):
     assert statement.command == 'multiline'
     assert statement.args == 'has > inside an unfinished command'
     assert not statement.terminator
+
+def test_parse_command_only_command_and_args(parser):
+    line = 'help history'
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'help'
+    assert statement.args == 'history'
+    assert statement.command_and_args == line
+
+def test_parse_command_only_emptyline(parser):
+    line = ''
+    statement = parser.parse_command_only(line)
+    assert statement.command is None
+    assert statement.args is ''
+    assert statement.command_and_args is line
+
+def test_parse_command_only_strips_line(parser):
+    line = '  help history  '
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'help'
+    assert statement.args == 'history'
+    assert statement.command_and_args == line.strip()
+
+def test_parse_command_only_expands_alias(parser):
+    line = 'fake foobar.py'
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'pyscript'
+    assert statement.args == 'foobar.py'
+
+def test_parse_command_only_expands_shortcuts(parser):
+    line = '!cat foobar.txt'
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'shell'
+    assert statement.args == 'cat foobar.txt'
+    assert statement.command_and_args == line.replace('!', 'shell ')
