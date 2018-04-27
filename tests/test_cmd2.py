@@ -964,6 +964,7 @@ class SayApp(cmd2.Cmd):
 @pytest.fixture
 def say_app():
     app = SayApp()
+    app.allow_cli_args = False
     app.stdout = StdOut()
     return app
 
