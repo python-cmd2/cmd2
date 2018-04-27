@@ -121,7 +121,7 @@ __version__ = '0.9.0'
 
 # Used for tab completion and word breaks. Do not change.
 QUOTES = ['"', "'"]
-REDIRECTION_CHARS = ['|', '<', '>']
+REDIRECTION_CHARS = ['|', '>']
 
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
 HELP_CATEGORY = 'help_category'
