@@ -64,15 +64,16 @@ class ArgparseFunctor:
             for action in parser._actions:
                 # was something provided for the argument
                 if action.dest in self._args:
-                    # was the argument a flag?
-                    # TODO: Handle 'narg' and 'append' options
-                    if action.option_strings:
-                        cmd_str[0] += '"{}" "{}" '.format(action.option_strings[0], self._args[action.dest])
+                    if isinstance(action, argparse._SubParsersAction):
+                        traverse_parser(action.choices[self._args[action.dest]])
                     else:
+                        # was the argument a flag?
+                        if action.option_strings:
+                            cmd_str[0] += '{} '.format(action.option_strings[0])
+
+                        # TODO: Handle 'narg' and 'append' options
                         cmd_str[0] += '"{}" '.format(self._args[action.dest])
 
-                        if isinstance(action, argparse._SubParsersAction):
-                            traverse_parser(action.choices[self._args[action.dest]])
         traverse_parser(self._parser)
 
         func(cmd_str[0])
