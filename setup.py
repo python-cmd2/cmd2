@@ -61,7 +61,7 @@ Programming Language :: Python :: Implementation :: PyPy3
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
-INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.5.27', 'colorama']
+INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
@@ -83,7 +83,7 @@ if int(setuptools.__version__.split('.')[0]) < 18:
         INSTALL_REQUIRES.append('typing')
 
 TESTS_REQUIRE = ['pytest', 'pytest-xdist']
-DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'wcwidth']
+DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyperclip', 'wcwidth']
 
 setup(
     name="cmd2",
