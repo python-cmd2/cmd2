@@ -591,17 +591,21 @@ class AddSubmenu(object):
             try:
                 # copy over any shared attributes
                 self._copy_in_shared_attrs(_self)
-                submenu.allow_appended_space = _self.allow_appended_space
-                submenu.allow_closing_quote = _self.allow_closing_quote
-                submenu.display_matches = _self.display_matches
+
+                # Reset the submenu's tab completion parameters
+                submenu.allow_appended_space = True
+                submenu.allow_closing_quote = True
+                submenu.display_matches = []
 
                 return _complete_from_cmd(submenu, text, line, begidx, endidx)
             finally:
                 # copy back original attributes
                 self._copy_out_shared_attrs(_self, original_attributes)
+
+                # Pass the submenu's tab completion parameters back up to the menu that called complete()
                 _self.allow_appended_space = submenu.allow_appended_space
                 _self.allow_closing_quote = submenu.allow_closing_quote
-                _self.display_matches = submenu.display_matches
+                _self.display_matches = copy.copy(submenu.display_matches)
 
         original_do_help = cmd_obj.do_help
         original_complete_help = cmd_obj.complete_help
