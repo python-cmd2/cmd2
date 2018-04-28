@@ -71,10 +71,6 @@ elif rl_type == RlType.GNU:
     import ctypes
     from .rl_utils import readline_lib
 
-    # Save address that rl_basic_quote_characters is pointing to since we need to override and restore it
-    rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-    orig_rl_basic_quote_characters_addr = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
     from pyperclip.exceptions import PyperclipException
@@ -580,10 +576,21 @@ class AddSubmenu(object):
             try:
                 # copy over any shared attributes
                 self._copy_in_shared_attrs(_self)
+
+                # Reset the submenu's tab completion parameters
+                submenu.allow_appended_space = True
+                submenu.allow_closing_quote = True
+                submenu.display_matches = []
+
                 return _complete_from_cmd(submenu, text, line, begidx, endidx)
             finally:
                 # copy back original attributes
                 self._copy_out_shared_attrs(_self, original_attributes)
+
+                # Pass the submenu's tab completion parameters back up to the menu that called complete()
+                _self.allow_appended_space = submenu.allow_appended_space
+                _self.allow_closing_quote = submenu.allow_closing_quote
+                _self.display_matches = copy.copy(submenu.display_matches)
 
         original_do_help = cmd_obj.do_help
         original_complete_help = cmd_obj.complete_help
@@ -971,6 +978,11 @@ class Cmd(cmd.Cmd):
         self.allow_appended_space = True
         self.allow_closing_quote = True
         self.display_matches = []
+
+        if rl_type == RlType.GNU:
+            readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
+        elif rl_type == RlType.PYREADLINE:
+            readline.rl.mode._display_completions = self._display_matches_pyreadline
 
     def tokens_for_completion(self, line, begidx, endidx):
         """
@@ -2342,38 +2354,33 @@ class Cmd(cmd.Cmd):
         """
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
-        if self.use_rawinput and self.completekey:
+        if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
 
             # Set up readline for our tab completion needs
             if rl_type == RlType.GNU:
-                readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
-
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
                 # We don't need to worry about setting rl_completion_suppress_quote since we never declared
                 # rl_completer_quote_characters.
-                rl_basic_quote_characters.value = None
+                basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+                old_basic_quote_characters = ctypes.cast(basic_quote_characters, ctypes.c_void_p).value
+                basic_quote_characters.value = None
 
-            elif rl_type == RlType.PYREADLINE:
-                readline.rl.mode._display_completions = self._display_matches_pyreadline
+            old_completer = readline.get_completer()
+            old_delims = readline.get_completer_delims()
+            readline.set_completer(self.complete)
 
-            try:
-                self.old_completer = readline.get_completer()
-                self.old_delims = readline.get_completer_delims()
-                readline.set_completer(self.complete)
+            # Break words on whitespace and quotes when tab completing
+            completer_delims = " \t\n" + ''.join(constants.QUOTES)
 
-                # Break words on whitespace and quotes when tab completing
-                completer_delims = " \t\n" + ''.join(constants.QUOTES)
+            if self.allow_redirection:
+                # If redirection is allowed, then break words on those characters too
+                completer_delims += ''.join(constants.REDIRECTION_CHARS)
 
-                if self.allow_redirection:
-                    # If redirection is allowed, then break words on those characters too
-                    completer_delims += ''.join(constants.REDIRECTION_CHARS)
+            readline.set_completer_delims(completer_delims)
 
-                readline.set_completer_delims(completer_delims)
+            # Enable tab completion
+            readline.parse_and_bind(self.completekey + ": complete")
 
-                # Enable tab completion
-                readline.parse_and_bind(self.completekey + ": complete")
-            except NameError:
-                pass
         stop = None
         try:
             while not stop:
@@ -2397,19 +2404,15 @@ class Cmd(cmd.Cmd):
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
         finally:
-            if self.use_rawinput and self.completekey:
+            if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
 
                 # Restore what we changed in readline
-                try:
-                    readline.set_completer(self.old_completer)
-                    readline.set_completer_delims(self.old_delims)
-                except NameError:
-                    pass
+                readline.set_completer(old_completer)
+                readline.set_completer_delims(old_delims)
 
                 if rl_type == RlType.GNU:
                     readline.set_completion_display_matches_hook(None)
-                    rl_basic_quote_characters.value = orig_rl_basic_quote_characters_addr
-
+                    basic_quote_characters.value = old_basic_quote_characters
                 elif rl_type == RlType.PYREADLINE:
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
@@ -2755,7 +2758,7 @@ Usage:  Usage: unalias [-a] name [name ...]
     set_parser = ACArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    set_parser.add_argument('settable', nargs=(0,2), help='[param_name] [value]')
+    set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]')
 
     @with_argparser(set_parser)
     def do_set(self, args):
@@ -2835,7 +2838,6 @@ Usage:  Usage: unalias [-a] name [name ...]
         """
         index_dict = {1: self.shell_cmd_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
-
 
     # noinspection PyBroadException
     def do_py(self, arg):
