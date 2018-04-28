@@ -18,7 +18,8 @@ else:
     import shlex
     import sys
 
-    from . import strip_quotes, QUOTES
+    from . import constants
+    from . import utils
 
 
     def tokens_for_completion(line, endidx):
@@ -42,7 +43,7 @@ else:
                     Both items are None
         """
         unclosed_quote = ''
-        quotes_to_try = copy.copy(QUOTES)
+        quotes_to_try = copy.copy(constants.QUOTES)
 
         tmp_line = line[:endidx]
         tmp_endidx = endidx
@@ -86,7 +87,7 @@ else:
         raw_tokens = initial_tokens
 
         # Save the unquoted tokens
-        tokens = [strip_quotes(cur_token) for cur_token in raw_tokens]
+        tokens = [utils.strip_quotes(cur_token) for cur_token in raw_tokens]
 
         # If the token being completed had an unclosed quote, we need
         # to remove the closing quote that was added in order for it

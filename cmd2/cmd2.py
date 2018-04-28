@@ -49,6 +49,9 @@ from code import InteractiveConsole
 import pyparsing
 import pyperclip
 
+from . import constants
+from . import utils
+
 # Set up readline
 from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
 from .argparse_completer import AutoCompleter, ACArgumentParser
@@ -134,9 +137,6 @@ POSIX_SHLEX = False
 # Strip outer quotes for convenience if POSIX_SHLEX = False
 STRIP_QUOTES_FOR_NON_POSIX = True
 
-# Used for tab completion and word breaks. Do not change.
-from . import strip_quotes, QUOTES, REDIRECTION_CHARS
-
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
 HELP_CATEGORY = 'help_category'
 HELP_SUMMARY = 'help_summary'
@@ -196,7 +196,7 @@ def parse_quoted_string(cmdline: str) -> List[str]:
         if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
             temp_arglist = []
             for arg in lexed_arglist:
-                temp_arglist.append(strip_quotes(arg))
+                temp_arglist.append(utils.strip_quotes(arg))
             lexed_arglist = temp_arglist
     return lexed_arglist
 
@@ -362,7 +362,7 @@ def replace_with_file_contents(fname: str) -> str:
     """
     try:
         # Any outer quotes are not part of the filename
-        unquoted_file = strip_quotes(fname[0])
+        unquoted_file = utils.strip_quotes(fname[0])
         with open(os.path.expanduser(unquoted_file)) as source_file:
             result = source_file.read()
     except IOError:
@@ -380,19 +380,6 @@ class EmbeddedConsoleExit(SystemExit):
 class EmptyStatement(Exception):
     """Custom exception class for handling behavior when the user just presses <Enter>."""
     pass
-
-
-# Regular expression to match ANSI escape codes
-ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
-
-
-def strip_ansi(text: str) -> str:
-    """Strip ANSI escape codes from a string.
-
-    :param text: string which may contain ANSI escape codes
-    :return: the same string with any ANSI escape codes removed
-    """
-    return ANSI_ESCAPE_RE.sub('', text)
 
 
 def _pop_readline_history(clear_history: bool=True) -> List[str]:
@@ -839,7 +826,7 @@ class Cmd(cmd.Cmd):
 
         :return: str - prompt stripped of any ANSI escape codes
         """
-        return strip_ansi(self.prompt)
+        return utils.strip_ansi(self.prompt)
 
     def _finalize_app_parameters(self):
         self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
@@ -1005,7 +992,7 @@ class Cmd(cmd.Cmd):
                     Both items are None
         """
         unclosed_quote = ''
-        quotes_to_try = copy.copy(QUOTES)
+        quotes_to_try = copy.copy(constants.QUOTES)
 
         tmp_line = line[:endidx]
         tmp_endidx = endidx
@@ -1048,7 +1035,7 @@ class Cmd(cmd.Cmd):
             for cur_initial_token in initial_tokens:
 
                 # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
-                if len(cur_initial_token) <= 1 or cur_initial_token[0] in QUOTES:
+                if len(cur_initial_token) <= 1 or cur_initial_token[0] in constants.QUOTES:
                     raw_tokens.append(cur_initial_token)
                     continue
 
@@ -1060,10 +1047,10 @@ class Cmd(cmd.Cmd):
                 cur_raw_token = ''
 
                 while True:
-                    if cur_char not in REDIRECTION_CHARS:
+                    if cur_char not in constants.REDIRECTION_CHARS:
 
                         # Keep appending to cur_raw_token until we hit a redirect char
-                        while cur_char not in REDIRECTION_CHARS:
+                        while cur_char not in constants.REDIRECTION_CHARS:
                             cur_raw_token += cur_char
                             cur_index += 1
                             if cur_index < len(cur_initial_token):
@@ -1094,7 +1081,7 @@ class Cmd(cmd.Cmd):
             raw_tokens = initial_tokens
 
         # Save the unquoted tokens
-        tokens = [strip_quotes(cur_token) for cur_token in raw_tokens]
+        tokens = [utils.strip_quotes(cur_token) for cur_token in raw_tokens]
 
         # If the token being completed had an unclosed quote, we need
         # to remove the closing quote that was added in order for it
@@ -1469,7 +1456,7 @@ class Cmd(cmd.Cmd):
             if len(raw_tokens) > 1:
 
                 # Build a list of all redirection tokens
-                all_redirects = REDIRECTION_CHARS + ['>>']
+                all_redirects = constants.REDIRECTION_CHARS + ['>>']
 
                 # Check if there are redirection strings prior to the token being completed
                 seen_pipe = False
@@ -1679,7 +1666,7 @@ class Cmd(cmd.Cmd):
                 raw_completion_token = raw_tokens[-1]
 
                 # Check if the token being completed has an opening quote
-                if raw_completion_token and raw_completion_token[0] in QUOTES:
+                if raw_completion_token and raw_completion_token[0] in constants.QUOTES:
 
                     # Since the token is still being completed, we know the opening quote is unclosed
                     unclosed_quote = raw_completion_token[0]
@@ -2375,11 +2362,11 @@ class Cmd(cmd.Cmd):
                 readline.set_completer(self.complete)
 
                 # Break words on whitespace and quotes when tab completing
-                completer_delims = " \t\n" + ''.join(QUOTES)
+                completer_delims = " \t\n" + ''.join(constants.QUOTES)
 
                 if self.allow_redirection:
                     # If redirection is allowed, then break words on those characters too
-                    completer_delims += ''.join(REDIRECTION_CHARS)
+                    completer_delims += ''.join(constants.REDIRECTION_CHARS)
 
                 readline.set_completer_delims(completer_delims)
 
@@ -2824,13 +2811,13 @@ Usage:  Usage: unalias [-a] name [name ...]
                 # Check if the token is quoted. Since shlex.split() passed, there isn't
                 # an unclosed quote, so we only need to check the first character.
                 first_char = tokens[index][0]
-                if first_char in QUOTES:
-                    tokens[index] = strip_quotes(tokens[index])
+                if first_char in constants.QUOTES:
+                    tokens[index] = utils.strip_quotes(tokens[index])
 
                 tokens[index] = os.path.expanduser(tokens[index])
 
                 # Restore the quotes
-                if first_char in QUOTES:
+                if first_char in constants.QUOTES:
                     tokens[index] = first_char + tokens[index] + first_char
 
         expanded_command = ' '.join(tokens)
@@ -3338,7 +3325,7 @@ class ParserManager:
                                                        ignore=do_not_parse)('pipeTo')) + \
             pyparsing.Optional(output_destination_parser +
                                pyparsing.SkipTo(string_end, ignore=do_not_parse).
-                               setParseAction(lambda x: strip_quotes(x[0].strip()))('outputTo'))
+                               setParseAction(lambda x: utils.strip_quotes(x[0].strip()))('outputTo'))
 
         multilineCommand.setParseAction(lambda x: x[0])
         oneline_command.setParseAction(lambda x: x[0])
@@ -3697,13 +3684,13 @@ class Cmd2TestCase(unittest.TestCase):
     def _test_transcript(self, fname, transcript):
         line_num = 0
         finished = False
-        line = strip_ansi(next(transcript))
+        line = utils.strip_ansi(next(transcript))
         line_num += 1
         while not finished:
             # Scroll forward to where actual commands begin
             while not line.startswith(self.cmdapp.visible_prompt):
                 try:
-                    line = strip_ansi(next(transcript))
+                    line = utils.strip_ansi(next(transcript))
                 except StopIteration:
                     finished = True
                     break
@@ -3727,13 +3714,13 @@ class Cmd2TestCase(unittest.TestCase):
             self.cmdapp.onecmd_plus_hooks(command)
             result = self.cmdapp.stdout.read()
             # Read the expected result from transcript
-            if strip_ansi(line).startswith(self.cmdapp.visible_prompt):
+            if utils.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
                 message = '\nFile {}, line {}\nCommand was:\n{}\nExpected: (nothing)\nGot:\n{}\n'.format(
                           fname, line_num, command, result)
                 self.assert_(not (result.strip()), message)
                 continue
             expected = []
-            while not strip_ansi(line).startswith(self.cmdapp.visible_prompt):
+            while not utils.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
                 expected.append(line)
                 try:
                     line = next(transcript)
