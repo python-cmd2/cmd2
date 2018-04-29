@@ -6,8 +6,6 @@ import re
 import shlex
 from typing import List, Tuple
 
-import cmd2
-
 BLANK_LINE = '\n'
 
 def _comment_replacer(match):
@@ -20,7 +18,7 @@ def _comment_replacer(match):
 
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
-    
+
     The cmd module in the standard library passes commands around as a
     string. To retain backwards compatibility, cmd2 does the same. However, we
     need a place to capture the additional output of the command parsing, so we add
@@ -29,8 +27,9 @@ class Statement(str):
     The string portion of the class contains the arguments, but not the command, nor
     the output redirection clauses.
     """
-    def __init__(self, object):
-        self.raw = str(object)
+    def __init__(self, obj):
+        super().__init__()
+        self.raw = str(obj)
         self.command = None
         self.multilineCommand = None
         # has to be an empty string for compatibility with standard library cmd
@@ -40,7 +39,7 @@ class Statement(str):
         self.pipeTo = None
         self.output = None
         self.outputTo = None
-    
+
     @property
     def command_and_args(self):
         """Combine command and args with a space separating them"""
@@ -48,7 +47,7 @@ class Statement(str):
 
 class StatementParser():
     """Parse raw text into command components.
-    
+
     Shortcuts is a list of tuples with each tuple containing the shortcut and the expansion.
     """
     def __init__(
@@ -207,7 +206,7 @@ class StatementParser():
         except ValueError:
             # no pipe in the tokens
             pipeTo = None
-        
+
         if terminator:
             # whatever is left is the suffix
             suffix = ' '.join(tokens)

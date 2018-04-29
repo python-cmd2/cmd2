@@ -42,7 +42,7 @@ import subprocess
 import sys
 import tempfile
 import traceback
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Union, Tuple
 import unittest
 from code import InteractiveConsole
 
@@ -55,7 +55,7 @@ from . import utils
 from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
 from .argparse_completer import AutoCompleter, ACArgumentParser
 
-from cmd2.parsing import StatementParser
+from cmd2.parsing import StatementParser, Statement
 
 if rl_type == RlType.PYREADLINE:
 
@@ -1586,7 +1586,7 @@ class Cmd(cmd.Cmd):
 
                 # Parse the command line
                 command, args, expanded_line = self.parseline(line)
-                
+
                 # use these lines instead of the one above
                 # statement = self.command_parser.parse_command_only(line)
                 # command = statement.command
@@ -1865,7 +1865,7 @@ class Cmd(cmd.Cmd):
         # Register a default SIGINT signal handler for Ctrl+C
         signal.signal(signal.SIGINT, self.sigint_handler)
 
-    def precmd(self, statement):
+    def precmd(self, statement: Statement) -> Statement:
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
 
         :param statement: Statement - subclass of str which also contains the parsed input
@@ -1876,7 +1876,7 @@ class Cmd(cmd.Cmd):
     # -----  Methods which are cmd2-specific lifecycle hooks which are not present in cmd -----
 
     # noinspection PyMethodMayBeStatic
-    def preparse(self, raw):
+    def preparse(self, raw: str) -> str:
         """Hook method executed just before the command line is interpreted, but after the input prompt is generated.
 
         :param raw: str - raw command line input
@@ -1885,7 +1885,7 @@ class Cmd(cmd.Cmd):
         return raw
 
     # noinspection PyMethodMayBeStatic
-    def postparse(self, statement):
+    def postparse(self, statement: Statement) -> Statement:
         """Hook that runs immediately after parsing the user input.
 
         :param statement: Statement object populated by parsing
@@ -1894,7 +1894,7 @@ class Cmd(cmd.Cmd):
         return statement
 
     # noinspection PyMethodMayBeStatic
-    def postparsing_precmd(self, statement):
+    def postparsing_precmd(self, statement: Statement) -> Tuple[bool, Statement]:
         """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
 
         NOTE: This runs before precmd() and prior to any potential output redirection or piping.
@@ -1913,7 +1913,7 @@ class Cmd(cmd.Cmd):
         return stop, statement
 
     # noinspection PyMethodMayBeStatic
-    def postparsing_postcmd(self, stop):
+    def postparsing_postcmd(self, stop: bool) -> bool:
         """This runs after everything else, including after postcmd().
 
         It even runs when an empty line is entered.  Thus, if you need to do something like update the prompt due
@@ -2072,7 +2072,7 @@ class Cmd(cmd.Cmd):
 
     def _complete_statement(self, line):
         """Keep accepting lines of input until the command is complete.
-        
+
         There is some pretty hacky code here to handle some quirks of
         self.pseudo_raw_input(). It returns a literal 'eof' if the input
         pipe runs out. We can't refactor it because we need to retain
