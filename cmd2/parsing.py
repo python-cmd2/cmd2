@@ -316,7 +316,8 @@ class StatementParser():
                     break
         return command
 
-    def _command_and_args(self, tokens: List[str]) -> Tuple[str, str]:
+    @staticmethod
+    def _command_and_args(tokens: List[str]) -> Tuple[str, str]:
         """given a list of tokens, and return a tuple of the command
         and the args as a string.
         """
