@@ -5,20 +5,20 @@ Test the parsing logic in parsing.py
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import pytest
+
 import cmd2
 from cmd2.parsing import StatementParser
-
-import pytest
 
 
 @pytest.fixture
 def parser():
     parser = StatementParser(
         allow_redirection=True,
-        terminators = [';'],
-        multiline_commands = ['multiline'],
-        aliases = {'helpalias': 'help', '42': 'theanswer', 'anothermultiline': 'multiline', 'fake': 'pyscript'},
-        shortcuts = [('?', 'help'), ('!', 'shell')]
+        terminators=[';'],
+        multiline_commands=['multiline'],
+        aliases={'helpalias': 'help', '42': 'theanswer', 'anothermultiline': 'multiline', 'fake': 'pyscript'},
+        shortcuts=[('?', 'help'), ('!', 'shell')]
     )
     return parser
 
@@ -29,9 +29,9 @@ def test_parse_empty_string(parser):
     assert statement.raw == ''
 
 @pytest.mark.parametrize('tokens,command,args', [
-    ( [], None, ''),
-    ( ['command'], 'command', '' ),
-    ( ['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')
+    ([], None, ''),
+    (['command'], 'command', ''),
+    (['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')
 ])
 def test_command_and_args(parser, tokens, command, args):
     (parsed_command, parsed_args) = parser._command_and_args(tokens)
