@@ -67,6 +67,12 @@ def test_command_with_args(parser):
     assert statement.args == 'with args'
     assert not statement.pipe_to
 
+def test_command_with_quoted_args(parser):
+    line = 'command with "quoted args" and "some not"'
+    statement = parser.parse(line)
+    assert statement.command == 'command'
+    assert statement.args == 'with "quoted args" and "some not"'
+
 def test_parse_command_with_args_terminator_and_suffix(parser):
     line = 'command with args and terminator; and suffix'
     statement = parser.parse(line)
