@@ -2142,16 +2142,16 @@ class Cmd(cmd.Cmd):
                 # Re-raise the exception
                 raise ex
         elif statement.output:
-            if (not statement.outputTo) and (not can_clip):
+            if (not statement.output_to) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
             self.redirecting = True
-            if statement.outputTo:
+            if statement.output_to:
                 mode = 'w'
                 if statement.output == 2 * self.redirector:
                     mode = 'a'
-                sys.stdout = self.stdout = open(os.path.expanduser(statement.outputTo), mode)
+                sys.stdout = self.stdout = open(os.path.expanduser(statement.output_to), mode)
             else:
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
                 if statement.output == '>>':
@@ -2165,7 +2165,7 @@ class Cmd(cmd.Cmd):
         # If we have redirected output to a file or the clipboard or piped it to a shell command, then restore state
         if self.kept_state is not None:
             # If we redirected output to the clipboard
-            if statement.output and not statement.outputTo:
+            if statement.output and not statement.output_to:
                 self.stdout.seek(0)
                 write_to_paste_buffer(self.stdout.read())
 

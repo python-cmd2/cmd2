@@ -127,7 +127,7 @@ def test_output_redirect(parser):
     assert statement.command == 'output'
     assert statement.args == 'into'
     assert statement.output == '>'
-    assert statement.outputTo == 'afile.txt'
+    assert statement.output_to == 'afile.txt'
 
 def test_output_redirect_with_dash_in_path(parser):
     line = 'output into > python-cmd2/afile.txt'
@@ -135,7 +135,7 @@ def test_output_redirect_with_dash_in_path(parser):
     assert statement.command == 'output'
     assert statement.args == 'into'
     assert statement.output == '>'
-    assert statement.outputTo == 'python-cmd2/afile.txt'
+    assert statement.output_to == 'python-cmd2/afile.txt'
 
 def test_output_redirect_append(parser):
     line = 'output appended to >> /tmp/afile.txt'
@@ -143,7 +143,7 @@ def test_output_redirect_append(parser):
     assert statement.command == 'output'
     assert statement.args == 'appended to'
     assert statement.output == '>>'
-    assert statement.outputTo == '/tmp/afile.txt'
+    assert statement.output_to == '/tmp/afile.txt'
 
 def test_parse_input_redirect(parser):
     line = '< afile.txt'
@@ -171,7 +171,7 @@ def test_pipe_and_redirect(parser):
     assert statement.suffix == 'sufx'
     assert statement.pipe_to == 'pipethrume plz'
     assert statement.output == '>'
-    assert statement.outputTo == 'afile.txt'
+    assert statement.output_to == 'afile.txt'
 
 def test_parse_output_to_paste_buffer(parser):
     line = 'output to paste buffer >> '
@@ -252,7 +252,7 @@ def test_parse_redirect_to_unicode_filename(parser):
     assert statement.command == 'dir'
     assert statement.args == 'home'
     assert statement.output == '>'
-    assert statement.outputTo == 'café'
+    assert statement.output_to == 'café'
 
 def test_parse_input_redirect_from_unicode_filename(parser):
     line = '< café'

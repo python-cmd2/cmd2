@@ -40,7 +40,7 @@ class Statement(str):
         self.suffix = None
         self.pipe_to = None
         self.output = None
-        self.outputTo = None
+        self.output_to = None
 
     @property
     def command_and_args(self):
@@ -186,11 +186,11 @@ class StatementParser():
 
         # check for output redirect
         output = None
-        outputTo = None
+        output_to = None
         try:
             output_pos = tokens.index('>')
             output = '>'
-            outputTo = ' '.join(tokens[output_pos+1:])
+            output_to = ' '.join(tokens[output_pos+1:])
             # remove all the tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
@@ -199,7 +199,7 @@ class StatementParser():
         try:
             output_pos = tokens.index('>>')
             output = '>>'
-            outputTo = ' '.join(tokens[output_pos+1:])
+            output_to = ' '.join(tokens[output_pos+1:])
             # remove all tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
@@ -241,7 +241,7 @@ class StatementParser():
         result.terminator = terminator
         result.inputFrom = inputFrom
         result.output = output
-        result.outputTo = outputTo
+        result.output_to = output_to
         result.pipe_to = pipe_to
         result.suffix = suffix
         result.multiline_command = multiline_command
