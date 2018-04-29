@@ -21,13 +21,10 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     """ Example cmd2 application where we create commands that just print the arguments they are called with."""
 
     def __init__(self):
-        # Uncomment this line to disable Python-style comments but still allow C-style comments
-        # self.commentGrammars = pyparsing.Or([pyparsing.cStyleComment])
-
         # Create command aliases which are shorter
         self.shortcuts.update({'$': 'aprint', '%': 'oprint'})
 
-        # Make sure to call this super class __init__ *after* setting commentGrammars and/or updating shortcuts
+        # Make sure to call this super class __init__ *after* setting and/or updating shortcuts
         super().__init__()
         # NOTE: It is critical that the super class __init__ method be called AFTER updating certain parameters which
         # are not settable at runtime.  This includes the shortcuts, multiline_commands, etc.

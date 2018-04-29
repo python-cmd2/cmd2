@@ -22,11 +22,9 @@ Parsed statements
 =================
 
 ``cmd2`` passes ``arg`` to a ``do_`` method (or
-``default``) as a ParsedString, a subclass of
-string that includes an attribute ``parsed``.
-``parsed`` is a ``pyparsing.ParseResults``
-object produced by applying a pyparsing_
-grammar applied to ``arg``.  It may include:
+``default``) as a Statement, a subclass of
+string that includes many attributes of the parsed
+input:
 
 command
     Name of the command called
@@ -37,46 +35,20 @@ raw
 terminator
     Character used to end a multiline command
 
-suffix
-    Remnant of input after terminator
+command_and_args
+    A string of just the command and the arguments, with
+    output redirection or piping to shell commands removed
 
-::
+If ``Statement`` does not contain an attribute,
+querying for it will return ``None``.
 
-    def do_parsereport(self, arg):
-        self.stdout.write(arg.parsed.dump() + '\n')
-
-::
-
-    (Cmd) parsereport A B /* C */ D; E
-    ['parsereport', 'A B  D', ';', 'E']
-    - args: A B  D
-    - command: parsereport
-    - raw: parsereport A B /* C */ D; E
-    - statement: ['parsereport', 'A B  D', ';']
-        - args: A B  D
-        - command: parsereport
-        - terminator: ;
-    - suffix: E
-    - terminator: ;
-
-If ``parsed`` does not contain an attribute,
-querying for it will return ``None``.  (This
-is a characteristic of ``pyparsing.ParseResults``.)
-
-The parsing grammar and process currently employed
-by cmd2 is stable, but is likely significantly more
-complex than it needs to be.  Future ``cmd2`` releases may
-change it somewhat (hopefully reducing complexity).
-
-(Getting ``arg`` as a ``ParsedString`` is
+(Getting ``arg`` as a ``Statement`` is
 technically "free", in that it requires no application
 changes from the cmd_ standard, but there will
 be no result unless you change your application
-to *use* ``arg.parsed``.)
+to *use* any of the additional attributes.)
 
 .. _cmd: https://docs.python.org/3/library/cmd.html
-
-.. _pyparsing: http://pyparsing.wikispaces.com/
 
 
 Environment parameters
