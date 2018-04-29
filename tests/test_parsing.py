@@ -299,3 +299,10 @@ def test_parse_command_only_expands_shortcuts(parser):
     assert statement.command == 'shell'
     assert statement.args == 'cat foobar.txt'
     assert statement.command_and_args == line.replace('!', 'shell ')
+
+def test_parse_command_only_quoted_args(parser):
+    line = 'shell "/tmp/directory with spaces/doit.sh"'
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'shell'
+    assert statement.args == '"/tmp/directory with spaces/doit.sh"'
+    assert statement.command_and_args == line
