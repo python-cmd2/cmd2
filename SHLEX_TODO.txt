@@ -4,6 +4,10 @@ Notes on conversion from pyparsing to shlex taking place in the ply branch
 Todo List:
 - refactor Cmd2.parseline() to use StatementParser.parse()
 - refactor tab completion to use StatementParser instead of parseline()
+- self.redirector doesn't really work any more, either make it work or expire it
+- clarify Statement.args whether it should be None or '', and whether it should be a string or a list of arguments,
+  include verifying documentation in unfreefeatures.txt
+- make sure Statement.command_and_args can handle quoted string arguments well. It might have to return a list of args, not a string
 - delete SHLEX_TODO.txt once everything is done
 
 Questions:
@@ -11,6 +15,7 @@ Questions:
 Changelog Items:
 - if self.default_to_shell is true, then redirection and piping are now properly passed to the shell, previously it was truncated
 - object passed to do_* methods has changed. It no longer is the pyparsing object, it's a new Statement object. A side effect of this is that we now have a clean interface between the parsing logic and the rest of cmd2. If we need to change the parser in the future, we can do it without breaking anything. The parser is now self.statement_parser instead of self.command_parser.
+- self.commentGrammers is no longer supported or available. Comments are C-style or python style.
 - input redirection no longer supported. Use the load command instead.
 - multilineCommand attribute is now multiline_command
 - submenus now call all hooks, it used to just call precmd and postcmd
