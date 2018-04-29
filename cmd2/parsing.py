@@ -175,15 +175,6 @@ class StatementParser():
                 args = testargs
                 tokens = []
 
-        # check for input from file
-        inputFrom = None
-        try:
-            input_pos = tokens.index('<')
-            inputFrom = ' '.join(tokens[input_pos+1:])
-            tokens = tokens[:input_pos]
-        except ValueError:
-            pass
-
         # check for output redirect
         output = None
         output_to = None
@@ -239,7 +230,6 @@ class StatementParser():
         result.command = command
         result.args = args
         result.terminator = terminator
-        result.inputFrom = inputFrom
         result.output = output
         result.output_to = output_to
         result.pipe_to = pipe_to

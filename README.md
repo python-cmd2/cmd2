@@ -23,7 +23,7 @@ Main Features
 - Python scripting of your application with ``pyscript``
 - Run shell commands with ``!``
 - Pipe command output to shell commands with `|`
-- Redirect command output to file with `>`, `>>`; input from file with `<`
+- Redirect command output to file with `>`, `>>`
 - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
 - `py` enters interactive Python console (opt-in `ipy` for IPython console)
 - Option to display long output using a pager with ``cmd2.Cmd.ppaged()``

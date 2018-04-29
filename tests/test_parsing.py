@@ -145,23 +145,6 @@ def test_output_redirect_append(parser):
     assert statement.output == '>>'
     assert statement.output_to == '/tmp/afile.txt'
 
-def test_parse_input_redirect(parser):
-    line = '< afile.txt'
-    statement = parser.parse(line)
-    assert statement.inputFrom == 'afile.txt'
-
-def test_parse_input_redirect_after_command(parser):
-    line = 'help < afile.txt'
-    statement = parser.parse(line)
-    assert statement.command == 'help'
-    assert statement.args == ''
-    assert statement.inputFrom == 'afile.txt'
-
-def test_parse_input_redirect_with_dash_in_path(parser):
-    line = '< python-cmd2/afile.txt'
-    statement = parser.parse(line)
-    assert statement.inputFrom == 'python-cmd2/afile.txt'
-
 def test_pipe_and_redirect(parser):
     line = 'output into;sufx | pipethrume plz > afile.txt'
     statement = parser.parse(line)
@@ -253,11 +236,6 @@ def test_parse_redirect_to_unicode_filename(parser):
     assert statement.args == 'home'
     assert statement.output == '>'
     assert statement.output_to == 'café'
-
-def test_parse_input_redirect_from_unicode_filename(parser):
-    line = '< café'
-    statement = parser.parse(line)
-    assert statement.inputFrom == 'café'
 
 def test_empty_statement_raises_exception():
     app = cmd2.Cmd()

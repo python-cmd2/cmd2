@@ -10,9 +10,9 @@ from setuptools import setup
 
 VERSION = '0.9.0'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
-LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
-it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
-provides a simple API which is an extension of Python's built-in cmd module.  cmd2 provides a wealth of features on top 
+LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make
+it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It
+provides a simple API which is an extension of Python's built-in cmd module.  cmd2 provides a wealth of features on top
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary when using cmd.
 
 The latest documentation for cmd2 can be read online here:
@@ -25,7 +25,7 @@ Main features:
     - Python scripting of your application with ``pyscript``
     - Run shell commands with ``!``
     - Pipe command output to shell commands with `|`
-    - Redirect command output to file with `>`, `>>`; input from file with `<`
+    - Redirect command output to file with `>`, `>>`
     - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
     - `py` enters interactive Python console (opt-in `ipy` for IPython console)
     - Multi-line commands
