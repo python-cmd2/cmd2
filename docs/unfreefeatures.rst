@@ -7,7 +7,7 @@ Multiline commands
 
 Command input may span multiple lines for the
 commands whose names are listed in the
-parameter ``app.multilineCommands``.  These
+parameter ``app.multiline_commands``.  These
 commands will be executed only
 after the user has entered a *terminator*.
 By default, the command terminators is

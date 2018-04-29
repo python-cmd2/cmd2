@@ -20,7 +20,7 @@ from cmd2 import Cmd, with_argparser, with_argument_list
 class CmdLineApp(Cmd):
     """ Example cmd2 application. """
     def __init__(self, ip_addr=None, port=None, transcript_files=None):
-        self.multilineCommands = ['orate']
+        self.multiline_commands = ['orate']
         self.shortcuts.update({'&': 'speak'})
         self.maxrepeats = 3
 

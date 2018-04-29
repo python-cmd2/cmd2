@@ -14,7 +14,7 @@ class Pirate(Cmd):
     """A piratical example cmd2 application involving looting and drinking."""
     def __init__(self):
         self.default_to_shell = True
-        self.multilineCommands = ['sing']
+        self.multiline_commands = ['sing']
         self.terminators = Cmd.terminators + ['...']
         self.songcolor = 'blue'
 

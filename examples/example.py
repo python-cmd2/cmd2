@@ -27,7 +27,7 @@ class CmdLineApp(Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        self.multilineCommands = ['orate']
+        self.multiline_commands = ['orate']
         self.maxrepeats = 3
 
         # Add stuff to settable and shortcuts before calling base class initializer

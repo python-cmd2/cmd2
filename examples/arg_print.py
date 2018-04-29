@@ -30,7 +30,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         # Make sure to call this super class __init__ *after* setting commentGrammars and/or updating shortcuts
         super().__init__()
         # NOTE: It is critical that the super class __init__ method be called AFTER updating certain parameters which
-        # are not settable at runtime.  This includes the commentGrammars, shortcuts, multilineCommands, etc.
+        # are not settable at runtime.  This includes the shortcuts, multiline_commands, etc.
 
     def do_aprint(self, arg):
         """Print the argument string this basic command is called with."""

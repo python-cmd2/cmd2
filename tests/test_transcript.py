@@ -24,7 +24,7 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self, *args, **kwargs):
-        self.multilineCommands = ['orate']
+        self.multiline_commands = ['orate']
         self.maxrepeats = 3
         self.redirector = '->'
 
@@ -125,7 +125,7 @@ def test_base_with_transcript(_cmdline_app):
 
 Documented commands (type help <topic>):
 ========================================
-alias  help     load    orate  pyscript  say  shell      speak  
+alias  help     load    orate  pyscript  say  shell      speak
 edit   history  mumble  py     quit      set  shortcuts  unalias
 
 (Cmd) help say

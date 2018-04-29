@@ -91,7 +91,7 @@ Instructions for implementing each feature follow.
 
 - Multi-line commands
 
-    Any command accepts multi-line input when its name is listed in `Cmd.multilineCommands`.
+    Any command accepts multi-line input when its name is listed in `Cmd.multiline_commands`.
     The program will keep expecting input until a line ends with any of the characters
     in `Cmd.terminators` .  The default terminators are `;` and `/n` (empty newline).
 
@@ -165,7 +165,7 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        self.multilineCommands = ['orate']
+        self.multiline_commands = ['orate']
         self.maxrepeats = 3
 
         # Add stuff to settable and shortcuts before calling base class initializer

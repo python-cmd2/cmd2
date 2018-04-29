@@ -66,7 +66,7 @@ class StatementParser():
         else:
             self.terminators = terminators
         if multiline_commands is None:
-            self.multilineCommands = []
+            self.multiline_commands = []
         else:
             self.multiline_commands = multiline_commands
         if aliases is None:
@@ -133,9 +133,9 @@ class StatementParser():
             terminator = BLANK_LINE
 
         # split the input on whitespace
-        s = shlex.shlex(line, posix=False)
-        s.whitespace_split = True
-        tokens = self.split_on_punctuation(list(s))
+        lexer = shlex.shlex(line, posix=False)
+        lexer.whitespace_split = True
+        tokens = self.split_on_punctuation(list(lexer))
 
         # expand aliases
         if tokens:
@@ -268,9 +268,9 @@ class StatementParser():
         line = self.expand_shortcuts(line)
 
         # split the input on whitespace
-        s = shlex.shlex(line, posix=False)
-        s.whitespace_split = True
-        tokens = self.split_on_punctuation(list(s))
+        lexer = shlex.shlex(line, posix=False)
+        lexer.whitespace_split = True
+        tokens = self.split_on_punctuation(list(lexer))
 
         # expand aliases
         if tokens:
@@ -304,7 +304,7 @@ class StatementParser():
         """Given a command, expand any aliases for the command"""
         # make a copy of aliases so we can edit it
         tmp_aliases = list(self.aliases.keys())
-        keep_expanding = len(tmp_aliases) > 0
+        keep_expanding = bool(tmp_aliases)
 
         while keep_expanding:
             for cur_alias in tmp_aliases:
@@ -312,7 +312,7 @@ class StatementParser():
                 if command == cur_alias:
                     command = self.aliases[cur_alias]
                     tmp_aliases.remove(cur_alias)
-                    keep_expanding = len(tmp_aliases) > 0
+                    keep_expanding = bool(tmp_aliases)
                     break
         return command
 
