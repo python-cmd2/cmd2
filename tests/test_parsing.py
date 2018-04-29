@@ -14,9 +14,7 @@ import pytest
 @pytest.fixture
 def parser():
     parser = StatementParser(
-        quotes=['"', "'"],
         allow_redirection=True,
-        redirection_chars=['|', '<', '>'],        
         terminators = [';'],
         multilineCommands = ['multiline'],
         aliases = {'helpalias': 'help', '42': 'theanswer', 'anothermultiline': 'multiline', 'fake': 'pyscript'},

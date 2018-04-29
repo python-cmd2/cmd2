@@ -6,15 +6,17 @@ import re
 import shlex
 from typing import List, Tuple
 
+from . import constants
+
 BLANK_LINE = '\n'
 
 def _comment_replacer(match):
-    s = match.group(0)
-    if s.startswith('/'):
-        # treat the removed comment as an empty string
+    matched_string = match.group(0)
+    if matched_string.startswith('/'):
+        # the matched string was a comment, so remove it
         return ''
-    else:
-        return s
+    # the matched string was a quoted string, return the match
+    return matched_string
 
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
@@ -52,21 +54,29 @@ class StatementParser():
     """
     def __init__(
             self,
-            quotes=['"', "'"],
             allow_redirection=True,
-            redirection_chars=['|', '<', '>'],
-            terminators=[';'],
-            multilineCommands = [],
-            aliases = {},
+            terminators=None,
+            multilineCommands = None,
+            aliases = None,
             shortcuts = [],
         ):
-        self.quotes = quotes
         self.allow_redirection = allow_redirection
-        self.redirection_chars = redirection_chars
-        self.terminators = terminators
-        self.multilineCommands = multilineCommands
-        self.aliases = aliases
-        self.shortcuts = shortcuts
+        if terminators is None:
+            self.terminators = [';']
+        else:
+            self.terminators = terminators
+        if multilineCommands is None:
+            self.multilineCommands = []
+        else:
+            self.multilineCommands = multilineCommands
+        if aliases is None:
+            self.aliases = {}
+        else:
+            self.aliases = aliases
+        if shortcuts is None:
+            self.shortcuts = []
+        else:
+            self.shortcuts = shortcuts
 
         # this regular expression matches C-style comments and quoted
         # strings, i.e. stuff between single or double quote marks
@@ -333,14 +343,14 @@ class StatementParser():
         punctuation = []
         punctuation.extend(self.terminators)
         if self.allow_redirection:
-            punctuation.extend(self.redirection_chars)
+            punctuation.extend(constants.REDIRECTION_CHARS)
 
         punctuated_tokens = []
 
         for cur_initial_token in tokens:
 
             # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
-            if len(cur_initial_token) <= 1 or cur_initial_token[0] in self.quotes:
+            if len(cur_initial_token) <= 1 or cur_initial_token[0] in constants.QUOTES:
                 punctuated_tokens.append(cur_initial_token)
                 continue
 

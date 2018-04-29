@@ -687,9 +687,7 @@ class Cmd(cmd.Cmd):
         self.pystate = {}
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
         self.statement_parser = StatementParser(
-            quotes=constants.QUOTES,
             allow_redirection=self.allow_redirection,
-            redirection_chars=constants.REDIRECTION_CHARS,
             terminators=self.terminators,
             multilineCommands=self.multilineCommands,
             aliases=self.aliases,
