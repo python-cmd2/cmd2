@@ -104,7 +104,6 @@ def test_base_show_readonly(base_app):
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-            
 """.format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection))
     assert out == expected
 
@@ -167,7 +166,7 @@ def test_set_not_supported(base_app, capsys):
     run_cmd(base_app, 'set qqq True')
     out, err = capsys.readouterr()
     expected = normalize("""
-EXCEPTION of type 'LookupError' occurred with message: 'Parameter 'qqq' not supported (type 'show' for list of parameters).'
+EXCEPTION of type 'LookupError' occurred with message: 'Parameter 'qqq' not supported (type 'set' for list of parameters).'
 To enable full traceback, run the following command:  'set debug true'
 """)
     assert normalize(str(err)) == expected
@@ -1384,7 +1383,7 @@ def test_which_editor_bad():
 
 class MultilineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        self.multilineCommands = ['orate']
+        self.multiline_commands = ['orate']
         super().__init__(*args, **kwargs)
 
     orate_parser = argparse.ArgumentParser()

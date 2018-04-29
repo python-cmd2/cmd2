@@ -2719,7 +2719,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             if args.all:
                 self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
         else:
-            raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
+            raise LookupError("Parameter '%s' not supported (type 'set' for list of parameters)." % param)
 
     set_parser = ACArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
