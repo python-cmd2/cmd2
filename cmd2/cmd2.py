@@ -2694,9 +2694,8 @@ Usage:  Usage: unalias [-a] name [name ...]
         read_only_settings = """
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
-        Output redirection and pipes allowed: {}
-        """.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
-        return read_only_settings
+        Output redirection and pipes allowed: {}"""
+        return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
 
     def show(self, args, parameter):
         param = ''
