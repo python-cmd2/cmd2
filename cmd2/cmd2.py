@@ -2114,7 +2114,7 @@ class Cmd(cmd.Cmd):
 
         :param statement: Statement - a parsed statement from the user
         """
-        if statement.pipeTo:
+        if statement.pipe_to:
             self.kept_state = Statekeeper(self, ('stdout',))
 
             # Create a pipe with read and write sides
@@ -2129,7 +2129,7 @@ class Cmd(cmd.Cmd):
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
-                self.pipe_proc = subprocess.Popen(shlex.split(statement.pipeTo), stdin=subproc_stdin)
+                self.pipe_proc = subprocess.Popen(shlex.split(statement.pipe_to), stdin=subproc_stdin)
             except Exception as ex:
                 # Restore stdout to what it was and close the pipe
                 self.stdout.close()

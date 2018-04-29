@@ -65,7 +65,7 @@ def test_command_with_args(parser):
     statement = parser.parse(line)
     assert statement.command == 'command'
     assert statement.args == 'with args'
-    assert not statement.pipeTo
+    assert not statement.pipe_to
 
 def test_parse_command_with_args_terminator_and_suffix(parser):
     line = 'command with args and terminator; and suffix'
@@ -79,38 +79,38 @@ def test_hashcomment(parser):
     statement = parser.parse('hi # this is all a comment')
     assert statement.command == 'hi'
     assert not statement.args
-    assert not statement.pipeTo
+    assert not statement.pipe_to
 
 def test_c_comment(parser):
     statement = parser.parse('hi /* this is | all a comment */')
     assert statement.command == 'hi'
     assert not statement.args
-    assert not statement.pipeTo
+    assert not statement.pipe_to
 
 def test_c_comment_empty(parser):
     statement = parser.parse('/* this is | all a comment */')
     assert not statement.command
     assert not statement.args
-    assert not statement.pipeTo
+    assert not statement.pipe_to
 
 def test_parse_what_if_quoted_strings_seem_to_start_comments(parser):
     statement = parser.parse('what if "quoted strings /* seem to " start comments?')
     assert statement.command == 'what'
     assert statement.args == 'if "quoted strings /* seem to " start comments?'
-    assert not statement.pipeTo
+    assert not statement.pipe_to
 
 def test_simple_piped(parser):
     statement = parser.parse('simple | piped')
     assert statement.command == 'simple'
     assert not statement.args
-    assert statement.pipeTo == 'piped'
+    assert statement.pipe_to == 'piped'
 
 def test_double_pipe_is_not_a_pipe(parser):
     line = 'double-pipe || is not a pipe'
     statement = parser.parse(line)
     assert statement.command == 'double-pipe'
     assert statement.args == '|| is not a pipe'
-    assert not statement.pipeTo
+    assert not statement.pipe_to
 
 def test_complex_pipe(parser):
     line = 'command with args, terminator;sufx | piped'
@@ -119,7 +119,7 @@ def test_complex_pipe(parser):
     assert statement.args == "with args, terminator"
     assert statement.terminator == ';'
     assert statement.suffix == 'sufx'
-    assert statement.pipeTo == 'piped'
+    assert statement.pipe_to == 'piped'
 
 def test_output_redirect(parser):
     line = 'output into > afile.txt'
@@ -169,7 +169,7 @@ def test_pipe_and_redirect(parser):
     assert statement.args == 'into'
     assert statement.terminator == ';'
     assert statement.suffix == 'sufx'
-    assert statement.pipeTo == 'pipethrume plz'
+    assert statement.pipe_to == 'pipethrume plz'
     assert statement.output == '>'
     assert statement.outputTo == 'afile.txt'
 

@@ -38,7 +38,7 @@ class Statement(str):
         self.args = ''
         self.terminator = None
         self.suffix = None
-        self.pipeTo = None
+        self.pipe_to = None
         self.output = None
         self.outputTo = None
 
@@ -56,9 +56,9 @@ class StatementParser():
             self,
             allow_redirection=True,
             terminators=None,
-            multiline_commands = None,
-            aliases = None,
-            shortcuts = [],
+            multiline_commands=None,
+            aliases=None,
+            shortcuts=[],
         ):
         self.allow_redirection = allow_redirection
         if terminators is None:
@@ -209,13 +209,13 @@ class StatementParser():
         try:
             # find the first pipe if it exists
             pipe_pos = tokens.index('|')
-            # set everything after the first pipe to result.pipeTo
-            pipeTo = ' '.join(tokens[pipe_pos+1:])
+            # set everything after the first pipe to result.pipe_to
+            pipe_to = ' '.join(tokens[pipe_pos+1:])
             # remove all the tokens after the pipe
             tokens = tokens[:pipe_pos]
         except ValueError:
             # no pipe in the tokens
-            pipeTo = None
+            pipe_to = None
 
         if terminator:
             # whatever is left is the suffix
@@ -242,7 +242,7 @@ class StatementParser():
         result.inputFrom = inputFrom
         result.output = output
         result.outputTo = outputTo
-        result.pipeTo = pipeTo
+        result.pipe_to = pipe_to
         result.suffix = suffix
         result.multiline_command = multiline_command
         return result
