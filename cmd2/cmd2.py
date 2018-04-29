@@ -595,7 +595,7 @@ class Cmd(cmd.Cmd):
     """
     # Attributes used to configure the StatementParser, best not to change these at runtime
     blankLinesAllowed = False
-    multilineCommands = []
+    multiline_commands = []
     redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
@@ -689,7 +689,7 @@ class Cmd(cmd.Cmd):
         self.statement_parser = StatementParser(
             allow_redirection=self.allow_redirection,
             terminators=self.terminators,
-            multilineCommands=self.multilineCommands,
+            multiline_commands=self.multiline_commands,
             aliases=self.aliases,
             shortcuts=self.shortcuts,
         )
@@ -2077,7 +2077,7 @@ class Cmd(cmd.Cmd):
         backwards compatibility with the standard library version of cmd.
         """
         statement = self.statement_parser.parse(line)
-        while statement.multilineCommand and not statement.terminator:
+        while statement.multiline_command and not statement.terminator:
             if not self.quit_on_sigint:
                 try:
                     newline = self.pseudo_raw_input(self.continuation_prompt)

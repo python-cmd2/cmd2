@@ -33,7 +33,7 @@ class Statement(str):
         super().__init__()
         self.raw = str(obj)
         self.command = None
-        self.multilineCommand = None
+        self.multiline_command = None
         # has to be an empty string for compatibility with standard library cmd
         self.args = ''
         self.terminator = None
@@ -56,7 +56,7 @@ class StatementParser():
             self,
             allow_redirection=True,
             terminators=None,
-            multilineCommands = None,
+            multiline_commands = None,
             aliases = None,
             shortcuts = [],
         ):
@@ -65,10 +65,10 @@ class StatementParser():
             self.terminators = [';']
         else:
             self.terminators = terminators
-        if multilineCommands is None:
+        if multiline_commands is None:
             self.multilineCommands = []
         else:
-            self.multilineCommands = multilineCommands
+            self.multiline_commands = multiline_commands
         if aliases is None:
             self.aliases = {}
         else:
@@ -167,7 +167,7 @@ class StatementParser():
             tokens = tokens[terminator_pos+1:]
         else:
             (testcommand, testargs) = self._command_and_args(tokens)
-            if testcommand in self.multilineCommands:
+            if testcommand in self.multiline_commands:
                 # no terminator on this line but we have a multiline command
                 # everything else on the line is part of the args
                 # because redirectors can only be after a terminator
@@ -228,10 +228,10 @@ class StatementParser():
                 (command, args) = self._command_and_args(tokens)
 
         # set multiline
-        if command in self.multilineCommands:
-            multilineCommand = command
+        if command in self.multiline_commands:
+            multiline_command = command
         else:
-            multilineCommand = None
+            multiline_command = None
 
         # build Statement object
         result = Statement(args)
@@ -244,7 +244,7 @@ class StatementParser():
         result.outputTo = outputTo
         result.pipeTo = pipeTo
         result.suffix = suffix
-        result.multilineCommand = multilineCommand
+        result.multiline_command = multiline_command
         return result
 
     def parse_command_only(self, rawinput: str) -> Statement:

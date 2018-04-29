@@ -16,7 +16,7 @@ def parser():
     parser = StatementParser(
         allow_redirection=True,
         terminators = [';'],
-        multilineCommands = ['multiline'],
+        multiline_commands = ['multiline'],
         aliases = {'helpalias': 'help', '42': 'theanswer', 'anothermultiline': 'multiline', 'fake': 'pyscript'},
         shortcuts = [('?', 'help'), ('!', 'shell')]
     )
@@ -192,7 +192,7 @@ def test_has_redirect_inside_terminator(parser):
 def test_parse_unfinished_multiliine_command(parser):
     line = 'multiline has > inside an unfinished command'
     statement = parser.parse(line)
-    assert statement.multilineCommand == 'multiline'
+    assert statement.multiline_command == 'multiline'
     assert statement.command == 'multiline'
     assert statement.args == 'has > inside an unfinished command'
     assert not statement.terminator
@@ -200,7 +200,7 @@ def test_parse_unfinished_multiliine_command(parser):
 def test_parse_multiline_command_ignores_redirectors_within_it(parser):
     line = 'multiline has > inside;'
     statement = parser.parse(line)
-    assert statement.multilineCommand == 'multiline'
+    assert statement.multiline_command == 'multiline'
     assert statement.args == 'has > inside'
     assert statement.terminator == ';'
 
@@ -209,28 +209,28 @@ def test_parse_multiline_with_incomplete_comment(parser):
     Un-closed comments effectively comment out everything after the start."""
     line = 'multiline command /* with comment in progress;'
     statement = parser.parse(line)
-    assert statement.multilineCommand == 'multiline'
+    assert statement.multiline_command == 'multiline'
     assert statement.args == 'command'
     assert not statement.terminator
 
 def test_parse_multiline_with_complete_comment(parser):
     line = 'multiline command /* with comment complete */ is done;'
     statement = parser.parse(line)
-    assert statement.multilineCommand == 'multiline'
+    assert statement.multiline_command == 'multiline'
     assert statement.args == 'command is done'
     assert statement.terminator == ';'
 
 def test_parse_multiline_termninated_by_empty_line(parser):
     line = 'multiline command ends\n\n'
     statement = parser.parse(line)
-    assert statement.multilineCommand == 'multiline'
+    assert statement.multiline_command == 'multiline'
     assert statement.args == 'command ends'
     assert statement.terminator == '\n'
 
 def test_parse_multiline_ignores_terminators_in_comments(parser):
     line = 'multiline command "with term; ends" now\n\n'
     statement = parser.parse(line)
-    assert statement.multilineCommand == 'multiline'
+    assert statement.multiline_command == 'multiline'
     assert statement.args == 'command "with term; ends" now'
     assert statement.terminator == '\n'
 
@@ -283,7 +283,7 @@ def test_alias_and_shortcut_expansion(parser, line, command, args):
 def test_alias_on_multiline_command(parser):
     line = 'anothermultiline has > inside an unfinished command'
     statement = parser.parse(line)
-    assert statement.multilineCommand == 'multiline'
+    assert statement.multiline_command == 'multiline'
     assert statement.command == 'multiline'
     assert statement.args == 'has > inside an unfinished command'
     assert not statement.terminator
