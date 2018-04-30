@@ -8,7 +8,7 @@ from typing import List, Tuple
 
 from . import constants
 
-BLANK_LINE = '\n'
+LINE_FEED = '\n'
 
 
 class Statement(str):
@@ -129,10 +129,35 @@ class StatementParser():
             re.DOTALL | re.MULTILINE
         )
 
+        # aliases have to be a word, so make a regular expression
+        # that matches the first word in the line. This regex has two
+        # parts, the first parenthesis enclosed group matches one
+        # or more non-whitespace characters, and the second group
+        # matches either a whitespace character or the end of the
+        # string. We use \A and \Z to ensure we always match the
+        # beginning and end of a string that may have multiple
+        # lines
+        self.command_pattern = re.compile(r'\A(\S+)(\s|\Z)')
+
+
     def tokenize(self, line: str) -> List[str]:
-        """Tokenize a string into a list"""
+        """Lex a string into a list of tokens.
+
+        Comments are removed, and shortcuts and aliases are expanded.
+        """
+
+        # strip C-style comments
+        # shlex will handle the python/shell style comments for us
+        line = re.sub(self.comment_pattern, self._comment_replacer, line)
+
+        # expand shortcuts and aliases
+        line = self._expand(line)
+
+        # split on whitespace
         lexer = shlex.shlex(line, posix=False)
         lexer.whitespace_split = True
+
+        # custom lexing
         tokens = self._split_on_punctuation(list(lexer))
         return tokens
 
@@ -141,34 +166,19 @@ class StatementParser():
         comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
         """
-        # strip C-style comments
-        # shlex will handle the python/shell style comments for us
-        # save rawinput for later
-        rawinput = re.sub(self.comment_pattern, self._comment_replacer, rawinput)
-        # we are going to modify line, so create a copy of the raw input
-        line = rawinput
+
+        # handle the special case/hardcoded terminator of a blank line
+        # we have to do this before we tokenize because tokenizing
+        # destroys all unquoted whitespace in the input
+        terminator = None
+        if rawinput[-1:] == LINE_FEED:
+            terminator = LINE_FEED
 
         command = None
         args = ''
 
-        # expand shortcuts, have to do this first because
-        # a shortcut can expand into multiple tokens, ie '!ls' becomes
-        # 'shell ls'
-        line = self.expand_shortcuts(line)
-
-        # handle the special case/hardcoded terminator of a blank line
-        # we have to do this before we shlex on whitespace because it
-        # destroys all unquoted whitespace in the input
-        terminator = None
-        if line[-1:] == BLANK_LINE:
-            terminator = BLANK_LINE
-
-        tokens = self.tokenize(line)
-
-        # expand aliases
-        if tokens:
-            command_to_expand = tokens[0]
-            tokens[0] = self.expand_aliases(command_to_expand)
+        # lex the input into a list of tokens
+        tokens = self.tokenize(rawinput)
 
         # of the valid terminators, find the first one to occur in the input
         terminator_pos = len(tokens)+1
@@ -184,7 +194,7 @@ class StatementParser():
                 pass
 
         if terminator:
-            if terminator == BLANK_LINE:
+            if terminator == LINE_FEED:
                 terminator_pos = len(tokens)+1
             else:
                 terminator_pos = tokens.index(terminator)
@@ -228,7 +238,7 @@ class StatementParser():
         try:
             # find the first pipe if it exists
             pipe_pos = tokens.index('|')
-            # set everything after the first pipe to result.pipe_to
+            # save everything after the first pipe
             pipe_to = ' '.join(tokens[pipe_pos+1:])
             # remove all the tokens after the pipe
             tokens = tokens[:pipe_pos]
@@ -252,18 +262,18 @@ class StatementParser():
         else:
             multiline_command = None
 
-        # build Statement object
-        result = Statement(args)
-        result.raw = rawinput
-        result.command = command
-        result.args = args
-        result.terminator = terminator
-        result.output = output
-        result.output_to = output_to
-        result.pipe_to = pipe_to
-        result.suffix = suffix
-        result.multiline_command = multiline_command
-        return result
+        # build the statement
+        statement = Statement(args)
+        statement.raw = rawinput
+        statement.command = command
+        statement.args = args
+        statement.terminator = terminator
+        statement.output = output
+        statement.output_to = output_to
+        statement.pipe_to = pipe_to
+        statement.suffix = suffix
+        statement.multiline_command = multiline_command
+        return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
         """Partially parse input into a Statement object. The command is
@@ -271,41 +281,42 @@ class StatementParser():
         Terminators, multiline commands, and output redirection are not
         parsed.
         """
-        # strip C-style comments
-        # shlex will handle the python/shell style comments for us
-        # save rawinput for later
-        rawinput = re.sub(self.comment_pattern, self._comment_replacer, rawinput)
-        # we are going to modify line, so create a copy of the raw input
-        line = rawinput
-        command = None
-        args = ''
+        # lex the input into a list of tokens
+        tokens = self.tokenize(rawinput)
 
-        # expand shortcuts, have to do this first because
-        # a shortcut can expand into multiple tokens, ie '!ls' becomes
-        # 'shell ls'
-        line = self.expand_shortcuts(line)
-
-        # split the input on whitespace
-        lexer = shlex.shlex(line, posix=False)
-        lexer.whitespace_split = True
-        tokens = self._split_on_punctuation(list(lexer))
-
-        # expand aliases
-        if tokens:
-            command_to_expand = tokens[0]
-            tokens[0] = self.expand_aliases(command_to_expand)
-
+        # parse out the command and everything else
         (command, args) = self._command_and_args(tokens)
 
-        # build Statement object
-        result = Statement(args)
-        result.raw = rawinput
-        result.command = command
-        result.args = args
-        return result
+        # build the statement
+        statement = Statement(args)
+        statement.raw = rawinput
+        statement.command = command
+        statement.args = args
+        return statement
 
-    def expand_shortcuts(self, line: str) -> str:
-        """Expand shortcuts at the beginning of input."""
+    def _expand(self, line: str) -> str:
+        """Expand shortcuts and aliases"""
+
+        # expand aliases
+        # make a copy of aliases so we can edit it
+        tmp_aliases = list(self.aliases.keys())
+        keep_expanding = bool(tmp_aliases)
+        while keep_expanding:
+            for cur_alias in tmp_aliases:
+                keep_expanding = False
+                # apply our regex to line
+                match = self.command_pattern.search(line)
+                if match:
+                    # we got a match, extract the command
+                    command = match.group(1)
+                    if command == cur_alias:
+                        # rebuild line with the expanded alias
+                        line = self.aliases[cur_alias] + match.group(2) + line[match.end(2):]
+                        tmp_aliases.remove(cur_alias)
+                        keep_expanding = bool(tmp_aliases)
+                        break
+
+        # expand shortcuts
         for (shortcut, expansion) in self.shortcuts:
             if  line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
@@ -317,25 +328,6 @@ class StatementParser():
                 line = line.replace(shortcut, expansion, 1)
                 break
         return line
-
-    def expand_aliases(self, command: str) -> str:
-        """Given a command, expand any aliases for the command.
-
-        If an alias contains shortcuts, the shortcuts will be expanded too.
-        """
-        # make a copy of aliases so we can edit it
-        tmp_aliases = list(self.aliases.keys())
-        keep_expanding = bool(tmp_aliases)
-
-        while keep_expanding:
-            for cur_alias in tmp_aliases:
-                keep_expanding = False
-                if command == cur_alias:
-                    command = self.aliases[cur_alias]
-                    tmp_aliases.remove(cur_alias)
-                    keep_expanding = bool(tmp_aliases)
-                    break
-        return self.expand_shortcuts(command)
 
     @staticmethod
     def _command_and_args(tokens: List[str]) -> Tuple[str, str]:

@@ -17,7 +17,11 @@ def parser():
         allow_redirection=True,
         terminators=[';'],
         multiline_commands=['multiline'],
-        aliases={'helpalias': 'help', '42': 'theanswer', 'anothermultiline': 'multiline', 'fake': 'pyscript'},
+        aliases={'helpalias': 'help',
+                 '42': 'theanswer',
+                 'l': '!ls -al',
+                 'anothermultiline': 'multiline',
+                 'fake': 'pyscript'},
         shortcuts=[('?', 'help'), ('!', 'shell')]
     )
     return parser
@@ -27,6 +31,17 @@ def test_parse_empty_string(parser):
     assert not statement.command
     assert not statement.args
     assert statement.raw == ''
+
+@pytest.mark.parametrize('line,tokens', [
+    ('command', ['command']),
+    ('command /* with some comment */ arg', ['command', 'arg']),
+    ('command arg1 arg2 # comment at the end', ['command', 'arg1', 'arg2']),
+    ('42 arg1 arg2', ['theanswer', 'arg1', 'arg2']),
+    ('l', ['shell', 'ls', '-al'])
+])
+def test_tokenize(parser, line, tokens):
+    tokens_to_test = parser.tokenize(line)
+    assert tokens_to_test == tokens
 
 @pytest.mark.parametrize('tokens,command,args', [
     ([], None, ''),
@@ -258,6 +273,7 @@ def test_empty_statement_raises_exception():
     ('42 arg1 arg2', 'theanswer', 'arg1 arg2'),
     ('!ls', 'shell', 'ls'),
     ('!ls -al /tmp', 'shell', 'ls -al /tmp'),
+    ('l', 'shell', 'ls -al')
 ])
 def test_alias_and_shortcut_expansion(parser, line, command, args):
     statement = parser.parse(line)
@@ -307,8 +323,8 @@ def test_parse_command_only_expands_shortcuts(parser):
     assert statement.command_and_args == line.replace('!', 'shell ')
 
 def test_parse_command_only_quoted_args(parser):
-    line = 'shell "/tmp/directory with spaces/doit.sh"'
+    line = 'l "/tmp/directory with spaces/doit.sh"'
     statement = parser.parse_command_only(line)
     assert statement.command == 'shell'
-    assert statement.args == '"/tmp/directory with spaces/doit.sh"'
-    assert statement.command_and_args == line
+    assert statement.args == 'ls -al "/tmp/directory with spaces/doit.sh"'
+    assert statement.command_and_args == line.replace('l', 'shell ls -al')
