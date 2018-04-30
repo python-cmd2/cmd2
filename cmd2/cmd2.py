@@ -147,21 +147,6 @@ def _which(editor: str) -> Optional[str]:
     return editor_path
 
 
-def strip_quotes(arg: str) -> str:
-    """ Strip outer quotes from a string.
-
-     Applies to both single and double quotes.
-
-    :param arg:  string to strip outer quotes from
-    :return: same string with potentially outer quotes stripped
-    """
-    quote_chars = '"' + "'"
-
-    if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in quote_chars:
-        arg = arg[1:-1]
-    return arg
-
-
 def parse_quoted_string(cmdline: str) -> List[str]:
     """Parse a quoted string into a list of arguments."""
     if isinstance(cmdline, list):
@@ -173,7 +158,7 @@ def parse_quoted_string(cmdline: str) -> List[str]:
         # strip off outer quotes for convenience
         temp_arglist = []
         for arg in lexed_arglist:
-            temp_arglist.append(strip_quotes(arg))
+            temp_arglist.append(utils.strip_quotes(arg))
         lexed_arglist = temp_arglist
     return lexed_arglist
 
@@ -1032,7 +1017,7 @@ class Cmd(cmd.Cmd):
             raw_tokens = initial_tokens
 
         # Save the unquoted tokens
-        tokens = [strip_quotes(cur_token) for cur_token in raw_tokens]
+        tokens = [utils.strip_quotes(cur_token) for cur_token in raw_tokens]
 
         # If the token being completed had an unclosed quote, we need
         # to remove the closing quote that was added in order for it
@@ -2780,7 +2765,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 # an unclosed quote, so we only need to check the first character.
                 first_char = tokens[index][0]
                 if first_char in constants.QUOTES:
-                    tokens[index] = strip_quotes(tokens[index])
+                    tokens[index] = utils.strip_quotes(tokens[index])
 
                 tokens[index] = os.path.expanduser(tokens[index])
 
