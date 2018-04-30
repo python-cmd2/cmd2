@@ -13,6 +13,7 @@ from cmd2 import with_argparser
 
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
+
 class SubcommandsExample(cmd2.Cmd):
     """
     Example cmd2 application where we a base command which has a couple subcommands

@@ -18,6 +18,7 @@ actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Pet
           'Lupita Nyong\'o', 'Andy Serkis', 'Liam Neeson', 'Ewan McGregor', 'Natalie Portman',
           'Jake Lloyd', 'Hayden Christensen', 'Christopher Lee']
 
+
 def query_actors() -> List[str]:
     """Simulating a function that queries and returns a completion values"""
     return actors

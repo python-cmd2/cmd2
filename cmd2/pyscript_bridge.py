@@ -33,7 +33,8 @@ class ArgparseFunctor:
                     self._args[action.dest] = item
                     return self
 
-        return super().__getatttr__(item)
+        raise AttributeError(item)
+        # return super().__getattr__(item)
 
     def __call__(self, *args, **kwargs):
         """
@@ -57,7 +58,9 @@ class ArgparseFunctor:
             else:
                 # This is a positional argument, search the positional arguments passed in.
                 if not isinstance(action, argparse._SubParsersAction):
-                    if next_pos_index < len(args):
+                    if action.dest in kwargs:
+                        self._args[action.dest] = kwargs[action.dest]
+                    elif next_pos_index < len(args):
                         self._args[action.dest] = args[next_pos_index]
                         next_pos_index += 1
                 else:
@@ -65,7 +68,7 @@ class ArgparseFunctor:
 
         # Check if there are any extra arguments we don't know how to handle
         for kw in kwargs:
-            if kw not in consumed_kw:
+            if kw not in self._args:  # consumed_kw:
                 raise TypeError('{}() got an unexpected keyword argument \'{}\''.format(
                     self.__current_subcommand_parser.prog, kw))
 
@@ -116,6 +119,8 @@ class ArgparseFunctor:
 
         traverse_parser(self._parser)
 
+        # print('Command: {}'.format(cmd_str[0]))
+
         func(cmd_str[0])
         return self._cmd2_app._last_result
 
@@ -146,7 +151,7 @@ class PyscriptBridge(object):
                 # Command does use argparse, return an object that can traverse the argparse subcommands and arguments
                 return ArgparseFunctor(self._cmd2_app, item, parser)
 
-        return super().__getattr__(item)
+        raise AttributeError(item)
 
     def __call__(self, args):
         self._cmd2_app.onecmd_plus_hooks(args + '\n')

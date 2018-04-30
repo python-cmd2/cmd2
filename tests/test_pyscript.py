@@ -100,6 +100,12 @@ def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
     ('media movies list', 'media_movies_list1.py'),
     ('media movies list', 'media_movies_list2.py'),
     ('media movies list', 'media_movies_list3.py'),
+    ('media movies list -a "Mark Hamill"', 'media_movies_list4.py'),
+    ('media movies list -a "Mark Hamill" -a "Carrie Fisher"', 'media_movies_list5.py'),
+    ('media movies list -r PG', 'media_movies_list6.py'),
+    ('media movies list -r PG PG-13', 'media_movies_list7.py'),
+    ('media movies add "My Movie" PG-13 --director "George Lucas" "J. J. Abrams"',
+     'media_movies_add1.py'),
 ])
 def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)
@@ -113,3 +119,27 @@ def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
     assert len(out) > 0
     assert out == expected
 
+
+@pytest.mark.parametrize('command', [
+    'app.noncommand',
+    'app.media.noncommand',
+])
+def test_pyscript_unknown_command(ps_app, capsys, command):
+    run_cmd(ps_app, 'py {}'.format(command))
+    _, err = capsys.readouterr()
+
+    assert len(err) > 0
+    assert 'Traceback' in err
+    assert 'AttributeError' in err
+
+
+@pytest.mark.parametrize('command', [
+    'app.media.movies.list(artist="Invalid Keyword")',
+])
+def test_pyscript_unknown_kw(ps_app, capsys, command):
+    run_cmd(ps_app, 'py {}'.format(command))
+    _, err = capsys.readouterr()
+
+    assert len(err) > 0
+    assert 'Traceback' in err
+    assert 'TypeError' in err
