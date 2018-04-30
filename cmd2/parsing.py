@@ -28,6 +28,31 @@ class Statement(str):
 
     The string portion of the class contains the arguments, but not the command, nor
     the output redirection clauses.
+
+    :var raw:               string containing exactly what we input by the user
+    :type raw:              str
+    :var command:           the command, i.e. the first whitespace delimited word
+    :type command:          str or None
+    :var multiline_command: if the command is a multiline command, the name of the
+                            command, otherwise None
+    :type command:          str or None
+    :var args:              the arguments to the command, not including any output
+                            redirection or terminators. quoted arguments remain
+                            quoted.
+    :type args:             str
+    :var terminator:        the charater which terminated the multiline command, if
+                            there was one
+    :type terminator:       str or None
+    :var suffix:            characters appearing after the terminator but before output
+                            redirection, if any
+    :type suffix:           str or None
+    :var pipe_to:           if output was piped to a shell command, the shell command
+    :type pipe_to:          str or None
+    :var output:            if output was redirected, the redirection token, i.e. '>>'
+    :type output:           str or None
+    :var output_to:         if output was redirected, the destination, usually a filename
+    :type output_to:        str or None
+
     """
     def __init__(self, obj):
         super().__init__()
@@ -44,7 +69,10 @@ class Statement(str):
 
     @property
     def command_and_args(self):
-        """Combine command and args with a space separating them"""
+        """Combine command and args with a space separating them.
+
+        Quoted arguments remain quoted.
+        """
         return '{} {}'.format('' if self.command is None else self.command, self.args).strip()
 
 class StatementParser():
