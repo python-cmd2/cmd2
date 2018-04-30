@@ -58,7 +58,7 @@ class StatementParser():
             terminators=None,
             multiline_commands=None,
             aliases=None,
-            shortcuts=[],
+            shortcuts=None,
         ):
         self.allow_redirection = allow_redirection
         if terminators is None:
