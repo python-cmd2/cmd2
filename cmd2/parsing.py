@@ -10,13 +10,6 @@ from . import constants
 
 BLANK_LINE = '\n'
 
-def _comment_replacer(match):
-    matched_string = match.group(0)
-    if matched_string.startswith('/'):
-        # the matched string was a comment, so remove it
-        return ''
-    # the matched string was a quoted string, return the match
-    return matched_string
 
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
@@ -74,6 +67,7 @@ class Statement(str):
         Quoted arguments remain quoted.
         """
         return '{} {}'.format('' if self.command is None else self.command, self.args).strip()
+
 
 class StatementParser():
     """Parse raw text into command components.
@@ -135,16 +129,25 @@ class StatementParser():
             re.DOTALL | re.MULTILINE
         )
 
+    def tokenize(self, line: str) -> List[str]:
+        """Tokenize a string into a list"""
+        lexer = shlex.shlex(line, posix=False)
+        lexer.whitespace_split = True
+        tokens = self._split_on_punctuation(list(lexer))
+        return tokens
+
     def parse(self, rawinput: str) -> Statement:
-        """Parse input into a Statement object, stripping comments, expanding
-        aliases and shortcuts, and extracting output redirection directives.
+        """Tokenize the input and parse it into a Statement object, stripping
+        comments, expanding aliases and shortcuts, and extracting output
+        redirection directives.
         """
         # strip C-style comments
         # shlex will handle the python/shell style comments for us
         # save rawinput for later
-        rawinput = re.sub(self.comment_pattern, _comment_replacer, rawinput)
+        rawinput = re.sub(self.comment_pattern, self._comment_replacer, rawinput)
         # we are going to modify line, so create a copy of the raw input
         line = rawinput
+
         command = None
         args = ''
 
@@ -160,10 +163,7 @@ class StatementParser():
         if line[-1:] == BLANK_LINE:
             terminator = BLANK_LINE
 
-        # split the input on whitespace
-        lexer = shlex.shlex(line, posix=False)
-        lexer.whitespace_split = True
-        tokens = self.split_on_punctuation(list(lexer))
+        tokens = self.tokenize(line)
 
         # expand aliases
         if tokens:
@@ -274,7 +274,7 @@ class StatementParser():
         # strip C-style comments
         # shlex will handle the python/shell style comments for us
         # save rawinput for later
-        rawinput = re.sub(self.comment_pattern, _comment_replacer, rawinput)
+        rawinput = re.sub(self.comment_pattern, self._comment_replacer, rawinput)
         # we are going to modify line, so create a copy of the raw input
         line = rawinput
         command = None
@@ -288,7 +288,7 @@ class StatementParser():
         # split the input on whitespace
         lexer = shlex.shlex(line, posix=False)
         lexer.whitespace_split = True
-        tokens = self.split_on_punctuation(list(lexer))
+        tokens = self._split_on_punctuation(list(lexer))
 
         # expand aliases
         if tokens:
@@ -319,7 +319,10 @@ class StatementParser():
         return line
 
     def expand_aliases(self, command: str) -> str:
-        """Given a command, expand any aliases for the command"""
+        """Given a command, expand any aliases for the command.
+
+        If an alias contains shortcuts, the shortcuts will be expanded too.
+        """
         # make a copy of aliases so we can edit it
         tmp_aliases = list(self.aliases.keys())
         keep_expanding = bool(tmp_aliases)
@@ -332,7 +335,7 @@ class StatementParser():
                     tmp_aliases.remove(cur_alias)
                     keep_expanding = bool(tmp_aliases)
                     break
-        return command
+        return self.expand_shortcuts(command)
 
     @staticmethod
     def _command_and_args(tokens: List[str]) -> Tuple[str, str]:
@@ -350,7 +353,16 @@ class StatementParser():
 
         return (command, args)
 
-    def split_on_punctuation(self, tokens: List[str]) -> List[str]:
+    @staticmethod
+    def _comment_replacer(match):
+        matched_string = match.group(0)
+        if matched_string.startswith('/'):
+            # the matched string was a comment, so remove it
+            return ''
+        # the matched string was a quoted string, return the match
+        return matched_string
+
+    def _split_on_punctuation(self, tokens: List[str]) -> List[str]:
         """
         # Further splits tokens from a command line using punctuation characters
         # as word breaks when they are in unquoted strings. Each run of punctuation
