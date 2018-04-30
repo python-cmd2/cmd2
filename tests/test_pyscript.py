@@ -106,6 +106,8 @@ def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
     ('media movies list -r PG PG-13', 'media_movies_list7.py'),
     ('media movies add "My Movie" PG-13 --director "George Lucas" "J. J. Abrams"',
      'media_movies_add1.py'),
+    ('media movies add "My Movie" PG-13 --director "George Lucas" "J. J. Abrams" "Mark Hamill"',
+     'media_movies_add2.py'),
 ])
 def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)

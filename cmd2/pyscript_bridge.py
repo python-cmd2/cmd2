@@ -114,6 +114,7 @@ class ArgparseFunctor:
                                 process_flag(action, values)
                         else:
                             process_flag(action, self._args[action.dest])
+                    # TODO: StoreTrue/StoreFalse
                     else:
                         process_flag(action, self._args[action.dest])
 
