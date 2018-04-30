@@ -11,14 +11,3 @@ Todo List:
 - delete SHLEX_TODO.txt once everything is done
 
 Questions:
-
-Changelog Items:
-- if self.default_to_shell is true, then redirection and piping are now properly passed to the shell, previously it was truncated
-- object passed to do_* methods has changed. It no longer is the pyparsing object, it's a new Statement object. A side effect of this is that we now have a clean interface between the parsing logic and the rest of cmd2. If we need to change the parser in the future, we can do it without breaking anything. The parser is now self.statement_parser instead of self.command_parser.
-- self.commentGrammers is no longer supported or available. Comments are C-style or python style.
-- input redirection no longer supported. Use the load command instead.
-- multilineCommand attribute is now multiline_command
-- submenus now call all hooks, it used to just call precmd and postcmd
-- cmd2 ignores identchars. The standardlibrary cmd uses those characters to split the first "word" of the input, but cmd2 hasn't used those for a while, and the new parsing logic parses on whitespace, which has the added benefit of full unicode support, unlike cmd or prior versions of cmd2.
-- set_posix_shlex function and POSIX_SHLEX variable have been removed. Parsing behavior is now always posix=false.
-- set_strip_quotes function and STRIP_QUOTES_FOR_NON_POSIX have been removed. Quotes are always stripped from arguments.
