@@ -8,8 +8,38 @@ Released under MIT license, see LICENSE file
 """
 
 import argparse
+from collections import namedtuple
+import sys
 from typing import List, Tuple
+
+# Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
+if sys.version_info < (3, 5):
+    from contextlib2 import redirect_stdout, redirect_stderr
+else:
+    from contextlib import redirect_stdout, redirect_stderr
+
 from .argparse_completer import _RangeAction
+
+
+CommandResult = namedtuple('FunctionResult', 'stdout stderr data')
+
+
+class CopyStream(object):
+    """ Toy class for replacing self.stdout in cmd2.Cmd instances for unit testing. """
+    def __init__(self, innerStream):
+        self.buffer = ''
+        self.innerStream = innerStream
+
+    def write(self, s):
+        self.buffer += s
+        self.innerStream.write(s)
+
+    def read(self):
+        raise NotImplementedError
+
+    def clear(self):
+        self.buffer = ''
+        self.innerStream.clear()
 
 
 class ArgparseFunctor:
@@ -178,8 +208,13 @@ class ArgparseFunctor:
 
         # print('Command: {}'.format(cmd_str[0]))
 
-        func(cmd_str[0])
-        return self._cmd2_app._last_result
+        copyStdOut = CopyStream(sys.stdout)
+        copyStdErr = CopyStream(sys.stderr)
+        with redirect_stdout(copyStdOut):
+            with redirect_stderr(copyStdErr):
+                func(cmd_str[0])
+        result = CommandResult(stdout=copyStdOut.buffer, stderr=copyStdErr.buffer, data=self._cmd2_app._last_result)
+        return result
 
 
 class PyscriptBridge(object):
