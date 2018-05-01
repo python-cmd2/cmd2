@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Bridges calls made inside of pyscript with the Cmd2 host app while maintaining a reasonable
 degree of isolation between the two
@@ -8,9 +9,13 @@ Released under MIT license, see LICENSE file
 
 import argparse
 from typing import List, Tuple
+from .argparse_completer import _RangeAction
 
 
 class ArgparseFunctor:
+    """
+    Encapsulates translating python object traversal
+    """
     def __init__(self, cmd2_app, item, parser):
         self._cmd2_app = cmd2_app
         self._item = item
@@ -59,10 +64,46 @@ class ArgparseFunctor:
                 # This is a positional argument, search the positional arguments passed in.
                 if not isinstance(action, argparse._SubParsersAction):
                     if action.dest in kwargs:
+                        # if this positional argument happens to be passed in as a keyword argument
+                        # go ahead and consume the matching keyword argument
                         self._args[action.dest] = kwargs[action.dest]
                     elif next_pos_index < len(args):
-                        self._args[action.dest] = args[next_pos_index]
-                        next_pos_index += 1
+                        # Make sure we actually have positional arguments to consume
+                        pos_remain = len(args) - next_pos_index
+
+                        # Check if this argument consumes a range of values
+                        if isinstance(action, _RangeAction) and action.nargs_min is not None \
+                                and action.nargs_max is not None:
+                            # this is a cmd2 ranged action.
+
+                            if pos_remain >= action.nargs_min:
+                                # Do we meet the minimum count?
+                                if pos_remain > action.nargs_max:
+                                    # Do we exceed the maximum count?
+                                    self._args[action.dest] = args[next_pos_index:next_pos_index + action.nargs_max]
+                                    next_pos_index += action.nargs_max
+                                else:
+                                    self._args[action.dest] = args[next_pos_index:next_pos_index + pos_remain]
+                                    next_pos_index += pos_remain
+                            else:
+                                raise ValueError('Expected at least {} values for {}'.format(action.nargs_min,
+                                                                                             action.dest))
+                        elif action.nargs is not None:
+                            if action.nargs == '+':
+                                if pos_remain > 0:
+                                    self._args[action.dest] = args[next_pos_index:next_pos_index + pos_remain]
+                                    next_pos_index += pos_remain
+                                else:
+                                    raise ValueError('Expected at least 1 value for {}'.format(action.dest))
+                            elif action.nargs == '*':
+                                self._args[action.dest] = args[next_pos_index:next_pos_index + pos_remain]
+                                next_pos_index += pos_remain
+                            elif action.nargs == '?':
+                                self._args[action.dest] = args[next_pos_index]
+                                next_pos_index += 1
+                        else:
+                            self._args[action.dest] = args[next_pos_index]
+                            next_pos_index += 1
                 else:
                     has_subcommand = True
 
@@ -85,6 +126,22 @@ class ArgparseFunctor:
         cmd_str = ['']
 
         def process_flag(action, value):
+            if isinstance(action, argparse._CountAction):
+                if isinstance(value, int):
+                    for c in range(value):
+                        cmd_str[0] += '{} '.format(action.option_strings[0])
+                    return
+                else:
+                    raise TypeError('Expected int for ' + action.dest)
+            if isinstance(action, argparse._StoreConstAction) or isinstance(action, argparse._AppendConstAction):
+                if value:
+                    # Nothing else to append to the command string, just the flag is enough.
+                    cmd_str[0] += '{} '.format(action.option_strings[0])
+                    return
+                else:
+                    # value is not True so we default to false, which means don't include the flag
+                    return
+
             # was the argument a flag?
             if action.option_strings:
                 cmd_str[0] += '{} '.format(action.option_strings[0])
@@ -114,7 +171,6 @@ class ArgparseFunctor:
                                 process_flag(action, values)
                         else:
                             process_flag(action, self._args[action.dest])
-                    # TODO: StoreTrue/StoreFalse
                     else:
                         process_flag(action, self._args[action.dest])
 

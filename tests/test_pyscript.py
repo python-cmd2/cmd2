@@ -71,6 +71,27 @@ class PyscriptExample(Cmd):
             # No subcommand was provided, so call help
             self.do_help('media')
 
+    foo_parser = argparse_completer.ACArgumentParser(prog='foo')
+    foo_parser.add_argument('-c', dest='counter', action='count')
+    foo_parser.add_argument('-t', dest='trueval', action='store_true')
+    foo_parser.add_argument('-n', dest='constval', action='store_const', const=42)
+    foo_parser.add_argument('variable', nargs=(2, 3))
+    foo_parser.add_argument('optional', nargs='?')
+    foo_parser.add_argument('zeroormore', nargs='*')
+
+    @with_argparser(foo_parser)
+    def do_foo(self, args):
+        print('foo ' + str(args.__dict__))
+
+    bar_parser = argparse_completer.ACArgumentParser(prog='bar')
+    bar_parser.add_argument('first')
+    bar_parser.add_argument('oneormore', nargs='+')
+    bar_parser.add_argument('-a', dest='aaa')
+
+    @with_argparser(bar_parser)
+    def do_bar(self, args):
+        print('bar ' + str(args.__dict__))
+
 
 @pytest.fixture
 def ps_app():
@@ -108,6 +129,10 @@ def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
      'media_movies_add1.py'),
     ('media movies add "My Movie" PG-13 --director "George Lucas" "J. J. Abrams" "Mark Hamill"',
      'media_movies_add2.py'),
+    ('foo aaa bbb -ccc -t -n', 'foo1.py'),
+    ('foo 11 22 33 44 -ccc -t -n', 'foo2.py'),
+    ('foo 11 22 33 44 55 66 -ccc', 'foo3.py'),
+    ('bar 11 22', 'bar1.py')
 ])
 def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)
@@ -122,26 +147,18 @@ def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
     assert out == expected
 
 
-@pytest.mark.parametrize('command', [
-    'app.noncommand',
-    'app.media.noncommand',
+@pytest.mark.parametrize('command, error', [
+    ('app.noncommand', 'AttributeError'),
+    ('app.media.noncommand', 'AttributeError'),
+    ('app.media.movies.list(artist="Invalid Keyword")', 'TypeError'),
+    ('app.foo(counter="a")', 'TypeError'),
+    ('app.foo("aaa")', 'ValueError'),
 ])
-def test_pyscript_unknown_command(ps_app, capsys, command):
+def test_pyscript_errors(ps_app, capsys, command, error):
     run_cmd(ps_app, 'py {}'.format(command))
     _, err = capsys.readouterr()
 
     assert len(err) > 0
     assert 'Traceback' in err
-    assert 'AttributeError' in err
+    assert error in err
 
-
-@pytest.mark.parametrize('command', [
-    'app.media.movies.list(artist="Invalid Keyword")',
-])
-def test_pyscript_unknown_kw(ps_app, capsys, command):
-    run_cmd(ps_app, 'py {}'.format(command))
-    _, err = capsys.readouterr()
-
-    assert len(err) > 0
-    assert 'Traceback' in err
-    assert 'TypeError' in err
