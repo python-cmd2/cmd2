@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding=utf-8
 """
 A example usage of the AutoCompleter
@@ -10,13 +10,14 @@ import argparse
 import itertools
 from typing import List
 
-import cmd2
-from cmd2 import with_argparser, with_category, argparse_completer
+from cmd2 import cmd2, argparse_completer
+from cmd2.cmd2 import with_argparser, with_category
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
           'Lupita Nyong\'o', 'Andy Serkis', 'Liam Neeson', 'Ewan McGregor', 'Natalie Portman',
           'Jake Lloyd', 'Hayden Christensen', 'Christopher Lee']
+
 
 def query_actors() -> List[str]:
     """Simulating a function that queries and returns a completion values"""
@@ -323,6 +324,7 @@ class TabCompleteExample(cmd2.Cmd):
         else:
             # No subcommand was provided, so call help
             self.do_help('media')
+
 
     # This completer is implemented using a single dictionary to look up completion lists for all layers of
     # subcommands. For each argument, AutoCompleter will search for completion values from the provided

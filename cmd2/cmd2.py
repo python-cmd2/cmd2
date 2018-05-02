@@ -197,8 +197,12 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
-            args, unknown = argparser.parse_known_args(lexed_arglist)
-            return func(instance, args, unknown)
+            try:
+                args, unknown = argparser.parse_known_args(lexed_arglist)
+            except SystemExit:
+                return
+            else:
+                return func(instance, args, unknown)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -234,8 +238,12 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline)
-            args = argparser.parse_args(lexed_arglist)
-            return func(instance, args)
+            try:
+                args = argparser.parse_args(lexed_arglist)
+            except SystemExit:
+                return
+            else:
+                return func(instance, args)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -608,7 +616,7 @@ class Cmd(cmd.Cmd):
                 if _which(editor):
                     break
     feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
-    locals_in_py = True
+    locals_in_py = False
     quiet = False  # Do not suppress nonessential output
     timing = False  # Prints elapsed time for each command
 
@@ -670,6 +678,7 @@ class Cmd(cmd.Cmd):
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
+        self.pyscript_name = 'app'
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
         self.statement_parser = StatementParser(
             allow_redirection=self.allow_redirection,
@@ -1993,6 +2002,8 @@ class Cmd(cmd.Cmd):
                 if self.allow_redirection:
                     self._redirect_output(statement)
                 timestart = datetime.datetime.now()
+                if self._in_py:
+                    self._last_result = None
                 statement = self.precmd(statement)
                 stop = self.onecmd(statement)
                 stop = self.postcmd(stop, statement)
@@ -2797,16 +2808,16 @@ Usage:  Usage: unalias [-a] name [name ...]
         py <command>: Executes a Python command.
         py: Enters interactive Python mode.
         End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
-        Non-python commands can be issued with ``cmd("your command")``.
+        Non-python commands can be issued with ``pyscript_name("your command")``.
         Run python code from external script files with ``run("script.py")``
         """
+        from .pyscript_bridge import PyscriptBridge
         if self._in_py:
             self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
             return
         self._in_py = True
 
         try:
-            self.pystate['self'] = self
             arg = arg.strip()
 
             # Support the run command even if called prior to invoking an interactive interpreter
@@ -2829,10 +2840,14 @@ Usage:  Usage: unalias [-a] name [name ...]
                 """
                 return self.onecmd_plus_hooks(cmd_plus_args + '\n')
 
+            bridge = PyscriptBridge(self)
             self.pystate['run'] = run
-            self.pystate['cmd'] = onecmd_plus_hooks
+            self.pystate[self.pyscript_name] = bridge
 
-            localvars = (self.locals_in_py and self.pystate) or {}
+            if self.locals_in_py:
+                self.pystate['self'] = self
+
+            localvars = self.pystate
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
@@ -2853,9 +2868,10 @@ Usage:  Usage: unalias [-a] name [name ...]
                     keepstate = Statekeeper(sys, ('stdin', 'stdout'))
                     sys.stdout = self.stdout
                     sys.stdin = self.stdin
+                    docstr = self.do_py.__doc__.replace('pyscript_name', self.pyscript_name)
                     interp.interact(banner="Python %s on %s\n%s\n(%s)\n%s" %
                                            (sys.version, sys.platform, cprt, self.__class__.__name__,
-                                            self.do_py.__doc__))
+                                            docstr))
                 except EmbeddedConsoleExit:
                     pass
                 if keepstate is not None:

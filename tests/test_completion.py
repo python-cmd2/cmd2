@@ -12,7 +12,7 @@ import argparse
 import os
 import sys
 
-import cmd2
+from cmd2 import cmd2
 import pytest
 from .conftest import complete_tester, StdOut
 from examples.subcommands import SubcommandsExample

@@ -1,5 +1,6 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding=utf-8
+# PYTHON_ARGCOMPLETE_OK
 """A simple example demonstrating how to use Argparse to support subcommands.
 
 
@@ -8,10 +9,51 @@ and provides separate contextual help.
 """
 import argparse
 
-import cmd2
-from cmd2 import with_argparser
-
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
+
+# create the top-level parser for the base command
+base_parser = argparse.ArgumentParser(prog='base')
+base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+
+# create the parser for the "foo" subcommand
+parser_foo = base_subparsers.add_parser('foo', help='foo help')
+parser_foo.add_argument('-x', type=int, default=1, help='integer')
+parser_foo.add_argument('y', type=float, help='float')
+
+# create the parser for the "bar" subcommand
+parser_bar = base_subparsers.add_parser('bar', help='bar help')
+
+bar_subparsers = parser_bar.add_subparsers(title='layer3', help='help for 3rd layer of commands')
+parser_bar.add_argument('z', help='string')
+
+bar_subparsers.add_parser('apple', help='apple help')
+bar_subparsers.add_parser('artichoke', help='artichoke help')
+bar_subparsers.add_parser('cranberries', help='cranberries help')
+
+# create the parser for the "sport" subcommand
+parser_sport = base_subparsers.add_parser('sport', help='sport help')
+sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
+setattr(sport_arg, 'arg_choices', sport_item_strs)
+
+# Handle bash completion if it's installed
+try:
+    # only move forward if we can import CompletionFinder and AutoCompleter
+    from cmd2.argcomplete_bridge import CompletionFinder
+    from cmd2.argparse_completer import AutoCompleter
+    if __name__ == '__main__':
+        with open('out.txt', 'a') as f:
+            f.write('Here 1')
+            f.flush()
+        completer = CompletionFinder()
+        completer(base_parser, AutoCompleter(base_parser))
+except ImportError:
+    pass
+
+
+# Intentionally below the bash completion code to reduce tab completion lag
+from cmd2 import cmd2
+from cmd2.cmd2 import with_argparser
+
 
 class SubcommandsExample(cmd2.Cmd):
     """
@@ -35,33 +77,9 @@ class SubcommandsExample(cmd2.Cmd):
         """sport subcommand of base command"""
         self.poutput('Sport is {}'.format(args.sport))
 
-    # create the top-level parser for the base command
-    base_parser = argparse.ArgumentParser(prog='base')
-    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
-
-    # create the parser for the "foo" subcommand
-    parser_foo = base_subparsers.add_parser('foo', help='foo help')
-    parser_foo.add_argument('-x', type=int, default=1, help='integer')
-    parser_foo.add_argument('y', type=float, help='float')
+    # Set handler functions for the subcommands
     parser_foo.set_defaults(func=base_foo)
-
-    # create the parser for the "bar" subcommand
-    parser_bar = base_subparsers.add_parser('bar', help='bar help')
     parser_bar.set_defaults(func=base_bar)
-
-    bar_subparsers = parser_bar.add_subparsers(title='layer3', help='help for 3rd layer of commands')
-    parser_bar.add_argument('z', help='string')
-
-    bar_subparsers.add_parser('apple', help='apple help')
-    bar_subparsers.add_parser('artichoke', help='artichoke help')
-    bar_subparsers.add_parser('cranberries', help='cranberries help')
-
-    # create the parser for the "sport" subcommand
-    parser_sport = base_subparsers.add_parser('sport', help='sport help')
-    sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
-    setattr(sport_arg, 'arg_choices', sport_item_strs)
-
-    # Set both a function and tab completer for the "sport" subcommand
     parser_sport.set_defaults(func=base_sport)
 
     @with_argparser(base_parser)
