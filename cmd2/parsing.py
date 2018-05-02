@@ -32,7 +32,7 @@ class Statement(str):
     :var args:              the arguments to the command, not including any output
                             redirection or terminators. quoted arguments remain
                             quoted.
-    :type args:             str
+    :type args:             str or None
     :var terminator:        the charater which terminated the multiline command, if
                             there was one
     :type terminator:       str or None
@@ -52,8 +52,7 @@ class Statement(str):
         self.raw = str(obj)
         self.command = None
         self.multiline_command = None
-        # has to be an empty string for compatibility with standard library cmd
-        self.args = ''
+        self.args = None
         self.terminator = None
         self.suffix = None
         self.pipe_to = None
@@ -175,7 +174,7 @@ class StatementParser():
             terminator = LINE_FEED
 
         command = None
-        args = ''
+        args = None
 
         # lex the input into a list of tokens
         tokens = self.tokenize(rawinput)
@@ -263,9 +262,13 @@ class StatementParser():
             multiline_command = None
 
         # build the statement
-        statement = Statement(args)
+        # string representation of args must be an empty string instead of
+        # None for compatibility with standard library cmd
+        statement = Statement('' if args is None else args)
         statement.raw = rawinput
         statement.command = command
+        # if there are no args we will use None since we don't have to worry
+        # about compatibility wiht standard library cmd
         statement.args = args
         statement.terminator = terminator
         statement.output = output
@@ -331,8 +334,11 @@ class StatementParser():
 
     @staticmethod
     def _command_and_args(tokens: List[str]) -> Tuple[str, str]:
-        """given a list of tokens, and return a tuple of the command
+        """Given a list of tokens, return a tuple of the command
         and the args as a string.
+
+        The args string will be '' instead of None to retain backwards compatibility
+        with cmd in the standard library.
         """
         command = None
         args = ''
