@@ -4,12 +4,8 @@
     1) How to add custom command aliases using the alias command
     2) How to load an initialization script at startup
 """
-import argparse
 
 from cmd2 import cmd2
-import pyparsing
-
-from cmd2.cmd2 import with_argument_list, with_argparser, with_argparser_and_unknown_args
 
 
 class AliasAndStartup(cmd2.Cmd):

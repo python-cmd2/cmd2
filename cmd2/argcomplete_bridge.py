@@ -148,16 +148,15 @@ else:
                 # not an argument completion invocation
                 return
 
-            global debug_stream
             try:
-                debug_stream = os.fdopen(9, "w")
-            except:
-                debug_stream = sys.stderr
+                argcomplete.debug_stream = os.fdopen(9, "w")
+            except IOError:
+                argcomplete.debug_stream = sys.stderr
 
             if output_stream is None:
                 try:
                     output_stream = os.fdopen(8, "wb")
-                except:
+                except IOError:
                     argcomplete.debug("Unable to open fd 8 for writing, quitting")
                     exit_method(1)
 
@@ -234,7 +233,7 @@ else:
                 # to ever match.
                 outstr = outstr.replace('\n', ' ').replace('\t', ' ').replace('    ', ' ').strip()
                 # generate a filler entry that should always sort first
-                filler = ' {0:><{width}}'.format('', width=len(outstr))
+                filler = ' {0:><{width}}'.format('', width=len(outstr)/2)
                 outstr = ifs.join([filler, outstr])
 
                 output_stream.write(outstr.encode(argcomplete.sys_encoding))
@@ -243,6 +242,5 @@ else:
                 # go forward with normal filesystem completion
                 output_stream.write(ifs.join([]).encode(argcomplete.sys_encoding))
             output_stream.flush()
-            debug_stream.flush()
+            argcomplete.debug_stream.flush()
             exit_method(0)
-
