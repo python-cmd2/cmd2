@@ -4,8 +4,9 @@
 A sample application for tagging categories on commands.
 """
 
-from cmd2 import Cmd, categorize, __version__, with_argparser, with_category
 import argparse
+
+from cmd2.cmd2 import Cmd, categorize, __version__, with_argparser, with_category
 
 
 class HelpCategories(Cmd):

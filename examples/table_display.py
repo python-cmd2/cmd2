@@ -12,7 +12,7 @@ WARNING: This example requires the tabulate module.
 """
 import functools
 
-import cmd2
+from cmd2 import cmd2
 import tabulate
 
 # Format to use with tabulate module when displaying tables

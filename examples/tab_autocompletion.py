@@ -10,8 +10,8 @@ import argparse
 import itertools
 from typing import List
 
-import cmd2
-from cmd2 import with_argparser, with_category, argparse_completer
+from cmd2 import cmd2, argparse_completer
+from cmd2.cmd2 import with_argparser, with_category
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
