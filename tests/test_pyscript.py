@@ -8,7 +8,8 @@ import os
 import pytest
 from cmd2.cmd2 import Cmd, with_argparser
 from cmd2 import argparse_completer
-from .conftest import run_cmd, normalize, StdOut, complete_tester
+from .conftest import run_cmd, StdOut
+from cmd2.utils import namedtuple_with_defaults
 
 class PyscriptExample(Cmd):
     ratings_types = ['G', 'PG', 'PG-13', 'R', 'NC-17']
@@ -82,6 +83,16 @@ class PyscriptExample(Cmd):
     @with_argparser(foo_parser)
     def do_foo(self, args):
         print('foo ' + str(args.__dict__))
+        if self._in_py:
+            FooResult = namedtuple_with_defaults('FooResult',
+                                                 ['counter', 'trueval', 'constval',
+                                                  'variable', 'optional', 'zeroormore'])
+            self._last_result = FooResult(**{'counter': args.counter,
+                                             'trueval': args.trueval,
+                                             'constval': args.constval,
+                                             'variable': args.variable,
+                                             'optional': args.optional,
+                                             'zeroormore': args.zeroormore})
 
     bar_parser = argparse_completer.ACArgumentParser(prog='bar')
     bar_parser.add_argument('first')
@@ -96,6 +107,23 @@ class PyscriptExample(Cmd):
 @pytest.fixture
 def ps_app():
     c = PyscriptExample()
+    c.stdout = StdOut()
+
+    return c
+
+
+class PyscriptCustomNameExample(Cmd):
+    def __init__(self):
+        super().__init__()
+        self.pyscript_name = 'custom'
+
+    def do_echo(self, out):
+        print(out)
+
+
+@pytest.fixture
+def ps_echo():
+    c = PyscriptCustomNameExample()
     c.stdout = StdOut()
 
     return c
@@ -161,4 +189,26 @@ def test_pyscript_errors(ps_app, capsys, command, error):
     assert len(err) > 0
     assert 'Traceback' in err
     assert error in err
+
+
+@pytest.mark.parametrize('pyscript_file, exp_out', [
+    ('foo4.py', 'Success'),
+])
+def test_pyscript_results(ps_app, capsys, request, pyscript_file, exp_out):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', pyscript_file)
+
+    run_cmd(ps_app, 'pyscript {}'.format(python_script))
+    expected, _ = capsys.readouterr()
+    assert len(expected) > 0
+    assert exp_out in expected
+
+
+def test_pyscript_custom_name(ps_echo, capsys):
+    message = 'blah!'
+    run_cmd(ps_echo, 'py custom.echo("{}")'.format(message))
+    expected, _ = capsys.readouterr()
+    assert len(expected) > 0
+    expected = expected.splitlines()
+    assert message == expected[0]
 

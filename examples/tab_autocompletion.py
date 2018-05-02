@@ -325,6 +325,7 @@ class TabCompleteExample(cmd2.Cmd):
             # No subcommand was provided, so call help
             self.do_help('media')
 
+
     # This completer is implemented using a single dictionary to look up completion lists for all layers of
     # subcommands. For each argument, AutoCompleter will search for completion values from the provided
     # arg_choices dict. This requires careful naming of argparse arguments so that there are no unintentional

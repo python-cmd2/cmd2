@@ -9,6 +9,7 @@ Released under MIT license, see LICENSE file
 
 import argparse
 from collections import namedtuple
+import functools
 import sys
 from typing import List, Tuple
 
@@ -19,27 +20,58 @@ else:
     from contextlib import redirect_stdout, redirect_stderr
 
 from .argparse_completer import _RangeAction
+from .utils import namedtuple_with_defaults
 
 
-CommandResult = namedtuple('FunctionResult', 'stdout stderr data')
+class CommandResult(namedtuple_with_defaults('CmdResult', ['stdout', 'stderr', 'data'])):
+    """Encapsulates the results from a command.
+
+    Named tuple attributes
+    ----------------------
+    stdout: str - Output captured from stdout while this command is executing
+    stderr: str - Output captured from stderr while this command is executing. None if no error captured
+    data - Data returned by the command.
+
+    NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
+    """
+    def __bool__(self):
+        """If stderr is None and data is not None the command is considered a success"""
+        return not self.stderr and self.data is not None
 
 
 class CopyStream(object):
-    """ Toy class for replacing self.stdout in cmd2.Cmd instances for unit testing. """
-    def __init__(self, innerStream):
+    """Copies all data written to a stream"""
+    def __init__(self, inner_stream):
         self.buffer = ''
-        self.innerStream = innerStream
+        self.inner_stream = inner_stream
 
     def write(self, s):
         self.buffer += s
-        self.innerStream.write(s)
+        self.inner_stream.write(s)
 
     def read(self):
         raise NotImplementedError
 
     def clear(self):
         self.buffer = ''
-        self.innerStream.clear()
+
+
+def _exec_cmd(cmd2_app, func):
+    """Helper to encapsulate executing a command and capturing the results"""
+    copy_stdout = CopyStream(sys.stdout)
+    copy_stderr = CopyStream(sys.stderr)
+
+    cmd2_app._last_result = None
+
+    with redirect_stdout(copy_stdout):
+        with redirect_stderr(copy_stderr):
+            func()
+
+    # if stderr is empty, set it to None
+    stderr = copy_stderr if copy_stderr.buffer else None
+
+    result = CommandResult(stdout=copy_stdout.buffer, stderr=stderr, data=cmd2_app._last_result)
+    return result
 
 
 class ArgparseFunctor:
@@ -208,14 +240,7 @@ class ArgparseFunctor:
 
         # print('Command: {}'.format(cmd_str[0]))
 
-        copyStdOut = CopyStream(sys.stdout)
-        copyStdErr = CopyStream(sys.stderr)
-        with redirect_stdout(copyStdOut):
-            with redirect_stderr(copyStdErr):
-                func(cmd_str[0])
-        result = CommandResult(stdout=copyStdOut.buffer, stderr=copyStdErr.buffer, data=self._cmd2_app._last_result)
-        return result
-
+        return _exec_cmd(self._cmd2_app, functools.partial(func, cmd_str[0]))
 
 class PyscriptBridge(object):
     """Preserves the legacy 'cmd' interface for pyscript while also providing a new python API wrapper for
@@ -236,8 +261,7 @@ class PyscriptBridge(object):
             except AttributeError:
                 # Command doesn't, we will accept parameters in the form of a command string
                 def wrap_func(args=''):
-                    func(args)
-                    return self._cmd2_app._last_result
+                    return _exec_cmd(self._cmd2_app, functools.partial(func, args))
                 return wrap_func
             else:
                 # Command does use argparse, return an object that can traverse the argparse subcommands and arguments
@@ -246,6 +270,4 @@ class PyscriptBridge(object):
         raise AttributeError(item)
 
     def __call__(self, args):
-        self._cmd2_app.onecmd_plus_hooks(args + '\n')
-        self._last_result = self._cmd2_app._last_result
-        return self._cmd2_app._last_result
+        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'))

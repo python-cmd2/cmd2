@@ -761,6 +761,7 @@ class Cmd(cmd.Cmd):
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
+        self.pyscript_name = 'app'
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
         self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
                                             multilineCommands=self.multilineCommands,
@@ -2075,6 +2076,8 @@ class Cmd(cmd.Cmd):
                 if self.allow_redirection:
                     self._redirect_output(statement)
                 timestart = datetime.datetime.now()
+                if self._in_py:
+                    self._last_result = None
                 statement = self.precmd(statement)
                 stop = self.onecmd(statement)
                 stop = self.postcmd(stop, statement)
@@ -2901,10 +2904,8 @@ Usage:  Usage: unalias [-a] name [name ...]
                 return self.onecmd_plus_hooks(cmd_plus_args + '\n')
 
             bridge = PyscriptBridge(self)
-            self.pystate['self'] = bridge
             self.pystate['run'] = run
-            self.pystate['cmd'] = bridge
-            self.pystate['app'] = bridge
+            self.pystate[self.pyscript_name] = bridge
 
             localvars = (self.locals_in_py and self.pystate) or {}
             interp = InteractiveConsole(locals=localvars)
