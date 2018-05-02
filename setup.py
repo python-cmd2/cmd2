@@ -3,9 +3,6 @@
 """
 Setuptools setup file, used to install or test 'cmd2'
 """
-import sys
-
-import setuptools
 from setuptools import setup
 
 VERSION = '0.9.0'
@@ -72,18 +69,7 @@ EXTRAS_REQUIRE = {
     ":python_version<'3.5'": ['contextlib2', 'typing'],
 }
 
-if int(setuptools.__version__.split('.')[0]) < 18:
-    EXTRAS_REQUIRE = {}
-    if sys.platform.startswith('win'):
-        INSTALL_REQUIRES.append('pyreadline')
-    else:
-        INSTALL_REQUIRES.append('wcwidth')
-    if sys.version_info < (3, 5):
-        INSTALL_REQUIRES.append('contextlib2')
-        INSTALL_REQUIRES.append('typing')
-
 TESTS_REQUIRE = ['pytest', 'pytest-xdist']
-DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyperclip', 'wcwidth']
 
 setup(
     name="cmd2",
@@ -98,6 +84,7 @@ setup(
     platforms=['any'],
     packages=['cmd2'],
     keywords='command prompt console cmd',
+    python_requires='>=3.4',
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     tests_require=TESTS_REQUIRE,
