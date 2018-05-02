@@ -4,6 +4,7 @@
         * See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for a demonstration of how to use this feature
     * ``cmd2`` no longer depends on the ``six`` module
     * ``cmd2`` is now a multi-file Python package instead of a single-file module
+    * New pyscript approach that provides a pythonic interface to commands in the cmd2 application.
 * Deletions (potentially breaking changes)
     * Deleted all ``optparse`` code which had previously been deprecated in release 0.8.0
         * The ``options`` decorator no longer exists
@@ -12,6 +13,7 @@
         * Alternatively, see the [argparse_example.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py)
     * Deleted ``cmd_with_subs_completer``, ``get_subcommands``, and ``get_subcommand_completer``
         * Replaced by default AutoCompleter implementation for all commands using argparse
+    * Deleted support for old method of calling application commands with ``cmd()`` and ``self``
 * Python 2 no longer supported
     * ``cmd2`` now supports Python 3.4+
 

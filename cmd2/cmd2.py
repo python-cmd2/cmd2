@@ -699,7 +699,7 @@ class Cmd(cmd.Cmd):
                 if _which(editor):
                     break
     feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
-    locals_in_py = True
+    locals_in_py = False
     quiet = False  # Do not suppress nonessential output
     timing = False  # Prints elapsed time for each command
 
@@ -2907,7 +2907,11 @@ Usage:  Usage: unalias [-a] name [name ...]
             self.pystate['run'] = run
             self.pystate[self.pyscript_name] = bridge
 
-            localvars = (self.locals_in_py and self.pystate) or {}
+            if self.locals_in_py:
+                self.pystate['self'] = self
+                self.pystate['cmd'] = onecmd_plus_hooks
+
+            localvars = self.pystate
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 

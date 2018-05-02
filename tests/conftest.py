@@ -89,7 +89,7 @@ debug: False
 echo: False
 editor: vim
 feedback_to_output: False
-locals_in_py: True
+locals_in_py: False
 prompt: (Cmd)
 quiet: False
 timing: False
@@ -106,7 +106,7 @@ debug: False              # Show full error stack on error
 echo: False               # Echo command issued into output
 editor: vim               # Program used by ``edit``
 feedback_to_output: False # Include nonessentials in `|`, `>` results
-locals_in_py: True        # Allow access to your application in py via self
+locals_in_py: False       # Allow access to your application in py via self
 prompt: (Cmd)             # The prompt issued to solicit input
 quiet: False              # Don't print nonessential feedback
 timing: False             # Report execution times
