@@ -4,7 +4,7 @@ Cmd2 testing for argument parsing
 """
 import pytest
 
-import cmd2
+from cmd2 import cmd2
 from .conftest import run_cmd, StdOut, normalize
 
 

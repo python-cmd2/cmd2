@@ -21,7 +21,7 @@ try:
 except ImportError:
     from unittest import mock
 
-import cmd2
+from cmd2 import cmd2
 from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
     HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
@@ -109,8 +109,8 @@ def test_base_show_readonly(base_app):
             Strip Quotes after splitting arguments: {}
             
 """.format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection,
-           "POSIX" if cmd2.cmd2.POSIX_SHLEX else "non-POSIX",
-           "True" if cmd2.cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.cmd2.POSIX_SHLEX else "False"))
+           "POSIX" if cmd2.POSIX_SHLEX else "non-POSIX",
+           "True" if cmd2.STRIP_QUOTES_FOR_NON_POSIX and not cmd2.POSIX_SHLEX else "False"))
     assert out == expected
 
 
@@ -647,18 +647,18 @@ def test_pipe_to_shell_error(base_app, capsys):
     assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 
-@pytest.mark.skipif(not cmd2.cmd2.can_clip,
+@pytest.mark.skipif(not cmd2.can_clip,
                     reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
     expected = normalize(BASE_HELP)
-    assert normalize(cmd2.cmd2.get_paste_buffer()) == expected
+    assert normalize(cmd2.get_paste_buffer()) == expected
 
     # Test appending to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help history >>')
     expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
-    assert normalize(cmd2.cmd2.get_paste_buffer()) == expected
+    assert normalize(cmd2.get_paste_buffer()) == expected
 
 
 def test_base_timing(base_app, capsys):
@@ -1314,7 +1314,7 @@ optional arguments:
                     reason="cmd2._which function only used on Mac and Linux")
 def test_which_editor_good():
     editor = 'vi'
-    path = cmd2.cmd2._which(editor)
+    path = cmd2._which(editor)
     # Assert that the vi editor was found because it should exist on all Mac and Linux systems
     assert path
 
@@ -1322,7 +1322,7 @@ def test_which_editor_good():
                     reason="cmd2._which function only used on Mac and Linux")
 def test_which_editor_bad():
     editor = 'notepad.exe'
-    path = cmd2.cmd2._which(editor)
+    path = cmd2._which(editor)
     # Assert that the editor wasn't found because no notepad.exe on non-Windows systems ;-)
     assert path is None
 
@@ -1349,7 +1349,7 @@ def multiline_app():
     return app
 
 def test_multiline_complete_empty_statement_raises_exception(multiline_app):
-    with pytest.raises(cmd2.cmd2.EmptyStatement):
+    with pytest.raises(cmd2.EmptyStatement):
         multiline_app._complete_statement('')
 
 def test_multiline_complete_statement_without_terminator(multiline_app):
@@ -1367,7 +1367,7 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
 
 def test_clipboard_failure(capsys):
     # Force cmd2 clipboard to be disabled
-    cmd2.cmd2.disable_clip()
+    cmd2.disable_clip()
     app = cmd2.Cmd()
 
     # Redirect command output to the clipboard when a clipboard isn't present

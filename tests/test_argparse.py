@@ -5,7 +5,7 @@ Cmd2 testing for argument parsing
 import argparse
 import pytest
 
-import cmd2
+from cmd2 import cmd2
 from unittest import mock
 
 from .conftest import run_cmd, StdOut

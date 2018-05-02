@@ -14,7 +14,7 @@ the transcript.
 import random
 import argparse
 
-from cmd2 import Cmd, with_argparser
+from cmd2.cmd2 import Cmd, with_argparser
 
 
 class CmdLineApp(Cmd):
