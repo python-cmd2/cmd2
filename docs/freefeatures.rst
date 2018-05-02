@@ -146,35 +146,68 @@ app's value of ``self.redirector`` to use a different string for output redirect
 Python
 ======
 
-The ``py`` command will run its arguments as a Python
-command.  Entered without arguments, it enters an
-interactive Python session.  That session can call
-"back" to your application with ``cmd("")``.  Through
-``self``, it also has access to your application
-instance itself which can be extremely useful for debugging.
-(If giving end-users this level of introspection is inappropriate,
-the ``locals_in_py`` parameter can be set to ``False`` and removed
-from the settable dictionary. See see :ref:`parameters`)
+The ``py`` command will run its arguments as a Python command.  Entered without
+arguments, it enters an interactive Python session.  The session can call "back"
+to your application through the name defined in ``self.pyscript_name`` (defaults
+to ``app``).  This wrapper provides access to execute commands in your cmd2
+application while maintaining isolation.
+
+You may optionally enable full access to to your application by setting
+``locals_in_py`` to ``True``.  Enabling this flag adds ``self`` to the python
+session, which is a reference to your Cmd2 application. This can be useful for
+debugging your application.  To prevent users from enabling this ability
+manually you'll need to remove ``locals_in_py`` from the ``settable`` dictionary.
+That session can call
+
+The ``app`` object (or your custom name) provides access to application commands
+through either raw commands or through a python API wrapper.  For example, any
+application command call be called with ``app("<command>")``. All application
+commands are accessible as python objects and functions matching the command
+name.  For example, the following are equivalent:
+
+::
+
+    >>> app('say --piglatin Blah')
+    lahBay
+    >>> app.say("Blah", piglatin=True)
+    lahBay
+
+
+Sub-commands are also supported. The following pairs are equivalent:
+
+::
+
+    >>> app('command subcmd1 subcmd2 param1 --myflag --otherflag 3')
+    >>> app.command.subcmd1.subcmd2('param1', myflag=True, otherflag=3)
+
+    >>> app('command subcmd1 param1 subcmd2 param2 --myflag --otherflag 3')
+    >>> app.command.subcmd1('param1').subcmd2('param2', myflag=True, otherflag=3)
+
+
+More Python examples:
 
 ::
 
     (Cmd) py print("-".join("spelling"))
     s-p-e-l-l-i-n-g
     (Cmd) py
-    Python 2.6.4 (r264:75706, Dec  7 2009, 18:45:15)
-    [GCC 4.4.1] on linux2
+    Python 3.5.3 (default, Jan 19 2017, 14:11:04)
+    [GCC 6.3.0 20170118] on linux
     Type "help", "copyright", "credits" or "license" for more information.
     (CmdLineApp)
 
+        Invoke python command, shell, or script
+
         py <command>: Executes a Python command.
         py: Enters interactive Python mode.
-        End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, 'exit()`.
-        Non-python commands can be issued with `cmd("your command")`.
+        End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
+        Non-python commands can be issued with ``app("your command")``.
+        Run python code from external script files with ``run("script.py")``
 
     >>> import os
     >>> os.uname()
     ('Linux', 'eee', '2.6.31-19-generic', '#56-Ubuntu SMP Thu Jan 28 01:26:53 UTC 2010', 'i686')
-    >>> cmd("say --piglatin {os}".format(os=os.uname()[0]))
+    >>> app("say --piglatin {os}".format(os=os.uname()[0]))
     inuxLay
     >>> self.prompt
     '(Cmd) '

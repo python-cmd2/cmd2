@@ -2871,7 +2871,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         py <command>: Executes a Python command.
         py: Enters interactive Python mode.
         End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
-        Non-python commands can be issued with ``cmd("your command")``.
+        Non-python commands can be issued with ``pyscript_name("your command")``.
         Run python code from external script files with ``run("script.py")``
         """
         from .pyscript_bridge import PyscriptBridge
@@ -2909,7 +2909,6 @@ Usage:  Usage: unalias [-a] name [name ...]
 
             if self.locals_in_py:
                 self.pystate['self'] = self
-                self.pystate['cmd'] = onecmd_plus_hooks
 
             localvars = self.pystate
             interp = InteractiveConsole(locals=localvars)
@@ -2932,9 +2931,10 @@ Usage:  Usage: unalias [-a] name [name ...]
                     keepstate = Statekeeper(sys, ('stdin', 'stdout'))
                     sys.stdout = self.stdout
                     sys.stdin = self.stdin
+                    docstr = self.do_py.__doc__.replace('pyscript_name', self.pyscript_name)
                     interp.interact(banner="Python %s on %s\n%s\n(%s)\n%s" %
                                            (sys.version, sys.platform, cprt, self.__class__.__name__,
-                                            self.do_py.__doc__))
+                                            docstr))
                 except EmbeddedConsoleExit:
                     pass
                 if keepstate is not None:
