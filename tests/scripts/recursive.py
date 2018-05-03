@@ -3,4 +3,4 @@
 """
 Example demonstrating that running a Python script recursively inside another Python script isn't allowed
 """
-cmd('pyscript ../script.py')
+app('pyscript ../script.py')

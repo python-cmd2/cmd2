@@ -14,7 +14,7 @@ import random
 from unittest import mock
 import pytest
 
-import cmd2
+from cmd2 import cmd2
 from .conftest import run_cmd, StdOut, normalize
 
 class CmdLineApp(cmd2.Cmd):
@@ -184,7 +184,7 @@ now: --->
         assert out == expected
 
 
-class TestMyAppCase(cmd2.cmd2.Cmd2TestCase):
+class TestMyAppCase(cmd2.Cmd2TestCase):
     CmdApp = CmdLineApp
     CmdApp.testfiles = ['tests/transcript.txt']
 
@@ -288,7 +288,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
 
-    class TestMyAppCase(cmd2.cmd2.Cmd2TestCase):
+    class TestMyAppCase(cmd2.Cmd2TestCase):
         cmdapp = app
 
     testcase = TestMyAppCase()

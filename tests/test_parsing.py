@@ -7,7 +7,7 @@ Released under MIT license, see LICENSE file
 """
 import pytest
 
-import cmd2
+from cmd2 import cmd2
 from cmd2.parsing import StatementParser
 
 from cmd2 import utils
@@ -292,10 +292,10 @@ def test_parse_redirect_to_unicode_filename(parser):
 
 def test_empty_statement_raises_exception():
     app = cmd2.Cmd()
-    with pytest.raises(cmd2.cmd2.EmptyStatement):
+    with pytest.raises(cmd2.EmptyStatement):
         app._complete_statement('')
 
-    with pytest.raises(cmd2.cmd2.EmptyStatement):
+    with pytest.raises(cmd2.EmptyStatement):
         app._complete_statement(' ')
 
 @pytest.mark.parametrize('line,command,args', [

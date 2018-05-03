@@ -3,8 +3,8 @@
 """A simple example demonstrating the using paged output via the ppaged() method.
 """
 
-import cmd2
-from cmd2 import with_argument_list
+from cmd2 import cmd2
+from cmd2.cmd2 import with_argument_list
 
 
 class PagedOutput(cmd2.Cmd):

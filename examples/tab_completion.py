@@ -4,8 +4,8 @@
 """
 import argparse
 
-import cmd2
-from cmd2 import with_argparser, with_argument_list
+from cmd2 import cmd2
+from cmd2.cmd2 import with_argparser, with_argument_list
 
 # List of strings used with flag and index based completion functions
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
