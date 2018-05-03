@@ -26,7 +26,6 @@ class CmdLineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         self.multiline_commands = ['orate']
         self.maxrepeats = 3
-        self.redirector = '->'
 
         # Add stuff to settable and/or shortcuts before calling base class initializer
         self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
@@ -63,7 +62,7 @@ class CmdLineApp(cmd2.Cmd):
     def do_mumble(self, opts, arg):
         """Mumbles what you tell me to."""
         repetitions = opts.repeat or 1
-        arg = arg.split()
+        #arg = arg.split()
         for i in range(min(repetitions, self.maxrepeats)):
             output = []
             if random.random() < .33:
@@ -229,7 +228,7 @@ def test_invalid_syntax(_cmdline_app, capsys):
     ('characterclass.txt', False),
     ('dotstar.txt', False),
     ('extension_notation.txt', False),
-    # ('from_cmdloop.txt', True),
+    ('from_cmdloop.txt', True),
     ('multiline_no_regex.txt', False),
     ('multiline_regex.txt', False),
     ('regex_set.txt', False),
@@ -237,7 +236,7 @@ def test_invalid_syntax(_cmdline_app, capsys):
     ('slashes_escaped.txt', False),
     ('slashslash.txt', False),
     ('spaces.txt', False),
-    # ('word_boundaries.txt', False),
+    ('word_boundaries.txt', False),
     ])
 def test_transcript(request, capsys, filename, feedback_to_output):
     # Create a cmd2.Cmd() instance and make sure basic settings are
