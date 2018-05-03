@@ -95,13 +95,6 @@ def _cmdline_app():
     return c
 
 
-@pytest.fixture
-def _demo_app():
-    c = DemoApp()
-    c.stdout = StdOut()
-    return c
-
-
 def _get_transcript_blocks(transcript):
     cmd = None
     expected = ''
@@ -188,24 +181,6 @@ class TestMyAppCase(cmd2.Cmd2TestCase):
     CmdApp.testfiles = ['tests/transcript.txt']
 
 
-def test_comment_stripping(_cmdline_app):
-    out = run_cmd(_cmdline_app, 'speak it was /* not */ delicious! # Yuck!')
-    expected = normalize("""it was delicious!""")
-    assert out == expected
-
-
-def test_argparser_correct_args_with_quotes_and_midline_options(_cmdline_app):
-    out = run_cmd(_cmdline_app, "speak 'This is a' -s test of the emergency broadcast system!")
-    expected = normalize("""THIS IS A TEST OF THE EMERGENCY BROADCAST SYSTEM!""")
-    assert out == expected
-
-
-def test_argparser_options_with_spaces_in_quotes(_demo_app):
-    out = run_cmd(_demo_app, "hello foo -n 'Bugs Bunny' bar baz")
-    expected = normalize("""Hello Bugs Bunny""")
-    assert out == expected
-
-
 def test_commands_at_invocation():
     testargs = ["prog", "say hello", "say Gracie", "quit"]
     expected = "This is an intro banner ...\nhello\nGracie\n"
@@ -215,12 +190,6 @@ def test_commands_at_invocation():
         app.cmdloop()
         out = app.stdout.buffer
         assert out == expected
-
-def test_invalid_syntax(_cmdline_app, capsys):
-    run_cmd(_cmdline_app, 'speak "')
-    out, err = capsys.readouterr()
-    expected = normalize("""ERROR: Invalid syntax: No closing quotation""")
-    assert normalize(str(err)) == expected
 
 
 @pytest.mark.parametrize('filename, feedback_to_output', [
