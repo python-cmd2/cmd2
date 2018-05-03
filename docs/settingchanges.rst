@@ -44,7 +44,7 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
   Shortcuts need to be created by updating the ``shortcuts`` dictionary attribute prior to calling the
   ``cmd2.Cmd`` super class ``__init__()`` method.  Moreover, that super class init method needs to be called after
   updating the ``shortcuts`` attribute  This warning applies in general to many other attributes which are not
-  settable at runtime such as ``commentGrammars``, ``multilineCommands``, etc.
+  settable at runtime such as ``multiline_commands``, etc.
 
 
 Aliases

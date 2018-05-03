@@ -23,7 +23,7 @@ Main Features
 - Python scripting of your application with ``pyscript``
 - Run shell commands with ``!``
 - Pipe command output to shell commands with `|`
-- Redirect command output to file with `>`, `>>`; input from file with `<`
+- Redirect command output to file with `>`, `>>`
 - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
 - `py` enters interactive Python console (opt-in `ipy` for IPython console)
 - Option to display long output using a pager with ``cmd2.Cmd.ppaged()``
@@ -57,7 +57,7 @@ pip install -U cmd2
 ```
 
 cmd2 works with Python 3.4+ on Windows, macOS, and Linux. It is pure Python code with
-the only 3rd-party dependencies being on [pyparsing](http://pyparsing.wikispaces.com), and [pyperclip](https://github.com/asweigart/pyperclip).
+the only 3rd-party dependencies being on [colorama](https://github.com/tartley/colorama), and [pyperclip](https://github.com/asweigart/pyperclip).
 Windows has an additional dependency on [pyreadline](https://pypi.python.org/pypi/pyreadline). Non-Windows platforms
 have an additional dependency on [wcwidth](https://pypi.python.org/pypi/wcwidth). Finally, Python
 3.4 has an additional dependency on [contextlib2](https://pypi.python.org/pypi/contextlib2).
@@ -91,7 +91,7 @@ Instructions for implementing each feature follow.
 
 - Multi-line commands
 
-    Any command accepts multi-line input when its name is listed in `Cmd.multilineCommands`.
+    Any command accepts multi-line input when its name is listed in `Cmd.multiline_commands`.
     The program will keep expecting input until a line ends with any of the characters
     in `Cmd.terminators` .  The default terminators are `;` and `/n` (empty newline).
 
@@ -165,7 +165,7 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        self.multilineCommands = ['orate']
+        self.multiline_commands = ['orate']
         self.maxrepeats = 3
 
         # Add stuff to settable and shortcuts before calling base class initializer

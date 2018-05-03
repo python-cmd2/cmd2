@@ -3,16 +3,13 @@
 """
 Setuptools setup file, used to install or test 'cmd2'
 """
-import sys
-
-import setuptools
 from setuptools import setup
 
 VERSION = '0.9.0'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
-LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
-it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
-provides a simple API which is an extension of Python's built-in cmd module.  cmd2 provides a wealth of features on top 
+LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make
+it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It
+provides a simple API which is an extension of Python's built-in cmd module.  cmd2 provides a wealth of features on top
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary when using cmd.
 
 The latest documentation for cmd2 can be read online here:
@@ -25,7 +22,7 @@ Main features:
     - Python scripting of your application with ``pyscript``
     - Run shell commands with ``!``
     - Pipe command output to shell commands with `|`
-    - Redirect command output to file with `>`, `>>`; input from file with `<`
+    - Redirect command output to file with `>`, `>>`
     - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
     - `py` enters interactive Python console (opt-in `ipy` for IPython console)
     - Multi-line commands
@@ -61,7 +58,7 @@ Programming Language :: Python :: Implementation :: PyPy3
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
-INSTALL_REQUIRES = ['pyparsing >= 2.1.0', 'pyperclip >= 1.5.27', 'colorama']
+INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
@@ -72,18 +69,7 @@ EXTRAS_REQUIRE = {
     ":python_version<'3.5'": ['contextlib2', 'typing'],
 }
 
-if int(setuptools.__version__.split('.')[0]) < 18:
-    EXTRAS_REQUIRE = {}
-    if sys.platform.startswith('win'):
-        INSTALL_REQUIRES.append('pyreadline')
-    else:
-        INSTALL_REQUIRES.append('wcwidth')
-    if sys.version_info < (3, 5):
-        INSTALL_REQUIRES.append('contextlib2')
-        INSTALL_REQUIRES.append('typing')
-
 TESTS_REQUIRE = ['pytest', 'pytest-xdist']
-DOCS_REQUIRE = ['sphinx', 'sphinx_rtd_theme', 'pyparsing', 'pyperclip', 'wcwidth']
 
 setup(
     name="cmd2",
@@ -98,6 +84,7 @@ setup(
     platforms=['any'],
     packages=['cmd2'],
     keywords='command prompt console cmd',
+    python_requires='>=3.4',
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     tests_require=TESTS_REQUIRE,

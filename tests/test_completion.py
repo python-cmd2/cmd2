@@ -582,44 +582,6 @@ def test_tokens_for_completion_redirect_off(cmd2_app):
     assert expected_tokens == tokens
     assert expected_raw_tokens == raw_tokens
 
-def test_parseline_command_and_args(cmd2_app):
-    line = 'help history'
-    command, args, out_line = cmd2_app.parseline(line)
-    assert command == 'help'
-    assert args == 'history'
-    assert line == out_line
-
-def test_parseline_emptyline(cmd2_app):
-    line = ''
-    command, args, out_line = cmd2_app.parseline(line)
-    assert command is None
-    assert args is None
-    assert line is out_line
-
-def test_parseline_strips_line(cmd2_app):
-    line = '  help history  '
-    command, args, out_line = cmd2_app.parseline(line)
-    assert command == 'help'
-    assert args == 'history'
-    assert line.strip() == out_line
-
-def test_parseline_expands_alias(cmd2_app):
-    # Create the alias
-    cmd2_app.do_alias(['fake', 'pyscript'])
-
-    line = 'fake foobar.py'
-    command, args, out_line = cmd2_app.parseline(line)
-    assert command == 'pyscript'
-    assert args == 'foobar.py'
-    assert line.replace('fake', 'pyscript') == out_line
-
-def test_parseline_expands_shortcuts(cmd2_app):
-    line = '!cat foobar.txt'
-    command, args, out_line = cmd2_app.parseline(line)
-    assert command == 'shell'
-    assert args == 'cat foobar.txt'
-    assert line.replace('!', 'shell ') == out_line
-
 def test_add_opening_quote_basic_no_text(cmd2_app):
     text = ''
     line = 'test_basic {}'.format(text)

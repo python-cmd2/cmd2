@@ -1,10 +1,24 @@
 ## 0.9.0 (TBD, 2018)
+* Bug Fixes
+    * If self.default_to_shell is true, then redirection and piping are now properly passed to the shell. Previously it was truncated.
+    * Submenus now call all hooks, it used to just call precmd and postcmd.
 * Enhancements
     * Automatic completion of ``argparse`` arguments via ``cmd2.argparse_completer.AutoCompleter``
         * See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for a demonstration of how to use this feature
     * ``cmd2`` no longer depends on the ``six`` module
     * ``cmd2`` is now a multi-file Python package instead of a single-file module
     * New pyscript approach that provides a pythonic interface to commands in the cmd2 application.
+    * Switch command parsing from pyparsing to custom code which utilizes shlex.
+        * The object passed to do_* methods has changed. It no longer is the pyparsing object, it's a new Statement object, which is a subclass of ``str``. The statement object has many attributes which give you access to various components of the parsed input. If you were using anything but the string in your do_* methods, this change will require you to update your code.
+        * ``commentGrammers`` is no longer supported or available. Comments are C-style or python style.
+        * Input redirection no longer supported. Use the load command instead.
+        * ``multilineCommand`` attribute is ``now multiline_command``
+        * ``identchars`` is now ignored. The standardlibrary cmd uses those characters to split the first "word" of the input, but cmd2 hasn't used those for a while, and the new parsing logic parses on whitespace, which has the added benefit of full unicode support, unlike cmd or prior versions of cmd2.
+        * ``set_posix_shlex`` function and ``POSIX_SHLEX`` variable have been removed. Parsing behavior is now always the more forgiving ``posix=false``.
+        * ``set_strip_quotes`` function and ``STRIP_QUOTES_FOR_NON_POSIX`` have been removed. Quotes are stripped from arguments when presented as a list (a la ``sys.argv``), and present when arguments are presented as a string (like the string passed to do_*).
+* Changes
+    * ``strip_ansi()`` and ``strip_quotes()`` functions have moved to new utils module
+    * Several constants moved to new constants module
 * Deletions (potentially breaking changes)
     * Deleted all ``optparse`` code which had previously been deprecated in release 0.8.0
         * The ``options`` decorator no longer exists

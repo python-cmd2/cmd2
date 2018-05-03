@@ -32,11 +32,7 @@ Comments
 Comments are omitted from the argument list
 before it is passed to a ``do_`` method.  By
 default, both Python-style and C-style comments
-are recognized; you may change this by overriding
-``app.commentGrammars`` with a different pyparsing_
-grammar (see the arg_print_ example for specifically how to to this).
-
-Comments can be useful in :ref:`scripts`, but would
+are recognized. Comments can be useful in :ref:`scripts`, but would
 be pointless within an interactive session.
 
 ::
@@ -49,7 +45,6 @@ be pointless within an interactive session.
   (Cmd) speak it was /* not */ delicious! # Yuck!
   it was  delicious!
 
-.. _pyparsing: http://pyparsing.wikispaces.com/
 .. _arg_print: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
 
 Startup Initialization Script
@@ -102,6 +97,7 @@ Output redirection
 As in a Unix shell, output of a command can be redirected:
 
   - sent to a file with ``>``, as in ``mycommand args > filename.txt``
+  - appended to a file with ``>>``, as in ``mycommand args >> filename.txt``
   - piped (``|``) as input to operating-system commands, as in
     ``mycommand args | wc``
   - sent to the paste buffer, ready for the next Copy operation, by

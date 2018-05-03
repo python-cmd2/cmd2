@@ -42,11 +42,10 @@ import subprocess
 import sys
 import tempfile
 import traceback
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Union, Tuple
 import unittest
 from code import InteractiveConsole
 
-import pyparsing
 import pyperclip
 
 from . import constants
@@ -55,6 +54,8 @@ from . import utils
 # Set up readline
 from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
 from .argparse_completer import AutoCompleter, ACArgumentParser
+
+from cmd2.parsing import StatementParser, Statement
 
 if rl_type == RlType.PYREADLINE:
 
@@ -116,22 +117,6 @@ except ImportError:
 
 __version__ = '0.9.0'
 
-# Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
-pyparsing.ParserElement.enablePackrat()
-
-# Override the default whitespace chars in Pyparsing so that newlines are not treated as whitespace
-pyparsing.ParserElement.setDefaultWhitespaceChars(' \t')
-
-
-# The next 2 variables and associated setter functions effect how arguments are parsed for decorated commands
-# which use one of the decorators: @with_argument_list, @with_argparser, or @with_argparser_and_unknown_args
-# The defaults are sane and maximize ease of use for new applications based on cmd2.
-
-# Use POSIX or Non-POSIX (Windows) rules for splitting a command-line string into a list of arguments via shlex.split()
-POSIX_SHLEX = False
-
-# Strip outer quotes for convenience if POSIX_SHLEX = False
-STRIP_QUOTES_FOR_NON_POSIX = True
 
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
 HELP_CATEGORY = 'help_category'
@@ -153,24 +138,6 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
         setattr(func, HELP_CATEGORY, category)
 
 
-def set_posix_shlex(val: bool) -> None:
-    """ Allows user of cmd2 to choose between POSIX and non-POSIX splitting of args for decorated commands.
-
-    :param val: True => POSIX,  False => Non-POSIX
-    """
-    global POSIX_SHLEX
-    POSIX_SHLEX = val
-
-
-def set_strip_quotes(val: bool) -> None:
-    """ Allows user of cmd2 to choose whether to automatically strip outer-quotes when POSIX_SHLEX is False.
-
-    :param val: True => strip quotes on args for decorated commands if POSIX_SHLEX is False.
-    """
-    global STRIP_QUOTES_FOR_NON_POSIX
-    STRIP_QUOTES_FOR_NON_POSIX = val
-
-
 def _which(editor: str) -> Optional[str]:
     try:
         editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
@@ -187,13 +154,12 @@ def parse_quoted_string(cmdline: str) -> List[str]:
         lexed_arglist = cmdline
     else:
         # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(cmdline, posix=POSIX_SHLEX)
-        # If not using POSIX shlex, make sure to strip off outer quotes for convenience
-        if not POSIX_SHLEX and STRIP_QUOTES_FOR_NON_POSIX:
-            temp_arglist = []
-            for arg in lexed_arglist:
-                temp_arglist.append(utils.strip_quotes(arg))
-            lexed_arglist = temp_arglist
+        lexed_arglist = shlex.split(cmdline, posix=False)
+        # strip off outer quotes for convenience
+        temp_arglist = []
+        for arg in lexed_arglist:
+            temp_arglist.append(utils.strip_quotes(arg))
+        lexed_arglist = temp_arglist
     return lexed_arglist
 
 
@@ -340,40 +306,6 @@ def write_to_paste_buffer(txt: str) -> None:
     :param txt: text to copy to the clipboard
     """
     pyperclip.copy(txt)
-
-
-class ParsedString(str):
-    """Subclass of str which also stores a pyparsing.ParseResults object containing structured parse results."""
-    # pyarsing.ParseResults - structured parse results, to provide multiple means of access to the parsed data
-    parsed = None
-
-    # Function which did the parsing
-    parser = None
-
-    def full_parsed_statement(self):
-        """Used to reconstruct the full parsed statement when a command isn't recognized."""
-        new = ParsedString('%s %s' % (self.parsed.command, self.parsed.args))
-        new.parsed = self.parsed
-        new.parser = self.parser
-        return new
-
-
-def replace_with_file_contents(fname: str) -> str:
-    """Action to perform when successfully matching parse element definition for inputFrom parser.
-
-    :param fname: filename
-    :return: contents of file "fname"
-    """
-    try:
-        # Any outer quotes are not part of the filename
-        unquoted_file = utils.strip_quotes(fname[0])
-        with open(os.path.expanduser(unquoted_file)) as source_file:
-            result = source_file.read()
-    except IOError:
-        result = '< %s' % fname[0]  # wasn't a file after all
-
-    # TODO: IF pyparsing input parser logic gets fixed to support empty file, add support to get from paste buffer
-    return result
 
 
 class EmbeddedConsoleExit(SystemExit):
@@ -528,7 +460,7 @@ class AddSubmenu(object):
 
     def __call__(self, cmd_obj):
         """Creates a subclass of Cmd wherein the given submenu can be accessed via the given command"""
-        def enter_submenu(parent_cmd, line):
+        def enter_submenu(parent_cmd, statement):
             """
             This function will be bound to do_<submenu> and will change the scope of the CLI to that of the
             submenu.
@@ -547,12 +479,9 @@ class AddSubmenu(object):
                 # copy over any shared attributes
                 self._copy_in_shared_attrs(parent_cmd)
 
-                if line.parsed.args:
+                if statement.args:
                     # Remove the menu argument and execute the command in the submenu
-                    line = submenu.parser_manager.parsed(line.parsed.args)
-                    submenu.precmd(line)
-                    ret = submenu.onecmd(line)
-                    submenu.postcmd(ret, line)
+                    submenu.onecmd_plus_hooks(statement.args)
                 else:
                     if self.reformat_prompt is not None:
                         prompt = submenu.prompt
@@ -657,17 +586,13 @@ class Cmd(cmd.Cmd):
 
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
-    # Attributes used to configure the ParserManager (all are not dynamically settable at runtime)
+    # Attributes used to configure the StatementParser, best not to change these at runtime
     blankLinesAllowed = False
-    commentGrammars = pyparsing.Or([pyparsing.pythonStyleComment, pyparsing.cStyleComment])
-    commentInProgress = pyparsing.Literal('/*') + pyparsing.SkipTo(pyparsing.stringEnd ^ '*/')
-    legalChars = u'!#$%.:?@_-' + pyparsing.alphanums + pyparsing.alphas8bit
-    multilineCommands = []
-    prefixParser = pyparsing.Empty()
+    multiline_commands = []
     redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
-    terminators = [';']     # make sure your terminators are not in legalChars!
+    terminators = [';']
 
     # Attributes which are NOT dynamically settable at runtime
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
@@ -755,13 +680,13 @@ class Cmd(cmd.Cmd):
         self.pystate = {}
         self.pyscript_name = 'app'
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
-        self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
-                                            multilineCommands=self.multilineCommands,
-                                            legalChars=self.legalChars, commentGrammars=self.commentGrammars,
-                                            commentInProgress=self.commentInProgress,
-                                            blankLinesAllowed=self.blankLinesAllowed, prefixParser=self.prefixParser,
-                                            preparse=self.preparse, postparse=self.postparse, aliases=self.aliases,
-                                            shortcuts=self.shortcuts)
+        self.statement_parser = StatementParser(
+            allow_redirection=self.allow_redirection,
+            terminators=self.terminators,
+            multiline_commands=self.multiline_commands,
+            aliases=self.aliases,
+            shortcuts=self.shortcuts,
+        )
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -845,7 +770,6 @@ class Cmd(cmd.Cmd):
         return utils.strip_ansi(self.prompt)
 
     def _finalize_app_parameters(self):
-        self.commentGrammars.ignore(pyparsing.quotedString).setParseAction(lambda x: '')
         # noinspection PyUnresolvedReferences
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
 
@@ -1655,6 +1579,11 @@ class Cmd(cmd.Cmd):
                 # Parse the command line
                 command, args, expanded_line = self.parseline(line)
 
+                # use these lines instead of the one above
+                # statement = self.command_parser.parse_command_only(line)
+                # command = statement.command
+                # expanded_line = statement.command_and_args
+
                 # We overwrote line with a properly formatted but fully stripped version
                 # Restore the end spaces since line is only supposed to be lstripped when
                 # passed to completer functions according to Python docs
@@ -1928,18 +1857,18 @@ class Cmd(cmd.Cmd):
         # Register a default SIGINT signal handler for Ctrl+C
         signal.signal(signal.SIGINT, self.sigint_handler)
 
-    def precmd(self, statement):
+    def precmd(self, statement: Statement) -> Statement:
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
 
-        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
-        :return: ParsedString - a potentially modified version of the input ParsedString statement
+        :param statement: Statement - subclass of str which also contains the parsed input
+        :return: Statement - a potentially modified version of the input Statement object
         """
         return statement
 
     # -----  Methods which are cmd2-specific lifecycle hooks which are not present in cmd -----
 
     # noinspection PyMethodMayBeStatic
-    def preparse(self, raw):
+    def preparse(self, raw: str) -> str:
         """Hook method executed just before the command line is interpreted, but after the input prompt is generated.
 
         :param raw: str - raw command line input
@@ -1948,16 +1877,16 @@ class Cmd(cmd.Cmd):
         return raw
 
     # noinspection PyMethodMayBeStatic
-    def postparse(self, parse_result):
-        """Hook that runs immediately after parsing the command-line but before ``parsed()`` returns a ParsedString.
+    def postparse(self, statement: Statement) -> Statement:
+        """Hook that runs immediately after parsing the user input.
 
-        :param parse_result: pyparsing.ParseResults - parsing results output by the pyparsing parser
-        :return: pyparsing.ParseResults - potentially modified ParseResults object
+        :param statement: Statement object populated by parsing
+        :return: Statement - potentially modified Statement object
         """
-        return parse_result
+        return statement
 
     # noinspection PyMethodMayBeStatic
-    def postparsing_precmd(self, statement):
+    def postparsing_precmd(self, statement: Statement) -> Tuple[bool, Statement]:
         """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
 
         NOTE: This runs before precmd() and prior to any potential output redirection or piping.
@@ -1969,14 +1898,14 @@ class Cmd(cmd.Cmd):
         - raise EmptyStatement - will silently fail and do nothing
         - raise <AnyOtherException> - will fail and print an error message
 
-        :param statement: - the parsed command-line statement
-        :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement
+        :param statement: - the parsed command-line statement as a Statement object
+        :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement object
         """
         stop = False
         return stop, statement
 
     # noinspection PyMethodMayBeStatic
-    def postparsing_postcmd(self, stop):
+    def postparsing_postcmd(self, stop: bool) -> bool:
         """This runs after everything else, including after postcmd().
 
         It even runs when an empty line is entered.  Thus, if you need to do something like update the prompt due
@@ -2136,24 +2065,52 @@ class Cmd(cmd.Cmd):
             return stop
 
     def _complete_statement(self, line):
-        """Keep accepting lines of input until the command is complete."""
-        if not line or (not pyparsing.Or(self.commentGrammars).setParseAction(lambda x: '').transformString(line)):
-            raise EmptyStatement()
-        statement = self.parser_manager.parsed(line)
-        while statement.parsed.multilineCommand and (statement.parsed.terminator == ''):
-            statement = '%s\n%s' % (statement.parsed.raw,
-                                    self.pseudo_raw_input(self.continuation_prompt))
-            statement = self.parser_manager.parsed(statement)
-        if not statement.parsed.command:
+        """Keep accepting lines of input until the command is complete.
+
+        There is some pretty hacky code here to handle some quirks of
+        self.pseudo_raw_input(). It returns a literal 'eof' if the input
+        pipe runs out. We can't refactor it because we need to retain
+        backwards compatibility with the standard library version of cmd.
+        """
+        statement = self.statement_parser.parse(line)
+        while statement.multiline_command and not statement.terminator:
+            if not self.quit_on_sigint:
+                try:
+                    newline = self.pseudo_raw_input(self.continuation_prompt)
+                    if newline == 'eof':
+                        # they entered either a blank line, or we hit an EOF
+                        # for some other reason. Turn the literal 'eof'
+                        # into a blank line, which serves as a command
+                        # terminator
+                        newline = '\n'
+                        self.poutput(newline)
+                    line = '{}\n{}'.format(statement.raw, newline)
+                except KeyboardInterrupt:
+                    self.poutput('^C')
+                    statement = self.statement_parser.parse('')
+                    break
+            else:
+                newline = self.pseudo_raw_input(self.continuation_prompt)
+                if newline == 'eof':
+                    # they entered either a blank line, or we hit an EOF
+                    # for some other reason. Turn the literal 'eof'
+                    # into a blank line, which serves as a command
+                    # terminator
+                    newline = '\n'
+                    self.poutput(newline)
+                line = '{}\n{}'.format(statement.raw, newline)
+            statement = self.statement_parser.parse(line)
+
+        if not statement.command:
             raise EmptyStatement()
         return statement
 
     def _redirect_output(self, statement):
         """Handles output redirection for >, >>, and |.
 
-        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
+        :param statement: Statement - a parsed statement from the user
         """
-        if statement.parsed.pipeTo:
+        if statement.pipe_to:
             self.kept_state = Statekeeper(self, ('stdout',))
 
             # Create a pipe with read and write sides
@@ -2168,7 +2125,7 @@ class Cmd(cmd.Cmd):
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
-                self.pipe_proc = subprocess.Popen(shlex.split(statement.parsed.pipeTo), stdin=subproc_stdin)
+                self.pipe_proc = subprocess.Popen(shlex.split(statement.pipe_to), stdin=subproc_stdin)
             except Exception as ex:
                 # Restore stdout to what it was and close the pipe
                 self.stdout.close()
@@ -2180,31 +2137,31 @@ class Cmd(cmd.Cmd):
 
                 # Re-raise the exception
                 raise ex
-        elif statement.parsed.output:
-            if (not statement.parsed.outputTo) and (not can_clip):
+        elif statement.output:
+            if (not statement.output_to) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
             self.redirecting = True
-            if statement.parsed.outputTo:
+            if statement.output_to:
                 mode = 'w'
-                if statement.parsed.output == 2 * self.redirector:
+                if statement.output == 2 * self.redirector:
                     mode = 'a'
-                sys.stdout = self.stdout = open(os.path.expanduser(statement.parsed.outputTo), mode)
+                sys.stdout = self.stdout = open(os.path.expanduser(statement.output_to), mode)
             else:
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
-                if statement.parsed.output == '>>':
+                if statement.output == '>>':
                     self.poutput(get_paste_buffer())
 
     def _restore_output(self, statement):
         """Handles restoring state after output redirection as well as the actual pipe operation if present.
 
-        :param statement: ParsedString - subclass of str which also contains pyparsing ParseResults instance
+        :param statement: Statement object which contains the parsed input from the user
         """
         # If we have redirected output to a file or the clipboard or piped it to a shell command, then restore state
         if self.kept_state is not None:
             # If we redirected output to the clipboard
-            if statement.parsed.output and not statement.parsed.outputTo:
+            if statement.output and not statement.output_to:
                 self.stdout.seek(0)
                 write_to_paste_buffer(self.stdout.read())
 
@@ -2242,22 +2199,21 @@ class Cmd(cmd.Cmd):
             result = target
         return result
 
-    def onecmd(self, line):
+    def onecmd(self, statement):
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes _default() instead.
 
-        :param line: ParsedString - subclass of string including the pyparsing ParseResults
+        :param statement: Command - a parsed command from the input stream
         :return: bool - a flag indicating whether the interpretation of commands should stop
         """
-        statement = self.parser_manager.parsed(line)
-        funcname = self._func_named(statement.parsed.command)
+        funcname = self._func_named(statement.command)
         if not funcname:
             return self.default(statement)
 
         # Since we have a valid command store it in the history
-        if statement.parsed.command not in self.exclude_from_history:
-            self.history.append(statement.parsed.raw)
+        if statement.command not in self.exclude_from_history:
+            self.history.append(statement.raw)
 
         try:
             func = getattr(self, funcname)
@@ -2270,10 +2226,10 @@ class Cmd(cmd.Cmd):
     def default(self, statement):
         """Executed when the command given isn't a recognized command implemented by a do_* method.
 
-        :param statement: ParsedString - subclass of string including the pyparsing ParseResults
+        :param statement: Statement object with parsed input
         :return:
         """
-        arg = statement.full_parsed_statement()
+        arg = statement.raw
         if self.default_to_shell:
             result = os.system(arg)
             # If os.system() succeeded, then don't print warning about unknown command
@@ -2734,14 +2690,8 @@ Usage:  Usage: unalias [-a] name [name ...]
         read_only_settings = """
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
-        Output redirection and pipes allowed: {}
-        Parsing of command arguments:
-            Shell lexer mode for command argument splitting: {}
-            Strip Quotes after splitting arguments: {}
-        """.format(str(self.terminators), self.allow_cli_args, self.allow_redirection,
-                   "POSIX" if POSIX_SHLEX else "non-POSIX",
-                   "True" if STRIP_QUOTES_FOR_NON_POSIX and not POSIX_SHLEX else "False")
-        return read_only_settings
+        Output redirection and pipes allowed: {}"""
+        return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
 
     def show(self, args, parameter):
         param = ''
@@ -2764,7 +2714,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             if args.all:
                 self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
         else:
-            raise LookupError("Parameter '%s' not supported (type 'show' for list of parameters)." % param)
+            raise LookupError("Parameter '%s' not supported (type 'set' for list of parameters)." % param)
 
     set_parser = ACArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
@@ -3297,167 +3247,6 @@ Script should contain one command per line, just like command would be typed in 
 
         # Run the postloop() no matter what
         self.postloop()
-
-
-# noinspection PyPep8Naming
-class ParserManager:
-    """
-    Class which encapsulates all of the pyparsing parser functionality for cmd2 in a single location.
-    """
-    def __init__(self, redirector, terminators, multilineCommands, legalChars, commentGrammars, commentInProgress,
-                 blankLinesAllowed, prefixParser, preparse, postparse, aliases, shortcuts):
-        """Creates and uses parsers for user input according to app's parameters."""
-
-        self.commentGrammars = commentGrammars
-        self.preparse = preparse
-        self.postparse = postparse
-        self.aliases = aliases
-        self.shortcuts = shortcuts
-
-        self.main_parser = self._build_main_parser(redirector=redirector, terminators=terminators,
-                                                   multilineCommands=multilineCommands, legalChars=legalChars,
-                                                   commentInProgress=commentInProgress,
-                                                   blankLinesAllowed=blankLinesAllowed, prefixParser=prefixParser)
-        self.input_source_parser = self._build_input_source_parser(legalChars=legalChars,
-                                                                   commentInProgress=commentInProgress)
-
-    def _build_main_parser(self, redirector, terminators, multilineCommands, legalChars, commentInProgress,
-                           blankLinesAllowed, prefixParser):
-        """Builds a PyParsing parser for interpreting user commands."""
-
-        # Build several parsing components that are eventually compiled into overall parser
-        output_destination_parser = (pyparsing.Literal(redirector * 2) |
-                                     (pyparsing.WordStart() + redirector) |
-                                     pyparsing.Regex('[^=]' + redirector))('output')
-
-        terminator_parser = pyparsing.Or(
-            [(hasattr(t, 'parseString') and t) or pyparsing.Literal(t) for t in terminators])('terminator')
-        string_end = pyparsing.stringEnd ^ '\nEOF'
-        multilineCommand = pyparsing.Or(
-            [pyparsing.Keyword(c, caseless=False) for c in multilineCommands])('multilineCommand')
-        oneline_command = (~multilineCommand + pyparsing.Word(legalChars))('command')
-        pipe = pyparsing.Keyword('|', identChars='|')
-        do_not_parse = self.commentGrammars | commentInProgress | pyparsing.quotedString
-        after_elements = \
-            pyparsing.Optional(pipe + pyparsing.SkipTo(output_destination_parser ^ string_end,
-                                                       ignore=do_not_parse)('pipeTo')) + \
-            pyparsing.Optional(output_destination_parser +
-                               pyparsing.SkipTo(string_end, ignore=do_not_parse).
-                               setParseAction(lambda x: utils.strip_quotes(x[0].strip()))('outputTo'))
-
-        multilineCommand.setParseAction(lambda x: x[0])
-        oneline_command.setParseAction(lambda x: x[0])
-
-        if blankLinesAllowed:
-            blankLineTerminationParser = pyparsing.NoMatch
-        else:
-            blankLineTerminator = (pyparsing.lineEnd + pyparsing.lineEnd)('terminator')
-            blankLineTerminator.setResultsName('terminator')
-            blankLineTerminationParser = ((multilineCommand ^ oneline_command) +
-                                          pyparsing.SkipTo(blankLineTerminator, ignore=do_not_parse).setParseAction(
-                                                   lambda x: x[0].strip())('args') + blankLineTerminator)('statement')
-
-        multilineParser = (((multilineCommand ^ oneline_command) +
-                            pyparsing.SkipTo(terminator_parser,
-                                             ignore=do_not_parse).setParseAction(lambda x: x[0].strip())('args') +
-                            terminator_parser)('statement') +
-                           pyparsing.SkipTo(output_destination_parser ^ pipe ^ string_end,
-                                            ignore=do_not_parse).setParseAction(lambda x: x[0].strip())('suffix') +
-                           after_elements)
-        multilineParser.ignore(commentInProgress)
-
-        singleLineParser = ((oneline_command +
-                             pyparsing.SkipTo(terminator_parser ^ string_end ^ pipe ^ output_destination_parser,
-                                              ignore=do_not_parse).setParseAction(
-                                 lambda x: x[0].strip())('args'))('statement') +
-                            pyparsing.Optional(terminator_parser) + after_elements)
-
-        blankLineTerminationParser = blankLineTerminationParser.setResultsName('statement')
-
-        parser = prefixParser + (
-            string_end |
-            multilineParser |
-            singleLineParser |
-            blankLineTerminationParser |
-            multilineCommand + pyparsing.SkipTo(string_end, ignore=do_not_parse)
-        )
-        parser.ignore(self.commentGrammars)
-        return parser
-
-    @staticmethod
-    def _build_input_source_parser(legalChars, commentInProgress):
-        """Builds a PyParsing parser for alternate user input sources (from file, pipe, etc.)"""
-
-        input_mark = pyparsing.Literal('<')
-        input_mark.setParseAction(lambda x: '')
-
-        # Also allow spaces, slashes, and quotes
-        file_name = pyparsing.Word(legalChars + ' /\\"\'')
-
-        input_from = file_name('inputFrom')
-        input_from.setParseAction(replace_with_file_contents)
-        # a not-entirely-satisfactory way of distinguishing < as in "import from" from <
-        # as in "lesser than"
-        inputParser = input_mark + pyparsing.Optional(input_from) + pyparsing.Optional('>') + \
-            pyparsing.Optional(file_name) + (pyparsing.stringEnd | '|')
-        inputParser.ignore(commentInProgress)
-        return inputParser
-
-    def parsed(self, raw):
-        """ This function is where the actual parsing of each line occurs.
-
-        :param raw: str - the line of text as it was entered
-        :return: ParsedString - custom subclass of str with extra attributes
-        """
-        if isinstance(raw, ParsedString):
-            p = raw
-        else:
-            # preparse is an overridable hook; default makes no changes
-            s = self.preparse(raw)
-            s = self.input_source_parser.transformString(s.lstrip())
-            s = self.commentGrammars.transformString(s)
-
-            # Make a copy of aliases so we can edit it
-            tmp_aliases = list(self.aliases.keys())
-            keep_expanding = len(tmp_aliases) > 0
-
-            # Expand aliases
-            while keep_expanding:
-                for cur_alias in tmp_aliases:
-                    keep_expanding = False
-
-                    if s == cur_alias or s.startswith(cur_alias + ' '):
-                        s = s.replace(cur_alias, self.aliases[cur_alias], 1)
-
-                        # Do not expand the same alias more than once
-                        tmp_aliases.remove(cur_alias)
-                        keep_expanding = len(tmp_aliases) > 0
-                        break
-
-            # Expand command shortcut to its full command name
-            for (shortcut, expansion) in self.shortcuts:
-                if s.startswith(shortcut):
-                    # If the next character after the shortcut isn't a space, then insert one
-                    shortcut_len = len(shortcut)
-                    if len(s) == shortcut_len or s[shortcut_len] != ' ':
-                        expansion += ' '
-
-                    # Expand the shortcut
-                    s = s.replace(shortcut, expansion, 1)
-                    break
-
-            try:
-                result = self.main_parser.parseString(s)
-            except pyparsing.ParseException:
-                # If we have a parsing failure, treat it is an empty command and move to next prompt
-                result = self.main_parser.parseString('')
-            result['raw'] = raw
-            result['command'] = result.multilineCommand or result.command
-            result = self.postparse(result)
-            p = ParsedString(result.args)
-            p.parsed = result
-            p.parser = self.parsed
-        return p
 
 
 class HistoryItem(str):

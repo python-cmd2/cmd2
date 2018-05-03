@@ -5,7 +5,6 @@
 import collections
 from . import constants
 
-
 def strip_ansi(text: str) -> str:
     """Strip ANSI escape codes from a string.
 

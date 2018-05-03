@@ -45,7 +45,6 @@ The tables below list all prerequisites along with the minimum required version 
 | Prerequisite                                        | Minimum Version |
 | --------------------------------------------------- | --------------- |
 | [Python](https://www.python.org/downloads/)         | `3.4`           |
-| [pyparsing](http://pyparsing.wikispaces.com)        | `2.1`           |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
 
 #### Additional prerequisites to run cmd2 unit tests
@@ -63,15 +62,13 @@ The tables below list all prerequisites along with the minimum required version 
 ### Optional prerequisites for enhanced unit test features
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
-| [pytest-forked](https://pypi.python.org/pypi/pytest-forked)| `0.2` |
-| [pytest-xdist](https://pypi.python.org/pypi/pytest-xdist)| `1.15` |
 | [pytest-cov](https://pypi.python.org/pypi/pytest-cov) | `1.8` |
 
 If Python is already installed in your machine, run the following commands to validate the versions:
 
 ```shell
 python -V
-pip freeze | grep pyparsing
+pip freeze | grep pyperclip
 ```
 
 If your versions are lower than the prerequisite versions, you should update.
@@ -190,7 +187,7 @@ Once you have cmd2 cloned, before you start any cmd2 application, you first need
 
 ```bash
 # Install cmd2 prerequisites
-pip install -U pyparsing pyperclip
+pip install -U pyperclip
 
 # Install prerequisites for running cmd2 unit tests
 pip install -U pytest
@@ -198,8 +195,8 @@ pip install -U pytest
 # Install prerequisites for building cmd2 documentation
 pip install -U sphinx sphinx-rtd-theme
 
-# Install optional prerequisites for running unit tests in parallel and doing code coverage analysis
-pip install -U pytest-xdist pytest-cov pytest-forked
+# Install optional prerequisites for doing code coverage analysis
+pip install -U pytest-cov
 ```
 
 For doing cmd2 development, you actually do NOT want to have cmd2 installed as a Python package.  
@@ -259,27 +256,13 @@ py.test
 
 and ensure all tests pass.
 
-If you have the `pytest-xdist` pytest distributed testing plugin installed, then you can use it to
-dramatically speed up test execution by running tests in parallel on multiple cores like so:
-
-```shell
-py.test -n4
-```
-where `4` should be replaced by the number of parallel threads you wish to run for testing.
-
-If you have the `pytest-forked` pytest plugin (not avilable on Windows) for running tests in isolated formed processes, 
-you can speed things up even further:
-
-```shell
-py.test -nauto --forked
-```
 
 #### Measuring code coverage
 
 Code coverage can be measured as follows:
 
 ```shell
-py.test -nauto --cov=cmd2 --cov-report=term-missing --cov-report=html --forked
+py.test --cov=cmd2 --cov-report=term-missing --cov-report=html
 ```
 
 Then use your web browser of choice to look at the results which are in `<cmd2>/htmlcov/index.html`.
@@ -287,7 +270,7 @@ Then use your web browser of choice to look at the results which are in `<cmd2>/
 ### Squash Your Commits
 When you make a pull request, it is preferable for all of your changes to be in one commit.
 
-If you have made more then one commit, then you will can _squash_ your commits.
+If you have made more then one commit, then you can _squash_ your commits.
 
 To do this, see [Squashing Your Commits](http://forum.freecodecamp.com/t/how-to-squash-multiple-commits-into-one-with-git/13231).
 

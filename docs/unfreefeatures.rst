@@ -7,7 +7,7 @@ Multiline commands
 
 Command input may span multiple lines for the
 commands whose names are listed in the
-parameter ``app.multilineCommands``.  These
+parameter ``app.multiline_commands``.  These
 commands will be executed only
 after the user has entered a *terminator*.
 By default, the command terminators is
@@ -22,14 +22,27 @@ Parsed statements
 =================
 
 ``cmd2`` passes ``arg`` to a ``do_`` method (or
-``default``) as a ParsedString, a subclass of
-string that includes an attribute ``parsed``.
-``parsed`` is a ``pyparsing.ParseResults``
-object produced by applying a pyparsing_
-grammar applied to ``arg``.  It may include:
+``default``) as a Statement, a subclass of
+string that includes many attributes of the parsed
+input:
 
 command
     Name of the command called
+
+args
+    The arguments to the command with output redirection
+    or piping to shell commands removed
+
+command_and_args
+    A string of just the command and the arguments, with
+    output redirection or piping to shell commands removed
+
+argv
+    A list of arguments a-la ``sys.argv``, including
+    the command as ``argv[0]`` and the subsequent
+    arguments as additional items in the list.
+    Quotes around arguments will be stripped as will
+    any output redirection or piping portions of the command
 
 raw
     Full input exactly as typed.
@@ -37,46 +50,18 @@ raw
 terminator
     Character used to end a multiline command
 
-suffix
-    Remnant of input after terminator
 
-::
 
-    def do_parsereport(self, arg):
-        self.stdout.write(arg.parsed.dump() + '\n')
+If ``Statement`` does not contain an attribute,
+querying for it will return ``None``.
 
-::
-
-    (Cmd) parsereport A B /* C */ D; E
-    ['parsereport', 'A B  D', ';', 'E']
-    - args: A B  D
-    - command: parsereport
-    - raw: parsereport A B /* C */ D; E
-    - statement: ['parsereport', 'A B  D', ';']
-        - args: A B  D
-        - command: parsereport
-        - terminator: ;
-    - suffix: E
-    - terminator: ;
-
-If ``parsed`` does not contain an attribute,
-querying for it will return ``None``.  (This
-is a characteristic of ``pyparsing.ParseResults``.)
-
-The parsing grammar and process currently employed
-by cmd2 is stable, but is likely significantly more
-complex than it needs to be.  Future ``cmd2`` releases may
-change it somewhat (hopefully reducing complexity).
-
-(Getting ``arg`` as a ``ParsedString`` is
+(Getting ``arg`` as a ``Statement`` is
 technically "free", in that it requires no application
 changes from the cmd_ standard, but there will
 be no result unless you change your application
-to *use* ``arg.parsed``.)
+to *use* any of the additional attributes.)
 
 .. _cmd: https://docs.python.org/3/library/cmd.html
-
-.. _pyparsing: http://pyparsing.wikispaces.com/
 
 
 Environment parameters
@@ -128,16 +113,6 @@ that module.
 
 ``cmd2`` defines a few decorators which change the behavior of
 how arguments get parsed for and passed to a ``do_`` method.  See the section :ref:`decorators` for more information.
-
-Controlling how arguments are parsed for commands with flags
-------------------------------------------------------------
-There are a couple functions which can globally effect how arguments are parsed for commands with flags:
-
-.. autofunction:: cmd2.set_posix_shlex
-
-.. autofunction:: cmd2.set_strip_quotes
-
-.. _argparse: https://docs.python.org/3/library/argparse.html
 
 
 poutput, pfeedback, perror, ppaged
