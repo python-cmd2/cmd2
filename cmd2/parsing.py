@@ -7,6 +7,7 @@ import shlex
 from typing import List, Tuple
 
 from . import constants
+from . import utils
 
 LINE_FEED = '\n'
 
@@ -33,6 +34,10 @@ class Statement(str):
                             redirection or terminators. quoted arguments remain
                             quoted.
     :type args:             str or None
+    :var: argv:             a list of arguments a la sys.argv. Quotes, if any, are removed
+                            from the elements of the list, and aliases and shortcuts
+                            are expanded
+    :type argv:             list
     :var terminator:        the charater which terminated the multiline command, if
                             there was one
     :type terminator:       str or None
@@ -53,6 +58,7 @@ class Statement(str):
         self.command = None
         self.multiline_command = None
         self.args = None
+        self.argv = None
         self.terminator = None
         self.suffix = None
         self.pipe_to = None
@@ -65,7 +71,14 @@ class Statement(str):
 
         Quoted arguments remain quoted.
         """
-        return '{} {}'.format('' if self.command is None else self.command, self.args).strip()
+        if self.command and self.args:
+            rtn = '{} {}'.format(self.command, self.args)
+        elif self.command:
+            # we are trusting that if we get here that self.args is None
+            rtn = self.command
+        else:
+            rtn = None
+        return rtn
 
 
 class StatementParser():
@@ -175,6 +188,7 @@ class StatementParser():
 
         command = None
         args = None
+        argv = None
 
         # lex the input into a list of tokens
         tokens = self.tokenize(rawinput)
@@ -198,7 +212,8 @@ class StatementParser():
             else:
                 terminator_pos = tokens.index(terminator)
             # everything before the first terminator is the command and the args
-            (command, args) = self._command_and_args(tokens[:terminator_pos])
+            argv = tokens[:terminator_pos]
+            (command, args) = self._command_and_args(argv)
             # we will set the suffix later
             # remove all the tokens before and including the terminator
             tokens = tokens[terminator_pos+1:]
@@ -210,6 +225,7 @@ class StatementParser():
                 # because redirectors can only be after a terminator
                 command = testcommand
                 args = testargs
+                argv = tokens
                 tokens = []
 
         # check for output redirect
@@ -253,7 +269,8 @@ class StatementParser():
             suffix = None
             if not command:
                 # command could already have been set, if so, don't set it again
-                (command, args) = self._command_and_args(tokens)
+                argv = tokens
+                (command, args) = self._command_and_args(argv)
 
         # set multiline
         if command in self.multiline_commands:
@@ -268,8 +285,9 @@ class StatementParser():
         statement.raw = rawinput
         statement.command = command
         # if there are no args we will use None since we don't have to worry
-        # about compatibility wiht standard library cmd
+        # about compatibility with standard library cmd
         statement.args = args
+        statement.argv = list(map(lambda x: utils.strip_quotes(x), argv))
         statement.terminator = terminator
         statement.output = output
         statement.output_to = output_to
@@ -291,10 +309,13 @@ class StatementParser():
         (command, args) = self._command_and_args(tokens)
 
         # build the statement
-        statement = Statement(args)
+        # string representation of args must be an empty string instead of
+        # None for compatibility with standard library cmd
+        statement = Statement('' if args is None else args)
         statement.raw = rawinput
         statement.command = command
         statement.args = args
+        statement.argv = tokens
         return statement
 
     def _expand(self, line: str) -> str:
@@ -341,7 +362,7 @@ class StatementParser():
         with cmd in the standard library.
         """
         command = None
-        args = ''
+        args = None
 
         if tokens:
             command = tokens[0]

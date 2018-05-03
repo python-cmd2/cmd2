@@ -29,15 +29,28 @@ input:
 command
     Name of the command called
 
+args
+    The arguments to the command with output redirection
+    or piping to shell commands removed
+
+command_and_args
+    A string of just the command and the arguments, with
+    output redirection or piping to shell commands removed
+
+argv
+    A list of arguments a-la ``sys.argv``, including
+    the command as ``argv[0]`` and the subsequent
+    arguments as additional items in the list.
+    Quotes around arguments will be stripped as will
+    any output redirection or piping portions of the command
+
 raw
     Full input exactly as typed.
 
 terminator
     Character used to end a multiline command
 
-command_and_args
-    A string of just the command and the arguments, with
-    output redirection or piping to shell commands removed
+
 
 If ``Statement`` does not contain an attribute,
 querying for it will return ``None``.
