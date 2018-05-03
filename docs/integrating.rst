@@ -76,8 +76,4 @@ several disadvantages, including:
 
 Here is a little more info on ``runcmds_plus_hooks``:
 
-.. automethod:: cmd2.Cmd.runcmds_plus_hooks
-
-
-
-
+.. automethod:: cmd2.cmd2.Cmd.runcmds_plus_hooks

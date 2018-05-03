@@ -19,11 +19,11 @@ Both ASCII and UTF-8 encoded unicode text files are supported.
 
 Simply include one command per line, typed exactly as you would inside a ``cmd2`` application.
 
-.. automethod:: cmd2.Cmd.do_load
+.. automethod:: cmd2.cmd2.Cmd.do_load
 
-.. automethod:: cmd2.Cmd.do__relative_load
+.. automethod:: cmd2.cmd2.Cmd.do__relative_load
 
-.. automethod:: cmd2.Cmd.do_edit
+.. automethod:: cmd2.cmd2.Cmd.do_edit
 
 
 Comments
@@ -297,11 +297,11 @@ the readline history.
 
 ``cmd2`` adds the option of making this readline history persistent via optional arguments to ``cmd2.Cmd.__init__()``:
 
-.. automethod:: cmd2.Cmd.__init__
+.. automethod:: cmd2.cmd2.Cmd.__init__
 
 ``cmd2`` makes a third type of history access available with the **history** command:
 
-.. automethod:: cmd2.Cmd.do_history
+.. automethod:: cmd2.cmd2.Cmd.do_history
 
 .. _`Readline Emacs editing mode`: http://readline.kablamo.org/emacs.html
 
@@ -318,9 +318,9 @@ Misc. pre-defined commands
 Several generically useful commands are defined
 with automatically included ``do_`` methods.
 
-.. automethod:: cmd2.Cmd.do_quit
+.. automethod:: cmd2.cmd2.Cmd.do_quit
 
-.. automethod:: cmd2.Cmd.do_shell
+.. automethod:: cmd2.cmd2.Cmd.do_shell
 
 ( ``!`` is a shortcut for ``shell``; thus ``!ls``
 is equivalent to ``shell ls``.)

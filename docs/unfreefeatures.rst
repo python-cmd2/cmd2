@@ -114,6 +114,7 @@ that module.
 ``cmd2`` defines a few decorators which change the behavior of
 how arguments get parsed for and passed to a ``do_`` method.  See the section :ref:`decorators` for more information.
 
+.. _argparse: https://docs.python.org/3/library/argparse.html
 
 poutput, pfeedback, perror, ppaged
 ==================================
@@ -128,10 +129,10 @@ instead.  These methods have these advantages:
     - ``.pfeedback()`` destination is controlled by :ref:`quiet` parameter.
 - Option to display long output using a pager via ``ppaged()``
 
-.. automethod:: cmd2.Cmd.poutput
-.. automethod:: cmd2.Cmd.perror
-.. automethod:: cmd2.Cmd.pfeedback
-.. automethod:: cmd2.Cmd.ppaged
+.. automethod:: cmd2.cmd2.Cmd.poutput
+.. automethod:: cmd2.cmd2.Cmd.perror
+.. automethod:: cmd2.cmd2.Cmd.pfeedback
+.. automethod:: cmd2.cmd2.Cmd.ppaged
 
 
 color
@@ -139,7 +140,7 @@ color
 
 Text output can be colored by wrapping it in the ``colorize`` method.
 
-.. automethod:: cmd2.Cmd.colorize
+.. automethod:: cmd2.cmd2.Cmd.colorize
 
 .. _quiet:
 
@@ -160,7 +161,7 @@ Presents numbered options to user, as bash ``select``.
 
 ``app.select`` is called from within a method (not by the user directly; it is ``app.select``, not ``app.do_select``).
 
-.. automethod:: cmd2.Cmd.select
+.. automethod:: cmd2.cmd2.Cmd.select
 
 ::
 
@@ -177,4 +178,3 @@ Presents numbered options to user, as bash ``select``.
         2. salty
     Sauce? 2
     wheaties with salty sauce, yum!
-

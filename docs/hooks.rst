@@ -18,9 +18,9 @@ Application Lifecycle Hook Methods
 ----------------------------------
 The ``preloop`` and ``postloop`` methods run before and after the main loop, respectively.
 
-.. automethod:: cmd2.Cmd.preloop
+.. automethod:: cmd2.cmd2.Cmd.preloop
 
-.. automethod:: cmd2.Cmd.postloop
+.. automethod:: cmd2.cmd2.Cmd.postloop
 
 Application Lifecycle Attributes
 --------------------------------
@@ -41,21 +41,21 @@ Command Processing Hooks
 
 Inside the main loop, every time the user hits <Enter> the line is processed by the ``onecmd_plus_hooks`` method.
 
-.. automethod:: cmd2.Cmd.onecmd_plus_hooks
+.. automethod:: cmd2.cmd2.Cmd.onecmd_plus_hooks
 
 As the ``onecmd_plus_hooks`` name implies, there are a number of *hook* methods that can be defined in order to inject
 application-specific behavior at various points during the processing of a line of text entered by the user.  ``cmd2``
 increases the 2 hooks provided by ``cmd`` (**precmd** and **postcmd**) to 6 for greater flexibility.  Here are
 the various hook methods, presented in chronological order starting with the ones called earliest in the process.
 
-.. automethod:: cmd2.Cmd.preparse
+.. automethod:: cmd2.cmd2.Cmd.preparse
 
-.. automethod:: cmd2.Cmd.postparse
+.. automethod:: cmd2.cmd2.Cmd.postparse
 
-.. automethod:: cmd2.Cmd.postparsing_precmd
+.. automethod:: cmd2.cmd2.Cmd.postparsing_precmd
 
-.. automethod:: cmd2.Cmd.precmd
+.. automethod:: cmd2.cmd2.Cmd.precmd
 
-.. automethod:: cmd2.Cmd.postcmd
+.. automethod:: cmd2.cmd2.Cmd.postcmd
 
-.. automethod:: cmd2.Cmd.postparsing_postcmd
+.. automethod:: cmd2.cmd2.Cmd.postparsing_postcmd
