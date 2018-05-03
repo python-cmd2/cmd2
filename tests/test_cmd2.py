@@ -1710,3 +1710,11 @@ def test_unalias_non_existing(base_app, capsys):
     run_cmd(base_app, 'unalias fake')
     out, err = capsys.readouterr()
     assert "does not exist" in err
+
+
+def test_ppaged(base_app):
+    msg = 'testing...'
+    end = '\n'
+    base_app.ppaged(msg)
+    out = base_app.stdout.buffer
+    assert out == msg + end
