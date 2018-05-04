@@ -11,8 +11,11 @@ import sys
 from typing import List
 
 from cmd2.argparse_completer import ACArgumentParser, AutoCompleter
-from cmd2.argcomplete_bridge import CompletionFinder
-
+try:
+    from cmd2.argcomplete_bridge import CompletionFinder
+except:
+    # Don't test if argcomplete isn't present (likely on Windows)
+    pytest.skip()
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
