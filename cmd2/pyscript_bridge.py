@@ -55,22 +55,35 @@ class CopyStream(object):
     def clear(self):
         self.buffer = ''
 
+    def __getattr__(self, item):
+        if item in self.__dict__:
+            return self.__dict__[item]
+        else:
+            return getattr(self.inner_stream, item)
+
 
 def _exec_cmd(cmd2_app, func):
     """Helper to encapsulate executing a command and capturing the results"""
     copy_stdout = CopyStream(sys.stdout)
     copy_stderr = CopyStream(sys.stderr)
 
+    copy_cmd_stdout = CopyStream(cmd2_app.stdout)
+
     cmd2_app._last_result = None
 
-    with redirect_stdout(copy_stdout):
-        with redirect_stderr(copy_stderr):
-            func()
+    try:
+        cmd2_app.stdout = copy_cmd_stdout
+        with redirect_stdout(copy_stdout):
+            with redirect_stderr(copy_stderr):
+                func()
+    finally:
+        cmd2_app.stdout = copy_cmd_stdout.inner_stream
 
     # if stderr is empty, set it to None
     stderr = copy_stderr if copy_stderr.buffer else None
 
-    result = CommandResult(stdout=copy_stdout.buffer, stderr=stderr, data=cmd2_app._last_result)
+    outbuf = copy_cmd_stdout.buffer if copy_cmd_stdout.buffer else copy_stdout.buffer
+    result = CommandResult(stdout=outbuf, stderr=stderr, data=cmd2_app._last_result)
     return result
 
 
