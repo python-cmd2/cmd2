@@ -1,0 +1,18 @@
+# this file contains the expected output of a 'history -t' command.
+# Because the help command outputs trailing spaces, this file
+# contains trailing spaces. Don't mess it up with your editor
+# which may be configured to trim trailing spaces
+# The first 7 lines of this file are stripped out by the
+# test case before comparing the actual output with
+# the contents of this file.
+(Cmd) help
+
+Documented commands (type help <topic>):
+========================================
+alias  help     load    orate  pyscript  say  shell      speak  
+edit   history  mumble  py     quit      set  shortcuts  unalias
+
+(Cmd) speak lots of wierd [ /tmp ]: chars?
+lots of wierd [ \/tmp ]: chars?
+(Cmd) speak /this is not a regex/
+\/this is not a regex\/

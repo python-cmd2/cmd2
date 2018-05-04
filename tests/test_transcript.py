@@ -10,12 +10,13 @@ import os
 import sys
 import re
 import random
+import tempfile
 
 from unittest import mock
 import pytest
 
 from cmd2 import cmd2
-from .conftest import run_cmd, StdOut, normalize
+from .conftest import run_cmd, StdOut
 
 class CmdLineApp(cmd2.Cmd):
 
@@ -76,111 +77,6 @@ class CmdLineApp(cmd2.Cmd):
             self.poutput(' '.join(output))
 
 
-class DemoApp(cmd2.Cmd):
-    hello_parser = argparse.ArgumentParser()
-    hello_parser.add_argument('-n', '--name', help="your name")
-    @cmd2.with_argparser_and_unknown_args(hello_parser)
-    def do_hello(self, opts, arg):
-        """Says hello."""
-        if opts.name:
-            self.stdout.write('Hello {}\n'.format(opts.name))
-        else:
-            self.stdout.write('Hello Nobody\n')
-
-
-@pytest.fixture
-def _cmdline_app():
-    c = CmdLineApp()
-    c.stdout = StdOut()
-    return c
-
-
-def _get_transcript_blocks(transcript):
-    cmd = None
-    expected = ''
-    for line in transcript.splitlines():
-        if line.startswith('(Cmd) '):
-            if cmd is not None:
-                yield cmd, normalize(expected)
-
-            cmd = line[6:]
-            expected = ''
-        else:
-            expected += line + '\n'
-    yield cmd, normalize(expected)
-
-
-def test_base_with_transcript(_cmdline_app):
-    app = _cmdline_app
-    transcript = """
-(Cmd) help
-
-Documented commands (type help <topic>):
-========================================
-alias  help     load    orate  pyscript  say  shell      speak
-edit   history  mumble  py     quit      set  shortcuts  unalias
-
-(Cmd) help say
-usage: speak [-h] [-p] [-s] [-r REPEAT]
-
-Repeats what you tell me to.
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -p, --piglatin        atinLay
-  -s, --shout           N00B EMULATION MODE
-  -r REPEAT, --repeat REPEAT
-                        output [n] times
-
-(Cmd) say goodnight, Gracie
-goodnight, Gracie
-(Cmd) say -ps --repeat=5 goodnight, Gracie
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-(Cmd) set maxrepeats 5
-maxrepeats - was: 3
-now: 5
-(Cmd) say -ps --repeat=5 goodnight, Gracie
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-(Cmd) history
--------------------------[1]
-help
--------------------------[2]
-help say
--------------------------[3]
-say goodnight, Gracie
--------------------------[4]
-say -ps --repeat=5 goodnight, Gracie
--------------------------[5]
-set maxrepeats 5
--------------------------[6]
-say -ps --repeat=5 goodnight, Gracie
-(Cmd) history -r 4
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-OODNIGHT, GRACIEGAY
-(Cmd) set prompt "---> "
-prompt - was: (Cmd)
-now: --->
-"""
-
-    for cmd, expected in _get_transcript_blocks(transcript):
-        out = run_cmd(app, cmd)
-        assert out == expected
-
-
-class TestMyAppCase(cmd2.Cmd2TestCase):
-    CmdApp = CmdLineApp
-    CmdApp.testfiles = ['tests/transcript.txt']
-
-
 def test_commands_at_invocation():
     testargs = ["prog", "say hello", "say Gracie", "quit"]
     expected = "This is an intro banner ...\nhello\nGracie\n"
@@ -191,8 +87,7 @@ def test_commands_at_invocation():
         out = app.stdout.buffer
         assert out == expected
 
-
-@pytest.mark.parametrize('filename, feedback_to_output', [
+@pytest.mark.parametrize('filename,feedback_to_output', [
     ('bol_eol.txt', False),
     ('characterclass.txt', False),
     ('dotstar.txt', False),
@@ -231,6 +126,34 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     assert err.startswith(expected_start)
     assert err.endswith(expected_end)
 
+def test_history_transcript(request, capsys):
+    app = CmdLineApp()
+    app.stdout = StdOut()
+    run_cmd(app, 'help')
+    run_cmd(app, 'speak lots of wierd [ /tmp ]: chars?')
+    run_cmd(app, 'speak /this is not a regex/')
+
+    # Get location of the expected transcript
+    test_dir = os.path.dirname(request.module.__file__)
+    expected_fname = os.path.join(test_dir, 'transcripts', 'expected_history.txt')
+    with open(expected_fname) as f:
+        lines = f.readlines()
+    # trim off the first 7 lines so we can have a comment in the
+    # expected_history.txt file explaining what it is
+    expected = ''.join(lines[7:])
+
+    # make a tmp file
+    fd, history_fname = tempfile.mkstemp(prefix='', suffix='.txt')
+    os.close(fd)
+
+    # tell the history command to create a transcript
+    run_cmd(app, 'history -t "{}"'.format(history_fname))
+
+    # read in the transcript created by the history command
+    with open(history_fname) as f:
+        transcript = f.read()
+
+    assert transcript == expected
 
 @pytest.mark.parametrize('expected, transformed', [
     # strings with zero or one slash or with escaped slashes means no regular
