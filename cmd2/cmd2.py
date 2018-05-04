@@ -3002,65 +3002,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             except Exception as e:
                 self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
         elif args.transcript:
-            # Save the current echo state, and turn it off. We inject commands into the
-            # output using a different mechanism
-            saved_echo = self.echo
-            self.echo = False
-
-            # Redirect stdout to the transcript file
-            saved_self_stdout = self.stdout
-
-            # The problem with supporting regular expressions in transcripts
-            # is that they shouldn't be processed in the command, just the output.
-            # In addition, when we generate a transcript, any slashes in the output
-            # are not really intended to indicate regular expressions, so they should
-            # be escaped.
-            #
-            # We have to jump through some hoops here in order to catch the commands
-            # separately from the output and escape the slashes in the output.
-            transcript = ''
-            for history_item in history:
-                # build the command, complete with prompts. When we replay
-                # the transcript, it looks for the prompts to separate
-                # the command from the output
-                first = True
-                command = ''
-                for line in history_item.splitlines():
-                    if first:
-                        command += '{}{}\n'.format(self.prompt, line)
-                        first = False
-                    else:
-                        command += '{}{}\n'.format(self.continuation_prompt, line)
-                transcript += command
-                # create a new string buffer and set it to stdout to catch the output
-                # of the command
-                membuf = io.StringIO()
-                self.stdout = membuf
-                # then run the command and let the output go into our buffer
-                self.onecmd_plus_hooks(history_item)
-                # rewind the buffer to the beginning
-                membuf.seek(0)
-                # get the output out of the buffer
-                output = membuf.read()
-                # and add the regex-escaped output to the transcript
-                transcript += output.replace('/', '\/')
-
-            # Restore stdout to its original state
-            self.stdout = saved_self_stdout
-            # Set echo back to its original state
-            self.echo = saved_echo
-
-            # finally, we can write the transcript out to the file
-            with open(args.transcript, 'w') as fout:
-                fout.write(transcript)
-
-            # and let the user know what we did
-            if len(history) > 1:
-                plural = 'commands and their outputs'
-            else:
-                plural = 'command and its output'
-            msg = '{} {} saved to transcript file {!r}'
-            self.pfeedback(msg.format(len(history), plural, args.transcript))
+            self._generate_transcript(history, args.transcript)
         else:
             # Display the history items retrieved
             for hi in history:
@@ -3068,6 +3010,68 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                     self.poutput(hi)
                 else:
                     self.poutput(hi.pr())
+
+    def _generate_transcript(self, history, transcript_file):
+        """Generate a transcript file from a given history of commands."""
+        # Save the current echo state, and turn it off. We inject commands into the
+        # output using a different mechanism
+        saved_echo = self.echo
+        self.echo = False
+
+        # Redirect stdout to the transcript file
+        saved_self_stdout = self.stdout
+
+        # The problem with supporting regular expressions in transcripts
+        # is that they shouldn't be processed in the command, just the output.
+        # In addition, when we generate a transcript, any slashes in the output
+        # are not really intended to indicate regular expressions, so they should
+        # be escaped.
+        #
+        # We have to jump through some hoops here in order to catch the commands
+        # separately from the output and escape the slashes in the output.
+        transcript = ''
+        for history_item in history:
+            # build the command, complete with prompts. When we replay
+            # the transcript, we look for the prompts to separate
+            # the command from the output
+            first = True
+            command = ''
+            for line in history_item.splitlines():
+                if first:
+                    command += '{}{}\n'.format(self.prompt, line)
+                    first = False
+                else:
+                    command += '{}{}\n'.format(self.continuation_prompt, line)
+            transcript += command
+            # create a new string buffer and set it to stdout to catch the output
+            # of the command
+            membuf = io.StringIO()
+            self.stdout = membuf
+            # then run the command and let the output go into our buffer
+            self.onecmd_plus_hooks(history_item)
+            # rewind the buffer to the beginning
+            membuf.seek(0)
+            # get the output out of the buffer
+            output = membuf.read()
+            # and add the regex-escaped output to the transcript
+            transcript += output.replace('/', '\/')
+
+        # Restore stdout to its original state
+        self.stdout = saved_self_stdout
+        # Set echo back to its original state
+        self.echo = saved_echo
+
+        # finally, we can write the transcript out to the file
+        with open(transcript_file, 'w') as fout:
+            fout.write(transcript)
+
+        # and let the user know what we did
+        if len(history) > 1:
+            plural = 'commands and their outputs'
+        else:
+            plural = 'command and its output'
+        msg = '{} {} saved to transcript file {!r}'
+        self.pfeedback(msg.format(len(history), plural, transcript_file))
 
     @with_argument_list
     def do_edit(self, arglist):

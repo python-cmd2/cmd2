@@ -129,18 +129,16 @@ def test_transcript(request, capsys, filename, feedback_to_output):
 def test_history_transcript(request, capsys):
     app = CmdLineApp()
     app.stdout = StdOut()
-    run_cmd(app, 'help')
-    run_cmd(app, 'orate this is\na multiline\ncommand;\n')
+    run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')
     run_cmd(app, 'speak /tmp/file.txt is not a regex')
 
-    # Get location of the expected transcript
-    test_dir = os.path.dirname(request.module.__file__)
-    expected_fname = os.path.join(test_dir, 'transcripts', 'expected_history.txt')
-    with open(expected_fname) as f:
-        lines = f.readlines()
-    # trim off the first 7 lines so we can have a comment in the
-    # expected_history.txt file explaining what it is
-    expected = ''.join(lines[7:])
+    expected = r"""(Cmd) orate this is
+> a /multiline/
+> command;
+this is a \/multiline\/ command
+(Cmd) speak /tmp/file.txt is not a regex
+\/tmp\/file.txt is not a regex
+"""
 
     # make a tmp file
     fd, history_fname = tempfile.mkstemp(prefix='', suffix='.txt')
