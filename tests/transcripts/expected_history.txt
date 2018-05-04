@@ -12,7 +12,7 @@ Documented commands (type help <topic>):
 alias  help     load    orate  pyscript  say  shell      speak  
 edit   history  mumble  py     quit      set  shortcuts  unalias
 
-(Cmd) speak lots of wierd [ /tmp ]: chars?
-lots of wierd [ \/tmp ]: chars?
-(Cmd) speak /this is not a regex/
-\/this is not a regex\/
+(Cmd) orate this is
+> a multiline
+> command;
+this is a multiline command

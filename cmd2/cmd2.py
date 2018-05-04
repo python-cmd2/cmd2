@@ -3002,27 +3002,38 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             except Exception as e:
                 self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
         elif args.transcript:
+            membuf = io.StringIO()
+
             # Make sure echo is on so commands print to standard out
             saved_echo = self.echo
-            self.echo = True
+            self.echo = False
 
             # Redirect stdout to the transcript file
             saved_self_stdout = self.stdout
-            self.stdout = open(args.transcript, 'w')
+            self.stdout = membuf
 
             # Run all of the commands in the history with output redirected to transcript and echo on
-            self.runcmds_plus_hooks(history)
+            for history_item in history:
+                # write the command to the output stream
+                first = True
+                for line in history_item.splitlines():
+                    if first:
+                        self.stdout.write('{}{}\n'.format(self.prompt, line))
+                        first = False
+                    else:
+                        self.stdout.write('{}{}\n'.format(self.continuation_prompt, line))
+                self.onecmd_plus_hooks(history_item)
 
             # Restore stdout to its original state
-            self.stdout.close()
+            #self.stdout.close()
             self.stdout = saved_self_stdout
 
             # Set echo back to its original state
             self.echo = saved_echo
 
             # Post-process the file to escape un-escaped "/" regex escapes
-            with open(args.transcript, 'r') as fin:
-                data = fin.read()
+            membuf.seek(0)
+            data = membuf.read()
             post_processed_data = data.replace('/', '\/')
             with open(args.transcript, 'w') as fout:
                 fout.write(post_processed_data)
