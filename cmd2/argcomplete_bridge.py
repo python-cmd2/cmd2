@@ -4,7 +4,7 @@
 try:
     # check if argcomplete is installed
     import argcomplete
-except ImportError:
+except ImportError:  # pragma: no cover
     # not installed, skip the rest of the file
     pass
 
@@ -70,7 +70,7 @@ else:
                 break
             except ValueError:
                 # ValueError can be caused by missing closing quote
-                if not quotes_to_try:
+                if not quotes_to_try:  # pragma: no cover 
                     # Since we have no more quotes to try, something else
                     # is causing the parsing error. Return None since
                     # this means the line is malformed.
