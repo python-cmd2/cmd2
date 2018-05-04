@@ -41,9 +41,6 @@ try:
     from cmd2.argcomplete_bridge import CompletionFinder
     from cmd2.argparse_completer import AutoCompleter
     if __name__ == '__main__':
-        with open('out.txt', 'a') as f:
-            f.write('Here 1')
-            f.flush()
         completer = CompletionFinder()
         completer(base_parser, AutoCompleter(base_parser))
 except ImportError:

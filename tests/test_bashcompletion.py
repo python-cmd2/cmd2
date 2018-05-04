@@ -23,9 +23,10 @@ except ImportError:
     skip_reason = "argcomplete isn't installed\n"
 
 
-skip_reason2 = "TRAVIS" in os.environ and os.environ["TRAVIS"] == "true"
-if skip_reason2:
-    skip_reason += 'These tests cannot run on TRAVIS\n'
+# skip_reason2 = "TRAVIS" in os.environ and os.environ["TRAVIS"] == "true"
+# if skip_reason2:
+#     skip_reason += 'These tests cannot run on TRAVIS\n'
+skip_reaason2 = False
 skip_reason3 = sys.platform.startswith('win')
 if skip_reason3:
     skip_reason = 'argcomplete doesn\'t support Windows'
@@ -111,10 +112,10 @@ def test_bash_nocomplete(parser1):
 os_fdopen = os.fdopen
 
 
-def my_fdopen(fd, mode):
+def my_fdopen(fd, mode, *args):
     """mock fdopen that redirects 8 and 9 from argcomplete to stdin/stdout for testing"""
     if fd > 7:
-        return os_fdopen(fd - 7, mode)
+        return os_fdopen(fd - 7, mode, *args)
     return os_fdopen(fd, mode)
 
 
@@ -165,11 +166,11 @@ def test_commands(parser1, capfd, mock, comp_line, exp_out, exp_err):
     assert err == exp_err
 
 
-def fdopen_fail_8(fd, mode):
+def fdopen_fail_8(fd, mode, *args):
     """mock fdopen that forces failure if fd == 8"""
     if fd == 8:
         raise IOError()
-    return my_fdopen(fd, mode)
+    return my_fdopen(fd, mode, *args)
 
 
 # noinspection PyShadowingNames
@@ -194,11 +195,11 @@ def test_fail_alt_stdout(parser1, mock):
         assert err.code == 1
 
 
-def fdopen_fail_9(fd, mode):
+def fdopen_fail_9(fd, mode, *args):
     """mock fdopen that forces failure if fd == 9"""
     if fd == 9:
         raise IOError()
-    return my_fdopen(fd, mode)
+    return my_fdopen(fd, mode, *args)
 
 
 # noinspection PyShadowingNames
