@@ -26,7 +26,7 @@ except ImportError:
 # skip_reason2 = "TRAVIS" in os.environ and os.environ["TRAVIS"] == "true"
 # if skip_reason2:
 #     skip_reason += 'These tests cannot run on TRAVIS\n'
-skip_reaason2 = False
+skip_reason2 = False
 skip_reason3 = sys.platform.startswith('win')
 if skip_reason3:
     skip_reason = 'argcomplete doesn\'t support Windows'
