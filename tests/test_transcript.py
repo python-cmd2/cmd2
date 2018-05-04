@@ -131,6 +131,7 @@ def test_history_transcript(request, capsys):
     app.stdout = StdOut()
     run_cmd(app, 'help')
     run_cmd(app, 'orate this is\na multiline\ncommand;\n')
+    run_cmd(app, 'speak /tmp/file.txt is not a regex')
 
     # Get location of the expected transcript
     test_dir = os.path.dirname(request.module.__file__)

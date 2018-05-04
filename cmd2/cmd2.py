@@ -3002,45 +3002,65 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             except Exception as e:
                 self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
         elif args.transcript:
-            membuf = io.StringIO()
-
-            # Make sure echo is on so commands print to standard out
+            # Save the current echo state, and turn it off. We inject commands into the
+            # output using a different mechanism
             saved_echo = self.echo
             self.echo = False
 
             # Redirect stdout to the transcript file
             saved_self_stdout = self.stdout
-            self.stdout = membuf
 
-            # Run all of the commands in the history with output redirected to transcript and echo on
+            # The problem with supporting regular expressions in transcripts
+            # is that they shouldn't be processed in the command, just the output.
+            # In addition, when we generate a transcript, any slashes in the output
+            # are not really intended to indicate regular expressions, so they should
+            # be escaped.
+            #
+            # We have to jump through some hoops here in order to catch the commands
+            # separately from the output and escape the slashes in the output.
+            transcript = ''
             for history_item in history:
-                # write the command to the output stream
+                # build the command, complete with prompts. When we replay
+                # the transcript, it looks for the prompts to separate
+                # the command from the output
                 first = True
+                command = ''
                 for line in history_item.splitlines():
                     if first:
-                        self.stdout.write('{}{}\n'.format(self.prompt, line))
+                        command += '{}{}\n'.format(self.prompt, line)
                         first = False
                     else:
-                        self.stdout.write('{}{}\n'.format(self.continuation_prompt, line))
+                        command += '{}{}\n'.format(self.continuation_prompt, line)
+                transcript += command
+                # create a new string buffer and set it to stdout to catch the output
+                # of the command
+                membuf = io.StringIO()
+                self.stdout = membuf
+                # then run the command and let the output go into our buffer
                 self.onecmd_plus_hooks(history_item)
+                # rewind the buffer to the beginning
+                membuf.seek(0)
+                # get the output out of the buffer
+                output = membuf.read()
+                # and add the regex-escaped output to the transcript
+                transcript += output.replace('/', '\/')
 
             # Restore stdout to its original state
-            #self.stdout.close()
             self.stdout = saved_self_stdout
-
             # Set echo back to its original state
             self.echo = saved_echo
 
-            # Post-process the file to escape un-escaped "/" regex escapes
-            membuf.seek(0)
-            data = membuf.read()
-            post_processed_data = data.replace('/', '\/')
+            # finally, we can write the transcript out to the file
             with open(args.transcript, 'w') as fout:
-                fout.write(post_processed_data)
+                fout.write(transcript)
 
-            plural = 's' if len(history) > 1 else ''
-            self.pfeedback('{} command{} and outputs saved to transcript file {!r}'.format(len(history), plural,
-                                                                                           args.transcript))
+            # and let the user know what we did
+            if len(history) > 1:
+                plural = 'commands and their outputs'
+            else:
+                plural = 'command and its output'
+            msg = '{} {} saved to transcript file {!r}'
+            self.pfeedback(msg.format(len(history), plural, args.transcript))
         else:
             # Display the history items retrieved
             for hi in history:

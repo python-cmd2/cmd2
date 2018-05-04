@@ -16,3 +16,5 @@ edit   history  mumble  py     quit      set  shortcuts  unalias
 > a multiline
 > command;
 this is a multiline command
+(Cmd) speak /tmp/file.txt is not a regex
+\/tmp\/file.txt is not a regex
