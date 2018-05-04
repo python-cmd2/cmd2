@@ -11,11 +11,27 @@ import sys
 from typing import List
 
 from cmd2.argparse_completer import ACArgumentParser, AutoCompleter
+
+
 try:
     from cmd2.argcomplete_bridge import CompletionFinder
-except:
+    skip_reason1 = False
+    skip_reason = ''
+except ImportError:
     # Don't test if argcomplete isn't present (likely on Windows)
-    pytest.skip()
+    skip_reason1 = True
+    skip_reason = "argcomplete isn't installed\n"
+
+
+skip_reason2 = "TRAVIS" in os.environ and os.environ["TRAVIS"] == "true"
+if skip_reason2:
+    skip_reason += 'These tests cannot run on TRAVIS\n'
+skip_reason3 = sys.platform.startswith('win')
+if skip_reason3:
+    skip_reason = 'argcomplete doesn\'t support Windows'
+
+skip = skip_reason1 or skip_reason2 or skip_reason3
+
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
@@ -84,6 +100,7 @@ def parser1():
 
 
 # noinspection PyShadowingNames
+@pytest.mark.skipif(skip, reason=skip_reason)
 def test_bash_nocomplete(parser1):
     completer = CompletionFinder()
     result = completer(parser1, AutoCompleter(parser1))
@@ -102,6 +119,7 @@ def my_fdopen(fd, mode):
 
 
 # noinspection PyShadowingNames
+@pytest.mark.skipif(skip, reason=skip_reason)
 def test_invalid_ifs(parser1, mock):
     completer = CompletionFinder()
 
@@ -115,6 +133,7 @@ def test_invalid_ifs(parser1, mock):
 
 
 # noinspection PyShadowingNames
+@pytest.mark.skipif(skip, reason=skip_reason)
 @pytest.mark.parametrize('comp_line, exp_out, exp_err', [
     ('media ', 'movies\013shows', ''),
     ('media mo', 'movies', ''),
@@ -154,6 +173,7 @@ def fdopen_fail_8(fd, mode):
 
 
 # noinspection PyShadowingNames
+@pytest.mark.skipif(skip, reason=skip_reason)
 def test_fail_alt_stdout(parser1, mock):
     completer = CompletionFinder()
 
@@ -182,6 +202,7 @@ def fdopen_fail_9(fd, mode):
 
 
 # noinspection PyShadowingNames
+@pytest.mark.skipif(skip, reason=skip_reason)
 def test_fail_alt_stderr(parser1, capfd, mock):
     completer = CompletionFinder()
 
