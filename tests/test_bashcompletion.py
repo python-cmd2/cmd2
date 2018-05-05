@@ -32,6 +32,8 @@ if skip_reason3:
 
 skip = skip_reason1 or skip_reason2 or skip_reason3
 
+skip_mac = sys.platform.startswith('dar')
+
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
@@ -133,7 +135,7 @@ def test_invalid_ifs(parser1, mock):
 
 
 # noinspection PyShadowingNames
-@pytest.mark.skipif(skip, reason=skip_reason)
+@pytest.mark.skipif(skip or skip_mac, reason=skip_reason)
 @pytest.mark.parametrize('comp_line, exp_out, exp_err', [
     ('media ', 'movies\013shows', ''),
     ('media mo', 'movies', ''),
@@ -202,7 +204,7 @@ def fdopen_fail_9(fd, mode, *args):
 
 
 # noinspection PyShadowingNames
-@pytest.mark.skipif(skip, reason=skip_reason)
+@pytest.mark.skipif(skip or skip_mac, reason=skip_reason)
 def test_fail_alt_stderr(parser1, capfd, mock):
     completer = CompletionFinder()
 
