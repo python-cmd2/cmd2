@@ -4,7 +4,7 @@
 try:
     # check if argcomplete is installed
     import argcomplete
-except ImportError:
+except ImportError:  # pragma: no cover
     # not installed, skip the rest of the file
     pass
 
@@ -70,7 +70,7 @@ else:
                 break
             except ValueError:
                 # ValueError can be caused by missing closing quote
-                if not quotes_to_try:
+                if not quotes_to_try:  # pragma: no cover
                     # Since we have no more quotes to try, something else
                     # is causing the parsing error. Return None since
                     # this means the line is malformed.
@@ -228,15 +228,14 @@ else:
                 output_stream.write(ifs.join(completions).encode(argcomplete.sys_encoding))
             elif outstr:
                 # if there are no completions, but we got something from stdout, try to print help
-
                 # trick the bash completion into thinking there are 2 completions that are unlikely
                 # to ever match.
-                outstr = outstr.replace('\n', ' ').replace('\t', ' ').replace('    ', ' ').strip()
-                # generate a filler entry that should always sort first
-                filler = ' {0:><{width}}'.format('', width=len(outstr)/2)
-                outstr = ifs.join([filler, outstr])
 
-                output_stream.write(outstr.encode(argcomplete.sys_encoding))
+                comp_type = int(os.environ["COMP_TYPE"])
+                if comp_type == 63:  # type is 63 for second tab press
+                    print(outstr.rstrip(), file=argcomplete.debug_stream, end='')
+
+                output_stream.write(ifs.join([ifs, ' ']).encode(argcomplete.sys_encoding))
             else:
                 # if completions is None we assume we don't know how to handle it so let bash
                 # go forward with normal filesystem completion

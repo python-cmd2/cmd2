@@ -877,7 +877,9 @@ class ACArgumentParser(argparse.ArgumentParser):
 
         return super(ACArgumentParser, self)._match_argument(action, arg_strings_pattern)
 
-    def _parse_known_args(self, arg_strings, namespace):
+    # This is the official python implementation with a 5 year old patch applied
+    # See the comment below describing the patch
+    def _parse_known_args(self, arg_strings, namespace):  # pragma: no cover
         # replace arg strings that are file references
         if self.fromfile_prefix_chars is not None:
             arg_strings = self._read_args_from_files(arg_strings)
