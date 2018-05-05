@@ -19,7 +19,6 @@ optional arguments:/ */
   -s, --shout           N00B EMULATION MODE/ */
   -r REPEAT, --repeat REPEAT/ */
                         output [n] times
-
 (Cmd) say goodnight, Gracie
 goodnight, Gracie
 (Cmd) say -ps --repeat=5 goodnight, Gracie

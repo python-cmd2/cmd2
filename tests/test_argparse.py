@@ -119,6 +119,11 @@ def argparse_app():
     return app
 
 
+def test_invalid_syntax(argparse_app, capsys):
+    run_cmd(argparse_app, 'speak "')
+    out, err = capsys.readouterr()
+    assert err == "ERROR: Invalid syntax: No closing quotation\n"
+
 def test_argparse_basic_command(argparse_app):
     out = run_cmd(argparse_app, 'say hello')
     assert out == ['hello']
@@ -134,6 +139,14 @@ def test_argparse_with_list(argparse_app):
 def test_argparse_with_list_and_empty_doc(argparse_app):
     out = run_cmd(argparse_app, 'speak -s hello world!')
     assert out == ['HELLO WORLD!']
+
+def test_argparse_comment_stripping(argparse_app):
+    out = run_cmd(argparse_app, 'speak it was /* not */ delicious! # Yuck!')
+    assert out == ['it was delicious!']
+
+def test_argparser_correct_args_with_quotes_and_midline_options(argparse_app):
+    out = run_cmd(argparse_app, "speak 'This  is a' -s test of the emergency broadcast system!")
+    assert out == ['THIS  IS A TEST OF THE EMERGENCY BROADCAST SYSTEM!']
 
 def test_argparse_quoted_arguments_multiple(argparse_app):
     out = run_cmd(argparse_app, 'say "hello  there" "rick & morty"')
