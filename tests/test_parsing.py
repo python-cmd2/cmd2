@@ -165,11 +165,11 @@ def test_parse_complex_pipe(parser):
     ('help >> out.txt', '>>'),
     ('help>>out.txt', '>>'),
 ])
-def test_parse_redirect(parser,line):
+def test_parse_redirect(parser,line, output):
     statement = parser.parse(line)
     assert statement.command == 'help'
     assert not statement.args
-    assert statement.output == '>'
+    assert statement.output == output
     assert statement.output_to == 'out.txt'
 
 def test_parse_redirect_with_args(parser):
