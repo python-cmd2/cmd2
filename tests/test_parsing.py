@@ -44,6 +44,10 @@ def test_tokenize(parser, line, tokens):
     tokens_to_test = parser.tokenize(line)
     assert tokens_to_test == tokens
 
+def test_tokenize_unclosed_quotes(parser):
+    with pytest.raises(ValueError):
+        tokens = parser.tokenize('command with "unclosed quotes')
+
 @pytest.mark.parametrize('tokens,command,args', [
     ([], None, None),
     (['command'], 'command', None),
@@ -219,7 +223,7 @@ def test_parse_output_to_paste_buffer(parser):
     assert statement.argv == ['output', 'to', 'paste', 'buffer']
     assert statement.output == '>>'
 
-def test_has_redirect_inside_terminator(parser):
+def test_parse_redirect_inside_terminator(parser):
     """The terminator designates the end of the commmand/arguments portion.  If a redirector
     occurs before a terminator, then it will be treated as part of the arguments and not as a redirector."""
     line = 'has > inside;'
@@ -307,6 +311,10 @@ def test_parse_redirect_to_unicode_filename(parser):
     assert statement.output == '>'
     assert statement.output_to == 'café'
 
+def test_parse_unclosed_quotes(parser):
+    with pytest.raises(ValueError):
+        tokens = parser.tokenize("command with 'unclosed quotes")
+
 def test_empty_statement_raises_exception():
     app = cmd2.Cmd()
     with pytest.raises(cmd2.EmptyStatement):
@@ -372,7 +380,6 @@ def test_parse_command_only_command_and_args(parser):
     statement = parser.parse_command_only(line)
     assert statement.command == 'help'
     assert statement.args == 'history'
-    assert statement.argv == ['help', 'history']
     assert statement.command_and_args == line
 
 def test_parse_command_only_emptyline(parser):
@@ -392,7 +399,6 @@ def test_parse_command_only_strips_line(parser):
     statement = parser.parse_command_only(line)
     assert statement.command == 'help'
     assert statement.args == 'history'
-    assert statement.argv == ['help', 'history']
     assert statement.command_and_args == line.strip()
 
 def test_parse_command_only_expands_alias(parser):
@@ -400,14 +406,12 @@ def test_parse_command_only_expands_alias(parser):
     statement = parser.parse_command_only(line)
     assert statement.command == 'pyscript'
     assert statement.args == 'foobar.py'
-    assert statement.argv == ['pyscript', 'foobar.py']
 
 def test_parse_command_only_expands_shortcuts(parser):
     line = '!cat foobar.txt'
     statement = parser.parse_command_only(line)
     assert statement.command == 'shell'
     assert statement.args == 'cat foobar.txt'
-    assert statement.argv == ['shell', 'cat', 'foobar.txt']
     assert statement.command_and_args == 'shell cat foobar.txt'
 
 def test_parse_command_only_quoted_args(parser):
