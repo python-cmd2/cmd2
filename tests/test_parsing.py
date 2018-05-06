@@ -38,7 +38,10 @@ def test_parse_empty_string(parser):
     ('command /* with some comment */ arg', ['command', 'arg']),
     ('command arg1 arg2 # comment at the end', ['command', 'arg1', 'arg2']),
     ('42 arg1 arg2', ['theanswer', 'arg1', 'arg2']),
-    ('l', ['shell', 'ls', '-al'])
+    ('l', ['shell', 'ls', '-al']),
+    ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+    ('help|less', ['help', '|', 'less']),
+    ('l|less', ['shell', 'ls', '-al', '|', 'less']),
 ])
 def test_tokenize(parser, line, tokens):
     tokens_to_test = parser.tokenize(line)
@@ -69,15 +72,21 @@ def test_parse_single_word(parser, line):
     assert not statement.args
     assert statement.argv == [utils.strip_quotes(line)]
 
-def test_parse_word_plus_terminator(parser):
-    line = 'termbare;'
+@pytest.mark.parametrize('line', [
+    'termbare;',
+    'termbare ;',
+])
+def test_parse_word_plus_terminator(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'termbare'
     assert statement.terminator == ';'
     assert statement.argv == ['termbare']
 
-def test_parse_suffix_after_terminator(parser):
-    line = 'termbare; suffx'
+@pytest.mark.parametrize('line', [
+    'termbare;  suffx',
+    'termbare ;suffx',
+])
+def test_parse_suffix_after_terminator(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'termbare'
     assert statement.terminator == ';'
