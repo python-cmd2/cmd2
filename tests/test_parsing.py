@@ -46,7 +46,7 @@ def test_tokenize(parser, line, tokens):
 
 def test_tokenize_unclosed_quotes(parser):
     with pytest.raises(ValueError):
-        tokens = parser.tokenize('command with "unclosed quotes')
+        _ = parser.tokenize('command with "unclosed quotes')
 
 @pytest.mark.parametrize('tokens,command,args', [
     ([], None, None),
@@ -313,7 +313,7 @@ def test_parse_redirect_to_unicode_filename(parser):
 
 def test_parse_unclosed_quotes(parser):
     with pytest.raises(ValueError):
-        tokens = parser.tokenize("command with 'unclosed quotes")
+        _ = parser.tokenize("command with 'unclosed quotes")
 
 def test_empty_statement_raises_exception():
     app = cmd2.Cmd()
