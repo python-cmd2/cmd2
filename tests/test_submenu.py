@@ -5,6 +5,7 @@ Cmd2 testing for argument parsing
 import pytest
 
 from cmd2 import cmd2
+import cmd2.submenu
 from .conftest import run_cmd, StdOut, normalize
 
 
@@ -50,15 +51,15 @@ second_level_cmd = SecondLevel()
 second_level_b_cmd = SecondLevelB()
 
 
-@cmd2.AddSubmenu(SecondLevelB(),
+@cmd2.submenu.AddSubmenu(SecondLevelB(),
                  command='should_work_with_default_kwargs')
-@cmd2.AddSubmenu(second_level_b_cmd,
+@cmd2.submenu.AddSubmenu(second_level_b_cmd,
                  command='secondb',
                  shared_attributes=dict(top_level_attr='top_level_attr'),
                  require_predefined_shares=False,
                  preserve_shares=True
                  )
-@cmd2.AddSubmenu(second_level_cmd,
+@cmd2.submenu.AddSubmenu(second_level_cmd,
                  command='second',
                  aliases=('second_alias',),
                  shared_attributes=dict(top_level_attr='top_level_attr'))

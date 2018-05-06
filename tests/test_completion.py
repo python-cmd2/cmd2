@@ -12,8 +12,9 @@ import argparse
 import os
 import sys
 
-from cmd2 import cmd2
 import pytest
+from cmd2 import cmd2
+import cmd2.submenu
 from .conftest import complete_tester, StdOut
 from examples.subcommands import SubcommandsExample
 
@@ -973,7 +974,7 @@ class SecondLevel(cmd2.Cmd):
 second_level_cmd = SecondLevel()
 
 
-@cmd2.AddSubmenu(second_level_cmd,
+@cmd2.submenu.AddSubmenu(second_level_cmd,
                  command='second',
                  require_predefined_shares=False)
 class SubmenuApp(cmd2.Cmd):
