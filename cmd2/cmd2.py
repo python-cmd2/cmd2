@@ -26,18 +26,12 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 import argparse
 import cmd
 import collections
-import datetime
-import functools
 import glob
-import io
-from io import StringIO
 import os
 import platform
 import re
 import shlex
-import subprocess
 import sys
-import traceback
 from typing import Callable, List, Optional, Union, Tuple
 
 import pyperclip
@@ -133,6 +127,7 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
 
 
 def _which(editor: str) -> Optional[str]:
+    import subprocess
     try:
         editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
         editor_path = editor_path.decode()
@@ -170,6 +165,8 @@ def with_argument_list(func: Callable) -> Callable:
     method. Default passes a string of whatever the user typed.
     With this decorator, the decorated method will receive a list
     of arguments parsed from user input using shlex.split()."""
+    import functools
+
     @functools.wraps(func)
     def cmd_wrapper(self, cmdline):
         lexed_arglist = parse_quoted_string(cmdline)
@@ -186,6 +183,8 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
     :return: function that gets passed parsed args and a list of unknown args
     """
+    import functools
+
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
@@ -226,6 +225,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
     :return: function that gets passed parsed args
     """
+    import functools
 
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
@@ -803,6 +803,7 @@ class Cmd(cmd.Cmd):
         :return:
         """
         if self.debug:
+            import traceback
             traceback.print_exc()
 
         if exception_type is None:
@@ -834,6 +835,7 @@ class Cmd(cmd.Cmd):
         :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
         :param end: str - string appended after the end of the message if not already present, default a newline
         """
+        import subprocess
         if msg is not None and msg != '':
             try:
                 msg_str = '{}'.format(msg)
@@ -1541,6 +1543,8 @@ class Cmd(cmd.Cmd):
         :param text: str - the current word that user is typing
         :param state: int - non-negative integer
         """
+        import functools
+
         if state == 0:
             unclosed_quote = ''
             self.set_completion_defaults()
@@ -1911,6 +1915,7 @@ class Cmd(cmd.Cmd):
         if not sys.platform.startswith('win'):
             # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
             if self.stdin.isatty():
+                import subprocess
                 proc = subprocess.Popen(shlex.split('stty sane'))
                 proc.communicate()
         return stop
@@ -1935,6 +1940,7 @@ class Cmd(cmd.Cmd):
         :param line: str - line of text read from input
         :return: bool - True if cmdloop() should exit, False otherwise
         """
+        import datetime
         stop = False
         try:
             statement = self._complete_statement(line)
@@ -2054,6 +2060,9 @@ class Cmd(cmd.Cmd):
 
         :param statement: Statement - a parsed statement from the user
         """
+        import io
+        import subprocess
+
         if statement.pipe_to:
             self.kept_state = Statekeeper(self, ('stdout',))
 
@@ -2505,6 +2514,8 @@ Usage:  Usage: unalias [-a] name [name ...]
 
     def _print_topics(self, header, cmds, verbose):
         """Customized version of print_topics that can switch between verbose or traditional output"""
+        import io
+
         if cmds:
             if not verbose:
                 self.print_topics(header, cmds, 15, 80)
@@ -2539,7 +2550,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                             doc = getattr(self, self._func_named(command)).__doc__
                     else:
                         # we found the help function
-                        result = StringIO()
+                        result = io.StringIO()
                         # try to redirect system stdout
                         with redirect_stdout(result):
                             # save our internal stdout
@@ -2707,6 +2718,7 @@ Usage:  Usage: unalias [-a] name [name ...]
 
     Usage:  shell <command> [arguments]"""
 
+        import subprocess
         try:
             # Use non-POSIX parsing to keep the quotes around the tokens
             tokens = shlex.split(command, posix=False)
@@ -2962,6 +2974,8 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         """Generate a transcript file from a given history of commands."""
         # Save the current echo state, and turn it off. We inject commands into the
         # output using a different mechanism
+        import io
+
         saved_echo = self.echo
         self.echo = False
 
