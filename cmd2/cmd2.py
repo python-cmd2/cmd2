@@ -24,11 +24,8 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
 # many imports are lazy-loaded when they are needed
 import argparse
-import atexit
 import cmd
-import codecs
 import collections
-import copy
 import datetime
 import functools
 import glob
@@ -38,10 +35,8 @@ import os
 import platform
 import re
 import shlex
-import signal
 import subprocess
 import sys
-import tempfile
 import traceback
 from typing import Callable, List, Optional, Union, Tuple
 
@@ -524,6 +519,7 @@ class AddSubmenu(object):
                 self._copy_out_shared_attrs(_self, original_attributes)
 
                 # Pass the submenu's tab completion parameters back up to the menu that called complete()
+                import copy
                 _self.allow_appended_space = submenu.allow_appended_space
                 _self.allow_closing_quote = submenu.allow_closing_quote
                 _self.display_matches = copy.copy(submenu.display_matches)
@@ -661,6 +657,7 @@ class Cmd(cmd.Cmd):
                 readline.set_history_length(persistent_history_length)
             except FileNotFoundError:
                 pass
+            import atexit
             atexit.register(readline.write_history_file, persistent_history_file)
 
         # Call super class constructor
@@ -935,6 +932,7 @@ class Cmd(cmd.Cmd):
                  On Failure
                     Both items are None
         """
+        import copy
         unclosed_quote = ''
         quotes_to_try = copy.copy(constants.QUOTES)
 
@@ -1677,6 +1675,7 @@ class Cmd(cmd.Cmd):
                         # Since self.display_matches is empty, set it to self.completion_matches
                         # before we alter them. That way the suggestions will reflect how we parsed
                         # the token being completed and not how readline did.
+                        import copy
                         self.display_matches = copy.copy(self.completion_matches)
 
                     # Check if we need to add an opening quote
@@ -1848,7 +1847,7 @@ class Cmd(cmd.Cmd):
 
     def preloop(self):
         """"Hook method executed once when the cmdloop() method is called."""
-
+        import signal
         # Register a default SIGINT signal handler for Ctrl+C
         signal.signal(signal.SIGINT, self.sigint_handler)
 
@@ -2083,6 +2082,7 @@ class Cmd(cmd.Cmd):
                 # Re-raise the exception
                 raise ex
         elif statement.output:
+            import tempfile
             if (not statement.output_to) and (not can_clip):
                 raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
             self.kept_state = Statekeeper(self, ('stdout',))
@@ -2927,6 +2927,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                     if runme:
                         self.onecmd_plus_hooks(runme)
         elif args.edit:
+            import tempfile
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             with os.fdopen(fd, 'w') as fobj:
                 for command in history:
@@ -3138,6 +3139,8 @@ Script should contain one command per line, just like command would be typed in 
         Returns if a file contains only ASCII or UTF-8 encoded text
         :param file_path: path to the file being checked
         """
+        import codecs
+
         expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
         valid_text_file = False
 
