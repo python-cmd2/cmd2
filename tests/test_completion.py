@@ -887,7 +887,7 @@ def test_cmd2_subcmd_with_unknown_completion_nomatch(scu_app):
     assert first_match is None
 
 
-def test_cmd2_help_subcommand_completion_single(scu_app):
+def test_cmd2_help_subcommand_completion_single_scu(scu_app):
     text = 'base'
     line = 'help {}'.format(text)
     endidx = len(line)
@@ -895,7 +895,7 @@ def test_cmd2_help_subcommand_completion_single(scu_app):
     assert scu_app.complete_help(text, line, begidx, endidx) == ['base']
 
 
-def test_cmd2_help_subcommand_completion_multiple(scu_app):
+def test_cmd2_help_subcommand_completion_multiple_scu(scu_app):
     text = ''
     line = 'help base {}'.format(text)
     endidx = len(line)
@@ -905,7 +905,7 @@ def test_cmd2_help_subcommand_completion_multiple(scu_app):
     assert matches == ['bar', 'foo', 'sport']
 
 
-def test_cmd2_help_subcommand_completion_nomatch(scu_app):
+def test_cmd2_help_subcommand_completion_nomatch_scu(scu_app):
     text = 'z'
     line = 'help base {}'.format(text)
     endidx = len(line)
@@ -913,7 +913,7 @@ def test_cmd2_help_subcommand_completion_nomatch(scu_app):
     assert scu_app.complete_help(text, line, begidx, endidx) == []
 
 
-def test_subcommand_tab_completion(scu_app):
+def test_subcommand_tab_completion_scu(scu_app):
     # This makes sure the correct completer for the sport subcommand is called
     text = 'Foot'
     line = 'base sport {}'.format(text)
@@ -926,7 +926,7 @@ def test_subcommand_tab_completion(scu_app):
     assert first_match is not None and scu_app.completion_matches == ['Football ']
 
 
-def test_subcommand_tab_completion_with_no_completer(scu_app):
+def test_subcommand_tab_completion_with_no_completer_scu(scu_app):
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
     text = 'Foot'
@@ -938,7 +938,7 @@ def test_subcommand_tab_completion_with_no_completer(scu_app):
     assert first_match is None
 
 
-def test_subcommand_tab_completion_space_in_text(scu_app):
+def test_subcommand_tab_completion_space_in_text_scu(scu_app):
     text = 'B'
     line = 'base sport "Space {}'.format(text)
     endidx = len(line)
