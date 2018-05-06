@@ -38,10 +38,21 @@ to import the `cmd2` module.
 
 ## Defer unittest
 
-In commit 8bc2c37a we deferring the import of `unittest` until we need it to
+In commit 8bc2c37a we defer the import of `unittest` until we need it to
 test a transcript.
 ```
 $./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
 100 iterations
 average: real 0.131 user 0.091 sys 0.030
+```
+
+
+## Defer InteractiveConsole from code
+
+In commit f3346ba1 we defer the import of `InteractiveConsole` until the user
+wants to run the `py` command.
+```
+$ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
+100 iterations
+average: real 0.131 user 0.090 sys 0.030
 ```

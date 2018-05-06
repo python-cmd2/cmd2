@@ -44,7 +44,6 @@ import sys
 import tempfile
 import traceback
 from typing import Callable, List, Optional, Union, Tuple
-from code import InteractiveConsole
 
 import pyperclip
 
@@ -2794,6 +2793,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 self.pystate['self'] = self
 
             localvars = self.pystate
+            from code import InteractiveConsole
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
