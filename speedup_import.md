@@ -56,3 +56,11 @@ $ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
 100 iterations
 average: real 0.131 user 0.090 sys 0.030
 ```
+
+## Defer atexit, codes, signal, tempfile, copy
+
+In commit a479fa94 we defer 5 imports: atexit, codecs, signal, tempfile, and copy.
+```
+$ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"100 iterations
+average: real 0.120 user 0.081 sys 0.021
+```
