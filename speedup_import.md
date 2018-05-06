@@ -64,3 +64,12 @@ In commit a479fa94 we defer 5 imports: atexit, codecs, signal, tempfile, and cop
 $ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"100 iterations
 average: real 0.120 user 0.081 sys 0.021
 ```
+
+# Defer datetime, functools, io, subprocess, traceback
+
+In commit d9ca07a9 we defer 5 more imports: datetime, functools, io, subprocess, traceback.
+```
+$ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
+100 iterations
+average: real 0.115 user 0.080 sys 0.020
+```
