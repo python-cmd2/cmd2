@@ -1600,8 +1600,7 @@ class Cmd(cmd.Cmd):
                 tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
                 # Either had a parsing error or are trying to complete the command token
-                # The latter can happen if default_to_shell is True and parseline() allowed
-                # assumed something like " or ' was a command.
+                # The latter can happen if " or ' was entered as the command
                 if tokens is None or len(tokens) == 1:
                     self.completion_matches = []
                     return None
