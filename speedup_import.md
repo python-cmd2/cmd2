@@ -49,7 +49,7 @@ average: real 0.131 user 0.091 sys 0.030
 
 ## Defer InteractiveConsole from code
 
-In commit f3346ba1 we defer the import of `InteractiveConsole` until the user
+In commit 6e49661f we defer the import of `InteractiveConsole` until the user
 wants to run the `py` command.
 ```
 $ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
