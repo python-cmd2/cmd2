@@ -56,7 +56,7 @@ def test_tokenize_unclosed_quotes(parser):
     (['command'], 'command', None),
     (['command', 'arg1', 'arg2'], 'command', 'arg1 arg2')
 ])
-def test_parse_command_and_args(parser, tokens, command, args):
+def test_command_and_args(parser, tokens, command, args):
     (parsed_command, parsed_args) = parser._command_and_args(tokens)
     assert command == parsed_command
     assert args == parsed_args
