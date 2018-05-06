@@ -16,7 +16,7 @@ from cmd2 import utils
 def parser():
     parser = StatementParser(
         allow_redirection=True,
-        terminators=[';'],
+        terminators=[';', '&'],
         multiline_commands=['multiline'],
         aliases={'helpalias': 'help',
                  '42': 'theanswer',
@@ -40,6 +40,9 @@ def test_parse_empty_string(parser):
     ('42 arg1 arg2', ['theanswer', 'arg1', 'arg2']),
     ('l', ['shell', 'ls', '-al']),
     ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+    ('termbare; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+    ('termbare & > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
+    ('termbare& > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
     ('help|less', ['help', '|', 'less']),
     ('l|less', ['shell', 'ls', '-al', '|', 'less']),
 ])
@@ -72,24 +75,28 @@ def test_parse_single_word(parser, line):
     assert not statement.args
     assert statement.argv == [utils.strip_quotes(line)]
 
-@pytest.mark.parametrize('line', [
-    'termbare;',
-    'termbare ;',
+@pytest.mark.parametrize('line,terminator', [
+    ('termbare;', ';'),
+    ('termbare ;', ';'),
+    ('termbare&', '&'),
+    ('termbare &', '&'),
 ])
-def test_parse_word_plus_terminator(parser, line):
+def test_parse_word_plus_terminator(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.command == 'termbare'
-    assert statement.terminator == ';'
+    assert statement.terminator == terminator
     assert statement.argv == ['termbare']
 
-@pytest.mark.parametrize('line', [
-    'termbare;  suffx',
-    'termbare ;suffx',
+@pytest.mark.parametrize('line,terminator', [
+    ('termbare;  suffx', ';'),
+    ('termbare ;suffx', ';'),
+    ('termbare&  suffx', '&'),
+    ('termbare &suffx', '&'),
 ])
-def test_parse_suffix_after_terminator(parser, line):
+def test_parse_suffix_after_terminator(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.command == 'termbare'
-    assert statement.terminator == ';'
+    assert statement.terminator == terminator
     assert statement.suffix == 'suffx'
     assert statement.argv == ['termbare']
 
@@ -163,12 +170,12 @@ def test_parse_double_pipe_is_not_a_pipe(parser):
     assert not statement.pipe_to
 
 def test_parse_complex_pipe(parser):
-    line = 'command with args, terminator;sufx | piped'
+    line = 'command with args, terminator&sufx | piped'
     statement = parser.parse(line)
     assert statement.command == 'command'
     assert statement.args == "with args, terminator"
     assert statement.argv == ['command', 'with', 'args,', 'terminator']
-    assert statement.terminator == ';'
+    assert statement.terminator == '&'
     assert statement.suffix == 'sufx'
     assert statement.pipe_to == 'piped'
 
@@ -251,13 +258,16 @@ def test_parse_unfinished_multiliine_command(parser):
     assert statement.argv == ['multiline', 'has', '>', 'inside', 'an', 'unfinished', 'command']
     assert not statement.terminator
 
-def test_parse_multiline_command_ignores_redirectors_within_it(parser):
-    line = 'multiline has > inside;'
+@pytest.mark.parametrize('line,terminator',[
+    ('multiline has > inside;', ';'),
+    ('multiline has > inside &', '&'),
+])
+def test_parse_multiline_command_ignores_redirectors_within_it(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
     assert statement.args == 'has > inside'
     assert statement.argv == ['multiline', 'has', '>', 'inside']
-    assert statement.terminator == ';'
+    assert statement.terminator == terminator
 
 def test_parse_multiline_with_incomplete_comment(parser):
     """A terminator within a comment will be ignored and won't terminate a multiline command.
