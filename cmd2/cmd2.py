@@ -2434,13 +2434,6 @@ Usage:  Usage: alias [name] | [<name> <value>]
             name = arglist[0]
             value = ' '.join(arglist[1:])
 
-            # Check for a valid name
-            for cur_char in name:
-                if cur_char not in self.identchars:
-                    self.perror("Alias names can only contain the following characters: {}".format(self.identchars),
-                                traceback_war=False)
-                    return
-
             # Set the alias
             self.aliases[name] = value
             self.poutput("Alias {!r} created".format(name))
