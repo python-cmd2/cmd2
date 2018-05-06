@@ -1577,12 +1577,9 @@ class Cmd(cmd.Cmd):
             if begidx > 0:
 
                 # Parse the command line
-                command, args, expanded_line = self.parseline(line)
-
-                # use these lines instead of the one above
-                # statement = self.command_parser.parse_command_only(line)
-                # command = statement.command
-                # expanded_line = statement.command_and_args
+                statement = self.statement_parser.parse_command_only(line)
+                command = statement.command
+                expanded_line = statement.command_and_args
 
                 # We overwrote line with a properly formatted but fully stripped version
                 # Restore the end spaces since line is only supposed to be lstripped when
@@ -1603,8 +1600,7 @@ class Cmd(cmd.Cmd):
                 tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
                 # Either had a parsing error or are trying to complete the command token
-                # The latter can happen if default_to_shell is True and parseline() allowed
-                # assumed something like " or ' was a command.
+                # The latter can happen if " or ' was entered as the command
                 if tokens is None or len(tokens) == 1:
                     self.completion_matches = []
                     return None
@@ -1924,66 +1920,16 @@ class Cmd(cmd.Cmd):
     def parseline(self, line):
         """Parse the line into a command name and a string containing the arguments.
 
-        NOTE: This is an override of a parent class method.  It is only used by other parent class methods.  But
-        we do need to override it here so that the additional shortcuts present in cmd2 get properly expanded for
-        purposes of tab completion.
+        NOTE: This is an override of a parent class method.  It is only used by other parent class methods.
 
-        Used for command tab completion.  Returns a tuple containing (command, args, line).
-        'command' and 'args' may be None if the line couldn't be parsed.
+        Different from the parent class method, this ignores self.identchars.
 
         :param line: str - line read by readline
         :return: (str, str, str) - tuple containing (command, args, line)
         """
-        line = line.strip()
 
-        if not line:
-            # Deal with empty line or all whitespace line
-            return None, None, line
-
-        # Make a copy of aliases so we can edit it
-        tmp_aliases = list(self.aliases.keys())
-        keep_expanding = len(tmp_aliases) > 0
-
-        # Expand aliases
-        while keep_expanding:
-            for cur_alias in tmp_aliases:
-                keep_expanding = False
-
-                if line == cur_alias or line.startswith(cur_alias + ' '):
-                    line = line.replace(cur_alias, self.aliases[cur_alias], 1)
-
-                    # Do not expand the same alias more than once
-                    tmp_aliases.remove(cur_alias)
-                    keep_expanding = len(tmp_aliases) > 0
-                    break
-
-        # Expand command shortcut to its full command name
-        for (shortcut, expansion) in self.shortcuts:
-            if line.startswith(shortcut):
-                # If the next character after the shortcut isn't a space, then insert one
-                shortcut_len = len(shortcut)
-                if len(line) == shortcut_len or line[shortcut_len] != ' ':
-                    expansion += ' '
-
-                # Expand the shortcut
-                line = line.replace(shortcut, expansion, 1)
-                break
-
-        i, n = 0, len(line)
-
-        # If we are allowing shell commands, then allow any character in the command
-        if self.default_to_shell:
-            while i < n and line[i] != ' ':
-                i += 1
-
-        # Otherwise only allow those in identchars
-        else:
-            while i < n and line[i] in self.identchars:
-                i += 1
-
-        command, arg = line[:i], line[i:].strip()
-
-        return command, arg, line
+        statement = self.statement_parser.parse_command_only(line)
+        return statement.command, statement.args, statement.command_and_args
 
     def onecmd_plus_hooks(self, line):
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
