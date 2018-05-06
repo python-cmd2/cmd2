@@ -1705,6 +1705,17 @@ def test_unalias_non_existing(base_app, capsys):
     out, err = capsys.readouterr()
     assert "does not exist" in err
 
+@pytest.mark.parametrize('alias_name', [
+    '">"',
+    '"no>pe"'
+    '"no spaces"',
+    '"nopipe|"',
+    '"noterm;"',
+])
+def test_create_invalid_alias(base_app, alias_name, capsys):
+    run_cmd(base_app, 'alias {} help'.format(alias_name))
+    out, err = capsys.readouterr()
+    assert "can not contain" in err
 
 def test_ppaged(base_app):
     msg = 'testing...'

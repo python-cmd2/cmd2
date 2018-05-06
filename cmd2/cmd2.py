@@ -730,6 +730,19 @@ class Cmd(cmd.Cmd):
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
 
+        # regular expression to test for invalid characters in aliases
+        invalid_items = []
+        invalid_items.extend(constants.REDIRECTION_CHARS)
+        invalid_items.extend(self.terminators)
+        # escape each item so it will for sure get treated as a literal
+        invalid_items = [re.escape(x) for x in invalid_items]
+        # don't allow whitespace
+        invalid_items.append(r'\s')
+        # join them up with a pipe
+        expr = '|'.join(invalid_items)
+        # and compile it into a pattern
+        self.invalid_alias_pattern = re.compile(expr)
+
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
             startup_script = os.path.expanduser(startup_script)
@@ -2433,6 +2446,12 @@ Usage:  Usage: alias [name] | [<name> <value>]
         else:
             name = arglist[0]
             value = ' '.join(arglist[1:])
+
+            # Validate the alias to ensure it doesn't include wierd characters
+            # like terminators, output redirection, or whitespace
+            if self.invalid_alias_pattern.search(name):
+                self.perror('Alias names can not contain special characters.', traceback_war=False)
+                return
 
             # Set the alias
             self.aliases[name] = value
