@@ -65,7 +65,7 @@ $ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"100 iteration
 average: real 0.120 user 0.081 sys 0.021
 ```
 
-# Defer datetime, functools, io, subprocess, traceback
+## Defer datetime, functools, io, subprocess, traceback
 
 In commit d9ca07a9 we defer 5 more imports: datetime, functools, io, subprocess, traceback.
 ```
@@ -74,12 +74,18 @@ $ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
 average: real 0.115 user 0.080 sys 0.020
 ```
 
-# extract AddSubmenu to its own file
+## extract AddSubmenu to its own file
 
 In commit ccfdf0f9 we extract AddSubmenu() to it's own file, so it is not
 imported or processed by default.
 ```
-./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"100 iterations
+./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
+100 iterations
 average: real 0.117 user 0.081 sys 0.021
 ```
 
+## Progress Update
+
+Python takes ~30ms to start up and do nothing. When we began we estimated it took
+~110ms to import cmd2. We are now down to about ~90ms, which is approximately a
+20% improvement.
