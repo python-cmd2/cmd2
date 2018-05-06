@@ -144,18 +144,20 @@ class StatementParser():
         # aliases have to be a word, so make a regular expression
         # that matches the first word in the line. This regex has two
         # parts, the first parenthesis enclosed group matches one
-        # or more non-whitespace characters, and the second group
-        # matches either a whitespace character or the end of the
-        # string. We use \A and \Z to ensure we always match the
-        # beginning and end of a string that may have multiple
-        # lines
-        self.command_pattern = re.compile(r'\A(\S+)(\s|\Z)')
+        # or more non-whitespace characters (which may be preceeded
+        # by whitespace) and the second group matches either a whitespace
+        # character or the end of the string. We use \A and \Z to ensure
+        # we always match the beginning and end of a string that may have
+        # multiple lines
+        self.command_pattern = re.compile(r'\A\s*(\S+)(\s|\Z)+')
 
 
     def tokenize(self, line: str) -> List[str]:
         """Lex a string into a list of tokens.
 
         Comments are removed, and shortcuts and aliases are expanded.
+
+        Raises ValueError if there are unclosed quotation marks.
         """
 
         # strip C-style comments
@@ -177,6 +179,8 @@ class StatementParser():
         """Tokenize the input and parse it into a Statement object, stripping
         comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
+
+        Raises ValueError if there are unclosed quotation marks.
         """
 
         # handle the special case/hardcoded terminator of a blank line
@@ -297,16 +301,40 @@ class StatementParser():
         return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
-        """Partially parse input into a Statement object. The command is
-        identified, and shortcuts and aliases are expanded.
+        """Partially parse input into a Statement object.
+
+        The command is identified, and shortcuts and aliases are expanded.
         Terminators, multiline commands, and output redirection are not
         parsed.
-        """
-        # lex the input into a list of tokens
-        tokens = self.tokenize(rawinput)
 
-        # parse out the command and everything else
-        (command, args) = self._command_and_args(tokens)
+        This method is used by tab completion code and therefore must not
+        generate an exception if there are unclosed quotes.
+
+        The Statement object returned by this method can at most contained
+        values in the following attributes:
+          - raw
+          - command
+          - args
+
+        Different from parse(), this method does not remove redundant whitespace
+        within statement.args. It does however, ensure args does not have leading
+        or trailing whitespace.
+        """
+        # expand shortcuts and aliases
+        line = self._expand(rawinput)
+
+        command = None
+        args = None
+        match = self.command_pattern.search(line)
+        if match:
+            # we got a match, extract the command
+            command = match.group(1)
+            # the command_pattern regex is designed to match the spaces
+            # between command and args with a second match group. Using
+            # the end of the second match group ensures that args has
+            # no leading whitespace. The rstrip() makes sure there is
+            # no trailing whitespace
+            args = line[match.end(2):].rstrip()
 
         # build the statement
         # string representation of args must be an empty string instead of
@@ -315,7 +343,6 @@ class StatementParser():
         statement.raw = rawinput
         statement.command = command
         statement.args = args
-        statement.argv = tokens
         return statement
 
     def _expand(self, line: str) -> str:
