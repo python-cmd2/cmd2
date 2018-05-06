@@ -731,6 +731,8 @@ class Cmd(cmd.Cmd):
         self.broken_pipe_warning = ''
 
         # regular expression to test for invalid characters in aliases
+        # we will construct it dynamically, because some of the components
+        # like terminator characters, can change
         invalid_items = []
         invalid_items.extend(constants.REDIRECTION_CHARS)
         invalid_items.extend(self.terminators)
@@ -738,7 +740,8 @@ class Cmd(cmd.Cmd):
         invalid_items = [re.escape(x) for x in invalid_items]
         # don't allow whitespace
         invalid_items.append(r'\s')
-        # join them up with a pipe
+        # join them up with a pipe to form a regular expression
+        # that looks something like r';|>|\||\s'
         expr = '|'.join(invalid_items)
         # and compile it into a pattern
         self.invalid_alias_pattern = re.compile(expr)
