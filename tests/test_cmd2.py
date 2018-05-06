@@ -1688,12 +1688,6 @@ def test_alias_lookup_invalid_alias(base_app, capsys):
     out, err = capsys.readouterr()
     assert "not found" in err
 
-def test_alias_with_invalid_name(base_app, capsys):
-    run_cmd(base_app, 'alias @ help')
-    out, err = capsys.readouterr()
-    assert "can only contain the following characters" in err
-
-
 def test_unalias(base_app):
     # Create an alias
     run_cmd(base_app, 'alias fake pyscript')
