@@ -21,9 +21,10 @@ $./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c ""
 average: real 0.028 user 0.020 sys 0.000
 ```
 
+
 ## Initial measurement
 
-From commit c7753352b, which has `__init.py__` importing `cmd2.cmd2.Cmd`
+From commit fbbfe256, which has `__init.py__` importing `cmd2.cmd2.Cmd`
 and a bunch of other stuff, we get:
 ```
 $ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
@@ -34,3 +35,13 @@ average: real 0.140 user 0.100 sys 0.030
 From the baseline and this initial measurement, we infer it takes ~110 ms
 to import the `cmd2` module.
 
+
+## Defer unittest
+
+In commit 8bc2c37a we deferring the import of `unittest` until we need it to
+test a transcript.
+```
+$./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
+100 iterations
+average: real 0.131 user 0.091 sys 0.030
+```
