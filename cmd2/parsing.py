@@ -142,15 +142,21 @@ class StatementParser:
         )
 
         # aliases have to be a word, so make a regular expression
-        # that matches the first word in the line. This regex has two
-        # parts, the first parenthesis enclosed group matches one
-        # or more non-whitespace characters with a non-greedy match
-        # (that's what the '+?' part does). The second group must be
-        # dynamically created because it needs to match either whitespace,
-        # something in REDIRECTION_CHARS, one of the terminators,
-        # or the end of the string. We use \A and \Z to ensure we always
-        # match the beginning and end of a string that may have multiple
-        # lines (if it's a multiline command)
+        # that matches the first word in the line. This regex has three
+        # parts:
+        #     - the '\A\s*' matches the beginning of the string (even
+        #       if contains multiple lines) and gobbles up any leading
+        #       whitespace
+        #     - the first parenthesis enclosed group matches one
+        #       or more non-whitespace characters with a non-greedy match
+        #       (that's what the '+?' part does). The non-greedy match
+        #       ensures that this first group doesn't include anything
+        #       matched by the second group
+        #     - the second parenthesis group must be dynamically created
+        #       because it needs to match either whitespace, something in
+        #       REDIRECTION_CHARS, one of the terminators, or the end of
+        #       the string (\Z matches the end of the string even if it
+        #       contains multiple lines)
         second_group_items = []
         second_group_items.extend(constants.REDIRECTION_CHARS)
         second_group_items.extend(terminators)
@@ -162,7 +168,7 @@ class StatementParser:
         # join them up with a pipe
         second_group = '|'.join(second_group_items)
         # build the regular expression
-        expr = r'\A(\S+?)({})'.format(second_group)
+        expr = r'\A\s*(\S+?)({})'.format(second_group)
         self.command_pattern = re.compile(expr)
 
     def tokenize(self, line: str) -> List[str]:
