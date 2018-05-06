@@ -3,6 +3,9 @@
 """Shared utility functions"""
 
 import collections
+import os
+from typing import Optional
+
 from . import constants
 
 def strip_ansi(text: str) -> str:
@@ -55,3 +58,89 @@ def namedtuple_with_defaults(typename, field_names, default_values=()):
     T.__new__.__defaults__ = tuple(prototype)
     return T
 
+def namedtuple_with_two_defaults(typename, field_names, default_values=('', '')):
+    """Wrapper around namedtuple which lets you treat the last value as optional.
+
+    :param typename: str - type name for the Named tuple
+    :param field_names: List[str] or space-separated string of field names
+    :param default_values: (optional) 2-element tuple containing the default values for last 2 parameters in named tuple
+                            Defaults to an empty string for both of them
+    :return: namedtuple type
+    """
+    T = collections.namedtuple(typename, field_names)
+    # noinspection PyUnresolvedReferences
+    T.__new__.__defaults__ = default_values
+    return T
+
+def cast(current, new):
+    """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
+
+    :param current: current value for the parameter, type varies
+    :param new: str - new value
+    :return: new value with same type as current, or the current value if there was an error casting
+    """
+    typ = type(current)
+    if typ == bool:
+        try:
+            return bool(int(new))
+        except (ValueError, TypeError):
+            pass
+        try:
+            new = new.lower()
+        except AttributeError:
+            pass
+        if (new == 'on') or (new[0] in ('y', 't')):
+            return True
+        if (new == 'off') or (new[0] in ('n', 'f')):
+            return False
+    else:
+        try:
+            return typ(new)
+        except (ValueError, TypeError):
+            pass
+    print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
+    return current
+
+def which(editor: str) -> Optional[str]:
+    import subprocess
+    try:
+        editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
+        editor_path = editor_path.decode()
+    except subprocess.CalledProcessError:
+        editor_path = None
+    return editor_path
+
+def is_text_file(file_path):
+    """
+    Returns if a file contains only ASCII or UTF-8 encoded text
+    :param file_path: path to the file being checked
+    """
+    import codecs
+
+    expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
+    valid_text_file = False
+
+    # Check if the file is ASCII
+    try:
+        with codecs.open(expanded_path, encoding='ascii', errors='strict') as f:
+            # Make sure the file has at least one line of text
+            # noinspection PyUnusedLocal
+            if sum(1 for line in f) > 0:
+                valid_text_file = True
+    except IOError:  # pragma: no cover
+        pass
+    except UnicodeDecodeError:
+        # The file is not ASCII. Check if it is UTF-8.
+        try:
+            with codecs.open(expanded_path, encoding='utf-8', errors='strict') as f:
+                # Make sure the file has at least one line of text
+                # noinspection PyUnusedLocal
+                if sum(1 for line in f) > 0:
+                    valid_text_file = True
+        except IOError:  # pragma: no cover
+            pass
+        except UnicodeDecodeError:
+            # Not UTF-8
+            pass
+
+    return valid_text_file

@@ -125,17 +125,6 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
     else:
         setattr(func, HELP_CATEGORY, category)
 
-
-def _which(editor: str) -> Optional[str]:
-    import subprocess
-    try:
-        editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
-        editor_path = editor_path.decode()
-    except subprocess.CalledProcessError:
-        editor_path = None
-    return editor_path
-
-
 def parse_quoted_string(cmdline: str) -> List[str]:
     """Parse a quoted string into a list of arguments."""
     if isinstance(cmdline, list):
@@ -347,7 +336,7 @@ class Cmd(cmd.Cmd):
         else:
             # Favor command-line editors first so we don't leave the terminal to edit
             for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
-                if _which(editor):
+                if utils.which(editor):
                     break
     feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
     locals_in_py = False
@@ -2437,7 +2426,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             if (val[0] == val[-1]) and val[0] in ("'", '"'):
                 val = val[1:-1]
             else:
-                val = cast(current_val, val)
+                val = utils.cast(current_val, val)
             setattr(self, param_name, val)
             self.poutput('%s - was: %s\nnow: %s\n' % (param_name, current_val, val))
             if current_val != val:
@@ -2865,7 +2854,7 @@ Script should contain one command per line, just like command would be typed in 
             return
 
         # Make sure the file is ASCII or UTF-8 encoded text
-        if not self.is_text_file(expanded_path):
+        if not utils.is_text_file(expanded_path):
             self.perror('{} is not an ASCII or UTF-8 encoded text file'.format(expanded_path), traceback_war=False)
             return
 
@@ -2885,42 +2874,6 @@ Script should contain one command per line, just like command would be typed in 
     def complete_load(self, text, line, begidx, endidx):
         index_dict = {1: self.path_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict)
-
-    @staticmethod
-    def is_text_file(file_path):
-        """
-        Returns if a file contains only ASCII or UTF-8 encoded text
-        :param file_path: path to the file being checked
-        """
-        import codecs
-
-        expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
-        valid_text_file = False
-
-        # Check if the file is ASCII
-        try:
-            with codecs.open(expanded_path, encoding='ascii', errors='strict') as f:
-                # Make sure the file has at least one line of text
-                # noinspection PyUnusedLocal
-                if sum(1 for line in f) > 0:
-                    valid_text_file = True
-        except IOError:  # pragma: no cover
-            pass
-        except UnicodeDecodeError:
-            # The file is not ASCII. Check if it is UTF-8.
-            try:
-                with codecs.open(expanded_path, encoding='utf-8', errors='strict') as f:
-                    # Make sure the file has at least one line of text
-                    # noinspection PyUnusedLocal
-                    if sum(1 for line in f) > 0:
-                        valid_text_file = True
-            except IOError:  # pragma: no cover
-                pass
-            except UnicodeDecodeError:
-                # Not UTF-8
-                pass
-
-        return valid_text_file
 
     def run_transcript_tests(self, callargs):
         """Runs transcript tests for provided file(s).
@@ -3119,36 +3072,6 @@ class History(list):
             return [itm for itm in self if isin(itm)]
 
 
-def cast(current, new):
-    """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
-
-    :param current: current value for the parameter, type varies
-    :param new: str - new value
-    :return: new value with same type as current, or the current value if there was an error casting
-    """
-    typ = type(current)
-    if typ == bool:
-        try:
-            return bool(int(new))
-        except (ValueError, TypeError):
-            pass
-        try:
-            new = new.lower()
-        except AttributeError:
-            pass
-        if (new == 'on') or (new[0] in ('y', 't')):
-            return True
-        if (new == 'off') or (new[0] in ('n', 'f')):
-            return False
-    else:
-        try:
-            return typ(new)
-        except (ValueError, TypeError):
-            pass
-    print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
-    return current
-
-
 class Statekeeper(object):
     """Class used to save and restore state during load and py commands as well as when redirecting output or pipes."""
     def __init__(self, obj, attribs):
@@ -3174,22 +3097,7 @@ class Statekeeper(object):
                 setattr(self.obj, attrib, getattr(self, attrib))
 
 
-def namedtuple_with_two_defaults(typename, field_names, default_values=('', '')):
-    """Wrapper around namedtuple which lets you treat the last value as optional.
-
-    :param typename: str - type name for the Named tuple
-    :param field_names: List[str] or space-separated string of field names
-    :param default_values: (optional) 2-element tuple containing the default values for last 2 parameters in named tuple
-                            Defaults to an empty string for both of them
-    :return: namedtuple type
-    """
-    T = collections.namedtuple(typename, field_names)
-    # noinspection PyUnresolvedReferences
-    T.__new__.__defaults__ = default_values
-    return T
-
-
-class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
+class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
     """Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
 
     This is provided as a convenience and an example for one possible way for end users to store results in
@@ -3209,5 +3117,3 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
     def __bool__(self):
         """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
         return not self.err
-
-

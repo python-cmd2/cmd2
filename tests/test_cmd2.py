@@ -8,9 +8,9 @@ Released under MIT license, see LICENSE file
 import argparse
 import builtins
 from code import InteractiveConsole
+import io
 import os
 import sys
-import io
 import tempfile
 
 import pytest
@@ -22,6 +22,7 @@ except ImportError:
     from unittest import mock
 
 from cmd2 import cmd2
+from cmd2 import utils
 from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
     HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
@@ -109,44 +110,40 @@ def test_base_show_readonly(base_app):
 
 
 def test_cast():
-    cast = cmd2.cast
-
     # Boolean
-    assert cast(True, True) == True
-    assert cast(True, False) == False
-    assert cast(True, 0) == False
-    assert cast(True, 1) == True
-    assert cast(True, 'on') == True
-    assert cast(True, 'off') == False
-    assert cast(True, 'ON') == True
-    assert cast(True, 'OFF') == False
-    assert cast(True, 'y') == True
-    assert cast(True, 'n') == False
-    assert cast(True, 't') == True
-    assert cast(True, 'f') == False
+    assert utils.cast(True, True) == True
+    assert utils.cast(True, False) == False
+    assert utils.cast(True, 0) == False
+    assert utils.cast(True, 1) == True
+    assert utils.cast(True, 'on') == True
+    assert utils.cast(True, 'off') == False
+    assert utils.cast(True, 'ON') == True
+    assert utils.cast(True, 'OFF') == False
+    assert utils.cast(True, 'y') == True
+    assert utils.cast(True, 'n') == False
+    assert utils.cast(True, 't') == True
+    assert utils.cast(True, 'f') == False
 
     # Non-boolean same type
-    assert cast(1, 5) == 5
-    assert cast(3.4, 2.7) == 2.7
-    assert cast('foo', 'bar') == 'bar'
-    assert cast([1,2], [3,4]) == [3,4]
+    assert utils.cast(1, 5) == 5
+    assert utils.cast(3.4, 2.7) == 2.7
+    assert utils.cast('foo', 'bar') == 'bar'
+    assert utils.cast([1,2], [3,4]) == [3,4]
 
 def test_cast_problems(capsys):
-    cast = cmd2.cast
-
     expected = 'Problem setting parameter (now {}) to {}; incorrect type?\n'
 
     # Boolean current, with new value not convertible to bool
     current = True
     new = [True, True]
-    assert cast(current, new) == current
+    assert utils.cast(current, new) == current
     out, err = capsys.readouterr()
     assert out == expected.format(current, new)
 
     # Non-boolean current, with new value not convertible to current type
     current = 1
     new = 'octopus'
-    assert cast(current, new) == current
+    assert utils.cast(current, new) == current
     out, err = capsys.readouterr()
     assert out == expected.format(current, new)
 
@@ -1365,18 +1362,18 @@ optional arguments:
 """
 
 @pytest.mark.skipif(sys.platform.startswith('win'),
-                    reason="cmd2._which function only used on Mac and Linux")
+                    reason="utils.which function only used on Mac and Linux")
 def test_which_editor_good():
     editor = 'vi'
-    path = cmd2._which(editor)
+    path = utils.which(editor)
     # Assert that the vi editor was found because it should exist on all Mac and Linux systems
     assert path
 
 @pytest.mark.skipif(sys.platform.startswith('win'),
-                    reason="cmd2._which function only used on Mac and Linux")
+                    reason="utils.which function only used on Mac and Linux")
 def test_which_editor_bad():
     editor = 'notepad.exe'
-    path = cmd2._which(editor)
+    path = utils.which(editor)
     # Assert that the editor wasn't found because no notepad.exe on non-Windows systems ;-)
     assert path is None
 
@@ -1463,11 +1460,11 @@ def test_cmdresult(cmdresult_app):
 
 def test_is_text_file_bad_input(base_app):
     # Test with a non-existent file
-    file_is_valid = base_app.is_text_file('does_not_exist.txt')
+    file_is_valid = utils.is_text_file('does_not_exist.txt')
     assert not file_is_valid
 
     # Test with a directory
-    dir_is_valid = base_app.is_text_file('.')
+    dir_is_valid = utils.is_text_file('.')
     assert not dir_is_valid
 
 
