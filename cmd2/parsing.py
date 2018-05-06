@@ -144,13 +144,26 @@ class StatementParser():
         # aliases have to be a word, so make a regular expression
         # that matches the first word in the line. This regex has two
         # parts, the first parenthesis enclosed group matches one
-        # or more non-whitespace characters, and the second group
-        # matches either a whitespace character or the end of the
-        # string. We use \A and \Z to ensure we always match the
-        # beginning and end of a string that may have multiple
-        # lines
-        self.command_pattern = re.compile(r'\A(\S+)(\s|\Z)')
-
+        # or more non-whitespace characters with a non-greedy match
+        # (that's what the '+?' part does). The second group must be
+        # dynamically created because it needs to match either whitespace,
+        # something in REDIRECTION_CHARS, one of the terminators,
+        # or the end of the string. We use \A and \Z to ensure we always
+        # match the beginning and end of a string that may have multiple
+        # lines (if it's a multiline command)
+        second_group_items = []
+        second_group_items.extend(constants.REDIRECTION_CHARS)
+        second_group_items.extend(terminators)
+        # escape each item so it will for sure get treated as a literal
+        second_group_items = [re.escape(x) for x in second_group_items]
+        # add the whitespace and end of string, not escaped because they
+        # are not literals
+        second_group_items.extend([r'\s', r'\Z'])
+        # join them up with a pipe
+        second_group = '|'.join(second_group_items)
+        # build the regular expression
+        expr = r'\A(\S+?)({})'.format(second_group)
+        self.command_pattern = re.compile(expr)
 
     def tokenize(self, line: str) -> List[str]:
         """Lex a string into a list of tokens.
