@@ -81,7 +81,7 @@ class Statement(str):
         return rtn
 
 
-class StatementParser():
+class StatementParser:
     """Parse raw text into command components.
 
     Shortcuts is a list of tuples with each tuple containing the shortcut and the expansion.
@@ -93,7 +93,7 @@ class StatementParser():
             multiline_commands=None,
             aliases=None,
             shortcuts=None,
-        ):
+    ):
         self.allow_redirection = allow_redirection
         if terminators is None:
             self.terminators = [';']
@@ -150,7 +150,6 @@ class StatementParser():
         # we always match the beginning and end of a string that may have
         # multiple lines
         self.command_pattern = re.compile(r'\A\s*(\S+)(\s|\Z)+')
-
 
     def tokenize(self, line: str) -> List[str]:
         """Lex a string into a list of tokens.
@@ -369,7 +368,7 @@ class StatementParser():
 
         # expand shortcuts
         for (shortcut, expansion) in self.shortcuts:
-            if  line.startswith(shortcut):
+            if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
                 shortcut_len = len(shortcut)
                 if len(line) == shortcut_len or line[shortcut_len] != ' ':
@@ -397,7 +396,7 @@ class StatementParser():
         if len(tokens) > 1:
             args = ' '.join(tokens[1:])
 
-        return (command, args)
+        return command, args
 
     @staticmethod
     def _comment_replacer(match):
@@ -414,7 +413,7 @@ class StatementParser():
         # as word breaks when they are in unquoted strings. Each run of punctuation
         # characters is treated as a single token.
 
-        :param initial_tokens: the tokens as parsed by shlex
+        :param tokens: the tokens as parsed by shlex
         :return: the punctuated tokens
         """
         punctuation = []
