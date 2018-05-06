@@ -79,7 +79,7 @@ average: real 0.115 user 0.080 sys 0.020
 In commit ccfdf0f9 we extract AddSubmenu() to it's own file, so it is not
 imported or processed by default.
 ```
-./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
+$ ./mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
 100 iterations
 average: real 0.117 user 0.081 sys 0.021
 ```
@@ -89,3 +89,11 @@ average: real 0.117 user 0.081 sys 0.021
 Python takes ~30ms to start up and do nothing. When we began we estimated it took
 ~110ms to import cmd2. We are now down to about ~90ms, which is approximately a
 20% improvement.
+
+## Move more functions into utils
+
+Commit fc495a42 moves a few functions from `cmd2.py` into `utils.py`.
+```
+$ ~/bin/mtime.sh ~/.pyenv/versions/cmd2-3.6/bin/python -c "import cmd2"
+100 iterations
+average: real 0.119 user 0.081 sys 0.021
