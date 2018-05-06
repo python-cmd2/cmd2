@@ -17,6 +17,7 @@ import pytest
 
 from cmd2 import cmd2
 from .conftest import run_cmd, StdOut
+from cmd2 import transcript
 
 class CmdLineApp(cmd2.Cmd):
 
@@ -177,7 +178,7 @@ this is a \/multiline\/ command
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()
 
-    class TestMyAppCase(cmd2.Cmd2TestCase):
+    class TestMyAppCase(transcript.Cmd2TestCase):
         cmdapp = app
 
     testcase = TestMyAppCase()
