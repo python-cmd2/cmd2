@@ -56,7 +56,7 @@ from . import utils
 from .rl_utils import rl_type, RlType
 if rl_type == RlType.NONE:
     rl_err_msg = "Tab completion has been disabled since no supported version of readline was found\n"
-    rl_err_msg += "To resolve this, install pyreadline on Windows or gnureadline on Mac"
+    rl_err_msg += "To resolve this, install pyreadline on Windows or gnureadline on Mac\n"
     sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_err_msg + Fore.RESET)
 else:
     from .rl_utils import rl_force_redisplay, readline
