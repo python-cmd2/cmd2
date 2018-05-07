@@ -27,6 +27,7 @@ import atexit
 import cmd
 import codecs
 import collections
+from colorama import Fore
 import copy
 import datetime
 import functools
@@ -52,7 +53,14 @@ from . import constants
 from . import utils
 
 # Set up readline
-from .rl_utils import rl_force_redisplay, readline, rl_type, RlType
+from .rl_utils import rl_type, RlType
+if rl_type == RlType.NONE:
+    rl_err_msg = "Tab completion has been disabled since no supported version of readline was found\n"
+    rl_err_msg += "To resolve this, install pyreadline on Windows or gnureadline on Mac"
+    sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_err_msg + Fore.RESET)
+else:
+    from .rl_utils import rl_force_redisplay, readline
+
 from .argparse_completer import AutoCompleter, ACArgumentParser
 
 from cmd2.parsing import StatementParser, Statement
@@ -321,6 +329,9 @@ class EmptyStatement(Exception):
 def _pop_readline_history(clear_history: bool=True) -> List[str]:
     """Returns a copy of readline's history and optionally clears it (default)"""
     # noinspection PyArgumentList
+    if rl_type == RlType.NONE:
+        return []
+
     history = [
         readline.get_history_item(i)
         for i in range(1, 1 + readline.get_current_history_length())
@@ -332,10 +343,11 @@ def _pop_readline_history(clear_history: bool=True) -> List[str]:
 
 def _push_readline_history(history, clear_history=True):
     """Restores readline's history and optionally clears it first (default)"""
-    if clear_history:
-        readline.clear_history()
-    for line in history:
-        readline.add_history(line)
+    if rl_type != RlType.NONE:
+        if clear_history:
+            readline.clear_history()
+        for line in history:
+            readline.add_history(line)
 
 
 def _complete_from_cmd(cmd_obj, text, line, begidx, endidx):
@@ -469,7 +481,7 @@ class AddSubmenu(object):
             original_attributes = self._get_original_attributes()
             history = _pop_readline_history()
 
-            if self.persistent_history_file:
+            if self.persistent_history_file and rl_type != RlType.NONE:
                 try:
                     readline.read_history_file(self.persistent_history_file)
                 except FileNotFoundError:
@@ -499,7 +511,7 @@ class AddSubmenu(object):
                 self._copy_out_shared_attrs(parent_cmd, original_attributes)
 
                 # write submenu history
-                if self.persistent_history_file:
+                if self.persistent_history_file and rl_type != RlType.NONE:
                     readline.write_history_file(self.persistent_history_file)
                 # reset main app history before exit
                 _push_readline_history(history)
@@ -654,7 +666,7 @@ class Cmd(cmd.Cmd):
                 pass
 
         # If persistent readline history is enabled, then read history from file and register to write to file at exit
-        if persistent_history_file:
+        if persistent_history_file and rl_type != RlType.NONE:
             persistent_history_file = os.path.expanduser(persistent_history_file)
             try:
                 readline.read_history_file(persistent_history_file)
@@ -1544,7 +1556,7 @@ class Cmd(cmd.Cmd):
         :param text: str - the current word that user is typing
         :param state: int - non-negative integer
         """
-        if state == 0:
+        if state == 0 and rl_type != RlType.NONE:
             unclosed_quote = ''
             self.set_completion_defaults()
 
@@ -2616,9 +2628,12 @@ Usage:  Usage: unalias [-a] name [name ...]
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
             response = input(prompt)
-            hlen = readline.get_current_history_length()
-            if hlen >= 1 and response != '':
-                readline.remove_history_item(hlen - 1)
+
+            if rl_type != RlType.NONE:
+                hlen = readline.get_current_history_length()
+                if hlen >= 1 and response != '':
+                    readline.remove_history_item(hlen - 1)
+
             try:
                 response = int(response)
                 result = fulloptions[response - 1][0]
