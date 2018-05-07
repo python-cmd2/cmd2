@@ -169,7 +169,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
 if rl_type == RlType.NONE:
     rl_err_msg = "Tab completion has been disabled since no supported version of readline was found\n"
     rl_err_msg += "To resolve this, install pyreadline on Windows or gnureadline on Mac\n"
-    sys.stderr.write(self.colorize(rl_err_msg, 'yellow'))
+    sys.stderr.write(rl_err_msg)
 
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
 if six.PY3:
