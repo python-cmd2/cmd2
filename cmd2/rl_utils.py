@@ -34,11 +34,13 @@ if 'pyreadline' in sys.modules:
     rl_type = RlType.PYREADLINE
 
 elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
-    rl_type = RlType.GNU
+    # We don't support libedit
+    if 'libedit' not in readline.__doc__:
+        rl_type = RlType.GNU
 
-    # Load the readline lib so we can access members of it
-    import ctypes
-    readline_lib = ctypes.CDLL(readline.__file__)
+        # Load the readline lib so we can access members of it
+        import ctypes
+        readline_lib = ctypes.CDLL(readline.__file__)
 
 
 def rl_force_redisplay() -> None:
