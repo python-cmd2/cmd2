@@ -1707,10 +1707,11 @@ def test_unalias_non_existing(base_app, capsys):
 
 @pytest.mark.parametrize('alias_name', [
     '">"',
-    '"no>pe"'
+    '"no>pe"',
     '"no spaces"',
     '"nopipe|"',
     '"noterm;"',
+    'noembedded"quotes',
 ])
 def test_create_invalid_alias(base_app, alias_name, capsys):
     run_cmd(base_app, 'alias {} help'.format(alias_name))

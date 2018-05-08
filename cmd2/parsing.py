@@ -141,7 +141,7 @@ class StatementParser:
             re.DOTALL | re.MULTILINE
         )
 
-        # aliases have to be a word, so make a regular expression
+        # commands have to be a word, so make a regular expression
         # that matches the first word in the line. This regex has three
         # parts:
         #     - the '\A\s*' matches the beginning of the string (even
@@ -157,19 +157,51 @@ class StatementParser:
         #       REDIRECTION_CHARS, one of the terminators, or the end of
         #       the string (\Z matches the end of the string even if it
         #       contains multiple lines)
-        second_group_items = []
-        second_group_items.extend(constants.REDIRECTION_CHARS)
-        second_group_items.extend(terminators)
+        #
+        invalid_command_chars = []
+        invalid_command_chars.extend(constants.QUOTES)
+        invalid_command_chars.extend(constants.REDIRECTION_CHARS)
+        invalid_command_chars.extend(terminators)
         # escape each item so it will for sure get treated as a literal
-        second_group_items = [re.escape(x) for x in second_group_items]
+        second_group_items = [re.escape(x) for x in invalid_command_chars]
         # add the whitespace and end of string, not escaped because they
         # are not literals
         second_group_items.extend([r'\s', r'\Z'])
         # join them up with a pipe
         second_group = '|'.join(second_group_items)
         # build the regular expression
-        expr = r'\A\s*(\S+?)({})'.format(second_group)
-        self.command_pattern = re.compile(expr)
+        expr = r'\A\s*(\S*?)({})'.format(second_group)
+        self._command_pattern = re.compile(expr)
+
+    def is_valid_command(self, word: str) -> Tuple[bool, str]:
+        """Determine whether a word is a valid alias.
+
+        Aliases can not include redirection characters, whitespace,
+        or termination characters.
+
+        If word is not a valid command, return False and a comma
+        separated string of characters that can not appear in a command.
+        This string is suitable for inclusion in an error message of your
+        choice:
+
+        valid, invalidchars = statement_parser.is_valid_command('>')
+        if not valid:
+            errmsg = "Aliases can not contain: {}".format(invalidchars)
+        """
+        valid = False
+
+        errmsg = 'whitespace, quotes, '
+        errchars = []
+        errchars.extend(constants.REDIRECTION_CHARS)
+        errchars.extend(self.terminators)
+        errmsg += ', '.join([shlex.quote(x) for x in errchars])
+
+        match = self._command_pattern.search(word)
+        if match:
+            if word == match.group(1):
+                valid = True
+                errmsg = None
+        return valid, errmsg
 
     def tokenize(self, line: str) -> List[str]:
         """Lex a string into a list of tokens.
@@ -344,16 +376,24 @@ class StatementParser:
 
         command = None
         args = None
-        match = self.command_pattern.search(line)
+        match = self._command_pattern.search(line)
         if match:
             # we got a match, extract the command
             command = match.group(1)
-            # the command_pattern regex is designed to match the spaces
+            # the match could be an empty string, if so, turn it into none
+            if not command:
+                command = None
+            # the _command_pattern regex is designed to match the spaces
             # between command and args with a second match group. Using
             # the end of the second match group ensures that args has
             # no leading whitespace. The rstrip() makes sure there is
             # no trailing whitespace
             args = line[match.end(2):].rstrip()
+            # if the command is none that means the input was either empty
+            # or something wierd like '>'. args should be None if we couldn't
+            # parse a command
+            if not command or not args:
+                args = None
 
         # build the statement
         # string representation of args must be an empty string instead of
@@ -375,11 +415,11 @@ class StatementParser:
             for cur_alias in tmp_aliases:
                 keep_expanding = False
                 # apply our regex to line
-                match = self.command_pattern.search(line)
+                match = self._command_pattern.search(line)
                 if match:
                     # we got a match, extract the command
                     command = match.group(1)
-                    if command == cur_alias:
+                    if command and command == cur_alias:
                         # rebuild line with the expanded alias
                         line = self.aliases[cur_alias] + match.group(2) + line[match.end(2):]
                         tmp_aliases.remove(cur_alias)

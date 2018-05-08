@@ -439,3 +439,27 @@ def test_parse_command_only_quoted_args(parser):
     assert statement.command == 'shell'
     assert statement.args == 'ls -al "/tmp/directory with spaces/doit.sh"'
     assert statement.command_and_args == line.replace('l', 'shell ls -al')
+
+@pytest.mark.parametrize('line', [
+    'helpalias > out.txt',
+    'helpalias>out.txt',
+    'helpalias >> out.txt',
+    'helpalias>>out.txt',
+    'help|less',
+    'helpalias;',
+])
+def test_parse_command_only_specialchars(parser, line):
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'help'
+
+@pytest.mark.parametrize('line', [
+    ';',
+    '>',
+    "'",
+    '"',
+    '|',
+])
+def test_parse_command_only_none(parser, line):
+    statement = parser.parse_command_only(line)
+    assert statement.command == None
+    assert statement.args == None

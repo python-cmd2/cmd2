@@ -730,22 +730,6 @@ class Cmd(cmd.Cmd):
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
 
-        # regular expression to test for invalid characters in aliases
-        # we will construct it dynamically, because some of the components
-        # like terminator characters, can change
-        invalid_items = []
-        invalid_items.extend(constants.REDIRECTION_CHARS)
-        invalid_items.extend(self.terminators)
-        # escape each item so it will for sure get treated as a literal
-        invalid_items = [re.escape(x) for x in invalid_items]
-        # don't allow whitespace
-        invalid_items.append(r'\s')
-        # join them up with a pipe to form a regular expression
-        # that looks something like r';|>|\||\s'
-        expr = '|'.join(invalid_items)
-        # and compile it into a pattern
-        self.invalid_alias_pattern = re.compile(expr)
-
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
             startup_script = os.path.expanduser(startup_script)
@@ -2396,15 +2380,17 @@ Usage:  Usage: alias [name] | [<name> <value>]
             name = arglist[0]
             value = ' '.join(arglist[1:])
 
-            # Validate the alias to ensure it doesn't include wierd characters
+            # Validate the alias to ensure it doesn't include weird characters
             # like terminators, output redirection, or whitespace
-            if self.invalid_alias_pattern.search(name):
-                self.perror('Alias names can not contain special characters.', traceback_war=False)
-                return
+            valid, invalidchars = self.statement_parser.is_valid_command(name)
+            if valid:
+                # Set the alias
+                self.aliases[name] = value
+                self.poutput("Alias {!r} created".format(name))
+            else:
+                errmsg = "Aliases can not contain: {}".format(invalidchars)
+                self.perror(errmsg, traceback_war=False)
 
-            # Set the alias
-            self.aliases[name] = value
-            self.poutput("Alias {!r} created".format(name))
 
     def complete_alias(self, text, line, begidx, endidx):
         """ Tab completion for alias """
