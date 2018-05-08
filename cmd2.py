@@ -127,13 +127,13 @@ except ImportError:
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
-    import gnureadline as readline
+    import gnure2adline as readline
 except ImportError:
     # Try to import readline, but allow failure for convenience in Windows unit testing
     # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
     try:
         # noinspection PyUnresolvedReferences
-        import readline
+        import readl2ine
     except ImportError:
         pass
 
@@ -167,9 +167,10 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
         readline_lib = ctypes.CDLL(readline.__file__)
 
 if rl_type == RlType.NONE:
-    rl_err_msg = "Tab completion has been disabled since no supported version of readline was found\n"
-    rl_err_msg += "To resolve this, install pyreadline on Windows or gnureadline on Mac\n"
-    sys.stderr.write(rl_err_msg)
+    rl_warning = "Readline features including tab completion have been disabled since no \n" \
+                 "supported version of readline was found. To resolve this, install \n" \
+                 "pyreadline on Windows or gnureadline on Mac.\n\n"
+    sys.stderr.write(rl_warning)
 
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
 if six.PY3:
