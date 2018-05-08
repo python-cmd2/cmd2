@@ -57,10 +57,10 @@ from cmd2.parsing import StatementParser, Statement
 # Set up readline
 from .rl_utils import rl_type, RlType
 if rl_type == RlType.NONE:
-    rl_err_msg = "Readline features including tab completion and history have been disabled since no \n" \
-                 "supported version of readline was found. To resolve this, install pyreadline on \n" \
-                 "Windows or gnureadline on Mac.\n\n"
-    sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_err_msg + Fore.RESET)
+    rl_warning = "Readline features including tab completion have been disabled since no \n" \
+                 "supported version of readline was found. To resolve this, install \n" \
+                 "pyreadline on Windows or gnureadline on Mac.\n\n"
+    sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_warning + Fore.RESET)
 else:
     from .rl_utils import rl_force_redisplay, readline
 
