@@ -16,7 +16,7 @@ from cmd2 import utils
 def parser():
     parser = StatementParser(
         allow_redirection=True,
-        terminators=[';'],
+        terminators=[';', '&'],
         multiline_commands=['multiline'],
         aliases={'helpalias': 'help',
                  '42': 'theanswer',
@@ -38,7 +38,13 @@ def test_parse_empty_string(parser):
     ('command /* with some comment */ arg', ['command', 'arg']),
     ('command arg1 arg2 # comment at the end', ['command', 'arg1', 'arg2']),
     ('42 arg1 arg2', ['theanswer', 'arg1', 'arg2']),
-    ('l', ['shell', 'ls', '-al'])
+    ('l', ['shell', 'ls', '-al']),
+    ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+    ('termbare; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+    ('termbare & > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
+    ('termbare& > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
+    ('help|less', ['help', '|', 'less']),
+    ('l|less', ['shell', 'ls', '-al', '|', 'less']),
 ])
 def test_tokenize(parser, line, tokens):
     tokens_to_test = parser.tokenize(line)
@@ -46,7 +52,7 @@ def test_tokenize(parser, line, tokens):
 
 def test_tokenize_unclosed_quotes(parser):
     with pytest.raises(ValueError):
-        tokens = parser.tokenize('command with "unclosed quotes')
+        _ = parser.tokenize('command with "unclosed quotes')
 
 @pytest.mark.parametrize('tokens,command,args', [
     ([], None, None),
@@ -69,18 +75,28 @@ def test_parse_single_word(parser, line):
     assert not statement.args
     assert statement.argv == [utils.strip_quotes(line)]
 
-def test_parse_word_plus_terminator(parser):
-    line = 'termbare;'
+@pytest.mark.parametrize('line,terminator', [
+    ('termbare;', ';'),
+    ('termbare ;', ';'),
+    ('termbare&', '&'),
+    ('termbare &', '&'),
+])
+def test_parse_word_plus_terminator(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.command == 'termbare'
-    assert statement.terminator == ';'
+    assert statement.terminator == terminator
     assert statement.argv == ['termbare']
 
-def test_parse_suffix_after_terminator(parser):
-    line = 'termbare; suffx'
+@pytest.mark.parametrize('line,terminator', [
+    ('termbare;  suffx', ';'),
+    ('termbare ;suffx', ';'),
+    ('termbare&  suffx', '&'),
+    ('termbare &suffx', '&'),
+])
+def test_parse_suffix_after_terminator(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.command == 'termbare'
-    assert statement.terminator == ';'
+    assert statement.terminator == terminator
     assert statement.suffix == 'suffx'
     assert statement.argv == ['termbare']
 
@@ -134,8 +150,12 @@ def test_parse_what_if_quoted_strings_seem_to_start_comments(parser):
     assert not statement.pipe_to
     assert statement.argv == ['what', 'if', 'quoted strings /* seem to ', 'start', 'comments?']
 
-def test_parse_simple_piped(parser):
-    statement = parser.parse('simple | piped')
+@pytest.mark.parametrize('line',[
+    'simple | piped',
+    'simple|piped',
+])
+def test_parse_simple_pipe(parser, line):
+    statement = parser.parse(line)
     assert statement.command == 'simple'
     assert not statement.args
     assert statement.argv == ['simple']
@@ -150,16 +170,29 @@ def test_parse_double_pipe_is_not_a_pipe(parser):
     assert not statement.pipe_to
 
 def test_parse_complex_pipe(parser):
-    line = 'command with args, terminator;sufx | piped'
+    line = 'command with args, terminator&sufx | piped'
     statement = parser.parse(line)
     assert statement.command == 'command'
     assert statement.args == "with args, terminator"
     assert statement.argv == ['command', 'with', 'args,', 'terminator']
-    assert statement.terminator == ';'
+    assert statement.terminator == '&'
     assert statement.suffix == 'sufx'
     assert statement.pipe_to == 'piped'
 
-def test_parse_output_redirect(parser):
+@pytest.mark.parametrize('line,output', [
+    ('help > out.txt', '>'),
+    ('help>out.txt', '>'),
+    ('help >> out.txt', '>>'),
+    ('help>>out.txt', '>>'),
+])
+def test_parse_redirect(parser,line, output):
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert not statement.args
+    assert statement.output == output
+    assert statement.output_to == 'out.txt'
+
+def test_parse_redirect_with_args(parser):
     line = 'output into > afile.txt'
     statement = parser.parse(line)
     assert statement.command == 'output'
@@ -168,7 +201,7 @@ def test_parse_output_redirect(parser):
     assert statement.output == '>'
     assert statement.output_to == 'afile.txt'
 
-def test_parse_output_redirect_with_dash_in_path(parser):
+def test_parse_redirect_with_dash_in_path(parser):
     line = 'output into > python-cmd2/afile.txt'
     statement = parser.parse(line)
     assert statement.command == 'output'
@@ -177,7 +210,7 @@ def test_parse_output_redirect_with_dash_in_path(parser):
     assert statement.output == '>'
     assert statement.output_to == 'python-cmd2/afile.txt'
 
-def test_parse_output_redirect_append(parser):
+def test_parse_redirect_append(parser):
     line = 'output appended to >> /tmp/afile.txt'
     statement = parser.parse(line)
     assert statement.command == 'output'
@@ -225,13 +258,16 @@ def test_parse_unfinished_multiliine_command(parser):
     assert statement.argv == ['multiline', 'has', '>', 'inside', 'an', 'unfinished', 'command']
     assert not statement.terminator
 
-def test_parse_multiline_command_ignores_redirectors_within_it(parser):
-    line = 'multiline has > inside;'
+@pytest.mark.parametrize('line,terminator',[
+    ('multiline has > inside;', ';'),
+    ('multiline has > inside &', '&'),
+])
+def test_parse_multiline_command_ignores_redirectors_within_it(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
     assert statement.args == 'has > inside'
     assert statement.argv == ['multiline', 'has', '>', 'inside']
-    assert statement.terminator == ';'
+    assert statement.terminator == terminator
 
 def test_parse_multiline_with_incomplete_comment(parser):
     """A terminator within a comment will be ignored and won't terminate a multiline command.
@@ -296,7 +332,7 @@ def test_parse_redirect_to_unicode_filename(parser):
 
 def test_parse_unclosed_quotes(parser):
     with pytest.raises(ValueError):
-        tokens = parser.tokenize("command with 'unclosed quotes")
+        _ = parser.tokenize("command with 'unclosed quotes")
 
 def test_empty_statement_raises_exception():
     app = cmd2.Cmd()
@@ -315,18 +351,48 @@ def test_empty_statement_raises_exception():
     ('!ls -al /tmp', 'shell', 'ls -al /tmp'),
     ('l', 'shell', 'ls -al')
 ])
-def test_alias_and_shortcut_expansion(parser, line, command, args):
+def test_parse_alias_and_shortcut_expansion(parser, line, command, args):
     statement = parser.parse(line)
     assert statement.command == command
     assert statement.args == args
 
-def test_alias_on_multiline_command(parser):
+def test_parse_alias_on_multiline_command(parser):
     line = 'anothermultiline has > inside an unfinished command'
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
     assert statement.command == 'multiline'
     assert statement.args == 'has > inside an unfinished command'
     assert not statement.terminator
+
+@pytest.mark.parametrize('line,output', [
+    ('helpalias > out.txt', '>'),
+    ('helpalias>out.txt', '>'),
+    ('helpalias >> out.txt', '>>'),
+    ('helpalias>>out.txt', '>>'),
+])
+def test_parse_alias_redirection(parser, line, output):
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert not statement.args
+    assert statement.output == output
+    assert statement.output_to == 'out.txt'
+
+@pytest.mark.parametrize('line', [
+    'helpalias | less',
+    'helpalias|less',
+])
+def test_parse_alias_pipe(parser, line):
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert not statement.args
+    assert statement.pipe_to == 'less'
+
+def test_parse_alias_terminator_no_whitespace(parser):
+    line = 'helpalias;'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert not statement.args
+    assert statement.terminator == ';'
 
 def test_parse_command_only_command_and_args(parser):
     line = 'help history'
@@ -373,3 +439,27 @@ def test_parse_command_only_quoted_args(parser):
     assert statement.command == 'shell'
     assert statement.args == 'ls -al "/tmp/directory with spaces/doit.sh"'
     assert statement.command_and_args == line.replace('l', 'shell ls -al')
+
+@pytest.mark.parametrize('line', [
+    'helpalias > out.txt',
+    'helpalias>out.txt',
+    'helpalias >> out.txt',
+    'helpalias>>out.txt',
+    'help|less',
+    'helpalias;',
+])
+def test_parse_command_only_specialchars(parser, line):
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'help'
+
+@pytest.mark.parametrize('line', [
+    ';',
+    '>',
+    "'",
+    '"',
+    '|',
+])
+def test_parse_command_only_none(parser, line):
+    statement = parser.parse_command_only(line)
+    assert statement.command == None
+    assert statement.args == None

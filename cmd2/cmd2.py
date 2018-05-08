@@ -2392,16 +2392,17 @@ Usage:  Usage: alias [name] | [<name> <value>]
             name = arglist[0]
             value = ' '.join(arglist[1:])
 
-            # Check for a valid name
-            for cur_char in name:
-                if cur_char not in self.identchars:
-                    self.perror("Alias names can only contain the following characters: {}".format(self.identchars),
-                                traceback_war=False)
-                    return
+            # Validate the alias to ensure it doesn't include weird characters
+            # like terminators, output redirection, or whitespace
+            valid, invalidchars = self.statement_parser.is_valid_command(name)
+            if valid:
+                # Set the alias
+                self.aliases[name] = value
+                self.poutput("Alias {!r} created".format(name))
+            else:
+                errmsg = "Aliases can not contain: {}".format(invalidchars)
+                self.perror(errmsg, traceback_war=False)
 
-            # Set the alias
-            self.aliases[name] = value
-            self.poutput("Alias {!r} created".format(name))
 
     def complete_alias(self, text, line, begidx, endidx):
         """ Tab completion for alias """
