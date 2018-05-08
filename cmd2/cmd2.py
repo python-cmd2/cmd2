@@ -57,12 +57,12 @@ from cmd2.parsing import StatementParser, Statement
 # Set up readline
 from .rl_utils import rl_type, RlType
 if rl_type == RlType.NONE:
-    rl_err_msg = "Tab completion has been disabled since no supported version of readline was found\n"
-    rl_err_msg += "To resolve this, install pyreadline on Windows or gnureadline on Mac\n"
+    rl_err_msg = "Readline features including tab completion and history have been disabled since no \n" \
+                 "supported version of readline was found. To resolve this, install pyreadline on \n" \
+                 "Windows or gnureadline on Mac.\n\n"
     sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_err_msg + Fore.RESET)
 else:
     from .rl_utils import rl_force_redisplay, readline
-    from .argparse_completer import AutoCompleter, ACArgumentParser
 
     if rl_type == RlType.PYREADLINE:
 
@@ -78,6 +78,8 @@ else:
         # Get the readline lib so we can make changes to it
         import ctypes
         from .rl_utils import readline_lib
+
+from .argparse_completer import AutoCompleter, ACArgumentParser
 
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
