@@ -52,6 +52,8 @@ import pyperclip
 from . import constants
 from . import utils
 
+from cmd2.parsing import StatementParser, Statement
+
 # Set up readline
 from .rl_utils import rl_type, RlType
 if rl_type == RlType.NONE:
@@ -60,25 +62,22 @@ if rl_type == RlType.NONE:
     sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_err_msg + Fore.RESET)
 else:
     from .rl_utils import rl_force_redisplay, readline
+    from .argparse_completer import AutoCompleter, ACArgumentParser
 
-from .argparse_completer import AutoCompleter, ACArgumentParser
+    if rl_type == RlType.PYREADLINE:
 
-from cmd2.parsing import StatementParser, Statement
+        # Save the original pyreadline display completion function since we need to override it and restore it
+        # noinspection PyProtectedMember
+        orig_pyreadline_display = readline.rl.mode._display_completions
 
-if rl_type == RlType.PYREADLINE:
+    elif rl_type == RlType.GNU:
 
-    # Save the original pyreadline display completion function since we need to override it and restore it
-    # noinspection PyProtectedMember
-    orig_pyreadline_display = readline.rl.mode._display_completions
+        # We need wcswidth to calculate display width of tab completions
+        from wcwidth import wcswidth
 
-elif rl_type == RlType.GNU:
-
-    # We need wcswidth to calculate display width of tab completions
-    from wcwidth import wcswidth
-
-    # Get the readline lib so we can make changes to it
-    import ctypes
-    from .rl_utils import readline_lib
+        # Get the readline lib so we can make changes to it
+        import ctypes
+        from .rl_utils import readline_lib
 
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
