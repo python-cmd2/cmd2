@@ -45,7 +45,8 @@ class Statement(str):
                             redirection, if any
     :type suffix:           str or None
     :var pipe_to:           if output was piped to a shell command, the shell command
-    :type pipe_to:          str or None
+                            as a list of tokens
+    :type pipe_to:          list
     :var output:            if output was redirected, the redirection token, i.e. '>>'
     :type output:           str or None
     :var output_to:         if output was redirected, the destination, usually a filename
@@ -283,12 +284,27 @@ class StatementParser:
                 argv = tokens
                 tokens = []
 
+        # check for a pipe to a shell process
+        # if there is a pipe, everything after the pipe needs to be passed
+        # to the shell, even redirected output
+        # this allows '(Cmd) say hello | wc > countit.txt'
+        try:
+            # find the first pipe if it exists
+            pipe_pos = tokens.index(constants.REDIRECTION_PIPE)
+            # save everything after the first pipe as tokens
+            pipe_to = tokens[pipe_pos+1:]
+            # remove all the tokens after the pipe
+            tokens = tokens[:pipe_pos]
+        except ValueError:
+            # no pipe in the tokens
+            pipe_to = None
+
         # check for output redirect
         output = None
         output_to = None
         try:
-            output_pos = tokens.index('>')
-            output = '>'
+            output_pos = tokens.index(constants.REDIRECTION_OUTPUT)
+            output = constants.REDIRECTION_OUTPUT
             output_to = ' '.join(tokens[output_pos+1:])
             # remove all the tokens after the output redirect
             tokens = tokens[:output_pos]
@@ -296,25 +312,13 @@ class StatementParser:
             pass
 
         try:
-            output_pos = tokens.index('>>')
-            output = '>>'
+            output_pos = tokens.index(constants.REDIRECTION_APPEND)
+            output = constants.REDIRECTION_APPEND
             output_to = ' '.join(tokens[output_pos+1:])
             # remove all tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
             pass
-
-        # check for pipes
-        try:
-            # find the first pipe if it exists
-            pipe_pos = tokens.index('|')
-            # save everything after the first pipe
-            pipe_to = ' '.join(tokens[pipe_pos+1:])
-            # remove all the tokens after the pipe
-            tokens = tokens[:pipe_pos]
-        except ValueError:
-            # no pipe in the tokens
-            pipe_to = None
 
         if terminator:
             # whatever is left is the suffix

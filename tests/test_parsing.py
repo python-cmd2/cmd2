@@ -159,7 +159,7 @@ def test_parse_simple_pipe(parser, line):
     assert statement.command == 'simple'
     assert not statement.args
     assert statement.argv == ['simple']
-    assert statement.pipe_to == 'piped'
+    assert statement.pipe_to == ['piped']
 
 def test_parse_double_pipe_is_not_a_pipe(parser):
     line = 'double-pipe || is not a pipe'
@@ -177,7 +177,7 @@ def test_parse_complex_pipe(parser):
     assert statement.argv == ['command', 'with', 'args,', 'terminator']
     assert statement.terminator == '&'
     assert statement.suffix == 'sufx'
-    assert statement.pipe_to == 'piped'
+    assert statement.pipe_to == ['piped']
 
 @pytest.mark.parametrize('line,output', [
     ('help > out.txt', '>'),
@@ -227,9 +227,9 @@ def test_parse_pipe_and_redirect(parser):
     assert statement.argv == ['output', 'into']
     assert statement.terminator == ';'
     assert statement.suffix == 'sufx'
-    assert statement.pipe_to == 'pipethrume plz'
-    assert statement.output == '>'
-    assert statement.output_to == 'afile.txt'
+    assert statement.pipe_to == ['pipethrume', 'plz', '>', 'afile.txt']
+    assert not statement.output
+    assert not statement.output_to
 
 def test_parse_output_to_paste_buffer(parser):
     line = 'output to paste buffer >> '
@@ -240,8 +240,9 @@ def test_parse_output_to_paste_buffer(parser):
     assert statement.output == '>>'
 
 def test_parse_redirect_inside_terminator(parser):
-    """The terminator designates the end of the commmand/arguments portion.  If a redirector
-    occurs before a terminator, then it will be treated as part of the arguments and not as a redirector."""
+    """The terminator designates the end of the commmand/arguments portion.
+    If a redirector occurs before a terminator, then it will be treated as
+    part of the arguments and not as a redirector."""
     line = 'has > inside;'
     statement = parser.parse(line)
     assert statement.command == 'has'
@@ -385,7 +386,7 @@ def test_parse_alias_pipe(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'help'
     assert not statement.args
-    assert statement.pipe_to == 'less'
+    assert statement.pipe_to == ['less']
 
 def test_parse_alias_terminator_no_whitespace(parser):
     line = 'helpalias;'

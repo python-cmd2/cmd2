@@ -10,12 +10,16 @@ commands whose names are listed in the
 parameter ``app.multiline_commands``.  These
 commands will be executed only
 after the user has entered a *terminator*.
-By default, the command terminators is
+By default, the command terminator is
 ``;``; replacing or appending to the list
 ``app.terminators`` allows different
 terminators.  A blank line
 is *always* considered a command terminator
 (cannot be overridden).
+
+In multiline commands, output redirection characters
+like ``>`` and ``|`` are part of the command
+arguments unless they appear after the terminator.
 
 
 Parsed statements
