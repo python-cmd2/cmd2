@@ -1148,29 +1148,26 @@ class Cmd(cmd.Cmd):
 
             if len(raw_tokens) > 1:
 
-                # Build a list of all redirection tokens
-                all_redirects = constants.REDIRECTION_CHARS + ['>>']
-
                 # Check if there are redirection strings prior to the token being completed
                 seen_pipe = False
                 has_redirection = False
 
                 for cur_token in raw_tokens[:-1]:
-                    if cur_token in all_redirects:
+                    if cur_token in constants.REDIRECTION_TOKENS:
                         has_redirection = True
 
-                        if cur_token == '|':
+                        if cur_token == constants.REDIRECTION_PIPE:
                             seen_pipe = True
 
                 # Get token prior to the one being completed
                 prior_token = raw_tokens[-2]
 
                 # If a pipe is right before the token being completed, complete a shell command as the piped process
-                if prior_token == '|':
+                if prior_token == constants.REDIRECTION_PIPE:
                     return self.shell_cmd_complete(text, line, begidx, endidx)
 
                 # Otherwise do path completion either as files to redirectors or arguments to the piped process
-                elif prior_token in all_redirects or seen_pipe:
+                elif prior_token in constants.REDIRECTION_TOKENS or seen_pipe:
                     return self.path_complete(text, line, begidx, endidx)
 
                 # If there were redirection strings anywhere on the command line, then we
