@@ -19,6 +19,7 @@
 * Changes
     * ``strip_ansi()`` and ``strip_quotes()`` functions have moved to new utils module
     * Several constants moved to new constants module
+    * Submenu support has been moved to a new [cmd2-submenu](https://github.com/python-cmd2/cmd2-submenu) plugin. If you use submenus, you will need to update your dependencies and modify your imports.
 * Deletions (potentially breaking changes)
     * Deleted all ``optparse`` code which had previously been deprecated in release 0.8.0
         * The ``options`` decorator no longer exists
