@@ -29,6 +29,7 @@
     * Deleted ``cmd_with_subs_completer``, ``get_subcommands``, and ``get_subcommand_completer``
         * Replaced by default AutoCompleter implementation for all commands using argparse
     * Deleted support for old method of calling application commands with ``cmd()`` and ``self``
+    * ``cmd2.redirector`` is no longer supported. Output redirection can only be done with '>' or '>>'
 * Python 2 no longer supported
     * ``cmd2`` now supports Python 3.4+
 

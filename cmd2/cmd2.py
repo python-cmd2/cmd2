@@ -338,7 +338,6 @@ class Cmd(cmd.Cmd):
     # Attributes used to configure the StatementParser, best not to change these at runtime
     blankLinesAllowed = False
     multiline_commands = []
-    redirector = '>'        # for sending output to file
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
     terminators = [';']
@@ -1149,29 +1148,26 @@ class Cmd(cmd.Cmd):
 
             if len(raw_tokens) > 1:
 
-                # Build a list of all redirection tokens
-                all_redirects = constants.REDIRECTION_CHARS + ['>>']
-
                 # Check if there are redirection strings prior to the token being completed
                 seen_pipe = False
                 has_redirection = False
 
                 for cur_token in raw_tokens[:-1]:
-                    if cur_token in all_redirects:
+                    if cur_token in constants.REDIRECTION_TOKENS:
                         has_redirection = True
 
-                        if cur_token == '|':
+                        if cur_token == constants.REDIRECTION_PIPE:
                             seen_pipe = True
 
                 # Get token prior to the one being completed
                 prior_token = raw_tokens[-2]
 
                 # If a pipe is right before the token being completed, complete a shell command as the piped process
-                if prior_token == '|':
+                if prior_token == constants.REDIRECTION_PIPE:
                     return self.shell_cmd_complete(text, line, begidx, endidx)
 
                 # Otherwise do path completion either as files to redirectors or arguments to the piped process
-                elif prior_token in all_redirects or seen_pipe:
+                elif prior_token in constants.REDIRECTION_TOKENS or seen_pipe:
                     return self.path_complete(text, line, begidx, endidx)
 
                 # If there were redirection strings anywhere on the command line, then we
@@ -1820,7 +1816,7 @@ class Cmd(cmd.Cmd):
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
-                self.pipe_proc = subprocess.Popen(shlex.split(statement.pipe_to), stdin=subproc_stdin)
+                self.pipe_proc = subprocess.Popen(statement.pipe_to, stdin=subproc_stdin)
             except Exception as ex:
                 # Restore stdout to what it was and close the pipe
                 self.stdout.close()
@@ -1834,24 +1830,30 @@ class Cmd(cmd.Cmd):
                 raise ex
         elif statement.output:
             if (not statement.output_to) and (not can_clip):
-                raise EnvironmentError('Cannot redirect to paste buffer; install ``xclip`` and re-run to enable')
+                raise EnvironmentError("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable")
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
             self.redirecting = True
             if statement.output_to:
+                # going to a file
                 mode = 'w'
-                if statement.output == 2 * self.redirector:
+                # statement.output can only contain
+                # REDIRECTION_APPEND or REDIRECTION_OUTPUT
+                if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
                 sys.stdout = self.stdout = open(os.path.expanduser(statement.output_to), mode)
             else:
+                # going to a paste buffer
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
-                if statement.output == '>>':
+                if statement.output == constants.REDIRECTION_APPEND:
                     self.poutput(get_paste_buffer())
 
     def _restore_output(self, statement):
-        """Handles restoring state after output redirection as well as the actual pipe operation if present.
+        """Handles restoring state after output redirection as well as
+        the actual pipe operation if present.
 
-        :param statement: Statement object which contains the parsed input from the user
+        :param statement: Statement object which contains the parsed
+                          input from the user
         """
         # If we have redirected output to a file or the clipboard or piped it to a shell command, then restore state
         if self.kept_state is not None:
