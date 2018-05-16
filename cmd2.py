@@ -127,13 +127,13 @@ except ImportError:
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
-    import gnure2adline as readline
+    import gnureadline as readline
 except ImportError:
     # Try to import readline, but allow failure for convenience in Windows unit testing
     # Note: If this actually fails, you should install readline on Linux or Mac or pyreadline on Windows
     try:
         # noinspection PyUnresolvedReferences
-        import readl2ine
+        import readline
     except ImportError:
         pass
 
