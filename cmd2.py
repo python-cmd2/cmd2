@@ -2849,10 +2849,13 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
     def complete_alias(self, text, line, begidx, endidx):
         """ Tab completion for alias """
+        alias_names = set(self.aliases.keys())
+        visible_commands = set(self.get_visible_commands())
+
         index_dict = \
             {
-                1: self.aliases,
-                2: self.get_visible_commands()
+                1: alias_names,
+                2: list(alias_names | visible_commands)
             }
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
