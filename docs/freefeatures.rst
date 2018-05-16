@@ -100,26 +100,8 @@ As in a Unix shell, output of a command can be redirected:
   - appended to a file with ``>>``, as in ``mycommand args >> filename.txt``
   - piped (``|``) as input to operating-system commands, as in
     ``mycommand args | wc``
-  - sent to the paste buffer, ready for the next Copy operation, by
-    ending with a bare ``>``, as in ``mycommand args >``..  Redirecting
-    to paste buffer requires software to be installed on the operating
-    system, pywin32_ on Windows or xclip_ on \*nix.
+  - sent to the operating system paste buffer, by ending with a bare ``>``, as in ``mycommand args >``. You can even append output to the current contents of the paste buffer by ending your command with ``>>``.
 
-If your application depends on mathematical syntax, ``>`` may be a bad
-choice for redirecting output - it will prevent you from using the
-greater-than sign in your actual user commands.  You can override your
-app's value of ``self.redirector`` to use a different string for output redirection::
-
-    class MyApp(cmd2.Cmd):
-        redirector = '->'
-
-::
-
-    (Cmd) say line1 -> out.txt
-    (Cmd) say line2 ->-> out.txt
-    (Cmd) !cat out.txt
-    line1
-    line2
 
 .. note::
 
@@ -136,8 +118,8 @@ app's value of ``self.redirector`` to use a different string for output redirect
    arguments after them from the command line arguments accordingly.  But output from a command will not be redirected
    to a file or piped to a shell command.
 
-.. _pywin32: http://sourceforge.net/projects/pywin32/
-.. _xclip: http://www.cyberciti.biz/faq/xclip-linux-insert-files-command-output-intoclipboard/
+If you need to include any of these redirection characters in your command,
+you can enclose them in quotation marks, ``mycommand 'with > in the argument'``.
 
 Python
 ======

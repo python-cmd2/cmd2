@@ -45,7 +45,8 @@ class Statement(str):
                             redirection, if any
     :type suffix:           str or None
     :var pipe_to:           if output was piped to a shell command, the shell command
-    :type pipe_to:          str or None
+                            as a list of tokens
+    :type pipe_to:          list
     :var output:            if output was redirected, the redirection token, i.e. '>>'
     :type output:           str or None
     :var output_to:         if output was redirected, the destination, usually a filename
@@ -81,7 +82,7 @@ class Statement(str):
         return rtn
 
 
-class StatementParser():
+class StatementParser:
     """Parse raw text into command components.
 
     Shortcuts is a list of tuples with each tuple containing the shortcut and the expansion.
@@ -93,7 +94,7 @@ class StatementParser():
             multiline_commands=None,
             aliases=None,
             shortcuts=None,
-        ):
+    ):
         self.allow_redirection = allow_redirection
         if terminators is None:
             self.terminators = [';']
@@ -141,21 +142,74 @@ class StatementParser():
             re.DOTALL | re.MULTILINE
         )
 
-        # aliases have to be a word, so make a regular expression
-        # that matches the first word in the line. This regex has two
-        # parts, the first parenthesis enclosed group matches one
-        # or more non-whitespace characters, and the second group
-        # matches either a whitespace character or the end of the
-        # string. We use \A and \Z to ensure we always match the
-        # beginning and end of a string that may have multiple
-        # lines
-        self.command_pattern = re.compile(r'\A(\S+)(\s|\Z)')
+        # commands have to be a word, so make a regular expression
+        # that matches the first word in the line. This regex has three
+        # parts:
+        #     - the '\A\s*' matches the beginning of the string (even
+        #       if contains multiple lines) and gobbles up any leading
+        #       whitespace
+        #     - the first parenthesis enclosed group matches one
+        #       or more non-whitespace characters with a non-greedy match
+        #       (that's what the '+?' part does). The non-greedy match
+        #       ensures that this first group doesn't include anything
+        #       matched by the second group
+        #     - the second parenthesis group must be dynamically created
+        #       because it needs to match either whitespace, something in
+        #       REDIRECTION_CHARS, one of the terminators, or the end of
+        #       the string (\Z matches the end of the string even if it
+        #       contains multiple lines)
+        #
+        invalid_command_chars = []
+        invalid_command_chars.extend(constants.QUOTES)
+        invalid_command_chars.extend(constants.REDIRECTION_CHARS)
+        invalid_command_chars.extend(terminators)
+        # escape each item so it will for sure get treated as a literal
+        second_group_items = [re.escape(x) for x in invalid_command_chars]
+        # add the whitespace and end of string, not escaped because they
+        # are not literals
+        second_group_items.extend([r'\s', r'\Z'])
+        # join them up with a pipe
+        second_group = '|'.join(second_group_items)
+        # build the regular expression
+        expr = r'\A\s*(\S*?)({})'.format(second_group)
+        self._command_pattern = re.compile(expr)
 
+    def is_valid_command(self, word: str) -> Tuple[bool, str]:
+        """Determine whether a word is a valid alias.
+
+        Aliases can not include redirection characters, whitespace,
+        or termination characters.
+
+        If word is not a valid command, return False and a comma
+        separated string of characters that can not appear in a command.
+        This string is suitable for inclusion in an error message of your
+        choice:
+
+        valid, invalidchars = statement_parser.is_valid_command('>')
+        if not valid:
+            errmsg = "Aliases can not contain: {}".format(invalidchars)
+        """
+        valid = False
+
+        errmsg = 'whitespace, quotes, '
+        errchars = []
+        errchars.extend(constants.REDIRECTION_CHARS)
+        errchars.extend(self.terminators)
+        errmsg += ', '.join([shlex.quote(x) for x in errchars])
+
+        match = self._command_pattern.search(word)
+        if match:
+            if word == match.group(1):
+                valid = True
+                errmsg = None
+        return valid, errmsg
 
     def tokenize(self, line: str) -> List[str]:
         """Lex a string into a list of tokens.
 
         Comments are removed, and shortcuts and aliases are expanded.
+
+        Raises ValueError if there are unclosed quotation marks.
         """
 
         # strip C-style comments
@@ -177,6 +231,8 @@ class StatementParser():
         """Tokenize the input and parse it into a Statement object, stripping
         comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
+
+        Raises ValueError if there are unclosed quotation marks.
         """
 
         # handle the special case/hardcoded terminator of a blank line
@@ -228,12 +284,27 @@ class StatementParser():
                 argv = tokens
                 tokens = []
 
+        # check for a pipe to a shell process
+        # if there is a pipe, everything after the pipe needs to be passed
+        # to the shell, even redirected output
+        # this allows '(Cmd) say hello | wc > countit.txt'
+        try:
+            # find the first pipe if it exists
+            pipe_pos = tokens.index(constants.REDIRECTION_PIPE)
+            # save everything after the first pipe as tokens
+            pipe_to = tokens[pipe_pos+1:]
+            # remove all the tokens after the pipe
+            tokens = tokens[:pipe_pos]
+        except ValueError:
+            # no pipe in the tokens
+            pipe_to = None
+
         # check for output redirect
         output = None
         output_to = None
         try:
-            output_pos = tokens.index('>')
-            output = '>'
+            output_pos = tokens.index(constants.REDIRECTION_OUTPUT)
+            output = constants.REDIRECTION_OUTPUT
             output_to = ' '.join(tokens[output_pos+1:])
             # remove all the tokens after the output redirect
             tokens = tokens[:output_pos]
@@ -241,25 +312,13 @@ class StatementParser():
             pass
 
         try:
-            output_pos = tokens.index('>>')
-            output = '>>'
+            output_pos = tokens.index(constants.REDIRECTION_APPEND)
+            output = constants.REDIRECTION_APPEND
             output_to = ' '.join(tokens[output_pos+1:])
             # remove all tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
             pass
-
-        # check for pipes
-        try:
-            # find the first pipe if it exists
-            pipe_pos = tokens.index('|')
-            # save everything after the first pipe
-            pipe_to = ' '.join(tokens[pipe_pos+1:])
-            # remove all the tokens after the pipe
-            tokens = tokens[:pipe_pos]
-        except ValueError:
-            # no pipe in the tokens
-            pipe_to = None
 
         if terminator:
             # whatever is left is the suffix
@@ -297,16 +356,48 @@ class StatementParser():
         return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
-        """Partially parse input into a Statement object. The command is
-        identified, and shortcuts and aliases are expanded.
+        """Partially parse input into a Statement object.
+
+        The command is identified, and shortcuts and aliases are expanded.
         Terminators, multiline commands, and output redirection are not
         parsed.
-        """
-        # lex the input into a list of tokens
-        tokens = self.tokenize(rawinput)
 
-        # parse out the command and everything else
-        (command, args) = self._command_and_args(tokens)
+        This method is used by tab completion code and therefore must not
+        generate an exception if there are unclosed quotes.
+
+        The Statement object returned by this method can at most contained
+        values in the following attributes:
+          - raw
+          - command
+          - args
+
+        Different from parse(), this method does not remove redundant whitespace
+        within statement.args. It does however, ensure args does not have leading
+        or trailing whitespace.
+        """
+        # expand shortcuts and aliases
+        line = self._expand(rawinput)
+
+        command = None
+        args = None
+        match = self._command_pattern.search(line)
+        if match:
+            # we got a match, extract the command
+            command = match.group(1)
+            # the match could be an empty string, if so, turn it into none
+            if not command:
+                command = None
+            # the _command_pattern regex is designed to match the spaces
+            # between command and args with a second match group. Using
+            # the end of the second match group ensures that args has
+            # no leading whitespace. The rstrip() makes sure there is
+            # no trailing whitespace
+            args = line[match.end(2):].rstrip()
+            # if the command is none that means the input was either empty
+            # or something wierd like '>'. args should be None if we couldn't
+            # parse a command
+            if not command or not args:
+                args = None
 
         # build the statement
         # string representation of args must be an empty string instead of
@@ -315,7 +406,6 @@ class StatementParser():
         statement.raw = rawinput
         statement.command = command
         statement.args = args
-        statement.argv = tokens
         return statement
 
     def _expand(self, line: str) -> str:
@@ -329,11 +419,11 @@ class StatementParser():
             for cur_alias in tmp_aliases:
                 keep_expanding = False
                 # apply our regex to line
-                match = self.command_pattern.search(line)
+                match = self._command_pattern.search(line)
                 if match:
                     # we got a match, extract the command
                     command = match.group(1)
-                    if command == cur_alias:
+                    if command and command == cur_alias:
                         # rebuild line with the expanded alias
                         line = self.aliases[cur_alias] + match.group(2) + line[match.end(2):]
                         tmp_aliases.remove(cur_alias)
@@ -342,7 +432,7 @@ class StatementParser():
 
         # expand shortcuts
         for (shortcut, expansion) in self.shortcuts:
-            if  line.startswith(shortcut):
+            if line.startswith(shortcut):
                 # If the next character after the shortcut isn't a space, then insert one
                 shortcut_len = len(shortcut)
                 if len(line) == shortcut_len or line[shortcut_len] != ' ':
@@ -370,7 +460,7 @@ class StatementParser():
         if len(tokens) > 1:
             args = ' '.join(tokens[1:])
 
-        return (command, args)
+        return command, args
 
     @staticmethod
     def _comment_replacer(match):
@@ -387,7 +477,7 @@ class StatementParser():
         # as word breaks when they are in unquoted strings. Each run of punctuation
         # characters is treated as a single token.
 
-        :param initial_tokens: the tokens as parsed by shlex
+        :param tokens: the tokens as parsed by shlex
         :return: the punctuated tokens
         """
         punctuation = []

@@ -887,7 +887,7 @@ def test_cmd2_subcmd_with_unknown_completion_nomatch(scu_app):
     assert first_match is None
 
 
-def test_cmd2_help_subcommand_completion_single(scu_app):
+def test_cmd2_help_subcommand_completion_single_scu(scu_app):
     text = 'base'
     line = 'help {}'.format(text)
     endidx = len(line)
@@ -895,7 +895,7 @@ def test_cmd2_help_subcommand_completion_single(scu_app):
     assert scu_app.complete_help(text, line, begidx, endidx) == ['base']
 
 
-def test_cmd2_help_subcommand_completion_multiple(scu_app):
+def test_cmd2_help_subcommand_completion_multiple_scu(scu_app):
     text = ''
     line = 'help base {}'.format(text)
     endidx = len(line)
@@ -905,7 +905,7 @@ def test_cmd2_help_subcommand_completion_multiple(scu_app):
     assert matches == ['bar', 'foo', 'sport']
 
 
-def test_cmd2_help_subcommand_completion_nomatch(scu_app):
+def test_cmd2_help_subcommand_completion_nomatch_scu(scu_app):
     text = 'z'
     line = 'help base {}'.format(text)
     endidx = len(line)
@@ -913,7 +913,7 @@ def test_cmd2_help_subcommand_completion_nomatch(scu_app):
     assert scu_app.complete_help(text, line, begidx, endidx) == []
 
 
-def test_subcommand_tab_completion(scu_app):
+def test_subcommand_tab_completion_scu(scu_app):
     # This makes sure the correct completer for the sport subcommand is called
     text = 'Foot'
     line = 'base sport {}'.format(text)
@@ -926,7 +926,7 @@ def test_subcommand_tab_completion(scu_app):
     assert first_match is not None and scu_app.completion_matches == ['Football ']
 
 
-def test_subcommand_tab_completion_with_no_completer(scu_app):
+def test_subcommand_tab_completion_with_no_completer_scu(scu_app):
     # This tests what happens when a subcommand has no completer
     # In this case, the foo subcommand has no completer defined
     text = 'Foot'
@@ -938,7 +938,7 @@ def test_subcommand_tab_completion_with_no_completer(scu_app):
     assert first_match is None
 
 
-def test_subcommand_tab_completion_space_in_text(scu_app):
+def test_subcommand_tab_completion_space_in_text_scu(scu_app):
     text = 'B'
     line = 'base sport "Space {}'.format(text)
     endidx = len(line)
@@ -949,124 +949,3 @@ def test_subcommand_tab_completion_space_in_text(scu_app):
     assert first_match is not None and \
            scu_app.completion_matches == ['Ball" '] and \
            scu_app.display_matches == ['Space Ball']
-
-####################################################
-
-
-class SecondLevel(cmd2.Cmd):
-    """To be used as a second level command class. """
-
-    def __init__(self, *args, **kwargs):
-        cmd2.Cmd.__init__(self, *args, **kwargs)
-        self.prompt = '2ndLevel '
-
-    def do_foo(self, line):
-        self.poutput("You called a command in SecondLevel with '%s'. " % line)
-
-    def help_foo(self):
-        self.poutput("This is a second level menu. Options are qwe, asd, zxc")
-
-    def complete_foo(self, text, line, begidx, endidx):
-        return [s for s in ['qwe', 'asd', 'zxc'] if s.startswith(text)]
-
-
-second_level_cmd = SecondLevel()
-
-
-@cmd2.AddSubmenu(second_level_cmd,
-                 command='second',
-                 require_predefined_shares=False)
-class SubmenuApp(cmd2.Cmd):
-    """To be used as the main / top level command class that will contain other submenus."""
-
-    def __init__(self, *args, **kwargs):
-        cmd2.Cmd.__init__(self, *args, **kwargs)
-        self.prompt = 'TopLevel '
-
-
-@pytest.fixture
-def sb_app():
-    app = SubmenuApp()
-    return app
-
-
-def test_cmd2_submenu_completion_single_end(sb_app):
-    text = 'f'
-    line = 'second {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, sb_app)
-
-    # It is at end of line, so extra space is present
-    assert first_match is not None and sb_app.completion_matches == ['foo ']
-
-
-def test_cmd2_submenu_completion_multiple(sb_app):
-    text = 'e'
-    line = 'second {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    expected = ['edit', 'eof', 'eos']
-    first_match = complete_tester(text, line, begidx, endidx, sb_app)
-
-    assert first_match is not None and sb_app.completion_matches == expected
-
-
-def test_cmd2_submenu_completion_nomatch(sb_app):
-    text = 'z'
-    line = 'second {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, sb_app)
-    assert first_match is None
-
-
-def test_cmd2_submenu_completion_after_submenu_match(sb_app):
-    text = 'a'
-    line = 'second foo {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, sb_app)
-    assert first_match is not None and sb_app.completion_matches == ['asd ']
-
-
-def test_cmd2_submenu_completion_after_submenu_nomatch(sb_app):
-    text = 'b'
-    line = 'second foo {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, sb_app)
-    assert first_match is None
-
-
-def test_cmd2_help_submenu_completion_multiple(sb_app):
-    text = 'p'
-    line = 'help second {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    matches = sorted(sb_app.complete_help(text, line, begidx, endidx))
-    assert matches == ['py', 'pyscript']
-
-
-def test_cmd2_help_submenu_completion_nomatch(sb_app):
-    text = 'fake'
-    line = 'help second {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-    assert sb_app.complete_help(text, line, begidx, endidx) == []
-
-
-def test_cmd2_help_submenu_completion_subcommands(sb_app):
-    text = 'p'
-    line = 'help second {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    matches = sorted(sb_app.complete_help(text, line, begidx, endidx))
-    assert matches == ['py', 'pyscript']
