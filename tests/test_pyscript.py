@@ -101,7 +101,14 @@ class PyscriptExample(Cmd):
 
     @with_argparser(bar_parser)
     def do_bar(self, args):
-        print('bar ' + str(args.__dict__))
+        out = 'bar '
+        arg_dict = args.__dict__
+        keys = list(arg_dict.keys())
+        keys.sort()
+        out += '{'
+        for key in keys:
+            out += "'{}':'{}'".format(key, arg_dict[key])
+        print(out)
 
 
 @pytest.fixture
@@ -160,7 +167,7 @@ def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
     ('foo aaa bbb -ccc -t -n', 'foo1.py'),
     ('foo 11 22 33 44 -ccc -t -n', 'foo2.py'),
     ('foo 11 22 33 44 55 66 -ccc', 'foo3.py'),
-    ('bar 11 22', 'bar1.py')
+    ('bar 11 22', 'bar1.py'),
 ])
 def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)
@@ -204,11 +211,30 @@ def test_pyscript_results(ps_app, capsys, request, pyscript_file, exp_out):
     assert exp_out in expected
 
 
-def test_pyscript_custom_name(ps_echo, capsys):
+@pytest.mark.parametrize('expected, pyscript_file', [
+    ("['_relative_load', 'alias', 'bar', 'cmd_echo', 'edit', 'eof', 'eos', 'foo', 'help', 'history', 'load', 'media', 'py', 'pyscript', 'quit', 'set', 'shell', 'shortcuts', 'unalias']",
+     'pyscript_dir1.py'),
+    ("['movies', 'shows']", 'pyscript_dir2.py')
+])
+def test_pyscript_dir(ps_app, capsys, request, expected, pyscript_file):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', pyscript_file)
+
+    run_cmd(ps_app, 'pyscript {}'.format(python_script))
+    out, _ = capsys.readouterr()
+    out = out.strip()
+    assert len(out) > 0
+    assert out == expected
+
+
+def test_pyscript_custom_name(ps_echo, capsys, request):
     message = 'blah!'
-    run_cmd(ps_echo, 'py custom.echo("{}")'.format(message))
+
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', 'custom_echo.py')
+
+    run_cmd(ps_echo, 'pyscript {}'.format(python_script))
     expected, _ = capsys.readouterr()
     assert len(expected) > 0
     expected = expected.splitlines()
     assert message == expected[0]
-

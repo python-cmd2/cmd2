@@ -41,13 +41,15 @@ class CommandResult(namedtuple_with_defaults('CmdResult', ['stdout', 'stderr', '
 
 class CopyStream(object):
     """Copies all data written to a stream"""
-    def __init__(self, inner_stream):
+    def __init__(self, inner_stream, echo):
         self.buffer = ''
         self.inner_stream = inner_stream
+        self.echo = echo
 
     def write(self, s):
         self.buffer += s
-        self.inner_stream.write(s)
+        if self.echo:
+            self.inner_stream.write(s)
 
     def read(self):
         raise NotImplementedError
@@ -62,12 +64,12 @@ class CopyStream(object):
             return getattr(self.inner_stream, item)
 
 
-def _exec_cmd(cmd2_app, func):
+def _exec_cmd(cmd2_app, func, echo):
     """Helper to encapsulate executing a command and capturing the results"""
-    copy_stdout = CopyStream(sys.stdout)
-    copy_stderr = CopyStream(sys.stderr)
+    copy_stdout = CopyStream(sys.stdout, echo)
+    copy_stderr = CopyStream(sys.stderr, echo)
 
-    copy_cmd_stdout = CopyStream(cmd2_app.stdout)
+    copy_cmd_stdout = CopyStream(cmd2_app.stdout, echo)
 
     cmd2_app._last_result = None
 
@@ -80,7 +82,7 @@ def _exec_cmd(cmd2_app, func):
         cmd2_app.stdout = copy_cmd_stdout.inner_stream
 
     # if stderr is empty, set it to None
-    stderr = copy_stderr if copy_stderr.buffer else None
+    stderr = copy_stderr.buffer if copy_stderr.buffer else None
 
     outbuf = copy_cmd_stdout.buffer if copy_cmd_stdout.buffer else copy_stdout.buffer
     result = CommandResult(stdout=outbuf, stderr=stderr, data=cmd2_app._last_result)
@@ -91,7 +93,8 @@ class ArgparseFunctor:
     """
     Encapsulates translating python object traversal
     """
-    def __init__(self, cmd2_app, item, parser):
+    def __init__(self, echo: bool, cmd2_app, item, parser):
+        self._echo = echo
         self._cmd2_app = cmd2_app
         self._item = item
         self._parser = parser
@@ -100,6 +103,14 @@ class ArgparseFunctor:
         self._args = {}
         # argparse object for the current command layer
         self.__current_subcommand_parser = parser
+
+    def __dir__(self):
+        """Returns a custom list of attribute names to match the sub-commands"""
+        commands = []
+        for action in self.__current_subcommand_parser._actions:
+            if not action.option_strings and isinstance(action, argparse._SubParsersAction):
+                commands.extend(action.choices)
+        return commands
 
     def __getattr__(self, item):
         """Search for a subcommand matching this item and update internal state to track the traversal"""
@@ -114,7 +125,6 @@ class ArgparseFunctor:
                     return self
 
         raise AttributeError(item)
-        # return super().__getattr__(item)
 
     def __call__(self, *args, **kwargs):
         """
@@ -251,9 +261,8 @@ class ArgparseFunctor:
 
         traverse_parser(self._parser)
 
-        # print('Command: {}'.format(cmd_str[0]))
+        return _exec_cmd(self._cmd2_app, functools.partial(func, cmd_str[0]), self._echo)
 
-        return _exec_cmd(self._cmd2_app, functools.partial(func, cmd_str[0]))
 
 class PyscriptBridge(object):
     """Preserves the legacy 'cmd' interface for pyscript while also providing a new python API wrapper for
@@ -261,6 +270,7 @@ class PyscriptBridge(object):
     def __init__(self, cmd2_app):
         self._cmd2_app = cmd2_app
         self._last_result = None
+        self.cmd_echo = False
 
     def __getattr__(self, item: str):
         """Check if the attribute is a command. If so, return a callable."""
@@ -274,13 +284,19 @@ class PyscriptBridge(object):
             except AttributeError:
                 # Command doesn't, we will accept parameters in the form of a command string
                 def wrap_func(args=''):
-                    return _exec_cmd(self._cmd2_app, functools.partial(func, args))
+                    return _exec_cmd(self._cmd2_app, functools.partial(func, args), self.cmd_echo)
                 return wrap_func
             else:
                 # Command does use argparse, return an object that can traverse the argparse subcommands and arguments
-                return ArgparseFunctor(self._cmd2_app, item, parser)
+                return ArgparseFunctor(self.cmd_echo, self._cmd2_app, item, parser)
 
-        raise AttributeError(item)
+        return super().__getattr__(item)
+
+    def __dir__(self):
+        """Return a custom set of attribute names to match the available commands"""
+        commands = list(self._cmd2_app.get_all_commands())
+        commands.insert(0, 'cmd_echo')
+        return commands
 
     def __call__(self, args):
-        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'))
+        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'), self.cmd_echo)
