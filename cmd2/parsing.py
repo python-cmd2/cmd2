@@ -256,7 +256,16 @@ class StatementParser:
                 if cur_token.startswith(test_terminator):
                     terminator_pos = pos
                     terminator = test_terminator
+                    # break the inner loop, and we want to break the
+                    # outer loop too
                     break
+            else:
+                # this else clause is only run if the inner loop
+                # didn't execute a break. If it didn't, then
+                # continue to the next iteration of the outer loop
+                continue
+            # inner loop was broken, break the outer
+            break
 
         if terminator:
             if terminator == LINE_FEED:

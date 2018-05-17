@@ -263,8 +263,8 @@ def test_parse_redirect_inside_terminator(parser):
 def test_parse_multiple_terminators(parser, line, terminator):
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
-    assert statement.args == 'has | inside'
-    assert statement.argv == ['multiline', 'has', '|', 'inside']
+    assert statement.args == 'with | inside'
+    assert statement.argv == ['multiline', 'with', '|', 'inside']
     assert statement.terminator == terminator
 
 def test_parse_unfinished_multiliine_command(parser):
