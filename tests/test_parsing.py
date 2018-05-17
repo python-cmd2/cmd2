@@ -250,6 +250,23 @@ def test_parse_redirect_inside_terminator(parser):
     assert statement.argv == ['has', '>', 'inside']
     assert statement.terminator == ';'
 
+@pytest.mark.parametrize('line,terminator',[
+    ('multiline with | inside;', ';'),
+    ('multiline with | inside ;', ';'),
+    ('multiline with | inside;;;', ';'),
+    ('multiline with | inside;; ;;', ';'),
+    ('multiline with | inside&', '&'),
+    ('multiline with | inside &;', '&'),
+    ('multiline with | inside&&;', '&'),
+    ('multiline with | inside &; &;', '&'),
+])
+def test_parse_multiple_terminators(parser, line, terminator):
+    statement = parser.parse(line)
+    assert statement.multiline_command == 'multiline'
+    assert statement.args == 'with | inside'
+    assert statement.argv == ['multiline', 'with', '|', 'inside']
+    assert statement.terminator == terminator
+
 def test_parse_unfinished_multiliine_command(parser):
     line = 'multiline has > inside an unfinished command'
     statement = parser.parse(line)
@@ -261,7 +278,10 @@ def test_parse_unfinished_multiliine_command(parser):
 
 @pytest.mark.parametrize('line,terminator',[
     ('multiline has > inside;', ';'),
+    ('multiline has > inside;;;', ';'),
+    ('multiline has > inside;; ;;', ';'),
     ('multiline has > inside &', '&'),
+    ('multiline has > inside & &', '&'),
 ])
 def test_parse_multiline_command_ignores_redirectors_within_it(parser, line, terminator):
     statement = parser.parse(line)
@@ -388,8 +408,15 @@ def test_parse_alias_pipe(parser, line):
     assert not statement.args
     assert statement.pipe_to == ['less']
 
-def test_parse_alias_terminator_no_whitespace(parser):
-    line = 'helpalias;'
+@pytest.mark.parametrize('line', [
+    'helpalias;',
+    'helpalias;;',
+    'helpalias;; ;',
+    'helpalias ;',
+    'helpalias ; ;',
+    'helpalias ;; ;',
+])
+def test_parse_alias_terminator_no_whitespace(parser, line):
     statement = parser.parse(line)
     assert statement.command == 'help'
     assert not statement.args
@@ -448,6 +475,8 @@ def test_parse_command_only_quoted_args(parser):
     'helpalias>>out.txt',
     'help|less',
     'helpalias;',
+    'help ;;',
+    'help; ;;',
 ])
 def test_parse_command_only_specialchars(parser, line):
     statement = parser.parse_command_only(line)
@@ -455,6 +484,11 @@ def test_parse_command_only_specialchars(parser, line):
 
 @pytest.mark.parametrize('line', [
     ';',
+    ';;',
+    ';; ;',
+    '&',
+    '& &',
+    ' && &',
     '>',
     "'",
     '"',
