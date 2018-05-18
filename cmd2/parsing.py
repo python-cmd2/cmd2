@@ -250,23 +250,27 @@ class StatementParser:
         tokens = self.tokenize(rawinput)
 
         # of the valid terminators, find the first one to occur in the input
-        terminator_pos = len(tokens)+1
-        for test_terminator in self.terminators:
-            try:
-                pos = tokens.index(test_terminator)
-                if pos < terminator_pos:
+        terminator_pos = len(tokens) + 1
+        for pos, cur_token in enumerate(tokens):
+            for test_terminator in self.terminators:
+                if cur_token.startswith(test_terminator):
                     terminator_pos = pos
                     terminator = test_terminator
+                    # break the inner loop, and we want to break the
+                    # outer loop too
                     break
-            except ValueError:
-                # the terminator is not in the tokens
-                pass
+            else:
+                # this else clause is only run if the inner loop
+                # didn't execute a break. If it didn't, then
+                # continue to the next iteration of the outer loop
+                continue
+            # inner loop was broken, break the outer
+            break
 
         if terminator:
             if terminator == LINE_FEED:
                 terminator_pos = len(tokens)+1
-            else:
-                terminator_pos = tokens.index(terminator)
+
             # everything before the first terminator is the command and the args
             argv = tokens[:terminator_pos]
             (command, args) = self._command_and_args(argv)
