@@ -8,10 +8,9 @@ Released under MIT license, see LICENSE file
 """
 
 import argparse
-from collections import namedtuple
 import functools
 import sys
-from typing import List, Tuple
+from typing import List, Tuple, Callable
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
@@ -41,7 +40,7 @@ class CommandResult(namedtuple_with_defaults('CmdResult', ['stdout', 'stderr', '
 
 class CopyStream(object):
     """Copies all data written to a stream"""
-    def __init__(self, inner_stream, echo):
+    def __init__(self, inner_stream, echo: bool = False):
         self.buffer = ''
         self.inner_stream = inner_stream
         self.echo = echo
@@ -57,14 +56,14 @@ class CopyStream(object):
     def clear(self):
         self.buffer = ''
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str):
         if item in self.__dict__:
             return self.__dict__[item]
         else:
             return getattr(self.inner_stream, item)
 
 
-def _exec_cmd(cmd2_app, func, echo):
+def _exec_cmd(cmd2_app, func: Callable, echo: bool):
     """Helper to encapsulate executing a command and capturing the results"""
     copy_stdout = CopyStream(sys.stdout, echo)
     copy_stderr = CopyStream(sys.stderr, echo)
@@ -93,10 +92,10 @@ class ArgparseFunctor:
     """
     Encapsulates translating python object traversal
     """
-    def __init__(self, echo: bool, cmd2_app, item, parser):
+    def __init__(self, echo: bool, cmd2_app, command_name: str, parser: argparse.ArgumentParser):
         self._echo = echo
         self._cmd2_app = cmd2_app
-        self._item = item
+        self._command_name = command_name
         self._parser = parser
 
         # Dictionary mapping command argument name to value
@@ -112,7 +111,7 @@ class ArgparseFunctor:
                 commands.extend(action.choices)
         return commands
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str):
         """Search for a subcommand matching this item and update internal state to track the traversal"""
         # look for sub-command under the current command/sub-command layer
         for action in self.__current_subcommand_parser._actions:
@@ -205,7 +204,7 @@ class ArgparseFunctor:
 
     def _run(self):
         # look up command function
-        func = getattr(self._cmd2_app, 'do_' + self._item)
+        func = getattr(self._cmd2_app, 'do_' + self._command_name)
 
         # reconstruct the cmd2 command from the python call
         cmd_str = ['']
@@ -298,5 +297,5 @@ class PyscriptBridge(object):
         commands.insert(0, 'cmd_echo')
         return commands
 
-    def __call__(self, args):
+    def __call__(self, args: str):
         return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'), self.cmd_echo)
