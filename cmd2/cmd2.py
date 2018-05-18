@@ -2532,7 +2532,10 @@ Usage:  Usage: unalias [-a] name [name ...]
 
             # rlcompleter will not need cmd2's custom display function
             # This will be restored by cmd2 the next time complete() is called
-            readline.set_completion_display_matches_hook(None)
+            if rl_type == RlType.GNU:
+                readline.set_completion_display_matches_hook(None)
+            elif rl_type == RlType.PYREADLINE:
+                readline.rl.mode._display_completions = orig_pyreadline_display
 
             # Import the rlcompleter module which will set the new completer function
             # noinspection PyUnresolvedReferences
