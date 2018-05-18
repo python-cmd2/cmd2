@@ -62,7 +62,7 @@ if rl_type == RlType.NONE:
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
     sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_warning + Fore.RESET)
 else:
-    from .rl_utils import rl_force_redisplay, readline
+    from .rl_utils import rl_force_redisplay, readline, rlcompleter_delims
 
     if rl_type == RlType.PYREADLINE:
 
@@ -75,9 +75,8 @@ else:
         # We need wcswidth to calculate display width of tab completions
         from wcwidth import wcswidth
 
-        # Get the readline lib so we can make changes to it
         import ctypes
-        from .rl_utils import readline_lib
+        from .rl_utils import readline_lib, rl_basic_quote_characters, rlcompleter_basic_quotes
 
 from .argparse_completer import AutoCompleter, ACArgumentParser
 
@@ -486,7 +485,7 @@ class Cmd(cmd.Cmd):
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
-        # using set_completion_defaults() and it is up to completer functions to set them before returning results.
+        # in reset_completion_defaults() and it is up to completer functions to set them before returning results.
         ############################################################################################################
 
         # If true and a single match is returned to complete(), then a space will be appended
@@ -651,7 +650,7 @@ class Cmd(cmd.Cmd):
 
     # -----  Methods related to tab completion -----
 
-    def set_completion_defaults(self):
+    def reset_completion_defaults(self):
         """
         Resets tab completion settings
         Needs to be called each time readline runs tab completion
@@ -1291,7 +1290,7 @@ class Cmd(cmd.Cmd):
         """
         if state == 0 and rl_type != RlType.NONE:
             unclosed_quote = ''
-            self.set_completion_defaults()
+            self.reset_completion_defaults()
 
             # lstrip the original line
             orig_line = readline.get_line_buffer()
@@ -2025,12 +2024,10 @@ class Cmd(cmd.Cmd):
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
                 # We don't need to worry about setting rl_completion_suppress_quote since we never declared
                 # rl_completer_quote_characters.
-                basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-                old_basic_quote_characters = ctypes.cast(basic_quote_characters, ctypes.c_void_p).value
-                basic_quote_characters.value = None
+                old_basic_quote_characters = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                rl_basic_quote_characters.value = None
 
             old_completer = readline.get_completer()
-            old_delims = readline.get_completer_delims()
             readline.set_completer(self.complete)
 
             # Break words on whitespace and quotes when tab completing
@@ -2040,6 +2037,7 @@ class Cmd(cmd.Cmd):
                 # If redirection is allowed, then break words on those characters too
                 completer_delims += ''.join(constants.REDIRECTION_CHARS)
 
+            old_delims = readline.get_completer_delims()
             readline.set_completer_delims(completer_delims)
 
             # Enable tab completion
@@ -2076,7 +2074,7 @@ class Cmd(cmd.Cmd):
 
                 if rl_type == RlType.GNU:
                     readline.set_completion_display_matches_hook(None)
-                    basic_quote_characters.value = old_basic_quote_characters
+                    rl_basic_quote_characters.value = old_basic_quote_characters
                 elif rl_type == RlType.PYREADLINE:
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
@@ -2520,6 +2518,29 @@ Usage:  Usage: unalias [-a] name [name ...]
             return
         self._in_py = True
 
+        # Override cmd2's tab completion settings to tab complete Python with rlcompleter module
+        if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
+
+            if rl_type == RlType.GNU:
+                old_basic_quote_characters = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                rl_basic_quote_characters.value = rlcompleter_basic_quotes
+
+            old_completer = readline.get_completer()
+
+            old_delims = readline.get_completer_delims()
+            readline.set_completer_delims(rlcompleter_delims)
+
+            # rlcompleter will not need cmd2's custom display function
+            # This will be restored by cmd2 the next time complete() is called
+            if rl_type == RlType.GNU:
+                readline.set_completion_display_matches_hook(None)
+            elif rl_type == RlType.PYREADLINE:
+                readline.rl.mode._display_completions = orig_pyreadline_display
+
+            # Import the rlcompleter module which will set the new completer function
+            # noinspection PyUnresolvedReferences
+            import rlcompleter
+
         try:
             arg = arg.strip()
 
@@ -2535,6 +2556,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 except IOError as e:
                     self.perror(e)
 
+            # noinspection PyUnusedLocal
             def onecmd_plus_hooks(cmd_plus_args):
                 """Run a cmd2.Cmd command from a Python script or the interactive Python console.
 
@@ -2583,6 +2605,15 @@ Usage:  Usage: unalias [-a] name [name ...]
             pass
         finally:
             self._in_py = False
+
+            if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
+                # Restore cmd2's tab completion settings
+                readline.set_completer(old_completer)
+                readline.set_completer_delims(old_delims)
+
+                if rl_type == RlType.GNU:
+                    rl_basic_quote_characters.value = old_basic_quote_characters
+
         return self._should_quit
 
     @with_argument_list

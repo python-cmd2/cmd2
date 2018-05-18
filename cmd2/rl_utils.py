@@ -26,7 +26,6 @@ class RlType(Enum):
 
 
 # Check what implementation of readline we are using
-
 rl_type = RlType.NONE
 
 # The order of this check matters since importing pyreadline will also show readline in the modules list
@@ -42,6 +41,20 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
         import ctypes
         readline_lib = ctypes.CDLL(readline.__file__)
 
+if rl_type != RlType.NONE:
+
+    # Save off original values for some readline parameters to use with the rlcompleter module
+    # when cmd2 enters an interactive Python shell via the py command. Saving these values off
+    # here assumes no changes have been made to readline yet.
+
+    # Save the original delimiters from Python's readline module. These are used by the rlcompleter
+    # module for completing valid Python identifiers and keywords.
+    rlcompleter_delims = readline.get_completer_delims()
+
+    if rl_type == RlType.GNU:
+        # Save the original basic quote characters of readline to use with rlcompleter module.
+        rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+        rlcompleter_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
 
 def rl_force_redisplay() -> None:
     """
