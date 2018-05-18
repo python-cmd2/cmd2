@@ -472,8 +472,23 @@ class AutoCompleter(object):
         if action.dest in self._arg_choices:
             arg_choices = self._arg_choices[action.dest]
 
-            if isinstance(arg_choices, tuple) and len(arg_choices) > 0 and callable(arg_choices[0]):
-                completer = arg_choices[0]
+            # if arg_choices is a tuple
+            #   Let's see if it's a custom completion function.  If it is, return what it provides
+            # To do this, we make sure the first element is either a callable
+            #   or it's the name of a callable in the application
+            if isinstance(arg_choices, tuple) and len(arg_choices) > 0 and \
+                    (callable(arg_choices[0]) or
+                         (isinstance(arg_choices[0], str) and hasattr(self._cmd2_app, arg_choices[0]) and
+                          callable(getattr(self._cmd2_app, arg_choices[0]))
+                          )
+                     ):
+
+                if callable(arg_choices[0]):
+                    completer = arg_choices[0]
+                elif isinstance(arg_choices[0], str) and callable(getattr(self._cmd2_app, arg_choices[0])):
+                    completer = getattr(self._cmd2_app, arg_choices[0])
+
+                # extract the positional and keyword arguments from the tuple
                 list_args = None
                 kw_args = None
                 for index in range(1, len(arg_choices)):
@@ -481,14 +496,19 @@ class AutoCompleter(object):
                         list_args = arg_choices[index]
                     elif isinstance(arg_choices[index], dict):
                         kw_args = arg_choices[index]
-                if list_args is not None and kw_args is not None:
-                    return completer(text, line, begidx, endidx, *list_args, **kw_args)
-                elif list_args is not None:
-                    return completer(text, line, begidx, endidx, *list_args)
-                elif kw_args is not None:
-                    return completer(text, line, begidx, endidx, **kw_args)
-                else:
-                    return completer(text, line, begidx, endidx)
+                try:
+                    # call the provided function differently depending on the provided positional and keyword arguments
+                    if list_args is not None and kw_args is not None:
+                        return completer(text, line, begidx, endidx, *list_args, **kw_args)
+                    elif list_args is not None:
+                        return completer(text, line, begidx, endidx, *list_args)
+                    elif kw_args is not None:
+                        return completer(text, line, begidx, endidx, **kw_args)
+                    else:
+                        return completer(text, line, begidx, endidx)
+                except TypeError:
+                    # assume this is due to an incorrect function signature, return nothing.
+                    return []
             else:
                 return AutoCompleter.basic_complete(text, line, begidx, endidx,
                                                     self._resolve_choices_for_arg(action, used_values))
@@ -499,6 +519,16 @@ class AutoCompleter(object):
         if action.dest in self._arg_choices:
             args = self._arg_choices[action.dest]
 
+            # is the argument a string? If so, see if we can find an attribute in the
+            # application matching the string.
+            if isinstance(args, str):
+                try:
+                    args = getattr(self._cmd2_app, args)
+                except AttributeError:
+                    # Couldn't find anything matching the name
+                    return []
+
+            # is the provided argument a callable. If so, call it
             if callable(args):
                 try:
                     if self._cmd2_app is not None:

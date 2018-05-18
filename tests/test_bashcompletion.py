@@ -139,15 +139,13 @@ def test_invalid_ifs(parser1, mock):
 @pytest.mark.parametrize('comp_line, exp_out, exp_err', [
     ('media ', 'movies\013shows', ''),
     ('media mo', 'movies', ''),
+    ('media movies list -a "J', '"John Boyega"\013"Jake Lloyd"', ''),
+    ('media movies list ', '', ''),
     ('media movies add ', '\013\013 ', '''
 Hint:
   TITLE                   Movie Title'''),
-    ('media movies list -a "J', '"John Boyega"\013"Jake Lloyd"', ''),
-    ('media movies list ', '', '')
 ])
 def test_commands(parser1, capfd, mock, comp_line, exp_out, exp_err):
-    completer = CompletionFinder()
-
     mock.patch.dict(os.environ, {'_ARGCOMPLETE': '1',
                                  '_ARGCOMPLETE_IFS': '\013',
                                  'COMP_TYPE': '63',
@@ -157,6 +155,8 @@ def test_commands(parser1, capfd, mock, comp_line, exp_out, exp_err):
     mock.patch.object(os, 'fdopen', my_fdopen)
 
     with pytest.raises(SystemExit):
+        completer = CompletionFinder()
+
         choices = {'actor': query_actors,  # function
                    }
         autocompleter = AutoCompleter(parser1, arg_choices=choices)

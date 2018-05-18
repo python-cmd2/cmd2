@@ -96,6 +96,15 @@ class TabCompleteExample(cmd2.Cmd):
                                  },
                      }
 
+    file_list = \
+        [
+            '/home/user/file.db',
+            '/home/user/file space.db',
+            '/home/user/another.db',
+            '/home/other user/maps.db',
+            '/home/other user/tests.db'
+        ]
+
     def instance_query_actors(self) -> List[str]:
         """Simulating a function that queries and returns a completion values"""
         return actors
@@ -225,9 +234,18 @@ class TabCompleteExample(cmd2.Cmd):
                                                          required=True)
     actor_action = vid_movies_add_parser.add_argument('actor', help='Actors', nargs='*')
 
+    vid_movies_load_parser = vid_movies_commands_subparsers.add_parser('load')
+    movie_file_action = vid_movies_load_parser.add_argument('movie_file', help='Movie database')
+
     # tag the action objects with completion providers. This can be a collection or a callable
     setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
-    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, instance_query_actors)
+    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, 'instance_query_actors')
+
+    # tag the file property with a custom completion function 'delimeter_complete' provided by cmd2.
+    setattr(movie_file_action, argparse_completer.ACTION_ARG_CHOICES,
+            ('delimiter_complete',
+             {'delimiter': '/',
+              'match_against': file_list}))
 
     vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
 

@@ -246,7 +246,7 @@ def test_autcomp_pos_consumed(cmd2_app):
 
 def test_autcomp_pos_after_flag(cmd2_app):
     text = 'Joh'
-    line = 'media movies add -d "George Lucas" -- "Han Solo" PG "Emilia Clarke" "{}'.format(text)
+    line = 'video movies add -d "George Lucas" -- "Han Solo" PG "Emilia Clarke" "{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
