@@ -406,21 +406,26 @@ def test_history_output_file(base_app):
         content = normalize(f.read())
     assert content == expected
 
-def test_history_edit(base_app, monkeypatch):
+def test_history_edit(base_app, mock):
     # Set a fake editor just to make sure we have one.  We aren't really
     # going to call it due to the mock
     base_app.editor = 'fooedit'
 
     # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
+    count = [0]
+
+    def fake_system(*args, **kwargs):
+        count[0] += 1
+
+    mock.patch.object(os, 'system', fake_system)
 
     # Run help command just so we have a command in history
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'history -e 1')
 
     # We have an editor, so should expect a system call
-    m.assert_called_once()
+    assert count[0] == 1
+
 
 def test_history_run_all_commands(base_app):
     # make sure we refuse to run all commands as a default
@@ -819,29 +824,36 @@ def test_edit_file_with_spaces(base_app, request, monkeypatch):
     # We think we have an editor, so should expect a system call
     m.assert_called_once_with('"{}" "{}"'.format(base_app.editor, filename))
 
-def test_edit_blank(base_app, monkeypatch):
+def test_edit_blank(base_app, mock):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
+    count = [0]
+
+    def fake_system(*args, **kwargs):
+        count[0] += 1
+
+    mock.patch.object(os, 'system', fake_system)
 
     run_cmd(base_app, 'edit')
 
     # We have an editor, so should expect a system call
-    m.assert_called_once()
+    assert count[0] == 1
 
 
-def test_base_py_interactive(base_app):
+def test_base_py_interactive(base_app, mock):
     # Mock out the InteractiveConsole.interact() call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='interact')
-    InteractiveConsole.interact = m
+    count = [0]
+
+    def fake_interact(*args, **kwargs):
+        count[0] += 1
+
+    mock.patch.object(InteractiveConsole, 'interact', fake_interact)
 
     run_cmd(base_app, "py")
 
     # Make sure our mock was called once and only once
-    m.assert_called_once()
+    assert count[0] == 1
 
 
 def test_exclude_from_history(base_app, monkeypatch):

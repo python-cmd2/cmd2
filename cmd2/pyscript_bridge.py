@@ -230,7 +230,7 @@ class ArgparseFunctor:
             if action.option_strings:
                 cmd_str[0] += '{} '.format(action.option_strings[0])
 
-            if isinstance(value, List) or isinstance(value, Tuple):
+            if isinstance(value, List) or isinstance(value, tuple):
                 for item in value:
                     item = str(item).strip()
                     if ' ' in item:
@@ -250,7 +250,7 @@ class ArgparseFunctor:
                         cmd_str[0] += '{} '.format(self._args[action.dest])
                         traverse_parser(action.choices[self._args[action.dest]])
                     elif isinstance(action, argparse._AppendAction):
-                        if isinstance(self._args[action.dest], List) or isinstance(self._args[action.dest], Tuple):
+                        if isinstance(self._args[action.dest], list) or isinstance(self._args[action.dest], tuple):
                             for values in self._args[action.dest]:
                                 process_flag(action, values)
                         else:

@@ -235,17 +235,22 @@ class TabCompleteExample(cmd2.Cmd):
     actor_action = vid_movies_add_parser.add_argument('actor', help='Actors', nargs='*')
 
     vid_movies_load_parser = vid_movies_commands_subparsers.add_parser('load')
-    movie_file_action = vid_movies_load_parser.add_argument('movie_file', help='Movie database')
+    vid_movie_file_action = vid_movies_load_parser.add_argument('movie_file', help='Movie database')
+
+    vid_movies_read_parser = vid_movies_commands_subparsers.add_parser('read')
+    vid_movie_fread_action = vid_movies_read_parser.add_argument('movie_file', help='Movie database')
 
     # tag the action objects with completion providers. This can be a collection or a callable
     setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
     setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, 'instance_query_actors')
 
     # tag the file property with a custom completion function 'delimeter_complete' provided by cmd2.
-    setattr(movie_file_action, argparse_completer.ACTION_ARG_CHOICES,
+    setattr(vid_movie_file_action, argparse_completer.ACTION_ARG_CHOICES,
             ('delimiter_complete',
              {'delimiter': '/',
               'match_against': file_list}))
+    setattr(vid_movie_fread_action, argparse_completer.ACTION_ARG_CHOICES,
+            ('path_complete', [False, False]))
 
     vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
 
@@ -324,6 +329,9 @@ class TabCompleteExample(cmd2.Cmd):
 
     movies_delete_parser = movies_commands_subparsers.add_parser('delete')
 
+    movies_load_parser = movies_commands_subparsers.add_parser('load')
+    movie_file_action = movies_load_parser.add_argument('movie_file', help='Movie database')
+
     shows_parser = media_types_subparsers.add_parser('shows')
     shows_parser.set_defaults(func=_do_media_shows)
 
@@ -351,7 +359,8 @@ class TabCompleteExample(cmd2.Cmd):
     def complete_media(self, text, line, begidx, endidx):
         """ Adds tab completion to media"""
         choices = {'actor': query_actors,  # function
-                   'director': TabCompleteExample.static_list_directors  # static list
+                   'director': TabCompleteExample.static_list_directors,  # static list
+                   'movie_file': (self.path_complete, [False, False])
                    }
         completer = argparse_completer.AutoCompleter(TabCompleteExample.media_parser, arg_choices=choices)
 

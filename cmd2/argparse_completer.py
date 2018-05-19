@@ -565,7 +565,10 @@ class AutoCompleter(object):
 
             prefix = '{}{}'.format(flags, param)
         else:
-            prefix = '{}'.format(str(action.dest).upper())
+            if action.dest != SUPPRESS:
+                prefix = '{}'.format(str(action.dest).upper())
+            else:
+                prefix = ''
 
         prefix = '  {0: <{width}}    '.format(prefix, width=20)
         pref_len = len(prefix)
