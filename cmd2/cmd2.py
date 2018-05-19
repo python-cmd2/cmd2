@@ -2630,9 +2630,21 @@ Paths or arguments that contain spaces must be enclosed in quotes
             Run python code from external files with ``run filename.py``
             End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
             """
-            banner = 'Entering an embedded IPython shell type quit() or <Ctrl>-d to exit ...'
-            exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
-            embed(banner1=banner, exit_msg=exit_msg)
+            from .pyscript_bridge import PyscriptBridge
+            bridge = PyscriptBridge(self)
+
+            if self.locals_in_py:
+                def load_ipy(self, app):
+                    banner = 'Entering an embedded IPython shell type quit() or <Ctrl>-d to exit ...'
+                    exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
+                    embed(banner1=banner, exit_msg=exit_msg)
+                load_ipy(self, bridge)
+            else:
+                def load_ipy(app):
+                    banner = 'Entering an embedded IPython shell type quit() or <Ctrl>-d to exit ...'
+                    exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
+                    embed(banner1=banner, exit_msg=exit_msg)
+                load_ipy(bridge)
 
     history_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     history_parser_group = history_parser.add_mutually_exclusive_group()
