@@ -168,7 +168,7 @@ def test_autocomp_subcmd_nested(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['add', 'delete', 'list']
+           cmd2_app.completion_matches == ['add', 'delete', 'list', 'load']
 
 
 def test_autocomp_subcmd_flag_choices_append(cmd2_app):
