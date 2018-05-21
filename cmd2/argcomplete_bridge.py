@@ -6,10 +6,15 @@ try:
     import argcomplete
 except ImportError:  # pragma: no cover
     # not installed, skip the rest of the file
-    pass
-
+    DEFAULT_COMPLETER = None
 else:
     # argcomplete is installed
+
+    # Newer versions of argcomplete have FilesCompleter at top level, older versions only have it under completers
+    try:
+        DEFAULT_COMPLETER = argcomplete.FilesCompleter()
+    except AttributeError:
+        DEFAULT_COMPLETER = argcomplete.completers.FilesCompleter()
 
     from contextlib import redirect_stdout
     import copy
@@ -102,7 +107,7 @@ else:
 
         def __call__(self, argument_parser, completer=None, always_complete_options=True, exit_method=os._exit, output_stream=None,
                      exclude=None, validator=None, print_suppressed=False, append_space=None,
-                     default_completer=argcomplete.FilesCompleter()):
+                     default_completer=DEFAULT_COMPLETER):
             """
             :param argument_parser: The argument parser to autocomplete on
             :type argument_parser: :class:`argparse.ArgumentParser`
@@ -140,9 +145,14 @@ else:
             added to argcomplete.safe_actions, if their values are wanted in the ``parsed_args`` completer argument, or
             their execution is otherwise desirable.
             """
-            self.__init__(argument_parser, always_complete_options=always_complete_options, exclude=exclude,
-                          validator=validator, print_suppressed=print_suppressed, append_space=append_space,
-                          default_completer=default_completer)
+            # Older versions of argcomplete have fewer keyword arguments
+            if sys.version_info >= (3, 5):
+                self.__init__(argument_parser, always_complete_options=always_complete_options, exclude=exclude,
+                            validator=validator, print_suppressed=print_suppressed, append_space=append_space,
+                            default_completer=default_completer)
+            else:
+                self.__init__(argument_parser, always_complete_options=always_complete_options, exclude=exclude,
+                            validator=validator, print_suppressed=print_suppressed)
 
             if "_ARGCOMPLETE" not in os.environ:
                 # not an argument completion invocation
