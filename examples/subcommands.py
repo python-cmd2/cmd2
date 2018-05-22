@@ -19,6 +19,10 @@ base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcomma
 parser_foo = base_subparsers.add_parser('foo', help='foo help')
 parser_foo.add_argument('-x', type=int, default=1, help='integer')
 parser_foo.add_argument('y', type=float, help='float')
+input_file = parser_foo.add_argument('input_file', type=str, help='Input File')
+if __name__ == '__main__':
+    from cmd2.argcomplete_bridge import bash_complete
+    bash_complete(input_file)
 
 # create the parser for the "bar" subcommand
 parser_bar = base_subparsers.add_parser('bar', help='bar help')

@@ -16,6 +16,7 @@ else:
     except AttributeError:
         DEFAULT_COMPLETER = argcomplete.completers.FilesCompleter()
 
+    from cmd2.argparse_completer import ACTION_ARG_CHOICES, ACTION_SUPPRESS_HINT
     from contextlib import redirect_stdout
     import copy
     from io import StringIO
@@ -245,7 +246,10 @@ else:
                 if comp_type == 63:  # type is 63 for second tab press
                     print(outstr.rstrip(), file=argcomplete.debug_stream, end='')
 
-                output_stream.write(ifs.join([ifs, ' ']).encode(argcomplete.sys_encoding))
+                if completions is not None:
+                    output_stream.write(ifs.join([ifs, ' ']).encode(argcomplete.sys_encoding))
+                else:
+                    output_stream.write(ifs.join([]).encode(argcomplete.sys_encoding))
             else:
                 # if completions is None we assume we don't know how to handle it so let bash
                 # go forward with normal filesystem completion
@@ -253,3 +257,11 @@ else:
             output_stream.flush()
             argcomplete.debug_stream.flush()
             exit_method(0)
+
+
+    def bash_complete(action, show_hint: bool=True):
+        """Helper function to configure an argparse action to fall back to bash completion"""
+        def complete_none(*args, **kwargs):
+            return None
+        setattr(action, ACTION_SUPPRESS_HINT, not show_hint)
+        setattr(action, ACTION_ARG_CHOICES, (complete_none,))
