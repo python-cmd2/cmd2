@@ -486,7 +486,7 @@ class Cmd(cmd.Cmd):
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
-        # using set_completion_defaults() and it is up to completer functions to set them before returning results.
+        # in reset_completion_defaults() and it is up to completer functions to set them before returning results.
         ############################################################################################################
 
         # If true and a single match is returned to complete(), then a space will be appended
@@ -651,7 +651,7 @@ class Cmd(cmd.Cmd):
 
     # -----  Methods related to tab completion -----
 
-    def set_completion_defaults(self):
+    def reset_completion_defaults(self):
         """
         Resets tab completion settings
         Needs to be called each time readline runs tab completion
@@ -1291,7 +1291,7 @@ class Cmd(cmd.Cmd):
         """
         if state == 0 and rl_type != RlType.NONE:
             unclosed_quote = ''
-            self.set_completion_defaults()
+            self.reset_completion_defaults()
 
             # lstrip the original line
             orig_line = readline.get_line_buffer()
@@ -2025,12 +2025,11 @@ class Cmd(cmd.Cmd):
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
                 # We don't need to worry about setting rl_completion_suppress_quote since we never declared
                 # rl_completer_quote_characters.
-                basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-                old_basic_quote_characters = ctypes.cast(basic_quote_characters, ctypes.c_void_p).value
-                basic_quote_characters.value = None
+                rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+                old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                rl_basic_quote_characters.value = None
 
             old_completer = readline.get_completer()
-            old_delims = readline.get_completer_delims()
             readline.set_completer(self.complete)
 
             # Break words on whitespace and quotes when tab completing
@@ -2040,6 +2039,7 @@ class Cmd(cmd.Cmd):
                 # If redirection is allowed, then break words on those characters too
                 completer_delims += ''.join(constants.REDIRECTION_CHARS)
 
+            old_delims = readline.get_completer_delims()
             readline.set_completer_delims(completer_delims)
 
             # Enable tab completion
@@ -2076,7 +2076,7 @@ class Cmd(cmd.Cmd):
 
                 if rl_type == RlType.GNU:
                     readline.set_completion_display_matches_hook(None)
-                    basic_quote_characters.value = old_basic_quote_characters
+                    rl_basic_quote_characters.value = old_basic_quotes
                 elif rl_type == RlType.PYREADLINE:
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
@@ -2535,6 +2535,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 except IOError as e:
                     self.perror(e)
 
+            # noinspection PyUnusedLocal
             def onecmd_plus_hooks(cmd_plus_args):
                 """Run a cmd2.Cmd command from a Python script or the interactive Python console.
 
@@ -2556,6 +2557,8 @@ Usage:  Usage: unalias [-a] name [name ...]
 
             if arg:
                 interp.runcode(arg)
+
+            # If there are no args, then we will open an interactive Python console
             else:
                 # noinspection PyShadowingBuiltins
                 def quit():
@@ -2567,6 +2570,25 @@ Usage:  Usage: unalias [-a] name [name ...]
 
                 keepstate = None
                 try:
+                    if rl_type != RlType.NONE:
+                        # Save cmd2 history
+                        saved_cmd2_history = []
+                        for i in range(1, readline.get_current_history_length() + 1):
+                            saved_cmd2_history.append(readline.get_history_item(i))
+
+                        # Keep a list of commands run in the Python console
+                        # noinspection PyAttributeOutsideInit
+                        self.py_history = getattr(self, 'py_history', [])
+
+                        # Restore py's history
+                        readline.clear_history()
+                        for item in self.py_history:
+                            readline.add_history(item)
+
+                        if self.use_rawinput and self.completekey:
+                            # Disable tab completion while in interactive Python shell
+                            readline.parse_and_bind(self.completekey + ": ")
+
                     cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                     keepstate = Statekeeper(sys, ('stdin', 'stdout'))
                     sys.stdout = self.stdout
@@ -2577,8 +2599,24 @@ Usage:  Usage: unalias [-a] name [name ...]
                                             docstr))
                 except EmbeddedConsoleExit:
                     pass
-                if keepstate is not None:
-                    keepstate.restore()
+
+                finally:
+                    if keepstate is not None:
+                        keepstate.restore()
+
+                    if rl_type != RlType.NONE:
+                        # Save py's history
+                        for i in range(1, readline.get_current_history_length() + 1):
+                            self.py_history.append(readline.get_history_item(i))
+
+                        # Restore cmd2 history
+                        readline.clear_history()
+                        for item in saved_cmd2_history:
+                            readline.add_history(item)
+
+                        if self.use_rawinput and self.completekey:
+                            # Enable tab completion since we are returning to cmd2
+                            readline.parse_and_bind(self.completekey + ": complete")
         except Exception:
             pass
         finally:
@@ -3430,5 +3468,3 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
     def __bool__(self):
         """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
         return not self.err
-
-

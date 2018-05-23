@@ -33,6 +33,29 @@ rl_type = RlType.NONE
 if 'pyreadline' in sys.modules:
     rl_type = RlType.PYREADLINE
 
+    # pyreadline is incomplete in terms of the Python readline API
+    # Add the missing functions we need
+    try:
+        getattr(readline, 'remove_history_item')
+    except AttributeError:
+        # noinspection PyProtectedMember
+        def pyreadline_remove_history_item(pos: int) -> None:
+            """
+            An implementation of remove_history_item() for pyreadline
+            :param pos: The 0-based position in history to remove
+            """
+            # Save of the current location of the history cursor
+            saved_cursor = readline.rl.mode._history.history_cursor
+
+            # Delete the history item
+            del(readline.rl.mode._history.history[pos])
+
+            # Update the cursor if needed
+            if saved_cursor > pos:
+                readline.rl.mode._history.history_cursor -= 1
+
+        readline.remove_history_item = pyreadline_remove_history_item
+
 elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
     # We don't support libedit
     if 'libedit' not in readline.__doc__:
