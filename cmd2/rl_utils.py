@@ -33,8 +33,17 @@ rl_type = RlType.NONE
 if 'pyreadline' in sys.modules:
     rl_type = RlType.PYREADLINE
 
-    # pyreadline is incomplete in terms of the Python readline API
-    # Add the missing functions we need
+    ############################################################################################################
+    # pyreadline is incomplete in terms of the Python readline API. Add the missing functions we need.
+    ############################################################################################################
+    # readline.redisplay()
+    try:
+        getattr(readline, 'redisplay')
+    except AttributeError:
+        # noinspection PyProtectedMember
+        readline.redisplay = readline.rl.mode._update_line
+
+    # readline.remove_history_item()
     try:
         getattr(readline, 'remove_history_item')
     except AttributeError:

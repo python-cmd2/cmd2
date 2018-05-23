@@ -64,6 +64,9 @@ if rl_type == RlType.NONE:
 else:
     from .rl_utils import rl_force_redisplay, readline
 
+    # Used by rlcompleter in Python console loaded by py command
+    orig_rl_delims = readline.get_completer_delims()
+
     if rl_type == RlType.PYREADLINE:
 
         # Save the original pyreadline display completion function since we need to override it and restore it
@@ -78,6 +81,9 @@ else:
         # Get the readline lib so we can make changes to it
         import ctypes
         from .rl_utils import readline_lib
+
+        rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+        orig_rl_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
 
 from .argparse_completer import AutoCompleter, ACArgumentParser
 
@@ -2025,7 +2031,6 @@ class Cmd(cmd.Cmd):
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
                 # We don't need to worry about setting rl_completion_suppress_quote since we never declared
                 # rl_completer_quote_characters.
-                rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
                 old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
                 rl_basic_quote_characters.value = None
 
@@ -2586,8 +2591,36 @@ Usage:  Usage: unalias [-a] name [name ...]
                             readline.add_history(item)
 
                         if self.use_rawinput and self.completekey:
-                            # Disable tab completion while in interactive Python shell
-                            readline.parse_and_bind(self.completekey + ": ")
+                            # Set up tab completion for the Python console
+                            # rlcompleter relies on the default settings of the Python readline module
+                            if rl_type == RlType.GNU:
+                                old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                                rl_basic_quote_characters.value = orig_rl_basic_quotes
+
+                                if 'gnureadline' in sys.modules:
+                                    # rlcompleter imports readline by name, so it won't use gnureadline
+                                    # Force rlcompleter to use gnureadline instead so it has our settings and history
+                                    saved_readline = None
+                                    if 'readline' in sys.modules:
+                                        saved_readline = sys.modules['readline']
+
+                                    sys.modules['readline'] = sys.modules['gnureadline']
+
+                            old_delims = readline.get_completer_delims()
+                            readline.set_completer_delims(orig_rl_delims)
+
+                            # rlcompleter will not need cmd2's custom display function
+                            # This will be restored by cmd2 the next time complete() is called
+                            if rl_type == RlType.GNU:
+                                readline.set_completion_display_matches_hook(None)
+                            elif rl_type == RlType.PYREADLINE:
+                                readline.rl.mode._display_completions = self._display_matches_pyreadline
+
+                            # Load rlcompleter so it sets its completer function
+                            old_completer = readline.get_completer()
+                            import rlcompleter
+                            import importlib
+                            importlib.reload(rlcompleter)
 
                     cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                     keepstate = Statekeeper(sys, ('stdin', 'stdout'))
@@ -2609,14 +2642,26 @@ Usage:  Usage: unalias [-a] name [name ...]
                         for i in range(1, readline.get_current_history_length() + 1):
                             self.py_history.append(readline.get_history_item(i))
 
-                        # Restore cmd2 history
+                        # Restore cmd2's history
                         readline.clear_history()
                         for item in saved_cmd2_history:
                             readline.add_history(item)
 
                         if self.use_rawinput and self.completekey:
-                            # Enable tab completion since we are returning to cmd2
-                            readline.parse_and_bind(self.completekey + ": complete")
+                            # Restore cmd2's tab completion settings
+                            readline.set_completer(old_completer)
+                            readline.set_completer_delims(old_delims)
+
+                            if rl_type == RlType.GNU:
+                                rl_basic_quote_characters.value = old_basic_quotes
+
+                                if 'gnureadline' in sys.modules:
+                                    # Restore what the readline module pointed to
+                                    if saved_readline is None:
+                                        del(sys.modules['readline'])
+                                    else:
+                                        sys.modules['readline'] = saved_readline
+
         except Exception:
             pass
         finally:
