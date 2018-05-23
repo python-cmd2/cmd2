@@ -30,6 +30,9 @@
     * Deleted support for old method of calling application commands with ``cmd()`` and ``self``
 * Python 2 no longer supported
     * ``cmd2`` now supports Python 3.4+
+* Known Issues
+    * Some developers have noted very slow performance when importing the ``cmd2`` module. The issue
+    it intermittant, and investigation of the root cause is ongoing.
 
 ## 0.8.5 (April 15, 2018)
 * Bug Fixes
