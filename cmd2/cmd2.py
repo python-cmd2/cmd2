@@ -1278,8 +1278,6 @@ class Cmd(cmd.Cmd):
         """
         import functools
         if state == 0 and rl_type != RlType.NONE:
-
-        if state == 0:
             unclosed_quote = ''
             self.set_completion_defaults()
 
