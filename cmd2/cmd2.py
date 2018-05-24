@@ -2508,7 +2508,6 @@ Usage:  Usage: unalias [-a] name [name ...]
         index_dict = {1: self.shell_cmd_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
-    # noinspection PyBroadException
     def do_py(self, arg):
         """
         Invoke python command, shell, or script
@@ -2525,6 +2524,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             return
         self._in_py = True
 
+        # noinspection PyBroadException
         try:
             arg = arg.strip()
 
@@ -2581,12 +2581,11 @@ Usage:  Usage: unalias [-a] name [name ...]
                         for i in range(1, readline.get_current_history_length() + 1):
                             saved_cmd2_history.append(readline.get_history_item(i))
 
-                        # Keep a list of commands run in the Python console
-                        # noinspection PyAttributeOutsideInit
-                        self.py_history = getattr(self, 'py_history', [])
+                        readline.clear_history()
 
                         # Restore py's history
-                        readline.clear_history()
+                        # noinspection PyAttributeOutsideInit
+                        self.py_history = getattr(self, 'py_history', [])
                         for item in self.py_history:
                             readline.add_history(item)
 
@@ -2639,11 +2638,14 @@ Usage:  Usage: unalias [-a] name [name ...]
 
                     if rl_type != RlType.NONE:
                         # Save py's history
+                        # noinspection PyAttributeOutsideInit
+                        self.py_history = []
                         for i in range(1, readline.get_current_history_length() + 1):
                             self.py_history.append(readline.get_history_item(i))
 
-                        # Restore cmd2's history
                         readline.clear_history()
+
+                        # Restore cmd2's history
                         for item in saved_cmd2_history:
                             readline.add_history(item)
 
