@@ -75,6 +75,7 @@ from .rl_utils import rl_force_redisplay
 # attribute that can optionally added to an argparse argument (called an Action) to
 # define the completion choices for the argument. You may provide a Collection or a Function.
 ACTION_ARG_CHOICES = 'arg_choices'
+ACTION_SUPPRESS_HINT = 'suppress_hint'
 
 
 class _RangeAction(object):
@@ -261,6 +262,7 @@ class AutoCompleter(object):
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd], subcmd_start,
                                                                arg_choices=subcmd_args,
                                                                subcmd_args_lookup=subcmd_lookup,
+                                                               tab_for_arg_help=tab_for_arg_help,
                                                                cmd2_app=cmd2_app)
                         sub_commands.append(subcmd)
                     self._positional_completers[action.dest] = sub_completers
@@ -555,8 +557,19 @@ class AutoCompleter(object):
         return []
 
     def _print_action_help(self, action: argparse.Action) -> None:
+        # is parameter hinting disabled globally?
         if not self._tab_for_arg_help:
             return
+
+        # is parameter hinting disabled for this parameter?
+        try:
+            suppress_hint = getattr(action, ACTION_SUPPRESS_HINT)
+        except AttributeError:
+            pass
+        else:
+            if suppress_hint:
+                return
+
         if action.option_strings:
             flags = ', '.join(action.option_strings)
             param = ''
