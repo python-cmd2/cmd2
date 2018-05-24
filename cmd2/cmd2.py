@@ -432,6 +432,7 @@ class Cmd(cmd.Cmd):
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
+        self.py_history = []
         self.pyscript_name = 'app'
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
         self.statement_parser = StatementParser(
@@ -2573,73 +2574,71 @@ Usage:  Usage: unalias [-a] name [name ...]
                 self.pystate['quit'] = quit
                 self.pystate['exit'] = quit
 
-                keepstate = None
+                # Set up readline for Python console
+                if rl_type != RlType.NONE:
+                    # Save cmd2 history
+                    saved_cmd2_history = []
+                    for i in range(1, readline.get_current_history_length() + 1):
+                        saved_cmd2_history.append(readline.get_history_item(i))
+
+                    readline.clear_history()
+
+                    # Restore py's history
+                    for item in self.py_history:
+                        readline.add_history(item)
+
+                    if self.use_rawinput and self.completekey:
+                        # Set up tab completion for the Python console
+                        # rlcompleter relies on the default settings of the Python readline module
+                        if rl_type == RlType.GNU:
+                            old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                            rl_basic_quote_characters.value = orig_rl_basic_quotes
+
+                            if 'gnureadline' in sys.modules:
+                                # rlcompleter imports readline by name, so it won't use gnureadline
+                                # Force rlcompleter to use gnureadline instead so it has our settings and history
+                                saved_readline = None
+                                if 'readline' in sys.modules:
+                                    saved_readline = sys.modules['readline']
+
+                                sys.modules['readline'] = sys.modules['gnureadline']
+
+                        old_delims = readline.get_completer_delims()
+                        readline.set_completer_delims(orig_rl_delims)
+
+                        # rlcompleter will not need cmd2's custom display function
+                        # This will be restored by cmd2 the next time complete() is called
+                        if rl_type == RlType.GNU:
+                            readline.set_completion_display_matches_hook(None)
+                        elif rl_type == RlType.PYREADLINE:
+                            readline.rl.mode._display_completions = self._display_matches_pyreadline
+
+                        # Save off the current completer and set a new one in the Python console
+                        # Make sure it tab completes from its locals() dictionary
+                        old_completer = readline.get_completer()
+                        interp.runcode("from rlcompleter import Completer")
+                        interp.runcode("import readline")
+                        interp.runcode("readline.set_completer(Completer(locals()).complete)")
+
+                cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+                keepstate = Statekeeper(sys, ('stdin', 'stdout'))
+                sys.stdout = self.stdout
+                sys.stdin = self.stdin
+                docstr = self.do_py.__doc__.replace('pyscript_name', self.pyscript_name)
+
                 try:
-                    if rl_type != RlType.NONE:
-                        # Save cmd2 history
-                        saved_cmd2_history = []
-                        for i in range(1, readline.get_current_history_length() + 1):
-                            saved_cmd2_history.append(readline.get_history_item(i))
-
-                        readline.clear_history()
-
-                        # Restore py's history
-                        # noinspection PyAttributeOutsideInit
-                        self.py_history = getattr(self, 'py_history', [])
-                        for item in self.py_history:
-                            readline.add_history(item)
-
-                        if self.use_rawinput and self.completekey:
-                            # Set up tab completion for the Python console
-                            # rlcompleter relies on the default settings of the Python readline module
-                            if rl_type == RlType.GNU:
-                                old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-                                rl_basic_quote_characters.value = orig_rl_basic_quotes
-
-                                if 'gnureadline' in sys.modules:
-                                    # rlcompleter imports readline by name, so it won't use gnureadline
-                                    # Force rlcompleter to use gnureadline instead so it has our settings and history
-                                    saved_readline = None
-                                    if 'readline' in sys.modules:
-                                        saved_readline = sys.modules['readline']
-
-                                    sys.modules['readline'] = sys.modules['gnureadline']
-
-                            old_delims = readline.get_completer_delims()
-                            readline.set_completer_delims(orig_rl_delims)
-
-                            # rlcompleter will not need cmd2's custom display function
-                            # This will be restored by cmd2 the next time complete() is called
-                            if rl_type == RlType.GNU:
-                                readline.set_completion_display_matches_hook(None)
-                            elif rl_type == RlType.PYREADLINE:
-                                readline.rl.mode._display_completions = self._display_matches_pyreadline
-
-                            # Load rlcompleter so it sets its completer function
-                            old_completer = readline.get_completer()
-                            import rlcompleter
-                            import importlib
-                            importlib.reload(rlcompleter)
-
-                    cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
-                    keepstate = Statekeeper(sys, ('stdin', 'stdout'))
-                    sys.stdout = self.stdout
-                    sys.stdin = self.stdin
-                    docstr = self.do_py.__doc__.replace('pyscript_name', self.pyscript_name)
-                    interp.interact(banner="Python %s on %s\n%s\n(%s)\n%s" %
-                                           (sys.version, sys.platform, cprt, self.__class__.__name__,
-                                            docstr))
+                    interp.interact(banner="Python {} on {}\n{}\n({})\n{}".
+                                    format(sys.version, sys.platform, cprt, self.__class__.__name__, docstr))
                 except EmbeddedConsoleExit:
                     pass
 
                 finally:
-                    if keepstate is not None:
-                        keepstate.restore()
+                    keepstate.restore()
 
+                    # Set up readline for cmd2
                     if rl_type != RlType.NONE:
                         # Save py's history
-                        # noinspection PyAttributeOutsideInit
-                        self.py_history = []
+                        self.py_history.clear()
                         for i in range(1, readline.get_current_history_length() + 1):
                             self.py_history.append(readline.get_history_item(i))
 
