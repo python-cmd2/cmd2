@@ -1427,7 +1427,7 @@ def test_clipboard_failure(capsys):
     # Make sure we got the error output
     out, err = capsys.readouterr()
     assert out == ''
-    assert 'Cannot redirect to paste buffer; install ``xclip`` and re-run to enable' in err
+    assert "Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable" in err
 
 
 class CmdResultApp(cmd2.Cmd):
@@ -1685,12 +1685,6 @@ def test_alias_lookup_invalid_alias(base_app, capsys):
     out, err = capsys.readouterr()
     assert "not found" in err
 
-def test_alias_with_invalid_name(base_app, capsys):
-    run_cmd(base_app, 'alias @ help')
-    out, err = capsys.readouterr()
-    assert "can only contain the following characters" in err
-
-
 def test_unalias(base_app):
     # Create an alias
     run_cmd(base_app, 'alias fake pyscript')
@@ -1708,6 +1702,18 @@ def test_unalias_non_existing(base_app, capsys):
     out, err = capsys.readouterr()
     assert "does not exist" in err
 
+@pytest.mark.parametrize('alias_name', [
+    '">"',
+    '"no>pe"',
+    '"no spaces"',
+    '"nopipe|"',
+    '"noterm;"',
+    'noembedded"quotes',
+])
+def test_create_invalid_alias(base_app, alias_name, capsys):
+    run_cmd(base_app, 'alias {} help'.format(alias_name))
+    out, err = capsys.readouterr()
+    assert "can not contain" in err
 
 def test_ppaged(base_app):
     msg = 'testing...'

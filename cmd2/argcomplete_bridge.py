@@ -6,11 +6,17 @@ try:
     import argcomplete
 except ImportError:  # pragma: no cover
     # not installed, skip the rest of the file
-    pass
-
+    DEFAULT_COMPLETER = None
 else:
     # argcomplete is installed
 
+    # Newer versions of argcomplete have FilesCompleter at top level, older versions only have it under completers
+    try:
+        DEFAULT_COMPLETER = argcomplete.FilesCompleter()
+    except AttributeError:
+        DEFAULT_COMPLETER = argcomplete.completers.FilesCompleter()
+
+    from cmd2.argparse_completer import ACTION_ARG_CHOICES, ACTION_SUPPRESS_HINT
     from contextlib import redirect_stdout
     import copy
     from io import StringIO
@@ -102,7 +108,7 @@ else:
 
         def __call__(self, argument_parser, completer=None, always_complete_options=True, exit_method=os._exit, output_stream=None,
                      exclude=None, validator=None, print_suppressed=False, append_space=None,
-                     default_completer=argcomplete.FilesCompleter()):
+                     default_completer=DEFAULT_COMPLETER):
             """
             :param argument_parser: The argument parser to autocomplete on
             :type argument_parser: :class:`argparse.ArgumentParser`
@@ -140,9 +146,14 @@ else:
             added to argcomplete.safe_actions, if their values are wanted in the ``parsed_args`` completer argument, or
             their execution is otherwise desirable.
             """
-            self.__init__(argument_parser, always_complete_options=always_complete_options, exclude=exclude,
-                          validator=validator, print_suppressed=print_suppressed, append_space=append_space,
-                          default_completer=default_completer)
+            # Older versions of argcomplete have fewer keyword arguments
+            if sys.version_info >= (3, 5):
+                self.__init__(argument_parser, always_complete_options=always_complete_options, exclude=exclude,
+                            validator=validator, print_suppressed=print_suppressed, append_space=append_space,
+                            default_completer=default_completer)
+            else:
+                self.__init__(argument_parser, always_complete_options=always_complete_options, exclude=exclude,
+                            validator=validator, print_suppressed=print_suppressed)
 
             if "_ARGCOMPLETE" not in os.environ:
                 # not an argument completion invocation
@@ -235,7 +246,10 @@ else:
                 if comp_type == 63:  # type is 63 for second tab press
                     print(outstr.rstrip(), file=argcomplete.debug_stream, end='')
 
-                output_stream.write(ifs.join([ifs, ' ']).encode(argcomplete.sys_encoding))
+                if completions is not None:
+                    output_stream.write(ifs.join([ifs, ' ']).encode(argcomplete.sys_encoding))
+                else:
+                    output_stream.write(ifs.join([]).encode(argcomplete.sys_encoding))
             else:
                 # if completions is None we assume we don't know how to handle it so let bash
                 # go forward with normal filesystem completion
@@ -243,3 +257,11 @@ else:
             output_stream.flush()
             argcomplete.debug_stream.flush()
             exit_method(0)
+
+
+    def bash_complete(action, show_hint: bool=True):
+        """Helper function to configure an argparse action to fall back to bash completion"""
+        def complete_none(*args, **kwargs):
+            return None
+        setattr(action, ACTION_SUPPRESS_HINT, not show_hint)
+        setattr(action, ACTION_ARG_CHOICES, (complete_none,))
