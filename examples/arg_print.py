@@ -11,9 +11,7 @@ It also serves as an example of how to create command aliases (shortcuts).
 """
 import argparse
 
-from cmd2 import cmd2
-from cmd2.cmd2 import with_argument_list, with_argparser, with_argparser_and_unknown_args
-
+import cmd2
 
 class ArgumentAndOptionPrinter(cmd2.Cmd):
     """ Example cmd2 application where we create commands that just print the arguments they are called with."""
@@ -31,7 +29,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         """Print the argument string this basic command is called with."""
         self.poutput('aprint was called with argument: {!r}'.format(arg))
 
-    @with_argument_list
+    @cmd2.with_argument_list
     def do_lprint(self, arglist):
         """Print the argument list this basic command is called with."""
         self.poutput('lprint was called with the following list of arguments: {!r}'.format(arglist))
@@ -42,7 +40,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     oprint_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     oprint_parser.add_argument('words', nargs='+', help='words to print')
 
-    @with_argparser(oprint_parser)
+    @cmd2.with_argparser(oprint_parser)
     def do_oprint(self, args):
         """Print the options and argument list this options command was called with."""
         self.poutput('oprint was called with the following\n\toptions: {!r}'.format(args))
@@ -51,11 +49,10 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     pprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     pprint_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     pprint_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    @with_argparser_and_unknown_args(pprint_parser)
+    @cmd2.with_argparser_and_unknown_args(pprint_parser)
     def do_pprint(self, args, unknown):
         """Print the options and argument list this options command was called with."""
         self.poutput('oprint was called with the following\n\toptions: {!r}\n\targuments: {}'.format(args, unknown))
-
 
 
 if __name__ == '__main__':

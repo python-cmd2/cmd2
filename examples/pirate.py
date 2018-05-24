@@ -7,10 +7,11 @@ presented as part of her PyCon 2010 talk.
 It demonstrates many features of cmd2.
 """
 import argparse
-from cmd2.cmd2 import Cmd, with_argparser
+
+import cmd2
 
 
-class Pirate(Cmd):
+class Pirate(cmd2.Cmd):
     """A piratical example cmd2 application involving looting and drinking."""
     def __init__(self):
         self.default_to_shell = True
@@ -74,7 +75,7 @@ class Pirate(Cmd):
     yo_parser.add_argument('-c', '--commas', action='store_true', help='Intersperse commas')
     yo_parser.add_argument('beverage', help='beverage to drink with the chant')
 
-    @with_argparser(yo_parser)
+    @cmd.with_argparser(yo_parser)
     def do_yo(self, args):
         """Compose a yo-ho-ho type chant with flexible options."""
         chant = ['yo'] + ['ho'] * args.ho

@@ -14,10 +14,10 @@ verifying that the output produced matches the transcript.
 import argparse
 import sys
 
-from cmd2.cmd2 import Cmd, with_argparser, with_argument_list
+import cmd2
 
 
-class CmdLineApp(Cmd):
+class CmdLineApp(cmd2.Cmd):
     """ Example cmd2 application. """
     def __init__(self, ip_addr=None, port=None, transcript_files=None):
         self.multiline_commands = ['orate']
@@ -46,7 +46,7 @@ class CmdLineApp(Cmd):
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
-    @with_argparser(speak_parser)
+    @cmd2.with_argparser(speak_parser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
         words = []
@@ -67,13 +67,13 @@ class CmdLineApp(Cmd):
     tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
-    @with_argparser(tag_parser)
+    @cmd2.with_argparser(tag_parser)
     def do_tag(self, args):
         """create a html tag"""
         self.poutput('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
 
 
-    @with_argument_list
+    @cmd2.with_argument_list
     def do_tagg(self, arglist):
         """verion of creating an html tag using arglist instead of argparser"""
         if len(arglist) >= 2:

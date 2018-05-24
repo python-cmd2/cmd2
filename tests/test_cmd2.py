@@ -21,7 +21,7 @@ try:
 except ImportError:
     from unittest import mock
 
-from cmd2 import cmd2
+import cmd2
 from cmd2 import utils
 from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
     HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut

@@ -5,7 +5,7 @@
 This will allow end users of your cmd2-based application to use the arrow keys and Ctrl+r in a manner which persists
 across invocations of your cmd2 application.  This can make it much easier for them to use your application.
 """
-from cmd2 import cmd2
+import cmd2
 
 
 class Cmd2PersistentHistory(cmd2.Cmd):

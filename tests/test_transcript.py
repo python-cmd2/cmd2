@@ -15,7 +15,7 @@ import tempfile
 from unittest import mock
 import pytest
 
-from cmd2 import cmd2
+import cmd2
 from .conftest import run_cmd, StdOut
 from cmd2 import transcript
 

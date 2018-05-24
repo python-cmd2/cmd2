@@ -52,8 +52,7 @@ except ImportError:
 
 
 # Intentionally below the bash completion code to reduce tab completion lag
-from cmd2 import cmd2
-from cmd2.cmd2 import with_argparser
+import cmd2
 
 
 class SubcommandsExample(cmd2.Cmd):
@@ -83,7 +82,7 @@ class SubcommandsExample(cmd2.Cmd):
     parser_bar.set_defaults(func=base_bar)
     parser_sport.set_defaults(func=base_sport)
 
-    @with_argparser(base_parser)
+    @cmd2.with_argparser(base_parser)
     def do_base(self, args):
         """Base command help"""
         func = getattr(args, 'func', None)
