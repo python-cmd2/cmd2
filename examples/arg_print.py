@@ -2,10 +2,11 @@
 # coding=utf-8
 """A simple example demonstrating the following:
     1) How arguments and options get parsed and passed to commands
-    2) How to change what syntax get parsed as a comment and stripped from the arguments
+    2) How to change what syntax get parsed as a comment and stripped from
+       the arguments
 
-This is intended to serve as a live demonstration so that developers can experiment with and understand how command
-and argument parsing is intended to work.
+This is intended to serve as a live demonstration so that developers can
+experiment with and understand how command and argument parsing work.
 
 It also serves as an example of how to create command aliases (shortcuts).
 """
@@ -25,9 +26,12 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         # NOTE: It is critical that the super class __init__ method be called AFTER updating certain parameters which
         # are not settable at runtime.  This includes the shortcuts, multiline_commands, etc.
 
-    def do_aprint(self, arg):
+    def do_aprint(self, statement):
         """Print the argument string this basic command is called with."""
-        self.poutput('aprint was called with argument: {!r}'.format(arg))
+        self.poutput('aprint was called with argument: {!r}'.format(statement))
+        self.poutput('statement.raw = {!r}'.format(statement.raw))
+        self.poutput('statement.argv = {!r}'.format(statement.argv))
+        self.poutput('statement.command = {!r}'.format(statement.command))
 
     @cmd2.with_argument_list
     def do_lprint(self, arglist):

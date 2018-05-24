@@ -25,7 +25,7 @@ class HelpCategories(cmd2.Cmd):
         self.poutput('Connect')
 
     # Tag the above command functions under the category Connecting
-    categorize(do_connect, CMD_CAT_CONNECTING)
+    cmd2.categorize(do_connect, CMD_CAT_CONNECTING)
 
     @cmd2.with_category(CMD_CAT_CONNECTING)
     def do_which(self, _):
@@ -80,7 +80,7 @@ class HelpCategories(cmd2.Cmd):
         self.poutput('Find Leakers')
 
     # Tag the above command functions under the category Application Management
-    categorize((do_list,
+    cmd2.categorize((do_list,
                 do_deploy,
                 do_start,
                 do_sessions,
@@ -137,7 +137,7 @@ class HelpCategories(cmd2.Cmd):
 
     def do_version(self, _):
         """Version command"""
-        self.poutput(__version__)
+        self.poutput(cmd2.__version__)
 
 
 if __name__ == '__main__':

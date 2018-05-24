@@ -16,7 +16,7 @@ class Pirate(cmd2.Cmd):
     def __init__(self):
         self.default_to_shell = True
         self.multiline_commands = ['sing']
-        self.terminators = Cmd.terminators + ['...']
+        self.terminators = self.terminators + ['...']
         self.songcolor = 'blue'
 
         # Add stuff to settable and/or shortcuts before calling base class initializer
@@ -75,7 +75,7 @@ class Pirate(cmd2.Cmd):
     yo_parser.add_argument('-c', '--commas', action='store_true', help='Intersperse commas')
     yo_parser.add_argument('beverage', help='beverage to drink with the chant')
 
-    @cmd.with_argparser(yo_parser)
+    @cmd2.with_argparser(yo_parser)
     def do_yo(self, args):
         """Compose a yo-ho-ho type chant with flexible options."""
         chant = ['yo'] + ['ho'] * args.ho

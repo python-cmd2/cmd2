@@ -11,6 +11,7 @@ import itertools
 from typing import List
 
 import cmd2
+from cmd2 import argparse_completer
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
@@ -113,7 +114,7 @@ class TabCompleteExample(cmd2.Cmd):
     #  - The help output for arguments with multiple flags or with append=True is more concise
     #  - ACArgumentParser adds the ability to specify ranges of argument counts in 'nargs'
 
-    suggest_parser = cmd2.argparse_completer.ACArgumentParser()
+    suggest_parser = argparse_completer.ACArgumentParser()
 
     suggest_parser.add_argument('-t', '--type', choices=['movie', 'show'], required=True)
     suggest_parser.add_argument('-d', '--duration', nargs=(1, 2), action='append',
@@ -138,7 +139,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     suggest_parser_hybrid = argparse.ArgumentParser()
     # This registers the custom narg range handling
-    cmd2.argparse_completer.register_custom_actions(suggest_parser_hybrid)
+    argparse_completer.register_custom_actions(suggest_parser_hybrid)
 
     suggest_parser_hybrid.add_argument('-t', '--type', choices=['movie', 'show'], required=True)
     suggest_parser_hybrid.add_argument('-d', '--duration', nargs=(1, 2), action='append',
