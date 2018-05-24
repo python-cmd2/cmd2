@@ -697,18 +697,18 @@ def test_pipe_to_shell_error(base_app, capsys):
     assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 
-@pytest.mark.skipif(not cmd2.can_clip,
+@pytest.mark.skipif(not cmd2.cmd2.can_clip,
                     reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
     expected = normalize(BASE_HELP)
-    assert normalize(cmd2.get_paste_buffer()) == expected
+    assert normalize(cmd2.cmd2.get_paste_buffer()) == expected
 
     # Test appending to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help history >>')
     expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
-    assert normalize(cmd2.get_paste_buffer()) == expected
+    assert normalize(cmd2.cmd2.get_paste_buffer()) == expected
 
 
 def test_base_timing(base_app, capsys):
@@ -1418,7 +1418,7 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
 
 def test_clipboard_failure(capsys):
     # Force cmd2 clipboard to be disabled
-    cmd2.disable_clip()
+    cmd2.cmd2.disable_clip()
     app = cmd2.Cmd()
 
     # Redirect command output to the clipboard when a clipboard isn't present
