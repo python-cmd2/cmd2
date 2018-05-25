@@ -102,6 +102,14 @@ def cast(current, new):
     return current
 
 def which(editor: str) -> Optional[str]:
+    """Find the full path of a given editor.
+
+    Return the full path of the given editor, or None if the editor can
+    not be found.
+
+    :param editor: filename of the editor to check, ie 'notepad.exe' or 'vi'
+    :return: a full path or None
+    """
     import subprocess
     try:
         editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
@@ -111,9 +119,10 @@ def which(editor: str) -> Optional[str]:
     return editor_path
 
 def is_text_file(file_path):
-    """
-    Returns if a file contains only ASCII or UTF-8 encoded text
+    """Returns if a file contains only ASCII or UTF-8 encoded text
+
     :param file_path: path to the file being checked
+    :return: True if the file is a text file, False if it is binary.
     """
     import codecs
 

@@ -22,7 +22,13 @@ is used in place of `print`.
 
 Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
-# many imports are lazy-loaded when they are needed
+# This module has many imports, quite a few of which are only
+# infrequently utilized. To reduce the initial overhead of
+# import this module, many of these imports are lazy-loaded
+# i.e. we only import the module when we use it
+# For example, we don't import the 'traceback' module
+# until the perror() function is called and the debug
+# setting is True
 import argparse
 import cmd
 import collections
@@ -33,7 +39,7 @@ import platform
 import re
 import shlex
 import sys
-from typing import Callable, List, Optional, Union, Tuple
+from typing import Callable, List, Union, Tuple
 
 import pyperclip
 

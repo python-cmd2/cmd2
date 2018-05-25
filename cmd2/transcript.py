@@ -1,5 +1,14 @@
 #
 # -*- coding: utf-8 -*-
+"""Machinery for running and validating transcripts.
+
+If the user wants to run a transcript (see docs/transcript.rst),
+we need a mechanism to run each command in the transcript as
+a unit test, comparing the expected output to the actual output.
+
+This file contains the classess necessary to make that work. These
+classes are used in cmd2.py::run_transcript_tests()
+"""
 import re
 import glob
 import unittest
@@ -7,9 +16,14 @@ import unittest
 from . import utils
 
 class Cmd2TestCase(unittest.TestCase):
-    """Subclass this, setting CmdApp, to make a unittest.TestCase class
-       that will execute the commands in a transcript file and expect the results shown.
-       See example.py"""
+    """A unittest class used for transcript testing.
+
+    Subclass this, setting CmdApp, to make a unittest.TestCase class
+    that will execute the commands in a transcript file and expect the
+    results shown.
+
+    See example.py
+    """
     cmdapp = None
 
     def fetchTranscripts(self):
@@ -90,7 +104,7 @@ class Cmd2TestCase(unittest.TestCase):
             self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
     def _transform_transcript_expected(self, s):
-        """parse the string with slashed regexes into a valid regex
+        """Parse the string with slashed regexes into a valid regex.
 
         Given a string like:
 
@@ -138,8 +152,7 @@ class Cmd2TestCase(unittest.TestCase):
 
     @staticmethod
     def _escaped_find(regex, s, start, in_regex):
-        """
-        Find the next slash in {s} after {start} that is not preceded by a backslash.
+        """Find the next slash in {s} after {start} that is not preceded by a backslash.
 
         If we find an escaped slash, add everything up to and including it to regex,
         updating {start}. {start} therefore serves two purposes, tells us where to start
@@ -191,7 +204,9 @@ class Cmd2TestCase(unittest.TestCase):
             self.cmdapp.stdout = self._orig_stdout
 
 class OutputTrap(object):
-    """Instantiate an OutputTrap to divert/capture ALL stdout output.  For use in transcript testing."""
+    """Instantiate an OutputTrap to divert/capture ALL stdout output.
+    For use in transcript testing.
+    """
 
     def __init__(self):
         self.contents = ''
