@@ -2,6 +2,7 @@
 * Bug Fixes
     * If self.default_to_shell is true, then redirection and piping are now properly passed to the shell. Previously it was truncated.
     * Submenus now call all hooks, it used to just call precmd and postcmd.
+    * Fixed ``AttributeError`` on Windows when running a ``select`` command cause by **pyreadline** not implementing ``remove_history_item``
 * Enhancements
     * Automatic completion of ``argparse`` arguments via ``cmd2.argparse_completer.AutoCompleter``
         * See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for a demonstration of how to use this feature
@@ -16,6 +17,9 @@
         * ``identchars`` is now ignored. The standardlibrary cmd uses those characters to split the first "word" of the input, but cmd2 hasn't used those for a while, and the new parsing logic parses on whitespace, which has the added benefit of full unicode support, unlike cmd or prior versions of cmd2.
         * ``set_posix_shlex`` function and ``POSIX_SHLEX`` variable have been removed. Parsing behavior is now always the more forgiving ``posix=false``.
         * ``set_strip_quotes`` function and ``STRIP_QUOTES_FOR_NON_POSIX`` have been removed. Quotes are stripped from arguments when presented as a list (a la ``sys.argv``), and present when arguments are presented as a string (like the string passed to do_*).
+    * Enhanced the ``py`` console in the following ways
+        * Added tab completion of Python identifiers instead of **cmd2** commands
+        * Separated the ``py`` console history from the **cmd2** history
 * Changes
     * ``strip_ansi()`` and ``strip_quotes()`` functions have moved to new utils module
     * Several constants moved to new constants module
