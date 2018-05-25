@@ -2510,14 +2510,18 @@ Usage:  Usage: unalias [-a] name [name ...]
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
     @staticmethod
-    def _reset_sys() -> None:
+    def _reset_py_display() -> None:
         """
-        Resets the dynamic objects in the sys modules that the py and ipy consoles fight over
-        This makes it so the py console doesn't end up looking like the ipy console in terms of
-        prompt and exception text. That happens if a user runs py after being in an IPython console.
+        Resets the dynamic objects in the sys module that the py and ipy consoles fight over.
+        When a Python console starts it adopts certain display settings if they've already been set.
+        If an ipy console has previously been run, then py uses its settings and ends up looking
+        like an ipy console in terms of prompt and exception text. This method forces the Python
+        console to create its own display settings since they won't exist.
 
+        IPython does not have this problem since it always overwrites the display settings when it
+        is run. Therefore this method only needs to be called before creating a Python console.
         """
-        # Delete any prompts set by the interactive consoles
+        # Delete any prompts that have been set
         attributes = ['ps1', 'ps2', 'ps3']
         for cur_attr in attributes:
             try:
@@ -2640,8 +2644,8 @@ Usage:  Usage: unalias [-a] name [name ...]
                         interp.runcode("import readline")
                         interp.runcode("readline.set_completer(Completer(locals()).complete)")
 
-                # Set up sys for the console
-                self._reset_sys()
+                # Set up sys module for the Python console
+                self._reset_py_display()
                 keepstate = Statekeeper(sys, ('stdin', 'stdout'))
                 sys.stdout = self.stdout
                 sys.stdin = self.stdin
@@ -2738,7 +2742,6 @@ Paths or arguments that contain spaces must be enclosed in quotes
             End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
             """
             from .pyscript_bridge import PyscriptBridge
-            self._reset_sys()
             bridge = PyscriptBridge(self)
 
             if self.locals_in_py:
