@@ -2509,6 +2509,26 @@ Usage:  Usage: unalias [-a] name [name ...]
         index_dict = {1: self.shell_cmd_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
+    @staticmethod
+    def _reset_sys() -> None:
+        """
+        Resets the dynamic objects in the sys modules that the py and ipy consoles fight over
+        This makes it so the py console doesn't end up looking like the ipy console in terms of
+        prompt and exception text. That happens if a user runs py after being in an IPython console.
+
+        """
+        # Delete any prompts set by the interactive consoles
+        attributes = ['ps1', 'ps2', 'ps3']
+        for cur_attr in attributes:
+            try:
+                del sys.__dict__[cur_attr]
+            except KeyError:
+                pass
+
+        # Reset functions
+        sys.displayhook = sys.__displayhook__
+        sys.excepthook = sys.__excepthook__
+
     def do_py(self, arg):
         """
         Invoke python command, shell, or script
@@ -2620,10 +2640,13 @@ Usage:  Usage: unalias [-a] name [name ...]
                         interp.runcode("import readline")
                         interp.runcode("readline.set_completer(Completer(locals()).complete)")
 
-                cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+                # Set up sys for the console
+                self._reset_sys()
                 keepstate = Statekeeper(sys, ('stdin', 'stdout'))
                 sys.stdout = self.stdout
                 sys.stdin = self.stdin
+
+                cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                 docstr = self.do_py.__doc__.replace('pyscript_name', self.pyscript_name)
 
                 try:
@@ -2715,6 +2738,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
             End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
             """
             from .pyscript_bridge import PyscriptBridge
+            self._reset_sys()
             bridge = PyscriptBridge(self)
 
             if self.locals_in_py:
