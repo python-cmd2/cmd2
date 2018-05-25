@@ -22,30 +22,24 @@ is used in place of `print`.
 
 Git repository on GitHub at https://github.com/python-cmd2/cmd2
 """
+# This module has many imports, quite a few of which are only
+# infrequently utilized. To reduce the initial overhead of
+# import this module, many of these imports are lazy-loaded
+# i.e. we only import the module when we use it
+# For example, we don't import the 'traceback' module
+# until the perror() function is called and the debug
+# setting is True
 import argparse
-import atexit
 import cmd
-import codecs
 import collections
 from colorama import Fore
-import copy
-import datetime
-import functools
 import glob
-import io
-from io import StringIO
 import os
 import platform
 import re
 import shlex
-import signal
-import subprocess
 import sys
-import tempfile
-import traceback
-from typing import Callable, List, Optional, Union, Tuple
-import unittest
-from code import InteractiveConsole
+from typing import Callable, List, Union, Tuple
 
 import pyperclip
 
@@ -146,16 +140,6 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
     else:
         setattr(func, HELP_CATEGORY, category)
 
-
-def _which(editor: str) -> Optional[str]:
-    try:
-        editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
-        editor_path = editor_path.decode()
-    except subprocess.CalledProcessError:
-        editor_path = None
-    return editor_path
-
-
 def parse_quoted_string(cmdline: str) -> List[str]:
     """Parse a quoted string into a list of arguments."""
     if isinstance(cmdline, list):
@@ -185,6 +169,8 @@ def with_argument_list(func: Callable) -> Callable:
     method. Default passes a string of whatever the user typed.
     With this decorator, the decorated method will receive a list
     of arguments parsed from user input using shlex.split()."""
+    import functools
+
     @functools.wraps(func)
     def cmd_wrapper(self, cmdline):
         lexed_arglist = parse_quoted_string(cmdline)
@@ -201,6 +187,8 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
     :return: function that gets passed parsed args and a list of unknown args
     """
+    import functools
+
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
@@ -241,6 +229,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
     :return: function that gets passed parsed args
     """
+    import functools
 
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
@@ -361,7 +350,7 @@ class Cmd(cmd.Cmd):
         else:
             # Favor command-line editors first so we don't leave the terminal to edit
             for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
-                if _which(editor):
+                if utils.which(editor):
                     break
     feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
     locals_in_py = False
@@ -410,6 +399,7 @@ class Cmd(cmd.Cmd):
                 readline.set_history_length(persistent_history_length)
             except FileNotFoundError:
                 pass
+            import atexit
             atexit.register(readline.write_history_file, persistent_history_file)
 
         # Call super class constructor
@@ -555,6 +545,7 @@ class Cmd(cmd.Cmd):
         :return:
         """
         if self.debug:
+            import traceback
             traceback.print_exc()
 
         if exception_type is None:
@@ -586,6 +577,7 @@ class Cmd(cmd.Cmd):
         :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
         :param end: str - string appended after the end of the message if not already present, default a newline
         """
+        import subprocess
         if msg is not None and msg != '':
             try:
                 msg_str = '{}'.format(msg)
@@ -684,6 +676,7 @@ class Cmd(cmd.Cmd):
                  On Failure
                     Both items are None
         """
+        import copy
         unclosed_quote = ''
         quotes_to_try = copy.copy(constants.QUOTES)
 
@@ -1289,6 +1282,7 @@ class Cmd(cmd.Cmd):
         :param text: str - the current word that user is typing
         :param state: int - non-negative integer
         """
+        import functools
         if state == 0 and rl_type != RlType.NONE:
             unclosed_quote = ''
             self.set_completion_defaults()
@@ -1423,6 +1417,7 @@ class Cmd(cmd.Cmd):
                         # Since self.display_matches is empty, set it to self.completion_matches
                         # before we alter them. That way the suggestions will reflect how we parsed
                         # the token being completed and not how readline did.
+                        import copy
                         self.display_matches = copy.copy(self.completion_matches)
 
                     # Check if we need to add an opening quote
@@ -1594,7 +1589,7 @@ class Cmd(cmd.Cmd):
 
     def preloop(self):
         """"Hook method executed once when the cmdloop() method is called."""
-
+        import signal
         # Register a default SIGINT signal handler for Ctrl+C
         signal.signal(signal.SIGINT, self.sigint_handler)
 
@@ -1658,6 +1653,7 @@ class Cmd(cmd.Cmd):
         if not sys.platform.startswith('win'):
             # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
             if self.stdin.isatty():
+                import subprocess
                 proc = subprocess.Popen(shlex.split('stty sane'))
                 proc.communicate()
         return stop
@@ -1682,6 +1678,7 @@ class Cmd(cmd.Cmd):
         :param line: str - line of text read from input
         :return: bool - True if cmdloop() should exit, False otherwise
         """
+        import datetime
         stop = False
         try:
             statement = self._complete_statement(line)
@@ -1801,6 +1798,9 @@ class Cmd(cmd.Cmd):
 
         :param statement: Statement - a parsed statement from the user
         """
+        import io
+        import subprocess
+
         if statement.pipe_to:
             self.kept_state = Statekeeper(self, ('stdout',))
 
@@ -1829,6 +1829,7 @@ class Cmd(cmd.Cmd):
                 # Re-raise the exception
                 raise ex
         elif statement.output:
+            import tempfile
             if (not statement.output_to) and (not can_clip):
                 raise EnvironmentError("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable")
             self.kept_state = Statekeeper(self, ('stdout',))
@@ -2260,6 +2261,8 @@ Usage:  Usage: unalias [-a] name [name ...]
 
     def _print_topics(self, header, cmds, verbose):
         """Customized version of print_topics that can switch between verbose or traditional output"""
+        import io
+
         if cmds:
             if not verbose:
                 self.print_topics(header, cmds, 15, 80)
@@ -2294,7 +2297,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                             doc = getattr(self, self._func_named(command)).__doc__
                     else:
                         # we found the help function
-                        result = StringIO()
+                        result = io.StringIO()
                         # try to redirect system stdout
                         with redirect_stdout(result):
                             # save our internal stdout
@@ -2445,7 +2448,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             if (val[0] == val[-1]) and val[0] in ("'", '"'):
                 val = val[1:-1]
             else:
-                val = cast(current_val, val)
+                val = utils.cast(current_val, val)
             setattr(self, param_name, val)
             self.poutput('%s - was: %s\nnow: %s\n' % (param_name, current_val, val))
             if current_val != val:
@@ -2465,6 +2468,7 @@ Usage:  Usage: unalias [-a] name [name ...]
 
     Usage:  shell <command> [arguments]"""
 
+        import subprocess
         try:
             # Use non-POSIX parsing to keep the quotes around the tokens
             tokens = shlex.split(command, posix=False)
@@ -2551,6 +2555,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 self.pystate['self'] = self
 
             localvars = self.pystate
+            from code import InteractiveConsole
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
@@ -2696,6 +2701,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                     if runme:
                         self.onecmd_plus_hooks(runme)
         elif args.edit:
+            import tempfile
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             with os.fdopen(fd, 'w') as fobj:
                 for command in history:
@@ -2730,6 +2736,8 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         """Generate a transcript file from a given history of commands."""
         # Save the current echo state, and turn it off. We inject commands into the
         # output using a different mechanism
+        import io
+
         saved_echo = self.echo
         self.echo = False
 
@@ -2880,7 +2888,7 @@ Script should contain one command per line, just like command would be typed in 
             return
 
         # Make sure the file is ASCII or UTF-8 encoded text
-        if not self.is_text_file(expanded_path):
+        if not utils.is_text_file(expanded_path):
             self.perror('{} is not an ASCII or UTF-8 encoded text file'.format(expanded_path), traceback_war=False)
             return
 
@@ -2901,40 +2909,6 @@ Script should contain one command per line, just like command would be typed in 
         index_dict = {1: self.path_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
-    @staticmethod
-    def is_text_file(file_path):
-        """
-        Returns if a file contains only ASCII or UTF-8 encoded text
-        :param file_path: path to the file being checked
-        """
-        expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))
-        valid_text_file = False
-
-        # Check if the file is ASCII
-        try:
-            with codecs.open(expanded_path, encoding='ascii', errors='strict') as f:
-                # Make sure the file has at least one line of text
-                # noinspection PyUnusedLocal
-                if sum(1 for line in f) > 0:
-                    valid_text_file = True
-        except IOError:  # pragma: no cover
-            pass
-        except UnicodeDecodeError:
-            # The file is not ASCII. Check if it is UTF-8.
-            try:
-                with codecs.open(expanded_path, encoding='utf-8', errors='strict') as f:
-                    # Make sure the file has at least one line of text
-                    # noinspection PyUnusedLocal
-                    if sum(1 for line in f) > 0:
-                        valid_text_file = True
-            except IOError:  # pragma: no cover
-                pass
-            except UnicodeDecodeError:
-                # Not UTF-8
-                pass
-
-        return valid_text_file
-
     def run_transcript_tests(self, callargs):
         """Runs transcript tests for provided file(s).
 
@@ -2943,6 +2917,8 @@ Script should contain one command per line, just like command would be typed in 
 
         :param callargs: List[str] - list of transcript test file names
         """
+        import unittest
+        from .transcript import Cmd2TestCase
         class TestMyAppCase(Cmd2TestCase):
             cmdapp = self
 
@@ -3130,36 +3106,6 @@ class History(list):
             return [itm for itm in self if isin(itm)]
 
 
-def cast(current, new):
-    """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
-
-    :param current: current value for the parameter, type varies
-    :param new: str - new value
-    :return: new value with same type as current, or the current value if there was an error casting
-    """
-    typ = type(current)
-    if typ == bool:
-        try:
-            return bool(int(new))
-        except (ValueError, TypeError):
-            pass
-        try:
-            new = new.lower()
-        except AttributeError:
-            pass
-        if (new == 'on') or (new[0] in ('y', 't')):
-            return True
-        if (new == 'off') or (new[0] in ('n', 'f')):
-            return False
-    else:
-        try:
-            return typ(new)
-        except (ValueError, TypeError):
-            pass
-    print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
-    return current
-
-
 class Statekeeper(object):
     """Class used to save and restore state during load and py commands as well as when redirecting output or pipes."""
     def __init__(self, obj, attribs):
@@ -3185,232 +3131,7 @@ class Statekeeper(object):
                 setattr(self.obj, attrib, getattr(self, attrib))
 
 
-class OutputTrap(object):
-    """Instantiate an OutputTrap to divert/capture ALL stdout output.  For use in transcript testing."""
-
-    def __init__(self):
-        self.contents = ''
-
-    def write(self, txt):
-        """Add text to the internal contents.
-
-        :param txt: str
-        """
-        self.contents += txt
-
-    def read(self):
-        """Read from the internal contents and then clear them out.
-
-        :return: str - text from the internal contents
-        """
-        result = self.contents
-        self.contents = ''
-        return result
-
-
-class Cmd2TestCase(unittest.TestCase):
-    """Subclass this, setting CmdApp, to make a unittest.TestCase class
-       that will execute the commands in a transcript file and expect the results shown.
-       See example.py"""
-    cmdapp = None
-
-    def fetchTranscripts(self):
-        self.transcripts = {}
-        for fileset in self.cmdapp.testfiles:
-            for fname in glob.glob(fileset):
-                tfile = open(fname)
-                self.transcripts[fname] = iter(tfile.readlines())
-                tfile.close()
-        if not len(self.transcripts):
-            raise Exception("No test files found - nothing to test.")
-
-    def setUp(self):
-        if self.cmdapp:
-            self.fetchTranscripts()
-
-            # Trap stdout
-            self._orig_stdout = self.cmdapp.stdout
-            self.cmdapp.stdout = OutputTrap()
-
-    def runTest(self):  # was testall
-        if self.cmdapp:
-            its = sorted(self.transcripts.items())
-            for (fname, transcript) in its:
-                self._test_transcript(fname, transcript)
-
-    def _test_transcript(self, fname, transcript):
-        line_num = 0
-        finished = False
-        line = utils.strip_ansi(next(transcript))
-        line_num += 1
-        while not finished:
-            # Scroll forward to where actual commands begin
-            while not line.startswith(self.cmdapp.visible_prompt):
-                try:
-                    line = utils.strip_ansi(next(transcript))
-                except StopIteration:
-                    finished = True
-                    break
-                line_num += 1
-            command = [line[len(self.cmdapp.visible_prompt):]]
-            line = next(transcript)
-            # Read the entirety of a multi-line command
-            while line.startswith(self.cmdapp.continuation_prompt):
-                command.append(line[len(self.cmdapp.continuation_prompt):])
-                try:
-                    line = next(transcript)
-                except StopIteration:
-                    raise (StopIteration,
-                           'Transcript broke off while reading command beginning at line {} with\n{}'.format(line_num,
-                                                                                                             command[0])
-                           )
-                line_num += 1
-            command = ''.join(command)
-            # Send the command into the application and capture the resulting output
-            # TODO: Should we get the return value and act if stop == True?
-            self.cmdapp.onecmd_plus_hooks(command)
-            result = self.cmdapp.stdout.read()
-            # Read the expected result from transcript
-            if utils.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
-                message = '\nFile {}, line {}\nCommand was:\n{}\nExpected: (nothing)\nGot:\n{}\n'.format(
-                          fname, line_num, command, result)
-                self.assert_(not (result.strip()), message)
-                continue
-            expected = []
-            while not utils.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
-                expected.append(line)
-                try:
-                    line = next(transcript)
-                except StopIteration:
-                    finished = True
-                    break
-                line_num += 1
-            expected = ''.join(expected)
-
-            # transform the expected text into a valid regular expression
-            expected = self._transform_transcript_expected(expected)
-            message = '\nFile {}, line {}\nCommand was:\n{}\nExpected:\n{}\nGot:\n{}\n'.format(
-                      fname, line_num, command, expected, result)
-            self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
-
-    def _transform_transcript_expected(self, s):
-        """parse the string with slashed regexes into a valid regex
-
-        Given a string like:
-
-            Match a 10 digit phone number: /\d{3}-\d{3}-\d{4}/
-
-        Turn it into a valid regular expression which matches the literal text
-        of the string and the regular expression. We have to remove the slashes
-        because they differentiate between plain text and a regular expression.
-        Unless the slashes are escaped, in which case they are interpreted as
-        plain text, or there is only one slash, which is treated as plain text
-        also.
-
-        Check the tests in tests/test_transcript.py to see all the edge
-        cases.
-        """
-        regex = ''
-        start = 0
-
-        while True:
-            (regex, first_slash_pos, start) = self._escaped_find(regex, s, start, False)
-            if first_slash_pos == -1:
-                # no more slashes, add the rest of the string and bail
-                regex += re.escape(s[start:])
-                break
-            else:
-                # there is a slash, add everything we have found so far
-                # add stuff before the first slash as plain text
-                regex += re.escape(s[start:first_slash_pos])
-                start = first_slash_pos+1
-                # and go find the next one
-                (regex, second_slash_pos, start) = self._escaped_find(regex, s, start, True)
-                if second_slash_pos > 0:
-                    # add everything between the slashes (but not the slashes)
-                    # as a regular expression
-                    regex += s[start:second_slash_pos]
-                    # and change where we start looking for slashed on the
-                    # turn through the loop
-                    start = second_slash_pos + 1
-                else:
-                    # No closing slash, we have to add the first slash,
-                    # and the rest of the text
-                    regex += re.escape(s[start-1:])
-                    break
-        return regex
-
-    @staticmethod
-    def _escaped_find(regex, s, start, in_regex):
-        """
-        Find the next slash in {s} after {start} that is not preceded by a backslash.
-
-        If we find an escaped slash, add everything up to and including it to regex,
-        updating {start}. {start} therefore serves two purposes, tells us where to start
-        looking for the next thing, and also tells us where in {s} we have already
-        added things to {regex}
-
-        {in_regex} specifies whether we are currently searching in a regex, we behave
-        differently if we are or if we aren't.
-        """
-
-        while True:
-            pos = s.find('/', start)
-            if pos == -1:
-                # no match, return to caller
-                break
-            elif pos == 0:
-                # slash at the beginning of the string, so it can't be
-                # escaped. We found it.
-                break
-            else:
-                # check if the slash is preceeded by a backslash
-                if s[pos-1:pos] == '\\':
-                    # it is.
-                    if in_regex:
-                        # add everything up to the backslash as a
-                        # regular expression
-                        regex += s[start:pos-1]
-                        # skip the backslash, and add the slash
-                        regex += s[pos]
-                    else:
-                        # add everything up to the backslash as escaped
-                        # plain text
-                        regex += re.escape(s[start:pos-1])
-                        # and then add the slash as escaped
-                        # plain text
-                        regex += re.escape(s[pos])
-                    # update start to show we have handled everything
-                    # before it
-                    start = pos+1
-                    # and continue to look
-                else:
-                    # slash is not escaped, this is what we are looking for
-                    break
-        return regex, pos, start
-
-    def tearDown(self):
-        if self.cmdapp:
-            # Restore stdout
-            self.cmdapp.stdout = self._orig_stdout
-
-
-def namedtuple_with_two_defaults(typename, field_names, default_values=('', '')):
-    """Wrapper around namedtuple which lets you treat the last value as optional.
-
-    :param typename: str - type name for the Named tuple
-    :param field_names: List[str] or space-separated string of field names
-    :param default_values: (optional) 2-element tuple containing the default values for last 2 parameters in named tuple
-                            Defaults to an empty string for both of them
-    :return: namedtuple type
-    """
-    T = collections.namedtuple(typename, field_names)
-    # noinspection PyUnresolvedReferences
-    T.__new__.__defaults__ = default_values
-    return T
-
-
-class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
+class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
     """Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
 
     This is provided as a convenience and an example for one possible way for end users to store results in
@@ -3430,5 +3151,3 @@ class CmdResult(namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])
     def __bool__(self):
         """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
         return not self.err
-
-

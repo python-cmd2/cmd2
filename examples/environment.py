@@ -4,10 +4,10 @@
 A sample application for cmd2 demonstrating customized environment parameters
 """
 
-from cmd2.cmd2 import Cmd
+import cmd2
 
 
-class EnvironmentApp(Cmd):
+class EnvironmentApp(cmd2.Cmd):
     """ Example cmd2 application. """
 
     degrees_c = 22

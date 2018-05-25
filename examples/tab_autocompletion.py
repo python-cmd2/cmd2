@@ -10,8 +10,8 @@ import argparse
 import itertools
 from typing import List
 
-from cmd2 import cmd2, argparse_completer
-from cmd2.cmd2 import with_argparser, with_category
+import cmd2
+from cmd2 import argparse_completer
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
@@ -122,8 +122,8 @@ class TabCompleteExample(cmd2.Cmd):
                                      '\tsingle value - maximum duration\n'
                                      '\t[a, b] - duration range')
 
-    @with_category(CAT_AUTOCOMPLETE)
-    @with_argparser(suggest_parser)
+    @cmd2.with_category(CAT_AUTOCOMPLETE)
+    @cmd2.with_argparser(suggest_parser)
     def do_suggest(self, args) -> None:
         """Suggest command demonstrates argparse customizations
 
@@ -147,8 +147,8 @@ class TabCompleteExample(cmd2.Cmd):
                                             '\tsingle value - maximum duration\n'
                                             '\t[a, b] - duration range')
 
-    @with_category(CAT_AUTOCOMPLETE)
-    @with_argparser(suggest_parser_hybrid)
+    @cmd2.with_category(CAT_AUTOCOMPLETE)
+    @cmd2.with_argparser(suggest_parser_hybrid)
     def do_hybrid_suggest(self, args):
         if not args.type:
             self.do_help('orig_suggest')
@@ -165,8 +165,8 @@ class TabCompleteExample(cmd2.Cmd):
                                           '\tsingle value - maximum duration\n'
                                           '\t[a, b] - duration range')
 
-    @with_argparser(suggest_parser_orig)
-    @with_category(CAT_AUTOCOMPLETE)
+    @cmd2.with_argparser(suggest_parser_orig)
+    @cmd2.with_category(CAT_AUTOCOMPLETE)
     def do_orig_suggest(self, args) -> None:
         if not args.type:
             self.do_help('orig_suggest')
@@ -261,8 +261,8 @@ class TabCompleteExample(cmd2.Cmd):
 
     vid_shows_list_parser = vid_shows_commands_subparsers.add_parser('list')
 
-    @with_category(CAT_AUTOCOMPLETE)
-    @with_argparser(video_parser)
+    @cmd2.with_category(CAT_AUTOCOMPLETE)
+    @cmd2.with_argparser(video_parser)
     def do_video(self, args):
         """Video management command demonstrates multiple layers of subcommands being handled by AutoCompleter"""
         func = getattr(args, 'func', None)
@@ -339,8 +339,8 @@ class TabCompleteExample(cmd2.Cmd):
 
     shows_list_parser = shows_commands_subparsers.add_parser('list')
 
-    @with_category(CAT_AUTOCOMPLETE)
-    @with_argparser(media_parser)
+    @cmd2.with_category(CAT_AUTOCOMPLETE)
+    @cmd2.with_argparser(media_parser)
     def do_media(self, args):
         """Media management command demonstrates multiple layers of subcommands being handled by AutoCompleter"""
         func = getattr(args, 'func', None)
@@ -440,8 +440,8 @@ class TabCompleteExample(cmd2.Cmd):
                 return self._filter_library(text, line, begidx, endidx, all_episodes, user_eps)
         return []
 
-    @with_category(CAT_AUTOCOMPLETE)
-    @with_argparser(library_parser)
+    @cmd2.with_category(CAT_AUTOCOMPLETE)
+    @cmd2.with_argparser(library_parser)
     def do_library(self, args):
         """Media management command demonstrates multiple layers of subcommands being handled by AutoCompleter"""
         func = getattr(args, 'func', None)

@@ -10,7 +10,7 @@ import sys
 from pytest import fixture
 from unittest import mock
 
-from cmd2 import cmd2
+import cmd2
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:

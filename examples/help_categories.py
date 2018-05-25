@@ -6,10 +6,9 @@ A sample application for tagging categories on commands.
 
 import argparse
 
-from cmd2.cmd2 import Cmd, categorize, __version__, with_argparser, with_category
+import cmd2
 
-
-class HelpCategories(Cmd):
+class HelpCategories(cmd2.Cmd):
     """ Example cmd2 application. """
 
     # Command categories
@@ -26,9 +25,9 @@ class HelpCategories(Cmd):
         self.poutput('Connect')
 
     # Tag the above command functions under the category Connecting
-    categorize(do_connect, CMD_CAT_CONNECTING)
+    cmd2.categorize(do_connect, CMD_CAT_CONNECTING)
 
-    @with_category(CMD_CAT_CONNECTING)
+    @cmd2.with_category(CMD_CAT_CONNECTING)
     def do_which(self, _):
         """Which command"""
         self.poutput('Which')
@@ -58,8 +57,8 @@ class HelpCategories(Cmd):
                                 choices=['now', 'later', 'sometime', 'whenever'],
                                 help='Specify when to restart')
 
-    @with_argparser(restart_parser)
-    @with_category(CMD_CAT_APP_MGMT)
+    @cmd2.with_argparser(restart_parser)
+    @cmd2.with_category(CMD_CAT_APP_MGMT)
     def do_restart(self, _):
         """Restart command"""
         self.poutput('Restart')
@@ -81,7 +80,7 @@ class HelpCategories(Cmd):
         self.poutput('Find Leakers')
 
     # Tag the above command functions under the category Application Management
-    categorize((do_list,
+    cmd2.categorize((do_list,
                 do_deploy,
                 do_start,
                 do_sessions,
@@ -123,12 +122,12 @@ class HelpCategories(Cmd):
         self.poutput('VM Info')
 
     # Tag the above command functions under the category Server Information
-    categorize(do_resources, CMD_CAT_SERVER_INFO)
-    categorize(do_status, CMD_CAT_SERVER_INFO)
-    categorize(do_serverinfo, CMD_CAT_SERVER_INFO)
-    categorize(do_thread_dump, CMD_CAT_SERVER_INFO)
-    categorize(do_sslconnectorciphers, CMD_CAT_SERVER_INFO)
-    categorize(do_vminfo, CMD_CAT_SERVER_INFO)
+    cmd2.categorize(do_resources, CMD_CAT_SERVER_INFO)
+    cmd2.categorize(do_status, CMD_CAT_SERVER_INFO)
+    cmd2.categorize(do_serverinfo, CMD_CAT_SERVER_INFO)
+    cmd2.categorize(do_thread_dump, CMD_CAT_SERVER_INFO)
+    cmd2.categorize(do_sslconnectorciphers, CMD_CAT_SERVER_INFO)
+    cmd2.categorize(do_vminfo, CMD_CAT_SERVER_INFO)
 
     # The following command functions don't have the HELP_CATEGORY attribute set
     # and show up in the 'Other' group
@@ -138,7 +137,7 @@ class HelpCategories(Cmd):
 
     def do_version(self, _):
         """Version command"""
-        self.poutput(__version__)
+        self.poutput(cmd2.__version__)
 
 
 if __name__ == '__main__':

@@ -12,8 +12,8 @@ import argparse
 import os
 import sys
 
-from cmd2 import cmd2
 import pytest
+import cmd2
 from .conftest import complete_tester, StdOut
 from examples.subcommands import SubcommandsExample
 
