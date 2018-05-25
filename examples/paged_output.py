@@ -3,8 +3,7 @@
 """A simple example demonstrating the using paged output via the ppaged() method.
 """
 
-from cmd2 import cmd2
-from cmd2.cmd2 import with_argument_list
+import cmd2
 
 
 class PagedOutput(cmd2.Cmd):
@@ -13,7 +12,7 @@ class PagedOutput(cmd2.Cmd):
     def __init__(self):
         super().__init__()
 
-    @with_argument_list
+    @cmd2.with_argument_list
     def do_page_file(self, args):
         """Read in a text file and display its output in a pager."""
         if not args:

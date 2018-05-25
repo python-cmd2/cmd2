@@ -21,9 +21,9 @@ Working on your first Pull Request? You can learn how from this *free* series [H
 - [Prerequisites](#prerequisites)
 - [Forking The Project](#forking-the-project)
 - [Create A Branch](#create-a-branch)
-- [Setup Linting](#setup-linting)
 - [Setup for cmd2 development](#setup-for-cmd2-development)
 - [Make Changes](#make-changes)
+- [Static Code Analysis](#static-code-analysis)
 - [Run The Test Suite](#run-the-test-suite)
 - [Squash Your Commits](#squash-your-commits)
 - [Creating A Pull Request](#creating-a-pull-request)
@@ -33,6 +33,7 @@ Working on your first Pull Request? You can learn how from this *free* series [H
 - [Next Steps](#next-steps)
 - [Other resources](#other-resources)
 - [Advice](#advice)
+- [Developing in an IDE](#developing-in-an-ide)
 
 ### Prerequisites
 
@@ -175,57 +176,44 @@ $ git push origin [name_of_your_new_branch]
 
 ##### If you need more help with branching, take a look at _[this](https://github.com/Kunena/Kunena-Forum/wiki/Create-a-new-branch-with-git-and-manage-branches)_.
 
-### Setup Linting
-
-You should have some sort of [PEP8](https://www.python.org/dev/peps/pep-0008/)-based linting running in your editor or IDE or at the command-line before you commit code.  [pylint](https://www.pylint.org) is a good Python linter which can be run at the command-line but also can integrate with many IDEs and editors.
-
-> Please do not ignore any linting errors in code you write or modify, as they are meant to **help** you and to ensure a clean and simple code base.  Don't worry about linting errors in code you don't touch though - cleaning up the legacy code is a work in progress.
-
 
 ### Setup for cmd2 development
-Once you have cmd2 cloned, before you start any cmd2 application, you first need to install all of the dependencies:
-
-```bash
-# Install cmd2 prerequisites
-pip install -U pyperclip
-
-# Install prerequisites for running cmd2 unit tests
-pip install -U pytest
-
-# Install prerequisites for building cmd2 documentation
-pip install -U sphinx sphinx-rtd-theme
-
-# Install optional prerequisites for doing code coverage analysis
-pip install -U pytest-cov
-```
-
-For doing cmd2 development, you actually do NOT want to have cmd2 installed as a Python package.  
+For doing cmd2 development, you actually do NOT want to have cmd2 installed as a Python package.
 So if you have previously installed cmd2, make sure to uninstall it:
 ```bash
 pip uninstall cmd2
 ```
 
-Then you should modify your PYTHONPATH environment variable to include the directory you have cloned the cmd2 repository to.
-Add a line similar to the following to your .bashrc, .bashprofile, or to your Windows environment variables:
-
+Assuming you cloned the repository to `~/src/cmd2`:
 ```bash
-# Use cmd2 Python module from GitHub clone when it isn't installed
-export PYTHONPATH=$PYTHONPATH:~/src/cmd2
+$ cd ~/src/cmd2
+$ pip install -e .
+```
+will install cmd2 in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs).
+Changes to the source code are immediately available when the python interpreter
+imports `cmd2`, there is no need to re-install the module after every change. This
+command will also install all of the runtime dependencies for `cmd2`.
+
+Next you should install all the modules used for development of `cmd2`:
+```bash
+$ cd ~/src/cmd2
+$ pip install -e .[dev]
 ```
 
-Where `~src/cmd2` is replaced by the directory you cloned your fork of the cmd2 repo to.
+This will install `pytest` and `tox` for running unit tests, `pylint` for
+static code analysis, and `sphinx` for building the documentation.
 
-Now navigate to your terminal to the directory you cloned your fork of the cmd2 repo to and
-try running the example to make sure everything is working:
-
+Now you can check if everything is installed and working:
 ```bash
 cd ~src/cmd2
 python examples/example.py
 ```
 
-If the example app loads, you should see a prompt that says "(Cmd)".  You can type `help` to get help or `quit` to quit.
-If you see that, then congratulations – you're all set. Otherwise, refer to the cmd2 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html#installing).  There also might be an error in the console
-of  your Bash / Terminal / Command Line that will help identify the problem.
+If the example app loads, you should see a prompt that says "(Cmd)".  You can
+type `help` to get help or `quit` to quit. If you see that, then congratulations
+– you're all set. Otherwise, refer to the cmd2 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html#installing).
+There also might be an error in the console of your Bash / Terminal / Command Line
+that will help identify the problem.
 
 ### Make Changes
 This bit is up to you!
@@ -246,16 +234,19 @@ make clean html
 ```
 In order to see the changes, use your web browser of choice to open `<cmd2>/docs/_build/html/index.html`.
 
+### Static Code Analysis
+
+You should have some sort of [PEP8](https://www.python.org/dev/peps/pep-0008/)-based linting running in your editor or IDE or at the command-line before you commit code.  [pylint](https://www.pylint.org) is a good Python linter which can be run at the command-line but also can integrate with many IDEs and editors.
+
+> Please do not ignore any linting errors in code you write or modify, as they are meant to **help** you and to ensure a clean and simple code base.  Don't worry about linting errors in code you don't touch though - cleaning up the legacy code is a work in progress.
+
 ### Run The Test Suite
 When you're ready to share your code, run the test suite:
-
 ```shell
 cd <cmd2>
 py.test
 ```
-
 and ensure all tests pass.
-
 
 #### Measuring code coverage
 
@@ -381,7 +372,7 @@ how to do it.
 
 7.  Creating the PR causes our continuous integration (CI) systems to automatically run all of the
     unit tests on all supported OSes and all supported versions of Python.  You should watch your PR
-    to make sure that all unit tests pass on Both TravisCI (Linux) and AppVeyor (Windows).  
+    to make sure that all unit tests pass on Both TravisCI (Linux) and AppVeyor (Windows).
 
 8.  If any unit tests fail, you should look at the details and fix the failures.  You can then push
     the fix to the same branch in your fork and the PR will automatically get updated and the CI system
@@ -395,7 +386,7 @@ integration (CI) providers to automatically run all of the unit tests on multipl
 
 1. If your changes can merge without conflicts and all unit tests pass for all OSes and supported versions of Python,
 then your pull request (PR) will have a big green checkbox which says something like "All Checks Passed" next to it.
-If this is not the case, there will be a link you can click on to get details regarding what the problem is.  
+If this is not the case, there will be a link you can click on to get details regarding what the problem is.
 It is your responsibility to make sure all unit tests are passing.  Generally a Maintainer will not QA a
 pull request unless it can merge without conflicts and all unit tests pass on all supported platforms.
 
@@ -460,9 +451,9 @@ Here is some advice regarding what makes a good pull request (PR) from the persp
 - Code coverage of the unit tests matters, try not to decrease it
 - Think twice before adding dependencies to 3rd party libraries (outside of the Python standard library) because it could affect a lot of users
 
-### Developing and Debugging in an IDE
+### Developing in an IDE
 
-We recommend using [Visual Studio Code](https://code.visualstudio.com) with the [Python extension](https://code.visualstudio.com/docs/languages/python) and it's [Integrated Terminal](https://code.visualstudio.com/docs/python/debugging) debugger for debugging since it has 
+We recommend using [Visual Studio Code](https://code.visualstudio.com) with the [Python extension](https://code.visualstudio.com/docs/languages/python) and it's [Integrated Terminal](https://code.visualstudio.com/docs/python/debugging) debugger for debugging since it has
 excellent support for debugging console applications.
 
 [PyCharm](https://www.jetbrains.com/pycharm/) is also quite good and has very nice [Code Inspection](https://www.jetbrains.com/help/pycharm/code-inspection.html) capabilities.

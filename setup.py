@@ -67,9 +67,12 @@ EXTRAS_REQUIRE = {
     ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
     ":python_version<'3.5'": ['contextlib2', 'typing'],
+    # development only dependencies
+    # install with 'pip install -e .[dev]'
+    'dev': [
+        'pytest', 'pytest-cov', 'tox', 'pylint', 'sphinx', 'sphinx-rtd-theme',
+    ]
 }
-
-TESTS_REQUIRE = ['pytest', 'pytest-xdist']
 
 setup(
     name="cmd2",
@@ -87,5 +90,4 @@ setup(
     python_requires='>=3.4',
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
-    tests_require=TESTS_REQUIRE,
 )

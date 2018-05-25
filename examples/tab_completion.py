@@ -4,8 +4,7 @@
 """
 import argparse
 
-from cmd2 import cmd2
-from cmd2.cmd2 import with_argparser, with_argument_list
+import cmd2
 
 # List of strings used with flag and index based completion functions
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
@@ -24,7 +23,7 @@ class TabCompleteExample(cmd2.Cmd):
     add_item_group.add_argument('-s', '--sport', help='Adds sport item')
     add_item_group.add_argument('-o', '--other', help='Adds other item')
 
-    @with_argparser(add_item_parser)
+    @cmd2.with_argparser(add_item_parser)
     def do_add_item(self, args):
         """Add item command help"""
         if args.food:
@@ -57,7 +56,7 @@ class TabCompleteExample(cmd2.Cmd):
 
         return self.flag_based_complete(text, line, begidx, endidx, flag_dict=flag_dict)
 
-    @with_argument_list
+    @cmd2.with_argument_list
     def do_list_item(self, args):
         """List item command help"""
         self.poutput("You listed {}".format(args))

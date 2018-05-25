@@ -7,9 +7,8 @@ Released under MIT license, see LICENSE file
 """
 import pytest
 
-from cmd2 import cmd2
+import cmd2
 from cmd2.parsing import StatementParser
-
 from cmd2 import utils
 
 @pytest.fixture
