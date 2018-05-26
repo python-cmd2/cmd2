@@ -46,32 +46,28 @@ until the application exits:
 
 1. Output the prompt
 2. Accept user input
-3. Call methods registered with `register_preparsing_hook()`
-4. Parse user input into `Statement` object
-5. Call methods registered with `register_postparsing_hook()`
-6. Call `postparsing_precmd()` - for backwards compatibility deprecated
-7. Redirect output, if user asked for it and it's allowed
-8. Start command timer
-9. Call methods registered with `register_precmd_hook()`
-10. Call `precmd()` - for backwards compatibility deprecated
-11. Add statement to history
-12. Call `do_command` method
-13. Call methods registered with `register_postcmd_hook()`
-14. Call `postcmd()` - for backwards compatibility deprecated
-15. Stop timer
-16. Stop redirecting output, if it was redirected
-17. Call methods registered with `register_cmdcompleted_hook()`
-18. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
+3. Parse user input into `Statement` object
+4. Call methods registered with `register_postparsing_hook()`
+5. Call `postparsing_precmd()` - for backwards compatibility deprecated
+6. Redirect output, if user asked for it and it's allowed
+7. Start command timer
+8. Call methods registered with `register_precmd_hook()`
+9. Call `precmd()` - for backwards compatibility deprecated
+10. Add statement to history
+11. Call `do_command` method
+12. Call methods registered with `register_postcmd_hook()`
+13. Call `postcmd()` - for backwards compatibility deprecated
+14. Stop timer
+15. Stop redirecting output, if it was redirected
+16. Call methods registered with `register_cmdcompleted_hook()`
+17. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
 
-By registering hook methods, steps 3, 5, 9, 13, and 17 allow you to run code
+By registering hook methods, steps 4, 8, 12, and 16 allow you to run code
 during, and control the flow of the command processing loop. Be aware that
 plugins also utilize these hooks, so there may be code running that is not
 part of your application. Methods registered for a hook are called in the
 order they were registered. You can register a function more than once, and
 it will be called each time it was registered.
-
-Preparsing Hooks
-^^^^^^^^^^^^^^^^
 
 Postparsing Hooks
 ^^^^^^^^^^^^^^^^^

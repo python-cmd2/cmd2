@@ -1706,7 +1706,6 @@ class Cmd(cmd.Cmd):
             if not stop:
                 (stop, statement) = self.postparsing_precmd(statement)
             if stop:
-                #stop = self.hook_cmdcompleted(stop)
                 return self.postparsing_postcmd(stop)
 
             try:
