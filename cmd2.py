@@ -154,6 +154,38 @@ if 'pyreadline' in sys.modules:
     # noinspection PyProtectedMember
     orig_pyreadline_display = readline.rl.mode._display_completions
 
+    ############################################################################################################
+    # pyreadline is incomplete in terms of the Python readline API. Add the missing functions we need.
+    ############################################################################################################
+    # readline.redisplay()
+    try:
+        getattr(readline, 'redisplay')
+    except AttributeError:
+        # noinspection PyProtectedMember
+        readline.redisplay = readline.rl.mode._update_line
+
+    # readline.remove_history_item()
+    try:
+        getattr(readline, 'remove_history_item')
+    except AttributeError:
+        # noinspection PyProtectedMember
+        def pyreadline_remove_history_item(pos):
+            """
+            An implementation of remove_history_item() for pyreadline
+            :param pos: The 0-based position in history to remove
+            """
+            # Save of the current location of the history cursor
+            saved_cursor = readline.rl.mode._history.history_cursor
+
+            # Delete the history item
+            del (readline.rl.mode._history.history[pos])
+
+            # Update the cursor if needed
+            if saved_cursor > pos:
+                readline.rl.mode._history.history_cursor -= 1
+
+        readline.remove_history_item = pyreadline_remove_history_item
+
 elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
     # We don't support libedit
     if 'libedit' not in readline.__doc__:
@@ -166,11 +198,17 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
         import ctypes
         readline_lib = ctypes.CDLL(readline.__file__)
 
+        rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
+        orig_rl_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+
 if rl_type == RlType.NONE:
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
     sys.stderr.write(rl_warning)
+else:
+    # Used by rlcompleter in Python console loaded by py command
+    orig_rl_delims = readline.get_completer_delims()
 
 # BrokenPipeError and FileNotFoundError exist only in Python 3. Use IOError for Python 2.
 if six.PY3:
@@ -1065,6 +1103,7 @@ class Cmd(cmd.Cmd):
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
+        self.py_history = []
         self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
         self.parser_manager = ParserManager(redirector=self.redirector, terminators=self.terminators,
                                             multilineCommands=self.multilineCommands,
@@ -1124,7 +1163,7 @@ class Cmd(cmd.Cmd):
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
-        # using set_completion_defaults() and it is up to completer functions to set them before returning results.
+        # using reset_completion_defaults() and it is up to completer functions to set them before returning results.
         ############################################################################################################
 
         # If true and a single match is returned to complete(), then a space will be appended
@@ -1333,7 +1372,7 @@ class Cmd(cmd.Cmd):
 
     # -----  Methods related to tab completion -----
 
-    def set_completion_defaults(self):
+    def reset_completion_defaults(self):
         """
         Resets tab completion settings
         Needs to be called each time readline runs tab completion
@@ -1985,7 +2024,7 @@ class Cmd(cmd.Cmd):
         """
         if state == 0 and rl_type != RlType.NONE:
             unclosed_quote = ''
-            self.set_completion_defaults()
+            self.reset_completion_defaults()
 
             # lstrip the original line
             orig_line = readline.get_line_buffer()
@@ -2729,12 +2768,10 @@ class Cmd(cmd.Cmd):
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
                 # We don't need to worry about setting rl_completion_suppress_quote since we never declared
                 # rl_completer_quote_characters.
-                basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
-                old_basic_quote_characters = ctypes.cast(basic_quote_characters, ctypes.c_void_p).value
-                basic_quote_characters.value = None
+                old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                rl_basic_quote_characters.value = None
 
             old_completer = readline.get_completer()
-            old_delims = readline.get_completer_delims()
             readline.set_completer(self.complete)
 
             # Break words on whitespace and quotes when tab completing
@@ -2744,6 +2781,7 @@ class Cmd(cmd.Cmd):
                 # If redirection is allowed, then break words on those characters too
                 completer_delims += ''.join(REDIRECTION_CHARS)
 
+            old_delims = readline.get_completer_delims()
             readline.set_completer_delims(completer_delims)
 
             # Enable tab completion
@@ -2780,7 +2818,7 @@ class Cmd(cmd.Cmd):
 
                 if rl_type == RlType.GNU:
                     readline.set_completion_display_matches_hook(None)
-                    basic_quote_characters.value = old_basic_quote_characters
+                    rl_basic_quote_characters.value = old_basic_quotes
                 elif rl_type == RlType.PYREADLINE:
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
@@ -3298,7 +3336,30 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         return matches
 
-    # noinspection PyBroadException
+    @staticmethod
+    def _reset_py_display():
+        """
+        Resets the dynamic objects in the sys module that the py and ipy consoles fight over.
+        When a Python console starts it adopts certain display settings if they've already been set.
+        If an ipy console has previously been run, then py uses its settings and ends up looking
+        like an ipy console in terms of prompt and exception text. This method forces the Python
+        console to create its own display settings since they won't exist.
+
+        IPython does not have this problem since it always overwrites the display settings when it
+        is run. Therefore this method only needs to be called before creating a Python console.
+        """
+        # Delete any prompts that have been set
+        attributes = ['ps1', 'ps2', 'ps3']
+        for cur_attr in attributes:
+            try:
+                del sys.__dict__[cur_attr]
+            except KeyError:
+                pass
+
+        # Reset functions
+        sys.displayhook = sys.__displayhook__
+        sys.excepthook = sys.__excepthook__
+
     def do_py(self, arg):
         """
         Invoke python command, shell, or script
@@ -3314,6 +3375,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             return
         self._in_py = True
 
+        # noinspection PyBroadException
         try:
             self.pystate['self'] = self
             arg = arg.strip()
@@ -3347,6 +3409,8 @@ Usage:  Usage: unalias [-a] name [name ...]
 
             if arg:
                 interp.runcode(arg)
+
+            # If there are no args, then we will open an interactive Python console
             else:
                 # noinspection PyShadowingBuiltins
                 def quit():
@@ -3356,19 +3420,98 @@ Usage:  Usage: unalias [-a] name [name ...]
                 self.pystate['quit'] = quit
                 self.pystate['exit'] = quit
 
-                keepstate = None
+                # Set up readline for Python console
+                if rl_type != RlType.NONE:
+                    # Save cmd2 history
+                    saved_cmd2_history = []
+                    for i in range(1, readline.get_current_history_length() + 1):
+                        saved_cmd2_history.append(readline.get_history_item(i))
+
+                    readline.clear_history()
+
+                    # Restore py's history
+                    for item in self.py_history:
+                        readline.add_history(item)
+
+                    if self.use_rawinput and self.completekey:
+                        # Set up tab completion for the Python console
+                        # rlcompleter relies on the default settings of the Python readline module
+                        if rl_type == RlType.GNU:
+                            old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                            rl_basic_quote_characters.value = orig_rl_basic_quotes
+
+                            if 'gnureadline' in sys.modules:
+                                # rlcompleter imports readline by name, so it won't use gnureadline
+                                # Force rlcompleter to use gnureadline instead so it has our settings and history
+                                saved_readline = None
+                                if 'readline' in sys.modules:
+                                    saved_readline = sys.modules['readline']
+
+                                sys.modules['readline'] = sys.modules['gnureadline']
+
+                        old_delims = readline.get_completer_delims()
+                        readline.set_completer_delims(orig_rl_delims)
+
+                        # rlcompleter will not need cmd2's custom display function
+                        # This will be restored by cmd2 the next time complete() is called
+                        if rl_type == RlType.GNU:
+                            readline.set_completion_display_matches_hook(None)
+                        elif rl_type == RlType.PYREADLINE:
+                            readline.rl.mode._display_completions = self._display_matches_pyreadline
+
+                        # Save off the current completer and set a new one in the Python console
+                        # Make sure it tab completes from its locals() dictionary
+                        old_completer = readline.get_completer()
+                        interp.runcode("from rlcompleter import Completer")
+                        interp.runcode("import readline")
+                        interp.runcode("readline.set_completer(Completer(locals()).complete)")
+
+                # Set up sys module for the Python console
+                self._reset_py_display()
+                keepstate = Statekeeper(sys, ('stdin', 'stdout'))
+                sys.stdout = self.stdout
+                sys.stdin = self.stdin
+
+                cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+
                 try:
-                    cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
-                    keepstate = Statekeeper(sys, ('stdin', 'stdout'))
-                    sys.stdout = self.stdout
-                    sys.stdin = self.stdin
-                    interp.interact(banner="Python %s on %s\n%s\n(%s)\n%s" %
-                                           (sys.version, sys.platform, cprt, self.__class__.__name__,
-                                            self.do_py.__doc__))
+                    interp.interact(banner="Python {} on {}\n{}\n({})\n{}".format(sys.version, sys.platform,
+                                                                                  cprt, self.__class__.__name__,
+                                                                                  self.do_py.__doc__))
                 except EmbeddedConsoleExit:
                     pass
-                if keepstate is not None:
+
+                finally:
                     keepstate.restore()
+
+                    # Set up readline for cmd2
+                    if rl_type != RlType.NONE:
+                        # Save py's history
+                        del self.py_history[:]
+                        for i in range(1, readline.get_current_history_length() + 1):
+                            self.py_history.append(readline.get_history_item(i))
+
+                        readline.clear_history()
+
+                        # Restore cmd2's history
+                        for item in saved_cmd2_history:
+                            readline.add_history(item)
+
+                        if self.use_rawinput and self.completekey:
+                            # Restore cmd2's tab completion settings
+                            readline.set_completer(old_completer)
+                            readline.set_completer_delims(old_delims)
+
+                            if rl_type == RlType.GNU:
+                                rl_basic_quote_characters.value = old_basic_quotes
+
+                                if 'gnureadline' in sys.modules:
+                                    # Restore what the readline module pointed to
+                                    if saved_readline is None:
+                                        del (sys.modules['readline'])
+                                    else:
+                                        sys.modules['readline'] = saved_readline
+
         except Exception:
             pass
         finally:
