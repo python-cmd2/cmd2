@@ -2569,15 +2569,6 @@ Usage:  Usage: unalias [-a] name [name ...]
                 except IOError as e:
                     self.perror(e)
 
-            # noinspection PyUnusedLocal
-            def onecmd_plus_hooks(cmd_plus_args):
-                """Run a cmd2.Cmd command from a Python script or the interactive Python console.
-
-                :param cmd_plus_args: str - command line including command and arguments to run
-                :return: bool - True if cmdloop() should exit once leaving the interactive Python console
-                """
-                return self.onecmd_plus_hooks(cmd_plus_args + '\n')
-
             bridge = PyscriptBridge(self)
             self.pystate['run'] = run
             self.pystate[self.pyscript_name] = bridge
