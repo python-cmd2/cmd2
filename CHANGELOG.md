@@ -2,7 +2,7 @@
 * Bug Fixes
     * Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing help
     * Fixed ``AttributeError`` on Windows when running a ``select`` command cause by **pyreadline** not implementing ``remove_history_item``
-* Enhancement
+* Enhancements
     * Enhanced the ``py`` console in the following ways
         * Added tab completion of Python identifiers instead of **cmd2** commands
         * Separated the ``py`` console history from the **cmd2** history
