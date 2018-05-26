@@ -5,14 +5,16 @@ cmd2 Application Lifecycle and Hooks
 
 The typical way of starting a cmd2 application is as follows::
 
-    from cmd2 import Cmd
-    class App(Cmd):
+    import cmd2
+    class App(cmd2.Cmd):
         # customized attributes and methods here
-    app = App()
-    app.cmdloop()
+
+    if __name__ == '__main__':
+        app = App()
+        app.cmdloop()
 
 There are several pre-existing methods and attributes which you can tweak to control the overall behavior of your
-application before, during, and after the main loop.
+application before, during, and after the command processing loop.
 
 Application Lifecycle Hook Methods
 ----------------------------------
@@ -36,8 +38,94 @@ behavior upon entering or during the main loop.  A partial list of some of the m
     command results
 
 
-Command Processing Hooks
-------------------------
+Command Processing Loop
+-----------------------
+
+When you call `.cmdloop()`, the following sequence of events are repeated
+until the application exits:
+
+1. Output the prompt
+2. Accept user input
+3. Call methods registered with `register_preparsing_hook()`
+4. Parse user input into `Statement` object
+5. Call methods registered with `register_postparsing_hook()`
+6. Call `postparsing_precmd()` - for backwards compatibility deprecated
+7. Redirect output, if user asked for it and it's allowed
+8. Start command timer
+9. Call methods registered with `register_precmd_hook()`
+10. Call `precmd()` - for backwards compatibility deprecated
+11. Add statement to history
+12. Call `do_command` method
+13. Call methods registered with `register_postcmd_hook()`
+14. Call `postcmd()` - for backwards compatibility deprecated
+15. Stop timer
+16. Stop redirecting output, if it was redirected
+17. Call methods registered with `register_cmdcompleted_hook()`
+18. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
+
+By registering hook methods, steps 3, 5, 9, 13, and 17 allow you to run code
+during, and control the flow of the command processing loop. Be aware that
+plugins also utilize these hooks, so there may be code running that is not
+part of your application. Methods registered for a hook are called in the
+order they were registered. You can register a function more than once, and
+it will be called each time it was registered.
+
+Preparsing Hooks
+^^^^^^^^^^^^^^^^
+
+Postparsing Hooks
+^^^^^^^^^^^^^^^^^
+
+You can register one or more methods which are called after the user input
+has been parsed, but before output is redirected, the timer is started, and
+before the command is run.
+
+To define and register a postparsing hook, do the following::
+
+    class App(cmd2.Cmd):
+        def __init__(self, *args, *kwargs):
+            super().__init__(*args, **kwargs)
+            self.register_postparsing_hook(self.myhookmethod)
+
+        def myhookmethod(self, statement):
+            return False, statement
+
+The hook method will be passed one parameter, a `Statement` object containing
+the parsed user input. There are many useful attributes in the Statement
+object, including `.raw` which contains exactly what the user typed. The hook
+method must return a tuple: the first element indicates whether to fatally fail
+this command and exit the application, and the second element is a potentially
+modified `Statement` object.
+
+To modify the user input, you create and return a new `Statement` object::
+
+        def myhookmethod(self, statement):
+            if not '|' in statement.raw:
+                newinput = statement.raw + ' | less'
+                statement = self.statement_parser.parse(newinput)
+            return False, statement
+
+There are several other mechanisms for controlling the flow of command
+processing. If you raise an `cmd2.EmptyStatement` exception, no further
+postparsing hooks will be run, nor will the command be run. No error will
+be displayed for the user either.
+
+If you raise any other exception, no further postprocessing hooks will be run,
+nor will the command be executed. The exception message will be displayed for
+the user.
+
+Precommand Hooks
+^^^^^^^^^^^^^^^^^
+
+Postcommand Hooks
+^^^^^^^^^^^^^^^^^^
+
+Command Completed Hooks
+^^^^^^^^^^^^^^^^^^^^^^^
+
+
+Deprecated Command Processing Hooks
+-----------------------------------
 
 Inside the main loop, every time the user hits <Enter> the line is processed by the ``onecmd_plus_hooks`` method.
 
@@ -59,22 +147,3 @@ the various hook methods, presented in chronological order starting with the one
 .. automethod:: cmd2.cmd2.Cmd.postcmd
 
 .. automethod:: cmd2.cmd2.Cmd.postparsing_postcmd
-
-Registering hooks
------------------
-
-As an alternative to overriding one of the hook methods, you can register any number of functions
-to be called when the hook is processed. These registered functions are called before any overridden
-method.
-
-This method of registering and calling multiple hooks allows plugins to tap into the hook mechanism
-without interfering with each other or with your code.
-
-register_preloop_hook
-register_postloop_hook
-
-register_preparsing_hook
-register_postparsing_hook
-register_precmd_hook
-register_postcmd_hook
-register_cmdcompleted_hook
