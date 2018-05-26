@@ -59,3 +59,22 @@ the various hook methods, presented in chronological order starting with the one
 .. automethod:: cmd2.cmd2.Cmd.postcmd
 
 .. automethod:: cmd2.cmd2.Cmd.postparsing_postcmd
+
+Registering hooks
+-----------------
+
+As an alternative to overriding one of the hook methods, you can register any number of functions
+to be called when the hook is processed. These registered functions are called before any overridden
+method.
+
+This method of registering and calling multiple hooks allows plugins to tap into the hook mechanism
+without interfering with each other or with your code.
+
+register_preloop_hook
+register_postloop_hook
+
+register_preparsing_hook
+register_postparsing_hook
+register_precmd_hook
+register_postcmd_hook
+register_cmdcompleted_hook

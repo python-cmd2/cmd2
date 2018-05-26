@@ -402,6 +402,10 @@ class Cmd(cmd.Cmd):
             import atexit
             atexit.register(readline.write_history_file, persistent_history_file)
 
+        # initialize plugin system
+        # needs to be done before we call __init__(0)
+        self._initialize_plugin_system()
+
         # Call super class constructor
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
@@ -1621,6 +1625,11 @@ class Cmd(cmd.Cmd):
         """
         return statement
 
+    #
+    def hook_postparsing(self, statement: Statement) -> Tuple[bool, Statement]:
+        stop = False
+        return stop, statement
+
     # noinspection PyMethodMayBeStatic
     def postparsing_precmd(self, statement: Statement) -> Tuple[bool, Statement]:
         """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
@@ -1682,8 +1691,15 @@ class Cmd(cmd.Cmd):
         stop = False
         try:
             statement = self._complete_statement(line)
-            (stop, statement) = self.postparsing_precmd(statement)
+            # call the postparsing hooks
+            for func in self._postparsing_hooks:
+                (stop, statement) = func(statement)
+                if stop:
+                    break
+            if not stop:
+                (stop, statement) = self.postparsing_precmd(statement)
             if stop:
+                #stop = self.hook_cmdcompleted(stop)
                 return self.postparsing_postcmd(stop)
 
             try:
@@ -2973,6 +2989,19 @@ Script should contain one command per line, just like command would be typed in 
 
         # Run the postloop() no matter what
         self.postloop()
+
+    ###
+    #
+    # plugin related functions
+    #
+    ###
+    def _initialize_plugin_system(self):
+        """Initialize the plugin system"""
+        self._postparsing_hooks = []
+
+    def register_postparsing_hook(self, func):
+        """Register a function to be called after parsing user input but before running the command"""
+        self._postparsing_hooks.append(func)
 
 
 class HistoryItem(str):
