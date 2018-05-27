@@ -1,8 +1,11 @@
-## 0.8.6 (TBD)
+## 0.8.6 (May 27, 2018)
 * Bug Fixes
-    * Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing help
+    * Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing 
+    * Fixed issue where completion display function was overwritten when a submenu quits
     * Fixed ``AttributeError`` on Windows when running a ``select`` command cause by **pyreadline** not implementing ``remove_history_item``
 * Enhancements
+    * Added warning about **libedit** variant of **readline** not being supported on macOS
+    * Added tab-completion of alias names in value filed of **alias** command
     * Enhanced the ``py`` console in the following ways
         * Added tab completion of Python identifiers instead of **cmd2** commands
         * Separated the ``py`` console history from the **cmd2** history
