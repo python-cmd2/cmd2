@@ -1688,7 +1688,7 @@ class Cmd(cmd.Cmd):
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line):
+    def onecmd_plus_hooks(self, line: str) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
         :param line: str - line of text read from input
@@ -1706,7 +1706,9 @@ class Cmd(cmd.Cmd):
             if not stop:
                 (stop, statement) = self.postparsing_precmd(statement)
             if stop:
-                return self.postparsing_postcmd(stop)
+                # we need to not run the command, but
+                # we need to run the finalization hooks
+                raise EmptyStatement
 
             try:
                 if self.allow_redirection:
@@ -1714,9 +1716,20 @@ class Cmd(cmd.Cmd):
                 timestart = datetime.datetime.now()
                 if self._in_py:
                     self._last_result = None
+
+                # precommand hooks
+                for func in self._precmd_hooks:
+                    statement = func(statement)
                 statement = self.precmd(statement)
+
+                # go run the command function
                 stop = self.onecmd(statement)
+
+                # postcommand hooks
+                for func in self._postcmd_hooks:
+                    stop = func(stop, statement)
                 stop = self.postcmd(stop, statement)
+
                 if self.timing:
                     self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
             finally:
@@ -3114,6 +3127,8 @@ Script should contain one command per line, just like command would be typed in 
         self._preloop_hooks = []
         self._postloop_hooks = []
         self._postparsing_hooks = []
+        self._precmd_hooks = []
+        self._postcmd_hooks = []
 
     def register_preloop_hook(self, func):
         """Register a function to be called at the beginning of the command loop."""
@@ -3126,6 +3141,14 @@ Script should contain one command per line, just like command would be typed in 
     def register_postparsing_hook(self, func):
         """Register a function to be called after parsing user input but before running the command"""
         self._postparsing_hooks.append(func)
+
+    def register_precmd_hook(self, func):
+        """Register a function to be called before the command function."""
+        self._precmd_hooks.append(func)
+
+    def register_postcmd_hook(self, func):
+        """Register a function to be called after the command function."""
+        self._postcmd_hooks.append(func)
 
 
 class HistoryItem(str):

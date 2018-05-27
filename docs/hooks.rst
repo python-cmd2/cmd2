@@ -40,15 +40,16 @@ And also after the command loop has finished::
         def myhookmethod(self):
             self.poutput("before the loop begins")
 
-As you can see the preloop and postloop hook methods are not passed any
-parameters and any return value is ignored.
+Preloop and postloop hook methods are not passed any parameters and any return
+value is ignored.
 
 
 Application Lifecycle Attributes
 --------------------------------
 
-There are numerous attributes (member variables of the ``cmd2.Cmd``) which have a significant effect on the application
-behavior upon entering or during the main loop.  A partial list of some of the more important ones is presented here:
+There are numerous attributes (member variables of the ``cmd2.Cmd``) which have
+a significant effect on the application behavior upon entering or during the
+main loop.  A partial list of some of the more important ones is presented here:
 
 - **intro**: *str* - if provided this serves as the intro banner printed once at start of application, after ``preloop`` runs
 - **allow_cli_args**: *bool* - if True (default), then searches for -t or --test at command line to invoke transcript testing mode instead of a normal main loop
@@ -70,16 +71,16 @@ until the application exits:
 4. Call methods registered with `register_postparsing_hook()`
 5. Call `postparsing_precmd()` - for backwards compatibility deprecated
 6. Redirect output, if user asked for it and it's allowed
-7. Start command timer
+7. Start timer
 8. Call methods registered with `register_precmd_hook()`
-9. Call `precmd()` - for backwards compatibility deprecated
+9. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
 10. Add statement to history
 11. Call `do_command` method
 12. Call methods registered with `register_postcmd_hook()`
-13. Call `postcmd()` - for backwards compatibility deprecated
-14. Stop timer
-15. Stop redirecting output, if it was redirected
-16. Call methods registered with `register_cmdcompleted_hook()`
+13. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
+14. Stop timer and display the elapsed time
+15. Stop redirecting output if it was redirected
+16. Call methods registered with `register_cmdfinalization_hook()`
 17. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
 
 By registering hook methods, steps 4, 8, 12, and 16 allow you to run code
@@ -89,12 +90,32 @@ part of your application. Methods registered for a hook are called in the
 order they were registered. You can register a function more than once, and
 it will be called each time it was registered.
 
+Postparsing, precomamnd, and postcommand hook methods share some common ways to
+influence the command processing loop.
+
+If a hook raises a ``cmd2.EmptyStatement`` exception:
+- no more hooks (except command finalization hooks) of any kind will be called
+- if the command has not yet been executed, it will not be executed
+- no error message will be displayed to the user
+
+If a hook raises any other exception:
+- no more hooks (except command finalization hooks) of any kind will be called
+- if the command has not yet been executed, it will not be executed
+- the exception message will be displayed for the user.
+
+Specific types of hook methods have additional options as described below.
+
 Postparsing Hooks
 ^^^^^^^^^^^^^^^^^
 
-You can register one or more methods which are called after the user input
-has been parsed, but before output is redirected, the timer is started, and
-before the command is run.
+Postparsing hooks are called after the user input has been parsed but before
+execution of the comamnd. These hooks can be used to:
+- modify the user input
+- cancel execution of the current command
+- exit the application
+
+When postparsing hooks are called, output has not been redirected, nor has the
+timer for command execution been started.
 
 To define and register a postparsing hook, do the following::
 
@@ -106,38 +127,125 @@ To define and register a postparsing hook, do the following::
         def myhookmethod(self, statement):
             return False, statement
 
-The hook method will be passed one parameter, a `Statement` object containing
-the parsed user input. There are many useful attributes in the Statement
-object, including `.raw` which contains exactly what the user typed. The hook
+The hook method will be passed one parameter, a ``Statement`` object containing
+the parsed user input. There are many useful attributes in the ``Statement``
+object, including ``.raw`` which contains exactly what the user typed. The hook
 method must return a tuple: the first element indicates whether to fatally fail
-this command and exit the application, and the second element is a potentially
-modified `Statement` object.
+this command prior to execution and exit the application, and the second element
+is a potentially modified ``Statement`` object.
 
-To modify the user input, you create and return a new `Statement` object::
+To modify the user input, you create and return a new ``Statement`` object.
+Don't try and directly modify the contents of a ``Statement`` object, there be
+dragons. Instead, use the various attributes in a ``Statement`` object to
+construct a new string, and then parse that string to create a new ``Statement``
+object.
 
-        def myhookmethod(self, statement):
-            if not '|' in statement.raw:
-                newinput = statement.raw + ' | less'
-                statement = self.statement_parser.parse(newinput)
-            return False, statement
+``cmd2.Cmd()`` uses an instance of ``cmd2.StatementParser`` to parse user input.
+This instance has been configured with the proper command terminators, multiline
+commands, and other parsing related settings. This instance is available as the
+``self.statement_parser`` attribute. Here's a simple example which shows the
+proper technique::
 
-There are several other mechanisms for controlling the flow of command
-processing. If you raise an `cmd2.EmptyStatement` exception, no further
-postparsing hooks will be run, nor will the command be run. No error will
-be displayed for the user either.
+    def myhookmethod(self, statement):
+        stop = False
+        if not '|' in statement.raw:
+            newinput = statement.raw + ' | less'
+            statement = self.statement_parser.parse(newinput)
+        return stop, statement
 
-If you raise any other exception, no further postprocessing hooks will be run,
-nor will the command be executed. The exception message will be displayed for
-the user.
+If a postparsing hook returns ``True`` as the first value in the tuple:
+- no more hooks of any kind (except command finalization hooks) will be called
+- the command will not be executed
+- no error message will be displayed to the user
+- the application will exit
+
 
 Precommand Hooks
 ^^^^^^^^^^^^^^^^^
 
+Once output is redirected and the timer started, all the hooks registered with
+``register_precmd_hook()`` are called. Here's how you do it::
+
+    class App(cmd2.Cmd):
+        def __init__(self, *args, *kwargs):
+            super().__init__(*args, **kwargs)
+            self.register_precmd_hook(self.myhookmethod)
+
+        def myhookmethod(self, statement):
+            return statement
+
+You may choose to create a new ``Statement`` with different properties (see
+above) or leave it alone, but you must return a ``Statement`` object.
+
+After all registered precommand hooks have been called, ``self.precmd(statement)``
+will be called. This retains full backwards compatibility with ``cmd.Cmd``.
+
 Postcommand Hooks
 ^^^^^^^^^^^^^^^^^^
 
-Command Completed Hooks
-^^^^^^^^^^^^^^^^^^^^^^^
+Once the command method has returned (i.e. the ``do_command(self, statement) method``
+has been called and returns, all postcommand hooks are called. If output was redirected
+by the user, it is still redirected, and the command timer is still running.
+
+Here's how to define a register a postcommand hook::
+
+    class App(cmd2.Cmd):
+        def __init__(self, *args, *kwargs):
+            super().__init__(*args, **kwargs)
+            self.register_postcmd_hook(self.myhookmethod)
+
+        def myhookmethod(self, statement):
+            stop = False
+            return stop
+
+Your hook will be passed the statement object, which describes the command which
+was executed. If your postcommand hook method gets called, you are guaranteed that
+the command method was called, and that it didn't raise an exception.
+
+If any postcommand hook raises an exception, no further postcommand hook methods
+will be called.
+
+After all registered precommand hooks have been called,
+``self.postcmd(statement)`` will be called. This retains full backwards
+compatibility with ``cmd.Cmd``.
+
+If any postcommand hook (registered or ``self.postcmd()``) returns ``True``,
+subsequent postcommand hooks will still be called, as will the command
+finalization hooks, but once those hooks have all been called, the application
+will terminate.
+
+Command Finalization Hooks
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Command finalization hooks are called even if one of the other types of hooks or
+the command method raise an exception. Here's how to create and register a
+command finalization hook::
+
+    class App(cmd2.Cmd):
+        def __init__(self, *args, *kwargs):
+            super().__init__(*args, **kwargs)
+            self.register_cmdfinalization_hook(self.myhookmethod)
+
+        def myhookmethod(self, stop, statement):
+            return stop
+
+If any prior postparsing or precommand hook has requested the application to
+terminate, the value of the ``stop`` parameter passed to the first command
+finalization hook will be ``True``. Any command finalization hook can change the
+value of the ``stop`` parameter before returning it, and the modified value will
+be passed to the next command finalization hook. The value returned by the final
+command finalization hook will determin whether the application terminates or
+not.
+
+This approach to command finalization hooks can be powerful, but it can also
+cause problems. If your hook blindly returns ``False``, a prior hook's requst to
+exit the application will not be honored. It's best to return the value you were
+passed unless you have a compelling reason to do otherwise.
+
+If any command finalization hook raises an exception, no more command
+finalization hooks will be called. If the last hook to return a value returned
+``True``, then the exception will be rendered, and the application will
+terminate.
 
 Deprecated Application Lifecycle Hook Methods
 ---------------------------------------------

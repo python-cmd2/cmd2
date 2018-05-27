@@ -165,17 +165,19 @@ def test_postparsing_hook_stop_second(capsys):
 def test_postparsing_hook_emptystatement_first(capsys):
     app = PluggedApp()
     app.register_postparsing_hook(app.pph_emptystatement)
-    app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
+    assert not stop
     assert not out
     assert not err
     assert app.called_pph == 1
 
     # register another function but it shouldn't be called
     app.reset_counters()
-    app.register_postparsing_hook(app.pph)
+    stop = app.register_postparsing_hook(app.pph)
     app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
+    assert not stop
     assert not out
     assert not err
     assert app.called_pph == 1
@@ -183,8 +185,9 @@ def test_postparsing_hook_emptystatement_first(capsys):
 def test_postparsing_hook_emptystatement_second(capsys):
     app = PluggedApp()
     app.register_postparsing_hook(app.pph)
-    app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
+    assert not stop
     assert out == 'hello\n'
     assert not err
     assert app.called_pph == 1
@@ -192,8 +195,9 @@ def test_postparsing_hook_emptystatement_second(capsys):
     # register another function and make sure it gets called
     app.reset_counters()
     app.register_postparsing_hook(app.pph_emptystatement)
-    app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
+    assert not stop
     assert not out
     assert not err
     assert app.called_pph == 2
@@ -203,25 +207,27 @@ def test_postparsing_hook_emptystatement_second(capsys):
     app.register_postparsing_hook(app.pph)
     stop = app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
+    assert not stop
     assert not out
     assert not err
     assert app.called_pph == 2
-    assert not stop
 
 def test_postparsing_hook_exception(capsys):
     app = PluggedApp()
     app.register_postparsing_hook(app.pph_exception)
-    app.onecmd_plus_hooks('say hello')
+    stop = app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
+    assert not stop
     assert not out
     assert err
     assert app.called_pph == 1
 
     # register another function, but it shouldn't be called
     app.reset_counters()
-    app.register_postparsing_hook(app.pph)
+    stop = app.register_postparsing_hook(app.pph)
     app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
+    assert not stop
     assert not out
     assert err
     assert app.called_pph == 1
