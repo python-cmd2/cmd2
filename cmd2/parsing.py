@@ -20,6 +20,10 @@ class Statement(str):
     need a place to capture the additional output of the command parsing, so we add
     our own attributes to this subclass.
 
+    Instances of this class should not be created by anything other than the
+    `StatementParser.parse()` method, nor should any of the attributes be modified
+    once the object is created.
+
     The string portion of the class contains the arguments, but not the command, nor
     the output redirection clauses.
 
@@ -227,7 +231,7 @@ class StatementParser:
         tokens = self._split_on_punctuation(list(lexer))
         return tokens
 
-    def parse(self, rawinput: str) -> Statement:
+    def parse(self, line: str) -> Statement:
         """Tokenize the input and parse it into a Statement object, stripping
         comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
@@ -239,7 +243,7 @@ class StatementParser:
         # we have to do this before we tokenize because tokenizing
         # destroys all unquoted whitespace in the input
         terminator = None
-        if rawinput[-1:] == LINE_FEED:
+        if line[-1:] == LINE_FEED:
             terminator = LINE_FEED
 
         command = None
@@ -247,7 +251,7 @@ class StatementParser:
         argv = None
 
         # lex the input into a list of tokens
-        tokens = self.tokenize(rawinput)
+        tokens = self.tokenize(line)
 
         # of the valid terminators, find the first one to occur in the input
         terminator_pos = len(tokens) + 1
@@ -345,7 +349,7 @@ class StatementParser:
         # string representation of args must be an empty string instead of
         # None for compatibility with standard library cmd
         statement = Statement('' if args is None else args)
-        statement.raw = rawinput
+        statement.raw = line
         statement.command = command
         # if there are no args we will use None since we don't have to worry
         # about compatibility with standard library cmd
