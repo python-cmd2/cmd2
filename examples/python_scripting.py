@@ -28,6 +28,7 @@ class CmdLineApp(cmd2.Cmd):
         super().__init__(use_ipython=True)
         self._set_prompt()
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇  (Python 3 only)  💩'
+        self.locals_in_py = True
 
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
