@@ -1620,15 +1620,6 @@ class Cmd(cmd.Cmd):
         return raw
 
     # noinspection PyMethodMayBeStatic
-    def postparse(self, statement: Statement) -> Statement:
-        """Hook that runs immediately after parsing the user input.
-
-        :param statement: Statement object populated by parsing
-        :return: Statement - potentially modified Statement object
-        """
-        return statement
-
-    # noinspection PyMethodMayBeStatic
     def postparsing_precmd(self, statement: Statement) -> Tuple[bool, Statement]:
         """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
 
@@ -1688,7 +1679,7 @@ class Cmd(cmd.Cmd):
         import datetime
         stop = False
         try:
-            statement = self._complete_statement(line)
+            statement = self._complete_statement(self.preparse(line))
             (stop, statement) = self.postparsing_precmd(statement)
             if stop:
                 return self.postparsing_postcmd(stop)
