@@ -23,6 +23,12 @@ class Plugin:
     def reset_counters(self):
         self.called_pph = 0
 
+    def prepost_hook_one(self):
+        self.poutput("one")
+
+    def prepost_hook_two(self):
+        self.poutput("two")
+
     def pph(self, statement: cmd2.Statement) -> Tuple[bool, cmd2.Statement]:
         self.called_pph += 1
         return False, statement
@@ -53,6 +59,48 @@ class PluggedApp(Plugin, cmd2.Cmd):
 # test hooks
 #
 ###
+def test_preloop_hook(capsys):
+    app = PluggedApp()
+    app.register_preloop_hook(app.prepost_hook_one)
+    app.cmdqueue.append('say hello')
+    app.cmdqueue.append('quit')
+    app.cmdloop()
+    out, err = capsys.readouterr()
+    assert out == 'one\nhello\n'
+    assert not err
+
+def test_preloop_hooks(capsys):
+    app = PluggedApp()
+    app.register_preloop_hook(app.prepost_hook_one)
+    app.register_preloop_hook(app.prepost_hook_two)
+    app.cmdqueue.append('say hello')
+    app.cmdqueue.append('quit')
+    app.cmdloop()
+    out, err = capsys.readouterr()
+    assert out == 'one\ntwo\nhello\n'
+    assert not err
+
+def test_postloop_hook(capsys):
+    app = PluggedApp()
+    app.register_postloop_hook(app.prepost_hook_one)
+    app.cmdqueue.append('say hello')
+    app.cmdqueue.append('quit')
+    app.cmdloop()
+    out, err = capsys.readouterr()
+    assert out == 'hello\none\n'
+    assert not err
+
+def test_postloop_hooks(capsys):
+    app = PluggedApp()
+    app.register_postloop_hook(app.prepost_hook_one)
+    app.register_postloop_hook(app.prepost_hook_two)
+    app.cmdqueue.append('say hello')
+    app.cmdqueue.append('quit')
+    app.cmdloop()
+    out, err = capsys.readouterr()
+    assert out == 'hello\none\ntwo\n'
+    assert not err
+
 def test_postparsing_hook(capsys):
     app = PluggedApp()
     app.onecmd_plus_hooks('say hello')

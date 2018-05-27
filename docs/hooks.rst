@@ -13,16 +13,36 @@ The typical way of starting a cmd2 application is as follows::
         app = App()
         app.cmdloop()
 
-There are several pre-existing methods and attributes which you can tweak to control the overall behavior of your
-application before, during, and after the command processing loop.
+There are several pre-existing methods and attributes which you can tweak to
+control the overall behavior of your application before, during,
+and after the command processing loop.
 
-Application Lifecycle Hook Methods
-----------------------------------
-The ``preloop`` and ``postloop`` methods run before and after the main loop, respectively.
+Application Lifecycle Hooks
+---------------------------
 
-.. automethod:: cmd2.cmd2.Cmd.preloop
+You can register methods to be called at the beginning of the command loop::
 
-.. automethod:: cmd2.cmd2.Cmd.postloop
+    class App(cmd2.Cmd):
+        def __init__(self, *args, *kwargs):
+            super().__init__(*args, **kwargs)
+            self.register_preloop_hook(self.myhookmethod)
+
+        def myhookmethod(self):
+            self.poutput("before the loop begins")
+
+And also after the command loop has finished::
+
+    class App(cmd2.Cmd):
+        def __init__(self, *args, *kwargs):
+            super().__init__(*args, **kwargs)
+            self.register_postloop_hook(self.myhookmethod)
+
+        def myhookmethod(self):
+            self.poutput("before the loop begins")
+
+As you can see the preloop and postloop hook methods are not passed any
+parameters and any return value is ignored.
+
 
 Application Lifecycle Attributes
 --------------------------------
@@ -119,6 +139,14 @@ Postcommand Hooks
 Command Completed Hooks
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+Deprecated Application Lifecycle Hook Methods
+---------------------------------------------
+
+The ``preloop`` and ``postloop`` methods run before and after the main loop, respectively.
+
+.. automethod:: cmd2.cmd2.Cmd.preloop
+
+.. automethod:: cmd2.cmd2.Cmd.postloop
 
 Deprecated Command Processing Hooks
 -----------------------------------

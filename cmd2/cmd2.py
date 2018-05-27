@@ -3080,6 +3080,8 @@ Script should contain one command per line, just like command would be typed in 
                 self.cmdqueue.extend(callargs)
 
         # Always run the preloop first
+        for func in self._preloop_hooks:
+            func()
         self.preloop()
 
         # If transcript-based regression testing was requested, then do that instead of the main loop
@@ -3098,6 +3100,8 @@ Script should contain one command per line, just like command would be typed in 
             self._cmdloop()
 
         # Run the postloop() no matter what
+        for func in self._postloop_hooks:
+            func()
         self.postloop()
 
     ###
@@ -3107,7 +3111,17 @@ Script should contain one command per line, just like command would be typed in 
     ###
     def _initialize_plugin_system(self):
         """Initialize the plugin system"""
+        self._preloop_hooks = []
+        self._postloop_hooks = []
         self._postparsing_hooks = []
+
+    def register_preloop_hook(self, func):
+        """Register a function to be called at the beginning of the command loop."""
+        self._preloop_hooks.append(func)
+
+    def register_postloop_hook(self, func):
+        """Register a function to be called at the end of the command loop."""
+        self._postloop_hooks.append(func)
 
     def register_postparsing_hook(self, func):
         """Register a function to be called after parsing user input but before running the command"""
