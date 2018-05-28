@@ -124,7 +124,7 @@ try:
 except ImportError:
     ipython_available = False
 
-__version__ = '0.9.0'
+__version__ = '0.9.1rc1'
 
 
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands

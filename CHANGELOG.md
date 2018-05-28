@@ -1,3 +1,5 @@
+## 0.9.1 (TBD)
+
 ## 0.9.0 (May 28, 2018)
 * Bug Fixes
     * If self.default_to_shell is true, then redirection and piping are now properly passed to the shell. Previously it was truncated.
@@ -36,10 +38,10 @@
 * Known Issues
     * Some developers have noted very slow performance when importing the ``cmd2`` module. The issue
     it intermittant, and investigation of the root cause is ongoing.
-    
+
 ## 0.8.6 (May 27, 2018)
 * Bug Fixes
-    * Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing 
+    * Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing
     * Fixed issue where completion display function was overwritten when a submenu quits
     * Fixed ``AttributeError`` on Windows when running a ``select`` command cause by **pyreadline** not implementing ``remove_history_item``
 * Enhancements

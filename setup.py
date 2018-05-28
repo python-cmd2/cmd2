@@ -5,7 +5,7 @@ Setuptools setup file, used to install or test 'cmd2'
 """
 from setuptools import setup
 
-VERSION = '0.9.0'
+VERSION = '0.9.1rc1'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It
@@ -38,8 +38,8 @@ Main features:
 
 Usable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 
-Version 0.9.0+ of cmd2 supports Python 3.4+ only. If you wish to use cmd2 with Python 2.7, then please install version 
-0.8.6 or earlier.  
+Version 0.9.0+ of cmd2 supports Python 3.4+ only. If you wish to use cmd2 with Python 2.7, then
+please install version 0.8.x.
 """
 
 CLASSIFIERS = list(filter(None, map(str.strip,

@@ -28,7 +28,7 @@ from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.9.0'
+    assert cmd2.__version__ == '0.9.1rc1'
 
 
 def test_empty_statement(base_app):
