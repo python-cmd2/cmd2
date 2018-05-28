@@ -8,11 +8,11 @@ import sys
 import setuptools
 from setuptools import setup
 
-VERSION = '0.8.6'
+VERSION = '0.8.7-rc1'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
-LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make 
-it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It 
-provides a simple API which is an extension of Python's built-in cmd module.  cmd2 provides a wealth of features on top 
+LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make
+it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It
+provides a simple API which is an extension of Python's built-in cmd module.  cmd2 provides a wealth of features on top
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary when using cmd.
 
 The latest documentation for cmd2 can be read online here:
@@ -108,6 +108,7 @@ setup(
     platforms=['any'],
     py_modules=["cmd2"],
     keywords='command prompt console cmd',
+    python_requires='>=2.7',
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
     tests_require=TESTS_REQUIRE,

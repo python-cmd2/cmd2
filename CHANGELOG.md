@@ -1,6 +1,10 @@
+## 0.8.7 (TBD)
+* Bug Fixes
+    * Make sure pip installs version 0.8.x if you have python 2.7
+
 ## 0.8.6 (May 27, 2018)
 * Bug Fixes
-    * Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing 
+    * Commands using the @with_argparser_and_unknown_args were not correctly recognized when tab completing
     * Fixed issue where completion display function was overwritten when a submenu quits
     * Fixed ``AttributeError`` on Windows when running a ``select`` command cause by **pyreadline** not implementing ``remove_history_item``
 * Enhancements
