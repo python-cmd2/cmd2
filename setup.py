@@ -73,6 +73,7 @@ EXTRAS_REQUIRE = {
     # install with 'pip install -e .[dev]'
     'dev': [
         'pytest', 'pytest-cov', 'tox', 'pylint', 'sphinx', 'sphinx-rtd-theme',
+        'sphinx-autobuild','invoke',
     ]
 }
 

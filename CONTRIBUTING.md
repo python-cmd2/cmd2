@@ -200,8 +200,29 @@ $ cd ~/src/cmd2
 $ pip install -e .[dev]
 ```
 
-This will install `pytest` and `tox` for running unit tests, `pylint` for
-static code analysis, and `sphinx` for building the documentation.
+This project uses many python modules for various development tasks, including
+testing, rendering documentation, and building and distributing releases. These
+modules can be configured many different ways, which can make it difficult to
+learn the specific incantations required for each project you are familiar with.
+
+This project uses `invoke <http://www.pyinvoke.org>`_ to provide a clean, high
+level interface for these development tasks. To see the full list of functions
+available::
+```bash
+$ invoke -l
+```
+
+You can run multiple tasks in a single invocation, for example::
+```bash
+$ invoke clean docs sdist wheel
+```
+
+That one command will remove all superflous cache, testing, and build
+files, render the documentation, and build a source distribution and a
+wheel distribution.
+
+If you want to see the details about what `invoke` is doing under the hood,
+have a look at `tasks.py`.
 
 Now you can check if everything is installed and working:
 ```bash
@@ -220,19 +241,31 @@ This bit is up to you!
 
 #### How to find the code in the cmd2 codebase to fix/edit?
 
-The cmd2 project directory structure is pretty simple and straightforward.  All actual code for cmd2
-is located underneath the `cmd2` directory.  The code to generate the documentation is in the `docs` directory.  Unit tests are in the `tests` directory.  The `examples` directory contains examples of how
-to use cmd2.  There are various other files in the root directory, but these are primarily related to
-continuous integration and to release deployment.
+The cmd2 project directory structure is pretty simple and straightforward.  All
+actual code for cmd2 is located underneath the `cmd2` directory.  The code to
+generate the documentation is in the `docs` directory.  Unit tests are in the
+`tests` directory.  The `examples` directory contains examples of how to use
+cmd2.  There are various other files in the root directory, but these are
+primarily related to continuous integration and to release deployment.
 
 #### Changes to the documentation files
-If you made changes to any file in the `/docs` directory, you need to build the Sphinx documentation
-and make sure your changes look good:
-```shell
-cd docs
-make clean html
+
+If you made changes to any file in the `/docs` directory, you need to build the
+Sphinx documentation and make sure your changes look good:
+```bash
+invoke docs
 ```
 In order to see the changes, use your web browser of choice to open `<cmd2>/docs/_build/html/index.html`.
+
+If you would rather use a webserver to view the documentation, including
+automatic page refreshes as you edit the files, use:
+
+```bash
+invoke livehtml
+```
+
+You will be shown the IP address and port number where the documents are now
+served. Put that into your web browser and edit away.
 
 ### Static Code Analysis
 
@@ -244,7 +277,7 @@ You should have some sort of [PEP8](https://www.python.org/dev/peps/pep-0008/)-b
 When you're ready to share your code, run the test suite:
 ```shell
 cd <cmd2>
-py.test
+invoke pytest
 ```
 and ensure all tests pass.
 
