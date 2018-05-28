@@ -110,7 +110,9 @@ Postparsing Hooks
 
 Postparsing hooks are called after the user input has been parsed but before
 execution of the comamnd. These hooks can be used to:
+
 - modify the user input
+- run code before every command executes
 - cancel execution of the current command
 - exit the application
 
@@ -154,6 +156,7 @@ proper technique::
         return stop, statement
 
 If a postparsing hook returns ``True`` as the first value in the tuple:
+
 - no more hooks of any kind (except command finalization hooks) will be called
 - the command will not be executed
 - no error message will be displayed to the user
