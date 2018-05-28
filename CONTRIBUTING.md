@@ -265,7 +265,7 @@ invoke livehtml
 ```
 
 You will be shown the IP address and port number where the documents are now
-served. Put that into your web browser and edit away.
+served (usually [http://localhost:8000](http://localhost:8000).
 
 ### Static Code Analysis
 
@@ -281,15 +281,8 @@ invoke pytest
 ```
 and ensure all tests pass.
 
-#### Measuring code coverage
-
-Code coverage can be measured as follows:
-
-```shell
-py.test --cov=cmd2 --cov-report=term-missing --cov-report=html
-```
-
-Then use your web browser of choice to look at the results which are in `<cmd2>/htmlcov/index.html`.
+Running the test suite also calculates test code coverage. A summary of coverage
+is shown on the screen. A full report is available in `<cmd2>/htmlcov/index.html`.
 
 ### Squash Your Commits
 When you make a pull request, it is preferable for all of your changes to be in one commit.

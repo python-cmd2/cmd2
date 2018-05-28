@@ -8,15 +8,20 @@ import shutil
 import invoke
 
 # shared function
-def rmrf(dirs, verbose=True):
-    "Silently remove a list of directories"
-    if isinstance(dirs, str):
-        dirs = [dirs]
+def rmrf(items, verbose=True):
+    "Silently remove a list of directories or files"
+    if isinstance(items, str):
+        items = [items]
 
-    for dir_ in dirs:
+    for item in items:
         if verbose:
-            print("Removing {}".format(dir_))
-        shutil.rmtree(dir_, ignore_errors=True)
+            print("Removing {}".format(item))
+        shutil.rmtree(item, ignore_errors=True)
+        # rmtree doesn't remove bare files
+        try:
+            os.remove(item)
+        except FileNotFoundError:
+            pass
 
 
 # create namespaces
@@ -32,14 +37,14 @@ namespace.add_collection(namespace_clean, 'clean')
 @invoke.task
 def pytest(context):
     "Run tests and code coverage using pytest"
-    context.run("pytest --cov=cmd2 --cov-report=html")
+    context.run("pytest --cov=cmd2 --cov-report=term --cov-report=html")
 namespace.add_task(pytest)
 
 @invoke.task
 def pytest_clean(context):
-    "Remove pytest cache directories"
+    "Remove pytest cache and code coverage files and directories"
     #pylint: disable=unused-argument
-    dirs = ['.pytest-cache', '.cache', 'htmlcov']
+    dirs = ['.pytest-cache', '.cache', 'htmlcov', '.coverage']
     rmrf(dirs)
 namespace_clean.add_task(pytest_clean, 'pytest')
 
@@ -55,17 +60,6 @@ def tox_clean(context):
     #pylint: disable=unused-argument
     rmrf('.tox')
 namespace_clean.add_task(tox_clean, 'tox')
-
-@invoke.task
-def codecov_clean(context):
-    "Remove code coverage reports"
-    #pylint: disable=unused-argument
-    dirs = set()
-    for name in os.listdir(os.curdir):
-        if name.startswith('.coverage'):
-            dirs.add(name)
-    rmrf(dirs)
-namespace_clean.add_task(codecov_clean, 'coverage')
 
 
 #####
@@ -158,25 +152,25 @@ def clean_all(context):
     pass
 namespace_clean.add_task(clean_all, 'all')
 
-@invoke.task
+@invoke.task(pre=[clean_all])
 def sdist(context):
     "Create a source distribution"
     context.run('python setup.py sdist')
 namespace.add_task(sdist)
 
-@invoke.task
+@invoke.task(pre=[clean_all])
 def wheel(context):
     "Build a wheel distribution"
     context.run('python setup.py bdist_wheel')
 namespace.add_task(wheel)
 
-@invoke.task(pre=[clean_all, sdist, wheel])
+@invoke.task(pre=[sdist, wheel])
 def pypi(context):
     "Build and upload a distribution to pypi"
     context.run('twine upload dist/*')
 namespace.add_task(pypi)
 
-@invoke.task(pre=[clean_all, sdist, wheel])
+@invoke.task(pre=[sdist, wheel])
 def pypi_test(context):
     "Build and upload a distribution to https://test.pypi.org"
     context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
