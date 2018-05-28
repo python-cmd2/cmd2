@@ -1,4 +1,7 @@
-## 0.9.1 (TBD)
+## 0.9.1 (May 28, 2018)
+* Bug Fixes
+    * fix packaging error for 0.8.x versions (yes we had to deploy a new version
+      of the 0.9.x series to fix a packaging error with the 0.8.x version)
 
 ## 0.9.0 (May 28, 2018)
 * Bug Fixes
