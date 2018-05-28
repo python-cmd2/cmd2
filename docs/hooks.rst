@@ -163,6 +163,10 @@ If a postparsing hook returns ``True`` as the first value in the tuple:
 Precommand Hooks
 ^^^^^^^^^^^^^^^^^
 
+A precommand hook is defined in ``cmd.Cmd``. It is not able to request that the
+app terminate, but it is passed the user input and allowed to make changes. If
+your hook needs to be able to exit the application, you should implement it as a postparsing hook.
+
 Once output is redirected and the timer started, all the hooks registered with
 ``register_precmd_hook()`` are called. Here's how you do it::
 
