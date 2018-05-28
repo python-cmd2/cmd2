@@ -30,6 +30,7 @@
         * Replaced by default AutoCompleter implementation for all commands using argparse
     * Deleted support for old method of calling application commands with ``cmd()`` and ``self``
     * ``cmd2.redirector`` is no longer supported. Output redirection can only be done with '>' or '>>'
+    * Deleted ``postparse()`` hook since it was redundant with ``postparsing_precmd``
 * Python 2 no longer supported
     * ``cmd2`` now supports Python 3.4+
 * Known Issues

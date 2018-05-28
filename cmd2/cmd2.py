@@ -1679,7 +1679,7 @@ class Cmd(cmd.Cmd):
         import datetime
         stop = False
         try:
-            statement = self._complete_statement(self.preparse(line))
+            statement = self._complete_statement(line)
             (stop, statement) = self.postparsing_precmd(statement)
             if stop:
                 return self.postparsing_postcmd(stop)
