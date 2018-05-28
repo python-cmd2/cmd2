@@ -1,4 +1,4 @@
-## 0.8.7 (TBD)
+## 0.8.7 (May 28, 2018)
 * Bug Fixes
     * Make sure pip installs version 0.8.x if you have python 2.7
 
