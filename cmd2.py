@@ -229,7 +229,7 @@ if six.PY2 and sys.platform.startswith('lin'):
         pass
 
 
-__version__ = '0.8.7rc1'
+__version__ = '0.8.6.1'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
