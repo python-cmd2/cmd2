@@ -1,4 +1,4 @@
-## 0.9.0 (May TBD, 2018)
+## 0.9.0 (May 28, 2018)
 * Bug Fixes
     * If self.default_to_shell is true, then redirection and piping are now properly passed to the shell. Previously it was truncated.
     * Submenus now call all hooks, it used to just call precmd and postcmd.

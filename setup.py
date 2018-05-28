@@ -37,6 +37,9 @@ Main features:
     - Transcripts for use with built-in regression can be automatically generated from `history -t`
 
 Usable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
+
+Version 0.9.0+ of cmd2 supports Python 3.4+ only. If you wish to use cmd2 with Python 2.7, then please install version 
+0.8.6 or earlier.  
 """
 
 CLASSIFIERS = list(filter(None, map(str.strip,
