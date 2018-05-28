@@ -8,7 +8,7 @@ import sys
 import setuptools
 from setuptools import setup
 
-VERSION = '0.8.7-rc1'
+VERSION = '0.8.7rc1'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It
