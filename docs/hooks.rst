@@ -168,7 +168,8 @@ Precommand Hooks
 
 A precommand hook is defined in ``cmd.Cmd``. It is not able to request that the
 app terminate, but it is passed the user input and allowed to make changes. If
-your hook needs to be able to exit the application, you should implement it as a postparsing hook.
+your hook needs to be able to exit the application, you should implement it as a
+postparsing hook.
 
 Once output is redirected and the timer started, all the hooks registered with
 ``register_precmd_hook()`` are called. Here's how you do it::
@@ -184,15 +185,17 @@ Once output is redirected and the timer started, all the hooks registered with
 You may choose to create a new ``Statement`` with different properties (see
 above) or leave it alone, but you must return a ``Statement`` object.
 
-After all registered precommand hooks have been called, ``self.precmd(statement)``
-will be called. This retains full backwards compatibility with ``cmd.Cmd``.
+After all registered precommand hooks have been called,
+``self.precmd(statement)`` will be called. This retains full backwards
+compatibility with ``cmd.Cmd``.
 
 Postcommand Hooks
 ^^^^^^^^^^^^^^^^^^
 
-Once the command method has returned (i.e. the ``do_command(self, statement) method``
-has been called and returns, all postcommand hooks are called. If output was redirected
-by the user, it is still redirected, and the command timer is still running.
+Once the command method has returned (i.e. the ``do_command(self, statement)
+method`` has been called and returns, all postcommand hooks are called. If
+output was redirected by the user, it is still redirected, and the command timer
+is still running.
 
 Here's how to define a register a postcommand hook::
 
@@ -206,15 +209,15 @@ Here's how to define a register a postcommand hook::
             return stop
 
 Your hook will be passed the statement object, which describes the command which
-was executed. If your postcommand hook method gets called, you are guaranteed that
-the command method was called, and that it didn't raise an exception.
+was executed. If your postcommand hook method gets called, you are guaranteed
+that the command method was called, and that it didn't raise an exception.
 
 If any postcommand hook raises an exception, no further postcommand hook methods
 will be called.
 
 After all registered precommand hooks have been called,
-``self.postcmd(statement)`` will be called. This retains full backwards
-compatibility with ``cmd.Cmd``.
+``self.postcmd(statement)`` will be called to retain full backward compatibility
+with ``cmd.Cmd``.
 
 If any postcommand hook (registered or ``self.postcmd()``) returns ``True``,
 subsequent postcommand hooks will still be called, as will the command
