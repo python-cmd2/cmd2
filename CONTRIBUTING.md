@@ -484,6 +484,19 @@ excellent support for debugging console applications.
 
 [PyCharm](https://www.jetbrains.com/pycharm/) is also quite good and has very nice [Code Inspection](https://www.jetbrains.com/help/pycharm/code-inspection.html) capabilities.
 
-### Acknowledgement
+## Publishing a new release
+
+Since 0.9.2, the process of publishing a new release of `cmd2` to [PyPi](https://pypi.org/) has been
+mostly automated. The manual steps are all git operations. Here's the checklist:
+
+1. Make sure you are on the proper branch
+2. Make sure the version strings in `cmd2.py`, `conf.py`, `setup.py`, and `test_cmd2.py` are correct.
+3. Make sure all the unit tests pass.
+4. Make sure `CHANGELOG.md` describes the version and has the correct release date.
+5. Create and push a git tag that matches the version strings above.
+6. (Optional) Run `invoke pypi_test` to clean, build, and upload a new release to [Test PyPi](https://test.pypi.org)
+7. Run `invoke pypi` to clean, build, and upload a new release to [PyPi](https://pypi.org/)
+
+## Acknowledgement
 Thanks to the good folks at [freeCodeCamp](https://github.com/freeCodeCamp/freeCodeCamp) for creating
 an excellent `CONTRIBUTING` file which we have borrowed heavily from.
