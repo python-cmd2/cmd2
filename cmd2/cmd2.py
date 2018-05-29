@@ -45,8 +45,7 @@ import pyperclip
 
 from . import constants
 from . import utils
-
-from cmd2.parsing import StatementParser, Statement
+from .parsing import StatementParser, Statement
 
 # Set up readline
 from .rl_utils import rl_type, RlType
