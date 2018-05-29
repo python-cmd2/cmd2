@@ -67,9 +67,9 @@ The tables below list all prerequisites along with the minimum required version 
 
 If Python is already installed in your machine, run the following commands to validate the versions:
 
-```shell
-python -V
-pip freeze | grep pyperclip
+```sh
+$ python -V
+$ pip freeze | grep pyperclip
 ```
 
 If your versions are lower than the prerequisite versions, you should update.
@@ -95,7 +95,7 @@ If you do not already have Python installed on your machine, we recommend using 
 1. Open a Terminal / Command Line / Bash Shell in your projects directory (_i.e.: `/yourprojectdirectory/`_)
 2. Clone your fork of cmd2
 
-```shell
+```sh
 $ git clone https://github.com/yourUsername/cmd2.git
 ```
 
@@ -108,7 +108,7 @@ This will download the entire cmd2 repo to your projects directory.
 1. Change directory to the new cmd2 directory (`cd cmd2`)
 2. Add a remote to the official cmd2 repo:
 
-```shell
+```sh
 $ git remote add upstream https://github.com/python-cmd2/cmd2.git
 ```
 
@@ -124,7 +124,7 @@ Do this prior to every time you create a branch for a PR:
 
 1. Make sure you are on the `master` branch
 
-  > ```shell
+  > ```sh
   > $ git status
   > On branch master
   > Your branch is up-to-date with 'origin/master'.
@@ -132,13 +132,13 @@ Do this prior to every time you create a branch for a PR:
 
   > If your aren't on `master`, resolve outstanding files / commits and checkout the `master` branch
 
-  > ```shell
+  > ```sh
   > $ git checkout master
   > ```
 
 2. Do A Pull with Rebase Against `upstream`
 
-  > ```shell
+  > ```sh
   > $ git pull --rebase upstream master
   > ```
 
@@ -146,7 +146,7 @@ Do this prior to every time you create a branch for a PR:
 
 3. (_Optional_) Force push your updated master branch to your GitHub fork
 
-  > ```shell
+  > ```sh
   > $ git push origin master --force
   > ```
 
@@ -164,13 +164,13 @@ Name the branch something like `fix/xxx` or `feature/xxx` where `xxx` is a short
 
 To create a branch on your local machine (and switch to this branch):
 
-```shell
+```sh
 $ git checkout -b [name_of_your_new_branch]
 ```
 
 and to push to GitHub:
 
-```shell
+```sh
 $ git push origin [name_of_your_new_branch]
 ```
 
@@ -180,12 +180,12 @@ $ git push origin [name_of_your_new_branch]
 ### Setup for cmd2 development
 For doing cmd2 development, you actually do NOT want to have cmd2 installed as a Python package.
 So if you have previously installed cmd2, make sure to uninstall it:
-```bash
-pip uninstall cmd2
+```sh
+$ pip uninstall cmd2
 ```
 
 Assuming you cloned the repository to `~/src/cmd2`:
-```bash
+```sh
 $ cd ~/src/cmd2
 $ pip install -e .
 ```
@@ -195,7 +195,7 @@ imports `cmd2`, there is no need to re-install the module after every change. Th
 command will also install all of the runtime dependencies for `cmd2`.
 
 Next you should install all the modules used for development of `cmd2`:
-```bash
+```sh
 $ cd ~/src/cmd2
 $ pip install -e .[dev]
 ```
@@ -208,13 +208,13 @@ learn the specific incantations required for each project you are familiar with.
 This project uses `invoke <http://www.pyinvoke.org>`_ to provide a clean, high
 level interface for these development tasks. To see the full list of functions
 available::
-```bash
+```sh
 $ invoke -l
 ```
 
 You can run multiple tasks in a single invocation, for example::
-```bash
-$ invoke clean docs sdist wheel
+```sh
+$ invoke docs sdist wheel
 ```
 
 That one command will remove all superflous cache, testing, and build
@@ -225,9 +225,9 @@ If you want to see the details about what `invoke` is doing under the hood,
 have a look at `tasks.py`.
 
 Now you can check if everything is installed and working:
-```bash
-cd ~src/cmd2
-python examples/example.py
+```sh
+$ cd ~src/cmd2
+$ python examples/example.py
 ```
 
 If the example app loads, you should see a prompt that says "(Cmd)".  You can
@@ -252,16 +252,16 @@ primarily related to continuous integration and to release deployment.
 
 If you made changes to any file in the `/docs` directory, you need to build the
 Sphinx documentation and make sure your changes look good:
-```bash
-invoke docs
+```sh
+$ invoke docs
 ```
 In order to see the changes, use your web browser of choice to open `<cmd2>/docs/_build/html/index.html`.
 
 If you would rather use a webserver to view the documentation, including
 automatic page refreshes as you edit the files, use:
 
-```bash
-invoke livehtml
+```sh
+$ invoke livehtml
 ```
 
 You will be shown the IP address and port number where the documents are now
@@ -275,9 +275,9 @@ You should have some sort of [PEP8](https://www.python.org/dev/peps/pep-0008/)-b
 
 ### Run The Test Suite
 When you're ready to share your code, run the test suite:
-```shell
-cd <cmd2>
-invoke pytest
+```sh
+$ cd <cmd2>
+$ invoke pytest
 ```
 and ensure all tests pass.
 
@@ -327,7 +327,7 @@ Instance of cmd2](#maintaining-your-fork).
 1.  Perform the maintenance step of rebasing `master`.
 2.  Ensure you are on the `master` branch using `git status`:
 
-```bash
+```sh
 $ git status
 On branch master
 Your branch is up-to-date with 'origin/master'.
