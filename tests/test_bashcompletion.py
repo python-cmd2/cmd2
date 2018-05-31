@@ -11,12 +11,11 @@ import shlex
 import sys
 from typing import List
 
-from cmd2.argcomplete_bridge import tokens_for_completion
 from cmd2.argparse_completer import ACArgumentParser, AutoCompleter
 
 
 try:
-    from cmd2.argcomplete_bridge import CompletionFinder
+    from cmd2.argcomplete_bridge import CompletionFinder, tokens_for_completion
     skip_reason1 = False
     skip_reason = ''
 except ImportError:
@@ -233,7 +232,7 @@ Hint:
     assert out == exp_out
     assert err == exp_err
 
-
+@pytest.mark.skipif(skip_reason1, reason=skip_reason)
 def test_argcomplete_tokens_for_completion_simple():
     line = 'this is "a test"'
     endidx = len(line)
@@ -244,6 +243,7 @@ def test_argcomplete_tokens_for_completion_simple():
     assert begin_idx == line.rfind("is ") + len("is ")
     assert end_idx == end_idx
 
+@pytest.mark.skipif(skip_reason1, reason=skip_reason)
 def test_argcomplete_tokens_for_completion_unclosed_quotee_exception():
     line = 'this is "a test'
     endidx = len(line)
