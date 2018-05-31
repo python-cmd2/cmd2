@@ -7,9 +7,11 @@ Released under MIT license, see LICENSE file
 """
 import os
 import pytest
+import shlex
 import sys
 from typing import List
 
+from cmd2.argcomplete_bridge import tokens_for_completion
 from cmd2.argparse_completer import ACArgumentParser, AutoCompleter
 
 
@@ -230,3 +232,25 @@ Hint:
     out, err = capfd.readouterr()
     assert out == exp_out
     assert err == exp_err
+
+
+def test_argcomplete_tokens_for_completion_simple():
+    line = 'this is "a test"'
+    endidx = len(line)
+
+    tokens, raw_tokens, begin_idx, end_idx = tokens_for_completion(line, endidx)
+    assert tokens == shlex.split(line)
+    assert raw_tokens == ['this', 'is', '"a test"']
+    assert begin_idx == line.rfind("is ") + len("is ")
+    assert end_idx == end_idx
+
+def test_argcomplete_tokens_for_completion_unclosed_quotee_exception():
+    line = 'this is "a test'
+    endidx = len(line)
+
+    tokens, raw_tokens, begin_idx, end_idx = tokens_for_completion(line, endidx)
+
+    assert tokens == ['this', 'is', 'a test']
+    assert raw_tokens == ['this', 'is', '"a test']
+    assert begin_idx == line.rfind("is ") + len("is ") + 1
+    assert end_idx == end_idx
