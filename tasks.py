@@ -1,7 +1,12 @@
 #
 # coding=utf-8
-"""Development related tasks to be run with 'invoke'"""
+"""Development related tasks to be run with 'invoke'.
 
+Make sure you satisfy the following Python module requirements if you are trying to publish a release to PyPI:
+    - twine >= 1.11.0
+    - wheel >= 0.31.0
+    - setuptools >= 39.1.0
+"""
 import os
 import shutil
 

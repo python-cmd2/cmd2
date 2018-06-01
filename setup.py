@@ -5,7 +5,7 @@ Setuptools setup file, used to install or test 'cmd2'
 """
 from setuptools import setup
 
-VERSION = '0.9.1'
+VERSION = '0.9.2a'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It
@@ -73,7 +73,7 @@ EXTRAS_REQUIRE = {
     # install with 'pip install -e .[dev]'
     'dev': [
         'pytest', 'pytest-cov', 'tox', 'pylint', 'sphinx', 'sphinx-rtd-theme',
-        'sphinx-autobuild','invoke', 'twine',
+        'sphinx-autobuild', 'invoke', 'twine>=1.11',
     ]
 }
 
