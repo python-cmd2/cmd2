@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # coding=utf-8
-# PYTHON_ARGCOMPLETE_OK
 """A simple example demonstrating how to use Argparse to support subcommands.
 
 
@@ -8,6 +7,7 @@ This example shows an easy way for a single command to have many subcommands, ea
 and provides separate contextual help.
 """
 import argparse
+import cmd2
 
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
@@ -19,10 +19,7 @@ base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcomma
 parser_foo = base_subparsers.add_parser('foo', help='foo help')
 parser_foo.add_argument('-x', type=int, default=1, help='integer')
 parser_foo.add_argument('y', type=float, help='float')
-input_file = parser_foo.add_argument('input_file', type=str, help='Input File')
-if __name__ == '__main__':
-    from cmd2.argcomplete_bridge import bash_complete
-    bash_complete(input_file)
+parser_foo.add_argument('input_file', type=str, help='Input File')
 
 # create the parser for the "bar" subcommand
 parser_bar = base_subparsers.add_parser('bar', help='bar help')
@@ -39,28 +36,12 @@ parser_sport = base_subparsers.add_parser('sport', help='sport help')
 sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
 setattr(sport_arg, 'arg_choices', sport_item_strs)
 
-# Handle bash completion if it's installed
-try:
-    # only move forward if we can import CompletionFinder and AutoCompleter
-    from cmd2.argcomplete_bridge import CompletionFinder
-    from cmd2.argparse_completer import AutoCompleter
-    if __name__ == '__main__':
-        completer = CompletionFinder()
-        completer(base_parser, AutoCompleter(base_parser))
-except ImportError:
-    pass
-
-
-# Intentionally below the bash completion code to reduce tab completion lag
-import cmd2
-
 
 class SubcommandsExample(cmd2.Cmd):
     """
     Example cmd2 application where we a base command which has a couple subcommands
     and the "sport" subcommand has tab completion enabled.
     """
-
     def __init__(self):
         super().__init__()
 
