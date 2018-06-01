@@ -7,6 +7,7 @@ Released under MIT license, see LICENSE file
 """
 import os
 import pytest
+import shlex
 import sys
 from typing import List
 
@@ -14,7 +15,7 @@ from cmd2.argparse_completer import ACArgumentParser, AutoCompleter
 
 
 try:
-    from cmd2.argcomplete_bridge import CompletionFinder
+    from cmd2.argcomplete_bridge import CompletionFinder, tokens_for_completion
     skip_reason1 = False
     skip_reason = ''
 except ImportError:
@@ -230,3 +231,26 @@ Hint:
     out, err = capfd.readouterr()
     assert out == exp_out
     assert err == exp_err
+
+@pytest.mark.skipif(skip_reason1, reason=skip_reason)
+def test_argcomplete_tokens_for_completion_simple():
+    line = 'this is "a test"'
+    endidx = len(line)
+
+    tokens, raw_tokens, begin_idx, end_idx = tokens_for_completion(line, endidx)
+    assert tokens == shlex.split(line)
+    assert raw_tokens == ['this', 'is', '"a test"']
+    assert begin_idx == line.rfind("is ") + len("is ")
+    assert end_idx == end_idx
+
+@pytest.mark.skipif(skip_reason1, reason=skip_reason)
+def test_argcomplete_tokens_for_completion_unclosed_quotee_exception():
+    line = 'this is "a test'
+    endidx = len(line)
+
+    tokens, raw_tokens, begin_idx, end_idx = tokens_for_completion(line, endidx)
+
+    assert tokens == ['this', 'is', 'a test']
+    assert raw_tokens == ['this', 'is', '"a test']
+    assert begin_idx == line.rfind("is ") + len("is ") + 1
+    assert end_idx == end_idx
