@@ -3109,22 +3109,27 @@ Script should contain one command per line, just like command would be typed in 
     def register_preloop_hook(self, func):
         """Register a function to be called at the beginning of the command loop."""
         self._preloop_hooks.append(func)
+        # TODO check signature of registered func and throw error if it's wrong
 
     def register_postloop_hook(self, func):
         """Register a function to be called at the end of the command loop."""
         self._postloop_hooks.append(func)
+        # TODO check signature of registered func and throw error if it's wrong
 
     def register_postparsing_hook(self, func):
         """Register a function to be called after parsing user input but before running the command"""
         self._postparsing_hooks.append(func)
+        # TODO check signature of registered func and throw error if it's wrong
 
     def register_precmd_hook(self, func):
         """Register a function to be called before the command function."""
         self._precmd_hooks.append(func)
+        # TODO check signature of registered func and throw error if it's wrong
 
     def register_postcmd_hook(self, func):
         """Register a function to be called after the command function."""
         self._postcmd_hooks.append(func)
+        # TODO check signature of registered func and throw error if it's wrong
 
 
 class HistoryItem(str):
