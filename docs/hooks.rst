@@ -166,28 +166,39 @@ If a postparsing hook returns ``True`` as the first value in the tuple:
 Precommand Hooks
 ^^^^^^^^^^^^^^^^^
 
-A precommand hook is defined in ``cmd.Cmd``. It is not able to request that the
-app terminate, but it is passed the user input and allowed to make changes. If
-your hook needs to be able to exit the application, you should implement it as a
-postparsing hook.
+Precommand hooks can modify the user input, but can not request the application
+terminate. If your hook needs to be able to exit the application, you should
+implement it as a postparsing hook.
 
 Once output is redirected and the timer started, all the hooks registered with
-``register_precmd_hook()`` are called. Here's how you do it::
+``register_precmd_hook()`` are called. Here's how to do it::
 
     class App(cmd2.Cmd):
         def __init__(self, *args, *kwargs):
             super().__init__(*args, **kwargs)
             self.register_precmd_hook(self.myhookmethod)
 
-        def myhookmethod(self, statement):
-            return statement
+        def myhookmethod(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
+            # the statement object created from the user input
+            # is available as data.statement
+            return data
 
-You may choose to create a new ``Statement`` with different properties (see
-above) or leave it alone, but you must return a ``Statement`` object.
+``register_precmd_hook()`` checks the method signature of the passed callable,
+and raises a ``TypeError`` if it has the wrong number of parameters. It will
+also raise a ``TypeError`` if the parameters and return value are not annotated
+as ``PrecommandData``.
+
+You may choose to modify the user input by creating a new ``Statement`` with
+different properties (see above). If you do so, assign your new ``Statement``
+object to ``data.statement``. In any case, you must return a ``PrecommandData``
+object. You don't have to create this object from scratch, you can just return
+the one given to you after you make modifications.
 
 After all registered precommand hooks have been called,
-``self.precmd(statement)`` will be called. This retains full backwards
-compatibility with ``cmd.Cmd``.
+``self.precmd(statement)`` will be called. To retain full backward compatibility
+with ``cmd.Cmd``, this method is passed a ``Statement``, not a
+``PrecommandData`` object.
+
 
 Postcommand Hooks
 ^^^^^^^^^^^^^^^^^^

@@ -3127,8 +3127,36 @@ Script should contain one command per line, just like command would be typed in 
 
     def register_precmd_hook(self, func):
         """Register a function to be called before the command function."""
+        import inspect
+        signature = inspect.signature(func)
+        # validate that the callable has the right number of parameters
+        nparam = len(signature.parameters)
+        if nparam < 1:
+            raise TypeError('precommand hooks must have one positional argument')
+        if nparam > 1:
+            raise TypeError('precommand hooks take one positional argument but {} were given'.format(nparam))
+        # validate the parameter has the right annotation
+        paramname = list(signature.parameters.keys())[0]
+        param = signature.parameters[paramname]
+        if param.annotation != plugin.PrecommandData:
+            raise TypeError('argument 1 of {} has incompatible type {}, expected {}'.format(
+                func.__name__,
+                param.annotation,
+                plugin.PrecommandData,
+            ))
+        # validate the return value has the right annotation
+        if signature.return_annotation == signature.empty:
+            raise TypeError('{} does not have a declared return type, expected {}'.format(
+                func.__name__,
+                plugin.PrecommandData,
+            ))
+        if signature.return_annotation != plugin.PrecommandData:
+            raise TypeError('{} has incompatible return type {}, expected {}'.format(
+                func.__name__,
+                signature.return_annotation,
+                plugin.PrecommandData,
+            ))
         self._precmd_hooks.append(func)
-        # TODO check signature of registered func and throw error if it's wrong
 
     def register_postcmd_hook(self, func):
         """Register a function to be called after the command function."""

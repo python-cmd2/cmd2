@@ -53,6 +53,11 @@ class Plugin:
         self.called_postparsing += 1
         raise ValueError
 
+    ###
+    #
+    # precommand hooks, some valid, some invalid
+    #
+    ###
     def precmd(self, statement: cmd2.Statement) -> cmd2.Statement:
         "Override cmd.Cmd method"
         self.called_precmd += 1
@@ -63,15 +68,38 @@ class Plugin:
         self.called_precmd += 1
         return data
 
-    def precmd_hook_emptystatement(self, statement: cmd2.Statement) -> cmd2.Statement:
+    def precmd_hook_emptystatement(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
         "A precommand hook which raises an EmptyStatement exception"
         self.called_precmd += 1
         raise cmd2.EmptyStatement
 
-    def precmd_hook_exception(self, statement: cmd2.Statement) -> cmd2.Statement:
+    def precmd_hook_exception(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
         "A precommand hook which raises an exception"
         self.called_precmd += 1
         raise ValueError
+
+    def precmd_hook_not_enough_parameters(self) -> plugin.PrecommandData:
+        "A precommand hook with no parameters"
+        pass
+
+    def precmd_hook_too_many_parameters(self, one: plugin.PrecommandData, two: str) -> plugin.PrecommandData:
+        "A precommand hook with too many parameters"
+        return one
+
+    def precmd_hook_no_parameter_annotation(self, mydat) -> plugin.PrecommandData:
+        "A precommand hook with no type annotation on the parameter"
+        return mydat
+
+    def precmd_hook_wrong_parameter_annotation(self, mydat: str) -> plugin.PrecommandData:
+        "A precommand hook with the incorrect type annotation on the parameter"
+        return mydat
+
+    def precmd_hook_no_return_annotation(self, mydat: plugin.PrecommandData):
+        "A precommand hook with no type annotation on the return value"
+        return mydat
+
+    def precmd_hook_wrong_return_annotation(self, mydat: plugin.PrecommandData) -> cmd2.Statement:
+        return self.statement_parser.parse('hi there')
 
 
 class PluggedApp(Plugin, cmd2.Cmd):
@@ -270,6 +298,33 @@ def test_postparsing_hook_exception(capsys):
 # test precmd hooks
 #
 #####
+def test_register_precmd_hook_parameter_count():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_precmd_hook(app.precmd_hook_not_enough_parameters)
+    with pytest.raises(TypeError):
+        app.register_precmd_hook(app.precmd_hook_too_many_parameters)
+
+def test_register_precmd_hook_no_parameter_annotation():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_precmd_hook(app.precmd_hook_no_parameter_annotation)
+
+def test_register_precmd_hook_wrong_parameter_annotation():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_precmd_hook(app.precmd_hook_wrong_parameter_annotation)
+
+def test_register_precmd_hook_no_return_annotation():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_precmd_hook(app.precmd_hook_no_return_annotation)
+
+def test_register_precmd_hook_wrong_return_annotation():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_precmd_hook(app.precmd_hook_wrong_return_annotation)
+
 def test_precmd_hook(capsys):
     app = PluggedApp()
     app.onecmd_plus_hooks('say hello')
