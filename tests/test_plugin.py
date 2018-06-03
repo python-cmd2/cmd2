@@ -11,6 +11,7 @@ from typing import Tuple
 import pytest
 
 import cmd2
+from cmd2 import plugin
 
 from .conftest import StdOut
 
@@ -57,10 +58,10 @@ class Plugin:
         self.called_precmd += 1
         return statement
 
-    def precmd_hook(self, statement: cmd2.Statement) -> cmd2.Statement:
+    def precmd_hook(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
         "A precommand hook"
         self.called_precmd += 1
-        return statement
+        return data
 
     def precmd_hook_emptystatement(self, statement: cmd2.Statement) -> cmd2.Statement:
         "A precommand hook which raises an EmptyStatement exception"

@@ -204,8 +204,7 @@ Here's how to define a register a postcommand hook::
             super().__init__(*args, **kwargs)
             self.register_postcmd_hook(self.myhookmethod)
 
-        def myhookmethod(self, statement):
-            stop = False
+        def myhookmethod(self, stop, statement):
             return stop
 
 Your hook will be passed the statement object, which describes the command which
@@ -223,6 +222,15 @@ If any postcommand hook (registered or ``self.postcmd()``) returns ``True``,
 subsequent postcommand hooks will still be called, as will the command
 finalization hooks, but once those hooks have all been called, the application
 will terminate.
+
+Any postcommand hook can change the value of the ``stop`` parameter before
+returning it, and the modified value will be passed to the next postcommand
+hook. The value returned by the final postcommand hook will be passed to the
+command finalization hooks, which may further modify the value. If your hook
+blindly returns ``False``, a prior hook's requst to exit the application will
+not be honored. It's best to return the value you were passed unless you have a
+compelling reason to do otherwise.
+
 
 Command Finalization Hooks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -244,7 +252,7 @@ terminate, the value of the ``stop`` parameter passed to the first command
 finalization hook will be ``True``. Any command finalization hook can change the
 value of the ``stop`` parameter before returning it, and the modified value will
 be passed to the next command finalization hook. The value returned by the final
-command finalization hook will determin whether the application terminates or
+command finalization hook will determine whether the application terminates or
 not.
 
 This approach to command finalization hooks can be powerful, but it can also

@@ -45,6 +45,7 @@ import pyperclip
 
 from . import constants
 from . import utils
+from . import plugin
 from .parsing import StatementParser, Statement
 
 # Set up readline
@@ -1704,7 +1705,10 @@ class Cmd(cmd.Cmd):
 
                 # precommand hooks
                 for func in self._precmd_hooks:
-                    statement = func(statement)
+                    data = plugin.PrecommandData(statement)
+                    result = func(data)
+                    statement = result.statement
+                # call precmd() for compatibility with cmd.Cmd
                 statement = self.precmd(statement)
 
                 # go run the command function
