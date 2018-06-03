@@ -34,6 +34,7 @@ import cmd
 import collections
 from colorama import Fore
 import glob
+import inspect
 import os
 import platform
 import re
@@ -3110,15 +3111,38 @@ Script should contain one command per line, just like command would be typed in 
         self._precmd_hooks = []
         self._postcmd_hooks = []
 
+    @classmethod
+    def _validate_callable_param_count(cls, func, count):
+        signature = inspect.signature(func)
+        # validate that the callable has the right number of parameters
+        nparam = len(signature.parameters)
+        if nparam != count:
+            raise TypeError('{} has {} positional arguments, expected {}'.format(
+                func.__name__,
+                nparam,
+                count,
+            ))
+
+    @classmethod
+    def _validate_prepostloop_callable(cls, func):
+        """Check parameter and return values for preloop and postloop hooks"""
+        cls._validate_callable_param_count(func, 0)
+        # make sure there is no return notation
+        signature = inspect.signature(func)
+        if signature.return_annotation != signature.empty:
+            raise TypeError('{} should not have a declared return type'.format(
+                func.__name__,
+            ))
+
     def register_preloop_hook(self, func):
         """Register a function to be called at the beginning of the command loop."""
+        self._validate_prepostloop_callable(func)
         self._preloop_hooks.append(func)
-        # TODO check signature of registered func and throw error if it's wrong
 
     def register_postloop_hook(self, func):
         """Register a function to be called at the end of the command loop."""
+        self._validate_prepostloop_callable(func)
         self._postloop_hooks.append(func)
-        # TODO check signature of registered func and throw error if it's wrong
 
     def register_postparsing_hook(self, func):
         """Register a function to be called after parsing user input but before running the command"""
@@ -3127,14 +3151,9 @@ Script should contain one command per line, just like command would be typed in 
 
     def register_precmd_hook(self, func):
         """Register a function to be called before the command function."""
-        import inspect
         signature = inspect.signature(func)
         # validate that the callable has the right number of parameters
-        nparam = len(signature.parameters)
-        if nparam < 1:
-            raise TypeError('precommand hooks must have one positional argument')
-        if nparam > 1:
-            raise TypeError('precommand hooks take one positional argument but {} were given'.format(nparam))
+        self._validate_callable_param_count(func, 1)
         # validate the parameter has the right annotation
         paramname = list(signature.parameters.keys())[0]
         param = signature.parameters[paramname]

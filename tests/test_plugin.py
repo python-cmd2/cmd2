@@ -33,6 +33,14 @@ class Plugin:
         "Another method used for preloop or postloop hooks"
         self.poutput("two")
 
+    def prepost_hook_too_many_parameters(self, param):
+        "A preloop or postloop hook with too many parameters"
+        pass
+
+    def prepost_hook_with_return_type(self) -> bool:
+        "A preloop or postloop hook with a declared return type"
+        pass
+
     def postparse_hook(self, statement: cmd2.Statement) -> Tuple[bool, cmd2.Statement]:
         "A postparsing hook"
         self.called_postparsing += 1
@@ -116,6 +124,16 @@ class PluggedApp(Plugin, cmd2.Cmd):
 # test pre and postloop hooks
 #
 ###
+def test_register_preloop_hook_too_many_parameters():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_preloop_hook(app.prepost_hook_too_many_parameters)
+
+def test_register_preloop_hook_with_return_type():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_preloop_hook(app.prepost_hook_with_return_type)
+
 def test_preloop_hook(capsys):
     app = PluggedApp()
     app.register_preloop_hook(app.prepost_hook_one)
@@ -136,6 +154,16 @@ def test_preloop_hooks(capsys):
     out, err = capsys.readouterr()
     assert out == 'one\ntwo\nhello\n'
     assert not err
+
+def test_register_postloop_hook_too_many_parameters():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_postloop_hook(app.prepost_hook_too_many_parameters)
+
+def test_register_postloop_hook_with_return_type():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_postloop_hook(app.prepost_hook_with_return_type)
 
 def test_postloop_hook(capsys):
     app = PluggedApp()
