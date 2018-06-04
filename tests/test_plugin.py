@@ -25,6 +25,12 @@ class Plugin:
         self.called_postparsing = 0
         self.called_precmd = 0
 
+    ###
+    #
+    # preloop and postloop hooks
+    # which share the same signature and are thus interchangable
+    #
+    ###
     def prepost_hook_one(self) -> None:
         "Method used for preloop or postloop hooks"
         self.poutput("one")
@@ -41,6 +47,11 @@ class Plugin:
         "A preloop or postloop hook with incorrect return type"
         pass
 
+    ###
+    #
+    # Postparsing hooks
+    #
+    ###
     def postparse_hook(self, statement: cmd2.Statement) -> Tuple[bool, cmd2.Statement]:
         "A postparsing hook"
         self.called_postparsing += 1
