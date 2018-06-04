@@ -1,4 +1,4 @@
-.. cmd2 documentation for application and command lifecycle and the hooks which are available
+.. cmd2 documentation for application and command lifecycle and the available hooks
 
 cmd2 Application Lifecycle and Hooks
 ====================================
@@ -14,8 +14,8 @@ The typical way of starting a cmd2 application is as follows::
         app.cmdloop()
 
 There are several pre-existing methods and attributes which you can tweak to
-control the overall behavior of your application before, during,
-and after the command processing loop.
+control the overall behavior of your application before, during, and after the
+command processing loop.
 
 Application Lifecycle Hooks
 ---------------------------
@@ -51,19 +51,23 @@ There are numerous attributes (member variables of the ``cmd2.Cmd``) which have
 a significant effect on the application behavior upon entering or during the
 main loop.  A partial list of some of the more important ones is presented here:
 
-- **intro**: *str* - if provided this serves as the intro banner printed once at start of application, after ``preloop`` runs
-- **allow_cli_args**: *bool* - if True (default), then searches for -t or --test at command line to invoke transcript testing mode instead of a normal main loop
-    and also processes any commands provided as arguments on the command line just prior to entering the main loop
-- **echo**: *bool* - if True, then the command line entered is echoed to the screen (most useful when running scripts)
-- **prompt**: *str* - sets the prompt which is displayed, can be dynamically changed based on application state and/or
-    command results
+- **intro**: *str* - if provided this serves as the intro banner printed once
+  at start of application, after ``preloop`` runs
+- **allow_cli_args**: *bool* - if True (default), then searches for -t or
+  --test at command line to invoke transcript testing mode instead of a normal
+  main loop and also processes any commands provided as arguments on the
+  command line just prior to entering the main loop
+- **echo**: *bool* - if True, then the command line entered is echoed to the
+  screen (most useful when running scripts)
+- **prompt**: *str* - sets the prompt which is displayed, can be dynamically
+  changed based on application state and/or command results
 
 
 Command Processing Loop
 -----------------------
 
-When you call `.cmdloop()`, the following sequence of events are repeated
-until the application exits:
+When you call `.cmdloop()`, the following sequence of events are repeated until
+the application exits:
 
 1. Output the prompt
 2. Accept user input
@@ -85,10 +89,10 @@ until the application exits:
 
 By registering hook methods, steps 4, 8, 12, and 16 allow you to run code
 during, and control the flow of the command processing loop. Be aware that
-plugins also utilize these hooks, so there may be code running that is not
-part of your application. Methods registered for a hook are called in the
-order they were registered. You can register a function more than once, and
-it will be called each time it was registered.
+plugins also utilize these hooks, so there may be code running that is not part
+of your application. Methods registered for a hook are called in the order they
+were registered. You can register a function more than once, and it will be
+called each time it was registered.
 
 Postparsing, precomamnd, and postcommand hook methods share some common ways to
 influence the command processing loop.
@@ -126,8 +130,16 @@ To define and register a postparsing hook, do the following::
             super().__init__(*args, **kwargs)
             self.register_postparsing_hook(self.myhookmethod)
 
-        def myhookmethod(self, statement):
-            return False, statement
+        def myhookmethod(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
+            # the statement object created from the user input
+            # is available as params.statement
+            return params
+
+``register_postparsing_hook()`` checks the method signature of the passed callable,
+and raises a ``TypeError`` if it has the wrong number of parameters. It will
+also raise a ``TypeError`` if the passed parameter and return value are not annotated
+as ``PostparsingData``.
+
 
 The hook method will be passed one parameter, a ``Statement`` object containing
 the parsed user input. There are many useful attributes in the ``Statement``
@@ -178,10 +190,10 @@ Once output is redirected and the timer started, all the hooks registered with
             super().__init__(*args, **kwargs)
             self.register_precmd_hook(self.myhookmethod)
 
-        def myhookmethod(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
+        def myhookmethod(self, params: cmd2.plugin.PrecommandData) -> cmd2.plugin.PrecommandData:
             # the statement object created from the user input
-            # is available as data.statement
-            return data
+            # is available as params.statement
+            return params
 
 ``register_precmd_hook()`` checks the method signature of the passed callable,
 and raises a ``TypeError`` if it has the wrong number of parameters. It will
@@ -190,9 +202,10 @@ as ``PrecommandData``.
 
 You may choose to modify the user input by creating a new ``Statement`` with
 different properties (see above). If you do so, assign your new ``Statement``
-object to ``data.statement``. In any case, you must return a ``PrecommandData``
-object. You don't have to create this object from scratch, you can just return
-the one given to you after you make modifications.
+object to ``params.statement``.
+
+The precommand hook must return a ``PrecommandData`` object. You don't have to
+create this object from scratch, you can just return the one passed into the hook.
 
 After all registered precommand hooks have been called,
 ``self.precmd(statement)`` will be called. To retain full backward compatibility
