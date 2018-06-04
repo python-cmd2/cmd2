@@ -25,20 +25,20 @@ class Plugin:
         self.called_postparsing = 0
         self.called_precmd = 0
 
-    def prepost_hook_one(self):
+    def prepost_hook_one(self) -> None:
         "Method used for preloop or postloop hooks"
         self.poutput("one")
 
-    def prepost_hook_two(self):
+    def prepost_hook_two(self) -> None:
         "Another method used for preloop or postloop hooks"
         self.poutput("two")
 
-    def prepost_hook_too_many_parameters(self, param):
+    def prepost_hook_too_many_parameters(self, param) -> None:
         "A preloop or postloop hook with too many parameters"
         pass
 
-    def prepost_hook_with_return_type(self) -> bool:
-        "A preloop or postloop hook with a declared return type"
+    def prepost_hook_with_wrong_return_type(self) -> bool:
+        "A preloop or postloop hook with incorrect return type"
         pass
 
     def postparse_hook(self, statement: cmd2.Statement) -> Tuple[bool, cmd2.Statement]:
@@ -94,19 +94,19 @@ class Plugin:
         "A precommand hook with too many parameters"
         return one
 
-    def precmd_hook_no_parameter_annotation(self, mydat) -> plugin.PrecommandData:
+    def precmd_hook_no_parameter_type(self, mydat) -> plugin.PrecommandData:
         "A precommand hook with no type annotation on the parameter"
         return mydat
 
-    def precmd_hook_wrong_parameter_annotation(self, mydat: str) -> plugin.PrecommandData:
+    def precmd_hook_wrong_parameter_type(self, mydat: str) -> plugin.PrecommandData:
         "A precommand hook with the incorrect type annotation on the parameter"
         return mydat
 
-    def precmd_hook_no_return_annotation(self, mydat: plugin.PrecommandData):
+    def precmd_hook_no_return_type(self, mydat: plugin.PrecommandData):
         "A precommand hook with no type annotation on the return value"
         return mydat
 
-    def precmd_hook_wrong_return_annotation(self, mydat: plugin.PrecommandData) -> cmd2.Statement:
+    def precmd_hook_wrong_return_type(self, mydat: plugin.PrecommandData) -> cmd2.Statement:
         return self.statement_parser.parse('hi there')
 
 
@@ -132,7 +132,7 @@ def test_register_preloop_hook_too_many_parameters():
 def test_register_preloop_hook_with_return_type():
     app = PluggedApp()
     with pytest.raises(TypeError):
-        app.register_preloop_hook(app.prepost_hook_with_return_type)
+        app.register_preloop_hook(app.prepost_hook_with_wrong_return_type)
 
 def test_preloop_hook(capsys):
     app = PluggedApp()
@@ -160,10 +160,10 @@ def test_register_postloop_hook_too_many_parameters():
     with pytest.raises(TypeError):
         app.register_postloop_hook(app.prepost_hook_too_many_parameters)
 
-def test_register_postloop_hook_with_return_type():
+def test_register_postloop_hook_with_wrong_return_type():
     app = PluggedApp()
     with pytest.raises(TypeError):
-        app.register_postloop_hook(app.prepost_hook_with_return_type)
+        app.register_postloop_hook(app.prepost_hook_with_wrong_return_type)
 
 def test_postloop_hook(capsys):
     app = PluggedApp()
@@ -336,22 +336,22 @@ def test_register_precmd_hook_parameter_count():
 def test_register_precmd_hook_no_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
-        app.register_precmd_hook(app.precmd_hook_no_parameter_annotation)
+        app.register_precmd_hook(app.precmd_hook_no_parameter_type)
 
 def test_register_precmd_hook_wrong_parameter_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
-        app.register_precmd_hook(app.precmd_hook_wrong_parameter_annotation)
+        app.register_precmd_hook(app.precmd_hook_wrong_parameter_type)
 
 def test_register_precmd_hook_no_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
-        app.register_precmd_hook(app.precmd_hook_no_return_annotation)
+        app.register_precmd_hook(app.precmd_hook_no_return_type)
 
 def test_register_precmd_hook_wrong_return_annotation():
     app = PluggedApp()
     with pytest.raises(TypeError):
-        app.register_precmd_hook(app.precmd_hook_wrong_return_annotation)
+        app.register_precmd_hook(app.precmd_hook_wrong_return_type)
 
 def test_precmd_hook(capsys):
     app = PluggedApp()

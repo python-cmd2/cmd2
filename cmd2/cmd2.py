@@ -3129,8 +3129,8 @@ Script should contain one command per line, just like command would be typed in 
         cls._validate_callable_param_count(func, 0)
         # make sure there is no return notation
         signature = inspect.signature(func)
-        if signature.return_annotation != signature.empty:
-            raise TypeError('{} should not have a declared return type'.format(
+        if signature.return_annotation != None:
+            raise TypeError("{} must declare return a return type of 'None'".format(
                 func.__name__,
             ))
 
