@@ -4,7 +4,7 @@
 
 import re
 import shlex
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from . import constants
 from . import utils
@@ -57,18 +57,40 @@ class Statement(str):
     :type output_to:        str or None
 
     """
-    def __init__(self, obj):
-        super().__init__()
-        self.raw = str(obj)
-        self.command = None
-        self.multiline_command = None
-        self.args = None
-        self.argv = None
-        self.terminator = None
-        self.suffix = None
-        self.pipe_to = None
-        self.output = None
-        self.output_to = None
+    def __new__(
+        cls,
+        obj: object,
+        *,
+        raw: str = None,
+        command: str = None,
+        args: str = None,
+        argv: List[str] = None,
+        multiline_command: str = None,
+        terminator: str = None,
+        suffix: str = None,
+        pipe_to: str = None,
+        output: str = None,
+        output_to:str = None,
+    ):
+        """Create a new instance of Statement
+
+        We must override __new__ because we are subclassing `str` which is
+        immutable.
+        """
+        stmt = str.__new__(cls, obj)
+        object.__setattr__(stmt, "raw", raw)
+        object.__setattr__(stmt, "command", command)
+        object.__setattr__(stmt, "args", args)
+        if argv is None:
+            argv = []
+        object.__setattr__(stmt, "argv", argv)
+        object.__setattr__(stmt, "multiline_command", multiline_command)
+        object.__setattr__(stmt, "terminator", terminator)
+        object.__setattr__(stmt, "suffix", suffix)
+        object.__setattr__(stmt, "pipe_to", pipe_to)
+        object.__setattr__(stmt, "output", output)
+        object.__setattr__(stmt, "output_to", output_to)
+        return stmt
 
     @property
     def command_and_args(self):
@@ -85,6 +107,13 @@ class Statement(str):
             rtn = None
         return rtn
 
+    def __setattr__(self, name, value):
+        """Statement instances should feel immutable; raise ValueError"""
+        raise ValueError
+
+    def __delattr__(self, name):
+        """Statement instances should feel immutable; raise ValueError"""
+        raise ValueError
 
 class StatementParser:
     """Parse raw text into command components.
@@ -93,11 +122,11 @@ class StatementParser:
     """
     def __init__(
             self,
-            allow_redirection=True,
-            terminators=None,
-            multiline_commands=None,
-            aliases=None,
-            shortcuts=None,
+            allow_redirection: bool = True,
+            terminators: List[str] = None,
+            multiline_commands: List[str] = None,
+            aliases: Dict[str, str] = None,
+            shortcuts: Dict[str, str] = None,
     ):
         self.allow_redirection = allow_redirection
         if terminators is None:
@@ -348,19 +377,18 @@ class StatementParser:
         # build the statement
         # string representation of args must be an empty string instead of
         # None for compatibility with standard library cmd
-        statement = Statement('' if args is None else args)
-        statement.raw = line
-        statement.command = command
-        # if there are no args we will use None since we don't have to worry
-        # about compatibility with standard library cmd
-        statement.args = args
-        statement.argv = list(map(lambda x: utils.strip_quotes(x), argv))
-        statement.terminator = terminator
-        statement.output = output
-        statement.output_to = output_to
-        statement.pipe_to = pipe_to
-        statement.suffix = suffix
-        statement.multiline_command = multiline_command
+        statement = Statement('' if args is None else args,
+            raw=line,
+            command=command,
+            args=args,
+            argv=list(map(lambda x: utils.strip_quotes(x), argv)),
+            multiline_command=multiline_command,
+            terminator=terminator,
+            suffix=suffix,
+            pipe_to=pipe_to,
+            output=output,
+            output_to=output_to,
+        )
         return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
@@ -410,10 +438,11 @@ class StatementParser:
         # build the statement
         # string representation of args must be an empty string instead of
         # None for compatibility with standard library cmd
-        statement = Statement('' if args is None else args)
-        statement.raw = rawinput
-        statement.command = command
-        statement.args = args
+        statement = Statement('' if args is None else args,
+            raw=rawinput,
+            command=command,
+            args=args,
+        )
         return statement
 
     def _expand(self, line: str) -> str:
