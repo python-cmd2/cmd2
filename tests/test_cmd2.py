@@ -1739,3 +1739,12 @@ def test_parseline(base_app):
     assert command == 'command'
     assert args == "with 'partially completed quotes"
     assert line == statement.strip()
+
+
+def test_readline_remove_history_item(base_app):
+    from cmd2.rl_utils import readline
+    assert readline.get_current_history_length() == 0
+    readline.add_history('this is a test')
+    assert readline.get_current_history_length() == 1
+    readline.remove_history_item(0)
+    assert readline.get_current_history_length() == 0
