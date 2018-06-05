@@ -57,21 +57,20 @@ class Statement(str):
     :type output_to:        str or None
 
     """
-    def __new__(
-        cls,
-        obj: object,
-        *,
-        raw: str = None,
-        command: str = None,
-        args: str = None,
-        argv: List[str] = None,
-        multiline_command: str = None,
-        terminator: str = None,
-        suffix: str = None,
-        pipe_to: str = None,
-        output: str = None,
-        output_to:str = None,
-    ):
+    def __new__(cls,
+                obj: object,
+                *,
+                raw: str = None,
+                command: str = None,
+                args: str = None,
+                argv: List[str] = None,
+                multiline_command: str = None,
+                terminator: str = None,
+                suffix: str = None,
+                pipe_to: str = None,
+                output: str = None,
+                output_to:str = None
+                ):
         """Create a new instance of Statement
 
         We must override __new__ because we are subclassing `str` which is
