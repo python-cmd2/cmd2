@@ -495,6 +495,9 @@ class Cmd(cmd.Cmd):
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
+        # An optional header that prints above the tab-completion suggestions
+        self.completion_header = ''
+
         # If the tab-completion suggestions should be displayed in a way that is different than the actual match values,
         # then place those results in this list. The full matches still must be returned from your completer function.
         # For an example, look at path_complete() which uses this to show only the basename of paths as the
@@ -661,6 +664,7 @@ class Cmd(cmd.Cmd):
         """
         self.allow_appended_space = True
         self.allow_closing_quote = True
+        self.completion_header = ''
         self.display_matches = []
         self.matches_delimited = False
 
@@ -1254,6 +1258,10 @@ class Cmd(cmd.Cmd):
             strings_array[1:-1] = encoded_matches
             strings_array[-1] = None
 
+            # Print the header if one exists
+            if self.completion_header:
+                self.stdout.write('\n' + self.completion_header)
+
             # Call readline's display function
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
             readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
@@ -1278,6 +1286,10 @@ class Cmd(cmd.Cmd):
 
             # Add padding for visual appeal
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
+
+            # Print the header if one exists
+            if self.completion_header:
+                readline.rl.mode.console.write('\n' + self.completion_header)
 
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
