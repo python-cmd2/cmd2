@@ -59,6 +59,7 @@ Released under MIT license, see LICENSE file
 
 import argparse
 from colorama import Fore
+import os
 import sys
 from typing import List, Dict, Tuple, Callable, Union
 
@@ -76,6 +77,15 @@ from .rl_utils import rl_force_redisplay
 # define the completion choices for the argument. You may provide a Collection or a Function.
 ACTION_ARG_CHOICES = 'arg_choices'
 ACTION_SUPPRESS_HINT = 'suppress_hint'
+
+
+class CompletionItem(str):
+    def __new__(cls, o, desc='', *args, **kwargs):
+        return str.__new__(cls, o, *args, **kwargs)
+
+    # noinspection PyMissingConstructor,PyUnusedLocal
+    def __init__(self, o, desc='', *args, **kwargs):
+        self.description = desc
 
 
 class _RangeAction(object):
@@ -413,6 +423,8 @@ class AutoCompleter(object):
                 completion_results = self._complete_for_arg(flag_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
                     self._print_action_help(flag_action)
+                elif len(completion_results) > 1:
+                    completion_results = self._format_completions(flag_action, completion_results)
 
         # ok, we're not a flag, see if there's a positional argument to complete
         else:
@@ -422,8 +434,36 @@ class AutoCompleter(object):
                 completion_results = self._complete_for_arg(pos_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
                     self._print_action_help(pos_action)
+                elif len(completion_results) > 1:
+                    completion_results = self._format_completions(pos_action, completion_results)
 
         return completion_results
+
+    def _format_completions(self, action, completions: List[Union[str, CompletionItem]]):
+        if completions and len(completions) > 1 and \
+                isinstance(completions[0], CompletionItem):
+
+            token_width = len(action.dest)
+            completions_with_desc = []
+
+            for item in completions:
+                if len(item) > token_width:
+                    token_width = len(item)
+
+            term_size = os.get_terminal_size()
+            fill_width = int(term_size.columns * .6) - (token_width + 2)
+            for item in completions:
+                entry = '{: <{token_width}}{: <{fill_width}}'.format(item, item.description,
+                                                                     token_width=token_width+2,
+                                                                     fill_width=fill_width)
+                completions_with_desc.append(entry)
+
+            header = '\n{: <{token_width}}{}'.format(action.dest, action.desc_header, token_width=token_width+2)
+            print(header)
+
+            self._cmd2_app.display_matches = completions_with_desc
+
+        return completions
 
     def complete_command_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Supports the completion of sub-commands for commands through the cmd2 help command."""
