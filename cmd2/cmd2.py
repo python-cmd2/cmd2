@@ -1260,7 +1260,7 @@ class Cmd(cmd.Cmd):
 
             # Print the header if one exists
             if self.completion_header:
-                self.stdout.write('\n' + self.completion_header)
+                sys.stdout.write('\n' + self.completion_header)
 
             # Call readline's display function
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
