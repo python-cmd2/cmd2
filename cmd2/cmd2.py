@@ -33,6 +33,7 @@ import argparse
 import cmd
 import collections
 from colorama import Fore
+import copy
 import glob
 import os
 import platform
@@ -494,12 +495,18 @@ class Cmd(cmd.Cmd):
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
-        # Use this list if you are completing strings that contain a common delimiter and you only want to
-        # display the final portion of the matches as the tab-completion suggestions. The full matches
-        # still must be returned from your completer function. For an example, look at path_complete()
-        # which uses this to show only the basename of paths as the suggestions. delimiter_complete() also
-        # populates this list.
+        # An optional header that prints above the tab-completion suggestions
+        self.completion_header = ''
+
+        # If the tab-completion suggestions should be displayed in a way that is different than the actual match values,
+        # then place those results in this list. The full matches still must be returned from your completer function.
+        # For an example, look at path_complete() which uses this to show only the basename of paths as the
+        # suggestions. delimiter_complete() also populates this list.
         self.display_matches = []
+
+        # Used by functions like path_complete() and delimiter_complete() to properly
+        # quote matches that are completed in a delimited fashion
+        self.matches_delimited = False
 
     # -----  Methods related to presenting output to the user -----
 
@@ -657,7 +664,9 @@ class Cmd(cmd.Cmd):
         """
         self.allow_appended_space = True
         self.allow_closing_quote = True
+        self.completion_header = ''
         self.display_matches = []
+        self.matches_delimited = False
 
         if rl_type == RlType.GNU:
             readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
@@ -683,7 +692,6 @@ class Cmd(cmd.Cmd):
                  On Failure
                     Both items are None
         """
-        import copy
         unclosed_quote = ''
         quotes_to_try = copy.copy(constants.QUOTES)
 
@@ -836,6 +844,8 @@ class Cmd(cmd.Cmd):
 
         # Display only the portion of the match that's being completed based on delimiter
         if matches:
+            # Set this to True for proper quoting of matches with spaces
+            self.matches_delimited = True
 
             # Get the common beginning for the matches
             common_prefix = os.path.commonprefix(matches)
@@ -1036,6 +1046,9 @@ class Cmd(cmd.Cmd):
             elif not os.path.dirname(text):
                 search_str = os.path.join(os.getcwd(), search_str)
                 cwd_added = True
+
+        # Set this to True for proper quoting of paths with spaces
+        self.matches_delimited = True
 
         # Find all matching path completions
         matches = glob.glob(search_str)
@@ -1245,6 +1258,10 @@ class Cmd(cmd.Cmd):
             strings_array[1:-1] = encoded_matches
             strings_array[-1] = None
 
+            # Print the header if one exists
+            if self.completion_header:
+                sys.stdout.write('\n' + self.completion_header)
+
             # Call readline's display function
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
             readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
@@ -1269,6 +1286,10 @@ class Cmd(cmd.Cmd):
 
             # Add padding for visual appeal
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
+
+            # Print the header if one exists
+            if self.completion_header:
+                readline.rl.mode.console.write('\n' + self.completion_header)
 
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
@@ -1414,17 +1435,10 @@ class Cmd(cmd.Cmd):
                     display_matches_set = set(self.display_matches)
                     self.display_matches = list(display_matches_set)
 
-                    # Check if display_matches has been used. If so, then matches
-                    # on delimited strings like paths was done.
-                    if self.display_matches:
-                        matches_delimited = True
-                    else:
-                        matches_delimited = False
-
+                    if not self.display_matches:
                         # Since self.display_matches is empty, set it to self.completion_matches
                         # before we alter them. That way the suggestions will reflect how we parsed
                         # the token being completed and not how readline did.
-                        import copy
                         self.display_matches = copy.copy(self.completion_matches)
 
                     # Check if we need to add an opening quote
@@ -1435,7 +1449,7 @@ class Cmd(cmd.Cmd):
                         # This is the tab completion text that will appear on the command line.
                         common_prefix = os.path.commonprefix(self.completion_matches)
 
-                        if matches_delimited:
+                        if self.matches_delimited:
                             # Check if any portion of the display matches appears in the tab completion
                             display_prefix = os.path.commonprefix(self.display_matches)
 
