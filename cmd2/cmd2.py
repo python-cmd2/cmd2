@@ -1842,7 +1842,7 @@ class Cmd(cmd.Cmd):
                     mode = 'a'
                 try:
                     sys.stdout = self.stdout = open(os.path.expanduser(statement.output_to), mode)
-                except (FileNotFoundError, OSError) as ex:
+                except OSError as ex:
                     self.perror('Not Redirecting because - {}'.format(ex), traceback_war=False)
                     self.redirecting = False
             else:
@@ -2885,7 +2885,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         try:
             with open(transcript_file, 'w') as fout:
                 fout.write(transcript)
-        except (FileNotFoundError, OSError) as ex:
+        except OSError as ex:
             self.perror('Failed to save transcript: {}'.format(ex), traceback_war=False)
         else:
             # and let the user know what we did
