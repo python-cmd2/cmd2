@@ -1840,7 +1840,7 @@ class Cmd(cmd.Cmd):
                 # REDIRECTION_APPEND or REDIRECTION_OUTPUT
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
-                sys.stdout = self.stdout = open(os.path.expanduser(shlex.split(statement.output_to)[0]), mode)
+                sys.stdout = self.stdout = open(statement.output_to, mode)
             else:
                 # going to a paste buffer
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
