@@ -440,9 +440,7 @@ class AutoCompleter(object):
         return completion_results
 
     def _format_completions(self, action, completions: List[Union[str, CompletionItem]]):
-        if completions and len(completions) > 1 and \
-                isinstance(completions[0], CompletionItem):
-
+        if completions and len(completions) > 1 and isinstance(completions[0], CompletionItem):
             token_width = len(action.dest)
             completions_with_desc = []
 
@@ -458,9 +456,9 @@ class AutoCompleter(object):
                                                                      fill_width=fill_width)
                 completions_with_desc.append(entry)
 
-            header = '\n{: <{token_width}}{}'.format(action.dest, action.desc_header, token_width=token_width+2)
-            print(header)
+            header = '\n{: <{token_width}}{}'.format(action.dest.upper(), action.desc_header, token_width=token_width+2)
 
+            self._cmd2_app.completion_header = header
             self._cmd2_app.display_matches = completions_with_desc
 
         return completions
