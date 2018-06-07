@@ -1696,7 +1696,7 @@ class Cmd(cmd.Cmd):
                 if self.timing:
                     self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
             finally:
-                if self.allow_redirection:
+                if self.allow_redirection and self.redirecting:
                     self._restore_output(statement)
         except EmptyStatement:
             pass
@@ -1840,7 +1840,11 @@ class Cmd(cmd.Cmd):
                 # REDIRECTION_APPEND or REDIRECTION_OUTPUT
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
-                sys.stdout = self.stdout = open(os.path.expanduser(statement.output_to), mode)
+                try:
+                    sys.stdout = self.stdout = open(os.path.expanduser(statement.output_to), mode)
+                except (FileNotFoundError, OSError) as ex:
+                    self.perror('Not Redirecting because - {}'.format(ex), traceback_war=False)
+                    self.redirecting = False
             else:
                 # going to a paste buffer
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
@@ -2878,16 +2882,19 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         self.echo = saved_echo
 
         # finally, we can write the transcript out to the file
-        with open(transcript_file, 'w') as fout:
-            fout.write(transcript)
-
-        # and let the user know what we did
-        if len(history) > 1:
-            plural = 'commands and their outputs'
+        try:
+            with open(transcript_file, 'w') as fout:
+                fout.write(transcript)
+        except (FileNotFoundError, OSError) as ex:
+            self.perror('Failed to save transcript: {}'.format(ex), traceback_war=False)
         else:
-            plural = 'command and its output'
-        msg = '{} {} saved to transcript file {!r}'
-        self.pfeedback(msg.format(len(history), plural, transcript_file))
+            # and let the user know what we did
+            if len(history) > 1:
+                plural = 'commands and their outputs'
+            else:
+                plural = 'command and its output'
+            msg = '{} {} saved to transcript file {!r}'
+            self.pfeedback(msg.format(len(history), plural, transcript_file))
 
     @with_argument_list
     def do_edit(self, arglist):
