@@ -14,6 +14,7 @@ import mock
 import pytest
 import six
 
+import cmd2
 from cmd2 import (Cmd, options, Cmd2TestCase, set_use_arg_list,
                   set_posix_shlex, set_strip_quotes)
 from conftest import run_cmd, StdOut, normalize
@@ -304,6 +305,32 @@ def test_transcript(request, capsys, filename, feedback_to_output):
         assert err == ''
         assert out == ''
 
+
+def test_history_transcript_bad_filename(request, capsys):
+    app = CmdLineApp()
+    app.stdout = StdOut()
+    run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')
+    run_cmd(app, 'speak /tmp/file.txt is not a regex')
+
+    expected = r"""(Cmd) orate this is
+> a /multiline/
+> command;
+this is a \/multiline\/ command
+(Cmd) speak /tmp/file.txt is not a regex
+\/tmp\/file.txt is not a regex
+"""
+
+    # make a tmp file
+    history_fname = '~/fakedir/this_does_not_exist.txt'
+
+    # tell the history command to create a transcript
+    run_cmd(app, 'history -t "{}"'.format(history_fname))
+
+    # read in the transcript created by the history command
+    with pytest.raises(cmd2.FILE_NOT_FOUND_ERROR):
+        with open(history_fname) as f:
+            transcript = f.read()
+        assert transcript == expected
 
 @pytest.mark.parametrize('expected, transformed', [
     # strings with zero or one slash or with escaped slashes means no regular

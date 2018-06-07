@@ -26,7 +26,7 @@ from conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.8.7'
+    assert cmd2.__version__ == '0.8.8'
 
 
 def test_empty_statement(base_app):
@@ -552,6 +552,44 @@ def test_output_redirection(base_app):
         raise
     finally:
         os.remove(filename)
+
+def test_output_redirection_to_nonexistent_directory(base_app):
+    filename = '~/fakedir/this_does_not_exist.txt'
+
+    # Verify that writing to a file in a non-existent directory doesn't work
+    run_cmd(base_app, 'help > {}'.format(filename))
+    expected = normalize(BASE_HELP)
+    with pytest.raises(cmd2.FILE_NOT_FOUND_ERROR):
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
+
+    # Verify that appending to a file also works
+    run_cmd(base_app, 'help history >> {}'.format(filename))
+    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
+    with pytest.raises(cmd2.FILE_NOT_FOUND_ERROR):
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
+
+def test_output_redirection_to_too_long_filename(base_app):
+    filename = '~/sdkfhksdjfhkjdshfkjsdhfkjsdhfkjdshfkjdshfkjshdfkhdsfkjhewfuihewiufhweiufhiweufhiuewhiuewhfiuwehfiuewhfiuewhfiuewhfiuewhiuewhfiuewhfiuewfhiuwehewiufhewiuhfiweuhfiuwehfiuewfhiuwehiuewfhiuewhiewuhfiuewhfiuwefhewiuhewiufhewiufhewiufhewiufhewiufhewiufhewiufhewiuhewiufhewiufhewiuheiufhiuewheiwufhewiufheiufheiufhieuwhfewiuhfeiufhiuewfhiuewheiwuhfiuewhfiuewhfeiuwfhewiufhiuewhiuewhfeiuwhfiuwehfuiwehfiuehiuewhfieuwfhieufhiuewhfeiuwfhiuefhueiwhfw'
+
+    # Verify that writing to a file in a non-existent directory doesn't work
+    run_cmd(base_app, 'help > {}'.format(filename))
+    expected = normalize(BASE_HELP)
+    with pytest.raises(IOError):
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
+
+    # Verify that appending to a file also works
+    run_cmd(base_app, 'help history >> {}'.format(filename))
+    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
+    with pytest.raises(IOError):
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
 
 
 def test_feedback_to_output_true(base_app):
