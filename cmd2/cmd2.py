@@ -494,12 +494,19 @@ class Cmd(cmd.Cmd):
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
+        # An optional header that prints above the tab-completion suggestions
+        self.completion_header = ''
+
         # Use this list if you are completing strings that contain a common delimiter and you only want to
         # display the final portion of the matches as the tab-completion suggestions. The full matches
         # still must be returned from your completer function. For an example, look at path_complete()
         # which uses this to show only the basename of paths as the suggestions. delimiter_complete() also
         # populates this list.
         self.display_matches = []
+
+        # Used by functions like path_complete() and delimiter_complete() to properly
+        # quote matches that are completed in a delimited fashion
+        self.matches_delimited = False
 
     # -----  Methods related to presenting output to the user -----
 
@@ -657,7 +664,9 @@ class Cmd(cmd.Cmd):
         """
         self.allow_appended_space = True
         self.allow_closing_quote = True
+        self.completion_header = ''
         self.display_matches = []
+        self.matches_delimited = False
 
         if rl_type == RlType.GNU:
             readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
@@ -836,6 +845,8 @@ class Cmd(cmd.Cmd):
 
         # Display only the portion of the match that's being completed based on delimiter
         if matches:
+            # Set this to True for proper quoting of matches with spaces
+            self.matches_delimited = True
 
             # Get the common beginning for the matches
             common_prefix = os.path.commonprefix(matches)
@@ -1036,6 +1047,9 @@ class Cmd(cmd.Cmd):
             elif not os.path.dirname(text):
                 search_str = os.path.join(os.getcwd(), search_str)
                 cwd_added = True
+
+        # Set this to True for proper quoting of paths with spaces
+        self.matches_delimited = True
 
         # Find all matching path completions
         matches = glob.glob(search_str)
@@ -1245,6 +1259,10 @@ class Cmd(cmd.Cmd):
             strings_array[1:-1] = encoded_matches
             strings_array[-1] = None
 
+            # Print the header if one exists
+            if self.completion_header:
+                sys.stdout.write('\n' + self.completion_header)
+
             # Call readline's display function
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
             readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
@@ -1269,6 +1287,10 @@ class Cmd(cmd.Cmd):
 
             # Add padding for visual appeal
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
+
+            # Print the header if one exists
+            if self.completion_header:
+                readline.rl.mode.console.write('\n' + self.completion_header)
 
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
@@ -1309,7 +1331,7 @@ class Cmd(cmd.Cmd):
             # from text and update the indexes. This only applies if we are at the the beginning of the line.
             shortcut_to_restore = ''
             if begidx == 0:
-                for (shortcut, expansion) in self.shortcuts:
+                for (shortcut, _) in self.shortcuts:
                     if text.startswith(shortcut):
                         # Save the shortcut to restore later
                         shortcut_to_restore = shortcut
@@ -1414,13 +1436,7 @@ class Cmd(cmd.Cmd):
                     display_matches_set = set(self.display_matches)
                     self.display_matches = list(display_matches_set)
 
-                    # Check if display_matches has been used. If so, then matches
-                    # on delimited strings like paths was done.
-                    if self.display_matches:
-                        matches_delimited = True
-                    else:
-                        matches_delimited = False
-
+                    if not self.display_matches:
                         # Since self.display_matches is empty, set it to self.completion_matches
                         # before we alter them. That way the suggestions will reflect how we parsed
                         # the token being completed and not how readline did.
@@ -1435,7 +1451,7 @@ class Cmd(cmd.Cmd):
                         # This is the tab completion text that will appear on the command line.
                         common_prefix = os.path.commonprefix(self.completion_matches)
 
-                        if matches_delimited:
+                        if self.matches_delimited:
                             # Check if any portion of the display matches appears in the tab completion
                             display_prefix = os.path.commonprefix(self.display_matches)
 
@@ -1696,7 +1712,7 @@ class Cmd(cmd.Cmd):
                 if self.timing:
                     self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
             finally:
-                if self.allow_redirection:
+                if self.allow_redirection and self.redirecting:
                     self._restore_output(statement)
         except EmptyStatement:
             pass
@@ -1840,7 +1856,11 @@ class Cmd(cmd.Cmd):
                 # REDIRECTION_APPEND or REDIRECTION_OUTPUT
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
-                sys.stdout = self.stdout = open(statement.output_to, mode)
+                try:
+                    sys.stdout = self.stdout = open(statement.output_to, mode)
+                except OSError as ex:
+                    self.perror('Not Redirecting because - {}'.format(ex), traceback_war=False)
+                    self.redirecting = False
             else:
                 # going to a paste buffer
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
@@ -2366,7 +2386,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                     fulloptions.append((opt[0], opt[1]))
                 except IndexError:
                     fulloptions.append((opt[0], opt[0]))
-        for (idx, (value, text)) in enumerate(fulloptions):
+        for (idx, (_, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
             response = input(prompt)
@@ -2878,16 +2898,19 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         self.echo = saved_echo
 
         # finally, we can write the transcript out to the file
-        with open(transcript_file, 'w') as fout:
-            fout.write(transcript)
-
-        # and let the user know what we did
-        if len(history) > 1:
-            plural = 'commands and their outputs'
+        try:
+            with open(transcript_file, 'w') as fout:
+                fout.write(transcript)
+        except OSError as ex:
+            self.perror('Failed to save transcript: {}'.format(ex), traceback_war=False)
         else:
-            plural = 'command and its output'
-        msg = '{} {} saved to transcript file {!r}'
-        self.pfeedback(msg.format(len(history), plural, transcript_file))
+            # and let the user know what we did
+            if len(history) > 1:
+                plural = 'commands and their outputs'
+            else:
+                plural = 'command and its output'
+            msg = '{} {} saved to transcript file {!r}'
+            self.pfeedback(msg.format(len(history), plural, transcript_file))
 
     @with_argument_list
     def do_edit(self, arglist):

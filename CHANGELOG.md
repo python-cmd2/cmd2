@@ -1,3 +1,7 @@
+## 0.8.8 (TBD, 2018)
+* Bug Fixes
+    * Prevent crashes that could occur attempting to open a file in non-existent directory or with very long filename
+    
 ## 0.9.1 (May 28, 2018)
 * Bug Fixes
     * fix packaging error for 0.8.x versions (yes we had to deploy a new version
