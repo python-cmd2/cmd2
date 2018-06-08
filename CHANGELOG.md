@@ -1,6 +1,8 @@
 ## 0.8.8 (TBD, 2018)
 * Bug Fixes
     * Prevent crashes that could occur attempting to open a file in non-existent directory or with very long filename
+* Enhancements
+    * ``display_matches`` is no longer restricted to delimited strings
 
 ## 0.8.7 (May 28, 2018)
 * Bug Fixes
