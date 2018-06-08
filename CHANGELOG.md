@@ -1,7 +1,15 @@
+## 0.9.2 (TBD, 2018)
+* Bug Fixes
+    * Fixed issue where piping and redirecting did not work correctly with paths that had spaces
+* Enhancements
+    * Added ability to print a header above tab-completion suggestions using `completion_header` member
+
 ## 0.8.8 (TBD, 2018)
 * Bug Fixes
     * Prevent crashes that could occur attempting to open a file in non-existent directory or with very long filename
-    
+* Enhancements
+    * `display_matches` is no longer restricted to delimited strings
+
 ## 0.9.1 (May 28, 2018)
 * Bug Fixes
     * fix packaging error for 0.8.x versions (yes we had to deploy a new version
