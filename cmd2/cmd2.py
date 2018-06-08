@@ -33,7 +33,6 @@ import argparse
 import cmd
 import collections
 from colorama import Fore
-import copy
 import glob
 import os
 import platform
@@ -498,10 +497,11 @@ class Cmd(cmd.Cmd):
         # An optional header that prints above the tab-completion suggestions
         self.completion_header = ''
 
-        # If the tab-completion suggestions should be displayed in a way that is different than the actual match values,
-        # then place those results in this list. The full matches still must be returned from your completer function.
-        # For an example, look at path_complete() which uses this to show only the basename of paths as the
-        # suggestions. delimiter_complete() also populates this list.
+        # Use this list if you are completing strings that contain a common delimiter and you only want to
+        # display the final portion of the matches as the tab-completion suggestions. The full matches
+        # still must be returned from your completer function. For an example, look at path_complete()
+        # which uses this to show only the basename of paths as the suggestions. delimiter_complete() also
+        # populates this list.
         self.display_matches = []
 
         # Used by functions like path_complete() and delimiter_complete() to properly
@@ -692,6 +692,7 @@ class Cmd(cmd.Cmd):
                  On Failure
                     Both items are None
         """
+        import copy
         unclosed_quote = ''
         quotes_to_try = copy.copy(constants.QUOTES)
 
@@ -1330,7 +1331,7 @@ class Cmd(cmd.Cmd):
             # from text and update the indexes. This only applies if we are at the the beginning of the line.
             shortcut_to_restore = ''
             if begidx == 0:
-                for (shortcut, expansion) in self.shortcuts:
+                for (shortcut, _) in self.shortcuts:
                     if text.startswith(shortcut):
                         # Save the shortcut to restore later
                         shortcut_to_restore = shortcut
@@ -1439,6 +1440,7 @@ class Cmd(cmd.Cmd):
                         # Since self.display_matches is empty, set it to self.completion_matches
                         # before we alter them. That way the suggestions will reflect how we parsed
                         # the token being completed and not how readline did.
+                        import copy
                         self.display_matches = copy.copy(self.completion_matches)
 
                     # Check if we need to add an opening quote
@@ -1855,7 +1857,7 @@ class Cmd(cmd.Cmd):
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
                 try:
-                    sys.stdout = self.stdout = open(os.path.expanduser(statement.output_to), mode)
+                    sys.stdout = self.stdout = open(statement.output_to, mode)
                 except OSError as ex:
                     self.perror('Not Redirecting because - {}'.format(ex), traceback_war=False)
                     self.redirecting = False
@@ -2384,7 +2386,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                     fulloptions.append((opt[0], opt[1]))
                 except IndexError:
                     fulloptions.append((opt[0], opt[0]))
-        for (idx, (value, text)) in enumerate(fulloptions):
+        for (idx, (_, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
             response = input(prompt)

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """Statement parsing classes for cmd2"""
 
+import os
 import re
 import shlex
 from typing import List, Tuple
@@ -38,7 +39,7 @@ class Statement(str):
                             from the elements of the list, and aliases and shortcuts
                             are expanded
     :type argv:             list
-    :var terminator:        the charater which terminated the multiline command, if
+    :var terminator:        the character which terminated the multiline command, if
                             there was one
     :type terminator:       str or None
     :var suffix:            characters appearing after the terminator but before output
@@ -49,7 +50,7 @@ class Statement(str):
     :type pipe_to:          list
     :var output:            if output was redirected, the redirection token, i.e. '>>'
     :type output:           str or None
-    :var output_to:         if output was redirected, the destination, usually a filename
+    :var output_to:         if output was redirected, the destination file
     :type output_to:        str or None
 
     """
@@ -297,6 +298,11 @@ class StatementParser:
             pipe_pos = tokens.index(constants.REDIRECTION_PIPE)
             # save everything after the first pipe as tokens
             pipe_to = tokens[pipe_pos+1:]
+
+            for pos, cur_token in enumerate(pipe_to):
+                unquoted_token = utils.strip_quotes(cur_token)
+                pipe_to[pos] = os.path.expanduser(unquoted_token)
+
             # remove all the tokens after the pipe
             tokens = tokens[:pipe_pos]
         except ValueError:
@@ -309,7 +315,12 @@ class StatementParser:
         try:
             output_pos = tokens.index(constants.REDIRECTION_OUTPUT)
             output = constants.REDIRECTION_OUTPUT
-            output_to = ' '.join(tokens[output_pos+1:])
+
+            # Check if we are redirecting to a file
+            if len(tokens) > output_pos + 1:
+                unquoted_path = utils.strip_quotes(tokens[output_pos + 1])
+                output_to = os.path.expanduser(unquoted_path)
+
             # remove all the tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
@@ -318,7 +329,12 @@ class StatementParser:
         try:
             output_pos = tokens.index(constants.REDIRECTION_APPEND)
             output = constants.REDIRECTION_APPEND
-            output_to = ' '.join(tokens[output_pos+1:])
+
+            # Check if we are redirecting to a file
+            if len(tokens) > output_pos + 1:
+                unquoted_path = utils.strip_quotes(tokens[output_pos + 1])
+                output_to = os.path.expanduser(unquoted_path)
+
             # remove all tokens after the output redirect
             tokens = tokens[:output_pos]
         except ValueError:
