@@ -16,6 +16,7 @@ else:
     except AttributeError:
         DEFAULT_COMPLETER = argcomplete.completers.FilesCompleter()
 
+    from cmd2.argparse_completer import ACTION_ARG_CHOICES, ACTION_SUPPRESS_HINT
     from contextlib import redirect_stdout
     import copy
     from io import StringIO
@@ -250,3 +251,15 @@ else:
             output_stream.flush()
             argcomplete.debug_stream.flush()
             exit_method(0)
+
+
+    def bash_complete(action, show_hint: bool = True):
+        """Helper function to configure an argparse action to fall back to bash completion.
+
+        This function tags a parameter for bash completion, bypassing the autocompleter (for file input).
+        """
+        def complete_none(*args, **kwargs):
+            return None
+
+        setattr(action, ACTION_SUPPRESS_HINT, not show_hint)
+        setattr(action, ACTION_ARG_CHOICES, (complete_none,))
