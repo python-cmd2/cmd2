@@ -103,7 +103,7 @@ def parser1():
 
 
 # noinspection PyShadowingNames
-@pytest.mark.skipif(skip, reason=skip_reason)
+@pytest.mark.skipif(skip, reason=(skip_reason1 or skip_reason3))
 def test_bash_nocomplete(parser1):
     completer = CompletionFinder()
     result = completer(parser1, AutoCompleter(parser1))
