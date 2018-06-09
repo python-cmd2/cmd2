@@ -205,7 +205,7 @@ def fdopen_fail_9(fd, mode, *args):
 
 
 # noinspection PyShadowingNames
-@pytest.mark.skipif(skip or skip_mac, reason=skip_reason)
+@pytest.mark.skipif(skip_no_argcomplete or skip_windows or skip_mac, reason=skip_reason)
 def test_fail_alt_stderr(parser1, capfd, mock):
     completer = CompletionFinder()
 
