@@ -136,7 +136,7 @@ def test_invalid_ifs(parser1, mock):
 
 
 # noinspection PyShadowingNames
-@pytest.mark.skipif(skip_no_argcomplete or skip_windows or skip_mac, reason=skip_reason)
+@pytest.mark.skipif(skip or skip_mac, reason=skip_reason)
 @pytest.mark.parametrize('comp_line, exp_out, exp_err', [
     ('media ', 'movies\013shows', ''),
     ('media mo', 'movies', ''),
