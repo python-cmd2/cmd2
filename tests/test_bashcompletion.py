@@ -122,7 +122,7 @@ def my_fdopen(fd, mode, *args):
 
 
 # noinspection PyShadowingNames
-@pytest.mark.skipif(skip, reason=skip_reason)
+@pytest.mark.skipif(skip_reason1 or skip_reason3, reason=skip_reason)
 def test_invalid_ifs(parser1, mock):
     completer = CompletionFinder()
 
