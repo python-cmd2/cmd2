@@ -136,9 +136,34 @@ def test_invalid_ifs(parser1, mock):
 
 
 # noinspection PyShadowingNames
-@pytest.mark.skipif(skip or skip_mac, reason=skip_reason)
+@pytest.mark.skipif(skip_no_argcomplete or skip_windows or skip_mac, reason=skip_reason)
 @pytest.mark.parametrize('comp_line, exp_out, exp_err', [
     ('media ', 'movies\013shows', ''),
+])
+def test_commands_travis(parser1, capfd, mock, comp_line, exp_out, exp_err):
+    mock.patch.dict(os.environ, {'_ARGCOMPLETE': '1',
+                                 '_ARGCOMPLETE_IFS': '\013',
+                                 'COMP_TYPE': '63',
+                                 'COMP_LINE': comp_line,
+                                 'COMP_POINT': str(len(comp_line))})
+
+    mock.patch.object(os, 'fdopen', my_fdopen)
+
+    with pytest.raises(SystemExit):
+        completer = CompletionFinder()
+
+        choices = {'actor': query_actors,  # function
+                   }
+        autocompleter = AutoCompleter(parser1, arg_choices=choices)
+        completer(parser1, autocompleter, exit_method=sys.exit)
+
+    out, err = capfd.readouterr()
+    assert out == exp_out
+    assert err == exp_err
+
+# noinspection PyShadowingNames
+@pytest.mark.skipif(skip or skip_mac, reason=skip_reason)
+@pytest.mark.parametrize('comp_line, exp_out, exp_err', [
     ('media mo', 'movies', ''),
     ('media movies list -a "J', '"John Boyega"\013"Jake Lloyd"', ''),
     ('media movies list ', '', ''),
@@ -146,7 +171,7 @@ def test_invalid_ifs(parser1, mock):
 Hint:
   TITLE                   Movie Title'''),
 ])
-def test_commands(parser1, capfd, mock, comp_line, exp_out, exp_err):
+def test_commands_local(parser1, capfd, mock, comp_line, exp_out, exp_err):
     mock.patch.dict(os.environ, {'_ARGCOMPLETE': '1',
                                  '_ARGCOMPLETE_IFS': '\013',
                                  'COMP_TYPE': '63',
@@ -205,7 +230,7 @@ def fdopen_fail_9(fd, mode, *args):
 
 
 # noinspection PyShadowingNames
-@pytest.mark.skipif(skip_no_argcomplete or skip_windows or skip_mac, reason=skip_reason)
+@pytest.mark.skipif(skip or skip_mac, reason=skip_reason)
 def test_fail_alt_stderr(parser1, capfd, mock):
     completer = CompletionFinder()
 
