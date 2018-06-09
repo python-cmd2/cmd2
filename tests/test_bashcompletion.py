@@ -138,7 +138,7 @@ def test_invalid_ifs(parser1, mock):
 # noinspection PyShadowingNames
 @pytest.mark.skipif(skip_no_argcomplete or skip_windows or skip_mac, reason=skip_reason)
 @pytest.mark.parametrize('comp_line, exp_out, exp_err', [
-    ('media ', 'movies\013shows', ''),
+    ('media mo', 'movies', ''),
 ])
 def test_commands_travis(parser1, capfd, mock, comp_line, exp_out, exp_err):
     mock.patch.dict(os.environ, {'_ARGCOMPLETE': '1',
@@ -164,7 +164,7 @@ def test_commands_travis(parser1, capfd, mock, comp_line, exp_out, exp_err):
 # noinspection PyShadowingNames
 @pytest.mark.skipif(skip or skip_mac, reason=skip_reason)
 @pytest.mark.parametrize('comp_line, exp_out, exp_err', [
-    ('media mo', 'movies', ''),
+    ('media ', 'movies\013shows', ''),
     ('media movies list -a "J', '"John Boyega"\013"Jake Lloyd"', ''),
     ('media movies list ', '', ''),
     ('media movies add ', '\013\013 ', '''
