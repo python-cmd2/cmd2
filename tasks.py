@@ -49,7 +49,7 @@ namespace.add_task(pytest)
 def pytest_clean(context):
     "Remove pytest cache and code coverage files and directories"
     #pylint: disable=unused-argument
-    dirs = ['.pytest-cache', '.cache', 'htmlcov', '.coverage']
+    dirs = ['.pytest_cache', '.cache', 'htmlcov', '.coverage']
     rmrf(dirs)
 namespace_clean.add_task(pytest_clean, 'pytest')
 
