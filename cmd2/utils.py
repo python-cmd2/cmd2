@@ -8,6 +8,7 @@ from typing import Optional
 
 from . import constants
 
+
 def strip_ansi(text: str) -> str:
     """Strip ANSI escape codes from a string.
 
@@ -58,6 +59,7 @@ def namedtuple_with_defaults(typename, field_names, default_values=()):
     T.__new__.__defaults__ = tuple(prototype)
     return T
 
+
 def namedtuple_with_two_defaults(typename, field_names, default_values=('', '')):
     """Wrapper around namedtuple which lets you treat the last value as optional.
 
@@ -71,6 +73,7 @@ def namedtuple_with_two_defaults(typename, field_names, default_values=('', ''))
     # noinspection PyUnresolvedReferences
     T.__new__.__defaults__ = default_values
     return T
+
 
 def cast(current, new):
     """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
@@ -101,6 +104,7 @@ def cast(current, new):
     print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
     return current
 
+
 def which(editor: str) -> Optional[str]:
     """Find the full path of a given editor.
 
@@ -118,7 +122,8 @@ def which(editor: str) -> Optional[str]:
         editor_path = None
     return editor_path
 
-def is_text_file(file_path):
+
+def is_text_file(file_path: str) -> bool:
     """Returns if a file contains only ASCII or UTF-8 encoded text
 
     :param file_path: path to the file being checked

@@ -10,7 +10,7 @@ Released under MIT license, see LICENSE file
 import argparse
 import functools
 import sys
-from typing import List, Tuple, Callable
+from typing import List, Callable
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
@@ -298,4 +298,5 @@ class PyscriptBridge(object):
         return commands
 
     def __call__(self, args: str):
-        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'), self.cmd_echo)
+        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'),
+                         self.cmd_echo)
