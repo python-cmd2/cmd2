@@ -1304,7 +1304,7 @@ class Cmd(cmd.Cmd):
 
     # -----  Methods which override stuff in cmd -----
 
-    def complete(self, text, state):
+    def complete(self, text: str, state: int) -> Optional[str]:
         """Override of command method which returns the next possible completion for 'text'.
 
         If a command has not been entered, then complete against command list.
@@ -1315,8 +1315,8 @@ class Cmd(cmd.Cmd):
         This completer function is called as complete(text, state), for state in 0, 1, 2, …, until it returns a
         non-string value. It should return the next possible completion starting with text.
 
-        :param text: str - the current word that user is typing
-        :param state: int - non-negative integer
+        :param text: the current word that user is typing
+        :param state: non-negative integer
         """
         import functools
         if state == 0 and rl_type != RlType.NONE:
@@ -1532,16 +1532,12 @@ class Cmd(cmd.Cmd):
 
         return results
 
-    def get_all_commands(self):
-        """
-        Returns a list of all commands
-        """
+    def get_all_commands(self) -> List[str]:
+        """Returns a list of all commands."""
         return [cur_name[3:] for cur_name in self.get_names() if cur_name.startswith('do_')]
 
-    def get_visible_commands(self):
-        """
-        Returns a list of commands that have not been hidden
-        """
+    def get_visible_commands(self) -> List[str]:
+        """Returns a list of commands that have not been hidden."""
         commands = self.get_all_commands()
 
         # Remove the hidden commands
@@ -1551,11 +1547,11 @@ class Cmd(cmd.Cmd):
 
         return commands
 
-    def get_help_topics(self):
+    def get_help_topics(self) -> List[str]:
         """ Returns a list of help topics """
         return [name[5:] for name in self.get_names() if name.startswith('help_')]
 
-    def complete_help(self, text, line, begidx, endidx):
+    def complete_help(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
         Override of parent class method to handle tab completing subcommands and not showing hidden commands
         Returns a list of possible tab completions
@@ -1599,12 +1595,12 @@ class Cmd(cmd.Cmd):
         return matches
 
     # noinspection PyUnusedLocal
-    def sigint_handler(self, signum, frame):
+    def sigint_handler(self, signum: int, frame) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
 
         If you need custom SIGINT behavior, then override this function.
 
-        :param signum: int - signal number
+        :param signum: signal number
         :param frame
         """
 
@@ -1617,7 +1613,7 @@ class Cmd(cmd.Cmd):
         # Re-raise a KeyboardInterrupt so other parts of the code can catch it
         raise KeyboardInterrupt("Got a keyboard interrupt")
 
-    def preloop(self):
+    def preloop(self) -> None:
         """"Hook method executed once when the cmdloop() method is called."""
         import signal
         # Register a default SIGINT signal handler for Ctrl+C
@@ -1626,8 +1622,8 @@ class Cmd(cmd.Cmd):
     def precmd(self, statement: Statement) -> Statement:
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
 
-        :param statement: Statement - subclass of str which also contains the parsed input
-        :return: Statement - a potentially modified version of the input Statement object
+        :param statement: subclass of str which also contains the parsed input
+        :return: a potentially modified version of the input Statement object
         """
         return statement
 
@@ -1637,8 +1633,8 @@ class Cmd(cmd.Cmd):
     def preparse(self, raw: str) -> str:
         """Hook method executed just before the command line is interpreted, but after the input prompt is generated.
 
-        :param raw: str - raw command line input
-        :return: str - potentially modified raw command line input
+        :param raw: raw command line input
+        :return: potentially modified raw command line input
         """
         return raw
 
@@ -1679,25 +1675,24 @@ class Cmd(cmd.Cmd):
                 proc.communicate()
         return stop
 
-    def parseline(self, line):
+    def parseline(self, line: str) -> Tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.
 
         NOTE: This is an override of a parent class method.  It is only used by other parent class methods.
 
         Different from the parent class method, this ignores self.identchars.
 
-        :param line: str - line read by readline
-        :return: (str, str, str) - tuple containing (command, args, line)
+        :param line: line read by readline
+        :return: tuple containing (command, args, line)
         """
-
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line):
+    def onecmd_plus_hooks(self, line: str) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
-        :param line: str - line of text read from input
-        :return: bool - True if cmdloop() should exit, False otherwise
+        :param line: line of text read from input
+        :return: True if cmdloop() should exit, False otherwise
         """
         import datetime
         stop = False
@@ -1731,7 +1726,7 @@ class Cmd(cmd.Cmd):
         finally:
             return self.postparsing_postcmd(stop)
 
-    def runcmds_plus_hooks(self, cmds):
+    def runcmds_plus_hooks(self, cmds: List[str]) -> bool:
         """Convenience method to run multiple commands by onecmd_plus_hooks.
 
         This method adds the given cmds to the command queue and processes the
@@ -1749,8 +1744,8 @@ class Cmd(cmd.Cmd):
 
         Example: cmd_obj.runcmds_plus_hooks(['load myscript.txt'])
 
-        :param cmds: list - Command strings suitable for onecmd_plus_hooks.
-        :return: bool - True implies the entire application should exit.
+        :param cmds: command strings suitable for onecmd_plus_hooks.
+        :return: True implies the entire application should exit.
 
         """
         stop = False
@@ -1773,7 +1768,7 @@ class Cmd(cmd.Cmd):
             # necessary/desired here.
             return stop
 
-    def _complete_statement(self, line):
+    def _complete_statement(self, line: str) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
@@ -1814,10 +1809,10 @@ class Cmd(cmd.Cmd):
             raise EmptyStatement()
         return statement
 
-    def _redirect_output(self, statement):
+    def _redirect_output(self, statement: Statement) -> None:
         """Handles output redirection for >, >>, and |.
 
-        :param statement: Statement - a parsed statement from the user
+        :param statement: a parsed statement from the user
         """
         import io
         import subprocess
@@ -1874,12 +1869,11 @@ class Cmd(cmd.Cmd):
                 if statement.output == constants.REDIRECTION_APPEND:
                     self.poutput(get_paste_buffer())
 
-    def _restore_output(self, statement):
+    def _restore_output(self, statement: Statement) -> None:
         """Handles restoring state after output redirection as well as
         the actual pipe operation if present.
 
-        :param statement: Statement object which contains the parsed
-                          input from the user
+        :param statement: Statement object which contains the parsed input from the user
         """
         # If we have redirected output to a file or the clipboard or piped it to a shell command, then restore state
         if self.kept_state is not None:
@@ -1910,11 +1904,11 @@ class Cmd(cmd.Cmd):
 
         self.redirecting = False
 
-    def _func_named(self, arg):
+    def _func_named(self, arg: str) -> str:
         """Gets the method name associated with a given command.
 
-        :param arg: str - command to look up method name which implements it
-        :return: str - method name which implements the given command
+        :param arg: command to look up method name which implements it
+        :return: method name which implements the given command
         """
         result = None
         target = 'do_' + arg
@@ -1922,13 +1916,13 @@ class Cmd(cmd.Cmd):
             result = target
         return result
 
-    def onecmd(self, statement):
+    def onecmd(self, statement: Statement) -> Optional[bool]:
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes _default() instead.
 
         :param statement: Command - a parsed command from the input stream
-        :return: bool - a flag indicating whether the interpretation of commands should stop
+        :return: a flag indicating whether the interpretation of commands should stop
         """
         funcname = self._func_named(statement.command)
         if not funcname:
@@ -1946,11 +1940,10 @@ class Cmd(cmd.Cmd):
         stop = func(statement)
         return stop
 
-    def default(self, statement):
+    def default(self, statement: Statement) -> None:
         """Executed when the command given isn't a recognized command implemented by a do_* method.
 
         :param statement: Statement object with parsed input
-        :return:
         """
         arg = statement.raw
         if self.default_to_shell:
@@ -1963,13 +1956,13 @@ class Cmd(cmd.Cmd):
         self.poutput('*** Unknown syntax: {}\n'.format(arg))
 
     @staticmethod
-    def _surround_ansi_escapes(prompt, start="\x01", end="\x02"):
+    def _surround_ansi_escapes(prompt: str, start: str="\x01", end: str="\x02") -> str:
         """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
 
-        :param prompt: str - original prompt
-        :param start: str - start code to tell GNU Readline about beginning of invisible characters
-        :param end: str - end code to tell GNU Readline about end of invisible characters
-        :return: str - prompt safe to pass to GNU Readline
+        :param prompt: original prompt
+        :param start: start code to tell GNU Readline about beginning of invisible characters
+        :param end: end code to tell GNU Readline about end of invisible characters
+        :return: prompt safe to pass to GNU Readline
         """
         # Windows terminals don't use ANSI escape codes and Windows readline isn't based on GNU Readline
         if sys.platform == "win32":
@@ -1990,9 +1983,8 @@ class Cmd(cmd.Cmd):
 
         return result
 
-    def pseudo_raw_input(self, prompt):
-        """
-        began life as a copy of cmd's cmdloop; like raw_input but
+    def pseudo_raw_input(self, prompt: str) -> str:
+        """Began life as a copy of cmd's cmdloop; like raw_input but
 
         - accounts for changed stdin, stdout
         - if input is a pipe (instead of a tty), look at self.echo
@@ -2033,14 +2025,14 @@ class Cmd(cmd.Cmd):
                     line = 'eof'
         return line.strip()
 
-    def _cmdloop(self):
+    def _cmdloop(self) -> bool:
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
 
         This serves the same role as cmd.cmdloop().
 
-        :return: bool - True implies the entire application should exit.
+        :return: True implies the entire application should exit.
         """
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
@@ -2070,7 +2062,7 @@ class Cmd(cmd.Cmd):
             # Enable tab completion
             readline.parse_and_bind(self.completekey + ": complete")
 
-        stop = None
+        stop = False
         try:
             while not stop:
                 if self.cmdqueue:
@@ -2111,7 +2103,7 @@ class Cmd(cmd.Cmd):
             return stop
 
     @with_argument_list
-    def do_alias(self, arglist):
+    def do_alias(self, arglist: List[str]) -> None:
         """Define or display aliases
 
 Usage:  Usage: alias [name] | [<name> <value>]
@@ -2167,7 +2159,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
                 errmsg = "Aliases can not contain: {}".format(invalidchars)
                 self.perror(errmsg, traceback_war=False)
 
-    def complete_alias(self, text, line, begidx, endidx):
+    def complete_alias(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """ Tab completion for alias """
         alias_names = set(self.aliases.keys())
         visible_commands = set(self.get_visible_commands())
@@ -2180,7 +2172,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
     @with_argument_list
-    def do_unalias(self, arglist):
+    def do_unalias(self, arglist: List[str]) -> None:
         """Unsets aliases
 
 Usage:  Usage: unalias [-a] name [name ...]
@@ -2191,7 +2183,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         -a     remove all alias definitions
 """
         if not arglist:
-            self.do_help('unalias')
+            self.do_help(['unalias'])
 
         if '-a' in arglist:
             self.aliases.clear()
@@ -2208,12 +2200,12 @@ Usage:  Usage: unalias [-a] name [name ...]
                 else:
                     self.perror("Alias {!r} does not exist".format(cur_arg), traceback_war=False)
 
-    def complete_unalias(self, text, line, begidx, endidx):
+    def complete_unalias(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """ Tab completion for unalias """
         return self.basic_complete(text, line, begidx, endidx, self.aliases)
 
     @with_argument_list
-    def do_help(self, arglist):
+    def do_help(self, arglist: List[str]) -> None:
         """List available commands with "help" or detailed help with "help cmd"."""
         if not arglist or (len(arglist) == 1 and arglist[0] in ('--verbose', '-v')):
             verbose = len(arglist) == 1 and arglist[0] in ('--verbose', '-v')
@@ -2240,7 +2232,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 # This could be a help topic
                 cmd.Cmd.do_help(self, arglist[0])
 
-    def _help_menu(self, verbose=False):
+    def _help_menu(self, verbose: bool=False) -> None:
         """Show a list of commands which help can be displayed for.
         """
         # Get a sorted list of help topics
@@ -2283,7 +2275,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
-    def _print_topics(self, header, cmds, verbose):
+    def _print_topics(self, header: str, cmds: List[str], verbose: bool) -> None:
         """Customized version of print_topics that can switch between verbose or traditional output"""
         import io
 
@@ -2354,7 +2346,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                         command = ''
                 self.stdout.write("\n")
 
-    def do_shortcuts(self, _):
+    def do_shortcuts(self, _: str) -> None:
         """Lists shortcuts (aliases) available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
@@ -2722,7 +2714,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
 """
         if not arglist:
             self.perror("pyscript command requires at least 1 argument ...", traceback_war=False)
-            self.do_help('pyscript')
+            self.do_help(['pyscript'])
             return
 
         # Get the absolute path of the script
