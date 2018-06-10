@@ -17,3 +17,6 @@ htmlcov
 
 # Visual Studio Code
 .vscode
+
+# mypy optional static type checker
+.mypy_cache

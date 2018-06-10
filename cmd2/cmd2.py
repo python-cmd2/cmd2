@@ -39,7 +39,7 @@ import platform
 import re
 import shlex
 import sys
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import pyperclip
 
@@ -940,7 +940,7 @@ class Cmd(cmd.Cmd):
         return completions_matches
 
     def index_based_complete(self, text: str, line: str, begidx: int, endidx: int,
-                             index_dict: Dict[int, Union[Iterable, Callable]],
+                             index_dict: Mapping[int, Union[Iterable, Callable]],
                              all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """
         Tab completes based on a fixed position in the input string
@@ -1950,7 +1950,8 @@ class Cmd(cmd.Cmd):
         """
         funcname = self._func_named(statement.command)
         if not funcname:
-            return self.default(statement)
+            self.default(statement)
+            return
 
         # Since we have a valid command store it in the history
         if statement.command not in self.exclude_from_history:
@@ -1959,7 +1960,8 @@ class Cmd(cmd.Cmd):
         try:
             func = getattr(self, funcname)
         except AttributeError:
-            return self.default(statement)
+            self.default(statement)
+            return
 
         stop = func(statement)
         return stop
@@ -2420,8 +2422,8 @@ Usage:  Usage: unalias [-a] name [name ...]
                     readline.remove_history_item(hlen - 1)
 
             try:
-                response = int(response)
-                result = fulloptions[response - 1][0]
+                choice = int(response)
+                result = fulloptions[choice - 1][0]
                 break
             except (ValueError, IndexError):
                 self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:\n".format(response,

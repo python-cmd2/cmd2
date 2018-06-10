@@ -1309,7 +1309,7 @@ def test_select_invalid_option(select_app):
     expected = normalize("""
    1. sweet
    2. salty
-3 isn't a valid choice. Pick a number between 1 and 2:
+'3' isn't a valid choice. Pick a number between 1 and 2:
 {} with sweet sauce, yum!
 """.format(food))
 
