@@ -40,7 +40,7 @@ class CommandResult(namedtuple_with_defaults('CmdResult', ['stdout', 'stderr', '
 
 class CopyStream(object):
     """Copies all data written to a stream"""
-    def __init__(self, inner_stream, echo: bool = False):
+    def __init__(self, inner_stream, echo: bool = False) -> None:
         self.buffer = ''
         self.inner_stream = inner_stream
         self.echo = echo
@@ -212,7 +212,7 @@ class ArgparseFunctor:
         def process_flag(action, value):
             if isinstance(action, argparse._CountAction):
                 if isinstance(value, int):
-                    for c in range(value):
+                    for _ in range(value):
                         cmd_str[0] += '{} '.format(action.option_strings[0])
                     return
                 else:

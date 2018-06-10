@@ -39,7 +39,7 @@ import platform
 import re
 import shlex
 import sys
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 import pyperclip
 
@@ -321,6 +321,30 @@ class EmbeddedConsoleExit(SystemExit):
 class EmptyStatement(Exception):
     """Custom exception class for handling behavior when the user just presses <Enter>."""
     pass
+
+
+class HistoryItem(str):
+    """Class used to represent an item in the History list.
+
+    Thin wrapper around str class which adds a custom format for printing. It
+    also keeps track of its index in the list as well as a lowercase
+    representation of itself for convenience/efficiency.
+
+    """
+    listformat = '-------------------------[{}]\n{}\n'
+
+    # noinspection PyUnusedLocal
+    def __init__(self, instr: str) -> None:
+        str.__init__(self)
+        self.lowercase = self.lower()
+        self.idx = None
+
+    def pr(self) -> str:
+        """Represent a HistoryItem in a pretty fashion suitable for printing.
+
+        :return: pretty print string version of a HistoryItem
+        """
+        return self.listformat.format(self.idx, str(self).rstrip())
 
 
 class Cmd(cmd.Cmd):
@@ -1614,7 +1638,7 @@ class Cmd(cmd.Cmd):
         raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def preloop(self) -> None:
-        """"Hook method executed once when the cmdloop() method is called."""
+        """Hook method executed once when the cmdloop() method is called."""
         import signal
         # Register a default SIGINT signal handler for Ctrl+C
         signal.signal(signal.SIGINT, self.sigint_handler)
@@ -2351,18 +2375,18 @@ Usage:  Usage: unalias [-a] name [name ...]
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
-    def do_eof(self, _):
+    def do_eof(self, _: str) -> bool:
         """Called when <Ctrl>-D is pressed."""
         # End of script should not exit app, but <Ctrl>-D should.
         print('')  # Required for clearing line when exiting submenu
         return self._STOP_AND_EXIT
 
-    def do_quit(self, _):
+    def do_quit(self, _: str) -> bool:
         """Exits this application."""
         self._should_quit = True
         return self._STOP_AND_EXIT
 
-    def select(self, opts, prompt='Your choice? '):
+    def select(self, opts: Union[str, List[str], List[Tuple[str, Optional[str]]]], prompt: str='Your choice? ') -> str:
         """Presents a numbered menu to the user.  Modelled after
            the bash shell's SELECT.  Returns the item chosen.
 
@@ -2404,10 +2428,10 @@ Usage:  Usage: unalias [-a] name [name ...]
                                                                                                    len(fulloptions)))
         return result
 
-    def cmdenvironment(self):
+    def cmdenvironment(self) -> str:
         """Get a summary report of read-only settings which the user cannot modify at runtime.
 
-        :return: str - summary report of read-only settings which the user cannot modify at runtime
+        :return: summary report of read-only settings which the user cannot modify at runtime
         """
         read_only_settings = """
         Commands may be terminated with: {}
@@ -2415,7 +2439,13 @@ Usage:  Usage: unalias [-a] name [name ...]
         Output redirection and pipes allowed: {}"""
         return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
 
-    def show(self, args, parameter):
+    def show(self, args: argparse.Namespace, parameter: str) -> None:
+        """Shows current settings of parameters.
+
+        :param args: argparse parsed arguments from the set command
+        :param parameter:
+        :return:
+        """
         param = ''
         if parameter:
             param = parameter.strip().lower()
@@ -2444,7 +2474,7 @@ Usage:  Usage: unalias [-a] name [name ...]
     set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]')
 
     @with_argparser(set_parser)
-    def do_set(self, args):
+    def do_set(self, args: argparse.Namespace) -> None:
         """Sets a settable parameter or shows current settings of parameters.
 
         Accepts abbreviated parameter names so long as there is no ambiguity.
@@ -2479,7 +2509,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 param = args.settable[0]
             self.show(args, param)
 
-    def do_shell(self, command):
+    def do_shell(self, command: str) -> None:
         """Execute a command as if at the OS prompt.
 
     Usage:  shell <command> [arguments]"""
@@ -2511,14 +2541,14 @@ Usage:  Usage: unalias [-a] name [name ...]
         proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
         proc.communicate()
 
-    def complete_shell(self, text, line, begidx, endidx):
+    def complete_shell(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Handles tab completion of executable commands and local file system paths for the shell command
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :return: a list of possible tab completions
         """
         index_dict = {1: self.shell_cmd_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
@@ -2547,7 +2577,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
-    def do_py(self, arg):
+    def do_py(self, arg: str) -> bool:
         """
         Invoke python command, shell, or script
 
@@ -2560,7 +2590,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         from .pyscript_bridge import PyscriptBridge
         if self._in_py:
             self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
-            return
+            return False
         self._in_py = True
 
         # noinspection PyBroadException
@@ -2703,7 +2733,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         return self._should_quit
 
     @with_argument_list
-    def do_pyscript(self, arglist):
+    def do_pyscript(self, arglist: List[str]) -> None:
         """\nRuns a python script file inside the console
 
     Usage: pyscript <script_path> [script_arguments]
@@ -2733,15 +2763,15 @@ Paths or arguments that contain spaces must be enclosed in quotes
         # Restore command line arguments to original state
         sys.argv = orig_args
 
-    # Enable tab-completion for pyscript command
-    def complete_pyscript(self, text, line, begidx, endidx):
+    def complete_pyscript(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Enable tab-completion for pyscript command."""
         index_dict = {1: self.path_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:
         # noinspection PyMethodMayBeStatic,PyUnusedLocal
-        def do_ipy(self, arg):
+        def do_ipy(self, arg: str) -> None:
             """Enters an interactive IPython shell.
 
             Run python code from external files with ``run filename.py``
@@ -2779,7 +2809,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
     history_parser.add_argument('arg', nargs='?', help=_history_arg_help)
 
     @with_argparser(history_parser)
-    def do_history(self, args):
+    def do_history(self, args: argparse.Namespace) -> None:
         """View, run, edit, and save previously entered commands."""
         # If an argument was supplied, then retrieve partial contents of the history
         cowardly_refuse_to_run = False
@@ -2844,7 +2874,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                 else:
                     self.poutput(hi.pr())
 
-    def _generate_transcript(self, history, transcript_file):
+    def _generate_transcript(self, history: List[HistoryItem], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""
         # Save the current echo state, and turn it off. We inject commands into the
         # output using a different mechanism
@@ -2912,7 +2942,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             self.pfeedback(msg.format(len(history), plural, transcript_file))
 
     @with_argument_list
-    def do_edit(self, arglist):
+    def do_edit(self, arglist: List[str]) -> None:
         """Edit a file in a text editor.
 
 Usage:  edit [file_path]
@@ -2930,13 +2960,13 @@ The editor used is determined by the ``editor`` settable parameter.
         else:
             os.system('"{}"'.format(self.editor))
 
-    # Enable tab-completion for edit command
-    def complete_edit(self, text, line, begidx, endidx):
+    def complete_edit(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Enable tab-completion for edit command."""
         index_dict = {1: self.path_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     @property
-    def _current_script_dir(self):
+    def _current_script_dir(self) -> Optional[str]:
         """Accessor to get the current script directory from the _script_dir LIFO queue."""
         if self._script_dir:
             return self._script_dir[-1]
@@ -2944,7 +2974,7 @@ The editor used is determined by the ``editor`` settable parameter.
             return None
 
     @with_argument_list
-    def do__relative_load(self, arglist):
+    def do__relative_load(self, arglist: List[str]) -> None:
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  _relative_load <file_path>
@@ -2967,15 +2997,15 @@ NOTE: This command is intended to only be used within text file scripts.
         file_path = arglist[0].strip()
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
-        self.do_load(relative_path)
+        self.do_load([relative_path])
 
-    def do_eos(self, _):
+    def do_eos(self, _: str) -> None:
         """Handles cleanup when a script has finished executing."""
         if self._script_dir:
             self._script_dir.pop()
 
     @with_argument_list
-    def do_load(self, arglist):
+    def do_load(self, arglist: List[str]) -> None:
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  load <file_path>
@@ -3019,18 +3049,18 @@ Script should contain one command per line, just like command would be typed in 
 
         self._script_dir.append(os.path.dirname(expanded_path))
 
-    # Enable tab-completion for load command
-    def complete_load(self, text, line, begidx, endidx):
+    def complete_load(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Enable tab-completion for load command."""
         index_dict = {1: self.path_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
-    def run_transcript_tests(self, callargs):
+    def run_transcript_tests(self, callargs: List[str]) -> None:
         """Runs transcript tests for provided file(s).
 
         This is called when either -t is provided on the command line or the transcript_files argument is provided
         during construction of the cmd2.Cmd instance.
 
-        :param callargs: List[str] - list of transcript test file names
+        :param callargs: list of transcript test file names
         """
         import unittest
         from .transcript import Cmd2TestCase
@@ -3044,7 +3074,7 @@ Script should contain one command per line, just like command would be typed in 
         runner = unittest.TextTestRunner()
         runner.run(testcase)
 
-    def cmdloop(self, intro=None):
+    def cmdloop(self, intro: Optional[str]=None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
 
         _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
@@ -3053,7 +3083,7 @@ Script should contain one command per line, just like command would be typed in 
         - transcript testing
         - intro banner
 
-        :param intro: str - if provided this overrides self.intro and serves as the intro banner printed once at start
+        :param intro: if provided this overrides self.intro and serves as the intro banner printed once at start
         """
         if self.allow_cli_args:
             parser = argparse.ArgumentParser()
@@ -3091,41 +3121,18 @@ Script should contain one command per line, just like command would be typed in 
         self.postloop()
 
 
-class HistoryItem(str):
-    """Class used to represent an item in the History list.
-
-    Thin wrapper around str class which adds a custom format for printing. It
-    also keeps track of its index in the list as well as a lowercase
-    representation of itself for convenience/efficiency.
-
-    """
-    listformat = '-------------------------[{}]\n{}\n'
-
-    # noinspection PyUnusedLocal
-    def __init__(self, instr):
-        str.__init__(self)
-        self.lowercase = self.lower()
-        self.idx = None
-
-    def pr(self):
-        """Represent a HistoryItem in a pretty fashion suitable for printing.
-
-        :return: str - pretty print string version of a HistoryItem
-        """
-        return self.listformat.format(self.idx, str(self).rstrip())
-
-
 class History(list):
     """ A list of HistoryItems that knows how to respond to user requests. """
 
     # noinspection PyMethodMayBeStatic
-    def _zero_based_index(self, onebased):
+    def _zero_based_index(self, onebased: int) -> int:
+        """Convert a one-based index to a zero-based index."""
         result = onebased
         if result > 0:
             result -= 1
         return result
 
-    def _to_index(self, raw):
+    def _to_index(self, raw: str) -> Optional[int]:
         if raw:
             result = self._zero_based_index(int(raw))
         else:
@@ -3134,11 +3141,11 @@ class History(list):
 
     spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>-?\d+)?\s*$')
 
-    def span(self, raw):
+    def span(self, raw: str) -> List[HistoryItem]:
         """Parses the input string search for a span pattern and if if found, returns a slice from the History list.
 
-        :param raw: str - string potentially containing a span of the forms a..b, a:b, a:, ..b
-        :return: List[HistoryItem] - slice from the History list
+        :param raw: string potentially containing a span of the forms a..b, a:b, a:, ..b
+        :return: slice from the History list
         """
         if raw.lower() in ('*', '-', 'all'):
             raw = ':'
@@ -3162,20 +3169,20 @@ class History(list):
 
     rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*-\s*(?P<end>[\d]+)?\s*$')
 
-    def append(self, new):
+    def append(self, new: str) -> None:
         """Append a HistoryItem to end of the History list
 
-        :param new: str - command line to convert to HistoryItem and add to the end of the History list
+        :param new: command line to convert to HistoryItem and add to the end of the History list
         """
         new = HistoryItem(new)
         list.append(self, new)
         new.idx = len(self)
 
-    def get(self, getme=None):
+    def get(self, getme: Optional[Union[int, str]]=None) -> List[HistoryItem]:
         """Get an item or items from the History list using 1-based indexing.
 
-        :param getme: int or str - item(s) to get - either an integer index or string to search for
-        :return: List[str] - list of HistoryItems matching the retrieval criteria
+        :param getme: item(s) to get - either an integer index or string to search for
+        :return: list of HistoryItems matching the retrieval criteria
         """
         if not getme:
             return self
@@ -3224,23 +3231,23 @@ class History(list):
 
 class Statekeeper(object):
     """Class used to save and restore state during load and py commands as well as when redirecting output or pipes."""
-    def __init__(self, obj, attribs):
+    def __init__(self, obj: Any, attribs: Iterable) -> None:
         """Use the instance attributes as a generic key-value store to copy instance attributes from outer object.
 
         :param obj: instance of cmd2.Cmd derived class (your application instance)
-        :param attribs: Tuple[str] - tuple of strings listing attributes of obj to save a copy of
+        :param attribs: tuple of strings listing attributes of obj to save a copy of
         """
         self.obj = obj
         self.attribs = attribs
         if self.obj:
             self._save()
 
-    def _save(self):
+    def _save(self) -> None:
         """Create copies of attributes from self.obj inside this Statekeeper instance."""
         for attrib in self.attribs:
             setattr(self, attrib, getattr(self.obj, attrib))
 
-    def restore(self):
+    def restore(self) -> None:
         """Overwrite attributes in self.obj with the saved values stored in this Statekeeper instance."""
         if self.obj:
             for attrib in self.attribs:
@@ -3264,6 +3271,6 @@ class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', '
 
     NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
     """
-    def __bool__(self):
+    def __bool__(self) -> bool:
         """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
         return not self.err

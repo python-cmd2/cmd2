@@ -4,7 +4,7 @@
 
 import collections
 import os
-from typing import Optional
+from typing import Any, List, Optional, Union
 
 from . import constants
 
@@ -31,7 +31,8 @@ def strip_quotes(arg: str) -> str:
     return arg
 
 
-def namedtuple_with_defaults(typename, field_names, default_values=()):
+def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
+                             default_values: collections.Iterable=()):
     """
     Convenience function for defining a namedtuple with default values
 
@@ -60,7 +61,8 @@ def namedtuple_with_defaults(typename, field_names, default_values=()):
     return T
 
 
-def namedtuple_with_two_defaults(typename, field_names, default_values=('', '')):
+def namedtuple_with_two_defaults(typename: str, field_names: Union[str, List[str]],
+                                 default_values: collections.Iterable=('', '')):
     """Wrapper around namedtuple which lets you treat the last value as optional.
 
     :param typename: str - type name for the Named tuple
@@ -75,7 +77,7 @@ def namedtuple_with_two_defaults(typename, field_names, default_values=('', ''))
     return T
 
 
-def cast(current, new):
+def cast(current: Any, new: str) -> Any:
     """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
 
     :param current: current value for the parameter, type varies
