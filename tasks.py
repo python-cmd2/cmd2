@@ -49,9 +49,24 @@ namespace.add_task(pytest)
 def pytest_clean(context):
     "Remove pytest cache and code coverage files and directories"
     #pylint: disable=unused-argument
-    dirs = ['.pytest-cache', '.cache', 'htmlcov', '.coverage']
+    dirs = ['.pytest_cache', '.cache', 'htmlcov', '.coverage']
     rmrf(dirs)
 namespace_clean.add_task(pytest_clean, 'pytest')
+
+@invoke.task
+def mypy(context):
+    "Run mypy optional static type checker"
+    context.run("mypy main.py")
+    namespace.add_task(mypy)
+namespace.add_task(mypy)
+
+@invoke.task
+def mypy_clean(context):
+    "Remove mypy cache directory"
+    #pylint: disable=unused-argument
+    dirs = ['.mypy_cache']
+    rmrf(dirs)
+namespace_clean.add_task(mypy_clean, 'mypy')
 
 @invoke.task
 def tox(context):
