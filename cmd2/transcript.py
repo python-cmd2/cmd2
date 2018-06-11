@@ -12,8 +12,10 @@ classes are used in cmd2.py::run_transcript_tests()
 import re
 import glob
 import unittest
+from typing import Tuple
 
 from . import utils
+
 
 class Cmd2TestCase(unittest.TestCase):
     """A unittest class used for transcript testing.
@@ -50,7 +52,7 @@ class Cmd2TestCase(unittest.TestCase):
             for (fname, transcript) in its:
                 self._test_transcript(fname, transcript)
 
-    def _test_transcript(self, fname, transcript):
+    def _test_transcript(self, fname: str, transcript):
         line_num = 0
         finished = False
         line = utils.strip_ansi(next(transcript))
@@ -103,7 +105,7 @@ class Cmd2TestCase(unittest.TestCase):
                       fname, line_num, command, expected, result)
             self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
-    def _transform_transcript_expected(self, s):
+    def _transform_transcript_expected(self, s: str) -> str:
         """Parse the string with slashed regexes into a valid regex.
 
         Given a string like:
@@ -151,7 +153,7 @@ class Cmd2TestCase(unittest.TestCase):
         return regex
 
     @staticmethod
-    def _escaped_find(regex, s, start, in_regex):
+    def _escaped_find(regex: str, s: str, start: int, in_regex: bool) -> Tuple[str, int, int]:
         """Find the next slash in {s} after {start} that is not preceded by a backslash.
 
         If we find an escaped slash, add everything up to and including it to regex,
@@ -162,7 +164,6 @@ class Cmd2TestCase(unittest.TestCase):
         {in_regex} specifies whether we are currently searching in a regex, we behave
         differently if we are or if we aren't.
         """
-
         while True:
             pos = s.find('/', start)
             if pos == -1:
@@ -211,14 +212,11 @@ class OutputTrap(object):
     def __init__(self):
         self.contents = ''
 
-    def write(self, txt):
-        """Add text to the internal contents.
-
-        :param txt: str
-        """
+    def write(self, txt: str):
+        """Add text to the internal contents."""
         self.contents += txt
 
-    def read(self):
+    def read(self) -> str:
         """Read from the internal contents and then clear them out.
 
         :return: str - text from the internal contents

@@ -10,7 +10,7 @@ Released under MIT license, see LICENSE file
 import argparse
 import functools
 import sys
-from typing import List, Tuple, Callable
+from typing import List, Callable
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
@@ -40,7 +40,7 @@ class CommandResult(namedtuple_with_defaults('CmdResult', ['stdout', 'stderr', '
 
 class CopyStream(object):
     """Copies all data written to a stream"""
-    def __init__(self, inner_stream, echo: bool = False):
+    def __init__(self, inner_stream, echo: bool = False) -> None:
         self.buffer = ''
         self.inner_stream = inner_stream
         self.echo = echo
@@ -212,7 +212,7 @@ class ArgparseFunctor:
         def process_flag(action, value):
             if isinstance(action, argparse._CountAction):
                 if isinstance(value, int):
-                    for c in range(value):
+                    for _ in range(value):
                         cmd_str[0] += '{} '.format(action.option_strings[0])
                     return
                 else:
@@ -298,4 +298,5 @@ class PyscriptBridge(object):
         return commands
 
     def __call__(self, args: str):
-        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'), self.cmd_echo)
+        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'),
+                         self.cmd_echo)

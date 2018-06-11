@@ -230,7 +230,7 @@ def test_pyscript_with_nonexist_file(base_app, capsys):
     python_script = 'does_not_exist.py'
     run_cmd(base_app, "pyscript {}".format(python_script))
     out, err = capsys.readouterr()
-    assert err.startswith('ERROR: [Errno 2] No such file or directory:')
+    assert err.startswith("EXCEPTION of type 'FileNotFoundError' occurred with message:")
 
 def test_pyscript_with_exception(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -1309,7 +1309,7 @@ def test_select_invalid_option(select_app):
     expected = normalize("""
    1. sweet
    2. salty
-3 isn't a valid choice. Pick a number between 1 and 2:
+'3' isn't a valid choice. Pick a number between 1 and 2:
 {} with sweet sauce, yum!
 """.format(food))
 

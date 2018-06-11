@@ -80,16 +80,16 @@ ACTION_SUPPRESS_HINT = 'suppress_hint'
 
 
 class CompletionItem(str):
-    def __new__(cls, o, desc='', *args, **kwargs):
+    def __new__(cls, o, desc='', *args, **kwargs) -> str:
         return str.__new__(cls, o, *args, **kwargs)
 
     # noinspection PyMissingConstructor,PyUnusedLocal
-    def __init__(self, o, desc='', *args, **kwargs):
+    def __init__(self, o, desc='', *args, **kwargs) -> None:
         self.description = desc
 
 
 class _RangeAction(object):
-    def __init__(self, nargs: Union[int, str, Tuple[int, int], None]):
+    def __init__(self, nargs: Union[int, str, Tuple[int, int], None]) -> None:
         self.nargs_min = None
         self.nargs_max = None
 
@@ -128,7 +128,7 @@ class _StoreRangeAction(argparse._StoreAction, _RangeAction):
                  choices=None,
                  required=False,
                  help=None,
-                 metavar=None):
+                 metavar=None) -> None:
 
         _RangeAction.__init__(self, nargs)
 
@@ -157,7 +157,7 @@ class _AppendRangeAction(argparse._AppendAction, _RangeAction):
                  choices=None,
                  required=False,
                  help=None,
-                 metavar=None):
+                 metavar=None) -> None:
 
         _RangeAction.__init__(self, nargs)
 
@@ -174,7 +174,7 @@ class _AppendRangeAction(argparse._AppendAction, _RangeAction):
                                         metavar=metavar)
 
 
-def register_custom_actions(parser: argparse.ArgumentParser):
+def register_custom_actions(parser: argparse.ArgumentParser) -> None:
     """Register custom argument action types"""
     parser.register('action', None, _StoreRangeAction)
     parser.register('action', 'store', _StoreRangeAction)
@@ -185,14 +185,14 @@ class AutoCompleter(object):
     """Automatically command line tab completion based on argparse parameters"""
 
     class _ArgumentState(object):
-        def __init__(self):
+        def __init__(self) -> None:
             self.min = None
             self.max = None
             self.count = 0
             self.needed = False
             self.variable = False
 
-        def reset(self):
+        def reset(self) -> None:
             """reset tracking values"""
             self.min = None
             self.max = None
@@ -206,7 +206,7 @@ class AutoCompleter(object):
                  arg_choices: Dict[str, Union[List, Tuple, Callable]] = None,
                  subcmd_args_lookup: dict = None,
                  tab_for_arg_help: bool = True,
-                 cmd2_app=None):
+                 cmd2_app=None) -> None:
         """
         Create an AutoCompleter
 
@@ -439,7 +439,7 @@ class AutoCompleter(object):
 
         return completion_results
 
-    def _format_completions(self, action, completions: List[Union[str, CompletionItem]]):
+    def _format_completions(self, action, completions: List[Union[str, CompletionItem]]) -> List[str]:
         if completions and len(completions) > 1 and isinstance(completions[0], CompletionItem):
             token_width = len(action.dest)
             completions_with_desc = []
@@ -665,7 +665,7 @@ class AutoCompleter(object):
 class ACHelpFormatter(argparse.HelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
-    def _format_usage(self, usage, actions, groups, prefix):
+    def _format_usage(self, usage, actions, groups, prefix) -> str:
         if prefix is None:
             prefix = _('Usage: ')
 
@@ -778,7 +778,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
         # prefix with 'usage:'
         return '%s%s\n\n' % (prefix, usage)
 
-    def _format_action_invocation(self, action):
+    def _format_action_invocation(self, action) -> str:
         if not action.option_strings:
             default = self._get_default_metavar_for_positional(action)
             metavar, = self._metavar_formatter(action, default)(1)
@@ -803,7 +803,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
                 return ', '.join(action.option_strings) + ' ' + args_string
             # End cmd2 customization
 
-    def _metavar_formatter(self, action, default_metavar):
+    def _metavar_formatter(self, action, default_metavar) -> Callable:
         if action.metavar is not None:
             result = action.metavar
         elif action.choices is not None:
@@ -822,7 +822,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
                 return (result, ) * tuple_size
         return format
 
-    def _format_args(self, action, default_metavar):
+    def _format_args(self, action, default_metavar) -> str:
         get_metavar = self._metavar_formatter(action, default_metavar)
         # Begin cmd2 customization (less verbose)
         if isinstance(action, _RangeAction) and \
@@ -837,7 +837,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
             result = super()._format_args(action, default_metavar)
         return result
 
-    def _split_lines(self, text, width):
+    def _split_lines(self, text: str, width) -> List[str]:
         return text.splitlines()
 
 
@@ -845,7 +845,7 @@ class ACHelpFormatter(argparse.HelpFormatter):
 class ACArgumentParser(argparse.ArgumentParser):
     """Custom argparse class to override error method to change default help text."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         if 'formatter_class' not in kwargs:
             kwargs['formatter_class'] = ACHelpFormatter
 
@@ -855,7 +855,7 @@ class ACArgumentParser(argparse.ArgumentParser):
         self._custom_error_message = ''
 
     # Begin cmd2 customization
-    def set_custom_message(self, custom_message=''):
+    def set_custom_message(self, custom_message: str='') -> None:
         """
         Allows an error message override to the error() function, useful when forcing a
         re-parse of arguments with newly required parameters
@@ -863,7 +863,7 @@ class ACArgumentParser(argparse.ArgumentParser):
         self._custom_error_message = custom_message
     # End cmd2 customization
 
-    def error(self, message):
+    def error(self, message: str) -> None:
         """Custom error override. Allows application to control the error being displayed by argparse"""
         if len(self._custom_error_message) > 0:
             message = self._custom_error_message
@@ -884,7 +884,7 @@ class ACArgumentParser(argparse.ArgumentParser):
         self.print_help()
         sys.exit(1)
 
-    def format_help(self):
+    def format_help(self) -> str:
         """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
         formatter = self._get_formatter()
 
@@ -934,7 +934,7 @@ class ACArgumentParser(argparse.ArgumentParser):
         # determine help from format above
         return formatter.format_help()
 
-    def _get_nargs_pattern(self, action):
+    def _get_nargs_pattern(self, action) -> str:
         # Override _get_nargs_pattern behavior to use the nargs ranges provided by AutoCompleter
         if isinstance(action, _RangeAction) and \
                 action.nargs_min is not None and action.nargs_max is not None:
@@ -947,7 +947,7 @@ class ACArgumentParser(argparse.ArgumentParser):
             return nargs_pattern
         return super(ACArgumentParser, self)._get_nargs_pattern(action)
 
-    def _match_argument(self, action, arg_strings_pattern):
+    def _match_argument(self, action, arg_strings_pattern) -> int:
         # match the pattern for this action to the arg strings
         nargs_pattern = self._get_nargs_pattern(action)
         match = _re.match(nargs_pattern, arg_strings_pattern)
@@ -963,7 +963,7 @@ class ACArgumentParser(argparse.ArgumentParser):
 
     # This is the official python implementation with a 5 year old patch applied
     # See the comment below describing the patch
-    def _parse_known_args(self, arg_strings, namespace):  # pragma: no cover
+    def _parse_known_args(self, arg_strings, namespace) -> Tuple[argparse.Namespace, List[str]]:  # pragma: no cover
         # replace arg strings that are file references
         if self.fromfile_prefix_chars is not None:
             arg_strings = self._read_args_from_files(arg_strings)
