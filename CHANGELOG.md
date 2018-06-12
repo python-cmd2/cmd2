@@ -3,6 +3,8 @@
     * Fixed issue where piping and redirecting did not work correctly with paths that had spaces
 * Enhancements
     * Added ability to print a header above tab-completion suggestions using `completion_header` member
+    * **pager** is now a settable parameter which controls pager command used by ``cmd2.Cmd.ppaged`` method
+        * **pager** looks for *PAGER* environment variable if present or uses sane defaults if not
 
 ## 0.8.8 (TBD, 2018)
 * Bug Fixes
