@@ -83,7 +83,7 @@ expect_colors = True
 pager = 'less -SRXF'
 if sys.platform.startswith('win'):
     expect_colors = False
-    pager = 'more'
+    pager = 'more      '
 # Output from the show command with default settings
 SHOW_TXT = """colors: {}
 continuation_prompt: >
