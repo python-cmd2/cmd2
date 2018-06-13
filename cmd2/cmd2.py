@@ -50,7 +50,7 @@ from cmd2.parsing import StatementParser, Statement
 
 # Set up readline
 from .rl_utils import rl_type, RlType
-if rl_type == RlType.NONE:
+if rl_type == RlType.NONE: # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
@@ -84,7 +84,7 @@ from .argparse_completer import AutoCompleter, ACArgumentParser
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
     from pyperclip.exceptions import PyperclipException
-except ImportError:
+except ImportError: # pragma: no cover
     # noinspection PyUnresolvedReferences
     from pyperclip import PyperclipException
 
@@ -121,7 +121,7 @@ ipython_available = True
 try:
     # noinspection PyUnresolvedReferences,PyPackageRequirements
     from IPython import embed
-except ImportError:
+except ImportError: # pragma: no cover
     ipython_available = False
 
 __version__ = '0.9.2a'

@@ -77,6 +77,7 @@ from .rl_utils import rl_force_redisplay
 # define the completion choices for the argument. You may provide a Collection or a Function.
 ACTION_ARG_CHOICES = 'arg_choices'
 ACTION_SUPPRESS_HINT = 'suppress_hint'
+ACTION_DESCRIPTIVE_COMPLETION_HEADER = 'desc_header'
 
 
 class CompletionItem(str):
@@ -456,7 +457,11 @@ class AutoCompleter(object):
                                                                      fill_width=fill_width)
                 completions_with_desc.append(entry)
 
-            header = '\n{: <{token_width}}{}'.format(action.dest.upper(), action.desc_header, token_width=token_width+2)
+            try:
+                desc_header = action.desc_header
+            except AttributeError:
+                desc_header = 'Description'
+            header = '\n{: <{token_width}}{}'.format(action.dest.upper(), desc_header, token_width=token_width+2)
 
             self._cmd2_app.completion_header = header
             self._cmd2_app.display_matches = completions_with_desc

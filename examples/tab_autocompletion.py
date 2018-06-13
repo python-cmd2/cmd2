@@ -116,9 +116,6 @@ class TabCompleteExample(cmd2.Cmd):
         for movie_id, movie_entry in self.MOVIE_DATABASE.items():
             completions_with_desc.append(argparse_completer.CompletionItem(movie_id, movie_entry['title']))
 
-        setattr(self.vid_delete_movie_id, 'desc_header', 'Title')
-        setattr(self.movies_delete_movie_id, 'desc_header', 'Title')
-
         return completions_with_desc
 
     # This demonstrates a number of customizations of the AutoCompleter version of ArgumentParser
@@ -267,6 +264,7 @@ class TabCompleteExample(cmd2.Cmd):
     vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
     vid_delete_movie_id = vid_movies_delete_parser.add_argument('movie_id', help='Movie ID')
     setattr(vid_delete_movie_id, argparse_completer.ACTION_ARG_CHOICES, instance_query_movie_ids)
+    setattr(vid_delete_movie_id, argparse_completer.ACTION_DESCRIPTIVE_COMPLETION_HEADER, 'Title')
 
     vid_shows_parser = video_types_subparsers.add_parser('shows')
     vid_shows_parser.set_defaults(func=_do_vid_media_shows)
@@ -344,6 +342,7 @@ class TabCompleteExample(cmd2.Cmd):
     movies_delete_parser = movies_commands_subparsers.add_parser('delete')
     movies_delete_movie_id = movies_delete_parser.add_argument('movie_id', help='Movie ID')
     setattr(movies_delete_movie_id, argparse_completer.ACTION_ARG_CHOICES, 'instance_query_movie_ids')
+    setattr(movies_delete_movie_id, argparse_completer.ACTION_DESCRIPTIVE_COMPLETION_HEADER, 'Title')
 
     movies_load_parser = movies_commands_subparsers.add_parser('load')
     movie_file_action = movies_load_parser.add_argument('movie_file', help='Movie database')
