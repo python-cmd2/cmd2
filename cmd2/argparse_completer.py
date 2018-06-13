@@ -81,6 +81,33 @@ ACTION_DESCRIPTIVE_COMPLETION_HEADER = 'desc_header'
 
 
 class CompletionItem(str):
+    """
+    Completion item with descriptive text attached
+
+    Returning this instead of a regular string for completion results will signal the
+    autocompleter to output the completions results in a table of completion tokens
+    with descriptions instead of just a table of tokens.
+
+    For example, you'd see this:
+        TOKEN          Description
+        MY_TOKEN       Info about my token
+        SOME_TOKEN     Info about some token
+        YET_ANOTHER    Yet more info
+
+    Instead of this:
+        TOKEN_ID   SOME_TOKEN   YET_ANOTHER
+
+    This is especially useful if you want to complete ID numbers in a more
+    user-friendly manner. For example, you can provide this:
+
+        ITEM_ID     Item Name
+        1           My item
+        2           Another item
+        3           Yet another item
+
+    Instead of this:
+        1     2     3
+    """
     def __new__(cls, o, desc='', *args, **kwargs) -> str:
         return str.__new__(cls, o, *args, **kwargs)
 
@@ -1196,9 +1223,9 @@ class ACArgumentParser(argparse.ArgumentParser):
                     # twice (which may fail) if the argument was given, but
                     # only if it was defined already in the namespace
                     if (action.default is not None and
-                        isinstance(action.default, str) and
-                        hasattr(namespace, action.dest) and
-                        action.default is getattr(namespace, action.dest)):
+                            isinstance(action.default, str) and
+                            hasattr(namespace, action.dest) and
+                            action.default is getattr(namespace, action.dest)):
                         setattr(namespace, action.dest,
                                 self._get_value(action, action.default))
 
