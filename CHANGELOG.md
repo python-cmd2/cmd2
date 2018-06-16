@@ -4,8 +4,8 @@
 * Enhancements
     * Added ability to print a header above tab-completion suggestions using `completion_header` member
     * Added ``pager`` and ``pager_chop`` attributes to the ``cmd2.Cmd`` class
-        * ``pager`` looks for *PAGER* environment variable if present or uses sane defaults if not
-        * ``pager_chop`` appends a **-S** flag if ``pager`` starts with **less**
+        * ``pager`` defaults to **less -RXF** on POSIX and **more** on Windows
+        * ``pager_chop`` defaults to **less -SRXF** on POSIX and **more** on Windows
     * Added ``chop`` argument to ``cmd2.Cmd.ppaged()`` method for displaying output using a pager
         * If ``chop`` is ``False``, then ``self.pager`` is used as the pager
         * Otherwise ``self.pager_chop`` is used as the pager

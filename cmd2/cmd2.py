@@ -535,22 +535,16 @@ class Cmd(cmd.Cmd):
         self.matches_delimited = False
 
         # Set the pager(s) for use with the ppaged() method for displaying output using a pager
-        self.pager = os.environ.get('PAGER')
-        if not self.pager:
-            if sys.platform.startswith('win'):
-                self.pager = self.pager_chop = 'more'
-            else:
-                # Here is the meaning of the various flags we are using with the less command:
-                # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
-                # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
-                # -X disables sending the termcap initialization and deinitialization strings to the terminal
-                # -F causes less to automatically exit if the entire file can be displayed on the first screen
-                self.pager = 'less -RXF'
-                self.pager_chop = 'less -SRXF'
+        if sys.platform.startswith('win'):
+            self.pager = self.pager_chop = 'more'
         else:
-            self.pager_chop = self.pager
-            if self.pager_chop.startswith('less'):
-                self.pager_chop += ' -S'
+            # Here is the meaning of the various flags we are using with the less command:
+            # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
+            # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
+            # -X disables sending the termcap initialization and deinitialization strings to the terminal
+            # -F causes less to automatically exit if the entire file can be displayed on the first screen
+            self.pager = 'less -RXF'
+            self.pager_chop = 'less -SRXF'
 
     # -----  Methods related to presenting output to the user -----
 
