@@ -12,7 +12,6 @@ editor: /.*/
 feedback_to_output: False
 locals_in_py: False
 maxrepeats: 3
-pager: /.*/
 prompt: (Cmd)/ /
 quiet: False
 timing: False

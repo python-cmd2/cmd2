@@ -80,10 +80,8 @@ SHORTCUTS_TXT = """Shortcuts for other commands:
 """
 
 expect_colors = True
-pager = 'less -SRXF'
 if sys.platform.startswith('win'):
     expect_colors = False
-    pager = 'more      '
 # Output from the show command with default settings
 SHOW_TXT = """colors: {}
 continuation_prompt: >
@@ -92,11 +90,10 @@ echo: False
 editor: vim
 feedback_to_output: False
 locals_in_py: False
-pager: {}
 prompt: (Cmd)
 quiet: False
 timing: False
-""".format(expect_colors, pager)
+""".format(expect_colors)
 
 if expect_colors:
     color_str = 'True '
@@ -110,11 +107,10 @@ echo: False               # Echo command issued into output
 editor: vim               # Program used by ``edit``
 feedback_to_output: False # Include nonessentials in `|`, `>` results
 locals_in_py: False       # Allow access to your application in py via self
-pager: {}         # Command used for displaying paged output
 prompt: (Cmd)             # The prompt issued to solicit input
 quiet: False              # Don't print nonessential feedback
 timing: False             # Report execution times
-""".format(color_str, pager)
+""".format(color_str)
 
 
 class StdOut(object):
