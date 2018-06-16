@@ -630,7 +630,9 @@ class Cmd(cmd.Cmd):
         :param end: string appended after the end of the message if not already present, default a newline
         :param chop: True  -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
+                              - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
+                              - wrapping is ideal when you want to avoid users having to use horizontal scrolling
                      WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
         import subprocess
