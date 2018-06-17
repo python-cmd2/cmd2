@@ -12,3 +12,43 @@
 
 # You can also use email addresses if you prefer.
 #docs/*  docs@example.com
+
+# cmd2 code
+cmd2/__init__.py        @tleonhardt @kotfu
+cmd2/arg*.py            @anselor
+cmd2/cmd2.py            @tleonhardt @kmvanbrunt @kotfu
+cmd2/constants.py       @kotfu
+cmd2/parsing.py         @kotfu @kmvanbrunt
+cmd2/pyscript*.py       @anselor
+cmd2/rl_utils.py        @kmvanbrunt
+cmd2/transcript.py      @kotfu
+cmd2/utils.py           @tleonhardt @kotfu @kmvanbrunt
+
+# Sphinx documentation
+docs/*                  @tleonhardt @kotfu
+
+# Examples
+examples/env*.py        @kotfu
+examples/help*.py       @anselor
+examples/tab_au*.py     @anselor
+examples/tab_co*.py     @kmvanbrunt
+
+# Unit Tests
+tests/pyscript/*        @anselor
+tests/transcripts/*     @kotfu
+tests/__init__.py       @kotfu
+tests/conftest.py       @kotfu @tleonhardt
+tests/test_acar*.py     @anselor
+tests/test_argp*.py     @kotfu
+tests/test_auto*.py     @anselor
+tests/test_bash*.py     @anselor @tleonhardt
+tests/test_comp*.py     @kmvanbrunt
+tests/test_pars*.py     @kotfu
+tests/test_pysc*.py     @anselor
+tests/test_tran*.py     @kotfu
+
+# Top-level project stuff
+CONTRIBUTING.md         @tleonhardt @kotfu
+setup.py                @tleonhardt @kotfu
+tasks.py                @kotfu
+
