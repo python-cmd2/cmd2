@@ -41,16 +41,15 @@ import shlex
 import sys
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
-import pyperclip
-
 from . import constants
 from . import utils
-
-from cmd2.parsing import StatementParser, Statement
+from .argparse_completer import AutoCompleter, ACArgumentParser
+from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
+from .parsing import StatementParser, Statement
 
 # Set up readline
 from .rl_utils import rl_type, RlType
-if rl_type == RlType.NONE: # pragma: no cover
+if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
@@ -78,15 +77,6 @@ else:
 
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
         orig_rl_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-
-from .argparse_completer import AutoCompleter, ACArgumentParser
-
-# Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
-try:
-    from pyperclip.exceptions import PyperclipException
-except ImportError: # pragma: no cover
-    # noinspection PyUnresolvedReferences
-    from pyperclip import PyperclipException
 
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
@@ -121,7 +111,7 @@ ipython_available = True
 try:
     # noinspection PyUnresolvedReferences,PyPackageRequirements
     from IPython import embed
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     ipython_available = False
 
 __version__ = '0.9.2a'
@@ -269,48 +259,6 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
         return cmd_wrapper
 
     return arg_decorator
-
-
-# Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
-# noinspection PyUnresolvedReferences
-try:
-    # Get the version of the pyperclip module as a float
-    pyperclip_ver = float('.'.join(pyperclip.__version__.split('.')[:2]))
-
-    # The extraneous output bug in pyperclip on Linux using xclip was fixed in more recent versions of pyperclip
-    if sys.platform.startswith('linux') and pyperclip_ver < 1.6:
-        # Avoid extraneous output to stderr from xclip when clipboard is empty at cost of overwriting clipboard contents
-        pyperclip.copy('')
-    else:
-        # Try getting the contents of the clipboard
-        _ = pyperclip.paste()
-except PyperclipException:
-    can_clip = False
-else:
-    can_clip = True
-
-
-def disable_clip() -> None:
-    """ Allows user of cmd2 to manually disable clipboard cut-and-paste functionality."""
-    global can_clip
-    can_clip = False
-
-
-def get_paste_buffer() -> str:
-    """Get the contents of the clipboard / paste buffer.
-
-    :return: contents of the clipboard
-    """
-    pb_str = pyperclip.paste()
-    return pb_str
-
-
-def write_to_paste_buffer(txt: str) -> None:
-    """Copy text to the clipboard / paste buffer.
-
-    :param txt: text to copy to the clipboard
-    """
-    pyperclip.copy(txt)
 
 
 class EmbeddedConsoleExit(SystemExit):
@@ -545,6 +493,9 @@ class Cmd(cmd.Cmd):
             # -F causes less to automatically exit if the entire file can be displayed on the first screen
             self.pager = 'less -RXF'
             self.pager_chop = 'less -SRXF'
+
+        # This boolean flag determines whether or not the cmd2 application can interact with the clipboard
+        self.can_clip = can_clip
 
     # -----  Methods related to presenting output to the user -----
 
@@ -1881,7 +1832,7 @@ class Cmd(cmd.Cmd):
                 raise ex
         elif statement.output:
             import tempfile
-            if (not statement.output_to) and (not can_clip):
+            if (not statement.output_to) and (not self.can_clip):
                 raise EnvironmentError("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable")
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
