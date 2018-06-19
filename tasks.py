@@ -54,6 +54,21 @@ def pytest_clean(context):
 namespace_clean.add_task(pytest_clean, 'pytest')
 
 @invoke.task
+def mypy(context):
+    "Run mypy optional static type checker"
+    context.run("mypy main.py")
+    namespace.add_task(mypy)
+namespace.add_task(mypy)
+
+@invoke.task
+def mypy_clean(context):
+    "Remove mypy cache directory"
+    #pylint: disable=unused-argument
+    dirs = ['.mypy_cache']
+    rmrf(dirs)
+namespace_clean.add_task(mypy_clean, 'mypy')
+
+@invoke.task
 def tox(context):
     "Run unit and integration tests on multiple python versions using tox"
     context.run("tox")

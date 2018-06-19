@@ -1,3 +1,21 @@
+## 0.9.2 (TBD, 2018)
+* Bug Fixes
+    * Fixed issue where piping and redirecting did not work correctly with paths that had spaces
+* Enhancements
+    * Added ability to print a header above tab-completion suggestions using `completion_header` member
+    * Added ``pager`` and ``pager_chop`` attributes to the ``cmd2.Cmd`` class
+        * ``pager`` defaults to **less -RXF** on POSIX and **more** on Windows
+        * ``pager_chop`` defaults to **less -SRXF** on POSIX and **more** on Windows
+    * Added ``chop`` argument to ``cmd2.Cmd.ppaged()`` method for displaying output using a pager
+        * If ``chop`` is ``False``, then ``self.pager`` is used as the pager
+        * Otherwise ``self.pager_chop`` is used as the pager
+
+## 0.8.8 (TBD, 2018)
+* Bug Fixes
+    * Prevent crashes that could occur attempting to open a file in non-existent directory or with very long filename
+* Enhancements
+    * `display_matches` is no longer restricted to delimited strings
+
 ## 0.9.1 (May 28, 2018)
 * Bug Fixes
     * fix packaging error for 0.8.x versions (yes we had to deploy a new version

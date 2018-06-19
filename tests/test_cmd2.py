@@ -230,7 +230,7 @@ def test_pyscript_with_nonexist_file(base_app, capsys):
     python_script = 'does_not_exist.py'
     run_cmd(base_app, "pyscript {}".format(python_script))
     out, err = capsys.readouterr()
-    assert err.startswith('ERROR: [Errno 2] No such file or directory:')
+    assert err.startswith("EXCEPTION of type 'FileNotFoundError' occurred with message:")
 
 def test_pyscript_with_exception(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -614,6 +614,44 @@ def test_output_redirection(base_app):
         raise
     finally:
         os.remove(filename)
+
+def test_output_redirection_to_nonexistent_directory(base_app):
+    filename = '~/fakedir/this_does_not_exist.txt'
+
+    # Verify that writing to a file in a non-existent directory doesn't work
+    run_cmd(base_app, 'help > {}'.format(filename))
+    expected = normalize(BASE_HELP)
+    with pytest.raises(FileNotFoundError):
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
+
+    # Verify that appending to a file also works
+    run_cmd(base_app, 'help history >> {}'.format(filename))
+    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
+    with pytest.raises(FileNotFoundError):
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
+
+def test_output_redirection_to_too_long_filename(base_app):
+    filename = '~/sdkfhksdjfhkjdshfkjsdhfkjsdhfkjdshfkjdshfkjshdfkhdsfkjhewfuihewiufhweiufhiweufhiuewhiuewhfiuwehfiuewhfiuewhfiuewhfiuewhiuewhfiuewhfiuewfhiuwehewiufhewiuhfiweuhfiuwehfiuewfhiuwehiuewfhiuewhiewuhfiuewhfiuwefhewiuhewiufhewiufhewiufhewiufhewiufhewiufhewiufhewiuhewiufhewiufhewiuheiufhiuewheiwufhewiufheiufheiufhieuwhfewiuhfeiufhiuewfhiuewheiwuhfiuewhfiuewhfeiuwfhewiufhiuewhiuewhfeiuwhfiuwehfuiwehfiuehiuewhfieuwfhieufhiuewhfeiuwfhiuefhueiwhfw'
+
+    # Verify that writing to a file in a non-existent directory doesn't work
+    run_cmd(base_app, 'help > {}'.format(filename))
+    expected = normalize(BASE_HELP)
+    with pytest.raises(OSError):
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
+
+    # Verify that appending to a file also works
+    run_cmd(base_app, 'help history >> {}'.format(filename))
+    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
+    with pytest.raises(OSError):
+        with open(filename) as f:
+            content = normalize(f.read())
+        assert content == expected
 
 
 def test_feedback_to_output_true(base_app):
@@ -1271,7 +1309,7 @@ def test_select_invalid_option(select_app):
     expected = normalize("""
    1. sweet
    2. salty
-3 isn't a valid choice. Pick a number between 1 and 2:
+'3' isn't a valid choice. Pick a number between 1 and 2:
 {} with sweet sauce, yum!
 """.format(food))
 

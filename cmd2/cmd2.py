@@ -40,7 +40,7 @@ import platform
 import re
 import shlex
 import sys
-from typing import Callable, List, Union, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
 import pyperclip
 
@@ -51,7 +51,7 @@ from .parsing import StatementParser, Statement
 
 # Set up readline
 from .rl_utils import rl_type, RlType
-if rl_type == RlType.NONE:
+if rl_type == RlType.NONE: # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
@@ -85,7 +85,7 @@ from .argparse_completer import AutoCompleter, ACArgumentParser
 # Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
 try:
     from pyperclip.exceptions import PyperclipException
-except ImportError:
+except ImportError: # pragma: no cover
     # noinspection PyUnresolvedReferences
     from pyperclip import PyperclipException
 
@@ -122,7 +122,7 @@ ipython_available = True
 try:
     # noinspection PyUnresolvedReferences,PyPackageRequirements
     from IPython import embed
-except ImportError:
+except ImportError: # pragma: no cover
     ipython_available = False
 
 __version__ = '0.9.2a'
@@ -146,6 +146,7 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
             setattr(item, HELP_CATEGORY, category)
     else:
         setattr(func, HELP_CATEGORY, category)
+
 
 def parse_quoted_string(cmdline: str) -> List[str]:
     """Parse a quoted string into a list of arguments."""
@@ -323,6 +324,30 @@ class EmptyStatement(Exception):
     pass
 
 
+class HistoryItem(str):
+    """Class used to represent an item in the History list.
+
+    Thin wrapper around str class which adds a custom format for printing. It
+    also keeps track of its index in the list as well as a lowercase
+    representation of itself for convenience/efficiency.
+
+    """
+    listformat = '-------------------------[{}]\n{}\n'
+
+    # noinspection PyUnusedLocal
+    def __init__(self, instr: str) -> None:
+        str.__init__(self)
+        self.lowercase = self.lower()
+        self.idx = None
+
+    def pr(self) -> str:
+        """Represent a HistoryItem in a pretty fashion suitable for printing.
+
+        :return: pretty print string version of a HistoryItem
+        """
+        return self.listformat.format(self.idx, str(self).rstrip())
+
+
 class Cmd(cmd.Cmd):
     """An easy but powerful framework for writing line-oriented command interpreters.
 
@@ -377,18 +402,19 @@ class Cmd(cmd.Cmd):
                 'quiet': "Don't print nonessential feedback",
                 'timing': 'Report execution times'}
 
-    def __init__(self, completekey='tab', stdin=None, stdout=None, persistent_history_file='',
-                 persistent_history_length=1000, startup_script=None, use_ipython=False, transcript_files=None):
+    def __init__(self, completekey: str='tab', stdin=None, stdout=None, persistent_history_file: str='',
+                 persistent_history_length: int=1000, startup_script: Optional[str]=None, use_ipython: bool=False,
+                 transcript_files: Optional[List[str]]=None) -> None:
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
-        :param completekey: str - (optional) readline name of a completion key, default to Tab
+        :param completekey: (optional) readline name of a completion key, default to Tab
         :param stdin: (optional) alternate input file object, if not specified, sys.stdin is used
         :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
-        :param persistent_history_file: str - (optional) file path to load a persistent readline history from
-        :param persistent_history_length: int - (optional) max number of lines which will be written to the history file
-        :param startup_script: str - (optional) file path to a a script to load and execute at startup
+        :param persistent_history_file: (optional) file path to load a persistent readline history from
+        :param persistent_history_length: (optional) max number of lines which will be written to the history file
+        :param startup_script: (optional) file path to a a script to load and execute at startup
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
-        :param transcript_files: str - (optional) allows running transcript tests when allow_cli_args is False
+        :param transcript_files: (optional) allows running transcript tests when allow_cli_args is False
         """
         # If use_ipython is False, make sure the do_ipy() method doesn't exit
         if not use_ipython:
@@ -499,6 +525,9 @@ class Cmd(cmd.Cmd):
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
+        # An optional header that prints above the tab-completion suggestions
+        self.completion_header = ''
+
         # Use this list if you are completing strings that contain a common delimiter and you only want to
         # display the final portion of the matches as the tab-completion suggestions. The full matches
         # still must be returned from your completer function. For an example, look at path_complete()
@@ -506,34 +535,51 @@ class Cmd(cmd.Cmd):
         # populates this list.
         self.display_matches = []
 
+        # Used by functions like path_complete() and delimiter_complete() to properly
+        # quote matches that are completed in a delimited fashion
+        self.matches_delimited = False
+
+        # Set the pager(s) for use with the ppaged() method for displaying output using a pager
+        if sys.platform.startswith('win'):
+            self.pager = self.pager_chop = 'more'
+        else:
+            # Here is the meaning of the various flags we are using with the less command:
+            # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
+            # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
+            # -X disables sending the termcap initialization and deinitialization strings to the terminal
+            # -F causes less to automatically exit if the entire file can be displayed on the first screen
+            self.pager = 'less -RXF'
+            self.pager_chop = 'less -SRXF'
+
     # -----  Methods related to presenting output to the user -----
 
     @property
-    def visible_prompt(self):
+    def visible_prompt(self) -> str:
         """Read-only property to get the visible prompt with any ANSI escape codes stripped.
 
         Used by transcript testing to make it easier and more reliable when users are doing things like coloring the
         prompt using ANSI color codes.
 
-        :return: str - prompt stripped of any ANSI escape codes
+        :return: prompt stripped of any ANSI escape codes
         """
         return utils.strip_ansi(self.prompt)
 
-    def _finalize_app_parameters(self):
+    def _finalize_app_parameters(self) -> None:
+        """Finalize the shortcuts and settable parameters."""
         # noinspection PyUnresolvedReferences
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
 
         # Make sure settable parameters are sorted alphabetically by key
         self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
-    def poutput(self, msg, end='\n'):
+    def poutput(self, msg: str, end: str='\n') -> None:
         """Convenient shortcut for self.stdout.write(); by default adds newline to end if not already present.
 
         Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
         that process terminates before the cmd2 command is finished executing.
 
-        :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
-        :param end: str - string appended after the end of the message if not already present, default a newline
+        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param end: string appended after the end of the message if not already present, default a newline
         """
         if msg is not None and msg != '':
             try:
@@ -548,30 +594,29 @@ class Cmd(cmd.Cmd):
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, errmsg, exception_type=None, traceback_war=True):
+    def perror(self, err: Union[str, Exception], traceback_war: bool=True) -> None:
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
 
-        :param errmsg: str - error message to print out
-        :param exception_type: str - (optional) type of exception which precipitated this error message
-        :param traceback_war: bool - (optional) if True, print a message to let user know they can enable debug
+        :param err: an Exception or error message to print out
+        :param traceback_war: (optional) if True, print a message to let user know they can enable debug
         :return:
         """
         if self.debug:
             import traceback
             traceback.print_exc()
 
-        if exception_type is None:
-            err = self.colorize("ERROR: {}\n".format(errmsg), 'red')
-            sys.stderr.write(err)
+        if isinstance(err, Exception):
+            err_msg = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(type(err).__name__, err)
+            sys.stderr.write(self.colorize(err_msg, 'red'))
         else:
-            err = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(exception_type, errmsg)
-            sys.stderr.write(self.colorize(err, 'red'))
+            err_msg = self.colorize("ERROR: {}\n".format(err), 'red')
+            sys.stderr.write(err_msg)
 
         if traceback_war:
             war = "To enable full traceback, run the following command:  'set debug true'\n"
             sys.stderr.write(self.colorize(war, 'yellow'))
 
-    def pfeedback(self, msg):
+    def pfeedback(self, msg: str) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
            Inclusion in redirected output is controlled by `feedback_to_output`."""
         if not self.quiet:
@@ -580,14 +625,20 @@ class Cmd(cmd.Cmd):
             else:
                 sys.stderr.write("{}\n".format(msg))
 
-    def ppaged(self, msg, end='\n'):
+    def ppaged(self, msg: str, end: str='\n', chop: bool=False) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
-        :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
-        :param end: str - string appended after the end of the message if not already present, default a newline
+        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param end: string appended after the end of the message if not already present, default a newline
+        :param chop: True  -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
+                              - truncated text is still accessible by scrolling with the right & left arrow keys
+                              - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
+                     False -> causes lines longer than the screen width to wrap to the next line
+                              - wrapping is ideal when you want to avoid users having to use horizontal scrolling
+                     WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
         import subprocess
         if msg is not None and msg != '':
@@ -607,17 +658,10 @@ class Cmd(cmd.Cmd):
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self.redirecting and not self._in_py and not self._script_dir:
-
-                    if sys.platform.startswith('win'):
-                        pager_cmd = 'more'
-                    else:
-                        # Here is the meaning of the various flags we are using with the less command:
-                        # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
-                        # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
-                        # -X disables sending the termcap initialization and deinitialization strings to the terminal
-                        # -F causes less to automatically exit if the entire file can be displayed on the first screen
-                        pager_cmd = 'less -SRXF'
-                    self.pipe_proc = subprocess.Popen(pager_cmd, shell=True, stdin=subprocess.PIPE)
+                    pager = self.pager
+                    if chop:
+                        pager = self.pager_chop
+                    self.pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                     try:
                         self.pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
                         self.pipe_proc.stdin.close()
@@ -642,7 +686,7 @@ class Cmd(cmd.Cmd):
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
-    def colorize(self, val, color):
+    def colorize(self, val: str, color: str) -> str:
         """Given a string (``val``), returns that string wrapped in UNIX-style
            special characters that turn on (and then off) text color and style.
            If the ``colors`` environment parameter is ``False``, or the application
@@ -655,26 +699,29 @@ class Cmd(cmd.Cmd):
 
     # -----  Methods related to tab completion -----
 
-    def reset_completion_defaults(self):
+    def reset_completion_defaults(self) -> None:
         """
         Resets tab completion settings
         Needs to be called each time readline runs tab completion
         """
         self.allow_appended_space = True
         self.allow_closing_quote = True
+        self.completion_header = ''
         self.display_matches = []
+        self.matches_delimited = False
 
         if rl_type == RlType.GNU:
             readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
         elif rl_type == RlType.PYREADLINE:
             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
-    def tokens_for_completion(self, line, begidx, endidx):
+    def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[Optional[List[str]],
+                                                                                  Optional[List[str]]]:
         """
         Used by tab completion functions to get all tokens through the one being completed
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
         :return: A 2 item tuple where the items are
                  On Success
                      tokens: list of unquoted tokens
@@ -791,20 +838,21 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyUnusedLocal
     @staticmethod
-    def basic_complete(text, line, begidx, endidx, match_against):
+    def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against: Iterable) -> List[str]:
         """
         Performs tab completion against a list
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :param match_against: Collection - the list being matched against
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param match_against: the list being matched against
+        :return: a list of possible tab completions
         """
         return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
-    def delimiter_complete(self, text, line, begidx, endidx, match_against, delimiter):
+    def delimiter_complete(self, text: str, line: str, begidx: int, endidx: int, match_against: Iterable,
+                           delimiter: str) -> List[str]:
         """
         Performs tab completion against a list but each match is split on a delimiter and only
         the portion of the match being tab completed is shown as the completion suggestions.
@@ -829,18 +877,20 @@ class Cmd(cmd.Cmd):
         In this case the delimiter would be :: and the user could easily narrow down what they are looking
         for if they were only shown suggestions in the category they are at in the string.
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :param match_against: Collection - the list being matched against
-        :param delimiter: str - what delimits each portion of the matches (ex: paths are delimited by a slash)
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param match_against: the list being matched against
+        :param delimiter: what delimits each portion of the matches (ex: paths are delimited by a slash)
+        :return: a list of possible tab completions
         """
         matches = self.basic_complete(text, line, begidx, endidx, match_against)
 
         # Display only the portion of the match that's being completed based on delimiter
         if matches:
+            # Set this to True for proper quoting of matches with spaces
+            self.matches_delimited = True
 
             # Get the common beginning for the matches
             common_prefix = os.path.commonprefix(matches)
@@ -862,13 +912,15 @@ class Cmd(cmd.Cmd):
 
         return matches
 
-    def flag_based_complete(self, text, line, begidx, endidx, flag_dict, all_else=None):
+    def flag_based_complete(self, text: str, line: str, begidx: int, endidx: int,
+                            flag_dict: Dict[str, Union[Iterable, Callable]],
+                            all_else: Union[None, Iterable, Callable]=None) -> List[str]:
         """
         Tab completes based on a particular flag preceding the token being completed
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
         :param flag_dict: dict - dictionary whose structure is the following:
                                  keys - flags (ex: -c, --create) that result in tab completion for the next
                                         argument in the command line
@@ -877,7 +929,7 @@ class Cmd(cmd.Cmd):
                                     2. function that performs tab completion (ex: path_complete)
         :param all_else: Collection or function - an optional parameter for tab completing any token that isn't preceded
                                                   by a flag in flag_dict
-        :return: List[str] - a list of possible tab completions
+        :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -903,13 +955,15 @@ class Cmd(cmd.Cmd):
 
         return completions_matches
 
-    def index_based_complete(self, text, line, begidx, endidx, index_dict, all_else=None):
+    def index_based_complete(self, text: str, line: str, begidx: int, endidx: int,
+                             index_dict: Mapping[int, Union[Iterable, Callable]],
+                             all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """
         Tab completes based on a fixed position in the input string
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
         :param index_dict: dict - dictionary whose structure is the following:
                                  keys - 0-based token indexes into command line that determine which tokens
                                         perform tab completion
@@ -918,7 +972,7 @@ class Cmd(cmd.Cmd):
                                     2. function that performs tab completion (ex: path_complete)
         :param all_else: Collection or function - an optional parameter for tab completing any token that isn't at an
                                                   index in index_dict
-        :return: List[str] - a list of possible tab completions
+        :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -947,16 +1001,17 @@ class Cmd(cmd.Cmd):
         return matches
 
     # noinspection PyUnusedLocal
-    def path_complete(self, text, line, begidx, endidx, dir_exe_only=False, dir_only=False):
+    def path_complete(self, text: str, line: str, begidx: int, endidx: int, dir_exe_only: bool=False,
+                      dir_only: bool=False) -> List[str]:
         """Performs completion of local file system paths
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :param dir_exe_only: bool - only return directories and executables, not non-executable files
-        :param dir_only: bool - only return directories
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param dir_exe_only: only return directories and executables, not non-executable files
+        :param dir_only: only return directories
+        :return: a list of possible tab completions
         """
 
         # Used to complete ~ and ~user strings
@@ -1042,6 +1097,9 @@ class Cmd(cmd.Cmd):
                 search_str = os.path.join(os.getcwd(), search_str)
                 cwd_added = True
 
+        # Set this to True for proper quoting of paths with spaces
+        self.matches_delimited = True
+
         # Find all matching path completions
         matches = glob.glob(search_str)
 
@@ -1078,11 +1136,11 @@ class Cmd(cmd.Cmd):
         return matches
 
     @staticmethod
-    def get_exes_in_path(starts_with):
-        """
-        Returns names of executables in a user's path
-        :param starts_with: str - what the exes should start with. leave blank for all exes in path.
-        :return: List[str] - a list of matching exe names
+    def get_exes_in_path(starts_with: str) -> List[str]:
+        """Returns names of executables in a user's path
+
+        :param starts_with: what the exes should start with. leave blank for all exes in path.
+        :return: a list of matching exe names
         """
         # Purposely don't match any executable containing wildcards
         wildcards = ['*', '?']
@@ -1106,16 +1164,17 @@ class Cmd(cmd.Cmd):
 
         return list(exes_set)
 
-    def shell_cmd_complete(self, text, line, begidx, endidx, complete_blank=False):
+    def shell_cmd_complete(self, text: str, line: str, begidx: int, endidx: int,
+                           complete_blank: bool=False) -> List[str]:
         """Performs completion of executables either in a user's path or a given path
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :param complete_blank: bool - If True, then a blank will complete all shell commands in a user's path
-                                      If False, then no completion is performed
-                                      Defaults to False to match Bash shell behavior
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param complete_blank: If True, then a blank will complete all shell commands in a user's path
+                               If False, then no completion is performed
+                               Defaults to False to match Bash shell behavior
+        :return: a list of possible tab completions
         """
         # Don't tab complete anything if no shell command has been started
         if not complete_blank and not text:
@@ -1129,19 +1188,18 @@ class Cmd(cmd.Cmd):
         else:
             return self.path_complete(text, line, begidx, endidx, dir_exe_only=True)
 
-    def _redirect_complete(self, text, line, begidx, endidx, compfunc):
-        """
-        Called by complete() as the first tab completion function for all commands
+    def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: Callable) -> List[str]:
+        """Called by complete() as the first tab completion function for all commands
         It determines if it should tab complete for redirection (|, <, >, >>) or use the
         completer function for the current command
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :param compfunc: Callable - the completer function for the current command
-                                    this will be called if we aren't completing for redirection
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param compfunc: the completer function for the current command
+                         this will be called if we aren't completing for redirection
+        :return: a list of possible tab completions
         """
         if self.allow_redirection:
 
@@ -1184,9 +1242,8 @@ class Cmd(cmd.Cmd):
         return compfunc(text, line, begidx, endidx)
 
     @staticmethod
-    def _pad_matches_to_display(matches_to_display):  # pragma: no cover
-        """
-        Adds padding to the matches being displayed as tab completion suggestions.
+    def _pad_matches_to_display(matches_to_display: List[str]) -> Tuple[List[str], int]:  # pragma: no cover
+        """Adds padding to the matches being displayed as tab completion suggestions.
         The default padding of readline/pyreadine is small and not visually appealing
         especially if matches have spaces. It appears very squished together.
 
@@ -1206,14 +1263,14 @@ class Cmd(cmd.Cmd):
 
         return [cur_match + padding for cur_match in matches_to_display], len(padding)
 
-    def _display_matches_gnu_readline(self, substitution, matches, longest_match_length):  # pragma: no cover
-        """
-        Prints a match list using GNU readline's rl_display_match_list()
+    def _display_matches_gnu_readline(self, substitution: str, matches: List[str],
+                                      longest_match_length: int) -> None:  # pragma: no cover
+        """Prints a match list using GNU readline's rl_display_match_list()
         This exists to print self.display_matches if it has data. Otherwise matches prints.
 
-        :param substitution: str - the substitution written to the command line
-        :param matches: list[str] - the tab completion matches to display
-        :param longest_match_length: int - longest printed length of the matches
+        :param substitution: the substitution written to the command line
+        :param matches: the tab completion matches to display
+        :param longest_match_length: longest printed length of the matches
         """
         if rl_type == RlType.GNU:
 
@@ -1250,6 +1307,10 @@ class Cmd(cmd.Cmd):
             strings_array[1:-1] = encoded_matches
             strings_array[-1] = None
 
+            # Print the header if one exists
+            if self.completion_header:
+                sys.stdout.write('\n' + self.completion_header)
+
             # Call readline's display function
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
             readline_lib.rl_display_match_list(strings_array, len(encoded_matches), longest_match_length)
@@ -1257,12 +1318,11 @@ class Cmd(cmd.Cmd):
             # Redraw prompt and input line
             rl_force_redisplay()
 
-    def _display_matches_pyreadline(self, matches):  # pragma: no cover
-        """
-        Prints a match list using pyreadline's _display_completions()
+    def _display_matches_pyreadline(self, matches: List[str]) -> None:  # pragma: no cover
+        """Prints a match list using pyreadline's _display_completions()
         This exists to print self.display_matches if it has data. Otherwise matches prints.
 
-        :param matches: list[str] - the tab completion matches to display
+        :param matches: the tab completion matches to display
         """
         if rl_type == RlType.PYREADLINE:
 
@@ -1275,12 +1335,16 @@ class Cmd(cmd.Cmd):
             # Add padding for visual appeal
             matches_to_display, _ = self._pad_matches_to_display(matches_to_display)
 
+            # Print the header if one exists
+            if self.completion_header:
+                readline.rl.mode.console.write('\n' + self.completion_header)
+
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
 
     # -----  Methods which override stuff in cmd -----
 
-    def complete(self, text, state):
+    def complete(self, text: str, state: int) -> Optional[str]:
         """Override of command method which returns the next possible completion for 'text'.
 
         If a command has not been entered, then complete against command list.
@@ -1291,8 +1355,8 @@ class Cmd(cmd.Cmd):
         This completer function is called as complete(text, state), for state in 0, 1, 2, …, until it returns a
         non-string value. It should return the next possible completion starting with text.
 
-        :param text: str - the current word that user is typing
-        :param state: int - non-negative integer
+        :param text: the current word that user is typing
+        :param state: non-negative integer
         """
         import functools
         if state == 0 and rl_type != RlType.NONE:
@@ -1314,7 +1378,7 @@ class Cmd(cmd.Cmd):
             # from text and update the indexes. This only applies if we are at the the beginning of the line.
             shortcut_to_restore = ''
             if begidx == 0:
-                for (shortcut, expansion) in self.shortcuts:
+                for (shortcut, _) in self.shortcuts:
                     if text.startswith(shortcut):
                         # Save the shortcut to restore later
                         shortcut_to_restore = shortcut
@@ -1419,13 +1483,7 @@ class Cmd(cmd.Cmd):
                     display_matches_set = set(self.display_matches)
                     self.display_matches = list(display_matches_set)
 
-                    # Check if display_matches has been used. If so, then matches
-                    # on delimited strings like paths was done.
-                    if self.display_matches:
-                        matches_delimited = True
-                    else:
-                        matches_delimited = False
-
+                    if not self.display_matches:
                         # Since self.display_matches is empty, set it to self.completion_matches
                         # before we alter them. That way the suggestions will reflect how we parsed
                         # the token being completed and not how readline did.
@@ -1440,7 +1498,7 @@ class Cmd(cmd.Cmd):
                         # This is the tab completion text that will appear on the command line.
                         common_prefix = os.path.commonprefix(self.completion_matches)
 
-                        if matches_delimited:
+                        if self.matches_delimited:
                             # Check if any portion of the display matches appears in the tab completion
                             display_prefix = os.path.commonprefix(self.display_matches)
 
@@ -1514,16 +1572,12 @@ class Cmd(cmd.Cmd):
 
         return results
 
-    def get_all_commands(self):
-        """
-        Returns a list of all commands
-        """
+    def get_all_commands(self) -> List[str]:
+        """Returns a list of all commands."""
         return [cur_name[3:] for cur_name in self.get_names() if cur_name.startswith('do_')]
 
-    def get_visible_commands(self):
-        """
-        Returns a list of commands that have not been hidden
-        """
+    def get_visible_commands(self) -> List[str]:
+        """Returns a list of commands that have not been hidden."""
         commands = self.get_all_commands()
 
         # Remove the hidden commands
@@ -1533,11 +1587,11 @@ class Cmd(cmd.Cmd):
 
         return commands
 
-    def get_help_topics(self):
+    def get_help_topics(self) -> List[str]:
         """ Returns a list of help topics """
         return [name[5:] for name in self.get_names() if name.startswith('help_')]
 
-    def complete_help(self, text, line, begidx, endidx):
+    def complete_help(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
         Override of parent class method to handle tab completing subcommands and not showing hidden commands
         Returns a list of possible tab completions
@@ -1581,12 +1635,12 @@ class Cmd(cmd.Cmd):
         return matches
 
     # noinspection PyUnusedLocal
-    def sigint_handler(self, signum, frame):
+    def sigint_handler(self, signum: int, frame) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
 
         If you need custom SIGINT behavior, then override this function.
 
-        :param signum: int - signal number
+        :param signum: signal number
         :param frame
         """
 
@@ -1599,8 +1653,8 @@ class Cmd(cmd.Cmd):
         # Re-raise a KeyboardInterrupt so other parts of the code can catch it
         raise KeyboardInterrupt("Got a keyboard interrupt")
 
-    def preloop(self):
-        """"Hook method executed once when the cmdloop() method is called."""
+    def preloop(self) -> None:
+        """Hook method executed once when the cmdloop() method is called."""
         import signal
         # Register a default SIGINT signal handler for Ctrl+C
         signal.signal(signal.SIGINT, self.sigint_handler)
@@ -1608,8 +1662,8 @@ class Cmd(cmd.Cmd):
     def precmd(self, statement: Statement) -> Statement:
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
 
-        :param statement: Statement - subclass of str which also contains the parsed input
-        :return: Statement - a potentially modified version of the input Statement object
+        :param statement: subclass of str which also contains the parsed input
+        :return: a potentially modified version of the input Statement object
         """
         return statement
 
@@ -1619,8 +1673,8 @@ class Cmd(cmd.Cmd):
     def preparse(self, raw: str) -> str:
         """Hook method executed just before the command line is interpreted, but after the input prompt is generated.
 
-        :param raw: str - raw command line input
-        :return: str - potentially modified raw command line input
+        :param raw: raw command line input
+        :return: potentially modified raw command line input
         """
         return raw
 
@@ -1661,25 +1715,24 @@ class Cmd(cmd.Cmd):
                 proc.communicate()
         return stop
 
-    def parseline(self, line):
+    def parseline(self, line: str) -> Tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.
 
         NOTE: This is an override of a parent class method.  It is only used by other parent class methods.
 
         Different from the parent class method, this ignores self.identchars.
 
-        :param line: str - line read by readline
-        :return: (str, str, str) - tuple containing (command, args, line)
+        :param line: line read by readline
+        :return: tuple containing (command, args, line)
         """
-
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
     def onecmd_plus_hooks(self, line: str) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
-        :param line: str - line of text read from input
-        :return: bool - True if cmdloop() should exit, False otherwise
+        :param line: line of text read from input
+        :return: True if cmdloop() should exit, False otherwise
         """
         import datetime
         stop = False
@@ -1723,7 +1776,7 @@ class Cmd(cmd.Cmd):
                 if self.timing:
                     self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
             finally:
-                if self.allow_redirection:
+                if self.allow_redirection and self.redirecting:
                     self._restore_output(statement)
         except EmptyStatement:
             pass
@@ -1731,11 +1784,11 @@ class Cmd(cmd.Cmd):
             # If shlex.split failed on syntax, let user know whats going on
             self.perror("Invalid syntax: {}".format(ex), traceback_war=False)
         except Exception as ex:
-            self.perror(ex, type(ex).__name__)
+            self.perror(ex)
         finally:
             return self.postparsing_postcmd(stop)
 
-    def runcmds_plus_hooks(self, cmds):
+    def runcmds_plus_hooks(self, cmds: List[str]) -> bool:
         """Convenience method to run multiple commands by onecmd_plus_hooks.
 
         This method adds the given cmds to the command queue and processes the
@@ -1753,8 +1806,8 @@ class Cmd(cmd.Cmd):
 
         Example: cmd_obj.runcmds_plus_hooks(['load myscript.txt'])
 
-        :param cmds: list - Command strings suitable for onecmd_plus_hooks.
-        :return: bool - True implies the entire application should exit.
+        :param cmds: command strings suitable for onecmd_plus_hooks.
+        :return: True implies the entire application should exit.
 
         """
         stop = False
@@ -1777,7 +1830,7 @@ class Cmd(cmd.Cmd):
             # necessary/desired here.
             return stop
 
-    def _complete_statement(self, line):
+    def _complete_statement(self, line: str) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
@@ -1818,10 +1871,10 @@ class Cmd(cmd.Cmd):
             raise EmptyStatement()
         return statement
 
-    def _redirect_output(self, statement):
+    def _redirect_output(self, statement: Statement) -> None:
         """Handles output redirection for >, >>, and |.
 
-        :param statement: Statement - a parsed statement from the user
+        :param statement: a parsed statement from the user
         """
         import io
         import subprocess
@@ -1867,19 +1920,22 @@ class Cmd(cmd.Cmd):
                 # REDIRECTION_APPEND or REDIRECTION_OUTPUT
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
-                sys.stdout = self.stdout = open(os.path.expanduser(statement.output_to), mode)
+                try:
+                    sys.stdout = self.stdout = open(statement.output_to, mode)
+                except OSError as ex:
+                    self.perror('Not Redirecting because - {}'.format(ex), traceback_war=False)
+                    self.redirecting = False
             else:
                 # going to a paste buffer
                 sys.stdout = self.stdout = tempfile.TemporaryFile(mode="w+")
                 if statement.output == constants.REDIRECTION_APPEND:
                     self.poutput(get_paste_buffer())
 
-    def _restore_output(self, statement):
+    def _restore_output(self, statement: Statement) -> None:
         """Handles restoring state after output redirection as well as
         the actual pipe operation if present.
 
-        :param statement: Statement object which contains the parsed
-                          input from the user
+        :param statement: Statement object which contains the parsed input from the user
         """
         # If we have redirected output to a file or the clipboard or piped it to a shell command, then restore state
         if self.kept_state is not None:
@@ -1910,11 +1966,11 @@ class Cmd(cmd.Cmd):
 
         self.redirecting = False
 
-    def _func_named(self, arg):
+    def _func_named(self, arg: str) -> str:
         """Gets the method name associated with a given command.
 
-        :param arg: str - command to look up method name which implements it
-        :return: str - method name which implements the given command
+        :param arg: command to look up method name which implements it
+        :return: method name which implements the given command
         """
         result = None
         target = 'do_' + arg
@@ -1922,17 +1978,18 @@ class Cmd(cmd.Cmd):
             result = target
         return result
 
-    def onecmd(self, statement):
+    def onecmd(self, statement: Statement) -> Optional[bool]:
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes _default() instead.
 
         :param statement: Command - a parsed command from the input stream
-        :return: bool - a flag indicating whether the interpretation of commands should stop
+        :return: a flag indicating whether the interpretation of commands should stop
         """
         funcname = self._func_named(statement.command)
         if not funcname:
-            return self.default(statement)
+            self.default(statement)
+            return
 
         # Since we have a valid command store it in the history
         if statement.command not in self.exclude_from_history:
@@ -1941,16 +1998,16 @@ class Cmd(cmd.Cmd):
         try:
             func = getattr(self, funcname)
         except AttributeError:
-            return self.default(statement)
+            self.default(statement)
+            return
 
         stop = func(statement)
         return stop
 
-    def default(self, statement):
+    def default(self, statement: Statement) -> None:
         """Executed when the command given isn't a recognized command implemented by a do_* method.
 
         :param statement: Statement object with parsed input
-        :return:
         """
         arg = statement.raw
         if self.default_to_shell:
@@ -1963,13 +2020,13 @@ class Cmd(cmd.Cmd):
         self.poutput('*** Unknown syntax: {}\n'.format(arg))
 
     @staticmethod
-    def _surround_ansi_escapes(prompt, start="\x01", end="\x02"):
+    def _surround_ansi_escapes(prompt: str, start: str="\x01", end: str="\x02") -> str:
         """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
 
-        :param prompt: str - original prompt
-        :param start: str - start code to tell GNU Readline about beginning of invisible characters
-        :param end: str - end code to tell GNU Readline about end of invisible characters
-        :return: str - prompt safe to pass to GNU Readline
+        :param prompt: original prompt
+        :param start: start code to tell GNU Readline about beginning of invisible characters
+        :param end: end code to tell GNU Readline about end of invisible characters
+        :return: prompt safe to pass to GNU Readline
         """
         # Windows terminals don't use ANSI escape codes and Windows readline isn't based on GNU Readline
         if sys.platform == "win32":
@@ -1990,9 +2047,8 @@ class Cmd(cmd.Cmd):
 
         return result
 
-    def pseudo_raw_input(self, prompt):
-        """
-        began life as a copy of cmd's cmdloop; like raw_input but
+    def pseudo_raw_input(self, prompt: str) -> str:
+        """Began life as a copy of cmd's cmdloop; like raw_input but
 
         - accounts for changed stdin, stdout
         - if input is a pipe (instead of a tty), look at self.echo
@@ -2033,14 +2089,14 @@ class Cmd(cmd.Cmd):
                     line = 'eof'
         return line.strip()
 
-    def _cmdloop(self):
+    def _cmdloop(self) -> bool:
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
 
         This serves the same role as cmd.cmdloop().
 
-        :return: bool - True implies the entire application should exit.
+        :return: True implies the entire application should exit.
         """
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
@@ -2070,7 +2126,7 @@ class Cmd(cmd.Cmd):
             # Enable tab completion
             readline.parse_and_bind(self.completekey + ": complete")
 
-        stop = None
+        stop = False
         try:
             while not stop:
                 if self.cmdqueue:
@@ -2111,7 +2167,7 @@ class Cmd(cmd.Cmd):
             return stop
 
     @with_argument_list
-    def do_alias(self, arglist):
+    def do_alias(self, arglist: List[str]) -> None:
         """Define or display aliases
 
 Usage:  Usage: alias [name] | [<name> <value>]
@@ -2167,7 +2223,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
                 errmsg = "Aliases can not contain: {}".format(invalidchars)
                 self.perror(errmsg, traceback_war=False)
 
-    def complete_alias(self, text, line, begidx, endidx):
+    def complete_alias(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """ Tab completion for alias """
         alias_names = set(self.aliases.keys())
         visible_commands = set(self.get_visible_commands())
@@ -2180,7 +2236,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
     @with_argument_list
-    def do_unalias(self, arglist):
+    def do_unalias(self, arglist: List[str]) -> None:
         """Unsets aliases
 
 Usage:  Usage: unalias [-a] name [name ...]
@@ -2191,7 +2247,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         -a     remove all alias definitions
 """
         if not arglist:
-            self.do_help('unalias')
+            self.do_help(['unalias'])
 
         if '-a' in arglist:
             self.aliases.clear()
@@ -2208,12 +2264,12 @@ Usage:  Usage: unalias [-a] name [name ...]
                 else:
                     self.perror("Alias {!r} does not exist".format(cur_arg), traceback_war=False)
 
-    def complete_unalias(self, text, line, begidx, endidx):
+    def complete_unalias(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """ Tab completion for unalias """
         return self.basic_complete(text, line, begidx, endidx, self.aliases)
 
     @with_argument_list
-    def do_help(self, arglist):
+    def do_help(self, arglist: List[str]) -> None:
         """List available commands with "help" or detailed help with "help cmd"."""
         if not arglist or (len(arglist) == 1 and arglist[0] in ('--verbose', '-v')):
             verbose = len(arglist) == 1 and arglist[0] in ('--verbose', '-v')
@@ -2240,7 +2296,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 # This could be a help topic
                 cmd.Cmd.do_help(self, arglist[0])
 
-    def _help_menu(self, verbose=False):
+    def _help_menu(self, verbose: bool=False) -> None:
         """Show a list of commands which help can be displayed for.
         """
         # Get a sorted list of help topics
@@ -2283,7 +2339,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
 
-    def _print_topics(self, header, cmds, verbose):
+    def _print_topics(self, header: str, cmds: List[str], verbose: bool) -> None:
         """Customized version of print_topics that can switch between verbose or traditional output"""
         import io
 
@@ -2354,23 +2410,23 @@ Usage:  Usage: unalias [-a] name [name ...]
                         command = ''
                 self.stdout.write("\n")
 
-    def do_shortcuts(self, _):
+    def do_shortcuts(self, _: str) -> None:
         """Lists shortcuts (aliases) available."""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
-    def do_eof(self, _):
+    def do_eof(self, _: str) -> bool:
         """Called when <Ctrl>-D is pressed."""
         # End of script should not exit app, but <Ctrl>-D should.
         print('')  # Required for clearing line when exiting submenu
         return self._STOP_AND_EXIT
 
-    def do_quit(self, _):
+    def do_quit(self, _: str) -> bool:
         """Exits this application."""
         self._should_quit = True
         return self._STOP_AND_EXIT
 
-    def select(self, opts, prompt='Your choice? '):
+    def select(self, opts: Union[str, List[str], List[Tuple[str, Optional[str]]]], prompt: str='Your choice? ') -> str:
         """Presents a numbered menu to the user.  Modelled after
            the bash shell's SELECT.  Returns the item chosen.
 
@@ -2393,7 +2449,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                     fulloptions.append((opt[0], opt[1]))
                 except IndexError:
                     fulloptions.append((opt[0], opt[0]))
-        for (idx, (value, text)) in enumerate(fulloptions):
+        for (idx, (_, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
             response = input(prompt)
@@ -2404,18 +2460,18 @@ Usage:  Usage: unalias [-a] name [name ...]
                     readline.remove_history_item(hlen - 1)
 
             try:
-                response = int(response)
-                result = fulloptions[response - 1][0]
+                choice = int(response)
+                result = fulloptions[choice - 1][0]
                 break
             except (ValueError, IndexError):
                 self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:\n".format(response,
                                                                                                    len(fulloptions)))
         return result
 
-    def cmdenvironment(self):
+    def cmdenvironment(self) -> str:
         """Get a summary report of read-only settings which the user cannot modify at runtime.
 
-        :return: str - summary report of read-only settings which the user cannot modify at runtime
+        :return: summary report of read-only settings which the user cannot modify at runtime
         """
         read_only_settings = """
         Commands may be terminated with: {}
@@ -2423,7 +2479,13 @@ Usage:  Usage: unalias [-a] name [name ...]
         Output redirection and pipes allowed: {}"""
         return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
 
-    def show(self, args, parameter):
+    def show(self, args: argparse.Namespace, parameter: str) -> None:
+        """Shows current settings of parameters.
+
+        :param args: argparse parsed arguments from the set command
+        :param parameter:
+        :return:
+        """
         param = ''
         if parameter:
             param = parameter.strip().lower()
@@ -2452,7 +2514,7 @@ Usage:  Usage: unalias [-a] name [name ...]
     set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]')
 
     @with_argparser(set_parser)
-    def do_set(self, args):
+    def do_set(self, args: argparse.Namespace) -> None:
         """Sets a settable parameter or shows current settings of parameters.
 
         Accepts abbreviated parameter names so long as there is no ambiguity.
@@ -2487,7 +2549,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 param = args.settable[0]
             self.show(args, param)
 
-    def do_shell(self, command):
+    def do_shell(self, command: str) -> None:
         """Execute a command as if at the OS prompt.
 
     Usage:  shell <command> [arguments]"""
@@ -2519,14 +2581,14 @@ Usage:  Usage: unalias [-a] name [name ...]
         proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
         proc.communicate()
 
-    def complete_shell(self, text, line, begidx, endidx):
+    def complete_shell(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Handles tab completion of executable commands and local file system paths for the shell command
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :return: a list of possible tab completions
         """
         index_dict = {1: self.shell_cmd_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
@@ -2555,7 +2617,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
-    def do_py(self, arg):
+    def do_py(self, arg: str) -> bool:
         """
         Invoke python command, shell, or script
 
@@ -2568,7 +2630,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         from .pyscript_bridge import PyscriptBridge
         if self._in_py:
             self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
-            return
+            return False
         self._in_py = True
 
         # noinspection PyBroadException
@@ -2711,7 +2773,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         return self._should_quit
 
     @with_argument_list
-    def do_pyscript(self, arglist):
+    def do_pyscript(self, arglist: List[str]) -> None:
         """\nRuns a python script file inside the console
 
     Usage: pyscript <script_path> [script_arguments]
@@ -2722,7 +2784,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
 """
         if not arglist:
             self.perror("pyscript command requires at least 1 argument ...", traceback_war=False)
-            self.do_help('pyscript')
+            self.do_help(['pyscript'])
             return
 
         # Get the absolute path of the script
@@ -2741,15 +2803,15 @@ Paths or arguments that contain spaces must be enclosed in quotes
         # Restore command line arguments to original state
         sys.argv = orig_args
 
-    # Enable tab-completion for pyscript command
-    def complete_pyscript(self, text, line, begidx, endidx):
+    def complete_pyscript(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Enable tab-completion for pyscript command."""
         index_dict = {1: self.path_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:
         # noinspection PyMethodMayBeStatic,PyUnusedLocal
-        def do_ipy(self, arg):
+        def do_ipy(self, arg: str) -> None:
             """Enters an interactive IPython shell.
 
             Run python code from external files with ``run filename.py``
@@ -2787,7 +2849,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
     history_parser.add_argument('arg', nargs='?', help=_history_arg_help)
 
     @with_argparser(history_parser)
-    def do_history(self, args):
+    def do_history(self, args: argparse.Namespace) -> None:
         """View, run, edit, and save previously entered commands."""
         # If an argument was supplied, then retrieve partial contents of the history
         cowardly_refuse_to_run = False
@@ -2852,7 +2914,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                 else:
                     self.poutput(hi.pr())
 
-    def _generate_transcript(self, history, transcript_file):
+    def _generate_transcript(self, history: List[HistoryItem], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""
         # Save the current echo state, and turn it off. We inject commands into the
         # output using a different mechanism
@@ -2905,19 +2967,22 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         self.echo = saved_echo
 
         # finally, we can write the transcript out to the file
-        with open(transcript_file, 'w') as fout:
-            fout.write(transcript)
-
-        # and let the user know what we did
-        if len(history) > 1:
-            plural = 'commands and their outputs'
+        try:
+            with open(transcript_file, 'w') as fout:
+                fout.write(transcript)
+        except OSError as ex:
+            self.perror('Failed to save transcript: {}'.format(ex), traceback_war=False)
         else:
-            plural = 'command and its output'
-        msg = '{} {} saved to transcript file {!r}'
-        self.pfeedback(msg.format(len(history), plural, transcript_file))
+            # and let the user know what we did
+            if len(history) > 1:
+                plural = 'commands and their outputs'
+            else:
+                plural = 'command and its output'
+            msg = '{} {} saved to transcript file {!r}'
+            self.pfeedback(msg.format(len(history), plural, transcript_file))
 
     @with_argument_list
-    def do_edit(self, arglist):
+    def do_edit(self, arglist: List[str]) -> None:
         """Edit a file in a text editor.
 
 Usage:  edit [file_path]
@@ -2935,13 +3000,13 @@ The editor used is determined by the ``editor`` settable parameter.
         else:
             os.system('"{}"'.format(self.editor))
 
-    # Enable tab-completion for edit command
-    def complete_edit(self, text, line, begidx, endidx):
+    def complete_edit(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Enable tab-completion for edit command."""
         index_dict = {1: self.path_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     @property
-    def _current_script_dir(self):
+    def _current_script_dir(self) -> Optional[str]:
         """Accessor to get the current script directory from the _script_dir LIFO queue."""
         if self._script_dir:
             return self._script_dir[-1]
@@ -2949,7 +3014,7 @@ The editor used is determined by the ``editor`` settable parameter.
             return None
 
     @with_argument_list
-    def do__relative_load(self, arglist):
+    def do__relative_load(self, arglist: List[str]) -> None:
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  _relative_load <file_path>
@@ -2972,15 +3037,15 @@ NOTE: This command is intended to only be used within text file scripts.
         file_path = arglist[0].strip()
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
-        self.do_load(relative_path)
+        self.do_load([relative_path])
 
-    def do_eos(self, _):
+    def do_eos(self, _: str) -> None:
         """Handles cleanup when a script has finished executing."""
         if self._script_dir:
             self._script_dir.pop()
 
     @with_argument_list
-    def do_load(self, arglist):
+    def do_load(self, arglist: List[str]) -> None:
         """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 
     Usage:  load <file_path>
@@ -3024,21 +3089,22 @@ Script should contain one command per line, just like command would be typed in 
 
         self._script_dir.append(os.path.dirname(expanded_path))
 
-    # Enable tab-completion for load command
-    def complete_load(self, text, line, begidx, endidx):
+    def complete_load(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Enable tab-completion for load command."""
         index_dict = {1: self.path_complete}
         return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
-    def run_transcript_tests(self, callargs):
+    def run_transcript_tests(self, callargs: List[str]) -> None:
         """Runs transcript tests for provided file(s).
 
         This is called when either -t is provided on the command line or the transcript_files argument is provided
         during construction of the cmd2.Cmd instance.
 
-        :param callargs: List[str] - list of transcript test file names
+        :param callargs: list of transcript test file names
         """
         import unittest
         from .transcript import Cmd2TestCase
+
         class TestMyAppCase(Cmd2TestCase):
             cmdapp = self
 
@@ -3048,7 +3114,7 @@ Script should contain one command per line, just like command would be typed in 
         runner = unittest.TextTestRunner()
         runner.run(testcase)
 
-    def cmdloop(self, intro=None):
+    def cmdloop(self, intro: Optional[str]=None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
 
         _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
@@ -3057,7 +3123,7 @@ Script should contain one command per line, just like command would be typed in 
         - transcript testing
         - intro banner
 
-        :param intro: str - if provided this overrides self.intro and serves as the intro banner printed once at start
+        :param intro: if provided this overrides self.intro and serves as the intro banner printed once at start
         """
         if self.allow_cli_args:
             parser = argparse.ArgumentParser()
@@ -3183,41 +3249,18 @@ Script should contain one command per line, just like command would be typed in 
         # TODO check signature of registered func and throw error if it's wrong
 
 
-class HistoryItem(str):
-    """Class used to represent an item in the History list.
-
-    Thin wrapper around str class which adds a custom format for printing. It
-    also keeps track of its index in the list as well as a lowercase
-    representation of itself for convenience/efficiency.
-
-    """
-    listformat = '-------------------------[{}]\n{}\n'
-
-    # noinspection PyUnusedLocal
-    def __init__(self, instr):
-        str.__init__(self)
-        self.lowercase = self.lower()
-        self.idx = None
-
-    def pr(self):
-        """Represent a HistoryItem in a pretty fashion suitable for printing.
-
-        :return: str - pretty print string version of a HistoryItem
-        """
-        return self.listformat.format(self.idx, str(self).rstrip())
-
-
 class History(list):
     """ A list of HistoryItems that knows how to respond to user requests. """
 
     # noinspection PyMethodMayBeStatic
-    def _zero_based_index(self, onebased):
+    def _zero_based_index(self, onebased: int) -> int:
+        """Convert a one-based index to a zero-based index."""
         result = onebased
         if result > 0:
             result -= 1
         return result
 
-    def _to_index(self, raw):
+    def _to_index(self, raw: str) -> Optional[int]:
         if raw:
             result = self._zero_based_index(int(raw))
         else:
@@ -3226,11 +3269,11 @@ class History(list):
 
     spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>-?\d+)?\s*$')
 
-    def span(self, raw):
+    def span(self, raw: str) -> List[HistoryItem]:
         """Parses the input string search for a span pattern and if if found, returns a slice from the History list.
 
-        :param raw: str - string potentially containing a span of the forms a..b, a:b, a:, ..b
-        :return: List[HistoryItem] - slice from the History list
+        :param raw: string potentially containing a span of the forms a..b, a:b, a:, ..b
+        :return: slice from the History list
         """
         if raw.lower() in ('*', '-', 'all'):
             raw = ':'
@@ -3254,20 +3297,20 @@ class History(list):
 
     rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*-\s*(?P<end>[\d]+)?\s*$')
 
-    def append(self, new):
+    def append(self, new: str) -> None:
         """Append a HistoryItem to end of the History list
 
-        :param new: str - command line to convert to HistoryItem and add to the end of the History list
+        :param new: command line to convert to HistoryItem and add to the end of the History list
         """
         new = HistoryItem(new)
         list.append(self, new)
         new.idx = len(self)
 
-    def get(self, getme=None):
+    def get(self, getme: Optional[Union[int, str]]=None) -> List[HistoryItem]:
         """Get an item or items from the History list using 1-based indexing.
 
-        :param getme: int or str - item(s) to get - either an integer index or string to search for
-        :return: List[str] - list of HistoryItems matching the retrieval criteria
+        :param getme: item(s) to get - either an integer index or string to search for
+        :return: list of HistoryItems matching the retrieval criteria
         """
         if not getme:
             return self
@@ -3316,23 +3359,23 @@ class History(list):
 
 class Statekeeper(object):
     """Class used to save and restore state during load and py commands as well as when redirecting output or pipes."""
-    def __init__(self, obj, attribs):
+    def __init__(self, obj: Any, attribs: Iterable) -> None:
         """Use the instance attributes as a generic key-value store to copy instance attributes from outer object.
 
         :param obj: instance of cmd2.Cmd derived class (your application instance)
-        :param attribs: Tuple[str] - tuple of strings listing attributes of obj to save a copy of
+        :param attribs: tuple of strings listing attributes of obj to save a copy of
         """
         self.obj = obj
         self.attribs = attribs
         if self.obj:
             self._save()
 
-    def _save(self):
+    def _save(self) -> None:
         """Create copies of attributes from self.obj inside this Statekeeper instance."""
         for attrib in self.attribs:
             setattr(self, attrib, getattr(self.obj, attrib))
 
-    def restore(self):
+    def restore(self) -> None:
         """Overwrite attributes in self.obj with the saved values stored in this Statekeeper instance."""
         if self.obj:
             for attrib in self.attribs:
@@ -3356,6 +3399,6 @@ class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', '
 
     NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
     """
-    def __bool__(self):
+    def __bool__(self) -> bool:
         """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
         return not self.err

@@ -17,3 +17,10 @@ htmlcov
 
 # Visual Studio Code
 .vscode
+
+# mypy optional static type checker
+.mypy_cache
+
+# mypy plugin for PyCharm
+dmypy.json
+dmypy.sock

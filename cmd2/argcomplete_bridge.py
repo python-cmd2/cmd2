@@ -106,18 +106,18 @@ else:
     class CompletionFinder(argcomplete.CompletionFinder):
         """Hijack the functor from argcomplete to call AutoCompleter"""
 
-        def __call__(self, argument_parser, completer=None, always_complete_options=True, exit_method=os._exit, output_stream=None,
-                     exclude=None, validator=None, print_suppressed=False, append_space=None,
+        def __call__(self, argument_parser, completer=None, always_complete_options=True, exit_method=os._exit,
+                     output_stream=None, exclude=None, validator=None, print_suppressed=False, append_space=None,
                      default_completer=DEFAULT_COMPLETER):
             """
             :param argument_parser: The argument parser to autocomplete on
             :type argument_parser: :class:`argparse.ArgumentParser`
             :param always_complete_options:
-                Controls the autocompletion of option strings if an option string opening character (normally ``-``) has not
-                been entered. If ``True`` (default), both short (``-x``) and long (``--x``) option strings will be
-                suggested. If ``False``, no option strings will be suggested. If ``long``, long options and short options
-                with no long variant will be suggested. If ``short``, short options and long options with no short variant
-                will be suggested.
+                Controls the autocompletion of option strings if an option string opening character (normally ``-``) has
+                not been entered. If ``True`` (default), both short (``-x``) and long (``--x``) option strings will be
+                suggested. If ``False``, no option strings will be suggested. If ``long``, long options and short
+                options with no long variant will be suggested. If ``short``, short options and long options with no
+                short variant will be suggested.
             :type always_complete_options: boolean or string
             :param exit_method:
                 Method used to stop the program after printing completions. Defaults to :meth:`os._exit`. If you want to
@@ -126,8 +126,8 @@ else:
             :param exclude: List of strings representing options to be omitted from autocompletion
             :type exclude: iterable
             :param validator:
-                Function to filter all completions through before returning (called with two string arguments, completion
-                and prefix; return value is evaluated as a boolean)
+                Function to filter all completions through before returning (called with two string arguments,
+                completion and prefix; return value is evaluated as a boolean)
             :type validator: callable
             :param print_suppressed:
                 Whether or not to autocomplete options that have the ``help=argparse.SUPPRESS`` keyword argument set.
@@ -142,18 +142,18 @@ else:
 
             Produces tab completions for ``argument_parser``. See module docs for more info.
 
-            Argcomplete only executes actions if their class is known not to have side effects. Custom action classes can be
-            added to argcomplete.safe_actions, if their values are wanted in the ``parsed_args`` completer argument, or
-            their execution is otherwise desirable.
+            Argcomplete only executes actions if their class is known not to have side effects. Custom action classes
+            can be added to argcomplete.safe_actions, if their values are wanted in the ``parsed_args`` completer
+            argument, or their execution is otherwise desirable.
             """
             # Older versions of argcomplete have fewer keyword arguments
             if sys.version_info >= (3, 5):
                 self.__init__(argument_parser, always_complete_options=always_complete_options, exclude=exclude,
-                            validator=validator, print_suppressed=print_suppressed, append_space=append_space,
-                            default_completer=default_completer)
+                              validator=validator, print_suppressed=print_suppressed, append_space=append_space,
+                              default_completer=default_completer)
             else:
                 self.__init__(argument_parser, always_complete_options=always_complete_options, exclude=exclude,
-                            validator=validator, print_suppressed=print_suppressed)
+                              validator=validator, print_suppressed=print_suppressed)
 
             if "_ARGCOMPLETE" not in os.environ:
                 # not an argument completion invocation
@@ -171,10 +171,6 @@ else:
                     argcomplete.debug("Unable to open fd 8 for writing, quitting")
                     exit_method(1)
 
-            # print("", stream=debug_stream)
-            # for v in "COMP_CWORD COMP_LINE COMP_POINT COMP_TYPE COMP_KEY _ARGCOMPLETE_COMP_WORDBREAKS COMP_WORDS".split():
-            #     print(v, os.environ[v], stream=debug_stream)
-
             ifs = os.environ.get("_ARGCOMPLETE_IFS", "\013")
             if len(ifs) != 1:
                 argcomplete.debug("Invalid value for IFS, quitting [{v}]".format(v=ifs))
@@ -190,8 +186,6 @@ else:
             #
             # Replaced with our own tokenizer function
             ##############################
-
-            # cword_prequote, cword_prefix, cword_suffix, comp_words, last_wordbreak_pos = split_line(comp_line, comp_point)
             tokens, _, begidx, endidx = tokens_for_completion(comp_line, comp_point)
 
             # _ARGCOMPLETE is set by the shell script to tell us where comp_words
@@ -259,9 +253,13 @@ else:
             exit_method(0)
 
 
-    def bash_complete(action, show_hint: bool=True):
-        """Helper function to configure an argparse action to fall back to bash completion"""
+    def bash_complete(action, show_hint: bool = True):
+        """Helper function to configure an argparse action to fall back to bash completion.
+
+        This function tags a parameter for bash completion, bypassing the autocompleter (for file input).
+        """
         def complete_none(*args, **kwargs):
             return None
+
         setattr(action, ACTION_SUPPRESS_HINT, not show_hint)
         setattr(action, ACTION_ARG_CHOICES, (complete_none,))
