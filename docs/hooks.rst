@@ -73,7 +73,7 @@ the application exits:
 2. Accept user input
 3. Parse user input into `Statement` object
 4. Call methods registered with `register_postparsing_hook()`
-5. Call `postparsing_precmd()` - for backwards compatibility deprecated
+5. Call `postparsing_precmd()` - for backwards compatibility with prior releases of cmd2, now deprecated
 6. Redirect output, if user asked for it and it's allowed
 7. Start timer
 8. Call methods registered with `register_precmd_hook()`
@@ -141,18 +141,24 @@ also raise a ``TypeError`` if the passed parameter and return value are not anno
 as ``PostparsingData``.
 
 
-The hook method will be passed one parameter, a ``Statement`` object containing
-the parsed user input. There are many useful attributes in the ``Statement``
-object, including ``.raw`` which contains exactly what the user typed. The hook
-method must return a tuple: the first element indicates whether to fatally fail
-this command prior to execution and exit the application, and the second element
-is a potentially modified ``Statement`` object.
+The hook method will be passed one parameter, a ``PostparsingData`` object
+which we will refer to as ``params``. ``params`` contains two attributes.
+``params.statement`` is a ``Statement`` object which describes the parsed
+user input. There are many useful attributes in the ``Statement``
+object, including ``.raw`` which contains exactly what the user typed.
+``params.stop`` is set to ``False`` by default.
 
-To modify the user input, you create and return a new ``Statement`` object.
-Don't try and directly modify the contents of a ``Statement`` object, there be
-dragons. Instead, use the various attributes in a ``Statement`` object to
-construct a new string, and then parse that string to create a new ``Statement``
-object.
+The hook method must return a ``PostparsingData`` object, and it is very
+convenient to just return the object passed into the hook method. The hook
+method may modify the attributes of the object to influece the behavior of
+the application. If ``params.stop`` is set to true, a fatal failure is
+triggered prior to execution of the command, and the application exits.
+
+To modify the user input, you create a new ``Statement`` object and return it in
+``params.statement``. Don't try and directly modify the contents of a
+``Statement`` object, there be dragons. Instead, use the various attributes in a
+``Statement`` object to construct a new string, and then parse that string to
+create a new ``Statement`` object.
 
 ``cmd2.Cmd()`` uses an instance of ``cmd2.StatementParser`` to parse user input.
 This instance has been configured with the proper command terminators, multiline
@@ -160,14 +166,14 @@ commands, and other parsing related settings. This instance is available as the
 ``self.statement_parser`` attribute. Here's a simple example which shows the
 proper technique::
 
-    def myhookmethod(self, statement):
-        stop = False
-        if not '|' in statement.raw:
-            newinput = statement.raw + ' | less'
-            statement = self.statement_parser.parse(newinput)
-        return stop, statement
+    def myhookmethod(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
+        if not '|' in params.statement.raw:
+            newinput = params.statement.raw + ' | less'
+            params.statement = self.statement_parser.parse(newinput)
+        return params
 
-If a postparsing hook returns ``True`` as the first value in the tuple:
+If a postparsing hook returns a ``PostparsingData`` object with the ``stop``
+attribute set to ``True``:
 
 - no more hooks of any kind (except command finalization hooks) will be called
 - the command will not be executed

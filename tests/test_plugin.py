@@ -52,25 +52,46 @@ class Plugin:
     # Postparsing hooks
     #
     ###
-    def postparse_hook(self, statement: cmd2.Statement) -> Tuple[bool, cmd2.Statement]:
+    def postparse_hook(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         "A postparsing hook"
         self.called_postparsing += 1
-        return False, statement
+        return params
 
-    def postparse_hook_stop(self, statement: cmd2.Statement) -> Tuple[bool, cmd2.Statement]:
+    def postparse_hook_stop(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         "A postparsing hook with requests application exit"
         self.called_postparsing += 1
-        return True, statement
+        params.stop = True
+        return params
 
-    def postparse_hook_emptystatement(self, statement: cmd2.Statement) -> Tuple[bool, cmd2.Statement]:
+    def postparse_hook_emptystatement(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         "A postparsing hook with raises an EmptyStatement exception"
         self.called_postparsing += 1
         raise cmd2.EmptyStatement
 
-    def postparse_hook_exception(self, statement: cmd2.Statement) -> Tuple[bool, cmd2.Statement]:
+    def postparse_hook_exception(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         "A postparsing hook which raises an exception"
         self.called_postparsing += 1
         raise ValueError
+
+    def postparse_hook_too_many_parameters(self, param1, param2) -> cmd2.plugin.PostparsingData:
+        "A postparsing hook with too many parameters"
+        pass
+
+    def postparse_hook_undeclared_parameter_type(self, param) -> cmd2.plugin.PostparsingData:
+        "A postparsing hook with an undeclared parameter type"
+        pass
+
+    def postparse_hook_wrong_parameter_type(self, params: str) -> cmd2.plugin.PostparsingData:
+        "A postparsing hook with the wrong parameter type"
+        pass
+
+    def postparse_hook_undeclared_return_type(self, params: cmd2.plugin.PostparsingData):
+        "A postparsing hook with an undeclared return type"
+        pass
+
+    def postparse_hook_wrong_return_type(self, params: cmd2.plugin.PostparsingData) -> str:
+        "A postparsing hook with the wrong return type"
+        pass
 
     ###
     #
@@ -202,6 +223,31 @@ def test_postloop_hooks(capsys):
 # test postparsing hooks
 #
 ###
+def test_postparsing_hook_too_many_parameters():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_postparsing_hook(app.postparse_hook_too_many_parameters)
+
+def test_postparsing_hook_undeclared_parameter_type():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_postparsing_hook(app.postparse_hook_undeclared_parameter_type)
+
+def test_postparsing_hook_wrong_parameter_type():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_postparsing_hook(app.postparse_hook_wrong_parameter_type)
+
+def test_postparsing_hook_undeclared_return_type():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_postparsing_hook(app.postparse_hook_undeclared_return_type)
+
+def test_postparsing_hook_wrong_return_type():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_postparsing_hook(app.postparse_hook_wrong_return_type)
+
 def test_postparsing_hook(capsys):
     app = PluggedApp()
     app.onecmd_plus_hooks('say hello')

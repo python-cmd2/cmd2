@@ -1691,14 +1691,19 @@ class Cmd(cmd.Cmd):
         try:
             statement = self._complete_statement(line)
             # call the postparsing hooks
+            params = plugin.PostparsingData(False, statement)
             for func in self._postparsing_hooks:
-                (stop, statement) = func(statement)
-                if stop:
+                params = func(params)
+                if params.stop:
                     break
-            if not stop:
-                (stop, statement) = self.postparsing_precmd(statement)
+            # postparsing_precmd is deprecated
+            if not params.stop:
+                (params.stop, params.statement) = self.postparsing_precmd(params.statement)
+            # unpack the data object
+            statement = params.statement
+            stop = params.stop
             if stop:
-                # we need to not run the command, but
+                # we should not run the command, but
                 # we need to run the finalization hooks
                 raise EmptyStatement
 
@@ -3162,10 +3167,25 @@ Script should contain one command per line, just like command would be typed in 
         self._validate_prepostloop_callable(func)
         self._postloop_hooks.append(func)
 
+    @classmethod
+    def _validate_postparsing_callable(cls, func):
+        """Check parameter and return values for postparsing hooks"""
+        cls._validate_callable_param_count(func, 1)
+        signature = inspect.signature(func)
+        _, param = list(signature.parameters.items())[0]
+        if param.annotation != plugin.PostparsingData:
+            raise TypeError("{} must have one parameter declared with type 'cmd2.plugin.PostparsingData'".format(
+                func.__name__
+            ))
+        if signature.return_annotation != plugin.PostparsingData:
+            raise TypeError("{} must declare return a return type of 'cmd2.plugin.PostparsingData'".format(
+                func.__name__
+            ))
+
     def register_postparsing_hook(self, func):
         """Register a function to be called after parsing user input but before running the command"""
+        self._validate_postparsing_callable(func)
         self._postparsing_hooks.append(func)
-        # TODO check signature of registered func and throw error if it's wrong
 
     def register_precmd_hook(self, func):
         """Register a function to be called before the command function."""
