@@ -126,19 +126,19 @@ class Plugin:
         "A precommand hook with too many parameters"
         return one
 
-    def precmd_hook_no_parameter_type(self, mydat) -> plugin.PrecommandData:
+    def precmd_hook_no_parameter_type(self, data) -> plugin.PrecommandData:
         "A precommand hook with no type annotation on the parameter"
-        return mydat
+        return data
 
-    def precmd_hook_wrong_parameter_type(self, mydat: str) -> plugin.PrecommandData:
+    def precmd_hook_wrong_parameter_type(self, data: str) -> plugin.PrecommandData:
         "A precommand hook with the incorrect type annotation on the parameter"
-        return mydat
+        return data
 
-    def precmd_hook_no_return_type(self, mydat: plugin.PrecommandData):
+    def precmd_hook_no_return_type(self, data: plugin.PrecommandData):
         "A precommand hook with no type annotation on the return value"
-        return mydat
+        return data
 
-    def precmd_hook_wrong_return_type(self, mydat: plugin.PrecommandData) -> cmd2.Statement:
+    def precmd_hook_wrong_return_type(self, data: plugin.PrecommandData) -> cmd2.Statement:
         return self.statement_parser.parse('hi there')
 
 

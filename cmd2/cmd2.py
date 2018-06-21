@@ -1715,10 +1715,10 @@ class Cmd(cmd.Cmd):
                     self._last_result = None
 
                 # precommand hooks
+                data = plugin.PrecommandData(statement)
                 for func in self._precmd_hooks:
-                    data = plugin.PrecommandData(statement)
-                    result = func(data)
-                    statement = result.statement
+                    data = func(data)
+                statement = data.statement
                 # call precmd() for compatibility with cmd.Cmd
                 statement = self.precmd(statement)
 
