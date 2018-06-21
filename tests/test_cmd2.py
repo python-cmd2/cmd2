@@ -22,6 +22,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
+from cmd2 import clipboard
 from cmd2 import utils
 from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
     HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
@@ -735,7 +736,7 @@ def test_pipe_to_shell_error(base_app, capsys):
     assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 
-@pytest.mark.skipif(not cmd2.cmd2.can_clip,
+@pytest.mark.skipif(not clipboard.can_clip,
                     reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
     # Test writing to the PasteBuffer/Clipboard
@@ -1454,13 +1455,12 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
     assert statement.command == command
 
 
-def test_clipboard_failure(capsys):
+def test_clipboard_failure(base_app, capsys):
     # Force cmd2 clipboard to be disabled
-    cmd2.cmd2.disable_clip()
-    app = cmd2.Cmd()
+    base_app.can_clip = False
 
     # Redirect command output to the clipboard when a clipboard isn't present
-    app.onecmd_plus_hooks('help > ')
+    base_app.onecmd_plus_hooks('help > ')
 
     # Make sure we got the error output
     out, err = capsys.readouterr()
