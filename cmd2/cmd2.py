@@ -1691,17 +1691,17 @@ class Cmd(cmd.Cmd):
         try:
             statement = self._complete_statement(line)
             # call the postparsing hooks
-            params = plugin.PostparsingData(False, statement)
+            data = plugin.PostparsingData(False, statement)
             for func in self._postparsing_hooks:
-                params = func(params)
-                if params.stop:
+                data = func(data)
+                if data.stop:
                     break
             # postparsing_precmd is deprecated
-            if not params.stop:
-                (params.stop, params.statement) = self.postparsing_precmd(params.statement)
+            if not data.stop:
+                (data.stop, data.statement) = self.postparsing_precmd(data.statement)
             # unpack the data object
-            statement = params.statement
-            stop = params.stop
+            statement = data.statement
+            stop = data.stop
             if stop:
                 # we should not run the command, but
                 # we need to run the finalization hooks

@@ -52,44 +52,44 @@ class Plugin:
     # Postparsing hooks
     #
     ###
-    def postparse_hook(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
+    def postparse_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         "A postparsing hook"
         self.called_postparsing += 1
-        return params
+        return data
 
-    def postparse_hook_stop(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
+    def postparse_hook_stop(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         "A postparsing hook with requests application exit"
         self.called_postparsing += 1
-        params.stop = True
-        return params
+        data.stop = True
+        return data
 
-    def postparse_hook_emptystatement(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
+    def postparse_hook_emptystatement(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         "A postparsing hook with raises an EmptyStatement exception"
         self.called_postparsing += 1
         raise cmd2.EmptyStatement
 
-    def postparse_hook_exception(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
+    def postparse_hook_exception(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         "A postparsing hook which raises an exception"
         self.called_postparsing += 1
         raise ValueError
 
-    def postparse_hook_too_many_parameters(self, param1, param2) -> cmd2.plugin.PostparsingData:
+    def postparse_hook_too_many_parameters(self, data1, data2) -> cmd2.plugin.PostparsingData:
         "A postparsing hook with too many parameters"
         pass
 
-    def postparse_hook_undeclared_parameter_type(self, param) -> cmd2.plugin.PostparsingData:
+    def postparse_hook_undeclared_parameter_type(self, data) -> cmd2.plugin.PostparsingData:
         "A postparsing hook with an undeclared parameter type"
         pass
 
-    def postparse_hook_wrong_parameter_type(self, params: str) -> cmd2.plugin.PostparsingData:
+    def postparse_hook_wrong_parameter_type(self, data: str) -> cmd2.plugin.PostparsingData:
         "A postparsing hook with the wrong parameter type"
         pass
 
-    def postparse_hook_undeclared_return_type(self, params: cmd2.plugin.PostparsingData):
+    def postparse_hook_undeclared_return_type(self, data: cmd2.plugin.PostparsingData):
         "A postparsing hook with an undeclared return type"
         pass
 
-    def postparse_hook_wrong_return_type(self, params: cmd2.plugin.PostparsingData) -> str:
+    def postparse_hook_wrong_return_type(self, data: cmd2.plugin.PostparsingData) -> str:
         "A postparsing hook with the wrong return type"
         pass
 
