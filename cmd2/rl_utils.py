@@ -75,16 +75,17 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
         readline_lib = ctypes.CDLL(readline.__file__)
 
 
+# noinspection PyProtectedMember
 def rl_force_redisplay() -> None:
     """
-    Causes readline to redraw prompt and input line
+    Causes readline to display the prompt and input text wherever the cursor is and start
+    reading input from this location. This is the proper way to restore the input line after
+    printing to the screen
     """
     if not sys.stdout.isatty():
         return
 
     if rl_type == RlType.GNU:  # pragma: no cover
-        # rl_forced_update_display() is the proper way to redraw the prompt and line, but we
-        # have to use ctypes to do it since Python's readline API does not wrap the function
         readline_lib.rl_forced_update_display()
 
         # After manually updating the display, readline asks that rl_display_fixed be set to 1 for efficiency
@@ -92,5 +93,6 @@ def rl_force_redisplay() -> None:
         display_fixed.value = 1
 
     elif rl_type == RlType.PYREADLINE:  # pragma: no cover
-        # noinspection PyProtectedMember
+        # Call _print_prompt() first to set the new location of the prompt
         readline.rl.mode._print_prompt()
+        readline.rl.mode._update_line()
