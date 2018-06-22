@@ -1726,8 +1726,12 @@ class Cmd(cmd.Cmd):
                 stop = self.onecmd(statement)
 
                 # postcommand hooks
+                data = plugin.PostcommandData(stop, statement)
                 for func in self._postcmd_hooks:
-                    stop = func(stop, statement)
+                    data = func(data)
+                # retrieve the final value of stop, ignoring any statement modification from the hooks
+                stop = data.stop
+                # call postcmd() for compatibility with cmd.Cmd
                 stop = self.postcmd(stop, statement)
 
                 if self.timing:
@@ -1738,6 +1742,7 @@ class Cmd(cmd.Cmd):
         except EmptyStatement:
             pass
         except ValueError as ex:
+            # TODO move this except to way above, so ValueError is only caught for shlex errors
             # If shlex.split failed on syntax, let user know whats going on
             self.perror("Invalid syntax: {}".format(ex), traceback_war=False)
         except Exception as ex:
@@ -3187,38 +3192,42 @@ Script should contain one command per line, just like command would be typed in 
         self._validate_postparsing_callable(func)
         self._postparsing_hooks.append(func)
 
-    def register_precmd_hook(self, func):
-        """Register a function to be called before the command function."""
+    @classmethod
+    def _validate_prepostcmd_hook(cls, func, data_type):
         signature = inspect.signature(func)
         # validate that the callable has the right number of parameters
-        self._validate_callable_param_count(func, 1)
+        cls._validate_callable_param_count(func, 1)
         # validate the parameter has the right annotation
         paramname = list(signature.parameters.keys())[0]
         param = signature.parameters[paramname]
-        if param.annotation != plugin.PrecommandData:
+        if param.annotation != data_type:
             raise TypeError('argument 1 of {} has incompatible type {}, expected {}'.format(
                 func.__name__,
                 param.annotation,
-                plugin.PrecommandData,
+                data_type,
             ))
         # validate the return value has the right annotation
         if signature.return_annotation == signature.empty:
             raise TypeError('{} does not have a declared return type, expected {}'.format(
                 func.__name__,
-                plugin.PrecommandData,
+                data_type,
             ))
-        if signature.return_annotation != plugin.PrecommandData:
+        if signature.return_annotation != data_type:
             raise TypeError('{} has incompatible return type {}, expected {}'.format(
                 func.__name__,
                 signature.return_annotation,
-                plugin.PrecommandData,
+                data_type,
             ))
+
+    def register_precmd_hook(self, func):
+        """Register a hook to be called before the command function."""
+        self._validate_prepostcmd_hook(func, plugin.PrecommandData)
         self._precmd_hooks.append(func)
 
     def register_postcmd_hook(self, func):
-        """Register a function to be called after the command function."""
+        """Register a hook to be called after the command function."""
+        self._validate_prepostcmd_hook(func, plugin.PostcommandData)
         self._postcmd_hooks.append(func)
-        # TODO check signature of registered func and throw error if it's wrong
 
 
 class History(list):

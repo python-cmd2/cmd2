@@ -14,8 +14,9 @@ class PrecommandData():
 
 @attr.s
 class PostcommandData():
-    stop = attr.ib(default=False)
+    stop = attr.ib()
+    statement = attr.ib()
 
 @attr.s
 class CommandFinalizationData():
-    stop = attr.ib(default=False)
+    stop = attr.ib()

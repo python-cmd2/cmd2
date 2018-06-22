@@ -196,10 +196,10 @@ Once output is redirected and the timer started, all the hooks registered with
             super().__init__(*args, **kwargs)
             self.register_precmd_hook(self.myhookmethod)
 
-        def myhookmethod(self, params: cmd2.plugin.PrecommandData) -> cmd2.plugin.PrecommandData:
+        def myhookmethod(self, data: cmd2.plugin.PrecommandData) -> cmd2.plugin.PrecommandData:
             # the statement object created from the user input
-            # is available as params.statement
-            return params
+            # is available as data.statement
+            return data
 
 ``register_precmd_hook()`` checks the method signature of the passed callable,
 and raises a ``TypeError`` if it has the wrong number of parameters. It will
@@ -208,7 +208,7 @@ as ``PrecommandData``.
 
 You may choose to modify the user input by creating a new ``Statement`` with
 different properties (see above). If you do so, assign your new ``Statement``
-object to ``params.statement``.
+object to ``data.statement``.
 
 The precommand hook must return a ``PrecommandData`` object. You don't have to
 create this object from scratch, you can just return the one passed into the hook.
@@ -227,22 +227,23 @@ method`` has been called and returns, all postcommand hooks are called. If
 output was redirected by the user, it is still redirected, and the command timer
 is still running.
 
-Here's how to define a register a postcommand hook::
+Here's how to define and register a postcommand hook::
 
     class App(cmd2.Cmd):
         def __init__(self, *args, *kwargs):
             super().__init__(*args, **kwargs)
             self.register_postcmd_hook(self.myhookmethod)
 
-        def myhookmethod(self, stop, statement):
+        def myhookmethod(self, data: cmd2.plugin.PostcommandData) -> cmd2.plugin.PostcommandData:
             return stop
 
-Your hook will be passed the statement object, which describes the command which
-was executed. If your postcommand hook method gets called, you are guaranteed
-that the command method was called, and that it didn't raise an exception.
+Your hook will be passed a ``PostcommandData`` object, which has a ``statement``
+attribute that describes the command which was executed. If your postcommand
+hook method gets called, you are guaranteed that the command method was called,
+and that it didn't raise an exception.
 
-If any postcommand hook raises an exception, no further postcommand hook methods
-will be called.
+If any postcommand hook raises an exception, the exception will be displayed to the user, and no further postcommand hook methods
+will be called. Command finalization hooks, if any, will be called.
 
 After all registered precommand hooks have been called,
 ``self.postcmd(statement)`` will be called to retain full backward compatibility
