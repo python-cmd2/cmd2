@@ -22,7 +22,7 @@ from .argparse_completer import _RangeAction
 from .utils import namedtuple_with_defaults
 
 
-class CommandResult(namedtuple_with_defaults('CmdResult', ['stdout', 'stderr', 'data'])):
+class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr', 'data'])):
     """Encapsulates the results from a command.
 
     Named tuple attributes

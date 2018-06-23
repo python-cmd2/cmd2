@@ -3219,7 +3219,7 @@ class Statekeeper(object):
 
 
 class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
-    """Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
+    """DEPRECATED: Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
 
     This is provided as a convenience and an example for one possible way for end users to store results in
     the self._last_result attribute of cmd2.Cmd class instances.  See the "python_scripting.py" example for how it can
