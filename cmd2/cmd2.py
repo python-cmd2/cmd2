@@ -304,7 +304,6 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
     # Attributes used to configure the StatementParser, best not to change these at runtime
-    blankLinesAllowed = False
     multiline_commands = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
