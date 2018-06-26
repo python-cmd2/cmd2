@@ -30,29 +30,13 @@ except ImportError:
         BACK_ALT = ''
 
 # Format to use for the grid style when displaying tables with the tableformatter module
-grid_style = tf.AlternatingRowGrid(BACK_PRI, BACK_ALT) # Use rows of alternating color to assist as a visual guide
+grid_style = tf.AlternatingRowGrid(BACK_PRI, BACK_ALT)  # Use rows of alternating color to assist as a visual guide
 
 # Create a function to format a fixed-width table for pretty-printing using the desired table format
 table = functools.partial(tf.generate_table, grid_style=grid_style)
 
 
-# Population data from Wikipedia: https://en.wikipedia.org/wiki/List_of_cities_proper_by_population
-EXAMPLE_DATA = [['Shanghai', 'Shanghai', 'China', 'Asia', 24183300, 6340.5],
-                ['Beijing', 'Hebei', 'China', 'Asia', 20794000, 1749.57],
-                ['Karachi', 'Sindh', 'Pakistan', 'Asia', 14910352, 615.58],
-                ['Shenzen', 'Guangdong', 'China', 'Asia', 13723000, 1493.32],
-                ['Guangzho', 'Guangdong', 'China', 'Asia', 13081000, 1347.81],
-                ['Mumbai', 'Maharashtra', 'India', 'Asia', 12442373, 465.78],
-                ['Istanbul', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29],
-                ]
-
-# Calculate population density
-for row in EXAMPLE_DATA:
-    row.append(row[-2]/row[-1])
-
-
-# TODO: Color row text foreground based on population density
-
+# Formatter functions
 
 def no_dec(num: float) -> str:
     """Format a floating point number with no decimal places."""
@@ -64,15 +48,92 @@ def two_dec(num: float) -> str:
     return "{0:.2f}".format(num)
 
 
+# Population data from Wikipedia: https://en.wikipedia.org/wiki/List_of_cities_proper_by_population
+
+
+# ############ Table data formatted as an iterable of iterable fields ############
+
+EXAMPLE_ITERABLE_DATA = [['Shanghai', 'Shanghai', 'China', 'Asia', 24183300, 6340.5],
+                         ['Beijing', 'Hebei', 'China', 'Asia', 20794000, 1749.57],
+                         ['Karachi', 'Sindh', 'Pakistan', 'Asia', 14910352, 615.58],
+                         ['Shenzen', 'Guangdong', 'China', 'Asia', 13723000, 1493.32],
+                         ['Guangzho', 'Guangdong', 'China', 'Asia', 13081000, 1347.81],
+                         ['Mumbai', 'Maharashtra', 'India', 'Asia', 12442373, 465.78],
+                         ['Istanbul', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29],
+                         ]
+
+# Calculate population density
+for row in EXAMPLE_ITERABLE_DATA:
+    row.append(row[-2]/row[-1])
+
+
 # # Column headers plus optional formatting info for each column
 columns = [tf.Column('City', header_halign=tf.ColumnAlignment.AlignCenter),
            tf.Column('Province', header_halign=tf.ColumnAlignment.AlignCenter),
            'Country',   # NOTE: If you don't need any special effects, you can just pass a string
            tf.Column('Continent', cell_halign=tf.ColumnAlignment.AlignCenter),
            tf.Column('Population', cell_halign=tf.ColumnAlignment.AlignRight, formatter=tf.FormatCommas()),
-           tf.Column('Area (km^2)', cell_halign=tf.ColumnAlignment.AlignRight, formatter=two_dec),
-           tf.Column('Pop. Density (/km^2)', width=12, cell_halign=tf.ColumnAlignment.AlignRight, formatter=no_dec),
+           tf.Column('Area (km²)', width=7, header_halign=tf.ColumnAlignment.AlignCenter,
+                     cell_halign=tf.ColumnAlignment.AlignRight, formatter=two_dec),
+           tf.Column('Pop. Density (/km²)', width=12, header_halign=tf.ColumnAlignment.AlignCenter,
+                     cell_halign=tf.ColumnAlignment.AlignRight, formatter=no_dec),
            ]
+
+
+# ######## Table data formatted as an iterable of python objects #########
+
+class CityInfo(object):
+    """City information container"""
+    def __init__(self, city: str, province: str, country: str, continent: str, population: int, area: float):
+        self.city = city
+        self.province = province
+        self.country = country
+        self.continent = continent
+        self._population = population
+        self._area = area
+
+    def get_population(self):
+        """Population of the city"""
+        return self._population
+
+    def get_area(self):
+        """Area of city in km²"""
+        return self._area
+
+
+def pop_density(data: CityInfo):
+    """Calculate the population density from the data entry"""
+    if isinstance(data, CityInfo):
+        return no_dec(data.get_population() / data.get_area())
+
+    return ''
+
+
+EXAMPLE_OBJECT_DATA = [CityInfo('Shanghai', 'Shanghai', 'China', 'Asia', 24183300, 6340.5),
+                       CityInfo('Beijing', 'Hebei', 'China', 'Asia', 20794000, 1749.57),
+                       CityInfo('Karachi', 'Sindh', 'Pakistan', 'Asia', 14910352, 615.58),
+                       CityInfo('Shenzen', 'Guangdong', 'China', 'Asia', 13723000, 1493.32),
+                       CityInfo('Guangzho', 'Guangdong', 'China', 'Asia', 13081000, 1347.81),
+                       CityInfo('Mumbai', 'Maharashtra', 'India', 'Asia', 12442373, 465.78),
+                       CityInfo('Istanbul', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29),
+                       ]
+
+# If table entries are python objects, all columns must be defined with the object attribute to query for each field
+#   - attributes can be fields or functions. If a function is provided, the formatter will automatically call
+#     the function to retrieve the value
+obj_cols = [tf.Column('City', attrib='city', header_halign=tf.ColumnAlignment.AlignCenter),
+            tf.Column('Province', attrib='province', header_halign=tf.ColumnAlignment.AlignCenter),
+            tf.Column('Country', attrib='country'),
+            tf.Column('Continent', attrib='continent', cell_halign=tf.ColumnAlignment.AlignCenter),
+            tf.Column('Population', attrib='get_population', cell_halign=tf.ColumnAlignment.AlignRight,
+                      formatter=tf.FormatCommas()),
+            tf.Column('Area (km²)', attrib='get_area', width=7, header_halign=tf.ColumnAlignment.AlignCenter,
+                      cell_halign=tf.ColumnAlignment.AlignRight, formatter=two_dec),
+            tf.Column('Pop. Density (/km²)', width=12, header_halign=tf.ColumnAlignment.AlignCenter,
+                      cell_halign=tf.ColumnAlignment.AlignRight, obj_formatter=pop_density),
+            ]
+
+# TODO: Color row text foreground based on population density
 
 
 class TableDisplay(cmd2.Cmd):
@@ -98,7 +159,11 @@ class TableDisplay(cmd2.Cmd):
 
     def do_table(self, _):
         """Display data on the Earth's most populated cities in a table."""
-        self.ptable(EXAMPLE_DATA, columns)
+        self.ptable(EXAMPLE_ITERABLE_DATA, columns)
+
+    def do_object_table(self, _):
+        """Display data on the Earth's most populated cities in a table."""
+        self.ptable(EXAMPLE_OBJECT_DATA, obj_cols)
 
 
 if __name__ == '__main__':
