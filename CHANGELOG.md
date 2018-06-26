@@ -9,6 +9,11 @@
     * Added ``chop`` argument to ``cmd2.Cmd.ppaged()`` method for displaying output using a pager
         * If ``chop`` is ``False``, then ``self.pager`` is used as the pager
         * Otherwise ``self.pager_chop`` is used as the pager
+* Deprecations
+    * The ``CmdResult`` helper class is *deprecated* and replaced by the improved ``CommandResult`` class
+        * ``CommandResult`` has the following attributes: **stdout**, **stderr**, and **data**
+            * ``CmdResult`` had attributes of: **out**, **err**, **war**
+        * ``CmdResult`` will be deleted in the next release
 
 ## 0.8.8 (TBD, 2018)
 * Bug Fixes
