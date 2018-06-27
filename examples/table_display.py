@@ -50,14 +50,13 @@ def two_dec(num: float) -> str:
 
 # Population data from Wikipedia: https://en.wikipedia.org/wiki/List_of_cities_proper_by_population
 
-
 # ############ Table data formatted as an iterable of iterable fields ############
 EXAMPLE_ITERABLE_DATA = [['Shanghai (上海)', 'Shanghai', 'China', 'Asia', 24183300, 6340.5],
                          ['Beijing (北京市)', 'Hebei', 'China', 'Asia', 20794000, 1749.57],
                          ['Karachi (کراچی)', 'Sindh', 'Pakistan', 'Asia', 14910352, 615.58],
                          ['Shenzen (深圳市)', 'Guangdong', 'China', 'Asia', 13723000, 1493.32],
                          ['Guangzho (广州市)', 'Guangdong', 'China', 'Asia', 13081000, 1347.81],
-                         ['Mumbai (बॉम्बे हिंदी)', 'Maharashtra', 'India', 'Asia', 12442373, 465.78],
+                         ['Mumbai (मुंबई)', 'Maharashtra', 'India', 'Asia', 12442373, 465.78],
                          ['Istanbul (İstanbuld)', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29],
                          ]
 
