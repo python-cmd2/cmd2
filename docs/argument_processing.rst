@@ -333,7 +333,7 @@ Here's what it looks like::
         if unknown:
             self.perror("dir does not take any positional arguments:", traceback_war=False)
             self.do_help('dir')
-            self._last_result = CmdResult('', 'Bad arguments')
+            self._last_result = CommandResult('', 'Bad arguments')
             return
 
         # Get the contents as a list

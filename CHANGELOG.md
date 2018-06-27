@@ -3,6 +3,17 @@
     * Fixed issue where piping and redirecting did not work correctly with paths that had spaces
 * Enhancements
     * Added ability to print a header above tab-completion suggestions using `completion_header` member
+    * Added ``pager`` and ``pager_chop`` attributes to the ``cmd2.Cmd`` class
+        * ``pager`` defaults to **less -RXF** on POSIX and **more** on Windows
+        * ``pager_chop`` defaults to **less -SRXF** on POSIX and **more** on Windows
+    * Added ``chop`` argument to ``cmd2.Cmd.ppaged()`` method for displaying output using a pager
+        * If ``chop`` is ``False``, then ``self.pager`` is used as the pager
+        * Otherwise ``self.pager_chop`` is used as the pager
+* Deprecations
+    * The ``CmdResult`` helper class is *deprecated* and replaced by the improved ``CommandResult`` class
+        * ``CommandResult`` has the following attributes: **stdout**, **stderr**, and **data**
+            * ``CmdResult`` had attributes of: **out**, **err**, **war**
+        * ``CmdResult`` will be deleted in the next release
 
 ## 0.8.8 (TBD, 2018)
 * Bug Fixes

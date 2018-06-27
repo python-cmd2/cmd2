@@ -56,7 +56,7 @@ class CmdLineApp(cmd2.Cmd):
         if not arglist or len(arglist) != 1:
             self.perror("cd requires exactly 1 argument:", traceback_war=False)
             self.do_help('cd')
-            self._last_result = cmd2.CmdResult('', 'Bad arguments')
+            self._last_result = cmd2.CommandResult('', 'Bad arguments')
             return
 
         # Convert relative paths to absolute paths
@@ -64,7 +64,8 @@ class CmdLineApp(cmd2.Cmd):
 
         # Make sure the directory exists, is a directory, and we have read access
         out = ''
-        err = ''
+        err = None
+        data = None
         if not os.path.isdir(path):
             err = '{!r} is not a directory'.format(path)
         elif not os.access(path, os.R_OK):
@@ -77,10 +78,11 @@ class CmdLineApp(cmd2.Cmd):
             else:
                 out = 'Successfully changed directory to {!r}\n'.format(path)
                 self.stdout.write(out)
+                data = path
 
         if err:
             self.perror(err, traceback_war=False)
-        self._last_result = cmd2.CmdResult(out, err)
+        self._last_result = cmd2.CommandResult(out, err, data)
 
     # Enable tab completion for cd command
     def complete_cd(self, text, line, begidx, endidx):
@@ -96,7 +98,7 @@ class CmdLineApp(cmd2.Cmd):
         if unknown:
             self.perror("dir does not take any positional arguments:", traceback_war=False)
             self.do_help('dir')
-            self._last_result = cmd2.CmdResult('', 'Bad arguments')
+            self._last_result = cmd2.CommandResult('', 'Bad arguments')
             return
 
         # Get the contents as a list
@@ -109,7 +111,7 @@ class CmdLineApp(cmd2.Cmd):
             self.stdout.write(fmt.format(f))
         self.stdout.write('\n')
 
-        self._last_result = cmd2.CmdResult(contents)
+        self._last_result = cmd2.CommandResult(data=contents)
 
 
 if __name__ == '__main__':

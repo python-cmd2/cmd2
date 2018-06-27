@@ -41,16 +41,15 @@ import shlex
 import sys
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Union
 
-import pyperclip
-
 from . import constants
 from . import utils
-
-from cmd2.parsing import StatementParser, Statement
+from .argparse_completer import AutoCompleter, ACArgumentParser
+from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
+from .parsing import StatementParser, Statement
 
 # Set up readline
 from .rl_utils import rl_type, RlType
-if rl_type == RlType.NONE: # pragma: no cover
+if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
@@ -78,15 +77,6 @@ else:
 
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
         orig_rl_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-
-from .argparse_completer import AutoCompleter, ACArgumentParser
-
-# Newer versions of pyperclip are released as a single file, but older versions had a more complicated structure
-try:
-    from pyperclip.exceptions import PyperclipException
-except ImportError: # pragma: no cover
-    # noinspection PyUnresolvedReferences
-    from pyperclip import PyperclipException
 
 # Collection is a container that is sizable and iterable
 # It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
@@ -121,7 +111,7 @@ ipython_available = True
 try:
     # noinspection PyUnresolvedReferences,PyPackageRequirements
     from IPython import embed
-except ImportError: # pragma: no cover
+except ImportError:  # pragma: no cover
     ipython_available = False
 
 __version__ = '0.9.2a'
@@ -271,48 +261,6 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     return arg_decorator
 
 
-# Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux
-# noinspection PyUnresolvedReferences
-try:
-    # Get the version of the pyperclip module as a float
-    pyperclip_ver = float('.'.join(pyperclip.__version__.split('.')[:2]))
-
-    # The extraneous output bug in pyperclip on Linux using xclip was fixed in more recent versions of pyperclip
-    if sys.platform.startswith('linux') and pyperclip_ver < 1.6:
-        # Avoid extraneous output to stderr from xclip when clipboard is empty at cost of overwriting clipboard contents
-        pyperclip.copy('')
-    else:
-        # Try getting the contents of the clipboard
-        _ = pyperclip.paste()
-except PyperclipException:
-    can_clip = False
-else:
-    can_clip = True
-
-
-def disable_clip() -> None:
-    """ Allows user of cmd2 to manually disable clipboard cut-and-paste functionality."""
-    global can_clip
-    can_clip = False
-
-
-def get_paste_buffer() -> str:
-    """Get the contents of the clipboard / paste buffer.
-
-    :return: contents of the clipboard
-    """
-    pb_str = pyperclip.paste()
-    return pb_str
-
-
-def write_to_paste_buffer(txt: str) -> None:
-    """Copy text to the clipboard / paste buffer.
-
-    :param txt: text to copy to the clipboard
-    """
-    pyperclip.copy(txt)
-
-
 class EmbeddedConsoleExit(SystemExit):
     """Custom exception class for use with the py command."""
     pass
@@ -356,7 +304,6 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
     # Attributes used to configure the StatementParser, best not to change these at runtime
-    blankLinesAllowed = False
     multiline_commands = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
@@ -505,7 +452,7 @@ class Cmd(cmd.Cmd):
         if startup_script is not None:
             startup_script = os.path.expanduser(startup_script)
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
-                self.cmdqueue.append('load {}'.format(startup_script))
+                self.cmdqueue.append("load '{}'".format(startup_script))
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
@@ -533,6 +480,21 @@ class Cmd(cmd.Cmd):
         # Used by functions like path_complete() and delimiter_complete() to properly
         # quote matches that are completed in a delimited fashion
         self.matches_delimited = False
+
+        # Set the pager(s) for use with the ppaged() method for displaying output using a pager
+        if sys.platform.startswith('win'):
+            self.pager = self.pager_chop = 'more'
+        else:
+            # Here is the meaning of the various flags we are using with the less command:
+            # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
+            # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
+            # -X disables sending the termcap initialization and deinitialization strings to the terminal
+            # -F causes less to automatically exit if the entire file can be displayed on the first screen
+            self.pager = 'less -RXF'
+            self.pager_chop = 'less -SRXF'
+
+        # This boolean flag determines whether or not the cmd2 application can interact with the clipboard
+        self.can_clip = can_clip
 
     # -----  Methods related to presenting output to the user -----
 
@@ -608,14 +570,20 @@ class Cmd(cmd.Cmd):
             else:
                 sys.stderr.write("{}\n".format(msg))
 
-    def ppaged(self, msg: str, end: str='\n') -> None:
+    def ppaged(self, msg: str, end: str='\n', chop: bool=False) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
-        :param msg: str - message to print to current stdout - anything convertible to a str with '{}'.format() is OK
-        :param end: str - string appended after the end of the message if not already present, default a newline
+        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param end: string appended after the end of the message if not already present, default a newline
+        :param chop: True  -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
+                              - truncated text is still accessible by scrolling with the right & left arrow keys
+                              - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
+                     False -> causes lines longer than the screen width to wrap to the next line
+                              - wrapping is ideal when you want to avoid users having to use horizontal scrolling
+                     WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
         import subprocess
         if msg is not None and msg != '':
@@ -635,17 +603,10 @@ class Cmd(cmd.Cmd):
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self.redirecting and not self._in_py and not self._script_dir:
-
-                    if sys.platform.startswith('win'):
-                        pager_cmd = 'more'
-                    else:
-                        # Here is the meaning of the various flags we are using with the less command:
-                        # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
-                        # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
-                        # -X disables sending the termcap initialization and deinitialization strings to the terminal
-                        # -F causes less to automatically exit if the entire file can be displayed on the first screen
-                        pager_cmd = 'less -SRXF'
-                    self.pipe_proc = subprocess.Popen(pager_cmd, shell=True, stdin=subprocess.PIPE)
+                    pager = self.pager
+                    if chop:
+                        pager = self.pager_chop
+                    self.pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                     try:
                         self.pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
                         self.pipe_proc.stdin.close()
@@ -1870,7 +1831,7 @@ class Cmd(cmd.Cmd):
                 raise ex
         elif statement.output:
             import tempfile
-            if (not statement.output_to) and (not can_clip):
+            if (not statement.output_to) and (not self.can_clip):
                 raise EnvironmentError("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable")
             self.kept_state = Statekeeper(self, ('stdout',))
             self.kept_sys = Statekeeper(sys, ('stdout',))
@@ -3257,7 +3218,7 @@ class Statekeeper(object):
 
 
 class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
-    """Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
+    """DEPRECATED: Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
 
     This is provided as a convenience and an example for one possible way for end users to store results in
     the self._last_result attribute of cmd2.Cmd class instances.  See the "python_scripting.py" example for how it can

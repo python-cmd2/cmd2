@@ -22,6 +22,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
+from cmd2 import clipboard
 from cmd2 import utils
 from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
     HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
@@ -735,7 +736,7 @@ def test_pipe_to_shell_error(base_app, capsys):
     assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
 
 
-@pytest.mark.skipif(not cmd2.cmd2.can_clip,
+@pytest.mark.skipif(not clipboard.can_clip,
                     reason="Pyperclip could not find a copy/paste mechanism for your system")
 def test_send_to_paste_buffer(base_app):
     # Test writing to the PasteBuffer/Clipboard
@@ -1454,13 +1455,12 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
     assert statement.command == command
 
 
-def test_clipboard_failure(capsys):
+def test_clipboard_failure(base_app, capsys):
     # Force cmd2 clipboard to be disabled
-    cmd2.cmd2.disable_clip()
-    app = cmd2.Cmd()
+    base_app.can_clip = False
 
     # Redirect command output to the clipboard when a clipboard isn't present
-    app.onecmd_plus_hooks('help > ')
+    base_app.onecmd_plus_hooks('help > ')
 
     # Make sure we got the error output
     out, err = capsys.readouterr()
@@ -1468,32 +1468,33 @@ def test_clipboard_failure(capsys):
     assert "Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable" in err
 
 
-class CmdResultApp(cmd2.Cmd):
+class CommandResultApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def do_affirmative(self, arg):
-        self._last_result = cmd2.CmdResult(arg)
+        self._last_result = cmd2.CommandResult(arg, data=True)
 
     def do_negative(self, arg):
-        self._last_result = cmd2.CmdResult('', arg)
+        self._last_result = cmd2.CommandResult(arg)
 
 @pytest.fixture
-def cmdresult_app():
-    app = CmdResultApp()
+def commandresult_app():
+    app = CommandResultApp()
     app.stdout = StdOut()
     return app
 
-def test_cmdresult(cmdresult_app):
+def test_commandresult_truthy(commandresult_app):
     arg = 'foo'
-    run_cmd(cmdresult_app, 'affirmative {}'.format(arg))
-    assert cmdresult_app._last_result
-    assert cmdresult_app._last_result == cmd2.CmdResult(arg)
+    run_cmd(commandresult_app, 'affirmative {}'.format(arg))
+    assert commandresult_app._last_result
+    assert commandresult_app._last_result == cmd2.CommandResult(arg, data=True)
 
+def test_commandresult_falsy(commandresult_app):
     arg = 'bar'
-    run_cmd(cmdresult_app, 'negative {}'.format(arg))
-    assert not cmdresult_app._last_result
-    assert cmdresult_app._last_result == cmd2.CmdResult('', arg)
+    run_cmd(commandresult_app, 'negative {}'.format(arg))
+    assert not commandresult_app._last_result
+    assert commandresult_app._last_result == cmd2.CommandResult(arg)
 
 
 def test_is_text_file_bad_input(base_app):
