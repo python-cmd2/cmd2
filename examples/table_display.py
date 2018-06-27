@@ -20,7 +20,7 @@ import tableformatter as tf
 try:
     from colored import bg
     BACK_PRI = bg(4)
-    BACK_ALT = bg(2)
+    BACK_ALT = bg(22)
 except ImportError:
     try:
         from colorama import Back
