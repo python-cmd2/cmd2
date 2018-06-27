@@ -452,7 +452,7 @@ class Cmd(cmd.Cmd):
         if startup_script is not None:
             startup_script = os.path.expanduser(startup_script)
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
-                self.cmdqueue.append('load {}'.format(startup_script))
+                self.cmdqueue.append("load '{}'".format(startup_script))
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
