@@ -16,6 +16,7 @@ import argparse
 import cmd2
 import tableformatter as tf
 
+# Configure colors for when users chooses the "-c" flag to enable color in the table output
 try:
     from colored import bg
     BACK_PRI = bg(4)
@@ -28,9 +29,6 @@ except ImportError:
     except ImportError:
         BACK_PRI = ''
         BACK_ALT = ''
-
-# Format to use for the grid style when displaying tables with the tableformatter module
-DEFAULT_GRID = tf.AlternatingRowGrid(BACK_PRI, BACK_ALT)  # Use rows of alternating color to assist as a visual guide
 
 
 # Formatter functions
@@ -54,24 +52,24 @@ EXAMPLE_ITERABLE_DATA = [['Shanghai (上海)', 'Shanghai', 'China', 'Asia', 2418
                          ['Guangzho (广州市)', 'Guangdong', 'China', 'Asia', 13081000, 1347.81],
                          ['Mumbai (मुंबई)', 'Maharashtra', 'India', 'Asia', 12442373, 465.78],
                          ['Istanbul (İstanbuld)', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29],
-                         ]
+                        ]
 
 # Calculate population density
 for row in EXAMPLE_ITERABLE_DATA:
     row.append(row[-2]/row[-1])
 
 
-# # Column headers plus optional formatting info for each column
-columns = [tf.Column('City', width=11, header_halign=tf.ColumnAlignment.AlignCenter),
+# Column headers plus optional formatting info for each column
+COLUMNS = [tf.Column('City', width=11, header_halign=tf.ColumnAlignment.AlignCenter),
            tf.Column('Province', header_halign=tf.ColumnAlignment.AlignCenter),
-           'Country',   # NOTE: If you don't need any special effects, you can just pass a string
+           'Country',  # NOTE: If you don't need any special effects, you can just pass a string
            tf.Column('Continent', cell_halign=tf.ColumnAlignment.AlignCenter),
            tf.Column('Population', cell_halign=tf.ColumnAlignment.AlignRight, formatter=tf.FormatCommas()),
            tf.Column('Area (km²)', width=7, header_halign=tf.ColumnAlignment.AlignCenter,
                      cell_halign=tf.ColumnAlignment.AlignRight, formatter=two_dec),
            tf.Column('Pop. Density (/km²)', width=12, header_halign=tf.ColumnAlignment.AlignCenter,
                      cell_halign=tf.ColumnAlignment.AlignRight, formatter=no_dec),
-           ]
+          ]
 
 
 # ######## Table data formatted as an iterable of python objects #########
@@ -105,13 +103,14 @@ def pop_density(data: CityInfo):
 
 # Convert the Iterable of Iterables data to an Iterable of non-iterable objects for demonstration purposes
 EXAMPLE_OBJECT_DATA = []
-for city in EXAMPLE_ITERABLE_DATA:
-    EXAMPLE_OBJECT_DATA.append(CityInfo(city[0], city[1], city[2], city[3], city[4], city[5]))
+for city_data in EXAMPLE_ITERABLE_DATA:
+    # Pass all city data other than population density to construct CityInfo
+    EXAMPLE_OBJECT_DATA.append(CityInfo(*city_data[:-1]))
 
 # If table entries are python objects, all columns must be defined with the object attribute to query for each field
 #   - attributes can be fields or functions. If a function is provided, the formatter will automatically call
 #     the function to retrieve the value
-obj_cols = [tf.Column('City', attrib='city', header_halign=tf.ColumnAlignment.AlignCenter),
+OBJ_COLS = [tf.Column('City', attrib='city', header_halign=tf.ColumnAlignment.AlignCenter),
             tf.Column('Province', attrib='province', header_halign=tf.ColumnAlignment.AlignCenter),
             tf.Column('Country', attrib='country'),
             tf.Column('Continent', attrib='continent', cell_halign=tf.ColumnAlignment.AlignCenter),
@@ -121,7 +120,7 @@ obj_cols = [tf.Column('City', attrib='city', header_halign=tf.ColumnAlignment.Al
                       cell_halign=tf.ColumnAlignment.AlignRight, formatter=two_dec),
             tf.Column('Pop. Density (/km²)', width=12, header_halign=tf.ColumnAlignment.AlignCenter,
                       cell_halign=tf.ColumnAlignment.AlignRight, obj_formatter=pop_density),
-            ]
+           ]
 
 # TODO: Color row text foreground based on population density
 
@@ -153,19 +152,20 @@ class TableDisplay(cmd2.Cmd):
         self.ppaged(formatted_table, chop=True)
 
     table_parser = argparse.ArgumentParser()
-    table_parser.add_argument('-c', '--color', action='store_true', help='Enable color')
-    table_parser.add_argument('-f', '--fancy', action='store_true', help='Fancy Grid')
-    table_parser.add_argument('-s', '--sparse', action='store_true', help='Sparse Grid')
+    table_item_group = table_parser.add_mutually_exclusive_group()
+    table_item_group.add_argument('-c', '--color', action='store_true', help='Enable color')
+    table_item_group.add_argument('-f', '--fancy', action='store_true', help='Fancy Grid')
+    table_item_group.add_argument('-s', '--sparse', action='store_true', help='Sparse Grid')
 
     @cmd2.with_argparser(table_parser)
     def do_table(self, args):
-        """Display data on the Earth's most populated cities in a table."""
-        self.ptable(EXAMPLE_ITERABLE_DATA, columns, args)
+        """Display data in iterable form on the Earth's most populated cities in a table."""
+        self.ptable(EXAMPLE_ITERABLE_DATA, COLUMNS, args)
 
     @cmd2.with_argparser(table_parser)
     def do_object_table(self, args):
-        """Display data on the Earth's most populated cities in a table."""
-        self.ptable(EXAMPLE_OBJECT_DATA, obj_cols, args)
+        """Display data in object form on the Earth's most populated cities in a table."""
+        self.ptable(EXAMPLE_OBJECT_DATA, OBJ_COLS, args)
 
 
 if __name__ == '__main__':
