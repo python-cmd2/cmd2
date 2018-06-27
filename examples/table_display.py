@@ -11,7 +11,7 @@ You can quit out of the pager by typing "q".  You can also search for text withi
 WARNING: This example requires the tableformatter module: https://github.com/python-tableformatter/tableformatter
 - pip install tableformatter
 """
-import functools
+import argparse
 
 import cmd2
 import tableformatter as tf
@@ -30,14 +30,10 @@ except ImportError:
         BACK_ALT = ''
 
 # Format to use for the grid style when displaying tables with the tableformatter module
-grid_style = tf.AlternatingRowGrid(BACK_PRI, BACK_ALT)  # Use rows of alternating color to assist as a visual guide
-
-# Create a function to format a fixed-width table for pretty-printing using the desired table format
-table = functools.partial(tf.generate_table, grid_style=grid_style)
+DEFAULT_GRID = tf.AlternatingRowGrid(BACK_PRI, BACK_ALT)  # Use rows of alternating color to assist as a visual guide
 
 
 # Formatter functions
-
 def no_dec(num: float) -> str:
     """Format a floating point number with no decimal places."""
     return "{}".format(round(num))
@@ -136,28 +132,40 @@ class TableDisplay(cmd2.Cmd):
     def __init__(self):
         super().__init__()
 
-    def ptable(self, tabular_data, headers=()):
+    def ptable(self, rows, columns, grid_args):
         """Format tabular data for pretty-printing as a fixed-width table and then display it using a pager.
 
-        :param tabular_data: required argument - can be a list-of-lists (or another iterable of iterables), a list of
-                             named tuples, a dictionary of iterables, an iterable of dictionaries, a two-dimensional
-                             NumPy array, NumPy record array, or a Pandas dataframe.
-        :param headers: (optional) - to print nice column headers, supply this argument:
-                        - headers can be an explicit list of column headers
-                        - if `headers="firstrow"`, then the first row of data is used
-                        - if `headers="keys"`, then dictionary keys or column indices are used
-                        - Otherwise, a headerless table is produced
+        :param rows: required argument - can be a list-of-lists (or another iterable of iterables), a two-dimensional
+                             NumPy array, or an Iterable of non-iterable objects
+        :param columns: column headers and formatting options per column
+        :param grid_args: argparse arguments for formatting the grid
         """
-        formatted_table = table(rows=tabular_data, columns=headers)
+        if grid_args.color:
+            grid = tf.AlternatingRowGrid(BACK_PRI, BACK_ALT)
+        elif grid_args.fancy:
+            grid = tf.FancyGrid()
+        elif grid_args.sparse:
+            grid = tf.SparseGrid()
+        else:
+            grid = None
+
+        formatted_table = tf.generate_table(rows=rows, columns=columns, grid_style=grid)
         self.ppaged(formatted_table, chop=True)
 
-    def do_table(self, _):
-        """Display data on the Earth's most populated cities in a table."""
-        self.ptable(EXAMPLE_ITERABLE_DATA, columns)
+    table_parser = argparse.ArgumentParser()
+    table_parser.add_argument('-c', '--color', action='store_true', help='Enable color')
+    table_parser.add_argument('-f', '--fancy', action='store_true', help='Fancy Grid')
+    table_parser.add_argument('-s', '--sparse', action='store_true', help='Sparse Grid')
 
-    def do_object_table(self, _):
+    @cmd2.with_argparser(table_parser)
+    def do_table(self, args):
         """Display data on the Earth's most populated cities in a table."""
-        self.ptable(EXAMPLE_OBJECT_DATA, obj_cols)
+        self.ptable(EXAMPLE_ITERABLE_DATA, columns, args)
+
+    @cmd2.with_argparser(table_parser)
+    def do_object_table(self, args):
+        """Display data on the Earth's most populated cities in a table."""
+        self.ptable(EXAMPLE_OBJECT_DATA, obj_cols, args)
 
 
 if __name__ == '__main__':
