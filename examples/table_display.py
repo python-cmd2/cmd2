@@ -52,14 +52,13 @@ def two_dec(num: float) -> str:
 
 
 # ############ Table data formatted as an iterable of iterable fields ############
-
-EXAMPLE_ITERABLE_DATA = [['Shanghai', 'Shanghai', 'China', 'Asia', 24183300, 6340.5],
-                         ['Beijing', 'Hebei', 'China', 'Asia', 20794000, 1749.57],
-                         ['Karachi', 'Sindh', 'Pakistan', 'Asia', 14910352, 615.58],
-                         ['Shenzen', 'Guangdong', 'China', 'Asia', 13723000, 1493.32],
-                         ['Guangzho', 'Guangdong', 'China', 'Asia', 13081000, 1347.81],
-                         ['Mumbai', 'Maharashtra', 'India', 'Asia', 12442373, 465.78],
-                         ['Istanbul', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29],
+EXAMPLE_ITERABLE_DATA = [['Shanghai (上海)', 'Shanghai', 'China', 'Asia', 24183300, 6340.5],
+                         ['Beijing (北京市)', 'Hebei', 'China', 'Asia', 20794000, 1749.57],
+                         ['Karachi (کراچی)', 'Sindh', 'Pakistan', 'Asia', 14910352, 615.58],
+                         ['Shenzen (深圳市)', 'Guangdong', 'China', 'Asia', 13723000, 1493.32],
+                         ['Guangzho (广州市)', 'Guangdong', 'China', 'Asia', 13081000, 1347.81],
+                         ['Mumbai (बॉम्बे हिंदी)', 'Maharashtra', 'India', 'Asia', 12442373, 465.78],
+                         ['Istanbul (İstanbuld)', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29],
                          ]
 
 # Calculate population density
@@ -68,7 +67,7 @@ for row in EXAMPLE_ITERABLE_DATA:
 
 
 # # Column headers plus optional formatting info for each column
-columns = [tf.Column('City', header_halign=tf.ColumnAlignment.AlignCenter),
+columns = [tf.Column('City', width=11, header_halign=tf.ColumnAlignment.AlignCenter),
            tf.Column('Province', header_halign=tf.ColumnAlignment.AlignCenter),
            'Country',   # NOTE: If you don't need any special effects, you can just pass a string
            tf.Column('Continent', cell_halign=tf.ColumnAlignment.AlignCenter),
@@ -109,14 +108,10 @@ def pop_density(data: CityInfo):
     return ''
 
 
-EXAMPLE_OBJECT_DATA = [CityInfo('Shanghai', 'Shanghai', 'China', 'Asia', 24183300, 6340.5),
-                       CityInfo('Beijing', 'Hebei', 'China', 'Asia', 20794000, 1749.57),
-                       CityInfo('Karachi', 'Sindh', 'Pakistan', 'Asia', 14910352, 615.58),
-                       CityInfo('Shenzen', 'Guangdong', 'China', 'Asia', 13723000, 1493.32),
-                       CityInfo('Guangzho', 'Guangdong', 'China', 'Asia', 13081000, 1347.81),
-                       CityInfo('Mumbai', 'Maharashtra', 'India', 'Asia', 12442373, 465.78),
-                       CityInfo('Istanbul', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29),
-                       ]
+# Convert the Iterable of Iterables data to an Iterable of non-iterable objects for demonstration purposes
+EXAMPLE_OBJECT_DATA = []
+for city in EXAMPLE_ITERABLE_DATA:
+    EXAMPLE_OBJECT_DATA.append(CityInfo(city[0], city[1], city[2], city[3], city[4], city[5]))
 
 # If table entries are python objects, all columns must be defined with the object attribute to query for each field
 #   - attributes can be fields or functions. If a function is provided, the formatter will automatically call
