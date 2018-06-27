@@ -1,7 +1,24 @@
 #!/usr/bin/env python3
 # coding=utf-8
 # PYTHON_ARGCOMPLETE_OK - This is required at the beginning of the file to enable argcomplete support
-"""A simple example demonstrating integration with argcomplete"""
+"""A simple example demonstrating integration with argcomplete.
+
+This example demonstrates how to achieve automatic auto-completion of argparse arguments for a command-line utility
+(CLU) in the Bash shell.
+
+Realistically it will probably only work on Linux and then only in a Bash shell.  With some effort you can probably get
+it to work on macOS or Windows Subsystem for Linux (WSL); but then again, specifically within a Bash shell.  This
+automatic Bash completion integration with the argcomplete module is included within cmd2 in order to assist developers
+with providing a the best possible out-of-the-box experience with their cmd2 applications, which in many cases will
+accept argparse arguments on the command-line when executed.  But from an architectural point of view, the
+"argcomplete_bridge" functionality within cmd2 doesn't really depend on the rest of cmd2 and could be used in your own
+CLU which doesn't use cmd2.
+
+WARNING:  For this example to work correctly you need the argcomplete module installed and activated:
+    pip install argcomplete
+    activate-global-python-argcomplete
+Please see https://github.com/kislyuk/argcomplete for more information on argcomplete.
+"""
 import argparse
 
 optional_strs = ['Apple', 'Banana', 'Cranberry', 'Durian', 'Elderberry']
