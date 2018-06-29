@@ -17,7 +17,7 @@
             * ``CmdResult`` had attributes of: **out**, **err**, **war**
         * ``CmdResult`` will be deleted in the next release
 
-## 0.8.8 (TBD, 2018)
+## 0.8.8 (June 28, 2018)
 * Bug Fixes
     * Prevent crashes that could occur attempting to open a file in non-existent directory or with very long filename
 * Enhancements
