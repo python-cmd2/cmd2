@@ -1,4 +1,4 @@
-## 0.9.2 (TBD, 2018)
+## 0.9.2 (June 28, 2018)
 * Bug Fixes
     * Fixed issue where piping and redirecting did not work correctly with paths that had spaces
 * Enhancements
@@ -9,6 +9,8 @@
     * Added ``chop`` argument to ``cmd2.Cmd.ppaged()`` method for displaying output using a pager
         * If ``chop`` is ``False``, then ``self.pager`` is used as the pager
         * Otherwise ``self.pager_chop`` is used as the pager
+    * Greatly improved the [table_display.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py) example
+        * Now uses the new [tableformatter](https://github.com/python-tableformatter/tableformatter) module which looks better than ``tabulate``
 * Deprecations
     * The ``CmdResult`` helper class is *deprecated* and replaced by the improved ``CommandResult`` class
         * ``CommandResult`` has the following attributes: **stdout**, **stderr**, and **data**
