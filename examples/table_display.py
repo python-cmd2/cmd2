@@ -12,6 +12,7 @@ WARNING: This example requires the tableformatter module: https://github.com/pyt
 - pip install tableformatter
 """
 import argparse
+from typing import Tuple
 
 import cmd2
 import tableformatter as tf
@@ -93,12 +94,11 @@ class CityInfo(object):
         return self._area
 
 
-def pop_density(data: CityInfo):
+def pop_density(data: CityInfo) -> str:
     """Calculate the population density from the data entry"""
-    if isinstance(data, CityInfo):
-        return no_dec(data.get_population() / data.get_area())
-
-    return ''
+    if not isinstance(data, CityInfo):
+        raise AttributeError("Argument to pop_density() must be an instance of CityInfo")
+    return no_dec(data.get_population() / data.get_area())
 
 
 # Convert the Iterable of Iterables data to an Iterable of non-iterable objects for demonstration purposes
@@ -122,7 +122,24 @@ OBJ_COLS = [tf.Column('City', attrib='city', header_halign=tf.ColumnAlignment.Al
                       cell_halign=tf.ColumnAlignment.AlignRight, obj_formatter=pop_density),
            ]
 
-# TODO: Color row text foreground based on population density
+
+EXTREMELY_HIGH_POULATION_DENSITY = 25000
+
+
+def high_density_tuples(row_tuple: Tuple) -> dict:
+    """Color rows with extremely high population density red."""
+    opts = dict()
+    if len(row_tuple) >= 7 and row_tuple[6] > EXTREMELY_HIGH_POULATION_DENSITY:
+        opts[tf.TableFormatter.ROW_OPT_TEXT_COLOR] = tf.TableColors.TEXT_COLOR_RED
+    return opts
+
+
+def high_density_objs(row_obj: CityInfo) -> dict:
+    """Color rows with extremely high population density red."""
+    opts = dict()
+    if float(pop_density(row_obj)) > EXTREMELY_HIGH_POULATION_DENSITY:
+        opts[tf.TableFormatter.ROW_OPT_TEXT_COLOR] = tf.TableColors.TEXT_COLOR_RED
+    return opts
 
 
 class TableDisplay(cmd2.Cmd):
@@ -131,13 +148,14 @@ class TableDisplay(cmd2.Cmd):
     def __init__(self):
         super().__init__()
 
-    def ptable(self, rows, columns, grid_args):
+    def ptable(self, rows, columns, grid_args, row_stylist):
         """Format tabular data for pretty-printing as a fixed-width table and then display it using a pager.
 
         :param rows: required argument - can be a list-of-lists (or another iterable of iterables), a two-dimensional
                              NumPy array, or an Iterable of non-iterable objects
         :param columns: column headers and formatting options per column
         :param grid_args: argparse arguments for formatting the grid
+        :param row_stylist: function to determine how each row gets styled
         """
         if grid_args.color:
             grid = tf.AlternatingRowGrid(BACK_PRI, BACK_ALT)
@@ -148,7 +166,7 @@ class TableDisplay(cmd2.Cmd):
         else:
             grid = None
 
-        formatted_table = tf.generate_table(rows=rows, columns=columns, grid_style=grid)
+        formatted_table = tf.generate_table(rows=rows, columns=columns, grid_style=grid, row_tagger=row_stylist)
         self.ppaged(formatted_table, chop=True)
 
     table_parser = argparse.ArgumentParser()
@@ -160,12 +178,12 @@ class TableDisplay(cmd2.Cmd):
     @cmd2.with_argparser(table_parser)
     def do_table(self, args):
         """Display data in iterable form on the Earth's most populated cities in a table."""
-        self.ptable(EXAMPLE_ITERABLE_DATA, COLUMNS, args)
+        self.ptable(EXAMPLE_ITERABLE_DATA, COLUMNS, args, high_density_tuples)
 
     @cmd2.with_argparser(table_parser)
     def do_object_table(self, args):
         """Display data in object form on the Earth's most populated cities in a table."""
-        self.ptable(EXAMPLE_OBJECT_DATA, OBJ_COLS, args)
+        self.ptable(EXAMPLE_OBJECT_DATA, OBJ_COLS, args, high_density_objs)
 
 
 if __name__ == '__main__':
