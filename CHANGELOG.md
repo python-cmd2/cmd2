@@ -1,3 +1,5 @@
+## 0.9.3 (TBD, 2018)
+
 ## 0.9.2 (June 28, 2018)
 * Bug Fixes
     * Fixed issue where piping and redirecting did not work correctly with paths that had spaces
