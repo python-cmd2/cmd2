@@ -29,7 +29,7 @@ from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.9.2a'
+    assert cmd2.__version__ == '0.9.3'
 
 
 def test_empty_statement(base_app):
@@ -1468,32 +1468,33 @@ def test_clipboard_failure(base_app, capsys):
     assert "Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable" in err
 
 
-class CmdResultApp(cmd2.Cmd):
+class CommandResultApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def do_affirmative(self, arg):
-        self._last_result = cmd2.CmdResult(arg)
+        self._last_result = cmd2.CommandResult(arg, data=True)
 
     def do_negative(self, arg):
-        self._last_result = cmd2.CmdResult('', arg)
+        self._last_result = cmd2.CommandResult(arg)
 
 @pytest.fixture
-def cmdresult_app():
-    app = CmdResultApp()
+def commandresult_app():
+    app = CommandResultApp()
     app.stdout = StdOut()
     return app
 
-def test_cmdresult(cmdresult_app):
+def test_commandresult_truthy(commandresult_app):
     arg = 'foo'
-    run_cmd(cmdresult_app, 'affirmative {}'.format(arg))
-    assert cmdresult_app._last_result
-    assert cmdresult_app._last_result == cmd2.CmdResult(arg)
+    run_cmd(commandresult_app, 'affirmative {}'.format(arg))
+    assert commandresult_app._last_result
+    assert commandresult_app._last_result == cmd2.CommandResult(arg, data=True)
 
+def test_commandresult_falsy(commandresult_app):
     arg = 'bar'
-    run_cmd(cmdresult_app, 'negative {}'.format(arg))
-    assert not cmdresult_app._last_result
-    assert cmdresult_app._last_result == cmd2.CmdResult('', arg)
+    run_cmd(commandresult_app, 'negative {}'.format(arg))
+    assert not commandresult_app._last_result
+    assert commandresult_app._last_result == cmd2.CommandResult(arg)
 
 
 def test_is_text_file_bad_input(base_app):

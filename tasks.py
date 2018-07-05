@@ -64,7 +64,7 @@ namespace.add_task(mypy)
 def mypy_clean(context):
     "Remove mypy cache directory"
     #pylint: disable=unused-argument
-    dirs = ['.mypy_cache']
+    dirs = ['.mypy_cache', 'dmypy.json', 'dmypy.sock']
     rmrf(dirs)
 namespace_clean.add_task(mypy_clean, 'mypy')
 
@@ -195,4 +195,3 @@ def pypi_test(context):
     "Build and upload a distribution to https://test.pypi.org"
     context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
 namespace.add_task(pypi_test)
-

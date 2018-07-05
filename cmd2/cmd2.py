@@ -116,7 +116,7 @@ try:
 except ImportError:  # pragma: no cover
     ipython_available = False
 
-__version__ = '0.9.2a'
+__version__ = '0.9.3'
 
 
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
@@ -306,7 +306,6 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
     # Attributes used to configure the StatementParser, best not to change these at runtime
-    blankLinesAllowed = False
     multiline_commands = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     aliases = dict()
@@ -459,7 +458,7 @@ class Cmd(cmd.Cmd):
         if startup_script is not None:
             startup_script = os.path.expanduser(startup_script)
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
-                self.cmdqueue.append('load {}'.format(startup_script))
+                self.cmdqueue.append("load '{}'".format(startup_script))
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
@@ -3408,7 +3407,7 @@ class Statekeeper(object):
 
 
 class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
-    """Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
+    """DEPRECATED: Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
 
     This is provided as a convenience and an example for one possible way for end users to store results in
     the self._last_result attribute of cmd2.Cmd class instances.  See the "python_scripting.py" example for how it can
