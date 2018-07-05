@@ -25,6 +25,7 @@ class Plugin:
         self.called_postparsing = 0
         self.called_precmd = 0
         self.called_postcmd = 0
+        self.called_cmdfinalization = 0
 
     ###
     #
@@ -184,6 +185,52 @@ class Plugin:
 
     def postcmd_hook_wrong_return_annotation(self, data: plugin.PostcommandData) -> cmd2.Statement:
         return self.statement_parser.parse('hi there')
+
+    ###
+    #
+    # command finalization hooks, some valid, some invalid
+    #
+    ###
+    def cmdfinalization_hook(self, data: plugin.CommandFinalizationData) -> plugin.CommandFinalizationData:
+        """A command finalization hook."""
+        self.called_cmdfinalization += 1
+        return data
+
+    def cmdfinalization_hook_stop(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
+        "A postparsing hook which requests application exit"
+        self.called_cmdfinalization += 1
+        data.stop = True
+        return data
+
+    def cmdfinalization_hook_exception(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
+        "A postparsing hook which raises an exception"
+        self.called_cmdfinalization += 1
+        raise ValueError
+
+    def cmdfinalization_hook_not_enough_parameters(self) -> plugin.CommandFinalizationData:
+        """A command finalization hook with no parameters."""
+        pass
+
+    def cmdfinalization_hook_too_many_parameters(self, one: plugin.CommandFinalizationData, two: str) -> plugin.CommandFinalizationData:
+        """A command finalization hook with too many parameters."""
+        return one
+
+    def cmdfinalization_hook_no_parameter_annotation(self, data) -> plugin.CommandFinalizationData:
+        """A command finalization hook with no type annotation on the parameter."""
+        return data
+
+    def cmdfinalization_hook_wrong_parameter_annotation(self, data: str) -> plugin.CommandFinalizationData:
+        """A command finalization hook with the incorrect type annotation on the parameter."""
+        return data
+
+    def cmdfinalization_hook_no_return_annotation(self, data: plugin.CommandFinalizationData):
+        """A command finalizationhook with no type annotation on the return value."""
+        return data
+
+    def cmdfinalization_hook_wrong_return_annotation(self, data: plugin.CommandFinalizationData) -> cmd2.Statement:
+        """A command finalization hook with the wrong return type annotation."""
+        return self.statement_parser.parse('hi there')
+
 
 class PluggedApp(Plugin, cmd2.Cmd):
     "A sample app with a plugin mixed in"
@@ -413,8 +460,8 @@ def test_postparsing_hook_exception(capsys):
 
     # register another function, but it shouldn't be called
     app.reset_counters()
-    stop = app.register_postparsing_hook(app.postparse_hook)
-    app.onecmd_plus_hooks('say hello')
+    app.register_postparsing_hook(app.postparse_hook)
+    stop = app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
     assert not stop
     assert not out
@@ -658,6 +705,95 @@ def test_postcmd_exception_second(capsys):
 # command finalization
 #
 ###
-def test_cmdfinalization(capsys):
-    pass
+def test_register_cmdfinalization_hook_parameter_count():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_cmdfinalization_hook(app.cmdfinalization_hook_not_enough_parameters)
+    with pytest.raises(TypeError):
+        app.register_cmdfinalization_hook(app.cmdfinalization_hook_too_many_parameters)
 
+def test_register_cmdfinalization_hook_no_parameter_annotation():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_cmdfinalization_hook(app.cmdfinalization_hook_no_parameter_annotation)
+
+def test_register_cmdfinalization_hook_wrong_parameter_annotation():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_cmdfinalization_hook(app.cmdfinalization_hook_wrong_parameter_annotation)
+
+def test_register_cmdfinalization_hook_no_return_annotation():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_cmdfinalization_hook(app.cmdfinalization_hook_no_return_annotation)
+
+def test_register_cmdfinalization_hook_wrong_return_annotation():
+    app = PluggedApp()
+    with pytest.raises(TypeError):
+        app.register_cmdfinalization_hook(app.cmdfinalization_hook_wrong_return_annotation)
+
+def test_cmdfinalization(capsys):
+    app = PluggedApp()
+    app.onecmd_plus_hooks('say hello')
+    out, err = capsys.readouterr()
+    assert out == 'hello\n'
+    assert not err
+    assert app.called_cmdfinalization == 0
+
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook)
+    app.onecmd_plus_hooks('say hello')
+    out, err = capsys.readouterr()
+    assert out == 'hello\n'
+    assert not err
+    assert app.called_cmdfinalization == 1
+
+    # register the function again, so it should be called twice
+    app.reset_counters()
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook)
+    app.onecmd_plus_hooks('say hello')
+    out, err = capsys.readouterr()
+    assert out == 'hello\n'
+    assert not err
+    assert app.called_cmdfinalization == 2
+
+def test_cmdfinalization_stop_first(capsys):
+    app = PluggedApp()
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook_stop)
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook)
+    stop = app.onecmd_plus_hooks('say hello')
+    out, err = capsys.readouterr()
+    assert out == 'hello\n'
+    assert not err
+    assert app.called_cmdfinalization == 2
+    assert stop
+
+def test_cmdfinalization_stop_second(capsys):
+    app = PluggedApp()
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook)
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook_stop)
+    stop = app.onecmd_plus_hooks('say hello')
+    out, err = capsys.readouterr()
+    assert out == 'hello\n'
+    assert not err
+    assert app.called_cmdfinalization == 2
+    assert stop
+
+def test_cmdfinalization_hook_exception(capsys):
+    app = PluggedApp()
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook_exception)
+    stop = app.onecmd_plus_hooks('say hello')
+    out, err = capsys.readouterr()
+    assert not stop
+    assert out == 'hello\n'
+    assert err
+    assert app.called_cmdfinalization == 1
+
+    # register another function, but it shouldn't be called
+    app.reset_counters()
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook)
+    stop = app.onecmd_plus_hooks('say hello')
+    out, err = capsys.readouterr()
+    assert not stop
+    assert out == 'hello\n'
+    assert err
+    assert app.called_cmdfinalization == 1

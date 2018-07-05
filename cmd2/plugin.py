@@ -20,3 +20,4 @@ class PostcommandData():
 @attr.s
 class CommandFinalizationData():
     stop = attr.ib()
+    statement = attr.ib()

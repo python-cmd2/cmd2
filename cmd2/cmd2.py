@@ -1687,9 +1687,19 @@ class Cmd(cmd.Cmd):
         :return: True if cmdloop() should exit, False otherwise
         """
         import datetime
+
         stop = False
         try:
             statement = self._complete_statement(line)
+        except EmptyStatement:
+            return self._run_cmdfinalization_hooks(stop, None)
+        except ValueError as ex:
+            # If shlex.split failed on syntax, let user know whats going on
+            self.perror("Invalid syntax: {}".format(ex), traceback_war=False)
+            return stop
+
+        # now that we have a statement, run it with all the hooks
+        try:
             # call the postparsing hooks
             data = plugin.PostparsingData(False, statement)
             for func in self._postparsing_hooks:
@@ -1740,15 +1750,26 @@ class Cmd(cmd.Cmd):
                 if self.allow_redirection and self.redirecting:
                     self._restore_output(statement)
         except EmptyStatement:
+            # don't do anything, but do allow command finalization hooks to run
             pass
-        except ValueError as ex:
-            # TODO move this except to way above, so ValueError is only caught for shlex errors
-            # If shlex.split failed on syntax, let user know whats going on
-            self.perror("Invalid syntax: {}".format(ex), traceback_war=False)
         except Exception as ex:
             self.perror(ex)
         finally:
+            return self._run_cmdfinalization_hooks(stop, statement)
+
+    def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement) -> bool:
+        """Run the command finalization hooks"""
+        try:
+            data = plugin.CommandFinalizationData(stop, statement)
+            for func in self._cmdfinalization_hooks:
+                data = func(data)
+            # retrieve the final value of stop, ignoring any
+            # modifications to the statement
+            stop = data.stop
+            # postparsing_postcmd is deprecated
             return self.postparsing_postcmd(stop)
+        except Exception as ex:
+            self.perror(ex)
 
     def runcmds_plus_hooks(self, cmds: List[str]) -> bool:
         """Convenience method to run multiple commands by onecmd_plus_hooks.
@@ -3138,9 +3159,11 @@ Script should contain one command per line, just like command would be typed in 
         self._postparsing_hooks = []
         self._precmd_hooks = []
         self._postcmd_hooks = []
+        self._cmdfinalization_hooks = []
 
     @classmethod
     def _validate_callable_param_count(cls, func, count):
+        """Ensure a function has the given number of parameters."""
         signature = inspect.signature(func)
         # validate that the callable has the right number of parameters
         nparam = len(signature.parameters)
@@ -3153,7 +3176,7 @@ Script should contain one command per line, just like command would be typed in 
 
     @classmethod
     def _validate_prepostloop_callable(cls, func):
-        """Check parameter and return values for preloop and postloop hooks"""
+        """Check parameter and return types for preloop and postloop hooks."""
         cls._validate_callable_param_count(func, 0)
         # make sure there is no return notation
         signature = inspect.signature(func)
@@ -3174,7 +3197,7 @@ Script should contain one command per line, just like command would be typed in 
 
     @classmethod
     def _validate_postparsing_callable(cls, func):
-        """Check parameter and return values for postparsing hooks"""
+        """Check parameter and return types for postparsing hooks"""
         cls._validate_callable_param_count(func, 1)
         signature = inspect.signature(func)
         _, param = list(signature.parameters.items())[0]
@@ -3194,6 +3217,7 @@ Script should contain one command per line, just like command would be typed in 
 
     @classmethod
     def _validate_prepostcmd_hook(cls, func, data_type):
+        """Check parameter and return types for pre and post command hooks."""
         signature = inspect.signature(func)
         # validate that the callable has the right number of parameters
         cls._validate_callable_param_count(func, 1)
@@ -3229,6 +3253,26 @@ Script should contain one command per line, just like command would be typed in 
         self._validate_prepostcmd_hook(func, plugin.PostcommandData)
         self._postcmd_hooks.append(func)
 
+    @classmethod
+    def _validate_cmdfinalization_callable(cls, func):
+        """Check parameter and return types for command finalization hooks."""
+        cls._validate_callable_param_count(func, 1)
+        signature = inspect.signature(func)
+        _, param = list(signature.parameters.items())[0]
+        if param.annotation != plugin.CommandFinalizationData:
+            raise TypeError("{} must have one parameter declared with type 'cmd2.plugin.CommandFinalizationData'".format(
+                func.__name__
+            ))
+        if signature.return_annotation != plugin.CommandFinalizationData:
+            raise TypeError("{} must declare return a return type of 'cmd2.plugin.CommandFinalizationData'".format(
+                func.__name__
+            ))
+        pass
+
+    def register_cmdfinalization_hook(self, func):
+        """Register a hook to be called after a command is completed, whether it completes successfully or not."""
+        self._validate_cmdfinalization_callable(func)
+        self._cmdfinalization_hooks.append(func)
 
 class History(list):
     """ A list of HistoryItems that knows how to respond to user requests. """

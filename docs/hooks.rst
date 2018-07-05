@@ -278,6 +278,8 @@ command finalization hook::
         def myhookmethod(self, stop, statement):
             return stop
 
+Command Finalization hooks must check whether the statement object is ``None``. There are certain circumstances where these hooks may be called before the statement has been parsed, so you can't always rely on having a statement.
+
 If any prior postparsing or precommand hook has requested the application to
 terminate, the value of the ``stop`` parameter passed to the first command
 finalization hook will be ``True``. Any command finalization hook can change the
