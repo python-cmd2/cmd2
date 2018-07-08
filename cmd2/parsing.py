@@ -10,8 +10,6 @@ from typing import List, Tuple, Dict
 from . import constants
 from . import utils
 
-LINE_FEED = '\n'
-
 
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
@@ -272,8 +270,8 @@ class StatementParser:
         # we have to do this before we tokenize because tokenizing
         # destroys all unquoted whitespace in the input
         terminator = None
-        if line[-1:] == LINE_FEED:
-            terminator = LINE_FEED
+        if line[-1:] == constants.LINE_FEED:
+            terminator = constants.LINE_FEED
 
         command = None
         args = None
@@ -301,7 +299,7 @@ class StatementParser:
             break
 
         if terminator:
-            if terminator == LINE_FEED:
+            if terminator == constants.LINE_FEED:
                 terminator_pos = len(tokens)+1
 
             # everything before the first terminator is the command and the args
