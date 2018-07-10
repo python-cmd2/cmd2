@@ -68,7 +68,7 @@ class Statement(str):
                 suffix: str = None,
                 pipe_to: str = None,
                 output: str = None,
-                output_to:str = None
+                output_to: str = None
                 ):
         """Create a new instance of Statement
 
@@ -113,6 +113,7 @@ class Statement(str):
         """Statement instances should feel immutable; raise ValueError"""
         raise ValueError
 
+
 class StatementParser:
     """Parse raw text into command components.
 
@@ -124,7 +125,7 @@ class StatementParser:
             terminators: List[str] = None,
             multiline_commands: List[str] = None,
             aliases: Dict[str, str] = None,
-            shortcuts: Dict[str, str] = None,
+            shortcuts: List[Tuple[str, str]] = None,
     ):
         self.allow_redirection = allow_redirection
         if terminators is None:
@@ -391,17 +392,17 @@ class StatementParser:
         # string representation of args must be an empty string instead of
         # None for compatibility with standard library cmd
         statement = Statement('' if args is None else args,
-            raw=line,
-            command=command,
-            args=args,
-            argv=list(map(lambda x: utils.strip_quotes(x), argv)),
-            multiline_command=multiline_command,
-            terminator=terminator,
-            suffix=suffix,
-            pipe_to=pipe_to,
-            output=output,
-            output_to=output_to,
-        )
+                              raw=line,
+                              command=command,
+                              args=args,
+                              argv=list(map(lambda x: utils.strip_quotes(x), argv)),
+                              multiline_command=multiline_command,
+                              terminator=terminator,
+                              suffix=suffix,
+                              pipe_to=pipe_to,
+                              output=output,
+                              output_to=output_to,
+                              )
         return statement
 
     def parse_command_only(self, rawinput: str) -> Statement:
@@ -452,10 +453,10 @@ class StatementParser:
         # string representation of args must be an empty string instead of
         # None for compatibility with standard library cmd
         statement = Statement('' if args is None else args,
-            raw=rawinput,
-            command=command,
-            args=args,
-        )
+                              raw=rawinput,
+                              command=command,
+                              args=args,
+                              )
         return statement
 
     def _expand(self, line: str) -> str:

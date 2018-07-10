@@ -1756,7 +1756,7 @@ class Cmd(cmd.Cmd):
         finally:
             return self._run_cmdfinalization_hooks(stop, statement)
 
-    def _run_cmdfinalization_hooks(self, stop: bool, statement: Statement) -> bool:
+    def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
         try:
             data = plugin.CommandFinalizationData(stop, statement)
@@ -3179,7 +3179,7 @@ Script should contain one command per line, just like command would be typed in 
         cls._validate_callable_param_count(func, 0)
         # make sure there is no return notation
         signature = inspect.signature(func)
-        if signature.return_annotation != None:
+        if signature.return_annotation is not None:
             raise TypeError("{} must declare return a return type of 'None'".format(
                 func.__name__,
             ))
@@ -3259,19 +3259,17 @@ Script should contain one command per line, just like command would be typed in 
         signature = inspect.signature(func)
         _, param = list(signature.parameters.items())[0]
         if param.annotation != plugin.CommandFinalizationData:
-            raise TypeError("{} must have one parameter declared with type 'cmd2.plugin.CommandFinalizationData'".format(
-                func.__name__
-            ))
+            raise TypeError("{} must have one parameter declared with type "
+                            "'cmd2.plugin.CommandFinalizationData'".format(func.__name__))
         if signature.return_annotation != plugin.CommandFinalizationData:
-            raise TypeError("{} must declare return a return type of 'cmd2.plugin.CommandFinalizationData'".format(
-                func.__name__
-            ))
-        pass
+            raise TypeError("{} must declare return a return type of "
+                            "'cmd2.plugin.CommandFinalizationData'".format(func.__name__))
 
     def register_cmdfinalization_hook(self, func: Callable):
         """Register a hook to be called after a command is completed, whether it completes successfully or not."""
         self._validate_cmdfinalization_callable(func)
         self._cmdfinalization_hooks.append(func)
+
 
 class History(list):
     """ A list of HistoryItems that knows how to respond to user requests. """
