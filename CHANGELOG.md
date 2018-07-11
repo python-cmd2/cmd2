@@ -1,4 +1,7 @@
-## 0.9.3 (TBD, 2018)
+## 0.9.3 (July TBD, 2018)
+* Bug Fixes
+    * Fixed bug when StatementParser ``__init__()`` was called with ``terminators`` equal to ``None``
+    * Fixed bug when ``Cmd.onecmd()`` was called with a raw ``str``
 
 ## 0.9.2 (June 28, 2018)
 * Bug Fixes
