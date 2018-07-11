@@ -1961,14 +1961,19 @@ class Cmd(cmd.Cmd):
             result = target
         return result
 
-    def onecmd(self, statement: Statement) -> Optional[bool]:
+    def onecmd(self, statement: Union[Statement, str]) -> Optional[bool]:
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes _default() instead.
 
-        :param statement: Command - a parsed command from the input stream
+        :param statement: Command - intended to be a Statement instance parsed command from the input stream,
+                                    alternative acceptance of a str is present only for backward compatibility with cmd
         :return: a flag indicating whether the interpretation of commands should stop
         """
+        # For backwards compatibility with cmd, allow a str to be passed in
+        if not isinstance(statement, Statement):
+            statement = self._complete_statement(statement)
+
         funcname = self._func_named(statement.command)
         if not funcname:
             self.default(statement)
