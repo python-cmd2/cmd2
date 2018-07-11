@@ -4,4 +4,4 @@ install:
 build: off
 
 test_script:
-  - python -m tox -e py35-win,py36-win
+  - python -m tox -e py35-win,py36-win,py37-win
