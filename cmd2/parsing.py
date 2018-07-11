@@ -194,7 +194,7 @@ class StatementParser:
         invalid_command_chars = []
         invalid_command_chars.extend(constants.QUOTES)
         invalid_command_chars.extend(constants.REDIRECTION_CHARS)
-        invalid_command_chars.extend(terminators)
+        invalid_command_chars.extend(self.terminators)
         # escape each item so it will for sure get treated as a literal
         second_group_items = [re.escape(x) for x in invalid_command_chars]
         # add the whitespace and end of string, not escaped because they
