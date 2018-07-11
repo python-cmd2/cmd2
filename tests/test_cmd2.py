@@ -231,7 +231,7 @@ def test_pyscript_with_nonexist_file(base_app, capsys):
     python_script = 'does_not_exist.py'
     run_cmd(base_app, "pyscript {}".format(python_script))
     out, err = capsys.readouterr()
-    assert err.startswith("EXCEPTION of type 'FileNotFoundError' occurred with message:")
+    assert "Error opening script file" in err
 
 def test_pyscript_with_exception(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -457,8 +457,7 @@ def test_load_with_empty_args(base_app, capsys):
     out, err = capsys.readouterr()
 
     # The load command requires a file path argument, so we should get an error message
-    expected = normalize("""ERROR: load command requires a file path:\n""")
-    assert normalize(str(err)) == expected
+    assert "load command requires a file path" in str(err)
     assert base_app.cmdqueue == []
 
 
@@ -468,8 +467,7 @@ def test_load_with_nonexistent_file(base_app, capsys):
     out, err = capsys.readouterr()
 
     # The load command requires a path to an existing file
-    assert str(err).startswith("ERROR")
-    assert "does not exist or is not a file" in str(err)
+    assert "does not exist" in str(err)
     assert base_app.cmdqueue == []
 
 
@@ -1225,7 +1223,7 @@ Other
 ================================================================================
 alias               Define or display aliases
 help                List available commands with "help" or detailed help with "help cmd".
-history             View, run, edit, and save previously entered commands.
+history             View, run, edit, save, or clear previously entered commands.
 load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 py                  Invoke python command, shell, or script
 pyscript            Runs a python script file inside the console

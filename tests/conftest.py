@@ -37,7 +37,7 @@ Documented commands (type help <topic>):
 alias               Define or display aliases
 edit                Edit a file in a text editor.
 help                List available commands with "help" or detailed help with "help cmd".
-history             View, run, edit, and save previously entered commands.
+history             View, run, edit, save, or clear previously entered commands.
 load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
 py                  Invoke python command, shell, or script
 pyscript            Runs a python script file inside the console
@@ -49,9 +49,9 @@ unalias             Unsets aliases
 """
 
 # Help text for the history command
-HELP_HISTORY = """usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT] [arg]
+HELP_HISTORY = """usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT | -c] [arg]
 
-View, run, edit, and save previously entered commands.
+View, run, edit, save, or clear previously entered commands.
 
 positional arguments:
   arg                   empty               all history items
@@ -69,6 +69,7 @@ optional arguments:
                         output commands to a script file
   -t TRANSCRIPT, --transcript TRANSCRIPT
                         output commands and results to a transcript file
+  -c, --clear           clears all history
 """
 
 # Output from the shortcuts command with default built-in shortcuts
