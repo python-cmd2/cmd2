@@ -127,7 +127,7 @@ def is_text_file(file_path: str) -> bool:
             # noinspection PyUnusedLocal
             if sum(1 for line in f) > 0:
                 valid_text_file = True
-    except IOError:  # pragma: no cover
+    except OSError:  # pragma: no cover
         pass
     except UnicodeDecodeError:
         # The file is not ASCII. Check if it is UTF-8.
@@ -137,7 +137,7 @@ def is_text_file(file_path: str) -> bool:
                 # noinspection PyUnusedLocal
                 if sum(1 for line in f) > 0:
                     valid_text_file = True
-        except IOError:  # pragma: no cover
+        except OSError:  # pragma: no cover
             pass
         except UnicodeDecodeError:
             # Not UTF-8
