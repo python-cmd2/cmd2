@@ -426,7 +426,7 @@ def test_history_run_all_commands(base_app):
     out = run_cmd(base_app, 'history -r')
     # this should generate an error, but we don't currently have a way to
     # capture stderr in these tests. So we assume that if we got nothing on
-    # standard out, that the error occured because if the commaned executed
+    # standard out, that the error occurred because if the command executed
     # then we should have a list of shortcuts in our output
     assert out == []
 
@@ -434,6 +434,23 @@ def test_history_run_one_command(base_app):
     expected = run_cmd(base_app, 'help')
     output = run_cmd(base_app, 'history -r 1')
     assert output == expected
+
+def test_history_clear(base_app):
+    # Add commands to history
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'alias')
+
+    # Make sure history has items
+    out = run_cmd(base_app, 'history')
+    assert out
+
+    # Clear the history
+    run_cmd(base_app, 'history --clear')
+
+    # Make sure history is empty
+    out = run_cmd(base_app, 'history')
+    assert out == []
+
 
 def test_base_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -470,6 +487,15 @@ def test_load_with_nonexistent_file(base_app, capsys):
     assert "does not exist" in str(err)
     assert base_app.cmdqueue == []
 
+def test_load_with_directory(base_app, capsys, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    # The way the load command works, we can't directly capture its stdout or stderr
+    run_cmd(base_app, 'load {}'.format(test_dir))
+    out, err = capsys.readouterr()
+
+    assert "is not a file" in str(err)
+    assert base_app.cmdqueue == []
 
 def test_load_with_empty_file(base_app, capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -479,8 +505,7 @@ def test_load_with_empty_file(base_app, capsys, request):
     run_cmd(base_app, 'load {}'.format(filename))
     out, err = capsys.readouterr()
 
-    # The load command requires non-empty scripts files
-    assert str(err).startswith("ERROR")
+    # The load command requires non-empty script files
     assert "is empty" in str(err)
     assert base_app.cmdqueue == []
 
@@ -722,7 +747,7 @@ def test_pipe_to_shell(base_app, capsys):
     out, err = capsys.readouterr()
 
     # Unfortunately with the improved way of piping output to a subprocess, there isn't any good way of getting
-    # access to the output produced by that subprocess within a unit test, but we can verify that no error occured
+    # access to the output produced by that subprocess within a unit test, but we can verify that no error occurred
     assert not err
 
 def test_pipe_to_shell_error(base_app, capsys):
