@@ -1785,3 +1785,18 @@ def test_readline_remove_history_item(base_app):
     assert readline.get_current_history_length() == 1
     readline.remove_history_item(0)
     assert readline.get_current_history_length() == 0
+
+def test_onecmd_raw_str_continue(base_app):
+    line = "help"
+    stop = base_app.onecmd(line)
+    out = base_app.stdout.buffer
+    assert not stop
+    assert out.strip() == BASE_HELP.strip()
+
+def test_onecmd_raw_str_quit(base_app):
+    line = "quit"
+    stop = base_app.onecmd(line)
+    out = base_app.stdout.buffer
+    assert stop
+    assert out == ''
+
