@@ -61,22 +61,6 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
     return T
 
 
-def namedtuple_with_two_defaults(typename: str, field_names: Union[str, List[str]],
-                                 default_values: collections.Iterable=('', '')):
-    """Wrapper around namedtuple which lets you treat the last value as optional.
-
-    :param typename: str - type name for the Named tuple
-    :param field_names: List[str] or space-separated string of field names
-    :param default_values: (optional) 2-element tuple containing the default values for last 2 parameters in named tuple
-                            Defaults to an empty string for both of them
-    :return: namedtuple type
-    """
-    T = collections.namedtuple(typename, field_names)
-    # noinspection PyUnresolvedReferences
-    T.__new__.__defaults__ = default_values
-    return T
-
-
 def cast(current: Any, new: str) -> Any:
     """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
 

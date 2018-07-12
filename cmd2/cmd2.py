@@ -3220,25 +3220,3 @@ class Statekeeper(object):
         if self.obj:
             for attrib in self.attribs:
                 setattr(self.obj, attrib, getattr(self, attrib))
-
-
-class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
-    """DEPRECATED: Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
-
-    This is provided as a convenience and an example for one possible way for end users to store results in
-    the self._last_result attribute of cmd2.Cmd class instances.  See the "python_scripting.py" example for how it can
-    be used to enable conditional control flow.
-
-    Named tuple attributes
-    ----------------------
-    out - this is intended to store normal output data from the command and can be of any type that makes sense
-    err: str - (optional) this is intended to store an error message and it being non-empty indicates there was an error
-                Defaults to an empty string
-    war: str - (optional) this is intended to store a warning message which isn't quite an error, but of note
-               Defaults to an empty string.
-
-    NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
-    """
-    def __bool__(self) -> bool:
-        """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
-        return not self.err
