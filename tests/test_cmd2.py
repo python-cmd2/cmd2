@@ -1826,13 +1826,20 @@ def test_onecmd_raw_str_quit(base_app):
     assert out == ''
 
 
-def test_existing_history_file(capsys, request):
+@pytest.fixture(scope="session")
+def hist_file():
+    fd, filename = tempfile.mkstemp(prefix='hist_file', suffix='.txt')
+    os.close(fd)
+    yield filename
+    # teardown code
+    try:
+        os.remove(filename)
+    except FileNotFoundError:
+        pass
+
+def test_existing_history_file(hist_file, capsys):
     import atexit
     import readline
-
-    # Create path to a history file
-    test_dir = os.path.dirname(request.module.__file__)
-    hist_file = os.path.join(test_dir, 'hist_file')
 
     # Create the history file before making cmd2 app
     with open(hist_file, 'w'):
@@ -1842,20 +1849,19 @@ def test_existing_history_file(capsys, request):
     app = cmd2.Cmd(persistent_history_file=hist_file)
     out, err = capsys.readouterr()
 
+    # Make sure there were no errors
+    assert err == ''
+
     # Unregister the call to write_history_file that cmd2 did
     atexit.unregister(readline.write_history_file)
 
-    # Remove created history file and make sure there were no errors
+    # Remove created history file
     os.remove(hist_file)
-    assert err == ''
 
-def test_new_history_file(capsys, request):
+
+def test_new_history_file(hist_file, capsys):
     import atexit
     import readline
-
-    # Create path to a history file
-    test_dir = os.path.dirname(request.module.__file__)
-    hist_file = os.path.join(test_dir, 'hist_file')
 
     # Remove any existing history file
     try:
@@ -1867,12 +1873,14 @@ def test_new_history_file(capsys, request):
     app = cmd2.Cmd(persistent_history_file=hist_file)
     out, err = capsys.readouterr()
 
+    # Make sure there were no errors
+    assert err == ''
+
     # Unregister the call to write_history_file that cmd2 did
     atexit.unregister(readline.write_history_file)
 
-    # Remove created history file and make sure there were no errors
+    # Remove created history file
     os.remove(hist_file)
-    assert err == ''
 
 def test_bad_history_file_path(capsys, request):
     # Use a directory path as the history file
