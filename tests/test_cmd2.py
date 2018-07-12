@@ -1825,3 +1825,66 @@ def test_onecmd_raw_str_quit(base_app):
     assert stop
     assert out == ''
 
+
+def test_existing_history_file(capsys, request):
+    import atexit
+    import readline
+
+    # Create path to a history file
+    test_dir = os.path.dirname(request.module.__file__)
+    hist_file = os.path.join(test_dir, 'hist_file')
+
+    # Create the history file before making cmd2 app
+    with open(hist_file, 'w'):
+        pass
+
+    # Create a new cmd2 app
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+    out, err = capsys.readouterr()
+
+    # Unregister the call to write_history_file that cmd2 did
+    atexit.unregister(readline.write_history_file)
+
+    # Remove created history file and make sure there were no errors
+    os.remove(hist_file)
+    assert err == ''
+
+def test_new_history_file(capsys, request):
+    import atexit
+    import readline
+
+    # Create path to a history file
+    test_dir = os.path.dirname(request.module.__file__)
+    hist_file = os.path.join(test_dir, 'hist_file')
+
+    # Remove any existing history file
+    try:
+        os.remove(hist_file)
+    except OSError:
+        pass
+
+    # Create a new cmd2 app
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+    out, err = capsys.readouterr()
+
+    # Unregister the call to write_history_file that cmd2 did
+    atexit.unregister(readline.write_history_file)
+
+    # Remove created history file and make sure there were no errors
+    os.remove(hist_file)
+    assert err == ''
+
+def test_bad_history_file_path(capsys, request):
+    # Use a directory path as the history file
+    test_dir = os.path.dirname(request.module.__file__)
+
+    # Create a new cmd2 app
+    app = cmd2.Cmd(persistent_history_file=test_dir)
+    out, err = capsys.readouterr()
+
+    if sys.platform == 'win32':
+        # pyreadline masks the read exception. Therefore the bad path error occurs when trying to write the file.
+        assert 'readline cannot write' in err
+    else:
+        # GNU readline raises an exception upon trying to read the directory as a file
+        assert 'readline cannot read' in err
