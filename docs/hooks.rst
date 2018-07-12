@@ -94,7 +94,7 @@ of your application. Methods registered for a hook are called in the order they
 were registered. You can register a function more than once, and it will be
 called each time it was registered.
 
-Postparsing, precomamnd, and postcommand hook methods share some common ways to
+Postparsing, precommand, and postcommand hook methods share some common ways to
 influence the command processing loop.
 
 If a hook raises a ``cmd2.EmptyStatement`` exception:
@@ -113,7 +113,7 @@ Postparsing Hooks
 ^^^^^^^^^^^^^^^^^
 
 Postparsing hooks are called after the user input has been parsed but before
-execution of the comamnd. These hooks can be used to:
+execution of the command. These hooks can be used to:
 
 - modify the user input
 - run code before every command executes
