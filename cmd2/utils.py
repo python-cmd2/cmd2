@@ -61,22 +61,6 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
     return T
 
 
-def namedtuple_with_two_defaults(typename: str, field_names: Union[str, List[str]],
-                                 default_values: collections.Iterable=('', '')):
-    """Wrapper around namedtuple which lets you treat the last value as optional.
-
-    :param typename: str - type name for the Named tuple
-    :param field_names: List[str] or space-separated string of field names
-    :param default_values: (optional) 2-element tuple containing the default values for last 2 parameters in named tuple
-                            Defaults to an empty string for both of them
-    :return: namedtuple type
-    """
-    T = collections.namedtuple(typename, field_names)
-    # noinspection PyUnresolvedReferences
-    T.__new__.__defaults__ = default_values
-    return T
-
-
 def cast(current: Any, new: str) -> Any:
     """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
 
@@ -143,7 +127,7 @@ def is_text_file(file_path: str) -> bool:
             # noinspection PyUnusedLocal
             if sum(1 for line in f) > 0:
                 valid_text_file = True
-    except IOError:  # pragma: no cover
+    except OSError:  # pragma: no cover
         pass
     except UnicodeDecodeError:
         # The file is not ASCII. Check if it is UTF-8.
@@ -153,7 +137,7 @@ def is_text_file(file_path: str) -> bool:
                 # noinspection PyUnusedLocal
                 if sum(1 for line in f) > 0:
                     valid_text_file = True
-        except IOError:  # pragma: no cover
+        except OSError:  # pragma: no cover
             pass
         except UnicodeDecodeError:
             # Not UTF-8

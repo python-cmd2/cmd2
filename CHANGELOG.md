@@ -1,7 +1,12 @@
-## 0.9.3 (July TBD, 2018)
+## 0.9.3 (July 12, 2018)
 * Bug Fixes
     * Fixed bug when StatementParser ``__init__()`` was called with ``terminators`` equal to ``None``
     * Fixed bug when ``Cmd.onecmd()`` was called with a raw ``str``
+* Enhancements
+    * Added ``--clear`` flag to ``history`` command that clears both the command and readline history.
+* Deletions
+    * The ``CmdResult`` helper class which was *deprecated* in the previous release has now been deleted
+        * It has been replaced by the improved ``CommandResult`` class
 
 ## 0.9.2 (June 28, 2018)
 * Bug Fixes

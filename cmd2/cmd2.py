@@ -371,19 +371,7 @@ class Cmd(cmd.Cmd):
             except AttributeError:
                 pass
 
-        # If persistent readline history is enabled, then read history from file and register to write to file at exit
-        if persistent_history_file and rl_type != RlType.NONE:
-            persistent_history_file = os.path.expanduser(persistent_history_file)
-            try:
-                readline.read_history_file(persistent_history_file)
-                # default history len is -1 (infinite), which may grow unruly
-                readline.set_history_length(persistent_history_length)
-            except FileNotFoundError:
-                pass
-            import atexit
-            atexit.register(readline.write_history_file, persistent_history_file)
-
-        # initialize plugin system
+		# initialize plugin system
         # needs to be done before we call __init__(0)
         self._initialize_plugin_system()
 
@@ -453,6 +441,37 @@ class Cmd(cmd.Cmd):
 
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
+
+        # Check if history should persist
+        if persistent_history_file and rl_type != RlType.NONE:
+            persistent_history_file = os.path.expanduser(persistent_history_file)
+            read_err = False
+
+            try:
+                # First try to read any existing history file
+                readline.read_history_file(persistent_history_file)
+            except FileNotFoundError:
+                pass
+            except OSError as ex:
+                self.perror("readline cannot read persistent history file '{}': {}".format(persistent_history_file, ex),
+                            traceback_war=False)
+                read_err = True
+
+            if not read_err:
+                try:
+                    # Make sure readline is able to write the history file. Doing it this way is a more thorough check
+                    # than trying to open the file with write access since readline's underlying function needs to
+                    # create a temporary file in the same directory and may not have permission.
+                    readline.set_history_length(persistent_history_length)
+                    readline.write_history_file(persistent_history_file)
+                except OSError as ex:
+                    self.perror("readline cannot write persistent history file '{}': {}".
+                                format(persistent_history_file, ex), traceback_war=False)
+                else:
+                    # Set history file and register to save our history at exit
+                    import atexit
+                    self.persistent_history_file = persistent_history_file
+                    atexit.register(readline.write_history_file, self.persistent_history_file)
 
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
@@ -617,7 +636,7 @@ class Cmd(cmd.Cmd):
                     try:
                         self.pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
                         self.pipe_proc.stdin.close()
-                    except (IOError, KeyboardInterrupt):
+                    except (OSError, KeyboardInterrupt):
                         pass
 
                     # Less doesn't respect ^C, but catches it for its own UI purposes (aborting search etc. inside less)
@@ -2634,8 +2653,9 @@ Usage:  Usage: unalias [-a] name [name ...]
                 try:
                     with open(filename) as f:
                         interp.runcode(f.read())
-                except IOError as e:
-                    self.perror(e)
+                except OSError as ex:
+                    error_msg = "Error opening script file '{}': {}".format(filename, ex)
+                    self.perror(error_msg, traceback_war=False)
 
             bridge = PyscriptBridge(self)
             self.pystate['run'] = run
@@ -2829,6 +2849,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
     history_parser_group.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
     history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output commands to a script file')
     history_parser_group.add_argument('-t', '--transcript', help='output commands and results to a transcript file')
+    history_parser_group.add_argument('-c', '--clear', action="store_true", help='clears all history')
     _history_arg_help = """empty               all history items
 a                   one history item by number
 a..b, a:b, a:, ..b  items by indices (inclusive)
@@ -2838,7 +2859,18 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> None:
-        """View, run, edit, and save previously entered commands."""
+        """View, run, edit, save, or clear previously entered commands."""
+
+        if args.clear:
+            # Clear command and readline history
+            self.history.clear()
+
+            if rl_type != RlType.NONE:
+                readline.clear_history()
+                if self.persistent_history_file:
+                    os.remove(self.persistent_history_file)
+            return
+
         # If an argument was supplied, then retrieve partial contents of the history
         cowardly_refuse_to_run = False
         if args.arg:
@@ -3044,25 +3076,30 @@ Script should contain one command per line, just like command would be typed in 
         """
         # If arg is None or arg is an empty string this is an error
         if not arglist:
-            self.perror('load command requires a file path:', traceback_war=False)
+            self.perror('load command requires a file path', traceback_war=False)
             return
 
         file_path = arglist[0].strip()
         expanded_path = os.path.abspath(os.path.expanduser(file_path))
 
+        # Make sure the path exists and we can access it
+        if not os.path.exists(expanded_path):
+            self.perror("'{}' does not exist or cannot be accessed".format(expanded_path), traceback_war=False)
+            return
+
         # Make sure expanded_path points to a file
         if not os.path.isfile(expanded_path):
-            self.perror('{} does not exist or is not a file'.format(expanded_path), traceback_war=False)
+            self.perror("'{}' is not a file".format(expanded_path), traceback_war=False)
             return
 
         # Make sure the file is not empty
         if os.path.getsize(expanded_path) == 0:
-            self.perror('{} is empty'.format(expanded_path), traceback_war=False)
+            self.perror("'{}' is empty".format(expanded_path), traceback_war=False)
             return
 
         # Make sure the file is ASCII or UTF-8 encoded text
         if not utils.is_text_file(expanded_path):
-            self.perror('{} is not an ASCII or UTF-8 encoded text file'.format(expanded_path), traceback_war=False)
+            self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path), traceback_war=False)
             return
 
         try:
@@ -3071,8 +3108,8 @@ Script should contain one command per line, just like command would be typed in 
             # self._script_dir list when done.
             with open(expanded_path, encoding='utf-8') as target:
                 self.cmdqueue = target.read().splitlines() + ['eos'] + self.cmdqueue
-        except IOError as e:  # pragma: no cover
-            self.perror('Problem accessing script from {}:\n{}'.format(expanded_path, e))
+        except OSError as ex:  # pragma: no cover
+            self.perror("Problem accessing script from '{}': {}".format(expanded_path, ex))
             return
 
         self._script_dir.append(os.path.dirname(expanded_path))
@@ -3408,25 +3445,3 @@ class Statekeeper(object):
         if self.obj:
             for attrib in self.attribs:
                 setattr(self.obj, attrib, getattr(self, attrib))
-
-
-class CmdResult(utils.namedtuple_with_two_defaults('CmdResult', ['out', 'err', 'war'])):
-    """DEPRECATED: Derive a class to store results from a named tuple so we can tweak dunder methods for convenience.
-
-    This is provided as a convenience and an example for one possible way for end users to store results in
-    the self._last_result attribute of cmd2.Cmd class instances.  See the "python_scripting.py" example for how it can
-    be used to enable conditional control flow.
-
-    Named tuple attributes
-    ----------------------
-    out - this is intended to store normal output data from the command and can be of any type that makes sense
-    err: str - (optional) this is intended to store an error message and it being non-empty indicates there was an error
-                Defaults to an empty string
-    war: str - (optional) this is intended to store a warning message which isn't quite an error, but of note
-               Defaults to an empty string.
-
-    NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
-    """
-    def __bool__(self) -> bool:
-        """If err is an empty string, treat the result as a success; otherwise treat it as a failure."""
-        return not self.err
