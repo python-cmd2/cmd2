@@ -30,7 +30,11 @@ You can register methods to be called at the beginning of the command loop::
         def myhookmethod(self):
             self.poutput("before the loop begins")
 
-And also after the command loop has finished::
+To retain backwards compatibility with `cmd.Cmd`, after all registered preloop
+hooks have been called, the ``preloop()`` method is called.
+
+A similar approach allows you to register functions to be called after the
+command loop has finished::
 
     class App(cmd2.Cmd):
         def __init__(self, *args, *kwargs):
@@ -39,6 +43,9 @@ And also after the command loop has finished::
 
         def myhookmethod(self):
             self.poutput("before the loop begins")
+
+To retain backwards compatibility with `cmd.Cmd`, after all registered postloop
+hooks have been called, the ``postloop()`` method is called.
 
 Preloop and postloop hook methods are not passed any parameters and any return
 value is ignored.
@@ -297,15 +304,6 @@ If any command finalization hook raises an exception, no more command
 finalization hooks will be called. If the last hook to return a value returned
 ``True``, then the exception will be rendered, and the application will
 terminate.
-
-Deprecated Application Lifecycle Hook Methods
----------------------------------------------
-
-The ``preloop`` and ``postloop`` methods run before and after the main loop, respectively.
-
-.. automethod:: cmd2.cmd2.Cmd.preloop
-
-.. automethod:: cmd2.cmd2.Cmd.postloop
 
 Deprecated Command Processing Hooks
 -----------------------------------
