@@ -60,7 +60,7 @@ Programming Language :: Python :: Implementation :: CPython
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
-INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama']
+INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama', 'attrs']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
