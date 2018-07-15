@@ -249,10 +249,11 @@ attribute that describes the command which was executed. If your postcommand
 hook method gets called, you are guaranteed that the command method was called,
 and that it didn't raise an exception.
 
-If any postcommand hook raises an exception, the exception will be displayed to the user, and no further postcommand hook methods
-will be called. Command finalization hooks, if any, will be called.
+If any postcommand hook raises an exception, the exception will be displayed to
+the user, and no further postcommand hook methods will be called. Command
+finalization hooks, if any, will be called.
 
-After all registered precommand hooks have been called,
+After all registered postcommand hooks have been called,
 ``self.postcmd(statement)`` will be called to retain full backward compatibility
 with ``cmd.Cmd``.
 
