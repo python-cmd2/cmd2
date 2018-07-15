@@ -26,6 +26,32 @@ def parser():
     )
     return parser
 
+@pytest.fixture
+def default_parser():
+    parser = StatementParser()
+    return parser
+
+def test_parse_empty_string_default(default_parser):
+    statement = default_parser.parse('')
+    assert not statement.command
+    assert not statement.args
+    assert statement == ''
+    assert statement.raw == ''
+
+@pytest.mark.parametrize('line,tokens', [
+    ('command', ['command']),
+    ('command /* with some comment */ arg', ['command', 'arg']),
+    ('command arg1 arg2 # comment at the end', ['command', 'arg1', 'arg2']),
+    ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+    ('termbare; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
+    ('termbare & > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
+    ('termbare& > /tmp/output', ['termbare&', '>', '/tmp/output']),
+    ('help|less', ['help', '|', 'less']),
+])
+def test_tokenize_default(default_parser, line, tokens):
+    tokens_to_test = default_parser.tokenize(line)
+    assert tokens_to_test == tokens
+
 def test_parse_empty_string(parser):
     statement = parser.parse('')
     assert not statement.command
