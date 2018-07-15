@@ -78,21 +78,22 @@ the application exits:
 
 1. Output the prompt
 2. Accept user input
-3. Parse user input into `Statement` object
-4. Call methods registered with `register_postparsing_hook()`
-5. Call `postparsing_precmd()` - for backwards compatibility with prior releases of cmd2, now deprecated
-6. Redirect output, if user asked for it and it's allowed
-7. Start timer
-8. Call methods registered with `register_precmd_hook()`
-9. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
-10. Add statement to history
-11. Call `do_command` method
-12. Call methods registered with `register_postcmd_hook()`
-13. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
-14. Stop timer and display the elapsed time
-15. Stop redirecting output if it was redirected
-16. Call methods registered with `register_cmdfinalization_hook()`
-17. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
+3. Call `preparse()` - for backwards compatibility with prior releases of cmd2, now deprecated
+4. Parse user input into `Statement` object
+5. Call methods registered with `register_postparsing_hook()`
+6. Call `postparsing_precmd()` - for backwards compatibility with prior releases of cmd2, now deprecated
+7. Redirect output, if user asked for it and it's allowed
+8. Start timer
+9. Call methods registered with `register_precmd_hook()`
+10. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
+11. Add statement to history
+12. Call `do_command` method
+13. Call methods registered with `register_postcmd_hook()`
+14. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
+15. Stop timer and display the elapsed time
+16. Stop redirecting output if it was redirected
+17. Call methods registered with `register_cmdfinalization_hook()`
+18. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
 
 By registering hook methods, steps 4, 8, 12, and 16 allow you to run code
 during, and control the flow of the command processing loop. Be aware that
@@ -146,7 +147,6 @@ To define and register a postparsing hook, do the following::
 and raises a ``TypeError`` if it has the wrong number of parameters. It will
 also raise a ``TypeError`` if the passed parameter and return value are not annotated
 as ``PostparsingData``.
-
 
 The hook method will be passed one parameter, a ``PostparsingData`` object
 which we will refer to as ``params``. ``params`` contains two attributes.

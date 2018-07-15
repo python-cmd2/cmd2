@@ -56,15 +56,22 @@ script file.
 
 The **onecmd_plus_hooks()** method will do the following to execute a single ``cmd2`` command in a normal fashion:
 
-#. Parse the command line text
-#. Execute postparsing_precmd()
-#. Add the command to the history
-#. Apply output redirection, if present
-#. Execute precmd()
-#. Execute onecmd() - this is what actually runs the command
-#. Execute postcmd()
-#. Undo output rediriection (if present) and perform piping, if present
-#. Execute postparsing_postcmd()
+1. Call `preparse()` - for backwards compatibility with prior releases of cmd2, now deprecated
+2. Parse user input into `Statement` object
+3. Call methods registered with `register_postparsing_hook()`
+4. Call `postparsing_precmd()` - for backwards compatibility with prior releases of cmd2, now deprecated
+5. Redirect output, if user asked for it and it's allowed
+6. Start timer
+7. Call methods registered with `register_precmd_hook()`
+8. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
+9. Add statement to history
+10. Call `do_command` method
+11. Call methods registered with `register_postcmd_hook()`
+12. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
+13. Stop timer and display the elapsed time
+14. Stop redirecting output if it was redirected
+15. Call methods registered with `register_cmdfinalization_hook()`
+16. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
 
 Running in this fashion enables the ability to integrate with an external event loop.  However, how to integrate with
 any specific event loop is beyond the scope of this documentation.  Please note that running in this fashion comes with
