@@ -1840,7 +1840,7 @@ class Cmd(cmd.Cmd):
         pipe runs out. We can't refactor it because we need to retain
         backwards compatibility with the standard library version of cmd.
         """
-        statement = self.statement_parser.parse(line)
+        statement = self.statement_parser.parse(self.preparse(line))
         while statement.multiline_command and not statement.terminator:
             if not self.quit_on_sigint:
                 try:

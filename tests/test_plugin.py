@@ -22,6 +22,7 @@ class Plugin:
         self.reset_counters()
 
     def reset_counters(self):
+        self.called_preparse = 0
         self.called_postparsing = 0
         self.called_precmd = 0
         self.called_postcmd = 0
@@ -48,6 +49,16 @@ class Plugin:
     def prepost_hook_with_wrong_return_annotation(self) -> bool:
         "A preloop or postloop hook with incorrect return type"
         pass
+
+    ###
+    #
+    # preparse hook
+    #
+    ###
+    def preparse(self, line: str) -> str:
+        "Preparsing hook"
+        self.called_preparse += 1
+        return line
 
     ###
     #
@@ -307,6 +318,19 @@ def test_postloop_hooks(capsys):
     out, err = capsys.readouterr()
     assert out == 'hello\none\ntwo\n'
     assert not err
+
+###
+#
+# test preparse hook
+#
+###
+def test_preparse(capsys):
+    app = PluggedApp()
+    app.onecmd_plus_hooks('say hello')
+    out, err = capsys.readouterr()
+    assert out == 'hello\n'
+    assert not err
+    assert app.called_preparse == 1
 
 ###
 #
