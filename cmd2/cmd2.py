@@ -1642,10 +1642,20 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyMethodMayBeStatic
     def preparse(self, raw: str) -> str:
-        """Hook method executed just before the command line is interpreted, but after the input prompt is generated.
+        """Hook method executed before user input is parsed.
 
-        :param raw: raw command line input
-        :return: potentially modified raw command line input
+        WARNING: If it's a multiline command, `preparse()` may not get all the
+        user input. _complete_statement() really does two things: a) parse the
+        user input, and b) accept more input in case it's a multiline command
+        the passed string doesn't have a terminator. `preparse()` is currently
+        called before we know whether it's a multiline command, and before we
+        know whether the user input includes a termination character.
+
+        If you want a reliable pre parsing hook method, register a postparsing
+        hook, modify the user input, and then reparse it.
+
+        :param raw: raw command line input :return: potentially modified raw
+        command line input
         """
         return raw
 
