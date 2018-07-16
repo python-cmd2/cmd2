@@ -139,7 +139,7 @@ class StatementParser:
         # capturing syntax because _comment_replacer() looks at match
         # groups
         self.comment_pattern = re.compile(
-            r'/\*.*?(\*/|$)|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+            r'\*.*?(\*/|$)|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE
         )
 
