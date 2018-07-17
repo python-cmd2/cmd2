@@ -1,3 +1,11 @@
+## 0.9.4 (TBD, 2018)
+* Bug Fixes
+    * Fixed bug where ``preparse`` wasn't getting called
+* Enhancements
+    * Improved implementation of lifecycle hooks to to support a plugin framework
+* Deprecations
+    * Deprecated a few of the old lifecycle hook methods
+
 ## 0.9.3 (July 12, 2018)
 * Bug Fixes
     * Fixed bug when StatementParser ``__init__()`` was called with ``terminators`` equal to ``None``

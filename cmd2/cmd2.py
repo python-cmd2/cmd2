@@ -116,7 +116,7 @@ try:
 except ImportError:  # pragma: no cover
     ipython_available = False
 
-__version__ = '0.9.3'
+__version__ = '0.9.4'
 
 
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
