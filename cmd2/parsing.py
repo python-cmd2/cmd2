@@ -152,25 +152,23 @@ class StatementParser:
         # double or single quotes.
         #
         # this big regular expression can be broken down into 3 regular
-        # expressions that are OR'ed together.
+        # expressions that are OR'ed together with a pipe character
         #
-        # /\*.*?(\*/|$)          matches C-style comments, with an optional
-        #                        closing '*/'. The optional closing '*/' is
-        #                        there to retain backward compatibility with
-        #                        the pyparsing implementation of cmd2 < 0.9.0
-        # \'(?:\\.|[^\\\'])*\'   matches a single quoted string, allowing
+        # /\*.*\*/               Matches C-style comments (i.e. /* comment */)
+        #                        does not match unclosed comments.
+        # \'(?:\\.|[^\\\'])*\'   Matches a single quoted string, allowing
         #                        for embedded backslash escaped single quote
-        #                        marks
-        # "(?:\\.|[^\\"])*"      matches a double quoted string, allowing
+        #                        marks.
+        # "(?:\\.|[^\\"])*"      Matches a double quoted string, allowing
         #                        for embedded backslash escaped double quote
-        #                        marks
+        #                        marks.
         #
         # by way of reminder the (?:...) regular expression syntax is just
         # a non-capturing version of regular parenthesis. We need the non-
         # capturing syntax because _comment_replacer() looks at match
         # groups
         self.comment_pattern = re.compile(
-            r'/\*.*?(\*/|$)|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+            r'/\*.*\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE
         )
 

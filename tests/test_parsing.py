@@ -180,6 +180,20 @@ def test_parse_c_comment_empty(parser):
     assert not statement.argv
     assert statement == ''
 
+def test_parse_c_comment_no_closing(parser):
+    statement = parser.parse('cat /tmp/*.txt')
+    assert statement.command == 'cat'
+    assert statement.args == '/tmp/*.txt'
+    assert not statement.pipe_to
+    assert statement.argv == ['cat', '/tmp/*.txt']
+
+def test_parse_c_comment_multiple_opening(parser):
+    statement = parser.parse('cat /tmp/*.txt /tmp/*.cfg')
+    assert statement.command == 'cat'
+    assert statement.args == '/tmp/*.txt /tmp/*.cfg'
+    assert not statement.pipe_to
+    assert statement.argv == ['cat', '/tmp/*.txt', '/tmp/*.cfg']
+
 def test_parse_what_if_quoted_strings_seem_to_start_comments(parser):
     statement = parser.parse('what if "quoted strings /* seem to " start comments?')
     assert statement.command == 'what'
@@ -344,14 +358,13 @@ def test_parse_multiline_command_ignores_redirectors_within_it(parser, line, ter
 def test_parse_multiline_with_incomplete_comment(parser):
     """A terminator within a comment will be ignored and won't terminate a multiline command.
     Un-closed comments effectively comment out everything after the start."""
-    line = 'multiline command /* with comment in progress;'
+    line = 'multiline command /* with unclosed comment;'
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
     assert statement.command == 'multiline'
-    assert statement.args == 'command'
-    assert statement == statement.args
-    assert statement.argv == ['multiline', 'command']
-    assert not statement.terminator
+    assert statement.args == 'command /* with unclosed comment'
+    assert statement.argv == ['multiline', 'command', '/*', 'with', 'unclosed', 'comment']
+    assert statement.terminator == ';'
 
 def test_parse_multiline_with_complete_comment(parser):
     line = 'multiline command /* with comment complete */ is done;'
