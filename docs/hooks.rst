@@ -322,8 +322,4 @@ the various hook methods, presented in chronological order starting with the one
 
 .. automethod:: cmd2.cmd2.Cmd.postparsing_precmd
 
-.. automethod:: cmd2.cmd2.Cmd.precmd
-
-.. automethod:: cmd2.cmd2.Cmd.postcmd
-
 .. automethod:: cmd2.cmd2.Cmd.postparsing_postcmd
