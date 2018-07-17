@@ -1434,9 +1434,9 @@ def test_which_editor_good():
 @pytest.mark.skipif(sys.platform.startswith('win'),
                     reason="utils.which function only used on Mac and Linux")
 def test_which_editor_bad():
-    editor = 'notepad.exe'
-    path = utils.which(editor)
-    # Assert that the editor wasn't found because no notepad.exe on non-Windows systems ;-)
+    nonexistent_editor = 'this_editor_does_not_exist.exe'
+    path = utils.which(nonexistent_editor)
+    # Assert that the non-existent editor wasn't found
     assert path is None
 
 
