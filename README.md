@@ -62,7 +62,8 @@ the only 3rd-party dependencies being on [attrs](https://github.com/python-attrs
 [colorama](https://github.com/tartley/colorama), and [pyperclip](https://github.com/asweigart/pyperclip).
 Windows has an additional dependency on [pyreadline](https://pypi.python.org/pypi/pyreadline). Non-Windows platforms
 have an additional dependency on [wcwidth](https://pypi.python.org/pypi/wcwidth). Finally, Python
-3.4 has an additional dependency on [contextlib2](https://pypi.python.org/pypi/contextlib2).
+3.4 has additional dependencies on [contextlib2](https://pypi.python.org/pypi/contextlib2) and the
+[typing](https://pypi.org/project/typing/) backport.
 
 For information on other installation options, see
 [Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2

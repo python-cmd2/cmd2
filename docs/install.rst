@@ -126,10 +126,10 @@ If you wish to permanently uninstall ``cmd2``, this can also easily be done with
 
     pip uninstall cmd2
 
-Extra requirement for Python 3.4
---------------------------------
+Extra requirements for Python 3.4
+---------------------------------
 ``cmd2`` requires the ``contextlib2`` module for Python 3.4.  This is used to temporarily redirect
-stdout and stderr.
+stdout and stderr.  Also when using Python 3.4, ``cmd2`` requires the ``typing`` module backport.
 
 Extra requirement for macOS
 ===========================
