@@ -29,7 +29,7 @@ from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
 
 
 def test_ver():
-    assert cmd2.__version__ == '0.9.3'
+    assert cmd2.__version__ == '0.9.4'
 
 
 def test_empty_statement(base_app):
@@ -1426,17 +1426,23 @@ optional arguments:
 @pytest.mark.skipif(sys.platform.startswith('win'),
                     reason="utils.which function only used on Mac and Linux")
 def test_which_editor_good():
+    import platform
     editor = 'vi'
     path = utils.which(editor)
-    # Assert that the vi editor was found because it should exist on all Mac and Linux systems
-    assert path
+
+    if 'azure' in platform.release().lower():
+        # vi doesn't exist on VSTS Hosted Linux agents
+        assert not path
+    else:
+        # Assert that the vi editor was found because it should exist on all Mac and Linux systems
+        assert path
 
 @pytest.mark.skipif(sys.platform.startswith('win'),
                     reason="utils.which function only used on Mac and Linux")
 def test_which_editor_bad():
-    editor = 'notepad.exe'
-    path = utils.which(editor)
-    # Assert that the editor wasn't found because no notepad.exe on non-Windows systems ;-)
+    nonexistent_editor = 'this_editor_does_not_exist.exe'
+    path = utils.which(nonexistent_editor)
+    # Assert that the non-existent editor wasn't found
     assert path is None
 
 

@@ -98,12 +98,16 @@ either composition or inheritance to achieve the same goal.
 This approach will obviously NOT automatically install the required 3rd-party dependencies, so you need to make sure
 the following Python packages are installed:
 
-  * pyparsing
+  * attrs
+  * colorama
   * pyperclip
 
 On Windows, there is an additional dependency:
 
   * pyreadline
+
+On macOS or Linux, there is an additional dependency:
+  * wcwidth
 
 
 Upgrading cmd2
@@ -122,10 +126,10 @@ If you wish to permanently uninstall ``cmd2``, this can also easily be done with
 
     pip uninstall cmd2
 
-Extra requirement for Python 3.4
---------------------------------
+Extra requirements for Python 3.4
+---------------------------------
 ``cmd2`` requires the ``contextlib2`` module for Python 3.4.  This is used to temporarily redirect
-stdout and stderr.
+stdout and stderr.  Also when using Python 3.4, ``cmd2`` requires the ``typing`` module backport.
 
 Extra requirement for macOS
 ===========================

@@ -398,7 +398,7 @@ how to do it.
 
 7.  Creating the PR causes our continuous integration (CI) systems to automatically run all of the
     unit tests on all supported OSes and all supported versions of Python.  You should watch your PR
-    to make sure that all unit tests pass on Both TravisCI (Linux) and AppVeyor (Windows).
+    to make sure that all unit tests pass on TravisCI (Linux), AppVeyor (Windows), and VSTS (macOS).
 
 8.  If any unit tests fail, you should look at the details and fix the failures.  You can then push
     the fix to the same branch in your fork and the PR will automatically get updated and the CI system

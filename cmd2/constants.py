@@ -15,3 +15,5 @@ REDIRECTION_TOKENS = [REDIRECTION_PIPE, REDIRECTION_OUTPUT, REDIRECTION_APPEND]
 
 # Regular expression to match ANSI escape codes
 ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
+
+LINE_FEED = '\n'
