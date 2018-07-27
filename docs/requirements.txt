@@ -1,3 +1,4 @@
+attrs
 colorama
 pyperclip
 wcwidth
