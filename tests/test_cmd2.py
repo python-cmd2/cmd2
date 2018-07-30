@@ -28,10 +28,6 @@ from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
     HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
 
 
-def test_ver():
-    assert cmd2.__version__ == '0.9.4'
-
-
 def test_empty_statement(base_app):
     out = run_cmd(base_app, '')
     expected = normalize('')

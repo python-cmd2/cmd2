@@ -5,7 +5,6 @@ Setuptools setup file, used to install or test 'cmd2'
 """
 from setuptools import setup
 
-VERSION = '0.9.4'
 DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
 LONG_DESCRIPTION = """cmd2 is a tool for building interactive command line applications in Python. Its goal is to make
 it quick and easy for developers to build feature-rich and user-friendly interactive command line applications.  It
@@ -60,6 +59,8 @@ Programming Language :: Python :: Implementation :: CPython
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))
 
+SETUP_REQUIRES = ['setuptools_scm']
+
 INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama', 'attrs']
 
 EXTRAS_REQUIRE = {
@@ -79,7 +80,7 @@ EXTRAS_REQUIRE = {
 
 setup(
     name="cmd2",
-    version=VERSION,
+    use_scm_version=True,
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     classifiers=CLASSIFIERS,
@@ -91,6 +92,7 @@ setup(
     packages=['cmd2'],
     keywords='command prompt console cmd',
     python_requires='>=3.4',
+    setup_requires=SETUP_REQUIRES,
     install_requires=INSTALL_REQUIRES,
     extras_require=EXTRAS_REQUIRE,
 )
