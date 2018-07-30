@@ -3,6 +3,7 @@ __pycache__
 build
 dist
 cmd2.egg-info
+.eggs
 .cache
 *.pyc
 .tox
