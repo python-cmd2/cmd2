@@ -1652,8 +1652,8 @@ class Cmd(cmd.Cmd):
         If you want a reliable pre parsing hook method, register a postparsing
         hook, modify the user input, and then reparse it.
 
-        :param raw: raw command line input :return: potentially modified raw
-        command line input
+        :param raw: raw command line input :return: potentially modified raw command line input
+        :return: a potentially modified version of the raw input string
         """
         return raw
 
