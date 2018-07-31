@@ -1,4 +1,0 @@
-attrs
-colorama
-pyperclip
-wcwidth
