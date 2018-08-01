@@ -410,7 +410,7 @@ def test_delimiter_completion(cmd2_app):
 
     # Remove duplicates from display_matches and sort it. This is typically done in complete().
     display_list = utils.remove_duplicates(cmd2_app.display_matches)
-    display_list.sort(key=str.lower)
+    display_list = utils.alphabetical_sort(display_list)
 
     assert display_list == ['other user', 'user']
 

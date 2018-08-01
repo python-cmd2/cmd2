@@ -157,3 +157,12 @@ def remove_duplicates(list_to_prune: List) -> List:
         temp_dict[item] = None
 
     return list(temp_dict.keys())
+
+
+def alphabetical_sort(list_to_sort: List[str]) -> List[str]:
+    """
+    Sorts a list of strings alphabetically
+    :param list_to_sort: the list being sorted
+    :return: the sorted list
+    """
+    return sorted(list_to_sort, key=str.casefold)

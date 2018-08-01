@@ -1092,7 +1092,7 @@ class Cmd(cmd.Cmd):
             self.allow_closing_quote = False
 
         # Sort the matches before any trailing slashes are added
-        matches.sort(key=str.lower)
+        matches = utils.alphabetical_sort(matches)
         self.matches_sorted = True
 
         # Build display_matches and add a slash to directories
@@ -1532,8 +1532,8 @@ class Cmd(cmd.Cmd):
 
             # Sort matches alphabetically if they haven't already been sorted
             if not self.matches_sorted:
-                self.completion_matches.sort(key=str.lower)
-                self.display_matches.sort(key=str.lower)
+                self.completion_matches = utils.alphabetical_sort(self.completion_matches)
+                self.display_matches = utils.alphabetical_sort(self.display_matches)
                 self.matches_sorted = True
 
         try:
@@ -2325,12 +2325,10 @@ Usage:  Usage: unalias [-a] name [name ...]
         """Show a list of commands which help can be displayed for.
         """
         # Get a sorted list of help topics
-        help_topics = self.get_help_topics()
-        help_topics.sort(key=str.lower)
+        help_topics = utils.alphabetical_sort(self.get_help_topics())
 
         # Get a sorted list of visible command names
-        visible_commands = self.get_visible_commands()
-        visible_commands.sort(key=str.lower)
+        visible_commands = utils.alphabetical_sort(self.get_visible_commands())
 
         cmds_doc = []
         cmds_undoc = []
