@@ -229,7 +229,7 @@ if six.PY2 and sys.platform.startswith('lin'):
         pass
 
 
-__version__ = '0.8.8'
+__version__ = '0.8.9'
 
 # Pyparsing enablePackrat() can greatly speed up parsing, but problems have been seen in Python 3 in the past
 pyparsing.ParserElement.enablePackrat()
@@ -1694,12 +1694,15 @@ class Cmd(cmd.Cmd):
             users = []
 
             # Windows lacks the pwd module so we can't get a list of users.
-            # Instead we will add a slash once the user enters text that
+            # Instead we will return a result once the user enters text that
             # resolves to an existing home directory.
             if sys.platform.startswith('win'):
                 expanded_path = os.path.expanduser(text)
                 if os.path.isdir(expanded_path):
-                    users.append(text + os.path.sep)
+                    user = text
+                    if add_trailing_sep_if_dir:
+                        user += os.path.sep
+                    users.append(user)
             else:
                 import pwd
 
