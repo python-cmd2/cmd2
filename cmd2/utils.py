@@ -144,3 +144,16 @@ def is_text_file(file_path: str) -> bool:
             pass
 
     return valid_text_file
+
+
+def remove_duplicates(list_to_prune: List) -> List:
+    """
+    Removes duplicates from a list while preserving order of the items
+    :param list_to_prune: the list being pruned of duplicates
+    :return: The pruned list
+    """
+    temp_dict = collections.OrderedDict()
+    for item in list_to_prune:
+        temp_dict[item] = None
+
+    return list(temp_dict.keys())

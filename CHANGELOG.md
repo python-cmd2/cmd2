@@ -2,9 +2,10 @@
 * Bug Fixes
     * Fixed bug where ``preparse`` wasn't getting called
 * Enhancements
-    * Improved implementation of lifecycle hooks to to support a plugin
+    * Improved implementation of lifecycle hooks to support a plugin
       framework, see ``docs/hooks.rst`` for details.
     * New dependency on ``attrs`` third party module
+    * Added ``matches_sorted`` member to support custom sorting of tab-completion matches
 * Deprecations
     * Deprecated the following hook methods, see ``hooks.rst`` for full details:
        * ``cmd2.Cmd.preparse()`` - equivilent functionality available
@@ -13,6 +14,10 @@
          via ``cmd2.Cmd.register_postparsing_hook()``
        * ``cmd2.Cmd.postparsing_postcmd()`` - equivilent functionality available
          via ``cmd2.Cmd.register_postcmd_hook()``
+
+## 0.8.9 (TBD 2018)
+* Bug Fixes
+    * Fixed extra slash that could print when tab completing users on Windows
 
 ## 0.9.3 (July 12, 2018)
 * Bug Fixes
