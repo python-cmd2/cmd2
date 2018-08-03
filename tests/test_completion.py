@@ -252,7 +252,7 @@ def test_path_completion_multiple(cmd2_app, request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    matches = sorted(cmd2_app.path_complete(text, line, begidx, endidx))
+    matches = cmd2_app.path_complete(text, line, begidx, endidx)
     expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
     assert matches == expected
 
