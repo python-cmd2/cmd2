@@ -5,6 +5,7 @@
 import collections
 import os
 from typing import Any, List, Optional, Union
+import unicodedata
 
 from . import constants
 
@@ -110,7 +111,7 @@ def which(editor: str) -> Optional[str]:
 
 
 def is_text_file(file_path: str) -> bool:
-    """Returns if a file contains only ASCII or UTF-8 encoded text
+    """Returns if a file contains only ASCII or UTF-8 encoded text.
 
     :param file_path: path to the file being checked
     :return: True if the file is a text file, False if it is binary.
@@ -147,8 +148,8 @@ def is_text_file(file_path: str) -> bool:
 
 
 def remove_duplicates(list_to_prune: List) -> List:
-    """
-    Removes duplicates from a list while preserving order of the items
+    """Removes duplicates from a list while preserving order of the items.
+
     :param list_to_prune: the list being pruned of duplicates
     :return: The pruned list
     """
@@ -159,10 +160,19 @@ def remove_duplicates(list_to_prune: List) -> List:
     return list(temp_dict.keys())
 
 
-def alphabetical_sort(list_to_sort: List[str]) -> List[str]:
+def norm_fold(astr: str) -> str:
+    """Normalize and casefold Unicode strings for saner comparisons.
+
+    :param astr: input unicode string
+    :return: a normalized and case-folded version of the input string
     """
-    Sorts a list of strings alphabetically
+    return unicodedata.normalize('NFC', astr).casefold()
+
+
+def alphabetical_sort(list_to_sort: List[str]) -> List[str]:
+    """Sorts a list of strings alphabetically.
+
     :param list_to_sort: the list being sorted
     :return: the sorted list
     """
-    return sorted(list_to_sort, key=str.casefold)
+    return sorted(list_to_sort, key=norm_fold)
