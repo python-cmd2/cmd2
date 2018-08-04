@@ -38,7 +38,7 @@ class TabCompleteExample(cmd2.Cmd):
     static_list_directors = ['J. J. Abrams', 'Irvin Kershner', 'George Lucas', 'Richard Marquand',
                              'Rian Johnson', 'Gareth Edwards']
     USER_MOVIE_LIBRARY = ['ROGUE1', 'SW_EP04', 'SW_EP05']
-    MOVIE_DATABASE_IDS = ['SW_EP01', 'SW_EP02', 'SW_EP03', 'ROGUE1', 'SW_EP04',
+    MOVIE_DATABASE_IDS = ['SW_EP1', 'SW_EP02', 'SW_EP03', 'ROGUE1', 'SW_EP04',
                           'SW_EP05', 'SW_EP06', 'SW_EP07', 'SW_EP08', 'SW_EP09']
     MOVIE_DATABASE = {'SW_EP04': {'title': 'Star Wars: Episode IV - A New Hope',
                                   'rating': 'PG',
@@ -52,13 +52,13 @@ class TabCompleteExample(cmd2.Cmd):
                                   'actor': ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher',
                                             'Alec Guinness', 'Peter Mayhew', 'Anthony Daniels']
                                   },
-                      'SW_EP06': {'title': 'Star Wars: Episode IV - A New Hope',
+                      'SW_EP06': {'title': 'Star Wars: Episode VI - Return of the Jedi',
                                   'rating': 'PG',
                                   'director': ['Richard Marquand'],
                                   'actor': ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher',
                                             'Alec Guinness', 'Peter Mayhew', 'Anthony Daniels']
                                   },
-                      'SW_EP01': {'title': 'Star Wars: Episode I - The Phantom Menace',
+                      'SW_EP1': {'title': 'Star Wars: Episode I - The Phantom Menace',
                                   'rating': 'PG',
                                   'director': ['George Lucas'],
                                   'actor': ['Liam Neeson', 'Ewan McGregor', 'Natalie Portman', 'Jake Lloyd']
@@ -113,8 +113,10 @@ class TabCompleteExample(cmd2.Cmd):
         """Demonstrates showing tabular hinting of tab completion information"""
         completions_with_desc = []
 
-        for movie_id, movie_entry in self.MOVIE_DATABASE.items():
-            completions_with_desc.append(argparse_completer.CompletionItem(movie_id, movie_entry['title']))
+        for movie_id in self.MOVIE_DATABASE_IDS:
+            if movie_id in self.MOVIE_DATABASE:
+                movie_entry = self.MOVIE_DATABASE[movie_id]
+                completions_with_desc.append(argparse_completer.CompletionItem(movie_id, movie_entry['title']))
 
         return completions_with_desc
 

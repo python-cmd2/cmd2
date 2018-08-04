@@ -34,7 +34,6 @@ Main Features
 - Ability to load commands at startup from an initialization script
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
-- Sub-menu support via the ``AddSubmenu`` decorator
 - Unicode character support
 - Good tab-completion of commands, sub-commands, file system paths, and shell commands
 - Support for Python 3.4+ on Windows, macOS, and Linux
@@ -58,7 +57,7 @@ pip install -U cmd2
 ```
 
 cmd2 works with Python 3.4+ on Windows, macOS, and Linux. It is pure Python code with
-the only 3rd-party dependencies being on [attrs](https://github.com/python-attrs/attrs), 
+the only 3rd-party dependencies being on [attrs](https://github.com/python-attrs/attrs),
 [colorama](https://github.com/tartley/colorama), and [pyperclip](https://github.com/asweigart/pyperclip).
 Windows has an additional dependency on [pyreadline](https://pypi.python.org/pypi/pyreadline). Non-Windows platforms
 have an additional dependency on [wcwidth](https://pypi.python.org/pypi/wcwidth). Finally, Python
