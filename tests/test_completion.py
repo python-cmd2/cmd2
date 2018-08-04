@@ -14,6 +14,7 @@ import sys
 
 import pytest
 import cmd2
+from cmd2 import utils
 from .conftest import complete_tester, StdOut
 from examples.subcommands import SubcommandsExample
 
@@ -251,7 +252,7 @@ def test_path_completion_multiple(cmd2_app, request):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    matches = sorted(cmd2_app.path_complete(text, line, begidx, endidx))
+    matches = cmd2_app.path_complete(text, line, begidx, endidx)
     expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
     assert matches == expected
 
@@ -408,9 +409,8 @@ def test_delimiter_completion(cmd2_app):
     cmd2_app.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
 
     # Remove duplicates from display_matches and sort it. This is typically done in complete().
-    display_set = set(cmd2_app.display_matches)
-    display_list = list(display_set)
-    display_list.sort()
+    display_list = utils.remove_duplicates(cmd2_app.display_matches)
+    display_list = utils.alphabetical_sort(display_list)
 
     assert display_list == ['other user', 'user']
 

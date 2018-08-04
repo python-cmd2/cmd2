@@ -369,7 +369,7 @@ class Cmd(cmd.Cmd):
             except AttributeError:
                 pass
 
-		# initialize plugin system
+        # initialize plugin system
         # needs to be done before we call __init__(0)
         self._initialize_plugin_system()
 
@@ -482,11 +482,11 @@ class Cmd(cmd.Cmd):
         # in reset_completion_defaults() and it is up to completer functions to set them before returning results.
         ############################################################################################################
 
-        # If true and a single match is returned to complete(), then a space will be appended
+        # If True and a single match is returned to complete(), then a space will be appended
         # if the match appears at the end of the line
         self.allow_appended_space = True
 
-        # If true and a single match is returned to complete(), then a closing quote
+        # If True and a single match is returned to complete(), then a closing quote
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
@@ -503,6 +503,10 @@ class Cmd(cmd.Cmd):
         # Used by functions like path_complete() and delimiter_complete() to properly
         # quote matches that are completed in a delimited fashion
         self.matches_delimited = False
+
+        # Set to True before returning matches to complete() in cases where matches are sorted with custom ordering.
+        # If False, then complete() will sort the matches alphabetically before they are displayed.
+        self.matches_sorted = False
 
         # Set the pager(s) for use with the ppaged() method for displaying output using a pager
         if sys.platform.startswith('win'):
@@ -678,6 +682,7 @@ class Cmd(cmd.Cmd):
         self.completion_header = ''
         self.display_matches = []
         self.matches_delimited = False
+        self.matches_sorted = False
 
         if rl_type == RlType.GNU:
             readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
@@ -994,12 +999,15 @@ class Cmd(cmd.Cmd):
             users = []
 
             # Windows lacks the pwd module so we can't get a list of users.
-            # Instead we will add a slash once the user enters text that
+            # Instead we will return a result once the user enters text that
             # resolves to an existing home directory.
             if sys.platform.startswith('win'):
                 expanded_path = os.path.expanduser(text)
                 if os.path.isdir(expanded_path):
-                    users.append(text + os.path.sep)
+                    user = text
+                    if add_trailing_sep_if_dir:
+                        user += os.path.sep
+                    users.append(user)
             else:
                 import pwd
 
@@ -1082,6 +1090,10 @@ class Cmd(cmd.Cmd):
         if len(matches) == 1 and os.path.isdir(matches[0]):
             self.allow_appended_space = False
             self.allow_closing_quote = False
+
+        # Sort the matches before any trailing slashes are added
+        matches = utils.alphabetical_sort(matches)
+        self.matches_sorted = True
 
         # Build display_matches and add a slash to directories
         for index, cur_match in enumerate(matches):
@@ -1446,11 +1458,8 @@ class Cmd(cmd.Cmd):
                 if self.completion_matches:
 
                     # Eliminate duplicates
-                    matches_set = set(self.completion_matches)
-                    self.completion_matches = list(matches_set)
-
-                    display_matches_set = set(self.display_matches)
-                    self.display_matches = list(display_matches_set)
+                    self.completion_matches = utils.remove_duplicates(self.completion_matches)
+                    self.display_matches = utils.remove_duplicates(self.display_matches)
 
                     if not self.display_matches:
                         # Since self.display_matches is empty, set it to self.completion_matches
@@ -1521,10 +1530,11 @@ class Cmd(cmd.Cmd):
 
                 self.completion_matches[0] += str_to_append
 
-            # Otherwise sort matches
-            elif self.completion_matches:
-                self.completion_matches.sort()
-                self.display_matches.sort()
+            # Sort matches alphabetically if they haven't already been sorted
+            if not self.matches_sorted:
+                self.completion_matches = utils.alphabetical_sort(self.completion_matches)
+                self.display_matches = utils.alphabetical_sort(self.display_matches)
+                self.matches_sorted = True
 
         try:
             return self.completion_matches[state]
@@ -2270,7 +2280,7 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         else:
             # Get rid of duplicates
-            arglist = list(set(arglist))
+            arglist = utils.remove_duplicates(arglist)
 
             for cur_arg in arglist:
                 if cur_arg in self.aliases:
@@ -2315,12 +2325,10 @@ Usage:  Usage: unalias [-a] name [name ...]
         """Show a list of commands which help can be displayed for.
         """
         # Get a sorted list of help topics
-        help_topics = self.get_help_topics()
-        help_topics.sort()
+        help_topics = utils.alphabetical_sort(self.get_help_topics())
 
         # Get a sorted list of visible command names
-        visible_commands = self.get_visible_commands()
-        visible_commands.sort()
+        visible_commands = utils.alphabetical_sort(self.get_visible_commands())
 
         cmds_doc = []
         cmds_undoc = []

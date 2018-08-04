@@ -5,6 +5,7 @@
 import collections
 import os
 from typing import Any, List, Optional, Union
+import unicodedata
 
 from . import constants
 
@@ -110,7 +111,7 @@ def which(editor: str) -> Optional[str]:
 
 
 def is_text_file(file_path: str) -> bool:
-    """Returns if a file contains only ASCII or UTF-8 encoded text
+    """Returns if a file contains only ASCII or UTF-8 encoded text.
 
     :param file_path: path to the file being checked
     :return: True if the file is a text file, False if it is binary.
@@ -144,3 +145,34 @@ def is_text_file(file_path: str) -> bool:
             pass
 
     return valid_text_file
+
+
+def remove_duplicates(list_to_prune: List) -> List:
+    """Removes duplicates from a list while preserving order of the items.
+
+    :param list_to_prune: the list being pruned of duplicates
+    :return: The pruned list
+    """
+    temp_dict = collections.OrderedDict()
+    for item in list_to_prune:
+        temp_dict[item] = None
+
+    return list(temp_dict.keys())
+
+
+def norm_fold(astr: str) -> str:
+    """Normalize and casefold Unicode strings for saner comparisons.
+
+    :param astr: input unicode string
+    :return: a normalized and case-folded version of the input string
+    """
+    return unicodedata.normalize('NFC', astr).casefold()
+
+
+def alphabetical_sort(list_to_sort: List[str]) -> List[str]:
+    """Sorts a list of strings alphabetically.
+
+    :param list_to_sort: the list being sorted
+    :return: the sorted list
+    """
+    return sorted(list_to_sort, key=norm_fold)

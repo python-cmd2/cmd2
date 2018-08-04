@@ -492,6 +492,7 @@ class AutoCompleter(object):
 
             self._cmd2_app.completion_header = header
             self._cmd2_app.display_matches = completions_with_desc
+            self._cmd2_app.matches_sorted = True
 
         return completions
 
