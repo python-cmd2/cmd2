@@ -75,10 +75,7 @@ Compatibility
 
 Tested and working with Python 3.4+ on Windows, macOS, and Linux.
 
-Indices and tables
-==================
+Index
+=====
 
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
