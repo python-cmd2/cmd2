@@ -601,6 +601,16 @@ def test_parse_command_only_none(parser, line):
     assert statement.args is None
     assert statement == ''
 
+def test_parse_command_only_multiline(parser):
+    line = 'multiline with partially "open quotes and no terminator'
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'multiline'
+    assert statement.multiline_command == 'multiline'
+    assert statement.args == 'with partially "open quotes and no terminator'
+    assert statement == statement.args
+    assert statement.command_and_args == line
+
+
 def test_statement_initialization(parser):
     string = 'alias'
     statement = cmd2.Statement(string)
