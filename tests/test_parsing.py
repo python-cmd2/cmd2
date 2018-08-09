@@ -376,7 +376,7 @@ def test_parse_multiline_with_complete_comment(parser):
     assert statement.argv == ['multiline', 'command', 'is', 'done']
     assert statement.terminator == ';'
 
-def test_parse_multiline_termninated_by_empty_line(parser):
+def test_parse_multiline_terminated_by_empty_line(parser):
     line = 'multiline command ends\n\n'
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
@@ -385,6 +385,23 @@ def test_parse_multiline_termninated_by_empty_line(parser):
     assert statement == statement.args
     assert statement.argv == ['multiline', 'command', 'ends']
     assert statement.terminator == '\n'
+
+@pytest.mark.parametrize('line,terminator',[
+    ('multiline command "with\nembedded newline";', ';'),
+    ('multiline command "with\nembedded newline";;;', ';'),
+    ('multiline command "with\nembedded newline";; ;;', ';'),
+    ('multiline command "with\nembedded newline" &', '&'),
+    ('multiline command "with\nembedded newline" & &', '&'),
+    ('multiline command "with\nembedded newline"\n\n', '\n'),
+])
+def test_parse_multiline_with_embedded_newline(parser, line, terminator):
+    statement = parser.parse(line)
+    assert statement.multiline_command == 'multiline'
+    assert statement.command == 'multiline'
+    assert statement.args == 'command "with\nembedded newline"'
+    assert statement == statement.args
+    assert statement.argv == ['multiline', 'command', 'with\nembedded newline']
+    assert statement.terminator == terminator
 
 def test_parse_multiline_ignores_terminators_in_comments(parser):
     line = 'multiline command "with term; ends" now\n\n'
@@ -583,6 +600,16 @@ def test_parse_command_only_none(parser, line):
     assert statement.command is None
     assert statement.args is None
     assert statement == ''
+
+def test_parse_command_only_multiline(parser):
+    line = 'multiline with partially "open quotes and no terminator'
+    statement = parser.parse_command_only(line)
+    assert statement.command == 'multiline'
+    assert statement.multiline_command == 'multiline'
+    assert statement.args == 'with partially "open quotes and no terminator'
+    assert statement == statement.args
+    assert statement.command_and_args == line
+
 
 def test_statement_initialization(parser):
     string = 'alias'

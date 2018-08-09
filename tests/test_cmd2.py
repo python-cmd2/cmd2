@@ -1471,7 +1471,8 @@ def test_multiline_complete_empty_statement_raises_exception(multiline_app):
         multiline_app._complete_statement('')
 
 def test_multiline_complete_statement_without_terminator(multiline_app):
-    # Mock out the input call so we don't actually wait for a user's response on stdin when it looks for more input
+    # Mock out the input call so we don't actually wait for a user's response
+    # on stdin when it looks for more input
     m = mock.MagicMock(name='input', return_value='\n')
     builtins.input = m
 
@@ -1481,6 +1482,20 @@ def test_multiline_complete_statement_without_terminator(multiline_app):
     statement = multiline_app._complete_statement(line)
     assert statement == args
     assert statement.command == command
+    assert statement.multiline_command == command
+
+def test_multiline_complete_statement_with_unclosed_quotes(multiline_app):
+    # Mock out the input call so we don't actually wait for a user's response
+    # on stdin when it looks for more input
+    m = mock.MagicMock(name='input', side_effect=['quotes', '" now closed;'])
+    builtins.input = m
+
+    line = 'orate hi "partially open'
+    statement = multiline_app._complete_statement(line)
+    assert statement == 'hi "partially open\nquotes\n" now closed'
+    assert statement.command == 'orate'
+    assert statement.multiline_command == 'orate'
+    assert statement.terminator == ';'
 
 
 def test_clipboard_failure(base_app, capsys):

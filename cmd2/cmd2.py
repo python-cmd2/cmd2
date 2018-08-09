@@ -1858,8 +1858,30 @@ class Cmd(cmd.Cmd):
         pipe runs out. We can't refactor it because we need to retain
         backwards compatibility with the standard library version of cmd.
         """
-        statement = self.statement_parser.parse(self.preparse(line))
-        while statement.multiline_command and not statement.terminator:
+        # preparse() is deprecated, use self.register_postparsing_hook() instead
+        line = self.preparse(line)
+
+        while True:
+            try:
+                statement = self.statement_parser.parse(line)
+                if statement.multiline_command and statement.terminator:
+                    # we have a completed multiline command, we are done
+                    break
+                if not statement.multiline_command:
+                    # it's not a multiline command, but we parsed it ok
+                    # so we are done
+                    break
+            except ValueError:
+                # we have unclosed quotation marks, lets parse only the command
+                # and see if it's a multiline
+                statement = self.statement_parser.parse_command_only(line)
+                if not statement.multiline_command:
+                    # not a multiline command, so raise the exception
+                    raise
+
+            # if we get here we must have:
+            #   - a multiline command with no terminator
+            #   - a multiline command with unclosed quotation marks
             if not self.quit_on_sigint:
                 try:
                     newline = self.pseudo_raw_input(self.continuation_prompt)
@@ -1885,7 +1907,6 @@ class Cmd(cmd.Cmd):
                     newline = '\n'
                     self.poutput(newline)
                 line = '{}\n{}'.format(statement.raw, newline)
-            statement = self.statement_parser.parse(line)
 
         if not statement.command:
             raise EmptyStatement()

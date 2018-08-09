@@ -407,8 +407,8 @@ class StatementParser:
         """Partially parse input into a Statement object.
 
         The command is identified, and shortcuts and aliases are expanded.
-        Terminators, multiline commands, and output redirection are not
-        parsed.
+        Multiline commands are identified, but terminators and output
+        redirection are not parsed.
 
         This method is used by tab completion code and therefore must not
         generate an exception if there are unclosed quotes.
@@ -420,8 +420,8 @@ class StatementParser:
           - args
 
         Different from parse(), this method does not remove redundant whitespace
-        within statement.args. It does however, ensure args does not have leading
-        or trailing whitespace.
+        within statement.args. It does however, ensure args does not have
+        leading or trailing whitespace.
         """
         # expand shortcuts and aliases
         line = self._expand(rawinput)
@@ -447,6 +447,12 @@ class StatementParser:
             if not command or not args:
                 args = None
 
+        # set multiline
+        if command in self.multiline_commands:
+            multiline_command = command
+        else:
+            multiline_command = None
+
         # build the statement
         # string representation of args must be an empty string instead of
         # None for compatibility with standard library cmd
@@ -454,6 +460,7 @@ class StatementParser:
                               raw=rawinput,
                               command=command,
                               args=args,
+                              multiline_command=multiline_command,
                               )
         return statement
 
