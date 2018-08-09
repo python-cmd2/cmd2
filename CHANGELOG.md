@@ -1,6 +1,7 @@
 ## 0.9.4 (August TBD, 2018)
 * Bug Fixes
     * Fixed bug where ``preparse`` was not getting called
+    * Fixed bug in parsing of multiline commands where matching quote is on another line 
 * Enhancements
     * Improved implementation of lifecycle hooks to support a plugin
       framework, see ``docs/hooks.rst`` for details.
