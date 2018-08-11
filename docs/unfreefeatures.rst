@@ -146,16 +146,18 @@ Text output can be colored by wrapping it in the ``colorize`` method.
 
 .. automethod:: cmd2.cmd2.Cmd.colorize
 
+
 .. _quiet:
+Supressing non-essential output
+===============================
 
+The ``quiet`` setting controls whether ``self.pfeedback()`` actually produces
+any output. If ``quiet`` is ``False``, then the output will be produced. If
+``quiet`` is ``True``, no output will be produced.
 
-quiet
-=====
-
-Controls whether ``self.pfeedback('message')`` output is suppressed;
-useful for non-essential feedback that the user may not always want
-to read.  ``quiet`` is only relevant if
-``app.pfeedback`` is sometimes used.
+This makes ``self.pfeedback()`` useful for non-essential output like status
+messages. Users can control whether they would like to see these messages by changing
+the value of the ``quiet`` setting.
 
 
 select
