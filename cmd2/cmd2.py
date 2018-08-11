@@ -317,7 +317,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
-    colors = (platform.system() != 'Windows')
+    colors = True
     continuation_prompt = '> '
     debug = False
     echo = False
@@ -337,7 +337,7 @@ class Cmd(cmd.Cmd):
 
     # To make an attribute settable with the "do_set" command, add it to this ...
     # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
-    settable = {'colors': 'Colorized output (*nix only)',
+    settable = {'colors': 'Allow colorized output',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
