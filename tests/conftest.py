@@ -80,11 +80,8 @@ SHORTCUTS_TXT = """Shortcuts for other commands:
 @@: _relative_load
 """
 
-expect_colors = True
-if sys.platform.startswith('win'):
-    expect_colors = False
 # Output from the show command with default settings
-SHOW_TXT = """colors: {}
+SHOW_TXT = """colors: Terminal
 continuation_prompt: >
 debug: False
 echo: False
@@ -94,14 +91,10 @@ locals_in_py: False
 prompt: (Cmd)
 quiet: False
 timing: False
-""".format(expect_colors)
+"""
 
-if expect_colors:
-    color_str = 'True '
-else:
-    color_str = 'False'
 SHOW_LONG = """
-colors: {}             # Colorized output (*nix only)
+colors: Terminal          # Allow colorized output
 continuation_prompt: >    # On 2nd+ line of input
 debug: False              # Show full error stack on error
 echo: False               # Echo command issued into output
@@ -111,7 +104,7 @@ locals_in_py: False       # Allow access to your application in py via self
 prompt: (Cmd)             # The prompt issued to solicit input
 quiet: False              # Don't print nonessential feedback
 timing: False             # Report execution times
-""".format(color_str)
+"""
 
 
 class StdOut(object):
@@ -127,6 +120,9 @@ class StdOut(object):
 
     def clear(self):
         self.buffer = ''
+
+    def isatty(self):
+        return True
 
 
 def normalize(block):

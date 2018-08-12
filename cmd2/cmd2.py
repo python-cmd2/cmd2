@@ -40,7 +40,7 @@ import platform
 import re
 import shlex
 import sys
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
 from . import constants
 from . import utils
@@ -317,7 +317,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
-    colors = True
+    colors = constants.COLORS_TERMINAL
     continuation_prompt = '> '
     debug = False
     echo = False
@@ -544,25 +544,42 @@ class Cmd(cmd.Cmd):
         # Make sure settable parameters are sorted alphabetically by key
         self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
-    def poutput(self, msg: str, end: str='\n') -> None:
-        """Convenient shortcut for self.stdout.write(); by default adds newline to end if not already present.
+    def decolorized_write(self, fileobj: IO, msg: str):
+        """Write a string to a fileobject, stripping ANSI escape sequences if necessary
 
-        Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
-        that process terminates before the cmd2 command is finished executing.
+        Honor the current colors setting, which requires us to check whether the
+        fileobject is a tty.
+        """
+        if self.colors == constants.COLORS_NEVER:
+            msg = utils.strip_ansi(msg)
+        if self.colors == constants.COLORS_TERMINAL:
+            if not fileobj.isatty():
+                msg = utils.strip_ansi(msg)
+        fileobj.write(msg)
 
-        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
-        :param end: string appended after the end of the message if not already present, default a newline
+    def poutput(self, msg: Any, end: str='\n') -> None:
+        """Smarter self.stdout.write(); color aware and adds newline of not present.
+
+        Also handles BrokenPipeError exceptions for when a commands's output has
+        been piped to another process and that process terminates before the
+        cmd2 command is finished executing.
+
+        :param msg: message to print to current stdout - anything convertible to
+        a str with '{}'.format() is OK :param end: string appended after the end
+        of the message if not already present, default a newline
         """
         if msg is not None and msg != '':
             try:
                 msg_str = '{}'.format(msg)
-                self.stdout.write(msg_str)
+                self.decolorized_write(self.stdout, msg_str)
                 if not msg_str.endswith(end):
                     self.stdout.write(end)
             except BrokenPipeError:
-                # This occurs if a command's output is being piped to another process and that process closes before the
-                # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.
+                # This occurs if a command's output is being piped to another
+                # process and that process closes before the command is
+                # finished. If you would like your application to print a
+                # warning message, then set the broken_pipe_warning attribute
+                # to the message you want printed.
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
@@ -579,14 +596,15 @@ class Cmd(cmd.Cmd):
 
         if isinstance(err, Exception):
             err_msg = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(type(err).__name__, err)
-            sys.stderr.write(self.colorize(err_msg, 'red'))
         else:
-            err_msg = self.colorize("ERROR: {}\n".format(err), 'red')
-            sys.stderr.write(err_msg)
+            err_msg = "ERROR: {}\n".format(err)
+        err_msg = Fore.RED + err_msg + Fore.RESET
+        self.decolorized_write(sys.stderr, err_msg)
 
         if traceback_war:
             war = "To enable full traceback, run the following command:  'set debug true'\n"
-            sys.stderr.write(self.colorize(war, 'yellow'))
+            war = Fore.YELLOW + war + Fore.RESET
+            self.decolorized_write(sys.stderr, war)
 
     def pfeedback(self, msg: str) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.

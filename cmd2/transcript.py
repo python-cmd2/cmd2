@@ -224,3 +224,6 @@ class OutputTrap(object):
         result = self.contents
         self.contents = ''
         return result
+
+    def isatty(self) -> bool:
+        return True

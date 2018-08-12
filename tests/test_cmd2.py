@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 
+import colorama
 import pytest
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
@@ -561,11 +562,11 @@ def test_load_nested_loads(base_app, request):
     expected = """
 %s
 _relative_load precmds.txt
-set colors on
+set colors Always
 help
 shortcuts
 _relative_load postcmds.txt
-set colors off""" % initial_load
+set colors Never""" % initial_load
     assert run_cmd(base_app, 'history -s') == normalize(expected)
 
 
@@ -583,11 +584,11 @@ def test_base_runcmds_plus_hooks(base_app, request):
                                  'load ' + postfilepath])
     expected = """
 load %s
-set colors on
+set colors Always
 help
 shortcuts
 load %s
-set colors off""" % (prefilepath, postfilepath)
+set colors Never""" % (prefilepath, postfilepath)
     assert run_cmd(base_app, 'history -s') == normalize(expected)
 
 
@@ -819,7 +820,6 @@ def test_base_colorize(base_app):
         assert color_test == 'Test'
     else:
         assert color_test == '\x1b[31mTest\x1b[39m'
-
 
 def _expected_no_editor_error():
     expected_exception = 'OSError'
@@ -1916,3 +1916,136 @@ def test_bad_history_file_path(capsys, request):
     else:
         # GNU readline raises an exception upon trying to read the directory as a file
         assert 'readline cannot read' in err
+
+
+class ColorsApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def do_echo(self, args):
+        self.poutput(args)
+        self.perror(args, False)
+
+    def do_echo_error(self, args):
+        color_on = colorama.Fore.RED + colorama.Back.BLACK
+        color_off = colorama.Style.RESET_ALL
+        self.poutput(color_on + args + color_off)
+        # perror uses colors by default
+        self.perror(args, False)
+
+def test_colors_default():
+    app = ColorsApp()
+    assert app.colors == cmd2.constants.COLORS_TERMINAL
+
+def test_colors_pouterr_always_tty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_ALWAYS
+    mocker.patch.object(app.stdout, 'isatty', return_value=True)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=True)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    # if colors are on, the output should have some escape sequences in it
+    assert len(out) > len('oopsie\n')
+    assert 'oopsie' in out
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+    # but this one shouldn't
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    # errors always have colors
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+def test_colors_pouterr_always_notty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_ALWAYS
+    mocker.patch.object(app.stdout, 'isatty', return_value=False)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=False)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    # if colors are on, the output should have some escape sequences in it
+    assert len(out) > len('oopsie\n')
+    assert 'oopsie' in out
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+    # but this one shouldn't
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    # errors always have colors
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+def test_colors_terminal_tty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_TERMINAL
+    mocker.patch.object(app.stdout, 'isatty', return_value=True)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=True)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    # if colors are on, the output should have some escape sequences in it
+    out, err = capsys.readouterr()
+    assert len(out) > len('oopsie\n')
+    assert 'oopsie' in out
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+    # but this one shouldn't
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+def test_colors_terminal_notty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_TERMINAL
+    mocker.patch.object(app.stdout, 'isatty', return_value=False)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=False)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+def test_colors_never_tty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_NEVER
+    mocker.patch.object(app.stdout, 'isatty', return_value=True)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=True)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+def test_colors_never_notty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_NEVER
+    mocker.patch.object(app.stdout, 'isatty', return_value=False)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=False)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
