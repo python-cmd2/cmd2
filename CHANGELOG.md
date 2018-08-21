@@ -1,4 +1,4 @@
-## 0.9.4 (August TBD, 2018)
+## 0.9.4 (August 21, 2018)
 * Bug Fixes
     * Fixed bug where ``preparse`` was not getting called
     * Fixed bug in parsing of multiline commands where matching quote is on another line 
@@ -18,7 +18,7 @@
        * ``cmd2.Cmd.postparsing_postcmd()`` - equivalent functionality available
          via ``cmd2.Cmd.register_postcmd_hook()``
 
-## 0.8.9 (August TBD, 2018)
+## 0.8.9 (August 20, 2018)
 * Bug Fixes
     * Fixed extra slash that could print when tab completing users on Windows
 
