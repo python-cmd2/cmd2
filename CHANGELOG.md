@@ -7,6 +7,8 @@
       framework, see ``docs/hooks.rst`` for details.
     * New dependency on ``attrs`` third party module
     * Added ``matches_sorted`` member to support custom sorting of tab-completion matches
+    * Added [tab_autocomp_dynamic.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocomp_dynamic.py) example
+        * Demonstrates updating the argparse object during init instead of during class construction
 * Deprecations
     * Deprecated the following hook methods, see ``hooks.rst`` for full details:
        * ``cmd2.Cmd.preparse()`` - equivalent functionality available
