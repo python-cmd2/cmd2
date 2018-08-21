@@ -2470,7 +2470,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         self._should_quit = True
         return self._STOP_AND_EXIT
 
-    def select(self, opts: Union[str, List[str], List[Tuple[str, Optional[str]]]], prompt: str='Your choice? ') -> str:
+    def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str='Your choice? ') -> str:
         """Presents a numbered menu to the user.  Modelled after
            the bash shell's SELECT.  Returns the item chosen.
 
