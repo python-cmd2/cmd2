@@ -1,4 +1,4 @@
-## 0.8.9 (August TBD, 2018)
+## 0.8.9 (August 20, 2018)
 * Bug Fixes
     * Fixed extra slash that could print when tab completing users on Windows
 
