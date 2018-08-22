@@ -2464,7 +2464,6 @@ Usage:  Usage: unalias [-a] name [name ...]
     def do_eof(self, _: str) -> bool:
         """Called when <Ctrl>-D is pressed."""
         # End of script should not exit app, but <Ctrl>-D should.
-        print('')  # Required for clearing line when exiting submenu
         return self._STOP_AND_EXIT
 
     def do_quit(self, _: str) -> bool:
