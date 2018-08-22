@@ -1553,7 +1553,8 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
-        return [cur_name[3:] for cur_name in self.get_names() if cur_name.startswith('do_')]
+        return [name[3:] for name in self.get_names()
+                if name.startswith('do_') and isinstance(getattr(self, name), Callable)]
 
     def get_visible_commands(self) -> List[str]:
         """Returns a list of commands that have not been hidden."""
@@ -1568,7 +1569,8 @@ class Cmd(cmd.Cmd):
 
     def get_help_topics(self) -> List[str]:
         """ Returns a list of help topics """
-        return [name[5:] for name in self.get_names() if name.startswith('help_')]
+        return [name[5:] for name in self.get_names()
+                if name.startswith('help_') and isinstance(getattr(self, name), Callable)]
 
     def complete_help(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
@@ -2470,7 +2472,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         self._should_quit = True
         return self._STOP_AND_EXIT
 
-    def select(self, opts: Union[str, List[str], List[Tuple[str, Optional[str]]]], prompt: str='Your choice? ') -> str:
+    def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str='Your choice? ') -> str:
         """Presents a numbered menu to the user.  Modelled after
            the bash shell's SELECT.  Returns the item chosen.
 

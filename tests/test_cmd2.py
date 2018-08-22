@@ -1916,3 +1916,17 @@ def test_bad_history_file_path(capsys, request):
     else:
         # GNU readline raises an exception upon trying to read the directory as a file
         assert 'readline cannot read' in err
+
+
+
+def test_get_all_commands(base_app):
+    # Verify that the base app has the expected commands
+    commands = base_app.get_all_commands()
+    expected_commands = ['_relative_load', 'alias', 'edit', 'eof', 'eos', 'help', 'history', 'load', 'py', 'pyscript',
+                         'quit', 'set', 'shell', 'shortcuts', 'unalias']
+    assert commands == expected_commands
+
+def test_get_help_topics(base_app):
+    # Verify that the base app has no additional help_foo methods
+    custom_help = base_app.get_help_topics()
+    assert len(custom_help) == 0
