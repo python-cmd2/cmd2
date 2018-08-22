@@ -1,3 +1,7 @@
+## 0.9.5 (TBD, 2018)
+* Bug Fixes
+    * Fixed bug where ``get_all_commands`` could return non-callable attributes
+    
 ## 0.9.4 (August 21, 2018)
 * Bug Fixes
     * Fixed bug where ``preparse`` was not getting called
