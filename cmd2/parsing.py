@@ -5,7 +5,7 @@
 import os
 import re
 import shlex
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict
 
 from . import constants
 from . import utils
@@ -106,13 +106,13 @@ class Statement(str):
         return rtn
 
     @property
-    def arg_list(self) -> Union[List[str], None]:
+    def arg_list(self) -> List[str]:
         """
         Returns a list of the arguments to the command, not including any output
         redirection or terminators. quoted arguments remain quoted.
         """
         if self.args is None:
-            return None
+            return []
 
         return self.args.split()
 
