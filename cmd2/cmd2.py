@@ -2214,8 +2214,7 @@ class Cmd(cmd.Cmd):
 
             return stop
 
-    @with_argument_list
-    def do_alias(self, arglist: List[str]) -> None:
+    def do_alias(self, statement: Statement) -> None:
         """Define or display aliases
 
 Usage:  Usage: alias [name] | [<name> <value>]
@@ -2234,22 +2233,27 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
     Example: alias ls !ls -lF
 
-    If you want to use redirection or pipes in the alias, then either quote the tokens with these
-    characters or quote the entire alias value.
+    If you want to use redirection or pipes in the alias, then quote them to avoid
+    the alias command itself from being redirected
 
     Examples:
         alias save_results print_results ">" out.txt
-        alias save_results print_results "> out.txt"
-        alias save_results "print_results > out.txt"
+        alias save_results print_results '>' out.txt
 """
+        # Get alias arguments as a list with quotes preserved
+        alias_arg_list = statement.arg_list
+
         # If no args were given, then print a list of current aliases
-        if not arglist:
+        if not alias_arg_list:
             for cur_alias in self.aliases:
                 self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
+            return
+
+        # Get the alias name
+        name = alias_arg_list[0]
 
         # The user is looking up an alias
-        elif len(arglist) == 1:
-            name = arglist[0]
+        if len(alias_arg_list) == 1:
             if name in self.aliases:
                 self.poutput("alias {} {}".format(name, self.aliases[name]))
             else:
@@ -2257,8 +2261,16 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
         # The user is creating an alias
         else:
-            name = arglist[0]
-            value = ' '.join(arglist[1:])
+            # Unquote redirection and pipes
+            index = 1
+            while index < len(alias_arg_list):
+                unquoted_arg = utils.strip_quotes(alias_arg_list[index])
+                if unquoted_arg in constants.REDIRECTION_TOKENS:
+                    alias_arg_list[index] = unquoted_arg
+                index += 1
+
+            # Build the alias value string
+            value = ' '.join(alias_arg_list[1:])
 
             # Validate the alias to ensure it doesn't include weird characters
             # like terminators, output redirection, or whitespace
@@ -2594,24 +2606,20 @@ Usage:  Usage: unalias [-a] name [name ...]
                 param = args.settable[0]
             self.show(args, param)
 
-    def do_shell(self, command: str) -> None:
+    def do_shell(self, statement: Statement) -> None:
         """Execute a command as if at the OS prompt.
 
     Usage:  shell <command> [arguments]"""
-
         import subprocess
-        try:
-            # Use non-POSIX parsing to keep the quotes around the tokens
-            tokens = shlex.split(command, posix=False)
-        except ValueError as err:
-            self.perror(err, traceback_war=False)
-            return
+
+        # Get list of arguments to shell with quotes preserved
+        tokens = statement.arg_list
 
         # Support expanding ~ in quoted paths
         for index, _ in enumerate(tokens):
             if tokens[index]:
-                # Check if the token is quoted. Since shlex.split() passed, there isn't
-                # an unclosed quote, so we only need to check the first character.
+                # Check if the token is quoted. Since parsing already passed, there isn't
+                # an unclosed quote. So we only need to check the first character.
                 first_char = tokens[index][0]
                 if first_char in constants.QUOTES:
                     tokens[index] = utils.strip_quotes(tokens[index])

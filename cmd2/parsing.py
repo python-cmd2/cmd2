@@ -5,7 +5,7 @@
 import os
 import re
 import shlex
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 
 from . import constants
 from . import utils
@@ -104,6 +104,17 @@ class Statement(str):
         else:
             rtn = None
         return rtn
+
+    @property
+    def arg_list(self) -> Union[List[str], None]:
+        """
+        Returns a list of the arguments to the command, not including any output
+        redirection or terminators. quoted arguments remain quoted.
+        """
+        if self.args is None:
+            return None
+
+        return self.args.split()
 
     def __setattr__(self, name, value):
         """Statement instances should feel immutable; raise ValueError"""

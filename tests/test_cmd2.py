@@ -1761,6 +1761,15 @@ def test_alias(base_app, capsys):
     out = run_cmd(base_app, 'alias fake')
     assert out == normalize('alias fake pyscript')
 
+def test_alias_with_quotes(base_app, capsys):
+    # Create the alias
+    out = run_cmd(base_app, 'alias fake help ">" "out file.txt"')
+    assert out == normalize("Alias 'fake' created")
+
+    # Lookup the new alias (Only the redirector should be unquoted)
+    out = run_cmd(base_app, 'alias fake')
+    assert out == normalize('alias fake help > "out file.txt"')
+
 def test_alias_lookup_invalid_alias(base_app, capsys):
     # Lookup invalid alias
     out = run_cmd(base_app, 'alias invalid')
