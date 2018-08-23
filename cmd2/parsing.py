@@ -5,7 +5,7 @@
 import os
 import re
 import shlex
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Union
 
 from . import constants
 from . import utils
@@ -33,10 +33,10 @@ class Statement(str):
     :var multiline_command: if the command is a multiline command, the name of the
                             command, otherwise None
     :type command:          str or None
-    :var args:              the arguments to the command, not including any output
+    :var arg_list:          list of arguments to the command, not including any output
                             redirection or terminators. quoted arguments remain
                             quoted.
-    :type args:             str or None
+    :type arg_list:         list
     :var: argv:             a list of arguments a la sys.argv. Quotes, if any, are removed
                             from the elements of the list, and aliases and shortcuts
                             are expanded
@@ -61,7 +61,7 @@ class Statement(str):
                 *,
                 raw: str = None,
                 command: str = None,
-                args: str = None,
+                arg_list: List[str] = None,
                 argv: List[str] = None,
                 multiline_command: str = None,
                 terminator: str = None,
@@ -78,7 +78,9 @@ class Statement(str):
         stmt = str.__new__(cls, obj)
         object.__setattr__(stmt, "raw", raw)
         object.__setattr__(stmt, "command", command)
-        object.__setattr__(stmt, "args", args)
+        if arg_list is None:
+            arg_list = []
+        object.__setattr__(stmt, "arg_list", arg_list)
         if argv is None:
             argv = []
         object.__setattr__(stmt, "argv", argv)
@@ -96,25 +98,14 @@ class Statement(str):
 
         Quoted arguments remain quoted.
         """
-        if self.command and self.args:
-            rtn = '{} {}'.format(self.command, self.args)
+        if self.command and self:
+            rtn = '{} {}'.format(self.command, self)
         elif self.command:
-            # we are trusting that if we get here that self.args is None
+            # there were no arguments to the command
             rtn = self.command
         else:
             rtn = None
         return rtn
-
-    @property
-    def arg_list(self) -> List[str]:
-        """
-        Returns a list of the arguments to the command, not including any output
-        redirection or terminators. quoted arguments remain quoted.
-        """
-        if self.args is None:
-            return []
-
-        return self.args.split()
 
     def __setattr__(self, name, value):
         """Statement instances should feel immutable; raise ValueError"""
@@ -403,7 +394,7 @@ class StatementParser:
         statement = Statement('' if args is None else args,
                               raw=line,
                               command=command,
-                              args=args,
+                              arg_list=[] if len(argv) <= 1 else argv[1:],
                               argv=list(map(lambda x: utils.strip_quotes(x), argv)),
                               multiline_command=multiline_command,
                               terminator=terminator,
@@ -428,10 +419,9 @@ class StatementParser:
         values in the following attributes:
           - raw
           - command
-          - args
 
         Different from parse(), this method does not remove redundant whitespace
-        within statement.args. It does however, ensure args does not have
+        within the statement. It does however, ensure statement does not have
         leading or trailing whitespace.
         """
         # expand shortcuts and aliases
@@ -453,7 +443,7 @@ class StatementParser:
             # no trailing whitespace
             args = line[match.end(2):].rstrip()
             # if the command is none that means the input was either empty
-            # or something wierd like '>'. args should be None if we couldn't
+            # or something weird like '>'. args should be None if we couldn't
             # parse a command
             if not command or not args:
                 args = None
@@ -470,7 +460,6 @@ class StatementParser:
         statement = Statement('' if args is None else args,
                               raw=rawinput,
                               command=command,
-                              args=args,
                               multiline_command=multiline_command,
                               )
         return statement
