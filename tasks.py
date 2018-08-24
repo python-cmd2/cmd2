@@ -182,6 +182,13 @@ def tag(context, name='', message=''):
         context.run('git push origin {}'.format(name))
 namespace.add_task(tag)
 
+@invoke.task()
+def validatetag(context):
+    "Check to make sure that a tag exists for the current HEAD"
+    # Validate that a Git tag exists for the current commit HEAD
+    context.run("git describe --exact-match --tags $(git log -n1 --pretty='%h')")
+namespace.add_task(validatetag)
+
 @invoke.task(pre=[clean_all])
 def sdist(context):
     "Create a source distribution"
@@ -194,13 +201,13 @@ def wheel(context):
     context.run('python setup.py bdist_wheel')
 namespace.add_task(wheel)
 
-@invoke.task(pre=[sdist, wheel])
+@invoke.task(pre=[validatetag, sdist, wheel])
 def pypi(context):
     "Build and upload a distribution to pypi"
     context.run('twine upload dist/*')
 namespace.add_task(pypi)
 
-@invoke.task(pre=[sdist, wheel])
+@invoke.task(pre=[validatetag, sdist, wheel])
 def pypi_test(context):
     "Build and upload a distribution to https://test.pypi.org"
     context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
