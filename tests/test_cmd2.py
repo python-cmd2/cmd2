@@ -1928,3 +1928,78 @@ def test_get_help_topics(base_app):
     # Verify that the base app has no additional help_foo methods
     custom_help = base_app.get_help_topics()
     assert len(custom_help) == 0
+
+
+class ReplWithExitCode(cmd2.Cmd):
+    """ Example cmd2 application where we can specify an exit code when existing."""
+
+    def __init__(self):
+        super().__init__()
+
+    @cmd2.with_argument_list
+    def do_exit(self, arg_list) -> bool:
+        """Exit the application with an optional exit code.
+
+Usage:  exit [exit_code]
+    Where:
+        * exit_code - integer exit code to return to the shell
+"""
+        # If an argument was provided
+        if arg_list:
+            try:
+                self.exit_code = int(arg_list[0])
+            except ValueError:
+                self.perror("{} isn't a valid integer exit code".format(arg_list[0]))
+                self.exit_code = -1
+
+        self._should_quit = True
+        return self._STOP_AND_EXIT
+
+    def postloop(self) -> None:
+        """Hook method executed once when the cmdloop() method is about to return."""
+        code = self.exit_code if self.exit_code is not None else 0
+        self.poutput('exiting with code: {}'.format(code))
+
+@pytest.fixture
+def exit_code_repl():
+    app = ReplWithExitCode()
+    return app
+
+def test_exit_code_default(exit_code_repl):
+    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+    app = exit_code_repl
+    app.use_rawinput = True
+    app.stdout = StdOut()
+
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='exit')
+    builtins.input = m
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog"]
+    expected = 'exiting with code: 0\n'
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        app.cmdloop()
+    out = app.stdout.buffer
+    assert out == expected
+
+def test_exit_code_nonzero(exit_code_repl):
+    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+    app = exit_code_repl
+    app.use_rawinput = True
+    app.stdout = StdOut()
+
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input', return_value='exit 23')
+    builtins.input = m
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog"]
+    expected = 'exiting with code: 23\n'
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        with pytest.raises(SystemExit):
+            app.cmdloop()
+    out = app.stdout.buffer
+    assert out == expected
