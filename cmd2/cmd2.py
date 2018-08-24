@@ -2553,18 +2553,19 @@ Usage:  Usage: unalias [-a] name [name ...]
         else:
             raise LookupError("Parameter '%s' not supported (type 'set' for list of parameters)." % param)
 
-    set_parser = ACArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    set_description = "Sets a settable parameter or shows current settings of parameters.\n"
+    set_description += "\n"
+    set_description += "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
+    set_description += "Call without arguments for a list of settable parameters with their values."
+
+    set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]')
 
     @with_argparser(set_parser)
     def do_set(self, args: argparse.Namespace) -> None:
-        """Sets a settable parameter or shows current settings of parameters.
-
-        Accepts abbreviated parameter names so long as there is no ambiguity.
-        Call without arguments for a list of settable parameters with their values.
-        """
+        """Sets a settable parameter or shows current settings of parameters"""
         try:
             param_name, val = args.settable
             val = val.strip()
@@ -2879,7 +2880,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(bridge)
 
-    history_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    history_parser = ACArgumentParser()
     history_parser_group = history_parser.add_mutually_exclusive_group()
     history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_parser_group.add_argument('-e', '--edit', action='store_true',
