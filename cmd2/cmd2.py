@@ -523,6 +523,9 @@ class Cmd(cmd.Cmd):
         # This boolean flag determines whether or not the cmd2 application can interact with the clipboard
         self.can_clip = can_clip
 
+        # This determines if a non-zero exit code should be used when exiting the application
+        self.exit_code = None
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -3234,6 +3237,9 @@ Script should contain one command per line, just like command would be typed in 
         for func in self._postloop_hooks:
             func()
         self.postloop()
+
+        if self.exit_code is not None:
+            sys.exit(self.exit_code)
 
     ###
     #
