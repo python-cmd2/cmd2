@@ -182,3 +182,10 @@ Presents numbered options to user, as bash ``select``.
         2. salty
     Sauce? 2
     wheaties with salty sauce, yum!
+
+
+Exit code to shell
+==================
+The ``self.exit_code`` attribute of your ``cmd2`` application controls
+what exit code is sent to the shell when your application exits from
+``cmdloop()``.
