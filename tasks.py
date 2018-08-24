@@ -173,6 +173,15 @@ def clean_all(context):
     pass
 namespace_clean.add_task(clean_all, 'all')
 
+@invoke.task
+def tag(context, name='', message=''):
+    "Add a Git tag and push it to origin"
+    # If a tag was provided on the command-line, then add a Git tag and push it to origin
+    if name:
+        context.run('git tag -a {} -m {!r}'.format(name, message))
+        context.run('git push origin {}'.format(name))
+namespace.add_task(tag)
+
 @invoke.task(pre=[clean_all])
 def sdist(context):
     "Create a source distribution"
