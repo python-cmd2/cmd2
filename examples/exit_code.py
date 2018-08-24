@@ -33,11 +33,9 @@ Usage:  exit [exit_code]
         return self._STOP_AND_EXIT
 
     def postloop(self) -> None:
-        """Hook method executed once when the cmdloop() method is about to return.
-
-        """
+        """Hook method executed once when the cmdloop() method is about to return."""
         code = self.exit_code if self.exit_code is not None else 0
-        print('{!r} exiting with code: {}'.format(sys.argv[0], code))
+        self.poutput('{!r} exiting with code: {}'.format(sys.argv[0], code))
 
 
 if __name__ == '__main__':
