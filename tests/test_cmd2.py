@@ -62,7 +62,7 @@ def test_base_argparse_help(base_app, capsys):
     out2 = run_cmd(base_app, 'help set')
 
     assert out1 == out2
-    assert out1[0].startswith('usage: set')
+    assert out1[0].startswith('Usage: set')
     assert out1[1] == ''
     assert out1[2].startswith('Sets a settable parameter')
 
@@ -71,10 +71,8 @@ def test_base_invalid_option(base_app, capsys):
     out, err = capsys.readouterr()
     out = normalize(out)
     err = normalize(err)
-    assert len(err) == 3
-    assert len(out) == 15
     assert 'Error: unrecognized arguments: -z' in err[0]
-    assert out[0] == 'usage: set [-h] [-a] [-l] [settable [settable ...]]'
+    assert out[0] == 'Usage: set settable{0..2} [-h] [-a] [-l]'
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')
@@ -1252,7 +1250,7 @@ load                Runs commands in script file that is encoded as either ASCII
 py                  Invoke python command, shell, or script
 pyscript            Runs a python script file inside the console
 quit                Exits this application.
-set                 Sets a settable parameter or shows current settings of parameters.
+set                 Sets a settable parameter or shows current settings of parameters
 shell               Execute a command as if at the OS prompt.
 shortcuts           Lists shortcuts (aliases) available.
 unalias             Unsets aliases
