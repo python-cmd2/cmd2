@@ -8,7 +8,9 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 import os
+import re
 import shutil
+import sys
 
 import invoke
 
@@ -184,9 +186,21 @@ namespace.add_task(tag)
 
 @invoke.task()
 def validatetag(context):
-    "Check to make sure that a tag exists for the current HEAD"
+    "Check to make sure that a tag exists for the current HEAD and it looks like a valid version number"
     # Validate that a Git tag exists for the current commit HEAD
-    context.run("git describe --exact-match --tags $(git log -n1 --pretty='%h')")
+    result = context.run("git describe --exact-match --tags $(git log -n1 --pretty='%h')")
+    tag = result.stdout.rstrip()
+
+    # Validate that the Git tag appears to be a valid version number
+    ver_regex = re.compile('(\d+)\.(\d+)\.(\d+)')
+    match = ver_regex.fullmatch(tag)
+    if match is None:
+        print('Tag {!r} does not appear to be a valid version number'.format(tag))
+        sys.exit(-1)
+    else:
+        print('Tag {!r} appears to be a valid version number'.format(tag))
+
+
 namespace.add_task(validatetag)
 
 @invoke.task(pre=[clean_all])
