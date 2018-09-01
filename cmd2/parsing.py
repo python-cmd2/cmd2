@@ -29,46 +29,41 @@ class Statement(str):
     :var raw:               string containing exactly what we input by the user
     :type raw:              str
     :var command:           the command, i.e. the first whitespace delimited word
-    :type command:          str or None
+    :type command:          str
     :var multiline_command: if the command is a multiline command, the name of the
-                            command, otherwise None
-    :type command:          str or None
+                            command, otherwise empty
+    :type command:          str
     :var arg_list:          list of arguments to the command, not including any output
                             redirection or terminators. quoted arguments remain
                             quoted.
     :type arg_list:         list
-    :var: argv:             a list of arguments a la sys.argv. Quotes, if any, are removed
-                            from the elements of the list, and aliases and shortcuts
-                            are expanded
-    :type argv:             list
     :var terminator:        the character which terminated the multiline command, if
                             there was one
-    :type terminator:       str or None
+    :type terminator:       str
     :var suffix:            characters appearing after the terminator but before output
                             redirection, if any
-    :type suffix:           str or None
+    :type suffix:           str
     :var pipe_to:           if output was piped to a shell command, the shell command
                             as a list of tokens
     :type pipe_to:          list
     :var output:            if output was redirected, the redirection token, i.e. '>>'
-    :type output:           str or None
+    :type output:           str
     :var output_to:         if output was redirected, the destination file
-    :type output_to:        str or None
+    :type output_to:        str
 
     """
     def __new__(cls,
                 obj: object,
                 *,
-                raw: str = None,
-                command: str = None,
+                raw: str = '',
+                command: str = '',
                 arg_list: List[str] = None,
-                argv: List[str] = None,
-                multiline_command: str = None,
-                terminator: str = None,
-                suffix: str = None,
-                pipe_to: str = None,
-                output: str = None,
-                output_to: str = None
+                multiline_command: str = '',
+                terminator: str = '',
+                suffix: str = '',
+                pipe_to: List[str] = None,
+                output: str = '',
+                output_to: str = ''
                 ):
         """Create a new instance of Statement
 
@@ -81,30 +76,51 @@ class Statement(str):
         if arg_list is None:
             arg_list = []
         object.__setattr__(stmt, "arg_list", arg_list)
-        if argv is None:
-            argv = []
-        object.__setattr__(stmt, "argv", argv)
         object.__setattr__(stmt, "multiline_command", multiline_command)
         object.__setattr__(stmt, "terminator", terminator)
         object.__setattr__(stmt, "suffix", suffix)
+        if pipe_to is None:
+            pipe_to = []
         object.__setattr__(stmt, "pipe_to", pipe_to)
         object.__setattr__(stmt, "output", output)
         object.__setattr__(stmt, "output_to", output_to)
         return stmt
 
     @property
-    def command_and_args(self):
+    def command_and_args(self) -> str:
         """Combine command and args with a space separating them.
 
         Quoted arguments remain quoted.
         """
-        if self.command and self:
-            rtn = '{} {}'.format(self.command, self)
+        if self.command and self.args:
+            rtn = '{} {}'.format(self.command, self.args)
         elif self.command:
             # there were no arguments to the command
             rtn = self.command
         else:
-            rtn = None
+            rtn = ''
+        return rtn
+
+    @property
+    def args(self) -> str:
+        """the arguments to the command, not including any output redirection or terminators.
+
+        Quoted arguments remain quoted.
+        """
+        return str(self)
+
+    @property
+    def argv(self) -> List[str]:
+        """a list of arguments a la sys.argv. Quotes, if any, are removed
+        from the elements of the list, and aliases and shortcuts are expanded
+        """
+        if self.command:
+            rtn = [utils.strip_quotes(self.command)]
+            for cur_token in self.arg_list:
+                rtn.append(utils.strip_quotes(cur_token))
+        else:
+            rtn = []
+
         return rtn
 
     def __setattr__(self, name, value):
@@ -233,7 +249,7 @@ class StatementParser:
         if match:
             if word == match.group(1):
                 valid = True
-                errmsg = None
+                errmsg = ''
         return valid, errmsg
 
     def tokenize(self, line: str) -> List[str]:
@@ -270,13 +286,13 @@ class StatementParser:
         # handle the special case/hardcoded terminator of a blank line
         # we have to do this before we tokenize because tokenizing
         # destroys all unquoted whitespace in the input
-        terminator = None
+        terminator = ''
         if line[-1:] == constants.LINE_FEED:
             terminator = constants.LINE_FEED
 
-        command = None
-        args = None
-        argv = None
+        command = ''
+        args = ''
+        arg_list = []
 
         # lex the input into a list of tokens
         tokens = self.tokenize(line)
@@ -304,8 +320,8 @@ class StatementParser:
                 terminator_pos = len(tokens)+1
 
             # everything before the first terminator is the command and the args
-            argv = tokens[:terminator_pos]
-            (command, args) = self._command_and_args(argv)
+            (command, args) = self._command_and_args(tokens[:terminator_pos])
+            arg_list = tokens[1:terminator_pos]
             # we will set the suffix later
             # remove all the tokens before and including the terminator
             tokens = tokens[terminator_pos+1:]
@@ -317,7 +333,7 @@ class StatementParser:
                 # because redirectors can only be after a terminator
                 command = testcommand
                 args = testargs
-                argv = tokens
+                arg_list = tokens[1:]
                 tokens = []
 
         # check for a pipe to a shell process
@@ -338,11 +354,11 @@ class StatementParser:
             tokens = tokens[:pipe_pos]
         except ValueError:
             # no pipe in the tokens
-            pipe_to = None
+            pipe_to = []
 
         # check for output redirect
-        output = None
-        output_to = None
+        output = ''
+        output_to = ''
         try:
             output_pos = tokens.index(constants.REDIRECTION_OUTPUT)
             output = constants.REDIRECTION_OUTPUT
@@ -376,26 +392,23 @@ class StatementParser:
             suffix = ' '.join(tokens)
         else:
             # no terminator, so whatever is left is the command and the args
-            suffix = None
+            suffix = ''
             if not command:
                 # command could already have been set, if so, don't set it again
-                argv = tokens
-                (command, args) = self._command_and_args(argv)
+                (command, args) = self._command_and_args(tokens)
+                arg_list = tokens[1:]
 
         # set multiline
         if command in self.multiline_commands:
             multiline_command = command
         else:
-            multiline_command = None
+            multiline_command = ''
 
         # build the statement
-        # string representation of args must be an empty string instead of
-        # None for compatibility with standard library cmd
-        statement = Statement('' if args is None else args,
+        statement = Statement(args,
                               raw=line,
                               command=command,
-                              arg_list=[] if len(argv) <= 1 else argv[1:],
-                              argv=list(map(lambda x: utils.strip_quotes(x), argv)),
+                              arg_list=arg_list,
                               multiline_command=multiline_command,
                               terminator=terminator,
                               suffix=suffix,
@@ -419,6 +432,7 @@ class StatementParser:
         values in the following attributes:
           - raw
           - command
+          - multiline_command
 
         Different from parse(), this method does not remove redundant whitespace
         within the statement. It does however, ensure statement does not have
@@ -427,37 +441,33 @@ class StatementParser:
         # expand shortcuts and aliases
         line = self._expand(rawinput)
 
-        command = None
-        args = None
+        command = ''
+        args = ''
         match = self._command_pattern.search(line)
         if match:
             # we got a match, extract the command
             command = match.group(1)
-            # the match could be an empty string, if so, turn it into none
-            if not command:
-                command = None
+
             # the _command_pattern regex is designed to match the spaces
             # between command and args with a second match group. Using
             # the end of the second match group ensures that args has
             # no leading whitespace. The rstrip() makes sure there is
             # no trailing whitespace
             args = line[match.end(2):].rstrip()
-            # if the command is none that means the input was either empty
-            # or something weird like '>'. args should be None if we couldn't
+            # if the command is empty that means the input was either empty
+            # or something weird like '>'. args should be empty if we couldn't
             # parse a command
             if not command or not args:
-                args = None
+                args = ''
 
         # set multiline
         if command in self.multiline_commands:
             multiline_command = command
         else:
-            multiline_command = None
+            multiline_command = ''
 
         # build the statement
-        # string representation of args must be an empty string instead of
-        # None for compatibility with standard library cmd
-        statement = Statement('' if args is None else args,
+        statement = Statement(args,
                               raw=rawinput,
                               command=command,
                               multiline_command=multiline_command,
@@ -503,12 +513,9 @@ class StatementParser:
     def _command_and_args(tokens: List[str]) -> Tuple[str, str]:
         """Given a list of tokens, return a tuple of the command
         and the args as a string.
-
-        The args string will be '' instead of None to retain backwards compatibility
-        with cmd in the standard library.
         """
-        command = None
-        args = None
+        command = ''
+        args = ''
 
         if tokens:
             command = tokens[0]

@@ -1720,7 +1720,7 @@ class Cmd(cmd.Cmd):
         :return: tuple containing (command, args, line)
         """
         statement = self.statement_parser.parse_command_only(line)
-        return statement.command, statement, statement.command_and_args
+        return statement.command, statement.args, statement.command_and_args
 
     def onecmd_plus_hooks(self, line: str) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
