@@ -5,7 +5,7 @@
 import os
 import re
 import shlex
-from typing import List, Tuple, Dict, Union
+from typing import List, Tuple, Dict
 
 from . import constants
 from . import utils
