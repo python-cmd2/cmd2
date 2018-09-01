@@ -8,7 +8,9 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 import os
+import re
 import shutil
+import sys
 
 import invoke
 
@@ -173,6 +175,34 @@ def clean_all(context):
     pass
 namespace_clean.add_task(clean_all, 'all')
 
+@invoke.task
+def tag(context, name='', message=''):
+    "Add a Git tag and push it to origin"
+    # If a tag was provided on the command-line, then add a Git tag and push it to origin
+    if name:
+        context.run('git tag -a {} -m {!r}'.format(name, message))
+        context.run('git push origin {}'.format(name))
+namespace.add_task(tag)
+
+@invoke.task()
+def validatetag(context):
+    "Check to make sure that a tag exists for the current HEAD and it looks like a valid version number"
+    # Validate that a Git tag exists for the current commit HEAD
+    result = context.run("git describe --exact-match --tags $(git log -n1 --pretty='%h')")
+    tag = result.stdout.rstrip()
+
+    # Validate that the Git tag appears to be a valid version number
+    ver_regex = re.compile('(\d+)\.(\d+)\.(\d+)')
+    match = ver_regex.fullmatch(tag)
+    if match is None:
+        print('Tag {!r} does not appear to be a valid version number'.format(tag))
+        sys.exit(-1)
+    else:
+        print('Tag {!r} appears to be a valid version number'.format(tag))
+
+
+namespace.add_task(validatetag)
+
 @invoke.task(pre=[clean_all])
 def sdist(context):
     "Create a source distribution"
@@ -185,13 +215,13 @@ def wheel(context):
     context.run('python setup.py bdist_wheel')
 namespace.add_task(wheel)
 
-@invoke.task(pre=[sdist, wheel])
+@invoke.task(pre=[validatetag, sdist, wheel])
 def pypi(context):
     "Build and upload a distribution to pypi"
     context.run('twine upload dist/*')
 namespace.add_task(pypi)
 
-@invoke.task(pre=[sdist, wheel])
+@invoke.task(pre=[validatetag, sdist, wheel])
 def pypi_test(context):
     "Build and upload a distribution to https://test.pypi.org"
     context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
