@@ -453,7 +453,7 @@ class StatementParser:
             # no trailing whitespace
             args = line[match.end(2):].rstrip()
             # if the command is none that means the input was either empty
-            # or something wierd like '>'. args should be None if we couldn't
+            # or something weird like '>'. args should be None if we couldn't
             # parse a command
             if not command or not args:
                 args = None
