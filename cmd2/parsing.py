@@ -434,9 +434,8 @@ class StatementParser:
           - command
           - multiline_command
 
-        Different from parse(), this method does not remove redundant whitespace
-        within the statement. It does however, ensure statement does not have
-        leading or trailing whitespace.
+        Different from parse(), this method does not remove redundant whitespace within args.
+        However, it does ensure args has no leading or trailing whitespace.
         """
         # expand shortcuts and aliases
         line = self._expand(rawinput)
