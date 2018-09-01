@@ -692,8 +692,7 @@ class Cmd(cmd.Cmd):
         elif rl_type == RlType.PYREADLINE:
             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
-    def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[Optional[List[str]],
-                                                                                  Optional[List[str]]]:
+    def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[List[str], List[str]]:
         """
         Used by tab completion functions to get all tokens through the one being completed
         :param line: the current input line with leading whitespace removed
@@ -710,7 +709,7 @@ class Cmd(cmd.Cmd):
                      The last item in both lists is the token being tab completed
 
                  On Failure
-                    Both items are None
+                    Both items are empty
         """
         import copy
         unclosed_quote = ''
@@ -730,21 +729,21 @@ class Cmd(cmd.Cmd):
                 if not unclosed_quote and begidx == tmp_endidx:
                     initial_tokens.append('')
                 break
-            except ValueError:
-                # ValueError can be caused by missing closing quote
-                if not quotes_to_try:
-                    # Since we have no more quotes to try, something else
-                    # is causing the parsing error. Return None since
-                    # this means the line is malformed.
-                    return None, None
+            except ValueError as ex:
+                # Make sure the exception was due to an unclosed quote and
+                # we haven't exhausted the closing quotes to try
+                if str(ex) == "No closing quotation" and quotes_to_try:
+                    # Add a closing quote and try to parse again
+                    unclosed_quote = quotes_to_try[0]
+                    quotes_to_try = quotes_to_try[1:]
 
-                # Add a closing quote and try to parse again
-                unclosed_quote = quotes_to_try[0]
-                quotes_to_try = quotes_to_try[1:]
-
-                tmp_line = line[:endidx]
-                tmp_line += unclosed_quote
-                tmp_endidx = endidx + 1
+                    tmp_line = line[:endidx]
+                    tmp_line += unclosed_quote
+                    tmp_endidx = endidx + 1
+                else:
+                    # The parsing error is not caused by unclosed quotes.
+                    # Return empty lists since this means the line is malformed.
+                    return [], []
 
         if self.allow_redirection:
 
@@ -910,7 +909,7 @@ class Cmd(cmd.Cmd):
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
+        if not tokens:
             return []
 
         completions_matches = []
@@ -953,7 +952,7 @@ class Cmd(cmd.Cmd):
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
+        if not tokens:
             return []
 
         matches = []
@@ -1190,7 +1189,7 @@ class Cmd(cmd.Cmd):
             # Get all tokens through the one being completed. We want the raw tokens
             # so we can tell if redirection strings are quoted and ignore them.
             _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
-            if raw_tokens is None:
+            if not raw_tokens:
                 return []
 
             if len(raw_tokens) > 1:
@@ -1398,9 +1397,9 @@ class Cmd(cmd.Cmd):
                 # Get all tokens through the one being completed
                 tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
-                # Either had a parsing error or are trying to complete the command token
+                # Check if we either had a parsing error or are trying to complete the command token
                 # The latter can happen if " or ' was entered as the command
-                if tokens is None or len(tokens) == 1:
+                if len(tokens) <= 1:
                     self.completion_matches = []
                     return None
 
@@ -1550,9 +1549,10 @@ class Cmd(cmd.Cmd):
         completer = AutoCompleter(argparser, cmd2_app=self)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        results = completer.complete_command(tokens, text, line, begidx, endidx)
+        if not tokens:
+            return []
 
-        return results
+        return completer.complete_command(tokens, text, line, begidx, endidx)
 
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
@@ -1589,7 +1589,7 @@ class Cmd(cmd.Cmd):
 
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
+        if not tokens:
             return []
 
         matches = []
