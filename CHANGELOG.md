@@ -1,6 +1,11 @@
 ## 0.9.5 (TBD, 2018)
 * Bug Fixes
     * Fixed bug where ``get_all_commands`` could return non-callable attributes
+* Enhancements
+    * Added ``exit_code`` attribute of ``cmd2.Cmd`` class
+        * Enables applications to return a non-zero exit code when exiting from ``cmdloop``
+    * ``ACHelpFormatter`` now inherits from ``argparse.RawTextHelpFormatter`` to make it easier
+    for formatting help/description text
     
 ## 0.9.4 (August 21, 2018)
 * Bug Fixes

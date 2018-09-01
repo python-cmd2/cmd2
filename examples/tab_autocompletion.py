@@ -125,7 +125,9 @@ class TabCompleteExample(cmd2.Cmd):
     #  - The help output for arguments with multiple flags or with append=True is more concise
     #  - ACArgumentParser adds the ability to specify ranges of argument counts in 'nargs'
 
-    suggest_parser = argparse_completer.ACArgumentParser()
+    suggest_description = "Suggest command demonstrates argparse customizations.\n"
+    suggest_description += "See hybrid_suggest and orig_suggest to compare the help output."
+    suggest_parser = argparse_completer.ACArgumentParser(description=suggest_description)
 
     suggest_parser.add_argument('-t', '--type', choices=['movie', 'show'], required=True)
     suggest_parser.add_argument('-d', '--duration', nargs=(1, 2), action='append',
@@ -136,12 +138,7 @@ class TabCompleteExample(cmd2.Cmd):
     @cmd2.with_category(CAT_AUTOCOMPLETE)
     @cmd2.with_argparser(suggest_parser)
     def do_suggest(self, args) -> None:
-        """Suggest command demonstrates argparse customizations
-
-        See hybrid_suggest and orig_suggest to compare the help output.
-
-
-        """
+        """Suggest command demonstrates argparse customizations"""
         if not args.type:
             self.do_help('suggest')
 
