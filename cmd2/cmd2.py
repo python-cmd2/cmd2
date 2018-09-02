@@ -709,7 +709,7 @@ class Cmd(cmd.Cmd):
                      The last item in both lists is the token being tab completed
 
                  On Failure
-                    Both items are empty
+                    Two empty lists
         """
         import copy
         unclosed_quote = ''
