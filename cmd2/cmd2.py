@@ -2236,7 +2236,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
     Example: alias ls !ls -lF
 
-    If you want to use redirection or pipes in the alias, then quote them to avoid
+    If you want to use redirection or pipes in the alias, then quote them to prevent
     the alias command itself from being redirected
 
     Examples:
