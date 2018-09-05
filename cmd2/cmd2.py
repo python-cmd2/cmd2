@@ -523,6 +523,9 @@ class Cmd(cmd.Cmd):
         # This boolean flag determines whether or not the cmd2 application can interact with the clipboard
         self.can_clip = can_clip
 
+        # This determines if a non-zero exit code should be used when exiting the application
+        self.exit_code = None
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -1571,7 +1574,8 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
-        return [cur_name[3:] for cur_name in self.get_names() if cur_name.startswith('do_')]
+        return [name[3:] for name in self.get_names()
+                if name.startswith('do_') and isinstance(getattr(self, name), Callable)]
 
     def get_visible_commands(self) -> List[str]:
         """Returns a list of commands that have not been hidden."""
@@ -1586,7 +1590,8 @@ class Cmd(cmd.Cmd):
 
     def get_help_topics(self) -> List[str]:
         """ Returns a list of help topics """
-        return [name[5:] for name in self.get_names() if name.startswith('help_')]
+        return [name[5:] for name in self.get_names()
+                if name.startswith('help_') and isinstance(getattr(self, name), Callable)]
 
     def complete_help(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
@@ -2480,7 +2485,6 @@ Usage:  Usage: unalias [-a] name [name ...]
     def do_eof(self, _: str) -> bool:
         """Called when <Ctrl>-D is pressed."""
         # End of script should not exit app, but <Ctrl>-D should.
-        print('')  # Required for clearing line when exiting submenu
         return self._STOP_AND_EXIT
 
     def do_quit(self, _: str) -> bool:
@@ -2488,7 +2492,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         self._should_quit = True
         return self._STOP_AND_EXIT
 
-    def select(self, opts: Union[str, List[str], List[Tuple[str, Optional[str]]]], prompt: str='Your choice? ') -> str:
+    def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str='Your choice? ') -> str:
         """Presents a numbered menu to the user.  Modelled after
            the bash shell's SELECT.  Returns the item chosen.
 
@@ -2570,18 +2574,19 @@ Usage:  Usage: unalias [-a] name [name ...]
         else:
             raise LookupError("Parameter '%s' not supported (type 'set' for list of parameters)." % param)
 
-    set_parser = ACArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    set_description = "Sets a settable parameter or shows current settings of parameters.\n"
+    set_description += "\n"
+    set_description += "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
+    set_description += "Call without arguments for a list of settable parameters with their values."
+
+    set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]')
 
     @with_argparser(set_parser)
     def do_set(self, args: argparse.Namespace) -> None:
-        """Sets a settable parameter or shows current settings of parameters.
-
-        Accepts abbreviated parameter names so long as there is no ambiguity.
-        Call without arguments for a list of settable parameters with their values.
-        """
+        """Sets a settable parameter or shows current settings of parameters"""
         try:
             param_name, val = args.settable
             val = val.strip()
@@ -2896,7 +2901,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(bridge)
 
-    history_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    history_parser = ACArgumentParser()
     history_parser_group = history_parser.add_mutually_exclusive_group()
     history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_parser_group.add_argument('-e', '--edit', action='store_true',
@@ -3243,6 +3248,9 @@ Script should contain one command per line, just like command would be typed in 
         for func in self._postloop_hooks:
             func()
         self.postloop()
+
+        if self.exit_code is not None:
+            sys.exit(self.exit_code)
 
     ###
     #

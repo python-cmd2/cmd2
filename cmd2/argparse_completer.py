@@ -695,7 +695,7 @@ class AutoCompleter(object):
 
 
 # noinspection PyCompatibility,PyShadowingBuiltins,PyShadowingBuiltins
-class ACHelpFormatter(argparse.HelpFormatter):
+class ACHelpFormatter(argparse.RawTextHelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
     def _format_usage(self, usage, actions, groups, prefix) -> str:
@@ -869,9 +869,6 @@ class ACHelpFormatter(argparse.HelpFormatter):
         else:
             result = super()._format_args(action, default_metavar)
         return result
-
-    def _split_lines(self, text: str, width) -> List[str]:
-        return text.splitlines()
 
 
 # noinspection PyCompatibility

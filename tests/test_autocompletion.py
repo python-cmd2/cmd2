@@ -19,8 +19,8 @@ def cmd2_app():
 
 SUGGEST_HELP = '''Usage: suggest -t {movie, show} [-h] [-d DURATION{1..2}]
 
-Suggest command demonstrates argparse customizations See hybrid_suggest and
-orig_suggest to compare the help output.
+Suggest command demonstrates argparse customizations.
+See hybrid_suggest and orig_suggest to compare the help output.
 
 required arguments:
   -t, --type {movie, show}
@@ -59,7 +59,7 @@ def test_help_required_group(cmd2_app, capsys):
     assert out1 == out2
     assert out1[0].startswith('Usage: suggest')
     assert out1[1] == ''
-    assert out1[2].startswith('Suggest command demonstrates argparse customizations ')
+    assert out1[2].startswith('Suggest command demonstrates argparse customizations.')
     assert out1 == normalize(SUGGEST_HELP)
 
 

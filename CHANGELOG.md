@@ -1,4 +1,13 @@
-## 0.9.4 (August TBD, 2018)
+## 0.9.5 (TBD, 2018)
+* Bug Fixes
+    * Fixed bug where ``get_all_commands`` could return non-callable attributes
+* Enhancements
+    * Added ``exit_code`` attribute of ``cmd2.Cmd`` class
+        * Enables applications to return a non-zero exit code when exiting from ``cmdloop``
+    * ``ACHelpFormatter`` now inherits from ``argparse.RawTextHelpFormatter`` to make it easier
+    for formatting help/description text
+    
+## 0.9.4 (August 21, 2018)
 * Bug Fixes
     * Fixed bug where ``preparse`` was not getting called
     * Fixed bug in parsing of multiline commands where matching quote is on another line 
@@ -7,6 +16,8 @@
       framework, see ``docs/hooks.rst`` for details.
     * New dependency on ``attrs`` third party module
     * Added ``matches_sorted`` member to support custom sorting of tab-completion matches
+    * Added [tab_autocomp_dynamic.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocomp_dynamic.py) example
+        * Demonstrates updating the argparse object during init instead of during class construction
 * Deprecations
     * Deprecated the following hook methods, see ``hooks.rst`` for full details:
        * ``cmd2.Cmd.preparse()`` - equivalent functionality available
@@ -16,7 +27,7 @@
        * ``cmd2.Cmd.postparsing_postcmd()`` - equivalent functionality available
          via ``cmd2.Cmd.register_postcmd_hook()``
 
-## 0.8.9 (August TBD, 2018)
+## 0.8.9 (August 20, 2018)
 * Bug Fixes
     * Fixed extra slash that could print when tab completing users on Windows
 
