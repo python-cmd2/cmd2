@@ -165,8 +165,9 @@ The previously recommended ``colorize`` method is now deprecated.
 
 
 .. _quiet:
-Supressing non-essential output
-===============================
+
+Suppressing non-essential output
+================================
 
 The ``quiet`` setting controls whether ``self.pfeedback()`` actually produces
 any output. If ``quiet`` is ``False``, then the output will be produced. If

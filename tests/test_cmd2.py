@@ -813,11 +813,7 @@ def test_base_colorize(base_app):
     # But if we create a fresh Cmd() instance, it will
     fresh_app = cmd2.Cmd()
     color_test = fresh_app.colorize('Test', 'red')
-    # Actually, colorization only ANSI escape codes is only applied on non-Windows systems
-    if sys.platform == 'win32':
-        assert color_test == 'Test'
-    else:
-        assert color_test == '\x1b[31mTest\x1b[39m'
+    assert color_test == '\x1b[31mTest\x1b[39m'
 
 def _expected_no_editor_error():
     expected_exception = 'OSError'
@@ -1107,14 +1103,9 @@ def test_ansi_prompt_escaped():
     readline_hack_end = "\x02"
 
     readline_safe_prompt = app._surround_ansi_escapes(color_prompt)
-    if sys.platform.startswith('win'):
-        # colorize() does nothing on Windows due to lack of ANSI color support
-        assert prompt == color_prompt
-        assert readline_safe_prompt == prompt
-    else:
-        assert prompt != color_prompt
-        assert readline_safe_prompt.startswith(readline_hack_start + app._colorcodes[color][True] + readline_hack_end)
-        assert readline_safe_prompt.endswith(readline_hack_start + app._colorcodes[color][False] + readline_hack_end)
+    assert prompt != color_prompt
+    assert readline_safe_prompt.startswith(readline_hack_start + app._colorcodes[color][True] + readline_hack_end)
+    assert readline_safe_prompt.endswith(readline_hack_start + app._colorcodes[color][False] + readline_hack_end)
 
 
 class HelpApp(cmd2.Cmd):

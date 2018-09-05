@@ -567,9 +567,8 @@ class Cmd(cmd.Cmd):
         been piped to another process and that process terminates before the
         cmd2 command is finished executing.
 
-        :param msg: message to print to current stdout - anything convertible to
-        a str with '{}'.format() is OK :param end: string appended after the end
-        of the message if not already present, default a newline
+        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param end: string appended after the end of the message if not already present, default a newline
         """
         if msg is not None and msg != '':
             try:
