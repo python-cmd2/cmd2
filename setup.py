@@ -76,7 +76,7 @@ EXTRAS_REQUIRE = {
         # for python 3.5 and earlier we need the third party mock module
         "mock ; python_version<'3.6'",
         'pytest', 'codecov', 'pytest-cov', 'pytest-mock', 'tox', 'pylint',
-        'sphinx<1.7.7', 'sphinx-rtd-theme', 'sphinx-autobuild', 'invoke', 'twine>=1.11',
+        'sphinx', 'sphinx-rtd-theme', 'sphinx-autobuild', 'invoke', 'twine>=1.11',
     ]
 }
 
