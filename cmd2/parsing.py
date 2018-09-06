@@ -425,7 +425,7 @@ class StatementParser:
         This method is used by tab completion code and therefore must not
         generate an exception if there are unclosed quotes.
 
-        The Statement object returned by this method can at most contained
+        The Statement object returned by this method can at most contain
         values in the following attributes:
           - raw
           - command
