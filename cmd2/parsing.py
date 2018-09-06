@@ -27,7 +27,8 @@ class Statement(str):
     the output redirection clauses.
     """
     def __new__(cls,
-                value: str,
+                obj: object,
+                *,
                 raw: str = '',
                 command: str = '',
                 arg_list: List[str] = None,
@@ -58,7 +59,7 @@ class Statement(str):
         We must override __new__ because we are subclassing `str` which is
         immutable.
         """
-        stmt = super().__new__(cls, value)
+        stmt = super().__new__(cls, obj)
         stmt.raw = raw
         stmt.command = command
 
