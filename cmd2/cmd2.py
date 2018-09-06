@@ -612,7 +612,7 @@ class Cmd(cmd.Cmd):
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
-                              - wrapping is ideal when you want to avoid users having to use horizontal scrolling
+                              - wrapping is ideal when you want to keep users from having to use horizontal scrolling
 
         WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
