@@ -25,36 +25,9 @@ class Statement(str):
 
     The string portion of the class contains the arguments, but not the command, nor
     the output redirection clauses.
-
-    :var raw:               string containing exactly what we input by the user
-    :type raw:              str
-    :var command:           the command, i.e. the first whitespace delimited word
-    :type command:          str
-    :var multiline_command: if the command is a multiline command, the name of the
-                            command, otherwise empty
-    :type command:          str
-    :var arg_list:          list of arguments to the command, not including any output
-                            redirection or terminators. quoted arguments remain
-                            quoted.
-    :type arg_list:         list
-    :var terminator:        the character which terminated the multiline command, if
-                            there was one
-    :type terminator:       str
-    :var suffix:            characters appearing after the terminator but before output
-                            redirection, if any
-    :type suffix:           str
-    :var pipe_to:           if output was piped to a shell command, the shell command
-                            as a list of tokens
-    :type pipe_to:          list
-    :var output:            if output was redirected, the redirection token, i.e. '>>'
-    :type output:           str
-    :var output_to:         if output was redirected, the destination file
-    :type output_to:        str
-
     """
     def __new__(cls,
-                obj: object,
-                *,
+                value: str,
                 raw: str = '',
                 command: str = '',
                 arg_list: List[str] = None,
@@ -65,25 +38,49 @@ class Statement(str):
                 output: str = '',
                 output_to: str = ''
                 ):
+        """
+        :param value: The arguments, but not the command, nor the output redirection clauses.
+        :param raw: string containing exactly what we input by the user
+        :param command: the command, i.e. the first whitespace delimited word
+        :param arg_list: list of arguments to the command, not including any output
+                         redirection or terminators. quoted arguments remain quoted.
+        :param multiline_command: if the command is a multiline command, the name of the
+                                  command, otherwise empty
+        :param terminator: the character which terminated the multiline command, if
+                           there was one
+        :param suffix: characters appearing after the terminator but before output redirection, if any
+        :param pipe_to: if output was piped to a shell command, the shell command as a list of tokens
+        :param output: if output was redirected, the redirection token, i.e. '>>'
+        :param output_to: if output was redirected, the destination file
+        """
         """Create a new instance of Statement
 
         We must override __new__ because we are subclassing `str` which is
         immutable.
         """
-        stmt = str.__new__(cls, obj)
-        object.__setattr__(stmt, "raw", raw)
-        object.__setattr__(stmt, "command", command)
+        stmt = super().__new__(cls, value)
+        stmt.raw = raw
+        stmt.command = command
+
         if arg_list is None:
             arg_list = []
-        object.__setattr__(stmt, "arg_list", arg_list)
-        object.__setattr__(stmt, "multiline_command", multiline_command)
-        object.__setattr__(stmt, "terminator", terminator)
-        object.__setattr__(stmt, "suffix", suffix)
+        stmt.arg_list = arg_list
+
+        stmt.multiline_command = multiline_command
+        stmt.terminator = terminator
+        stmt.suffix = suffix
+
         if pipe_to is None:
             pipe_to = []
-        object.__setattr__(stmt, "pipe_to", pipe_to)
-        object.__setattr__(stmt, "output", output)
-        object.__setattr__(stmt, "output_to", output_to)
+        stmt.pipe_to = pipe_to
+
+        stmt.output = output
+        stmt.output_to = output_to
+
+        # Make Statement feel immutable by overriding these functions
+        stmt.__setattr__ = stmt.__stmt_setattr__
+        stmt.__delattr__ = stmt.__stmt_delattr__
+
         return stmt
 
     @property
@@ -123,11 +120,11 @@ class Statement(str):
 
         return rtn
 
-    def __setattr__(self, name, value):
+    def __stmt_setattr__(self, name, value):
         """Statement instances should feel immutable; raise ValueError"""
         raise ValueError
 
-    def __delattr__(self, name):
+    def __stmt_delattr__(self, name):
         """Statement instances should feel immutable; raise ValueError"""
         raise ValueError
 
