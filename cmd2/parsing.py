@@ -59,18 +59,7 @@ class Statement(str):
     # if output was redirected, the destination file
     output_to = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
 
-    def __new__(cls,
-                args: object,
-                raw: str = '',
-                command: str = '',
-                arg_list: List[str] = None,
-                multiline_command: str = '',
-                terminator: str = '',
-                suffix: str = '',
-                pipe_to: List[str] = None,
-                output: str = '',
-                output_to: str = ''
-                ):
+    def __new__(cls, value: object, *pos_args, **kw_args):
         """Create a new instance of Statement.
 
         We must override __new__ because we are subclassing `str` which is immutable and takes a different number of
@@ -78,7 +67,7 @@ class Statement(str):
 
         NOTE:  attrs takes care of initializing other members in the __init__ it generates.
         """
-        stmt = super().__new__(cls, args)
+        stmt = super().__new__(cls, value)
         return stmt
 
     @property
