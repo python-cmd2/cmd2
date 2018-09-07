@@ -5,6 +5,7 @@ Test the parsing logic in parsing.py
 Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import attr
 import pytest
 
 import cmd2
@@ -639,7 +640,8 @@ def test_parse_command_only_multiline(parser):
     assert statement.command_and_args == line
     assert statement.args == statement
 
-def test_statement_initialization(parser):
+
+def test_statement_initialization():
     string = 'alias'
     statement = cmd2.Statement(string)
     assert string == statement
@@ -657,3 +659,15 @@ def test_statement_initialization(parser):
     assert not statement.pipe_to
     assert statement.output == ''
     assert statement.output_to == ''
+
+
+def test_statement_is_immutable():
+    string = 'foo'
+    statement = cmd2.Statement(string)
+    assert string == statement
+    assert statement.args == statement
+    assert statement.raw == ''
+    with pytest.raises(attr.exceptions.FrozenInstanceError):
+        statement.args = 'bar'
+    with pytest.raises(attr.exceptions.FrozenInstanceError):
+        statement.raw = 'baz'

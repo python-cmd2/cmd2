@@ -7,10 +7,13 @@ import re
 import shlex
 from typing import List, Tuple, Dict
 
+import attr
+
 from . import constants
 from . import utils
 
 
+@attr.s(frozen=True)
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
 
@@ -26,9 +29,38 @@ class Statement(str):
     The string portion of the class contains the arguments, but not the command, nor
     the output redirection clauses.
     """
+    # the arguments, but not the command, nor the output redirection clauses.
+    args = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+
+    # string containing exactly what we input by the user
+    raw = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+
+    # the command, i.e. the first whitespace delimited word
+    command = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+
+    # list of arguments to the command, not including any output redirection or terminators; quoted args remain quoted
+    arg_list = attr.ib(factory=list, validator=attr.validators.instance_of(list), type=List[str])
+
+    # if the command is a multiline command, the name of the command, otherwise empty
+    multiline_command = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+
+    # the character which terminated the multiline command, if there was one
+    terminator = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+
+    # characters appearing after the terminator but before output redirection, if any
+    suffix = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+
+    # if output was piped to a shell command, the shell command as a list of tokens
+    pipe_to = attr.ib(factory=list, validator=attr.validators.instance_of(list), type=List[str])
+
+    # if output was redirected, the redirection token, i.e. '>>'
+    output = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+
+    # if output was redirected, the destination file
+    output_to = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+
     def __new__(cls,
-                obj: object,
-                *,
+                args: object,
                 raw: str = '',
                 command: str = '',
                 arg_list: List[str] = None,
@@ -39,49 +71,14 @@ class Statement(str):
                 output: str = '',
                 output_to: str = ''
                 ):
+        """Create a new instance of Statement.
+
+        We must override __new__ because we are subclassing `str` which is immutable and takes a different number of
+        arguments as Statement.
+
+        NOTE:  attrs takes care of initializing other members in the __init__ it generates.
         """
-        :param value: The arguments, but not the command, nor the output redirection clauses.
-        :param raw: string containing exactly what we input by the user
-        :param command: the command, i.e. the first whitespace delimited word
-        :param arg_list: list of arguments to the command, not including any output
-                         redirection or terminators. quoted arguments remain quoted.
-        :param multiline_command: if the command is a multiline command, the name of the
-                                  command, otherwise empty
-        :param terminator: the character which terminated the multiline command, if
-                           there was one
-        :param suffix: characters appearing after the terminator but before output redirection, if any
-        :param pipe_to: if output was piped to a shell command, the shell command as a list of tokens
-        :param output: if output was redirected, the redirection token, i.e. '>>'
-        :param output_to: if output was redirected, the destination file
-        """
-        """Create a new instance of Statement
-
-        We must override __new__ because we are subclassing `str` which is
-        immutable.
-        """
-        stmt = super().__new__(cls, obj)
-        stmt.raw = raw
-        stmt.command = command
-
-        if arg_list is None:
-            arg_list = []
-        stmt.arg_list = arg_list
-
-        stmt.multiline_command = multiline_command
-        stmt.terminator = terminator
-        stmt.suffix = suffix
-
-        if pipe_to is None:
-            pipe_to = []
-        stmt.pipe_to = pipe_to
-
-        stmt.output = output
-        stmt.output_to = output_to
-
-        # Make Statement feel immutable by overriding these functions
-        stmt.__setattr__ = stmt.__stmt_setattr__
-        stmt.__delattr__ = stmt.__stmt_delattr__
-
+        stmt = super().__new__(cls, args)
         return stmt
 
     @property
@@ -100,14 +97,6 @@ class Statement(str):
         return rtn
 
     @property
-    def args(self) -> str:
-        """the arguments to the command, not including any output redirection or terminators.
-
-        Quoted arguments remain quoted.
-        """
-        return str(self)
-
-    @property
     def argv(self) -> List[str]:
         """a list of arguments a la sys.argv. Quotes, if any, are removed
         from the elements of the list, and aliases and shortcuts are expanded
@@ -120,14 +109,6 @@ class Statement(str):
             rtn = []
 
         return rtn
-
-    def __stmt_setattr__(self, name, value):
-        """Statement instances should feel immutable; raise ValueError"""
-        raise ValueError
-
-    def __stmt_delattr__(self, name):
-        """Statement instances should feel immutable; raise ValueError"""
-        raise ValueError
 
 
 class StatementParser:
