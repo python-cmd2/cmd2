@@ -32,11 +32,40 @@ def default_parser():
     parser = StatementParser()
     return parser
 
-def test_parse_empty_string_default(default_parser):
-    statement = default_parser.parse('')
-    assert statement.command == ''
+
+def test_parse_empty_string(parser):
+    line = ''
+    statement = parser.parse(line)
     assert statement == ''
-    assert statement.raw == ''
+    assert statement.args == statement
+    assert statement.raw == line
+    assert statement.command == ''
+    assert statement.arg_list == []
+    assert statement.multiline_command == ''
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
+    assert statement.command_and_args == line
+    assert statement.argv == statement.arg_list
+
+def test_parse_empty_string_default(default_parser):
+    line = ''
+    statement = default_parser.parse(line)
+    assert statement == ''
+    assert statement.args == statement
+    assert statement.raw == line
+    assert statement.command == ''
+    assert statement.arg_list == []
+    assert statement.multiline_command == ''
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
+    assert statement.command_and_args == line
+    assert statement.argv == statement.arg_list
 
 @pytest.mark.parametrize('line,tokens', [
     ('command', ['command']),
@@ -51,12 +80,6 @@ def test_parse_empty_string_default(default_parser):
 def test_tokenize_default(default_parser, line, tokens):
     tokens_to_test = default_parser.tokenize(line)
     assert tokens_to_test == tokens
-
-def test_parse_empty_string(parser):
-    statement = parser.parse('')
-    assert statement.command == ''
-    assert statement == ''
-    assert statement.raw == ''
 
 @pytest.mark.parametrize('line,tokens', [
     ('command', ['command']),
@@ -100,6 +123,15 @@ def test_parse_single_word(parser, line):
     assert statement == ''
     assert statement.argv == [utils.strip_quotes(line)]
     assert not statement.arg_list
+    assert statement.args == statement
+    assert statement.raw == line
+    assert statement.multiline_command == ''
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
+    assert statement.command_and_args == line
 
 @pytest.mark.parametrize('line,terminator', [
     ('termbare;', ';'),
@@ -550,10 +582,18 @@ def test_parse_alias_terminator_no_whitespace(parser, line):
 def test_parse_command_only_command_and_args(parser):
     line = 'help history'
     statement = parser.parse_command_only(line)
-    assert statement.command == 'help'
     assert statement == 'history'
     assert statement.args == statement
+    assert statement.raw == line
+    assert statement.command == 'help'
     assert statement.command_and_args == line
+    assert statement.arg_list == []
+    assert statement.multiline_command == ''
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
 
 def test_parse_command_only_emptyline(parser):
     line = ''

@@ -398,6 +398,7 @@ class StatementParser:
 
         The Statement object returned by this method can at most contain
         values in the following attributes:
+          - args
           - raw
           - command
           - multiline_command
