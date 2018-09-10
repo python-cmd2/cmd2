@@ -452,12 +452,15 @@ class StatementParser:
         This method is used by tab completion code and therefore must not
         generate an exception if there are unclosed quotes.
 
-        The Statement object returned by this method can at most contain values
+        The `Statement` object returned by this method can at most contain values
         in the following attributes:
           - args
           - raw
           - command
           - multiline_command
+
+        `Statement.args` includes all output redirection clauses and command
+        terminators.
 
         Different from parse(), this method does not remove redundant whitespace
         within args. However, it does ensure args has no leading or trailing
@@ -473,12 +476,10 @@ class StatementParser:
             # we got a match, extract the command
             command = match.group(1)
 
-            # the _command_pattern regex is designed to match the spaces
-            # between command and args with a second match group. Using
-            # the end of the second match group ensures that args has
-            # no leading whitespace. The rstrip() makes sure there is
-            # no trailing whitespace
-            args = line[match.end(2):].rstrip()
+            # take everything from the end of the first match group to
+            # the end of the line as the arguments (stripping leading
+            # and trailing spaces)
+            args = line[match.end(1):].strip()
             # if the command is empty that means the input was either empty
             # or something weird like '>'. args should be empty if we couldn't
             # parse a command

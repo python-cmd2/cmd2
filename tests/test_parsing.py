@@ -584,10 +584,59 @@ def test_parse_command_only_command_and_args(parser):
     statement = parser.parse_command_only(line)
     assert statement == 'history'
     assert statement.args == statement
-    assert statement.raw == line
+    assert statement.arg_list == []
     assert statement.command == 'help'
     assert statement.command_and_args == line
+    assert statement.multiline_command == ''
+    assert statement.raw == line
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
+
+def test_parse_command_only_strips_line(parser):
+    line = '  help history  '
+    statement = parser.parse_command_only(line)
+    assert statement == 'history'
+    assert statement.args == statement
     assert statement.arg_list == []
+    assert statement.command == 'help'
+    assert statement.command_and_args == line.strip()
+    assert statement.multiline_command == ''
+    assert statement.raw == line
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
+
+def test_parse_command_only_expands_alias(parser):
+    line = 'fake foobar.py "somebody.py'
+    statement = parser.parse_command_only(line)
+    assert statement == 'foobar.py "somebody.py'
+    assert statement.args == statement
+    assert statement.arg_list == []
+    assert statement.command == 'pyscript'
+    assert statement.command_and_args == 'pyscript foobar.py "somebody.py'
+    assert statement.multiline_command == ''
+    assert statement.raw == line
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
+
+def test_parse_command_only_expands_shortcuts(parser):
+    line = '!cat foobar.txt'
+    statement = parser.parse_command_only(line)
+    assert statement == 'cat foobar.txt'
+    assert statement.args == statement
+    assert statement.arg_list == []
+    assert statement.command == 'shell'
+    assert statement.command_and_args == 'shell cat foobar.txt'
+    assert statement.multiline_command == ''
+    assert statement.raw == line
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
@@ -595,66 +644,49 @@ def test_parse_command_only_command_and_args(parser):
     assert statement.output == ''
     assert statement.output_to == ''
 
-def test_parse_command_only_emptyline(parser):
-    line = ''
-    statement = parser.parse_command_only(line)
-    # statement is a subclass of str(), the value of the str
-    # should be '', to retain backwards compatibility with
-    # the cmd in the standard library
-    assert statement.command == ''
-    assert statement == ''
-    assert statement.args == statement
-    assert not statement.argv
-    assert not statement.arg_list
-    assert statement.command_and_args == ''
-
-def test_parse_command_only_strips_line(parser):
-    line = '  help history  '
-    statement = parser.parse_command_only(line)
-    assert statement.command == 'help'
-    assert statement == 'history'
-    assert statement.args == statement
-    assert statement.command_and_args == line.strip()
-
-def test_parse_command_only_expands_alias(parser):
-    line = 'fake foobar.py'
-    statement = parser.parse_command_only(line)
-    assert statement.command == 'pyscript'
-    assert statement == 'foobar.py'
-    assert statement.args == statement
-
-def test_parse_command_only_expands_shortcuts(parser):
-    line = '!cat foobar.txt'
-    statement = parser.parse_command_only(line)
-    assert statement.command == 'shell'
-    assert statement == 'cat foobar.txt'
-    assert statement.args == statement
-    assert statement.command_and_args == 'shell cat foobar.txt'
-
 def test_parse_command_only_quoted_args(parser):
     line = 'l "/tmp/directory with spaces/doit.sh"'
     statement = parser.parse_command_only(line)
-    assert statement.command == 'shell'
     assert statement == 'ls -al "/tmp/directory with spaces/doit.sh"'
     assert statement.args == statement
+    assert statement.arg_list == []
+    assert statement.command == 'shell'
     assert statement.command_and_args == line.replace('l', 'shell ls -al')
+    assert statement.multiline_command == ''
+    assert statement.raw == line
+    assert statement.multiline_command == ''
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
 
-@pytest.mark.parametrize('line', [
-    'helpalias > out.txt',
-    'helpalias>out.txt',
-    'helpalias >> out.txt',
-    'helpalias>>out.txt',
-    'help|less',
-    'helpalias;',
-    'help ;;',
-    'help; ;;',
+@pytest.mark.parametrize('line,args', [
+    ('helpalias > out.txt', '> out.txt'),
+    ('helpalias>out.txt', '>out.txt'),
+    ('helpalias >> out.txt', '>> out.txt'),
+    ('helpalias>>out.txt', '>>out.txt'),
+    ('help|less', '|less'),
+    ('helpalias;', ';'),
+    ('help ;;', ';;'),
+    ('help; ;;', '; ;;'),
 ])
-def test_parse_command_only_specialchars(parser, line):
+def test_parse_command_only_specialchars(parser, line, args):
     statement = parser.parse_command_only(line)
+    assert statement == args
+    assert statement.args == args
     assert statement.command == 'help'
-    assert statement.args == statement
+    assert statement.multiline_command == ''
+    assert statement.raw == line
+    assert statement.multiline_command == ''
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
 
 @pytest.mark.parametrize('line', [
+    '',
     ';',
     ';;',
     ';; ;',
@@ -668,8 +700,19 @@ def test_parse_command_only_specialchars(parser, line):
 ])
 def test_parse_command_only_empty(parser, line):
     statement = parser.parse_command_only(line)
-    assert statement.command == ''
     assert statement == ''
+    assert statement.args == statement
+    assert statement.arg_list == []
+    assert statement.command == ''
+    assert statement.command_and_args == ''
+    assert statement.multiline_command == ''
+    assert statement.raw == line
+    assert statement.multiline_command == ''
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == []
+    assert statement.output == ''
+    assert statement.output_to == ''
 
 def test_parse_command_only_multiline(parser):
     line = 'multiline with partially "open quotes and no terminator'
