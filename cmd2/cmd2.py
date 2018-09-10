@@ -2333,7 +2333,7 @@ Usage:  Usage: unalias [-a] name [name ...]
 
     @with_argument_list
     def do_help(self, arglist: List[str]) -> None:
-        """List available commands with "help" or detailed help with "help cmd"."""
+        """ List available commands with "help" or detailed help with "help cmd" """
         if not arglist or (len(arglist) == 1 and arglist[0] in ('--verbose', '-v')):
             verbose = len(arglist) == 1 and arglist[0] in ('--verbose', '-v')
             self._help_menu(verbose)
@@ -2472,22 +2472,22 @@ Usage:  Usage: unalias [-a] name [name ...]
                 self.stdout.write("\n")
 
     def do_shortcuts(self, _: str) -> None:
-        """Lists shortcuts (aliases) available."""
+        """Lists shortcuts available"""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
     def do_eof(self, _: str) -> bool:
-        """Called when <Ctrl>-D is pressed."""
+        """Called when <Ctrl>-D is pressed"""
         # End of script should not exit app, but <Ctrl>-D should.
         return self._STOP_AND_EXIT
 
     def do_quit(self, _: str) -> bool:
-        """Exits this application."""
+        """Exits this application"""
         self._should_quit = True
         return self._STOP_AND_EXIT
 
     def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str='Your choice? ') -> str:
-        """Presents a numbered menu to the user.  Modelled after
+        """Presents a numbered menu to the user.  Modeled after
            the bash shell's SELECT.  Returns the item chosen.
 
            Argument ``opts`` can be:
@@ -2611,7 +2611,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             self.show(args, param)
 
     def do_shell(self, statement: Statement) -> None:
-        """Execute a command as if at the OS prompt.
+        """Execute a command as if at the OS prompt
 
     Usage:  shell <command> [arguments]"""
         import subprocess
@@ -2909,7 +2909,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> None:
-        """View, run, edit, save, or clear previously entered commands."""
+        """View, run, edit, save, or clear previously entered commands"""
 
         if args.clear:
             # Clear command and readline history
@@ -3053,7 +3053,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argument_list
     def do_edit(self, arglist: List[str]) -> None:
-        """Edit a file in a text editor.
+        """Edit a file in a text editor
 
 Usage:  edit [file_path]
     Where:
@@ -3085,7 +3085,7 @@ The editor used is determined by the ``editor`` settable parameter.
 
     @with_argument_list
     def do__relative_load(self, arglist: List[str]) -> None:
-        """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+        """Runs commands in script file that is encoded as either ASCII or UTF-8 text
 
     Usage:  _relative_load <file_path>
 
@@ -3110,13 +3110,13 @@ NOTE: This command is intended to only be used within text file scripts.
         self.do_load([relative_path])
 
     def do_eos(self, _: str) -> None:
-        """Handles cleanup when a script has finished executing."""
+        """Handles cleanup when a script has finished executing"""
         if self._script_dir:
             self._script_dir.pop()
 
     @with_argument_list
     def do_load(self, arglist: List[str]) -> None:
-        """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+        """Runs commands in script file that is encoded as either ASCII or UTF-8 text
 
     Usage:  load <file_path>
 

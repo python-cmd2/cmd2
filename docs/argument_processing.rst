@@ -278,16 +278,16 @@ the help categories with per-command Help Messages::
     ================================================================================
     alias               Define or display aliases
     config              Config command
-    edit                Edit a file in a text editor.
-    help                List available commands with "help" or detailed help with "help cmd".
+    edit                Edit a file in a text editor
+    help                List available commands with "help" or detailed help with "help cmd"
     history             usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT] [arg]
-    load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+    load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
     py                  Invoke python command, shell, or script
     pyscript            Runs a python script file inside the console
-    quit                Exits this application.
+    quit                Exits this application
     set                 usage: set [-h] [-a] [-l] [settable [settable ...]]
-    shell               Execute a command as if at the OS prompt.
-    shortcuts           Lists shortcuts (aliases) available.
+    shell               Execute a command as if at the OS prompt
+    shortcuts           Lists shortcuts available
     unalias             Unsets aliases
     version             Version command
 
