@@ -28,6 +28,57 @@ class Statement(str):
 
     The string portion of the class contains the arguments, but not the command, nor
     the output redirection clauses.
+
+    Here's some suggestions and best practices for how to use the attributes of this
+    object:
+
+    command - the name of the command, shortcuts and aliases have already been
+              expanded
+
+    args - the arguments to the command, excluding output redirection and command
+           terminators. If the user used quotes in their input, they remain here,
+           and you will have to handle them on your own.
+
+    arg_list - the arguments to the command, excluding output redirection and
+               command terminators. Each argument is represented as an element
+               in the list. Quoted arguments remain quoted. If you want to
+               remove the quotes, use `cmd2.utils.strip_quotes()` or use
+               `argv[1:]`
+
+    command_and_args - join the args and the command together with a space. Output
+                       redirection is excluded.
+
+    argv - this is a list of arguments in the style of `sys.argv`. The first element
+           of the list is the command. Subsequent elements of the list contain any
+           additional arguments, with quotes removed, just like bash would. This
+           is very useful if you are going to use `argparse.parse_args()`:
+           ```
+           def do_mycommand(stmt):
+               mycommand_argparser.parse_args(stmt.argv)
+               ...
+            ```
+
+    raw - if you want full access to exactly what the user typed at the input prompt
+          you can get it, but you'll have to parse it on your own, including:
+             - shortcuts and aliases
+             - quoted commands and arguments
+             - output redirection
+             - multi-line command terminator handling
+          if you use multiline commands, all the input will be passed to you in
+          this string, but there will be embedded newlines where
+          the user hit return to continue the command on the next line.
+
+    Tips:
+
+    1. `argparse` is your friend for anything complex. `cmd2` has two decorators
+       (`with_argparser`, and `with_argparser_and_unknown_args`) which you can use
+       to make your command method receive a namespace of parsed arguments, whether
+       positional or denoted with switches.
+
+    2. For commands with simple positional arguments, use `args` or `arg_list`
+
+    3. If you don't want to have to worry about quoted arguments, use
+       argv[1:], which strips them all off for you.
     """
     # the arguments, but not the command, nor the output redirection clauses.
     args = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
@@ -62,10 +113,11 @@ class Statement(str):
     def __new__(cls, value: object, *pos_args, **kw_args):
         """Create a new instance of Statement.
 
-        We must override __new__ because we are subclassing `str` which is immutable and takes a different number of
-        arguments as Statement.
+        We must override __new__ because we are subclassing `str` which is
+        immutable and takes a different number of arguments as Statement.
 
-        NOTE:  attrs takes care of initializing other members in the __init__ it generates.
+        NOTE:  attrs takes care of initializing other members in the __init__ it
+        generates.
         """
         stmt = super().__new__(cls, value)
         return stmt
@@ -74,7 +126,8 @@ class Statement(str):
     def command_and_args(self) -> str:
         """Combine command and args with a space separating them.
 
-        Quoted arguments remain quoted.
+        Quoted arguments remain quoted. Output redirection and piping are
+        excluded, as are any multiline command terminators.
         """
         if self.command and self.args:
             rtn = '{} {}'.format(self.command, self.args)
@@ -87,8 +140,10 @@ class Statement(str):
 
     @property
     def argv(self) -> List[str]:
-        """a list of arguments a la sys.argv. Quotes, if any, are removed
-        from the elements of the list, and aliases and shortcuts are expanded
+        """a list of arguments a la sys.argv.
+
+        Quotes, if any, are removed from the elements of the list, and aliases
+        and shortcuts are expanded
         """
         if self.command:
             rtn = [utils.strip_quotes(self.command)]
@@ -103,7 +158,8 @@ class Statement(str):
 class StatementParser:
     """Parse raw text into command components.
 
-    Shortcuts is a list of tuples with each tuple containing the shortcut and the expansion.
+    Shortcuts is a list of tuples with each tuple containing the shortcut and
+    the expansion.
     """
     def __init__(
             self,
@@ -396,15 +452,16 @@ class StatementParser:
         This method is used by tab completion code and therefore must not
         generate an exception if there are unclosed quotes.
 
-        The Statement object returned by this method can at most contain
-        values in the following attributes:
+        The Statement object returned by this method can at most contain values
+        in the following attributes:
           - args
           - raw
           - command
           - multiline_command
 
-        Different from parse(), this method does not remove redundant whitespace within args.
-        However, it does ensure args has no leading or trailing whitespace.
+        Different from parse(), this method does not remove redundant whitespace
+        within args. However, it does ensure args has no leading or trailing
+        whitespace.
         """
         # expand shortcuts and aliases
         line = self._expand(rawinput)
@@ -503,10 +560,11 @@ class StatementParser:
         return matched_string
 
     def _split_on_punctuation(self, tokens: List[str]) -> List[str]:
-        """
-        # Further splits tokens from a command line using punctuation characters
-        # as word breaks when they are in unquoted strings. Each run of punctuation
-        # characters is treated as a single token.
+        """Further splits tokens from a command line using punctuation characters
+
+        Punctuation characters are treated as word breaks when they are in
+        unquoted strings. Each run of punctuation characters is treated as a
+        single token.
 
         :param tokens: the tokens as parsed by shlex
         :return: the punctuated tokens
