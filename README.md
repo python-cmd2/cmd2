@@ -43,9 +43,9 @@ Main Features
 
 Python 2.7 support is EOL
 -------------------------
-Support for adding new features to the Python 2.7 release of ``cmd2`` was discontinued on April 15, 2018.  Bug fixes will be supported for Python 2.7 via 0.8.x until August 31, 2018.
+The last version of cmd2 to support Python 2.7 is [0.8.9](https://pypi.org/project/cmd2/0.8.9/), released on August 21, 2018.
 
-Supporting Python 2 was an increasing burden on our limited resources.  Switching to support only Python 3 will allow
+Supporting Python 2 was an increasing burden on our limited resources.  Switching to support only Python 3 is allowing
 us to clean up the codebase, remove some cruft, and focus on developing new features.
 
 Installation
