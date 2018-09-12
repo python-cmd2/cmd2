@@ -34,7 +34,7 @@ jobs:
 
     # Install dependencies - install specific PyPI packages with pip, including cmd2 dependencies
   - script: |
-      python -m pip install --upgrade pip && pip3 install --upgrade setuptools
+      python -m pip install --upgrade pip && pip3 install --upgrade setuptools gnureadline
       pip install -e .
     displayName: 'Upgrade pip and setuptools'
     continueOnError: false
@@ -47,6 +47,7 @@ jobs:
       py.test tests --cov --junitxml=junit/test-results.xml
       codecov
     displayName: 'Run tests and code coverage'
+    continueOnError: false
 
     # Publish test results to the Azure DevOps server
   - task: PublishTestResults@2
