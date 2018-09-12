@@ -1701,12 +1701,6 @@ class Cmd(cmd.Cmd):
         :param stop: bool - True implies the entire application should exit.
         :return: bool - True implies the entire application should exit.
         """
-        if not sys.platform.startswith('win'):
-            # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
-            if self.stdin.isatty():
-                import subprocess
-                proc = subprocess.Popen(shlex.split('stty sane'))
-                proc.communicate()
         return stop
 
     def parseline(self, line: str) -> Tuple[str, str, str]:
@@ -1801,6 +1795,14 @@ class Cmd(cmd.Cmd):
 
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
+
+        if not sys.platform.startswith('win'):
+            # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
+            if self.stdin.isatty():
+                import subprocess
+                proc = subprocess.Popen(shlex.split('stty sane'))
+                proc.communicate()
+
         try:
             data = plugin.CommandFinalizationData(stop, statement)
             for func in self._cmdfinalization_hooks:
