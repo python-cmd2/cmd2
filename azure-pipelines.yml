@@ -43,9 +43,8 @@ jobs:
 
     # Test - test with pytest, collect coverage metrics with pytest-cov, and publish these metrics to codecov.io
   - script: |
-      pip install pytest pytest-cov pytest-mock codecov
-      py.test tests --cov --junitxml=junit/test-results.xml
-      codecov
+      pip install pytest pytest-cov pytest-mock codecov mock
+      py.test tests --cov --junitxml=junit/test-results.xml && codecov
     displayName: 'Run tests and code coverage'
     continueOnError: false
 
