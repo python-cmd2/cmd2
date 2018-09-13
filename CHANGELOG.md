@@ -1,6 +1,7 @@
-## 0.9.5 (TBD, 2018)
+## 0.9.5 (September TBD, 2018)
 * Bug Fixes
     * Fixed bug where ``get_all_commands`` could return non-callable attributes
+    * Fixed bug where **alias** command was dropping quotes around arguments
 * Enhancements
     * Added ``exit_code`` attribute of ``cmd2.Cmd`` class
         * Enables applications to return a non-zero exit code when exiting from ``cmdloop``

@@ -70,13 +70,14 @@ EXTRAS_REQUIRE = {
     ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
     ":python_version<'3.5'": ['contextlib2', 'typing'],
-    # development only dependencies
-    # install with 'pip install -e .[dev]'
-    'dev': [
-        # for python 3.5 and earlier we need the third party mock module
-        "mock ; python_version<'3.6'",
-        'pytest', 'codecov', 'pytest-cov', 'pytest-mock', 'tox', 'pylint',
-        'sphinx<1.7.7', 'sphinx-rtd-theme', 'sphinx-autobuild', 'invoke', 'twine>=1.11',
+    # Extra dependencies for running unit tests
+    'test': ["argcomplete ; sys_platform!='win32'",  # include argcomplete tests where available
+             "mock ; python_version<'3.6'",  # for python 3.5 and earlier we need the third party mock module
+             'codecov', 'pytest', 'pytest-cov', 'pytest-mock'],
+    # development only dependencies:  install with 'pip install -e .[dev]'
+    'dev': ["mock ; python_version<'3.6'",  # for python 3.5 and earlier we need the third party mock module
+            'pytest', 'codecov', 'pytest-cov', 'pytest-mock', 'tox', 'pylint',
+            'sphinx', 'sphinx-rtd-theme', 'sphinx-autobuild', 'invoke', 'twine>=1.11',
     ]
 }
 

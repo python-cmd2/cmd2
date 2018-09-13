@@ -629,7 +629,7 @@ class Cmd(cmd.Cmd):
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
                      False -> causes lines longer than the screen width to wrap to the next line
-                              - wrapping is ideal when you want to avoid users having to use horizontal scrolling
+                              - wrapping is ideal when you want to keep users from having to use horizontal scrolling
 
         WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
@@ -709,8 +709,7 @@ class Cmd(cmd.Cmd):
         elif rl_type == RlType.PYREADLINE:
             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
-    def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[Optional[List[str]],
-                                                                                  Optional[List[str]]]:
+    def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[List[str], List[str]]:
         """
         Used by tab completion functions to get all tokens through the one being completed
         :param line: the current input line with leading whitespace removed
@@ -727,7 +726,7 @@ class Cmd(cmd.Cmd):
                      The last item in both lists is the token being tab completed
 
                  On Failure
-                    Both items are None
+                    Two empty lists
         """
         import copy
         unclosed_quote = ''
@@ -747,21 +746,21 @@ class Cmd(cmd.Cmd):
                 if not unclosed_quote and begidx == tmp_endidx:
                     initial_tokens.append('')
                 break
-            except ValueError:
-                # ValueError can be caused by missing closing quote
-                if not quotes_to_try:
-                    # Since we have no more quotes to try, something else
-                    # is causing the parsing error. Return None since
-                    # this means the line is malformed.
-                    return None, None
+            except ValueError as ex:
+                # Make sure the exception was due to an unclosed quote and
+                # we haven't exhausted the closing quotes to try
+                if str(ex) == "No closing quotation" and quotes_to_try:
+                    # Add a closing quote and try to parse again
+                    unclosed_quote = quotes_to_try[0]
+                    quotes_to_try = quotes_to_try[1:]
 
-                # Add a closing quote and try to parse again
-                unclosed_quote = quotes_to_try[0]
-                quotes_to_try = quotes_to_try[1:]
-
-                tmp_line = line[:endidx]
-                tmp_line += unclosed_quote
-                tmp_endidx = endidx + 1
+                    tmp_line = line[:endidx]
+                    tmp_line += unclosed_quote
+                    tmp_endidx = endidx + 1
+                else:
+                    # The parsing error is not caused by unclosed quotes.
+                    # Return empty lists since this means the line is malformed.
+                    return [], []
 
         if self.allow_redirection:
 
@@ -927,7 +926,7 @@ class Cmd(cmd.Cmd):
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
+        if not tokens:
             return []
 
         completions_matches = []
@@ -970,7 +969,7 @@ class Cmd(cmd.Cmd):
         """
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
+        if not tokens:
             return []
 
         matches = []
@@ -1207,7 +1206,7 @@ class Cmd(cmd.Cmd):
             # Get all tokens through the one being completed. We want the raw tokens
             # so we can tell if redirection strings are quoted and ignore them.
             _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
-            if raw_tokens is None:
+            if not raw_tokens:
                 return []
 
             if len(raw_tokens) > 1:
@@ -1415,9 +1414,9 @@ class Cmd(cmd.Cmd):
                 # Get all tokens through the one being completed
                 tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
-                # Either had a parsing error or are trying to complete the command token
+                # Check if we either had a parsing error or are trying to complete the command token
                 # The latter can happen if " or ' was entered as the command
-                if tokens is None or len(tokens) == 1:
+                if len(tokens) <= 1:
                     self.completion_matches = []
                     return None
 
@@ -1567,9 +1566,10 @@ class Cmd(cmd.Cmd):
         completer = AutoCompleter(argparser, cmd2_app=self)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        results = completer.complete_command(tokens, text, line, begidx, endidx)
+        if not tokens:
+            return []
 
-        return results
+        return completer.complete_command(tokens, text, line, begidx, endidx)
 
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
@@ -1606,7 +1606,7 @@ class Cmd(cmd.Cmd):
 
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if tokens is None:
+        if not tokens:
             return []
 
         matches = []
@@ -1718,12 +1718,6 @@ class Cmd(cmd.Cmd):
         :param stop: bool - True implies the entire application should exit.
         :return: bool - True implies the entire application should exit.
         """
-        if not sys.platform.startswith('win'):
-            # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
-            if self.stdin.isatty():
-                import subprocess
-                proc = subprocess.Popen(shlex.split('stty sane'))
-                proc.communicate()
         return stop
 
     def parseline(self, line: str) -> Tuple[str, str, str]:
@@ -1818,6 +1812,14 @@ class Cmd(cmd.Cmd):
 
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
+
+        if not sys.platform.startswith('win'):
+            # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
+            if self.stdin.isatty():
+                import subprocess
+                proc = subprocess.Popen(shlex.split('stty sane'))
+                proc.communicate()
+
         try:
             data = plugin.CommandFinalizationData(stop, statement)
             for func in self._cmdfinalization_hooks:
@@ -2230,8 +2232,7 @@ class Cmd(cmd.Cmd):
 
             return stop
 
-    @with_argument_list
-    def do_alias(self, arglist: List[str]) -> None:
+    def do_alias(self, statement: Statement) -> None:
         """Define or display aliases
 
 Usage:  Usage: alias [name] | [<name> <value>]
@@ -2250,22 +2251,27 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
     Example: alias ls !ls -lF
 
-    If you want to use redirection or pipes in the alias, then either quote the tokens with these
-    characters or quote the entire alias value.
+    If you want to use redirection or pipes in the alias, then quote them to prevent
+    the alias command itself from being redirected
 
     Examples:
         alias save_results print_results ">" out.txt
-        alias save_results print_results "> out.txt"
-        alias save_results "print_results > out.txt"
+        alias save_results print_results '>' out.txt
 """
+        # Get alias arguments as a list with quotes preserved
+        alias_arg_list = statement.arg_list
+
         # If no args were given, then print a list of current aliases
-        if not arglist:
+        if not alias_arg_list:
             for cur_alias in self.aliases:
                 self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
+            return
+
+        # Get the alias name
+        name = alias_arg_list[0]
 
         # The user is looking up an alias
-        elif len(arglist) == 1:
-            name = arglist[0]
+        if len(alias_arg_list) == 1:
             if name in self.aliases:
                 self.poutput("alias {} {}".format(name, self.aliases[name]))
             else:
@@ -2273,8 +2279,16 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
         # The user is creating an alias
         else:
-            name = arglist[0]
-            value = ' '.join(arglist[1:])
+            # Unquote redirection and pipes
+            index = 1
+            while index < len(alias_arg_list):
+                unquoted_arg = utils.strip_quotes(alias_arg_list[index])
+                if unquoted_arg in constants.REDIRECTION_TOKENS:
+                    alias_arg_list[index] = unquoted_arg
+                index += 1
+
+            # Build the alias value string
+            value = ' '.join(alias_arg_list[1:])
 
             # Validate the alias to ensure it doesn't include weird characters
             # like terminators, output redirection, or whitespace
@@ -2334,7 +2348,7 @@ Usage:  Usage: unalias [-a] name [name ...]
 
     @with_argument_list
     def do_help(self, arglist: List[str]) -> None:
-        """List available commands with "help" or detailed help with "help cmd"."""
+        """ List available commands with "help" or detailed help with "help cmd" """
         if not arglist or (len(arglist) == 1 and arglist[0] in ('--verbose', '-v')):
             verbose = len(arglist) == 1 and arglist[0] in ('--verbose', '-v')
             self._help_menu(verbose)
@@ -2473,22 +2487,22 @@ Usage:  Usage: unalias [-a] name [name ...]
                 self.stdout.write("\n")
 
     def do_shortcuts(self, _: str) -> None:
-        """Lists shortcuts (aliases) available."""
+        """Lists shortcuts available"""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
     def do_eof(self, _: str) -> bool:
-        """Called when <Ctrl>-D is pressed."""
+        """Called when <Ctrl>-D is pressed"""
         # End of script should not exit app, but <Ctrl>-D should.
         return self._STOP_AND_EXIT
 
     def do_quit(self, _: str) -> bool:
-        """Exits this application."""
+        """Exits this application"""
         self._should_quit = True
         return self._STOP_AND_EXIT
 
     def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str='Your choice? ') -> str:
-        """Presents a numbered menu to the user.  Modelled after
+        """Presents a numbered menu to the user.  Modeled after
            the bash shell's SELECT.  Returns the item chosen.
 
            Argument ``opts`` can be:
@@ -2611,24 +2625,20 @@ Usage:  Usage: unalias [-a] name [name ...]
                 param = args.settable[0]
             self.show(args, param)
 
-    def do_shell(self, command: str) -> None:
-        """Execute a command as if at the OS prompt.
+    def do_shell(self, statement: Statement) -> None:
+        """Execute a command as if at the OS prompt
 
     Usage:  shell <command> [arguments]"""
-
         import subprocess
-        try:
-            # Use non-POSIX parsing to keep the quotes around the tokens
-            tokens = shlex.split(command, posix=False)
-        except ValueError as err:
-            self.perror(err, traceback_war=False)
-            return
+
+        # Get list of arguments to shell with quotes preserved
+        tokens = statement.arg_list
 
         # Support expanding ~ in quoted paths
         for index, _ in enumerate(tokens):
             if tokens[index]:
-                # Check if the token is quoted. Since shlex.split() passed, there isn't
-                # an unclosed quote, so we only need to check the first character.
+                # Check if the token is quoted. Since parsing already passed, there isn't
+                # an unclosed quote. So we only need to check the first character.
                 first_char = tokens[index][0]
                 if first_char in constants.QUOTES:
                     tokens[index] = utils.strip_quotes(tokens[index])
@@ -2914,7 +2924,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> None:
-        """View, run, edit, save, or clear previously entered commands."""
+        """View, run, edit, save, or clear previously entered commands"""
 
         if args.clear:
             # Clear command and readline history
@@ -3058,7 +3068,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argument_list
     def do_edit(self, arglist: List[str]) -> None:
-        """Edit a file in a text editor.
+        """Edit a file in a text editor
 
 Usage:  edit [file_path]
     Where:
@@ -3090,7 +3100,7 @@ The editor used is determined by the ``editor`` settable parameter.
 
     @with_argument_list
     def do__relative_load(self, arglist: List[str]) -> None:
-        """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+        """Runs commands in script file that is encoded as either ASCII or UTF-8 text
 
     Usage:  _relative_load <file_path>
 
@@ -3115,13 +3125,13 @@ NOTE: This command is intended to only be used within text file scripts.
         self.do_load([relative_path])
 
     def do_eos(self, _: str) -> None:
-        """Handles cleanup when a script has finished executing."""
+        """Handles cleanup when a script has finished executing"""
         if self._script_dir:
             self._script_dir.pop()
 
     @with_argument_list
     def do_load(self, arglist: List[str]) -> None:
-        """Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+        """Runs commands in script file that is encoded as either ASCII or UTF-8 text
 
     Usage:  load <file_path>
 

@@ -278,16 +278,16 @@ the help categories with per-command Help Messages::
     ================================================================================
     alias               Define or display aliases
     config              Config command
-    edit                Edit a file in a text editor.
-    help                List available commands with "help" or detailed help with "help cmd".
+    edit                Edit a file in a text editor
+    help                List available commands with "help" or detailed help with "help cmd"
     history             usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT] [arg]
-    load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+    load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
     py                  Invoke python command, shell, or script
     pyscript            Runs a python script file inside the console
-    quit                Exits this application.
+    quit                Exits this application
     set                 usage: set [-h] [-a] [-l] [settable [settable ...]]
-    shell               Execute a command as if at the OS prompt.
-    shortcuts           Lists shortcuts (aliases) available.
+    shell               Execute a command as if at the OS prompt
+    shortcuts           Lists shortcuts available
     unalias             Unsets aliases
     version             Version command
 
@@ -296,7 +296,36 @@ Receiving an argument list
 ==========================
 
 The default behavior of ``cmd2`` is to pass the user input directly to your
-``do_*`` methods as a string. If you don't want to use the full argument parser support outlined above, you can still have ``cmd2`` apply shell parsing rules to the user input and pass you a list of arguments instead of a string. Apply the ``@with_argument_list`` decorator to those methods that should receive an argument list instead of a string::
+``do_*`` methods as a string. The object passed to your method is actually a
+``Statement`` object, which has additional attributes that may be helpful,
+including ``arg_list`` and ``argv``::
+
+    class CmdLineApp(cmd2.Cmd):
+        """ Example cmd2 application. """
+
+        def do_say(self, statement):
+            # statement contains a string
+            self.poutput(statement)
+
+        def do_speak(self, statement):
+            # statement also has a list of arguments
+            # quoted arguments remain quoted
+            for arg in statement.arg_list:
+                self.poutput(arg)
+
+        def do_articulate(self, statement):
+            # statement.argv contains the command
+            # and the arguments, which have had quotes
+            # stripped
+            for arg in statement.argv:
+                self.poutput(arg)
+
+
+If you don't want to access the additional attributes on the string passed to
+you``do_*`` method you can still have ``cmd2`` apply shell parsing rules to the
+user input and pass you a list of arguments instead of a string. Apply the
+``@with_argument_list`` decorator to those methods that should receive an
+argument list instead of a string::
 
     from cmd2 import with_argument_list
 

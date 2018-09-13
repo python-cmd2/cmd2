@@ -1235,15 +1235,15 @@ diddly              This command does diddly
 Other
 ================================================================================
 alias               Define or display aliases
-help                List available commands with "help" or detailed help with "help cmd".
-history             View, run, edit, save, or clear previously entered commands.
-load                Runs commands in script file that is encoded as either ASCII or UTF-8 text.
+help                List available commands with "help" or detailed help with "help cmd"
+history             View, run, edit, save, or clear previously entered commands
+load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
 py                  Invoke python command, shell, or script
 pyscript            Runs a python script file inside the console
-quit                Exits this application.
+quit                Exits this application
 set                 Sets a settable parameter or shows current settings of parameters
-shell               Execute a command as if at the OS prompt.
-shortcuts           Lists shortcuts (aliases) available.
+shell               Execute a command as if at the OS prompt
+shortcuts           Lists shortcuts available
 unalias             Unsets aliases
 
 Undocumented commands:
@@ -1749,6 +1749,15 @@ def test_alias(base_app, capsys):
     # Lookup the new alias
     out = run_cmd(base_app, 'alias fake')
     assert out == normalize('alias fake pyscript')
+
+def test_alias_with_quotes(base_app, capsys):
+    # Create the alias
+    out = run_cmd(base_app, 'alias fake help ">" "out file.txt"')
+    assert out == normalize("Alias 'fake' created")
+
+    # Lookup the new alias (Only the redirector should be unquoted)
+    out = run_cmd(base_app, 'alias fake')
+    assert out == normalize('alias fake help > "out file.txt"')
 
 def test_alias_lookup_invalid_alias(base_app, capsys):
     # Lookup invalid alias

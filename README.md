@@ -3,7 +3,7 @@ cmd2: a tool for building interactive command line apps
 [![Latest Version](https://img.shields.io/pypi/v/cmd2.svg?style=flat-square&label=latest%20stable%20version)](https://pypi.python.org/pypi/cmd2/)
 [![Build status](https://img.shields.io/travis/python-cmd2/cmd2.svg?style=flat-square&label=unix%20build)](https://travis-ci.org/python-cmd2/cmd2)
 [![Appveyor build status](https://img.shields.io/appveyor/ci/FedericoCeratto/cmd2.svg?style=flat-square&label=windows%20build)](https://ci.appveyor.com/project/FedericoCeratto/cmd2)
-[![VSTS Build status](https://python-cmd2.visualstudio.com/cmd2/_apis/build/status/cmd2-Python%20package-CI?branch=master)](https://python-cmd2.visualstudio.com/cmd2/_build/latest?definitionId=1&branch=master)
+[![Azure Build status](https://python-cmd2.visualstudio.com/cmd2/_apis/build/status/python-cmd2.cmd2?branch=master)](https://python-cmd2.visualstudio.com/cmd2/_build/latest?definitionId=1&branch=master)
 [![codecov](https://codecov.io/gh/python-cmd2/cmd2/branch/master/graph/badge.svg)](https://codecov.io/gh/python-cmd2/cmd2)
 [![Documentation Status](https://readthedocs.org/projects/cmd2/badge/?version=latest)](http://cmd2.readthedocs.io/en/latest/?badge=latest)
 
@@ -43,9 +43,9 @@ Main Features
 
 Python 2.7 support is EOL
 -------------------------
-Support for adding new features to the Python 2.7 release of ``cmd2`` was discontinued on April 15, 2018.  Bug fixes will be supported for Python 2.7 via 0.8.x until August 31, 2018.
+The last version of cmd2 to support Python 2.7 is [0.8.9](https://pypi.org/project/cmd2/0.8.9/), released on August 21, 2018.
 
-Supporting Python 2 was an increasing burden on our limited resources.  Switching to support only Python 3 will allow
+Supporting Python 2 was an increasing burden on our limited resources.  Switching to support only Python 3 is allowing
 us to clean up the codebase, remove some cruft, and focus on developing new features.
 
 Installation
