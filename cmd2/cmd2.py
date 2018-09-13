@@ -3031,7 +3031,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             # get the output out of the buffer
             output = membuf.read()
             # and add the regex-escaped output to the transcript
-            transcript += output.replace('/', '\/')
+            transcript += output.replace('/', r'\/')
 
         # Restore stdout to its original state
         self.stdout = saved_self_stdout

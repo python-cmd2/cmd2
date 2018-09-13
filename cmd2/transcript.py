@@ -106,7 +106,7 @@ class Cmd2TestCase(unittest.TestCase):
             self.assertTrue(re.match(expected, result, re.MULTILINE | re.DOTALL), message)
 
     def _transform_transcript_expected(self, s: str) -> str:
-        """Parse the string with slashed regexes into a valid regex.
+        r"""Parse the string with slashed regexes into a valid regex.
 
         Given a string like:
 
