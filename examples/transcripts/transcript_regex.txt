@@ -9,7 +9,7 @@ debug: False
 echo: False
 editor: /.*?/
 feedback_to_output: False
-locals_in_py: True
+locals_in_py: False
 maxrepeats: 3
 prompt: (Cmd)/ /
 quiet: False
