@@ -77,6 +77,10 @@ class CmdLineApp(cmd2.Cmd):
                 output.append(random.choice(self.MUMBLE_LAST))
             self.poutput(' '.join(output))
 
+    def do_nothing(self, statement):
+        """Do nothing and output nothing"""
+        pass
+
 
 def test_commands_at_invocation():
     testargs = ["prog", "say hello", "say Gracie", "quit"]
@@ -96,6 +100,7 @@ def test_commands_at_invocation():
     ('from_cmdloop.txt', True),
     ('multiline_no_regex.txt', False),
     ('multiline_regex.txt', False),
+    ('no_output.txt', False),
     ('regex_set.txt', False),
     ('singleslash.txt', False),
     ('slashes_escaped.txt', False),
@@ -123,7 +128,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     # Check for the unittest "OK" condition for the 1 test which ran
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
     expected_end = "s\n\nOK\n"
-    out, err = capsys.readouterr()
+    _, err = capsys.readouterr()
     assert err.startswith(expected_start)
     assert err.endswith(expected_end)
 
