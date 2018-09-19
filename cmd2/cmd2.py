@@ -45,7 +45,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Un
 from . import constants
 from . import utils
 from . import plugin
-from .argparse_completer import AutoCompleter, ACArgumentParser
+from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .parsing import StatementParser, Statement
 
@@ -2219,119 +2219,133 @@ class Cmd(cmd.Cmd):
 
             return stop
 
-    def do_alias(self, statement: Statement) -> None:
-        """Define or display aliases
+    # -----  Alias subcommand functions -----
 
-Usage:  Usage: alias [name] | [<name> <value>]
-    Where:
-        name - name of the alias being looked up, added, or replaced
-        value - what the alias will be resolved to (if adding or replacing)
-                this can contain spaces and does not need to be quoted
-
-    Without arguments, 'alias' prints a list of all aliases in a reusable form which
-    can be outputted to a startup_script to preserve aliases across sessions.
-
-    With one argument, 'alias' shows the value of the specified alias.
-    Example: alias ls  (Prints the value of the alias called 'ls' if it exists)
-
-    With two or more arguments, 'alias' creates or replaces an alias.
-
-    Example: alias ls !ls -lF
-
-    If you want to use redirection or pipes in the alias, then quote them to prevent
-    the alias command itself from being redirected
-
-    Examples:
-        alias save_results print_results ">" out.txt
-        alias save_results print_results '>' out.txt
-"""
-        # Get alias arguments as a list with quotes preserved
-        alias_arg_list = statement.arg_list
-
-        # If no args were given, then print a list of current aliases
-        if not alias_arg_list:
-            for cur_alias in self.aliases:
-                self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
+    def alias_create(self, argparser):
+        """ Creates or overwrites an alias """
+        # Validate the alias name
+        valid, errmsg = self.statement_parser.is_valid_command(argparser.name)
+        if not valid:
+            errmsg = "Alias names {}".format(errmsg)
+            self.perror(errmsg, traceback_war=False)
             return
 
-        # Get the alias name
-        name = alias_arg_list[0]
+        # Validate the command the alias is being resolved to
+        valid, errmsg = self.statement_parser.is_valid_command(argparser.command)
+        if not valid:
+            errmsg = "Command names {}".format(errmsg)
+            self.perror(errmsg, traceback_war=False)
+            return
 
-        # The user is looking up an alias
-        if len(alias_arg_list) == 1:
-            if name in self.aliases:
-                self.poutput("alias {} {}".format(name, self.aliases[name]))
-            else:
-                self.perror("Alias {!r} not found".format(name), traceback_war=False)
+        # Build the alias command string
+        command = argparser.command + ' ' + ' '.join(utils.quote_string_if_needed(argparser.command_args))
 
-        # The user is creating an alias
-        else:
-            # Unquote redirection and pipes
-            index = 1
-            while index < len(alias_arg_list):
-                unquoted_arg = utils.strip_quotes(alias_arg_list[index])
-                if unquoted_arg in constants.REDIRECTION_TOKENS:
-                    alias_arg_list[index] = unquoted_arg
-                index += 1
+        # Set the alias
+        self.aliases[argparser.name] = command
+        self.poutput("Alias {!r} created".format(argparser.name))
 
-            # Build the alias value string
-            value = ' '.join(alias_arg_list[1:])
-
-            # Validate the alias to ensure it doesn't include weird characters
-            # like terminators, output redirection, or whitespace
-            valid, invalidchars = self.statement_parser.is_valid_command(name)
-            if valid:
-                # Set the alias
-                self.aliases[name] = value
-                self.poutput("Alias {!r} created".format(name))
-            else:
-                errmsg = "Aliases can not contain: {}".format(invalidchars)
-                self.perror(errmsg, traceback_war=False)
-
-    def complete_alias(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """ Tab completion for alias """
-        alias_names = set(self.aliases.keys())
-        visible_commands = set(self.get_visible_commands())
-
-        index_dict = \
-            {
-                1: alias_names,
-                2: list(alias_names | visible_commands)
-            }
-        return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
-
-    @with_argument_list
-    def do_unalias(self, arglist: List[str]) -> None:
-        """Unsets aliases
-
-Usage:  Usage: unalias [-a] name [name ...]
-    Where:
-        name - name of the alias being unset
-
-    Options:
-        -a     remove all alias definitions
-"""
-        if not arglist:
-            self.do_help(['unalias'])
-
-        if '-a' in arglist:
+    def alias_delete(self, argparser):
+        """ Deletes aliases """
+        if argparser.all:
             self.aliases.clear()
-            self.poutput("All aliases cleared")
+            self.poutput("All aliases deleted")
 
         else:
             # Get rid of duplicates
-            arglist = utils.remove_duplicates(arglist)
+            aliases_to_delete = utils.remove_duplicates(argparser.names)
 
-            for cur_arg in arglist:
+            for cur_arg in aliases_to_delete:
                 if cur_arg in self.aliases:
                     del self.aliases[cur_arg]
                     self.poutput("Alias {!r} cleared".format(cur_arg))
                 else:
                     self.perror("Alias {!r} does not exist".format(cur_arg), traceback_war=False)
 
-    def complete_unalias(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """ Tab completion for unalias """
-        return self.basic_complete(text, line, begidx, endidx, self.aliases)
+    def alias_list(self, argparser):
+        """ Lists some or all aliases """
+        if argparser.names:
+            names_to_view = utils.remove_duplicates(argparser.names)
+            for cur_name in names_to_view:
+                if cur_name in self.aliases:
+                    self.poutput("alias create {} {}".format(cur_name, self.aliases[cur_name]))
+                else:
+                    self.perror("Alias {!r} not found".format(cur_name), traceback_war=False)
+        else:
+            # noinspection PyTypeChecker
+            sorted_aliases = utils.alphabetical_sort(self.aliases.keys())
+            for cur_alias in sorted_aliases:
+                self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
+
+    def get_aliases(self):
+        """ Used to complete alias names """
+        return self.aliases.keys()
+
+    def get_aliases_and_commands(self):
+        """ Used to complete alias and command names """
+        alias_names = set(self.aliases.keys())
+        visible_commands = set(self.get_visible_commands())
+        return list(alias_names | visible_commands)
+
+    # Top-level parser for alias
+    alias_parser = ACArgumentParser(description="Manage aliases", prog='alias')
+
+    # Add subcommands to alias
+    alias_subparsers = alias_parser.add_subparsers()
+
+    # alias -> create
+    alias_create_help = "Create or overwrite an alias"
+    alias_create_epilog = "Notes:\n"
+    alias_create_epilog += "    If you want to use redirection or pipes in the alias, then quote them to prevent\n"
+    alias_create_epilog += "    the alias command itself from being redirected\n"
+    alias_create_epilog += "\n"
+    alias_create_epilog += "Examples:\n"
+    alias_create_epilog += "    alias ls !ls -lF\n"
+    alias_create_epilog += "    alias create show_log !cat \"log file.txt\"\n"
+    alias_create_epilog += "    alias create save_results print_results \">\" out.txt\n"
+    alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
+                                                      description=alias_create_help,
+                                                      epilog=alias_create_epilog, add_help=False)
+    setattr(alias_create_parser.add_argument('name', type=str, help='Name of this alias'),
+            ACTION_ARG_CHOICES, get_aliases_and_commands)
+    setattr(alias_create_parser.add_argument('command', type=str, help='Command or alias the alias resolves to'),
+            ACTION_ARG_CHOICES, get_aliases_and_commands)
+    setattr(alias_create_parser.add_argument('command_args', type=str, nargs="*",
+                                             help='Any arguments being passed to command'),
+            ACTION_ARG_CHOICES, ('path_complete',))
+    alias_create_parser.set_defaults(func=alias_create)
+
+    # alias -> delete
+    alias_delete_help = "Delete specified aliases"
+    alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
+                                                      description=alias_delete_help)
+    setattr(alias_delete_parser.add_argument('names', type=str, nargs='*',
+                                             help='Optional list of aliases to delete\n'
+                                                  'Enter --all if you want to delete all aliases.'),
+            ACTION_ARG_CHOICES, get_aliases)
+    alias_delete_parser.add_argument('-a', '--all', action='store_true', help="All aliases will be deleted")
+    alias_delete_parser.set_defaults(func=alias_delete)
+
+    # alias -> list
+    alias_list_help = "List aliases in a reusable form which can be saved to\n" \
+                      "a startup_script to preserve aliases across sessions."
+    alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
+                                                    description=alias_list_help)
+    setattr(alias_list_parser.add_argument('names', type=str, nargs="*",
+                                           help='Optional names of aliases to list\n'
+                                                'Leave blank if you want to list all aliases'),
+            ACTION_ARG_CHOICES, get_aliases)
+    alias_list_parser.set_defaults(func=alias_list)
+
+    @with_argparser(alias_parser)
+    def do_alias(self, argparser):
+        """ Manages aliases """
+        func = getattr(argparser, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, argparser)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help(['alias'])
 
     @with_argument_list
     def do_help(self, arglist: List[str]) -> None:

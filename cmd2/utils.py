@@ -19,6 +19,28 @@ def strip_ansi(text: str) -> str:
     return constants.ANSI_ESCAPE_RE.sub('', text)
 
 
+def is_quoted(arg: str) -> bool:
+    """
+    Checks if a string is quoted
+    :param arg: the string being checked for quotes
+    :return: True if a string is quotes
+    """
+    return len(arg) > 1 and arg[0] == arg[-1] and arg[0] in constants.QUOTES
+
+
+def quote_string_if_needed(arg: str) -> str:
+    """ Quotes a string if it contains spaces and isn't already quoted """
+    if is_quoted(arg) or ' ' not in arg:
+        return arg
+
+    if '"' in arg:
+        quote = "'"
+    else:
+        quote = '"'
+
+    return quote + arg + quote
+
+
 def strip_quotes(arg: str) -> str:
     """ Strip outer quotes from a string.
 
@@ -27,7 +49,7 @@ def strip_quotes(arg: str) -> str:
     :param arg:  string to strip outer quotes from
     :return: same string with potentially outer quotes stripped
     """
-    if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in constants.QUOTES:
+    if is_quoted(arg):
         arg = arg[1:-1]
     return arg
 

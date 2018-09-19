@@ -247,23 +247,32 @@ class StatementParser:
         self._command_pattern = re.compile(expr)
 
     def is_valid_command(self, word: str) -> Tuple[bool, str]:
-        """Determine whether a word is a valid alias.
+        """Determine whether a word is a valid name for a command.
 
-        Aliases can not include redirection characters, whitespace,
-        or termination characters.
+        Commands can not include redirection characters, whitespace,
+        or termination characters. They also cannot start with a
+        shortcut.
 
-        If word is not a valid command, return False and a comma
-        separated string of characters that can not appear in a command.
+        If word is not a valid command, return False and error text
         This string is suitable for inclusion in an error message of your
         choice:
 
-        valid, invalidchars = statement_parser.is_valid_command('>')
+        valid, errmsg = statement_parser.is_valid_command('>')
         if not valid:
-            errmsg = "Aliases can not contain: {}".format(invalidchars)
+            errmsg = "Aliases {}".format(errmsg)
         """
         valid = False
 
-        errmsg = 'whitespace, quotes, '
+        if not word:
+            return False, 'cannot be empty'
+
+        errmsg = 'cannot start with a shortcut: '
+        errmsg += ', '.join(shortcut for (shortcut, expansion) in self.shortcuts)
+        for (shortcut, expansion) in self.shortcuts:
+            if word.startswith(shortcut):
+                return False, errmsg
+
+        errmsg = 'cannot contain: whitespace, quotes, '
         errchars = []
         errchars.extend(constants.REDIRECTION_CHARS)
         errchars.extend(self.terminators)
