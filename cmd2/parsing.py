@@ -90,7 +90,7 @@ class Statement(str):
     command = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
 
     # list of arguments to the command, not including any output redirection or terminators; quoted args remain quoted
-    arg_list = attr.ib(factory=list, validator=attr.validators.instance_of(list), type=List[str])
+    arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list), type=List[str])
 
     # if the command is a multiline command, the name of the command, otherwise empty
     multiline_command = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
@@ -102,7 +102,7 @@ class Statement(str):
     suffix = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
 
     # if output was piped to a shell command, the shell command as a list of tokens
-    pipe_to = attr.ib(factory=list, validator=attr.validators.instance_of(list), type=List[str])
+    pipe_to = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list), type=List[str])
 
     # if output was redirected, the redirection token, i.e. '>>'
     output = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)

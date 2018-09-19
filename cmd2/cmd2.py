@@ -32,11 +32,11 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 import argparse
 import cmd
 import collections
+import colorama
 from colorama import Fore
 import glob
 import inspect
 import os
-import platform
 import re
 import shlex
 import sys
@@ -337,7 +337,7 @@ class Cmd(cmd.Cmd):
 
     # To make an attribute settable with the "do_set" command, add it to this ...
     # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
-    settable = {'colors': 'Allow colorized output',
+    settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
@@ -368,6 +368,9 @@ class Cmd(cmd.Cmd):
                 del Cmd.do_ipy
             except AttributeError:
                 pass
+
+        # Override whether ansi codes should be stripped from the output since cmd2 has its own logic for doing this
+        colorama.init(strip=False)
 
         # initialize plugin system
         # needs to be done before we call __init__(0)
@@ -417,13 +420,13 @@ class Cmd(cmd.Cmd):
         self._STOP_AND_EXIT = True  # cmd convention
 
         self._colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
-                            'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
-                            'blue': {True: '\x1b[34m', False: '\x1b[39m'},
-                            'red': {True: '\x1b[31m', False: '\x1b[39m'},
-                            'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
-                            'green': {True: '\x1b[32m', False: '\x1b[39m'},
-                            'underline': {True: '\x1b[4m', False: '\x1b[24m'},
-                            'yellow': {True: '\x1b[33m', False: '\x1b[39m'}}
+                            'cyan': {True: Fore.CYAN, False: Fore.RESET},
+                            'blue': {True: Fore.BLUE, False: Fore.RESET},
+                            'red': {True: Fore.RED, False: Fore.RESET},
+                            'magenta': {True: Fore.MAGENTA, False: Fore.RESET},
+                            'green': {True: Fore.GREEN, False: Fore.RESET},
+                            'underline': {True: '\x1b[4m', False: Fore.RESET},
+                            'yellow': {True: Fore.YELLOW, False: Fore.RESET}}
 
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
@@ -547,17 +550,15 @@ class Cmd(cmd.Cmd):
         # Make sure settable parameters are sorted alphabetically by key
         self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
-    def decolorized_write(self, fileobj: IO, msg: str):
+    def decolorized_write(self, fileobj: IO, msg: str) -> None:
         """Write a string to a fileobject, stripping ANSI escape sequences if necessary
 
         Honor the current colors setting, which requires us to check whether the
         fileobject is a tty.
         """
-        if self.colors == constants.COLORS_NEVER:
+        if self.colors.lower() == constants.COLORS_NEVER.lower() or \
+                (self.colors.lower() == constants.COLORS_TERMINAL.lower() and not fileobj.isatty()):
             msg = utils.strip_ansi(msg)
-        if self.colors == constants.COLORS_TERMINAL:
-            if not fileobj.isatty():
-                msg = utils.strip_ansi(msg)
         fileobj.write(msg)
 
     def poutput(self, msg: Any, end: str='\n') -> None:
@@ -575,7 +576,7 @@ class Cmd(cmd.Cmd):
                 msg_str = '{}'.format(msg)
                 self.decolorized_write(self.stdout, msg_str)
                 if not msg_str.endswith(end):
-                    self.stdout.write(end)
+                    self.decolorized_write(self.stdout, end)
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another
                 # process and that process closes before the command is
@@ -615,7 +616,7 @@ class Cmd(cmd.Cmd):
             if self.feedback_to_output:
                 self.poutput(msg)
             else:
-                sys.stderr.write("{}\n".format(msg))
+                self.decolorized_write(sys.stderr, "{}\n".format(msg))
 
     def ppaged(self, msg: str, end: str='\n', chop: bool=False) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
@@ -651,6 +652,9 @@ class Cmd(cmd.Cmd):
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self.redirecting and not self._in_py and not self._script_dir:
+                    if self.colors.lower() == constants.COLORS_NEVER.lower():
+                        msg_str = utils.strip_ansi(msg_str)
+
                     pager = self.pager
                     if chop:
                         pager = self.pager_chop
@@ -686,7 +690,7 @@ class Cmd(cmd.Cmd):
            is running on Windows, will return ``val`` unchanged.
            ``color`` should be one of the supported strings (or styles):
            red/blue/green/cyan/magenta, bold, underline"""
-        if self.colors and (self.stdout == self.initial_stdout):
+        if self.colors.lower() != constants.COLORS_NEVER.lower() and (self.stdout == self.initial_stdout):
             return self._colorcodes[color][True] + val + self._colorcodes[color][False]
         return val
 

@@ -94,7 +94,7 @@ timing: False
 """
 
 SHOW_LONG = """
-colors: Terminal          # Allow colorized output
+colors: Terminal          # Allow colorized output (valid values: Terminal, Always, Never)
 continuation_prompt: >    # On 2nd+ line of input
 debug: False              # Show full error stack on error
 echo: False               # Echo command issued into output

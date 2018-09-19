@@ -53,6 +53,7 @@ BG_COLORS ={
     'white':Back.WHITE,
 }
 
+
 class CmdLineApp(cmd2.Cmd):
     """Example cmd2 application demonstrating colorized output."""
 
@@ -71,14 +72,14 @@ class CmdLineApp(cmd2.Cmd):
         self.shortcuts.update({'&': 'speak'})
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        super().__init__(use_ipython=False)
+        super().__init__(use_ipython=True)
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    speak_parser.add_argument('-f', '--fg', help='foreground color to apply to output')
-    speak_parser.add_argument('-b', '--bg', help='background color to apply to output')
+    speak_parser.add_argument('-f', '--fg', choices=FG_COLORS, help='foreground color to apply to output')
+    speak_parser.add_argument('-b', '--bg', choices=BG_COLORS, help='background color to apply to output')
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
@@ -95,9 +96,9 @@ class CmdLineApp(cmd2.Cmd):
         repetitions = args.repeat or 1
 
         color_on = ''
-        if args.fg and args.fg in FG_COLORS:
+        if args.fg:
             color_on += FG_COLORS[args.fg]
-        if args.bg and args.bg in BG_COLORS:
+        if args.bg:
             color_on += BG_COLORS[args.bg]
         color_off = Fore.RESET + Back.RESET
 
