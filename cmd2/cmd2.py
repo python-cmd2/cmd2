@@ -3191,14 +3191,11 @@ Script should contain one command per line, just like command would be typed in 
         runner = unittest.TextTestRunner()
         runner.run(testcase)
 
-    def print_alert(self, alert_msg: str) -> None:
+    def _clear_input_lines_str(self) -> str:
         """
-        Used to display an important message to the user while they are at the prompt.
-        The current prompt and input lines are erased, then the alert is printed in their place, and
-        finally the prompt and input lines restored below the alert. To the user it appears as if
-        an alert message is printed above the prompt.
-
-        :param alert_msg: the message to display to the user
+        Returns a string that if printed will clear the prompt and input lines in the terminal,
+        leaving the cursor at the beginning of the first input line
+        :return: the string to print
         """
         if rl_type == RlType.NONE:
             return
@@ -3236,74 +3233,51 @@ Script should contain one command per line, just like command would be typed in 
         # Move the cursor to the beginning of the first input line
         terminal_str += '\r'
 
-        # Print the alert
-        terminal_str += alert_msg + '\n'
+        return terminal_str
 
-        # Write the string to the terminal
-        if rl_type == RlType.GNU:
-            sys.stdout.write(terminal_str)
-        elif rl_type == RlType.PYREADLINE:
-            readline.rl.mode.console.write(terminal_str)
-
-        # Redraw the prompt and input line
-        rl_force_redisplay()
-
-    def update_prompt(self, new_prompt: str) -> None:
+    def print_alert(self, alert_msg: str) -> None:
         """
         Used to display an important message to the user while they are at the prompt.
-        The current prompt and input lines are erased, then the alert is printed in their place, and
-        finally the prompt and input lines restored below the alert. To the user it appears as if
-        an alert message is printed above the prompt.
+        To the user it appears as if an alert message is printed above the prompt.
 
         :param alert_msg: the message to display to the user
         """
         if rl_type == RlType.NONE:
             return
 
-        import shutil
-        import colorama.ansi as ansi
-        from colorama import Cursor
+        # Clear the prompt and input lines and replace with the alert
+        terminal_str = self._clear_input_lines_str()
+        terminal_str += alert_msg + '\n'
 
-        visible_prompt = self.visible_prompt
-
-        # Get the size of the terminal
-        terminal_size = shutil.get_terminal_size()
-
-        # Figure out how many lines the prompt and user input take up
-        total_str_size = len(visible_prompt) + len(readline.get_line_buffer())
-        num_input_lines = int(total_str_size / terminal_size.columns) + 1
-
-        # Get the cursor's offset from the beginning of the first input line
-        cursor_input_offset = len(visible_prompt) + rl_get_point()
-
-        # Calculate what input line the cursor is on
-        cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
-
-        # Create a string that will clear all input lines
-        terminal_str = ''
-
-        # Move the cursor down to the last input line
-        if cursor_input_line != num_input_lines:
-            terminal_str += Cursor.DOWN(num_input_lines - cursor_input_line)
-
-        # Clear each input line from the bottom up so that the cursor ends up on the original first input line
-        terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (num_input_lines - 1)
-        terminal_str += ansi.clear_line()
-
-        # Move the cursor to the beginning of the line
-        terminal_str += '\r'
-
-        # Set the new prompt
-        rl_set_prompt(new_prompt)
-        self.prompt = new_prompt
-
-        # Write the string to the terminal
         if rl_type == RlType.GNU:
             sys.stdout.write(terminal_str)
         elif rl_type == RlType.PYREADLINE:
             readline.rl.mode.console.write(terminal_str)
 
-        # Redraw the prompt and input line
+        # Redraw the prompt and input lines
+        rl_force_redisplay()
+
+    def update_prompt(self, new_prompt: str) -> None:
+        """
+        Dynamically alters the prompt in the terminal
+
+        :param new_prompt: what to change the prompt to
+        """
+        if rl_type == RlType.NONE:
+            return
+
+        # Set the new prompt
+        rl_set_prompt(new_prompt)
+        self.prompt = new_prompt
+
+        # Clear the prompt and input lines
+        terminal_str = self._clear_input_lines_str()
+        if rl_type == RlType.GNU:
+            sys.stdout.write(terminal_str)
+        elif rl_type == RlType.PYREADLINE:
+            readline.rl.mode.console.write(terminal_str)
+
+        # Redraw the prompt and input lines
         rl_force_redisplay()
 
     def alerter(self):

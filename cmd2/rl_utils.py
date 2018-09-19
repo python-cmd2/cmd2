@@ -27,6 +27,7 @@ class RlType(Enum):
 
 # Check what implementation of readline we are using
 rl_type = RlType.NONE
+vt100_support = False
 
 # The order of this check matters since importing pyreadline will also show readline in the modules list
 if 'pyreadline' in sys.modules:
