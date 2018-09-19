@@ -1114,8 +1114,8 @@ class Cmd(cmd.Cmd):
             self.allow_appended_space = False
             self.allow_closing_quote = False
 
-        # Sort the matches before any trailing slashes are added
-        matches = utils.alphabetical_sort(matches)
+        # Sort the matches alphabetically before any trailing slashes are added
+        matches.sort(key=utils.norm_fold)
         self.matches_sorted = True
 
         # Build display_matches and add a slash to directories
@@ -1555,8 +1555,8 @@ class Cmd(cmd.Cmd):
 
             # Sort matches alphabetically if they haven't already been sorted
             if not self.matches_sorted:
-                self.completion_matches = utils.alphabetical_sort(self.completion_matches)
-                self.display_matches = utils.alphabetical_sort(self.display_matches)
+                self.completion_matches.sort(key=utils.norm_fold)
+                self.display_matches.sort(key=utils.norm_fold)
                 self.matches_sorted = True
 
         try:
