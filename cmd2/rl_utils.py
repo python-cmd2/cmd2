@@ -139,3 +139,17 @@ def rl_get_point() -> int:
 
     else:  # pragma: no cover
         return 0
+
+
+# noinspection PyProtectedMember
+def rl_set_prompt(prompt: str) -> None:
+    """
+    Sets readline's prompt
+    :param prompt: the new prompt value
+    """
+    if rl_type == RlType.GNU:  # pragma: no cover
+        encoded_prompt = bytes(prompt, encoding='utf-8')
+        readline_lib.rl_set_prompt(encoded_prompt)
+
+    elif rl_type == RlType.PYREADLINE:  # pragma: no cover
+        readline.rl._set_prompt(prompt)
