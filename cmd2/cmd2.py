@@ -2612,6 +2612,10 @@ Usage:  Usage: unalias [-a] name [name ...]
                 param = args.settable[0]
             self.show(args, param)
 
+    def complete_set(self, text, line, begidx, endidx):
+        """Tab-completion for the set command."""
+        return self.basic_complete(text, line, begidx, endidx, self.settable)
+
     def do_shell(self, statement: Statement) -> None:
         """Execute a command as if at the OS prompt
 
