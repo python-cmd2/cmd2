@@ -14,6 +14,10 @@ class AliasAndStartup(cmd2.Cmd):
         alias_script = os.path.join(os.path.dirname(__file__), '.cmd2rc')
         super().__init__(startup_script=alias_script)
 
+    def do_nothing(self, args):
+        """This command does nothing and produces no output."""
+        pass
+
 
 if __name__ == '__main__':
     app = AliasAndStartup()
