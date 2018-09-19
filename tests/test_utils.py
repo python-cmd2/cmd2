@@ -13,7 +13,7 @@ HELLO_WORLD = 'Hello, world!'
 
 def test_strip_ansi():
     base_str = HELLO_WORLD
-    ansi_str =  Fore.GREEN + base_str + Fore.RESET
+    ansi_str = Fore.GREEN + base_str + Fore.RESET
     assert base_str != ansi_str
     assert base_str == cu.strip_ansi(ansi_str)
 
@@ -48,5 +48,31 @@ def test_unicode_casefold():
     assert cu.norm_fold(micro) == cu.norm_fold(micro_cf)
 
 def test_alphabetical_sort():
-    my_list = ['café', 'µ', 'A' , 'micro', 'unity', 'cafeteria']
+    my_list = ['café', 'µ', 'A', 'micro', 'unity', 'cafeteria']
     assert cu.alphabetical_sort(my_list) == ['A', 'cafeteria', 'café', 'micro', 'unity', 'µ']
+    my_list = ['a3', 'a22', 'A2', 'A11', 'a1']
+    assert cu.alphabetical_sort(my_list) == ['a1', 'A11', 'A2', 'a22', 'a3']
+
+def test_try_int_or_force_to_lower_case():
+    str1 = '17'
+    assert cu.try_int_or_force_to_lower_case(str1) == 17
+    str1 = 'ABC'
+    assert cu.try_int_or_force_to_lower_case(str1) == 'abc'
+    str1 = 'X19'
+    assert cu.try_int_or_force_to_lower_case(str1) == 'x19'
+    str1 = ''
+    assert cu.try_int_or_force_to_lower_case(str1) == ''
+
+def test_natural_keys():
+    my_list = ['café', 'µ', 'A', 'micro', 'unity', 'x1', 'X2', 'X11', 'X0', 'x22']
+    my_list.sort(key=cu.natural_keys)
+    assert my_list == ['A', 'café', 'micro', 'unity', 'X0', 'x1', 'X2', 'X11', 'x22', 'µ']
+    my_list = ['a3', 'a22', 'A2', 'A11', 'a1']
+    my_list.sort(key=cu.natural_keys)
+    assert my_list == ['a1', 'A2', 'a3', 'A11', 'a22']
+
+def test_natural_sort():
+    my_list = ['café', 'µ', 'A', 'micro', 'unity', 'x1', 'X2', 'X11', 'X0', 'x22']
+    assert cu.natural_sort(my_list) == ['A', 'café', 'micro', 'unity', 'X0', 'x1', 'X2', 'X11', 'x22', 'µ']
+    my_list = ['a3', 'a22', 'A2', 'A11', 'a1']
+    assert cu.natural_sort(my_list) == ['a1', 'A2', 'a3', 'A11', 'a22']
