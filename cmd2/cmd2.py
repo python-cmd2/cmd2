@@ -3233,6 +3233,9 @@ Script should contain one command per line, just like command would be typed in 
         terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (num_input_lines - 1)
         terminal_str += ansi.clear_line()
 
+        # Move the cursor to the beginning of the first input line
+        terminal_str += '\r'
+
         # Print the alert
         terminal_str += alert_msg + '\n'
 
@@ -3245,7 +3248,7 @@ Script should contain one command per line, just like command would be typed in 
         # Redraw the prompt and input line
         rl_force_redisplay()
 
-    def worker(self):
+    def alerter(self):
         import time
         while True:
             alert_msg = "\n***********************************************\n" \
@@ -3256,7 +3259,7 @@ Script should contain one command per line, just like command would be typed in 
 
     def do_alert(self, args):
         import threading
-        printer = threading.Thread(target=self.worker, daemon=True)
+        printer = threading.Thread(target=self.alerter, daemon=True)
         printer.start()
 
     def cmdloop(self, intro: Optional[str]=None) -> None:
