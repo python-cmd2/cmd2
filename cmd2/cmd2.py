@@ -1574,7 +1574,7 @@ class Cmd(cmd.Cmd):
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
         return [name[3:] for name in self.get_names()
-                if name.startswith('do_') and isinstance(getattr(self, name), Callable)]
+                if name.startswith('do_') and callable(getattr(self, name))]
 
     def get_visible_commands(self) -> List[str]:
         """Returns a list of commands that have not been hidden."""
@@ -1590,7 +1590,7 @@ class Cmd(cmd.Cmd):
     def get_help_topics(self) -> List[str]:
         """ Returns a list of help topics """
         return [name[5:] for name in self.get_names()
-                if name.startswith('help_') and isinstance(getattr(self, name), Callable)]
+                if name.startswith('help_') and callable(getattr(self, name))]
 
     def complete_help(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
@@ -2895,13 +2895,13 @@ Paths or arguments that contain spaces must be enclosed in quotes
 
             if self.locals_in_py:
                 def load_ipy(self, app):
-                    banner = 'Entering an embedded IPython shell type quit() or <Ctrl>-d to exit ...'
+                    banner = 'Entering an embedded IPython shell. Type quit() or <Ctrl>-d to exit ...'
                     exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(self, bridge)
             else:
                 def load_ipy(app):
-                    banner = 'Entering an embedded IPython shell type quit() or <Ctrl>-d to exit ...'
+                    banner = 'Entering an embedded IPython shell. Type quit() or <Ctrl>-d to exit ...'
                     exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(bridge)
@@ -3044,7 +3044,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             # get the output out of the buffer
             output = membuf.read()
             # and add the regex-escaped output to the transcript
-            transcript += output.replace('/', '\/')
+            transcript += output.replace('/', r'\/')
 
         # Restore stdout to its original state
         self.stdout = saved_self_stdout
