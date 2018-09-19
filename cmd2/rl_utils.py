@@ -26,12 +26,40 @@ class RlType(Enum):
 
 
 # Check what implementation of readline we are using
-
 rl_type = RlType.NONE
 
 # The order of this check matters since importing pyreadline will also show readline in the modules list
 if 'pyreadline' in sys.modules:
     rl_type = RlType.PYREADLINE
+
+    from ctypes import byref
+    from ctypes.wintypes import DWORD, HANDLE
+    import atexit
+
+    # noinspection PyPep8Naming
+    def enable_win_vt100(handle: HANDLE) -> None:
+        """
+        Enables VT100 character sequences in a Windows console
+        This only works on Windows 10 and up
+        """
+        ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+
+        # Get the current mode for this handle in the console
+        cur_mode = DWORD(0)
+        readline.rl.console.GetConsoleMode(handle, byref(cur_mode))
+
+        # If ENABLE_VIRTUAL_TERMINAL_PROCESSING is not enabled, then enable it now
+        if (cur_mode.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0:
+            readline.rl.console.SetConsoleMode(handle, cur_mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+
+            # Restore the original mode when we exit
+            atexit.register(readline.rl.console.SetConsoleMode, handle, cur_mode)
+
+    # Enable VT100 sequences for stdout and stderr
+    STD_OUT_HANDLE = -11
+    STD_ERROR_HANDLE = -12
+    enable_win_vt100(readline.rl.console.GetStdHandle(STD_OUT_HANDLE))
+    enable_win_vt100(readline.rl.console.GetStdHandle(STD_ERROR_HANDLE))
 
     ############################################################################################################
     # pyreadline is incomplete in terms of the Python readline API. Add the missing functions we need.
@@ -96,3 +124,18 @@ def rl_force_redisplay() -> None:
         # Call _print_prompt() first to set the new location of the prompt
         readline.rl.mode._print_prompt()
         readline.rl.mode._update_line()
+
+
+# noinspection PyProtectedMember
+def rl_get_point() -> int:
+    """
+    Returns the offset of the current cursor position in rl_line_buffer
+    """
+    if rl_type == RlType.GNU:  # pragma: no cover
+        return ctypes.c_int.in_dll(readline_lib, "rl_point").value
+
+    elif rl_type == RlType.PYREADLINE:  # pragma: no cover
+        return readline.rl.mode.l_buffer.point
+
+    else:  # pragma: no cover
+        return 0
