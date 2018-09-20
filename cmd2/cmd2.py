@@ -3332,34 +3332,6 @@ Script should contain one command per line, just like command would be typed in 
             # Debugging in Pycharm has issues with setting terminal title
             pass
 
-    def alerter(self):
-        import time
-        while True:
-            alert_msg = "\n***********************************************\n" \
-                        "           Message failed to send\n" \
-                        "***********************************************"
-            time.sleep(5)
-            self.async_alert(alert_msg)
-
-    def do_alert(self, args):
-        import threading
-        alert_thread = threading.Thread(target=self.alerter, daemon=True)
-        alert_thread.start()
-
-    def prompt_changer(self):
-        import time
-        counter = 1
-        while True:
-            time.sleep(1)
-            self.async_update_prompt("({:>3}) ".format(counter))
-            counter += 1
-
-    def do_update_prompt(self, args):
-        import threading
-        self.prompt = "(  0) "
-        change_thread = threading.Thread(target=self.prompt_changer, daemon=True)
-        change_thread.start()
-
     def cmdloop(self, intro: Optional[str]=None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
 
