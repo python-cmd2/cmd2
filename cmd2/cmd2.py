@@ -2123,8 +2123,12 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
-                    # A prompt is about to be drawn. Allow asynchronous changes to the terminal.
-                    self._terminal_lock.release()
+                    try:
+                        # A prompt is about to be drawn. Allow asynchronous changes to the terminal.
+                        self._terminal_lock.release()
+                    except RuntimeError:
+                        pass
+
                     line = input(safe_prompt)
                 else:
                     line = input()
