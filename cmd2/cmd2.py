@@ -2284,6 +2284,9 @@ Usage:  Usage: alias [name] | [<name> <value>]
                 # Set the alias
                 self.aliases[name] = value
                 self.poutput("Alias {!r} created".format(name))
+
+                # Keep aliases in alphabetically sorted order
+                self.aliases = collections.OrderedDict(sorted(self.aliases.items()))
             else:
                 errmsg = "Aliases can not contain: {}".format(invalidchars)
                 self.perror(errmsg, traceback_war=False)

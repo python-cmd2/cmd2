@@ -1804,6 +1804,23 @@ def test_create_invalid_alias(base_app, alias_name, capsys):
     out, err = capsys.readouterr()
     assert "can not contain" in err
 
+def test_complete_unalias(base_app):
+    text = 'f'
+    line = text
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Validate there are no completions when there are no aliases
+    assert base_app.complete_unalias(text, line, begidx, endidx) == []
+
+    # Create a couple aliases
+    run_cmd(base_app, 'alias fall quit')
+    run_cmd(base_app, 'alias fake pyscript')
+
+    # Validate that there are now completions
+    expected = ['fake', 'fall']
+    assert base_app.complete_unalias(text, line, begidx, endidx) == expected
+
 def test_ppaged(base_app):
     msg = 'testing...'
     end = '\n'

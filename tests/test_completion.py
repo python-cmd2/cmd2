@@ -159,6 +159,13 @@ def test_cmd2_help_completion_nomatch(cmd2_app):
     begidx = endidx - len(text)
     assert cmd2_app.complete_help(text, line, begidx, endidx) == []
 
+def test_complete_set(cmd2_app):
+    text = 'co'
+    line = text
+    endidx = len(line)
+    begidx = endidx - len(text)
+    assert cmd2_app.complete_set(text, line, begidx, endidx) == ['colors', 'continuation_prompt']
+
 
 def test_shell_command_completion_shortcut(cmd2_app):
     # Made sure ! runs a shell command and all matches start with ! since there
