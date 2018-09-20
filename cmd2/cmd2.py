@@ -2615,7 +2615,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 param = args.settable[0]
             self.show(args, param)
 
-    def complete_set(self, text: str, line: str, begidx: str, endidx: str) -> List[str]:
+    def complete_set(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Tab-completion for the set command."""
         return self.basic_complete(text, line, begidx, endidx, self.settable)
 
