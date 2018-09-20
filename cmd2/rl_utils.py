@@ -27,6 +27,8 @@ class RlType(Enum):
 
 # Check what implementation of readline we are using
 rl_type = RlType.NONE
+
+# Tells if the terminal we are running in supports vt100 control characters
 vt100_support = False
 
 # The order of this check matters since importing pyreadline will also show readline in the modules list
@@ -37,30 +39,40 @@ if 'pyreadline' in sys.modules:
     from ctypes.wintypes import DWORD, HANDLE
     import atexit
 
-    # noinspection PyPep8Naming
-    def enable_win_vt100(handle: HANDLE) -> None:
-        """
-        Enables VT100 character sequences in a Windows console
-        This only works on Windows 10 and up
-        """
-        ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
+    # Check if we are running in a terminal
+    if sys.stdout.isatty():
+        # noinspection PyPep8Naming
+        def enable_win_vt100(handle: HANDLE) -> bool:
+            """
+            Enables VT100 character sequences in a Windows console
+            This only works on Windows 10 and up
+            :param handle: the handle on which to enable vt100
+            :return: True if vt100 characters are enabled for the handle
+            """
+            ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
 
-        # Get the current mode for this handle in the console
-        cur_mode = DWORD(0)
-        readline.rl.console.GetConsoleMode(handle, byref(cur_mode))
+            # Get the current mode for this handle in the console
+            cur_mode = DWORD(0)
+            readline.rl.console.GetConsoleMode(handle, byref(cur_mode))
 
-        # If ENABLE_VIRTUAL_TERMINAL_PROCESSING is not enabled, then enable it now
-        if (cur_mode.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0:
-            readline.rl.console.SetConsoleMode(handle, cur_mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING)
+            retVal = False
 
-            # Restore the original mode when we exit
-            atexit.register(readline.rl.console.SetConsoleMode, handle, cur_mode)
+            # Check if  ENABLE_VIRTUAL_TERMINAL_PROCESSING is already enabled
+            if (cur_mode.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0:
+                retVal = True
 
-    # Enable VT100 sequences for stdout and stderr
-    STD_OUT_HANDLE = -11
-    STD_ERROR_HANDLE = -12
-    enable_win_vt100(readline.rl.console.GetStdHandle(STD_OUT_HANDLE))
-    enable_win_vt100(readline.rl.console.GetStdHandle(STD_ERROR_HANDLE))
+            elif readline.rl.console.SetConsoleMode(handle, cur_mode.value | ENABLE_VIRTUAL_TERMINAL_PROCESSING):
+                # Restore the original mode when we exit
+                atexit.register(readline.rl.console.SetConsoleMode, handle, cur_mode)
+                retVal = True
+
+            return retVal
+
+        # Enable VT100 sequences for stdout and stderr
+        STD_OUT_HANDLE = -11
+        STD_ERROR_HANDLE = -12
+        vt100_support = enable_win_vt100(readline.rl.console.GetStdHandle(STD_OUT_HANDLE)) and \
+                        enable_win_vt100(readline.rl.console.GetStdHandle(STD_ERROR_HANDLE))
 
     ############################################################################################################
     # pyreadline is incomplete in terms of the Python readline API. Add the missing functions we need.
@@ -102,6 +114,10 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
         # Load the readline lib so we can access members of it
         import ctypes
         readline_lib = ctypes.CDLL(readline.__file__)
+
+        # Check if we are running in a terminal
+        if sys.stdout.isatty():
+            vt100_support = True
 
 
 # noinspection PyProtectedMember
