@@ -1813,9 +1813,10 @@ def test_complete_unalias(base_app):
     # Validate there are no completions when there are no aliases
     assert base_app.complete_unalias(text, line, begidx, endidx) == []
 
-    # Create a couple aliases
+    # Create a few aliases - two the start with 'f' and one that doesn't
     run_cmd(base_app, 'alias fall quit')
     run_cmd(base_app, 'alias fake pyscript')
+    run_cmd(base_app, 'alias carapace shell')
 
     # Validate that there are now completions
     expected = ['fake', 'fall']
