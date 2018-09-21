@@ -259,3 +259,15 @@ timing: False
 Note how a regular expression `/(True|False)/` is used for output of the **show color** command since
 colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
 transcript file simply by enclosing them within forward slashes, `/`.
+
+
+Found a bug?
+------------
+
+If you think you've found a bug, please first read through the open [Issues](https://github.com/python-cmd2/cmd2/issues). If you're confident it's a new bug, go ahead and create a new GitHub issue. Be sure to include as much information as possible so we can reproduce the bug.  At a minimum, please state the following:
+
+* ``cmd2`` version
+* Python version
+* OS name and version
+* What you did to cause the bug to occur
+* Include any trackeback or error message associated with the bug
