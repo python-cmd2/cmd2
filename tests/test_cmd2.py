@@ -73,7 +73,7 @@ def test_base_invalid_option(base_app, capsys):
     out = normalize(out)
     err = normalize(err)
     assert 'Error: unrecognized arguments: -z' in err[0]
-    assert out[0] == 'Usage: set settable{0..2} [-h] [-a] [-l]'
+    assert out[0] == 'Usage: set [param] [value] [-h] [-a] [-l]'
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')
@@ -1794,6 +1794,24 @@ def test_create_invalid_alias(base_app, alias_name, capsys):
     run_cmd(base_app, 'alias {} help'.format(alias_name))
     out, err = capsys.readouterr()
     assert "can not contain" in err
+
+def test_complete_unalias(base_app):
+    text = 'f'
+    line = text
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Validate there are no completions when there are no aliases
+    assert base_app.complete_unalias(text, line, begidx, endidx) == []
+
+    # Create a few aliases - two the start with 'f' and one that doesn't
+    run_cmd(base_app, 'alias fall quit')
+    run_cmd(base_app, 'alias fake pyscript')
+    run_cmd(base_app, 'alias carapace shell')
+
+    # Validate that there are now completions
+    expected = ['fake', 'fall']
+    assert base_app.complete_unalias(text, line, begidx, endidx) == expected
 
 def test_ppaged(base_app):
     msg = 'testing...'
