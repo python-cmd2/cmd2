@@ -2550,9 +2550,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         :param args: argparse parsed arguments from the set command
         :param parameter: optional search parameter
         """
-        param = ''
-        if parameter:
-            param = parameter.strip().lower()
+        param = parameter.strip().lower()
         result = {}
         maxlen = 0
         for p in self.settable:
