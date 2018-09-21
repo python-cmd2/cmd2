@@ -72,7 +72,7 @@ def test_base_invalid_option(base_app, capsys):
     out = normalize(out)
     err = normalize(err)
     assert 'Error: unrecognized arguments: -z' in err[0]
-    assert out[0] == 'Usage: set settable{0..2} [-h] [-a] [-l]'
+    assert out[0] == 'Usage: set param{0..1} [value] [-h] [-a] [-l]'
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')

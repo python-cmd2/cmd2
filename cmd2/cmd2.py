@@ -2544,12 +2544,11 @@ Usage:  Usage: unalias [-a] name [name ...]
         Output redirection and pipes allowed: {}"""
         return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
 
-    def show(self, args: argparse.Namespace, parameter: str) -> None:
+    def show(self, args: argparse.Namespace, parameter: str='') -> None:
         """Shows current settings of parameters.
 
         :param args: argparse parsed arguments from the set command
-        :param parameter:
-        :return:
+        :param parameter: optional search parameter
         """
         param = ''
         if parameter:
@@ -2558,7 +2557,7 @@ Usage:  Usage: unalias [-a] name [name ...]
         maxlen = 0
         for p in self.settable:
             if (not param) or p.startswith(param):
-                result[p] = '%s: %s' % (p, str(getattr(self, p)))
+                result[p] = '{}: {}'.format(p, str(getattr(self, p)))
                 maxlen = max(maxlen, len(result[p]))
         if result:
             for p in sorted(result):
@@ -2581,40 +2580,51 @@ Usage:  Usage: unalias [-a] name [name ...]
     set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    setattr(set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]'),
+    setattr(set_parser.add_argument('param', nargs=(0, 1), help='parameter to set or view'),
             ACTION_ARG_CHOICES, settable)
+    set_parser.add_argument('value', nargs='?', help='the new value for settable')
 
     @with_argparser(set_parser)
     def do_set(self, args: argparse.Namespace) -> None:
         """Sets a settable parameter or shows current settings of parameters"""
-        try:
-            param_name, val = args.settable
-            val = val.strip()
-            param_name = param_name.strip().lower()
-            if param_name not in self.settable:
-                hits = [p for p in self.settable if p.startswith(param_name)]
-                if len(hits) == 1:
-                    param_name = hits[0]
-                else:
-                    return self.show(args, param_name)
-            current_val = getattr(self, param_name)
-            if (val[0] == val[-1]) and val[0] in ("'", '"'):
-                val = val[1:-1]
+
+        # Check if param was passed in
+        if not args.param:
+            return self.show(args)
+        else:
+            param = args.param.strip().lower()
+
+        # Check if value was passed in
+        value = ''
+        if args.value:
+            value = args.value.strip()
+        if not value:
+            return self.show(args, param)
+
+        # Check if param points to just one settable
+        if param not in self.settable:
+            hits = [p for p in self.settable if p.startswith(param)]
+            if len(hits) == 1:
+                param = hits[0]
             else:
-                val = utils.cast(current_val, val)
-            setattr(self, param_name, val)
-            self.poutput('%s - was: %s\nnow: %s\n' % (param_name, current_val, val))
-            if current_val != val:
-                try:
-                    onchange_hook = getattr(self, '_onchange_%s' % param_name)
-                    onchange_hook(old=current_val, new=val)
-                except AttributeError:
-                    pass
-        except (ValueError, AttributeError):
-            param = ''
-            if args.settable:
-                param = args.settable[0]
-            self.show(args, param)
+                return self.show(args, param)
+
+        # Update the settable's value
+        current_value = getattr(self, param, None)
+
+        if utils.is_quoted(value):
+            value = utils.strip_quotes(value)
+        else:
+            value = utils.cast(current_value, value)
+
+        setattr(self, param, value)
+        self.poutput('{} - was: {}\nnow: {}\n'.format(param, current_value, value))
+
+        # See if we need to call a change hook for this settable
+        if current_value != value:
+            onchange_hook = getattr(self, '_onchange_{}'.format(param), None)
+            if onchange_hook is not None:
+                onchange_hook(old=current_value, new=value)
 
     def do_shell(self, statement: Statement) -> None:
         """Execute a command as if at the OS prompt
