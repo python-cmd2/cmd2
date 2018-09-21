@@ -61,7 +61,7 @@ Topic :: Software Development :: Libraries :: Python Modules
 
 SETUP_REQUIRES = ['setuptools_scm']
 
-INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama', 'attrs']
+INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama', 'attrs >= 16.3.0']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
