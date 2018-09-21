@@ -24,7 +24,7 @@ def is_quoted(arg: str) -> bool:
     """
     Checks if a string is quoted
     :param arg: the string being checked for quotes
-    :return: True if a string is quotes
+    :return: True if a string is quoted
     """
     return len(arg) > 1 and arg[0] == arg[-1] and arg[0] in constants.QUOTES
 
