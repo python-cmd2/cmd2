@@ -45,7 +45,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Un
 from . import constants
 from . import utils
 from . import plugin
-from .argparse_completer import AutoCompleter, ACArgumentParser
+from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .parsing import StatementParser, Statement
 
@@ -2581,7 +2581,8 @@ Usage:  Usage: unalias [-a] name [name ...]
     set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]')
+    setattr(set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]'),
+            ACTION_ARG_CHOICES, settable)
 
     @with_argparser(set_parser)
     def do_set(self, args: argparse.Namespace) -> None:
@@ -2614,10 +2615,6 @@ Usage:  Usage: unalias [-a] name [name ...]
             if args.settable:
                 param = args.settable[0]
             self.show(args, param)
-
-    def complete_set(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Tab-completion for the set command."""
-        return self.basic_complete(text, line, begidx, endidx, self.settable)
 
     def do_shell(self, statement: Statement) -> None:
         """Execute a command as if at the OS prompt
