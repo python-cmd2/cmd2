@@ -181,7 +181,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
-    :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
+    :param argparser: given instance of ArgumentParser
     :return: function that gets passed parsed args and a list of unknown args
     """
     import functools
@@ -223,7 +223,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
-    :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
+    :param argparser: given instance of ArgumentParser
     :return: function that gets passed parsed args
     """
     import functools
@@ -568,7 +568,7 @@ class Cmd(cmd.Cmd):
         been piped to another process and that process terminates before the
         cmd2 command is finished executing.
 
-        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message if not already present, default a newline
         """
         if msg is not None and msg != '':
@@ -624,7 +624,7 @@ class Cmd(cmd.Cmd):
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
-        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message if not already present, default a newline
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
@@ -918,14 +918,13 @@ class Cmd(cmd.Cmd):
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param flag_dict: dict - dictionary whose structure is the following:
-                                 keys - flags (ex: -c, --create) that result in tab completion for the next
-                                        argument in the command line
-                                 values - there are two types of values
-                                    1. iterable list of strings to match against (dictionaries, lists, etc.)
-                                    2. function that performs tab completion (ex: path_complete)
-        :param all_else: Collection or function - an optional parameter for tab completing any token that isn't preceded
-                                                  by a flag in flag_dict
+        :param flag_dict: dictionary whose structure is the following:
+                          keys - flags (ex: -c, --create) that result in tab completion for the next
+                                 argument in the command line
+                          values - there are two types of values
+                             1. iterable list of strings to match against (dictionaries, lists, etc.)
+                             2. function that performs tab completion (ex: path_complete)
+        :param all_else: an optional parameter for tab completing any token that isn't preceded by a flag in flag_dict
         :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
@@ -961,14 +960,13 @@ class Cmd(cmd.Cmd):
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param index_dict: dict - dictionary whose structure is the following:
-                                 keys - 0-based token indexes into command line that determine which tokens
-                                        perform tab completion
-                                 values - there are two types of values
-                                    1. iterable list of strings to match against (dictionaries, lists, etc.)
-                                    2. function that performs tab completion (ex: path_complete)
-        :param all_else: Collection or function - an optional parameter for tab completing any token that isn't at an
-                                                  index in index_dict
+        :param index_dict: dictionary whose structure is the following:
+                           keys - 0-based token indexes into command line that determine which tokens
+                                  perform tab completion
+                           values - there are two types of values
+                              1. iterable list of strings to match against (dictionaries, lists, etc.)
+                              2. function that performs tab completion (ex: path_complete)
+        :param all_else: an optional parameter for tab completing any token that isn't at an index in index_dict
         :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
@@ -1706,8 +1704,8 @@ class Cmd(cmd.Cmd):
         - raise EmptyStatement - will silently fail and do nothing
         - raise <AnyOtherException> - will fail and print an error message
 
-        :param statement: - the parsed command-line statement as a Statement object
-        :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement object
+        :param statement: the parsed command-line statement as a Statement object
+        :return: (stop, statement) containing a potentially modified version of the statement object
         """
         stop = False
         return stop, statement
@@ -1719,8 +1717,8 @@ class Cmd(cmd.Cmd):
         It even runs when an empty line is entered.  Thus, if you need to do something like update the prompt due
         to notifications from a background thread, then this is the method you want to override to do it.
 
-        :param stop: bool - True implies the entire application should exit.
-        :return: bool - True implies the entire application should exit.
+        :param stop: True implies the entire application should exit.
+        :return: True implies the entire application should exit.
         """
         return stop
 
@@ -2052,8 +2050,8 @@ class Cmd(cmd.Cmd):
 
         If the command provided doesn't exist, then it executes _default() instead.
 
-        :param statement: Command - intended to be a Statement instance parsed command from the input stream,
-                                    alternative acceptance of a str is present only for backward compatibility with cmd
+        :param statement: intended to be a Statement instance parsed command from the input stream, alternative
+                          acceptance of a str is present only for backward compatibility with cmd
         :return: a flag indicating whether the interpretation of commands should stop
         """
         # For backwards compatibility with cmd, allow a str to be passed in
@@ -2721,10 +2719,10 @@ Usage:  Usage: unalias [-a] name [name ...]
             arg = arg.strip()
 
             # Support the run command even if called prior to invoking an interactive interpreter
-            def run(filename):
+            def run(filename: str):
                 """Run a Python script file in the interactive console.
 
-                :param filename: str - filename of *.py script file to run
+                :param filename: filename of *.py script file to run
                 """
                 try:
                     with open(filename) as f:
@@ -3453,7 +3451,7 @@ class History(list):
     def get(self, getme: Optional[Union[int, str]]=None) -> List[HistoryItem]:
         """Get an item or items from the History list using 1-based indexing.
 
-        :param getme: item(s) to get - either an integer index or string to search for
+        :param getme: optional item(s) to get (either an integer index or string to search for)
         :return: list of HistoryItems matching the retrieval criteria
         """
         if not getme:

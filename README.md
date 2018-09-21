@@ -270,4 +270,4 @@ If you think you've found a bug, please first read through the open [Issues](htt
 * Python version
 * OS name and version
 * What you did to cause the bug to occur
-* Include any trackeback or error message associated with the bug
+* Include any traceback or error message associated with the bug
