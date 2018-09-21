@@ -12,7 +12,7 @@ Remember to feel free to ask for help by leaving a comment within the Issue.
 
 Working on your first pull request? You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github).
 
-###### If you've found a bug that is not on the board, [follow these steps](#found-a-bug).
+###### If you've found a bug that is not on the board, [follow these steps](Readme.md#found-a-bug).
 
 --------------------------------------------------------------------------------
 
@@ -34,6 +34,7 @@ Working on your first pull request? You can learn how from this *free* series [H
 - [Other resources](#other-resources)
 - [Advice](#advice)
 - [Developing in an IDE](#developing-in-an-ide)
+- [Publishing a new release](#publishing-a-new-release)
 
 ### Prerequisites
 
@@ -45,25 +46,29 @@ The tables below list all prerequisites along with the minimum required version 
 
 | Prerequisite                                        | Minimum Version |
 | --------------------------------------------------- | --------------- |
-| [Python](https://www.python.org/downloads/)         | `3.4`           |
-| [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
+| [python](https://www.python.org/downloads/)         | `3.4`           |
+| [attrs](https://github.com/python-attrs/attrs)      | `16.3`          |
+| [colorama](https://github.com/tartley/colorama)     | `0.3.7`         |
+| [pyperclip](https://github.com/asweigart/pyperclip) | `1.5.27`        |
+
 
 #### Additional prerequisites to run cmd2 unit tests
 
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
-| [pytest](http://doc.pytest.org/en/latest/)  | `2.6.3`         |
+| [pytest](http://doc.pytest.org/en/latest/)  | `3.0.6`         |
+| [pytest-mock](https://pypi.org/project/pytest-mock/) | `1.3`  |
 
 #### Additional prerequisites to build cmd2 documentation
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
-| [sphinx](http://www.sphinx-doc.org)         | `1.2.3`         |
-| [sphinx-rtd-theme](https://github.com/snide/sphinx_rtd_theme) | `0.1.6` |
+| [sphinx](http://www.sphinx-doc.org)         | `1.4.9`         |
+| [sphinx-rtd-theme](https://github.com/snide/sphinx_rtd_theme) | `0.1.9` |
 
 #### Optional prerequisites for enhanced unit test features
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
-| [pytest-cov](https://pypi.python.org/pypi/pytest-cov) | `1.8` |
+| [pytest-cov](https://pypi.python.org/pypi/pytest-cov) | `2.4` |
 
 If Python is already installed in your machine, run the following commands to validate the versions:
 
@@ -483,13 +488,13 @@ excellent support for debugging console applications.
 Since 0.9.2, the process of publishing a new release of `cmd2` to [PyPi](https://pypi.org/) has been
 mostly automated. The manual steps are all git operations. Here's the checklist:
 
-1. Make sure you're on the proper branch
-2. Make sure the version strings in `cmd2.py`, `conf.py`, `setup.py`, and `test_cmd2.py` are correct
-3. Make sure all the unit tests pass
-4. Make sure `CHANGELOG.md` describes the version and has the correct release date
-5. Create and push a git tag that matches the version strings above
-6. (Optional) Run `invoke pypi_test` to clean, build, and upload a new release to [Test PyPi](https://test.pypi.org)
-7. Run `invoke pypi` to clean, build, and upload a new release to [PyPi](https://pypi.org/)
+1. Make sure you're on the proper branch (almost always **master**)
+1. Make sure all the unit tests pass wih `invoke pypi-test` or `py.test`
+1. Make sure `CHANGELOG.md` describes the version and has the correct release date
+1. Add a git tag representing the version number using ``invoke tag x.y.z`` 
+    * Where x, y, and z are all small non-negative integers
+1. (Optional) Run `invoke pypi_test` to clean, build, and upload a new release to [Test PyPi](https://test.pypi.org)
+1. Run `invoke pypi` to clean, build, and upload a new release to [PyPi](https://pypi.org/)
 
 ## Acknowledgement
 Thanks to the good folks at [freeCodeCamp](https://github.com/freeCodeCamp/freeCodeCamp) for creating
