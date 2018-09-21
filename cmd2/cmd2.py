@@ -3349,11 +3349,13 @@ Script should contain one command per line, just like command would be typed in 
             if callargs:
                 self.cmdqueue.extend(callargs)
 
-        # Register a default SIGINT signal handler for Ctrl+C
+        # Register a SIGINT signal handler for Ctrl+C
         import signal
+        original_sigint_handler = signal.getsignal(signal.SIGINT)
         signal.signal(signal.SIGINT, self.sigint_handler)
 
-        # Grab the terminal lock before the prompt has been drawn by readline
+        # Recreate terminal lock for this session and grab it before the prompt has been drawn by readline
+        self._terminal_lock = threading.RLock()
         self._terminal_lock.acquire()
 
         # Always run the preloop first
@@ -3380,6 +3382,9 @@ Script should contain one command per line, just like command would be typed in 
         for func in self._postloop_hooks:
             func()
         self.postloop()
+
+        # Restore the original signal handler
+        signal.signal(signal.SIGINT, original_sigint_handler)
 
         if self.exit_code is not None:
             sys.exit(self.exit_code)
