@@ -2553,10 +2553,12 @@ Usage:  Usage: unalias [-a] name [name ...]
         param = parameter.strip().lower()
         result = {}
         maxlen = 0
+
         for p in self.settable:
             if (not param) or p.startswith(param):
                 result[p] = '{}: {}'.format(p, str(getattr(self, p)))
                 maxlen = max(maxlen, len(result[p]))
+
         if result:
             for p in sorted(result):
                 if args.long:
@@ -2568,7 +2570,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             if args.all:
                 self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
         else:
-            raise LookupError("Parameter '%s' not supported (type 'set' for list of parameters)." % param)
+            raise LookupError("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
 
     set_description = "Sets a settable parameter or shows current settings of parameters.\n"
     set_description += "\n"
@@ -2578,7 +2580,7 @@ Usage:  Usage: unalias [-a] name [name ...]
     set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    setattr(set_parser.add_argument('param', nargs=(0, 1), help='parameter to set or view'),
+    setattr(set_parser.add_argument('param', nargs='?', help='parameter to set or view'),
             ACTION_ARG_CHOICES, settable)
     set_parser.add_argument('value', nargs='?', help='the new value for settable')
 
@@ -2589,15 +2591,12 @@ Usage:  Usage: unalias [-a] name [name ...]
         # Check if param was passed in
         if not args.param:
             return self.show(args)
-        else:
-            param = args.param.strip().lower()
+        param = args.param.strip().lower()
 
         # Check if value was passed in
-        value = ''
-        if args.value:
-            value = args.value.strip()
-        if not value:
+        if not args.value:
             return self.show(args, param)
+        value = args.value
 
         # Check if param points to just one settable
         if param not in self.settable:
@@ -2609,13 +2608,9 @@ Usage:  Usage: unalias [-a] name [name ...]
 
         # Update the settable's value
         current_value = getattr(self, param)
-
-        if utils.is_quoted(value):
-            value = utils.strip_quotes(value)
-        else:
-            value = utils.cast(current_value, value)
-
+        value = utils.cast(current_value, value)
         setattr(self, param, value)
+
         self.poutput('{} - was: {}\nnow: {}\n'.format(param, current_value, value))
 
         # See if we need to call a change hook for this settable
