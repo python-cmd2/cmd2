@@ -4,8 +4,9 @@
 
 import collections
 import os
-from typing import Any, List, Optional, Union
+import re
 import unicodedata
+from typing import Any, List, Optional, Union
 
 from . import constants
 
@@ -194,7 +195,52 @@ def norm_fold(astr: str) -> str:
 def alphabetical_sort(list_to_sort: List[str]) -> List[str]:
     """Sorts a list of strings alphabetically.
 
+    For example: ['a1', 'A11', 'A2', 'a22', 'a3']
+
+    To sort a list in place, don't call this method, which makes a copy. Instead, do this:
+
+    my_list.sort(key=norm_fold)
+
     :param list_to_sort: the list being sorted
     :return: the sorted list
     """
     return sorted(list_to_sort, key=norm_fold)
+
+
+def try_int_or_force_to_lower_case(input_str: str) -> Union[int, str]:
+    """
+    Tries to convert the passed-in string to an integer. If that fails, it converts it to lower case using norm_fold.
+    :param input_str: string to convert
+    :return: the string as an integer or a lower case version of the string
+    """
+    try:
+        return int(input_str)
+    except ValueError:
+        return norm_fold(input_str)
+
+
+def natural_keys(input_str: str) -> List[Union[int, str]]:
+    """
+    Converts a string into a list of integers and strings to support natural sorting (see natural_sort).
+
+    For example: natural_keys('abc123def') -> ['abc', '123', 'def']
+    :param input_str: string to convert
+    :return: list of strings and integers
+    """
+    return [try_int_or_force_to_lower_case(substr) for substr in re.split('(\d+)', input_str)]
+
+
+def natural_sort(list_to_sort: List[str]) -> List[str]:
+    """
+    Sorts a list of strings case insensitively as well as numerically.
+
+    For example: ['a1', 'A2', 'a3', 'A11', 'a22']
+
+    To sort a list in place, don't call this method, which makes a copy. Instead, do this:
+
+    my_list.sort(key=natural_keys)
+
+    :param list_to_sort: the list being sorted
+    :return: the list sorted naturally
+    """
+    return sorted(list_to_sort, key=natural_keys)
