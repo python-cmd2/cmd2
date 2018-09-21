@@ -1643,15 +1643,6 @@ class Cmd(cmd.Cmd):
         # Re-raise a KeyboardInterrupt so other parts of the code can catch it
         raise KeyboardInterrupt("Got a keyboard interrupt")
 
-    def preloop(self) -> None:
-        """Hook method executed once when the cmdloop() method is called."""
-        import signal
-        # Register a default SIGINT signal handler for Ctrl+C
-        signal.signal(signal.SIGINT, self.sigint_handler)
-
-        # Grab the terminal lock before the prompt has been drawn by readline
-        self._terminal_lock.acquire()
-
     def precmd(self, statement: Statement) -> Statement:
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
 
@@ -3270,10 +3261,6 @@ Script should contain one command per line, just like command would be typed in 
         if not (vt100_support and self.use_rawinput):
             return
 
-        if new_prompt is not None:
-            rl_set_prompt(new_prompt)
-            self.prompt = new_prompt
-
         # Clear the prompt and input lines and replace with the alert
         terminal_str = self._clear_input_lines_str()
         terminal_str += alert_msg + '\n'
@@ -3282,6 +3269,11 @@ Script should contain one command per line, just like command would be typed in 
             sys.stderr.write(terminal_str)
         elif rl_type == RlType.PYREADLINE:
             readline.rl.mode.console.write(terminal_str)
+
+        # Set the new prompt
+        if new_prompt is not None:
+            self.prompt = new_prompt
+            rl_set_prompt(self.prompt)
 
         # Redraw the prompt and input lines
         rl_force_redisplay()
@@ -3302,16 +3294,16 @@ Script should contain one command per line, just like command would be typed in 
         if not (vt100_support and self.use_rawinput):
             return
 
-        # Set the new prompt
-        rl_set_prompt(new_prompt)
-        self.prompt = new_prompt
-
         # Clear the prompt and input lines
         terminal_str = self._clear_input_lines_str()
         if rl_type == RlType.GNU:
             sys.stderr.write(terminal_str)
         elif rl_type == RlType.PYREADLINE:
             readline.rl.mode.console.write(terminal_str)
+
+        # Set the new prompt
+        self.prompt = new_prompt
+        rl_set_prompt(self.prompt)
 
         # Redraw the prompt and input lines
         rl_force_redisplay()
@@ -3357,6 +3349,13 @@ Script should contain one command per line, just like command would be typed in 
             if callargs:
                 self.cmdqueue.extend(callargs)
 
+        # Register a default SIGINT signal handler for Ctrl+C
+        import signal
+        signal.signal(signal.SIGINT, self.sigint_handler)
+
+        # Grab the terminal lock before the prompt has been drawn by readline
+        self._terminal_lock.acquire()
+
         # Always run the preloop first
         for func in self._preloop_hooks:
             func()
@@ -3390,7 +3389,7 @@ Script should contain one command per line, just like command would be typed in 
     # plugin related functions
     #
     ###
-    def _initialize_plugin_system(self):
+    def _initialize_plugin_system(self) -> None:
         """Initialize the plugin system"""
         self._preloop_hooks = []
         self._postloop_hooks = []
@@ -3400,7 +3399,7 @@ Script should contain one command per line, just like command would be typed in 
         self._cmdfinalization_hooks = []
 
     @classmethod
-    def _validate_callable_param_count(cls, func: Callable, count: int):
+    def _validate_callable_param_count(cls, func: Callable, count: int) -> None:
         """Ensure a function has the given number of parameters."""
         signature = inspect.signature(func)
         # validate that the callable has the right number of parameters
@@ -3413,7 +3412,7 @@ Script should contain one command per line, just like command would be typed in 
             ))
 
     @classmethod
-    def _validate_prepostloop_callable(cls, func: Callable):
+    def _validate_prepostloop_callable(cls, func: Callable[[None], None]) -> None:
         """Check parameter and return types for preloop and postloop hooks."""
         cls._validate_callable_param_count(func, 0)
         # make sure there is no return notation
@@ -3423,18 +3422,18 @@ Script should contain one command per line, just like command would be typed in 
                 func.__name__,
             ))
 
-    def register_preloop_hook(self, func: Callable):
+    def register_preloop_hook(self, func: Callable[[None], None]) -> None:
         """Register a function to be called at the beginning of the command loop."""
         self._validate_prepostloop_callable(func)
         self._preloop_hooks.append(func)
 
-    def register_postloop_hook(self, func: Callable):
+    def register_postloop_hook(self, func: Callable[[None], None]) -> None:
         """Register a function to be called at the end of the command loop."""
         self._validate_prepostloop_callable(func)
         self._postloop_hooks.append(func)
 
     @classmethod
-    def _validate_postparsing_callable(cls, func: Callable):
+    def _validate_postparsing_callable(cls, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Check parameter and return types for postparsing hooks"""
         cls._validate_callable_param_count(func, 1)
         signature = inspect.signature(func)
@@ -3448,13 +3447,13 @@ Script should contain one command per line, just like command would be typed in 
                 func.__name__
             ))
 
-    def register_postparsing_hook(self, func: Callable):
+    def register_postparsing_hook(self, func: Callable[[plugin.PostparsingData], plugin.PostparsingData]) -> None:
         """Register a function to be called after parsing user input but before running the command"""
         self._validate_postparsing_callable(func)
         self._postparsing_hooks.append(func)
 
     @classmethod
-    def _validate_prepostcmd_hook(cls, func: Callable, data_type: Type):
+    def _validate_prepostcmd_hook(cls, func: Callable, data_type: Type) -> None:
         """Check parameter and return types for pre and post command hooks."""
         signature = inspect.signature(func)
         # validate that the callable has the right number of parameters
@@ -3481,18 +3480,19 @@ Script should contain one command per line, just like command would be typed in 
                 data_type,
             ))
 
-    def register_precmd_hook(self, func: Callable):
+    def register_precmd_hook(self, func: Callable[[plugin.PrecommandData], plugin.PrecommandData]) -> None:
         """Register a hook to be called before the command function."""
         self._validate_prepostcmd_hook(func, plugin.PrecommandData)
         self._precmd_hooks.append(func)
 
-    def register_postcmd_hook(self, func: Callable):
+    def register_postcmd_hook(self, func: Callable[[plugin.PostcommandData], plugin.PostcommandData]) -> None:
         """Register a hook to be called after the command function."""
         self._validate_prepostcmd_hook(func, plugin.PostcommandData)
         self._postcmd_hooks.append(func)
 
     @classmethod
-    def _validate_cmdfinalization_callable(cls, func: Callable):
+    def _validate_cmdfinalization_callable(cls, func: Callable[[plugin.CommandFinalizationData],
+                                                               plugin.CommandFinalizationData]) -> None:
         """Check parameter and return types for command finalization hooks."""
         cls._validate_callable_param_count(func, 1)
         signature = inspect.signature(func)
@@ -3504,7 +3504,8 @@ Script should contain one command per line, just like command would be typed in 
             raise TypeError("{} must declare return a return type of "
                             "'cmd2.plugin.CommandFinalizationData'".format(func.__name__))
 
-    def register_cmdfinalization_hook(self, func: Callable):
+    def register_cmdfinalization_hook(self, func: Callable[[plugin.CommandFinalizationData],
+                                                           plugin.CommandFinalizationData]) -> None:
         """Register a hook to be called after a command is completed, whether it completes successfully or not."""
         self._validate_cmdfinalization_callable(func)
         self._cmdfinalization_hooks.append(func)
