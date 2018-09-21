@@ -654,12 +654,19 @@ class AutoCompleter(object):
             else:
                 prefix = ''
 
+        if action.help is None:
+            help_text = ''
+        else:
+            help_text = action.help
+
+        # is there anything to print for this parameter?
+        if not prefix and not help_text:
+            return
+
         prefix = '  {0: <{width}}    '.format(prefix, width=20)
         pref_len = len(prefix)
-        if action.help is not None:
-            help_lines = action.help.splitlines()
-        else:
-            help_lines = ['']
+        help_lines = help_text.splitlines()
+
         if len(help_lines) == 1:
             print('\nHint:\n{}{}\n'.format(prefix, help_lines[0]))
         else:
