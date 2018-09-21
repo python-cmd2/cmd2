@@ -81,34 +81,34 @@ class Statement(str):
        argv[1:], which strips them all off for you.
     """
     # the arguments, but not the command, nor the output redirection clauses.
-    args = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+    args = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # string containing exactly what we input by the user
-    raw = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+    raw = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # the command, i.e. the first whitespace delimited word
-    command = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+    command = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # list of arguments to the command, not including any output redirection or terminators; quoted args remain quoted
-    arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list), type=List[str])
+    arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
 
     # if the command is a multiline command, the name of the command, otherwise empty
-    multiline_command = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+    multiline_command = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # the character which terminated the multiline command, if there was one
-    terminator = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+    terminator = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # characters appearing after the terminator but before output redirection, if any
-    suffix = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+    suffix = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # if output was piped to a shell command, the shell command as a list of tokens
-    pipe_to = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list), type=List[str])
+    pipe_to = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
 
     # if output was redirected, the redirection token, i.e. '>>'
-    output = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+    output = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # if output was redirected, the destination file
-    output_to = attr.ib(default='', validator=attr.validators.instance_of(str), type=str)
+    output_to = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     def __new__(cls, value: object, *pos_args, **kw_args):
         """Create a new instance of Statement.
