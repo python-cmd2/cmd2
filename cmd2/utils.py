@@ -89,7 +89,7 @@ def cast(current: Any, new: str) -> Any:
     """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
 
     :param current: current value for the parameter, type varies
-    :param new: str - new value
+    :param new: new value
     :return: new value with same type as current, or the current value if there was an error casting
     """
     typ = type(current)

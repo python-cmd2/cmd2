@@ -676,12 +676,12 @@ class AutoCompleter(object):
         """
         Performs tab completion against a list
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :param match_against: Collection - the list being matched against
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param match_against: the list being matched against
+        :return: a list of possible tab completions
         """
         return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
