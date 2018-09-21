@@ -22,8 +22,6 @@ Terminal
 Always
     poutput() and pfeedback() never strip ANSI escape sequences, regardless of
     the output destination
-
-
 """
 
 import random
@@ -42,7 +40,7 @@ FG_COLORS = {
     'cyan': Fore.CYAN,
     'white': Fore.WHITE,
 }
-BG_COLORS ={
+BG_COLORS = {
     'black': Back.BLACK,
     'red': Back.RED,
     'green': Back.GREEN,
@@ -50,7 +48,7 @@ BG_COLORS ={
     'blue': Back.BLUE,
     'magenta': Back.MAGENTA,
     'cyan': Back.CYAN,
-    'white':Back.WHITE,
+    'white': Back.WHITE,
 }
 
 
