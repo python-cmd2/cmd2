@@ -2610,7 +2610,7 @@ Usage:  Usage: unalias [-a] name [name ...]
                 return self.show(args, param)
 
         # Update the settable's value
-        current_value = getattr(self, param, None)
+        current_value = getattr(self, param)
 
         if utils.is_quoted(value):
             value = utils.strip_quotes(value)
