@@ -51,7 +51,7 @@ from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .parsing import StatementParser, Statement
 
 # Set up readline
-from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support
+from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
 if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
@@ -2070,34 +2070,6 @@ class Cmd(cmd.Cmd):
         # Print out a message stating this is an unknown command
         self.poutput('*** Unknown syntax: {}\n'.format(arg))
 
-    @staticmethod
-    def _surround_ansi_escapes(prompt: str, start: str="\x01", end: str="\x02") -> str:
-        """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
-
-        :param prompt: original prompt
-        :param start: start code to tell GNU Readline about beginning of invisible characters
-        :param end: end code to tell GNU Readline about end of invisible characters
-        :return: prompt safe to pass to GNU Readline
-        """
-        # Windows terminals don't use ANSI escape codes and Windows readline isn't based on GNU Readline
-        if sys.platform == "win32":
-            return prompt
-
-        escaped = False
-        result = ""
-
-        for c in prompt:
-            if c == "\x1b" and not escaped:
-                result += start + c
-                escaped = True
-            elif c.isalpha() and escaped:
-                result += c + end
-                escaped = False
-            else:
-                result += c
-
-        return result
-
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
 
@@ -2105,9 +2077,6 @@ class Cmd(cmd.Cmd):
         - if input is a pipe (instead of a tty), look at self.echo
           to decide whether to print the prompt and the input
         """
-
-        # Deal with the vagaries of readline and ANSI escape codes
-        safe_prompt = self._surround_ansi_escapes(prompt)
 
         if self.use_rawinput:
             try:
@@ -2118,11 +2087,13 @@ class Cmd(cmd.Cmd):
                     except RuntimeError:
                         pass
 
+                    # Deal with the vagaries of readline and ANSI escape codes
+                    safe_prompt = rl_make_safe_prompt(prompt)
                     line = input(safe_prompt)
                 else:
                     line = input()
                     if self.echo:
-                        sys.stdout.write('{}{}\n'.format(safe_prompt, line))
+                        sys.stdout.write('{}{}\n'.format(self.prompt, line))
             except EOFError:
                 line = 'eof'
             finally:
@@ -2132,7 +2103,7 @@ class Cmd(cmd.Cmd):
         else:
             if self.stdin.isatty():
                 # on a tty, print the prompt first, then read the line
-                self.poutput(safe_prompt, end='')
+                self.poutput(self.prompt, end='')
                 self.stdout.flush()
                 line = self.stdin.readline()
                 if len(line) == 0:
@@ -2145,7 +2116,7 @@ class Cmd(cmd.Cmd):
                 if len(line):
                     # we read something, output the prompt and the something
                     if self.echo:
-                        self.poutput('{}{}'.format(safe_prompt, line))
+                        self.poutput('{}{}'.format(self.prompt, line))
                 else:
                     line = 'eof'
         return line.strip()

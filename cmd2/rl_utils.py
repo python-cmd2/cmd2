@@ -164,9 +164,39 @@ def rl_set_prompt(prompt: str) -> None:
     Sets readline's prompt
     :param prompt: the new prompt value
     """
+    safe_prompt = rl_make_safe_prompt(prompt)
+
     if rl_type == RlType.GNU:  # pragma: no cover
-        encoded_prompt = bytes(prompt, encoding='utf-8')
+        encoded_prompt = bytes(safe_prompt, encoding='utf-8')
         readline_lib.rl_set_prompt(encoded_prompt)
 
     elif rl_type == RlType.PYREADLINE:  # pragma: no cover
-        readline.rl._set_prompt(prompt)
+        readline.rl._set_prompt(safe_prompt)
+
+
+def rl_make_safe_prompt(prompt: str, start: str = "\x01", end: str = "\x02") -> str:
+    """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
+
+    :param prompt: original prompt
+    :param start: start code to tell GNU Readline about beginning of invisible characters
+    :param end: end code to tell GNU Readline about end of invisible characters
+    :return: prompt safe to pass to GNU Readline
+    """
+    if rl_type == RlType.GNU:
+        escaped = False
+        result = ""
+
+        for c in prompt:
+            if c == "\x1b" and not escaped:
+                result += start + c
+                escaped = True
+            elif c.isalpha() and escaped:
+                result += c + end
+                escaped = False
+            else:
+                result += c
+
+        return result
+
+    else:
+        return prompt

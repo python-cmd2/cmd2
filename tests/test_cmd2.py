@@ -1093,11 +1093,13 @@ def test_default_to_shell_failure(capsys):
 
 
 def test_ansi_prompt_not_esacped(base_app):
+    from cmd2.rl_utils import rl_make_safe_prompt
     prompt = '(Cmd) '
-    assert base_app._surround_ansi_escapes(prompt) == prompt
+    assert rl_make_safe_prompt(prompt) == prompt
 
 
 def test_ansi_prompt_escaped():
+    from cmd2.rl_utils import rl_make_safe_prompt
     app = cmd2.Cmd()
     color = 'cyan'
     prompt = 'InColor'
@@ -1106,7 +1108,7 @@ def test_ansi_prompt_escaped():
     readline_hack_start = "\x01"
     readline_hack_end = "\x02"
 
-    readline_safe_prompt = app._surround_ansi_escapes(color_prompt)
+    readline_safe_prompt = rl_make_safe_prompt(color_prompt)
     if sys.platform.startswith('win'):
         # colorize() does nothing on Windows due to lack of ANSI color support
         assert prompt == color_prompt
