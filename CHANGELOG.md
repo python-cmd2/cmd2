@@ -7,6 +7,8 @@
         * Enables applications to return a non-zero exit code when exiting from ``cmdloop``
     * ``ACHelpFormatter`` now inherits from ``argparse.RawTextHelpFormatter`` to make it easier
     for formatting help/description text
+    * Aliases are now sorted alphabetically
+    * The **set** command now tab-completes settable parameter names
     
 ## 0.9.4 (August 21, 2018)
 * Bug Fixes

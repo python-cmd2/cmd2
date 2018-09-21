@@ -46,7 +46,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Un
 from . import constants
 from . import utils
 from . import plugin
-from .argparse_completer import AutoCompleter, ACArgumentParser
+from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .parsing import StatementParser, Statement
 
@@ -182,7 +182,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
-    :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
+    :param argparser: given instance of ArgumentParser
     :return: function that gets passed parsed args and a list of unknown args
     """
     import functools
@@ -224,7 +224,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
-    :param argparser: argparse.ArgumentParser - given instance of ArgumentParser
+    :param argparser: given instance of ArgumentParser
     :return: function that gets passed parsed args
     """
     import functools
@@ -559,7 +559,7 @@ class Cmd(cmd.Cmd):
         Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
         that process terminates before the cmd2 command is finished executing.
 
-        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message if not already present, default a newline
         """
         if msg is not None and msg != '':
@@ -612,7 +612,7 @@ class Cmd(cmd.Cmd):
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
-        :param msg: message to print to current stdout - anything convertible to a str with '{}'.format() is OK
+        :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message if not already present, default a newline
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
@@ -903,14 +903,13 @@ class Cmd(cmd.Cmd):
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param flag_dict: dict - dictionary whose structure is the following:
-                                 keys - flags (ex: -c, --create) that result in tab completion for the next
-                                        argument in the command line
-                                 values - there are two types of values
-                                    1. iterable list of strings to match against (dictionaries, lists, etc.)
-                                    2. function that performs tab completion (ex: path_complete)
-        :param all_else: Collection or function - an optional parameter for tab completing any token that isn't preceded
-                                                  by a flag in flag_dict
+        :param flag_dict: dictionary whose structure is the following:
+                          keys - flags (ex: -c, --create) that result in tab completion for the next
+                                 argument in the command line
+                          values - there are two types of values
+                             1. iterable list of strings to match against (dictionaries, lists, etc.)
+                             2. function that performs tab completion (ex: path_complete)
+        :param all_else: an optional parameter for tab completing any token that isn't preceded by a flag in flag_dict
         :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
@@ -946,14 +945,13 @@ class Cmd(cmd.Cmd):
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param index_dict: dict - dictionary whose structure is the following:
-                                 keys - 0-based token indexes into command line that determine which tokens
-                                        perform tab completion
-                                 values - there are two types of values
-                                    1. iterable list of strings to match against (dictionaries, lists, etc.)
-                                    2. function that performs tab completion (ex: path_complete)
-        :param all_else: Collection or function - an optional parameter for tab completing any token that isn't at an
-                                                  index in index_dict
+        :param index_dict: dictionary whose structure is the following:
+                           keys - 0-based token indexes into command line that determine which tokens
+                                  perform tab completion
+                           values - there are two types of values
+                              1. iterable list of strings to match against (dictionaries, lists, etc.)
+                              2. function that performs tab completion (ex: path_complete)
+        :param all_else: an optional parameter for tab completing any token that isn't at an index in index_dict
         :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
@@ -1685,8 +1683,8 @@ class Cmd(cmd.Cmd):
         - raise EmptyStatement - will silently fail and do nothing
         - raise <AnyOtherException> - will fail and print an error message
 
-        :param statement: - the parsed command-line statement as a Statement object
-        :return: (bool, statement) - (stop, statement) containing a potentially modified version of the statement object
+        :param statement: the parsed command-line statement as a Statement object
+        :return: (stop, statement) containing a potentially modified version of the statement object
         """
         stop = False
         return stop, statement
@@ -1698,8 +1696,8 @@ class Cmd(cmd.Cmd):
         It even runs when an empty line is entered.  Thus, if you need to do something like update the prompt due
         to notifications from a background thread, then this is the method you want to override to do it.
 
-        :param stop: bool - True implies the entire application should exit.
-        :return: bool - True implies the entire application should exit.
+        :param stop: True implies the entire application should exit.
+        :return: True implies the entire application should exit.
         """
         return stop
 
@@ -2031,8 +2029,8 @@ class Cmd(cmd.Cmd):
 
         If the command provided doesn't exist, then it executes _default() instead.
 
-        :param statement: Command - intended to be a Statement instance parsed command from the input stream,
-                                    alternative acceptance of a str is present only for backward compatibility with cmd
+        :param statement: intended to be a Statement instance parsed command from the input stream, alternative
+                          acceptance of a str is present only for backward compatibility with cmd
         :return: a flag indicating whether the interpretation of commands should stop
         """
         # For backwards compatibility with cmd, allow a str to be passed in
@@ -2294,6 +2292,9 @@ Usage:  Usage: alias [name] | [<name> <value>]
                 # Set the alias
                 self.aliases[name] = value
                 self.poutput("Alias {!r} created".format(name))
+
+                # Keep aliases in alphabetically sorted order
+                self.aliases = collections.OrderedDict(sorted(self.aliases.items()))
             else:
                 errmsg = "Aliases can not contain: {}".format(invalidchars)
                 self.perror(errmsg, traceback_war=False)
@@ -2551,22 +2552,21 @@ Usage:  Usage: unalias [-a] name [name ...]
         Output redirection and pipes allowed: {}"""
         return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
 
-    def show(self, args: argparse.Namespace, parameter: str) -> None:
+    def show(self, args: argparse.Namespace, parameter: str='') -> None:
         """Shows current settings of parameters.
 
         :param args: argparse parsed arguments from the set command
-        :param parameter:
-        :return:
+        :param parameter: optional search parameter
         """
-        param = ''
-        if parameter:
-            param = parameter.strip().lower()
+        param = parameter.strip().lower()
         result = {}
         maxlen = 0
+
         for p in self.settable:
             if (not param) or p.startswith(param):
-                result[p] = '%s: %s' % (p, str(getattr(self, p)))
+                result[p] = '{}: {}'.format(p, str(getattr(self, p)))
                 maxlen = max(maxlen, len(result[p]))
+
         if result:
             for p in sorted(result):
                 if args.long:
@@ -2578,7 +2578,7 @@ Usage:  Usage: unalias [-a] name [name ...]
             if args.all:
                 self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
         else:
-            raise LookupError("Parameter '%s' not supported (type 'set' for list of parameters)." % param)
+            raise LookupError("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
 
     set_description = "Sets a settable parameter or shows current settings of parameters.\n"
     set_description += "\n"
@@ -2588,39 +2588,44 @@ Usage:  Usage: unalias [-a] name [name ...]
     set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    set_parser.add_argument('settable', nargs=(0, 2), help='[param_name] [value]')
+    setattr(set_parser.add_argument('param', nargs='?', help='parameter to set or view'),
+            ACTION_ARG_CHOICES, settable)
+    set_parser.add_argument('value', nargs='?', help='the new value for settable')
 
     @with_argparser(set_parser)
     def do_set(self, args: argparse.Namespace) -> None:
         """Sets a settable parameter or shows current settings of parameters"""
-        try:
-            param_name, val = args.settable
-            val = val.strip()
-            param_name = param_name.strip().lower()
-            if param_name not in self.settable:
-                hits = [p for p in self.settable if p.startswith(param_name)]
-                if len(hits) == 1:
-                    param_name = hits[0]
-                else:
-                    return self.show(args, param_name)
-            current_val = getattr(self, param_name)
-            if (val[0] == val[-1]) and val[0] in ("'", '"'):
-                val = val[1:-1]
+
+        # Check if param was passed in
+        if not args.param:
+            return self.show(args)
+        param = args.param.strip().lower()
+
+        # Check if value was passed in
+        if not args.value:
+            return self.show(args, param)
+        value = args.value
+
+        # Check if param points to just one settable
+        if param not in self.settable:
+            hits = [p for p in self.settable if p.startswith(param)]
+            if len(hits) == 1:
+                param = hits[0]
             else:
-                val = utils.cast(current_val, val)
-            setattr(self, param_name, val)
-            self.poutput('%s - was: %s\nnow: %s\n' % (param_name, current_val, val))
-            if current_val != val:
-                try:
-                    onchange_hook = getattr(self, '_onchange_%s' % param_name)
-                    onchange_hook(old=current_val, new=val)
-                except AttributeError:
-                    pass
-        except (ValueError, AttributeError):
-            param = ''
-            if args.settable:
-                param = args.settable[0]
-            self.show(args, param)
+                return self.show(args, param)
+
+        # Update the settable's value
+        current_value = getattr(self, param)
+        value = utils.cast(current_value, value)
+        setattr(self, param, value)
+
+        self.poutput('{} - was: {}\nnow: {}\n'.format(param, current_value, value))
+
+        # See if we need to call a change hook for this settable
+        if current_value != value:
+            onchange_hook = getattr(self, '_onchange_{}'.format(param), None)
+            if onchange_hook is not None:
+                onchange_hook(old=current_value, new=value)
 
     def do_shell(self, statement: Statement) -> None:
         """Execute a command as if at the OS prompt
@@ -2707,10 +2712,10 @@ Usage:  Usage: unalias [-a] name [name ...]
             arg = arg.strip()
 
             # Support the run command even if called prior to invoking an interactive interpreter
-            def run(filename):
+            def run(filename: str):
                 """Run a Python script file in the interactive console.
 
-                :param filename: str - filename of *.py script file to run
+                :param filename: filename of *.py script file to run
                 """
                 try:
                     with open(filename) as f:
@@ -3576,7 +3581,7 @@ class History(list):
     def get(self, getme: Optional[Union[int, str]]=None) -> List[HistoryItem]:
         """Get an item or items from the History list using 1-based indexing.
 
-        :param getme: item(s) to get - either an integer index or string to search for
+        :param getme: optional item(s) to get (either an integer index or string to search for)
         :return: list of HistoryItems matching the retrieval criteria
         """
         if not getme:

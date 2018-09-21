@@ -6,9 +6,10 @@ Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import sys
+from typing import Optional
+from unittest import mock
 
 from pytest import fixture
-from unittest import mock
 
 import cmd2
 
@@ -156,17 +157,17 @@ def base_app():
     return c
 
 
-def complete_tester(text, line, begidx, endidx, app):
+def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Optional[str]:
     """
     This is a convenience function to test cmd2.complete() since
     in a unit test environment there is no actual console readline
     is monitoring. Therefore we use mock to provide readline data
     to complete().
 
-    :param text: str - the string prefix we are attempting to match
-    :param line: str - the current input line with leading whitespace removed
-    :param begidx: int - the beginning index of the prefix text
-    :param endidx: int - the ending index of the prefix text
+    :param text: the string prefix we are attempting to match
+    :param line: the current input line with leading whitespace removed
+    :param begidx: the beginning index of the prefix text
+    :param endidx: the ending index of the prefix text
     :param app: the cmd2 app that will run completions
     :return: The first matched string or None if there are no matches
              Matches are stored in app.completion_matches
