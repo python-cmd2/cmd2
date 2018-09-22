@@ -2078,6 +2078,10 @@ class Cmd(cmd.Cmd):
           to decide whether to print the prompt and the input
         """
 
+        # Temporarily save over self.prompt to reflect what will be on screen
+        orig_prompt = self.prompt
+        self.prompt = prompt
+
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
@@ -2119,6 +2123,10 @@ class Cmd(cmd.Cmd):
                         self.poutput('{}{}'.format(self.prompt, line))
                 else:
                     line = 'eof'
+
+        # Restore prompt
+        self.prompt = orig_prompt
+
         return line.strip()
 
     def _cmdloop(self) -> bool:
@@ -2496,7 +2504,8 @@ Usage:  Usage: unalias [-a] name [name ...]
         for (idx, (_, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s\n' % (idx + 1, text))
         while True:
-            response = input(prompt)
+            safe_prompt = rl_make_safe_prompt(prompt)
+            response = input(safe_prompt)
 
             if rl_type != RlType.NONE:
                 hlen = readline.get_current_history_length()
@@ -3333,8 +3342,7 @@ Script should contain one command per line, just like command would be typed in 
         original_sigint_handler = signal.getsignal(signal.SIGINT)
         signal.signal(signal.SIGINT, self.sigint_handler)
 
-        # Recreate terminal lock for this session and grab it before the prompt has been drawn by readline
-        self._terminal_lock = threading.RLock()
+        # Grab terminal lock before the prompt has been drawn by readline
         self._terminal_lock.acquire()
 
         # Always run the preloop first
@@ -3361,6 +3369,10 @@ Script should contain one command per line, just like command would be typed in 
         for func in self._postloop_hooks:
             func()
         self.postloop()
+
+        # Release terminal lock now that postloop code should have stopped any terminal updater threads
+        # This will also zero the lock count in case cmdloop() is called again
+        self._terminal_lock.release()
 
         # Restore the original signal handler
         signal.signal(signal.SIGINT, original_sigint_handler)
