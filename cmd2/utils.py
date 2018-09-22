@@ -89,10 +89,12 @@ def cast(current: Any, new: str) -> Any:
     """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
 
     :param current: current value for the parameter, type varies
-    :param new: str - new value
+    :param new: new value
     :return: new value with same type as current, or the current value if there was an error casting
     """
     typ = type(current)
+    orig_new = new
+
     if typ == bool:
         try:
             return bool(int(new))
@@ -100,18 +102,18 @@ def cast(current: Any, new: str) -> Any:
             pass
         try:
             new = new.lower()
+            if (new == 'on') or (new[0] in ('y', 't')):
+                return True
+            if (new == 'off') or (new[0] in ('n', 'f')):
+                return False
         except AttributeError:
             pass
-        if (new == 'on') or (new[0] in ('y', 't')):
-            return True
-        if (new == 'off') or (new[0] in ('n', 'f')):
-            return False
     else:
         try:
             return typ(new)
         except (ValueError, TypeError):
             pass
-    print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
+    print("Problem setting parameter (now {}) to {}; incorrect type?".format(current, orig_new))
     return current
 
 

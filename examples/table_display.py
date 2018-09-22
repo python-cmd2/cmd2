@@ -151,8 +151,8 @@ class TableDisplay(cmd2.Cmd):
     def ptable(self, rows, columns, grid_args, row_stylist):
         """Format tabular data for pretty-printing as a fixed-width table and then display it using a pager.
 
-        :param rows: required argument - can be a list-of-lists (or another iterable of iterables), a two-dimensional
-                             NumPy array, or an Iterable of non-iterable objects
+        :param rows: can be a list-of-lists (or another iterable of iterables), a two-dimensional
+                     NumPy array, or an Iterable of non-iterable objects
         :param columns: column headers and formatting options per column
         :param grid_args: argparse arguments for formatting the grid
         :param row_stylist: function to determine how each row gets styled

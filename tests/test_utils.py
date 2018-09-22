@@ -76,3 +76,38 @@ def test_natural_sort():
     assert cu.natural_sort(my_list) == ['A', 'café', 'micro', 'unity', 'X0', 'x1', 'X2', 'X11', 'x22', 'µ']
     my_list = ['a3', 'a22', 'A2', 'A11', 'a1']
     assert cu.natural_sort(my_list) == ['a1', 'A2', 'a3', 'A11', 'a22']
+
+def test_is_quoted_short():
+    my_str = ''
+    assert not cu.is_quoted(my_str)
+    your_str = '"'
+    assert not cu.is_quoted(your_str)
+
+def test_is_quoted_yes():
+    my_str = '"This is a test"'
+    assert cu.is_quoted(my_str)
+    your_str = "'of the emergengy broadcast system'"
+    assert cu.is_quoted(your_str)
+
+def test_is_quoted_no():
+    my_str = '"This is a test'
+    assert not cu.is_quoted(my_str)
+    your_str = "of the emergengy broadcast system'"
+    assert not cu.is_quoted(your_str)
+    simple_str = "hello world"
+    assert not cu.is_quoted(simple_str)
+
+def test_quote_string_if_needed_yes():
+    my_str = "Hello World"
+    assert cu.quote_string_if_needed(my_str) == '"' + my_str + '"'
+    your_str = '"foo" bar'
+    assert cu.quote_string_if_needed(your_str) == "'" + your_str + "'"
+
+def test_quot_string_if_needed_no():
+    my_str = "HelloWorld"
+    assert cu.quote_string_if_needed(my_str) == my_str
+    your_str = "'Hello World'"
+    assert cu.quote_string_if_needed(your_str) == your_str
+
+
+
