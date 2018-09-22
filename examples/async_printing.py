@@ -16,11 +16,39 @@ ALERTS = ["Mail server is down",
           "Your next appointment has arrived",
           "Christmas bonuses are cancelled",
           "Mandatory overtime this weekend",
-          "Jimmy quit",
-          "Jody got married",
+          "Jimmy quit. Jody got married.",
           "Is there anyone on board who knows how to fly a plane?",
           "Gentlemen, you can't fight in here. This is the War Room!",
-          "Your mom goes to college!"]
+          "Your mom goes to college!",
+          "I'm an ugly stinking llama. Llama face!",
+          "That's some bad hat, Harry",
+          "I love the smell of napalm in the morning",
+          "You're gonna need a bigger boat",
+          "Snakes, why did it have to be snakes?",
+          "No, I am your father",
+          "I'm Batman",
+          "Goonies never say die",
+          "You're killing me Smalls",
+          "It's alive!! It's alive!!",
+          "Houston, we have a problem!",
+          "These go to 11",
+          "Soylent Green is people!!",
+          "You shall not pass!!",
+          "KHAAN!!",
+          "Get to tha choppa!",
+          "I've heard it both ways",
+          "Yo Adrian, I did it!!",
+          "Just what do you think you're doing, Dave?",
+          "Welcome... to the real world",
+          "See this? This... is my boomstick!",
+          "Shop smart. Shop S-MART!",
+          "It's not the years, it's the mileage",
+          "I am not an elephant! I am not an animal! I am a human being!",
+          "Great Scott!!",
+          "This is heavy",
+          "Do... or do not. There is no try.",
+          "Game over man, GAME OVER!",
+          "SHALL WE PLAY A GAME?"]
 
 
 def get_alerts() -> List[str]:
@@ -29,16 +57,12 @@ def get_alerts() -> List[str]:
     :return: the list of alerts
     """
     rand_num = random.randint(1, 20)
-    if rand_num > 3:
+    if rand_num > 2:
         return []
 
     alerts = []
     for i in range(0, rand_num):
-        cur_alert = random.choice(ALERTS)
-        if cur_alert in alerts:
-            i -= 1
-        else:
-            alerts.append(cur_alert)
+        alerts.append(random.choice(ALERTS))
 
     return alerts
 
@@ -92,9 +116,9 @@ class AlerterApp(cmd2.Cmd):
 
     def _preloop_hook(self) -> None:
         """ Start the alerter thread """
-
-        # This function runs after cmdloop() locks _terminal_lock, which will be locked until the prompt appears.
-        # Therefore it is safe to start our thread since there is no risk of it alerting before the prompt is displayed.
+        # This runs after cmdloop() acquires self._terminal_lock, which will be locked until the prompt appears.
+        # Therefore this is the best place to start the alerter thread since there is no risk of it alerting
+        # before the prompt is displayed.
         self._stop_thread = False
 
         self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
@@ -102,6 +126,9 @@ class AlerterApp(cmd2.Cmd):
 
     def _postloop_hook(self) -> None:
         """ Stops the alerter thread """
+
+        # After this function returns, cmdloop() releases self._terminal_lock which could make the alerter
+        # thread think the prompt is on screen. Therefore this is the best place to stop the alerter thread.
         self._stop_thread = True
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
