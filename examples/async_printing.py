@@ -84,7 +84,7 @@ class AlerterApp(cmd2.Cmd):
 
         # The thread that will asynchronously alert the user of events
         self._stop_thread = False
-        self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
+        self._alerter_thread = threading.Thread()
 
         # Create some hooks to handle the starting and stopping of our thread
         self.register_preloop_hook(self._preloop_hook)
@@ -96,6 +96,8 @@ class AlerterApp(cmd2.Cmd):
         # This function runs after cmdloop() locks _terminal_lock, which will be locked until the prompt appears.
         # Therefore it is safe to start our thread since there is no risk of it alerting before the prompt is displayed.
         self._stop_thread = False
+
+        self._alerter_thread = threading.Thread(name='alerter', target=self._alerter_thread_func)
         self._alerter_thread.start()
 
     def _postloop_hook(self) -> None:
