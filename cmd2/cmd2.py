@@ -3221,7 +3221,7 @@ Script should contain one command per line, just like command would be typed in 
 
         return terminal_str
 
-    def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:
+    def _async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:
         """
         Used to display an important message to the user while they are at the prompt in between commands.
         To the user it appears as if an alert message is printed above the prompt and their current input
@@ -3237,24 +3237,25 @@ Script should contain one command per line, just like command would be typed in 
         if not (vt100_support and self.use_rawinput):
             return
 
-        # Clear the prompt and input lines and replace with the alert
+        # Generate a string to clear the prompt and input lines and replace with the alert
         terminal_str = self._clear_input_lines_str()
         terminal_str += alert_msg + '\n'
 
+        # Set the new prompt now that _clear_input_lines_str is done using the old prompt
+        if new_prompt is not None:
+            self.prompt = new_prompt
+            rl_set_prompt(self.prompt)
+
+        # Print terminal_str to erase the lines
         if rl_type == RlType.GNU:
             sys.stderr.write(terminal_str)
         elif rl_type == RlType.PYREADLINE:
             readline.rl.mode.console.write(terminal_str)
 
-        # Set the new prompt
-        if new_prompt is not None:
-            self.prompt = new_prompt
-            rl_set_prompt(self.prompt)
-
         # Redraw the prompt and input lines
         rl_force_redisplay()
 
-    def async_update_prompt(self, new_prompt: str) -> None:
+    def _async_update_prompt(self, new_prompt: str) -> None:
         """
         Updates the prompt while the user is still typing at it. This is good for alerting the user to system
         changes dynamically in between commands. For instance you could alter the color of the prompt to indicate
@@ -3270,16 +3271,18 @@ Script should contain one command per line, just like command would be typed in 
         if not (vt100_support and self.use_rawinput):
             return
 
-        # Clear the prompt and input lines
+        # Generate a string to clear the prompt and input lines
         terminal_str = self._clear_input_lines_str()
+
+        # Set the new prompt now that _clear_input_lines_str is done using the old prompt
+        self.prompt = new_prompt
+        rl_set_prompt(self.prompt)
+
+        # Print terminal_str to erase the lines
         if rl_type == RlType.GNU:
             sys.stderr.write(terminal_str)
         elif rl_type == RlType.PYREADLINE:
             readline.rl.mode.console.write(terminal_str)
-
-        # Set the new prompt
-        self.prompt = new_prompt
-        rl_set_prompt(self.prompt)
 
         # Redraw the prompt and input lines
         rl_force_redisplay()

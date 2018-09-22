@@ -8,6 +8,7 @@ import time
 from typing import List
 
 import cmd2
+from colorama import Fore
 
 ALERTS = ["Mail server is down",
           "Blockage detected in sector 4",
@@ -23,8 +24,10 @@ ALERTS = ["Mail server is down",
 
 
 def get_alerts() -> List[str]:
-    """ Randomly generates alerts for testing purposes """
-
+    """
+    Randomly reports alerts
+    :return: the list of alerts
+    """
     rand_num = random.randint(1, 20)
     if rand_num > 3:
         return []
@@ -40,7 +43,7 @@ def get_alerts() -> List[str]:
     return alerts
 
 
-def get_alert_str() -> str:
+def generate_alert_str() -> str:
     """
     Combines alerts into one string that can be printed to the terminal
     :return: the alert string
@@ -72,7 +75,12 @@ class AlerterApp(cmd2.Cmd):
 
         super().__init__(*args, **kwargs)
 
-        self.prompt = "(APR)> "
+        self._orig_prompt = "(APR)> "
+        self.prompt = self._orig_prompt
+
+        self.intro = "\nWatch as this application prints alerts and updates the prompt.\n"
+        self.intro += "This will only happen when the prompt is present. Notice how it doesn't\n"
+        self.intro += "interfere with your typing.\n"
 
         # The thread that will asynchronously alert the user of events
         self._stop_thread = False
@@ -96,6 +104,28 @@ class AlerterApp(cmd2.Cmd):
         if self._alerter_thread.is_alive():
             self._alerter_thread.join()
 
+    def _generate_new_prompt(self) -> str:
+        """
+        Randomly generates a new prompt
+        :return: the new prompt
+        """
+        rand_num = random.randint(1, 20)
+
+        status_color = Fore.RESET
+
+        if rand_num == 1:
+            status_color = Fore.LIGHTRED_EX
+        elif rand_num == 2:
+            status_color = Fore.LIGHTYELLOW_EX
+        elif rand_num == 3:
+            status_color = Fore.CYAN
+        elif rand_num == 4:
+            status_color = Fore.LIGHTGREEN_EX
+        elif rand_num == 5:
+            status_color = Fore.LIGHTBLUE_EX
+
+        return status_color + self._orig_prompt + Fore.RESET
+
     def _alerter_thread_func(self) -> None:
         """ Prints alerts and updates the prompt any time the prompt is showing """
 
@@ -104,11 +134,16 @@ class AlerterApp(cmd2.Cmd):
             # To keep the app responsive, do not block on this call
             if self._terminal_lock.acquire(blocking=False):
 
-                # We have the terminal lock. See if any alerts need to be printed.
-                alert_str = get_alert_str()
+                # Get any alerts that need to be printed
+                alert_str = generate_alert_str()
+
+                # Generate a new prompt
+                new_prompt = self._generate_new_prompt()
 
                 if alert_str:
-                    self.async_alert(alert_str)
+                    self._async_alert(alert_str, new_prompt)
+                elif new_prompt != self.prompt:
+                    self._async_update_prompt(new_prompt)
 
                 # Don't forget to release the lock
                 self._terminal_lock.release()
@@ -118,4 +153,5 @@ class AlerterApp(cmd2.Cmd):
 
 if __name__ == '__main__':
     app = AlerterApp()
+    app.set_window_title("Asynchronous Printer Test")
     app.cmdloop()
