@@ -2085,6 +2085,7 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
+                    # Wrap in try since _terminal_lock may not be locked when this function is called from unit tests
                     try:
                         # A prompt is about to be drawn. Allow asynchronous changes to the terminal.
                         self._terminal_lock.release()
@@ -3242,27 +3243,36 @@ Script should contain one command per line, just like command would be typed in 
         :param alert_msg: the message to display to the user
         :param new_prompt: if you also want to change the prompt that is displayed, then include it here
                            see async_update_prompt() docstring for guidance on updating a prompt
+        :raises RuntimeError if called while another thread holds _terminal_lock
         """
         if not (vt100_support and self.use_rawinput):
             return
 
-        # Generate a string to clear the prompt and input lines and replace with the alert
-        terminal_str = self._clear_input_lines_str()
-        terminal_str += alert_msg + '\n'
+        # Sanity check that can't fail if self._terminal_lock was acquired before calling this function
+        if self._terminal_lock.acquire(blocking=False):
 
-        # Set the new prompt now that _clear_input_lines_str is done using the old prompt
-        if new_prompt is not None:
-            self.prompt = new_prompt
-            rl_set_prompt(self.prompt)
+            # Generate a string to clear the prompt and input lines and replace with the alert
+            terminal_str = self._clear_input_lines_str()
+            terminal_str += alert_msg + '\n'
 
-        # Print terminal_str to erase the lines
-        if rl_type == RlType.GNU:
-            sys.stderr.write(terminal_str)
-        elif rl_type == RlType.PYREADLINE:
-            readline.rl.mode.console.write(terminal_str)
+            # Set the new prompt now that _clear_input_lines_str is done using the old prompt
+            if new_prompt is not None:
+                self.prompt = new_prompt
+                rl_set_prompt(self.prompt)
 
-        # Redraw the prompt and input lines
-        rl_force_redisplay()
+            # Print terminal_str to erase the lines
+            if rl_type == RlType.GNU:
+                sys.stderr.write(terminal_str)
+            elif rl_type == RlType.PYREADLINE:
+                readline.rl.mode.console.write(terminal_str)
+
+            # Redraw the prompt and input lines
+            rl_force_redisplay()
+
+            self._terminal_lock.release()
+
+        else:
+            raise RuntimeError("another thread holds _terminal_lock")
 
     def _async_update_prompt(self, new_prompt: str) -> None:
         """
@@ -3276,25 +3286,34 @@ Script should contain one command per line, just like command would be typed in 
                    first, which ensures a prompt is onscreen
 
         :param new_prompt: what to change the prompt to
+        :raises RuntimeError if called while another thread holds _terminal_lock
         """
         if not (vt100_support and self.use_rawinput):
             return
 
-        # Generate a string to clear the prompt and input lines
-        terminal_str = self._clear_input_lines_str()
+        # Sanity check that can't fail if self._terminal_lock was acquired before calling this function
+        if self._terminal_lock.acquire(blocking=False):
 
-        # Set the new prompt now that _clear_input_lines_str is done using the old prompt
-        self.prompt = new_prompt
-        rl_set_prompt(self.prompt)
+            # Generate a string to clear the prompt and input lines
+            terminal_str = self._clear_input_lines_str()
 
-        # Print terminal_str to erase the lines
-        if rl_type == RlType.GNU:
-            sys.stderr.write(terminal_str)
-        elif rl_type == RlType.PYREADLINE:
-            readline.rl.mode.console.write(terminal_str)
+            # Set the new prompt now that _clear_input_lines_str is done using the old prompt
+            self.prompt = new_prompt
+            rl_set_prompt(self.prompt)
 
-        # Redraw the prompt and input lines
-        rl_force_redisplay()
+            # Print terminal_str to erase the lines
+            if rl_type == RlType.GNU:
+                sys.stderr.write(terminal_str)
+            elif rl_type == RlType.PYREADLINE:
+                readline.rl.mode.console.write(terminal_str)
+
+            # Redraw the prompt and input lines
+            rl_force_redisplay()
+
+            self._terminal_lock.release()
+
+        else:
+            raise RuntimeError("another thread holds _terminal_lock")
 
     @staticmethod
     def set_window_title(title: str) -> None:
