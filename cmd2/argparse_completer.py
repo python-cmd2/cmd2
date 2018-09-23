@@ -510,6 +510,18 @@ class AutoCompleter(object):
                             return self.basic_complete(text, line, begidx, endidx, completers.keys())
         return []
 
+    def format_help(self, tokens: List[str]) -> str:
+        """Supports the completion of sub-commands for commands through the cmd2 help command."""
+        for idx, token in enumerate(tokens):
+            if idx >= self._token_start_index:
+                if self._positional_completers:
+                    # For now argparse only allows 1 sub-command group per level
+                    # so this will only loop once.
+                    for completers in self._positional_completers.values():
+                        if token in completers:
+                            return completers[token].format_help(tokens)
+        return self._parser.format_help()
+
     @staticmethod
     def _process_action_nargs(action: argparse.Action, arg_state: _ArgumentState) -> None:
         if isinstance(action, _RangeAction):
