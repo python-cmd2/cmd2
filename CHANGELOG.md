@@ -9,6 +9,15 @@
     for formatting help/description text
     * Aliases are now sorted alphabetically
     * The **set** command now tab-completes settable parameter names
+    * Cross-platform colored output support 
+        * ``colorama`` gets initialized properly in ``Cmd.__init()``
+        * The ``Cmd.colors`` setting is no longer platform dependent and now has three values:
+            * Terminal (default) - output methods do not strip any ANSI escape sequences when output is a terminal, but 
+            if the output is a pipe or a file the escape sequences are stripped
+            * Always - output methods **never** strip ANSI escape sequences, regardless of the output destination
+            * Never - output methods strip all ANSI escape sequences
+* Deprecations
+    * Deprecated the builtin ``cmd2`` suport for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
     
 ## 0.9.4 (August 21, 2018)
 * Bug Fixes
