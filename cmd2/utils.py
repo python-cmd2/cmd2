@@ -246,3 +246,57 @@ def natural_sort(list_to_sort: List[str]) -> List[str]:
     :return: the list sorted naturally
     """
     return sorted(list_to_sort, key=natural_keys)
+
+
+class StdSim(object):
+    """Class to simulate behavior of sys.stdout or sys.stderr.
+
+    Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
+    """
+    class ByteBuf(object):
+        """Inner class which stores an actual bytes buffer and does the actual output if echo is enabled."""
+        def __init__(self, inner_stream, echo: bool = False) -> None:
+            self.byte_buf = b''
+            self.inner_stream = inner_stream
+            self.echo = echo
+
+        def write(self, b: bytes) -> None:
+            """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
+            self.byte_buf += b
+            if self.echo:
+                self.inner_stream.buffer.write(b)
+
+    def __init__(self, inner_stream, echo: bool = False) -> None:
+        self.buffer = self.ByteBuf(inner_stream, echo)
+        self.inner_stream = inner_stream
+
+    def write(self, s: str) -> None:
+        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream."""
+        b = s.encode()
+        self.buffer.write(b)
+
+    def getvalue(self) -> str:
+        """Get the internal contents as a str.
+
+        :return string from the internal contents
+        """
+        return self.buffer.byte_buf.decode()
+
+    def read(self) -> str:
+        """Read from the internal contents as a str and then clear them out.
+
+        :return: string from the internal contents
+        """
+        result = self.getvalue()
+        self.clear()
+        return result
+
+    def clear(self) -> None:
+        """Clear the internal contents."""
+        self.buffer.byte_buf = b''
+
+    def __getattr__(self, item: str):
+        if item in self.__dict__:
+            return self.__dict__[item]
+        else:
+            return getattr(self.inner_stream, item)

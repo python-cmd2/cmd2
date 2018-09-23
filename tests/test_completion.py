@@ -15,7 +15,7 @@ import sys
 import pytest
 import cmd2
 from cmd2 import utils
-from .conftest import complete_tester, StdOut
+from .conftest import complete_tester
 from examples.subcommands import SubcommandsExample
 
 # List of strings used with completion functions
@@ -113,13 +113,6 @@ def test_complete_bogus_command(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is None
 
-
-def test_cmd2_command_completion_single(cmd2_app):
-    text = 'hel'
-    line = text
-    endidx = len(line)
-    begidx = endidx - len(text)
-    assert cmd2_app.completenames(text, line, begidx, endidx) == ['help']
 
 def test_cmd2_command_completion_multiple(cmd2_app):
     text = 'h'
@@ -694,8 +687,7 @@ def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
 @pytest.fixture
 def sc_app():
     c = SubcommandsExample()
-    c.stdout = StdOut()
-
+    c.stdout = utils.StdSim(c.stdout)
     return c
 
 def test_cmd2_subcommand_completion_single_end(sc_app):
@@ -843,7 +835,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help('base')
+            self.do_help(['base'])
 
 
 @pytest.fixture

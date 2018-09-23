@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Unit/functional testing for argparse completer in cmd2
 
@@ -8,24 +9,25 @@ import os
 import pytest
 from cmd2.cmd2 import Cmd, with_argparser
 from cmd2 import argparse_completer
-from .conftest import run_cmd, StdOut
-from cmd2.utils import namedtuple_with_defaults
+from .conftest import run_cmd
+from cmd2.utils import namedtuple_with_defaults, StdSim
+
 
 class PyscriptExample(Cmd):
     ratings_types = ['G', 'PG', 'PG-13', 'R', 'NC-17']
 
     def _do_media_movies(self, args) -> None:
         if not args.command:
-            self.do_help('media movies')
+            self.do_help(['media movies'])
         else:
             print('media movies ' + str(args.__dict__))
 
     def _do_media_shows(self, args) -> None:
         if not args.command:
-            self.do_help('media shows')
+            self.do_help(['media shows'])
 
         if not args.command:
-            self.do_help('media shows')
+            self.do_help(['media shows'])
         else:
             print('media shows ' + str(args.__dict__))
 
@@ -70,7 +72,7 @@ class PyscriptExample(Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help('media')
+            self.do_help(['media'])
 
     foo_parser = argparse_completer.ACArgumentParser(prog='foo')
     foo_parser.add_argument('-c', dest='counter', action='count')
@@ -114,8 +116,7 @@ class PyscriptExample(Cmd):
 @pytest.fixture
 def ps_app():
     c = PyscriptExample()
-    c.stdout = StdOut()
-
+    c.stdout = StdSim(c.stdout)
     return c
 
 
@@ -131,8 +132,7 @@ class PyscriptCustomNameExample(Cmd):
 @pytest.fixture
 def ps_echo():
     c = PyscriptCustomNameExample()
-    c.stdout = StdOut()
-
+    c.stdout = StdSim(c.stdout)
     return c
 
 
