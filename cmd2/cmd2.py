@@ -2329,13 +2329,13 @@ class Cmd(cmd.Cmd):
 
     # alias -> list
     alias_list_help = "list aliases"
-    alias_list_description = "List specified aliases in a reusable form which can be saved to\n"
+    alias_list_description = "List specified aliases in a reusable form that can be saved to\n"
     alias_list_description += "a startup_script to preserve aliases across sessions\n"
     alias_list_description += "\n"
     alias_list_description += "Without arguments, all aliases will be listed"
 
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
-                                                    description=alias_list_help)
+                                                    description=alias_list_description)
     setattr(alias_list_parser.add_argument('name', type=str, nargs="*", help='alias to list'),
             ACTION_ARG_CHOICES, get_aliases)
     alias_list_parser.set_defaults(func=alias_list)
