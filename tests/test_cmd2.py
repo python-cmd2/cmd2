@@ -1094,18 +1094,19 @@ def test_ansi_prompt_not_esacped(base_app):
 
 
 def test_ansi_prompt_escaped():
+    from colorama import Fore
     app = cmd2.Cmd()
-    color = 'cyan'
+    color = Fore.CYAN
     prompt = 'InColor'
-    color_prompt = app.colorize(prompt, color)
+    color_prompt = color + prompt + Fore.RESET
 
     readline_hack_start = "\x01"
     readline_hack_end = "\x02"
 
     readline_safe_prompt = app._surround_ansi_escapes(color_prompt)
     assert prompt != color_prompt
-    assert readline_safe_prompt.startswith(readline_hack_start + app._colorcodes[color][True] + readline_hack_end)
-    assert readline_safe_prompt.endswith(readline_hack_start + app._colorcodes[color][False] + readline_hack_end)
+    assert readline_safe_prompt.startswith(readline_hack_start + color + readline_hack_end)
+    assert readline_safe_prompt.endswith(readline_hack_start + Fore.RESET + readline_hack_end)
 
 
 class HelpApp(cmd2.Cmd):

@@ -561,7 +561,7 @@ class Cmd(cmd.Cmd):
             msg = utils.strip_ansi(msg)
         fileobj.write(msg)
 
-    def poutput(self, msg: Any, end: str='\n') -> None:
+    def poutput(self, msg: Any, end: str='\n', color: str='') -> None:
         """Smarter self.stdout.write(); color aware and adds newline of not present.
 
         Also handles BrokenPipeError exceptions for when a commands's output has
@@ -569,14 +569,17 @@ class Cmd(cmd.Cmd):
         cmd2 command is finished executing.
 
         :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
-        :param end: string appended after the end of the message if not already present, default a newline
+        :param end: (optional) string appended after the end of the message if not already present, default a newline
+        :param color: (optional) color escape to output this message with
         """
         if msg is not None and msg != '':
             try:
                 msg_str = '{}'.format(msg)
-                self.decolorized_write(self.stdout, msg_str)
                 if not msg_str.endswith(end):
-                    self.decolorized_write(self.stdout, end)
+                    msg_str += end
+                if color:
+                    msg_str = color + msg_str + Fore.RESET
+                self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another
                 # process and that process closes before the command is
@@ -586,12 +589,14 @@ class Cmd(cmd.Cmd):
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, err: Union[str, Exception], traceback_war: bool=True) -> None:
+    def perror(self, err: Union[str, Exception], traceback_war: bool=True, err_color: str=Fore.LIGHTRED_EX,
+               war_color: str=Fore.LIGHTYELLOW_EX) -> None:
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
 
         :param err: an Exception or error message to print out
         :param traceback_war: (optional) if True, print a message to let user know they can enable debug
-        :return:
+        :param err_color: (optional) color escape to output error with
+        :param war_color: (optional) color escape to output warning with
         """
         if self.debug:
             import traceback
@@ -601,12 +606,12 @@ class Cmd(cmd.Cmd):
             err_msg = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(type(err).__name__, err)
         else:
             err_msg = "ERROR: {}\n".format(err)
-        err_msg = Fore.RED + err_msg + Fore.RESET
+        err_msg = err_color + err_msg + Fore.RESET
         self.decolorized_write(sys.stderr, err_msg)
 
         if traceback_war:
             war = "To enable full traceback, run the following command:  'set debug true'\n"
-            war = Fore.YELLOW + war + Fore.RESET
+            war = war_color + war + Fore.RESET
             self.decolorized_write(sys.stderr, war)
 
     def pfeedback(self, msg: str) -> None:
@@ -679,7 +684,7 @@ class Cmd(cmd.Cmd):
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.
+                # broken_pipe_warning attribute to the message you want printed.`
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 

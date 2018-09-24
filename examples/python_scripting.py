@@ -17,6 +17,8 @@ This application and the "scripts/conditional.py" script serve as an example for
 import argparse
 import os
 
+from colorama import Fore
+
 import cmd2
 
 
@@ -33,7 +35,7 @@ class CmdLineApp(cmd2.Cmd):
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.prompt = self.colorize('{!r} $ '.format(self.cwd), 'cyan')
+        self.prompt = Fore.CYAN + '{!r} $ '.format(self.cwd) + Fore.RESET
 
     def postcmd(self, stop: bool, line: str) -> bool:
         """Hook method executed just after a command dispatch is finished.
