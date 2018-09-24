@@ -14,8 +14,7 @@ applications.  It provides a simple API which is an extension of Python's built-
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary
 when using cmd.
 
-Click on image below to watch a short video demonstrating the capabilities of cmd2.
-
+Click on image below to watch a short video demonstrating the capabilities of cmd2:
 [![Screenshot](cmd2.png)](https://youtu.be/DDU_JH6cFsA)
 
 Main Features
