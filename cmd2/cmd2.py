@@ -2228,15 +2228,13 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        # Validate the command the alias is being resolved to
-        valid, errmsg = self.statement_parser.is_valid_command(args.command)
-        if not valid:
-            errmsg = "Command names {}".format(errmsg)
+        if not args.command:
+            errmsg = "An alias cannot resolve to an empty string"
             self.perror(errmsg, traceback_war=False)
             return
 
         # Build the alias command string
-        command = args.command + ' ' + ' '.join(utils.quote_string_if_needed(args.command_arg))
+        command = args.command + ' ' + ' '.join(utils.quote_string_if_needed(args.command_args))
 
         # Set the alias
         self.aliases[args.name] = command
@@ -2248,8 +2246,7 @@ class Cmd(cmd.Cmd):
             self.aliases.clear()
             self.poutput("All aliases deleted")
         elif not args.name:
-            args.help = True
-            self.onecmd('alias delete -h')
+            self.onecmd('help alias delete')
         else:
             # Get rid of duplicates
             aliases_to_delete = utils.remove_duplicates(args.name)
@@ -2307,13 +2304,13 @@ class Cmd(cmd.Cmd):
 
     alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
                                                       description=alias_create_description,
-                                                      epilog=alias_create_epilog, add_help=False)
+                                                      epilog=alias_create_epilog)
     setattr(alias_create_parser.add_argument('name', type=str, help='Name of this alias'),
             ACTION_ARG_CHOICES, get_aliases_and_commands)
     setattr(alias_create_parser.add_argument('command', type=str, help='command or alias the alias resolves to'),
             ACTION_ARG_CHOICES, get_aliases_and_commands)
-    setattr(alias_create_parser.add_argument('command_arg', type=str, nargs="*",
-                                             help='argument being passed to command'),
+    setattr(alias_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
+                                             help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     alias_create_parser.set_defaults(func=alias_create)
 
