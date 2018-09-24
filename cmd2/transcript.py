@@ -44,7 +44,7 @@ class Cmd2TestCase(unittest.TestCase):
 
             # Trap stdout
             self._orig_stdout = self.cmdapp.stdout
-            self.cmdapp.stdout = OutputTrap()
+            self.cmdapp.stdout = utils.StdSim(self.cmdapp.stdout)
 
     def runTest(self):  # was testall
         if self.cmdapp:
@@ -203,24 +203,3 @@ class Cmd2TestCase(unittest.TestCase):
         if self.cmdapp:
             # Restore stdout
             self.cmdapp.stdout = self._orig_stdout
-
-class OutputTrap(object):
-    """Instantiate an OutputTrap to divert/capture ALL stdout output.
-    For use in transcript testing.
-    """
-
-    def __init__(self):
-        self.contents = ''
-
-    def write(self, txt: str):
-        """Add text to the internal contents."""
-        self.contents += txt
-
-    def read(self) -> str:
-        """Read from the internal contents and then clear them out.
-
-        :return: str - text from the internal contents
-        """
-        result = self.contents
-        self.contents = ''
-        return result

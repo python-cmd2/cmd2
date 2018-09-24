@@ -5,18 +5,14 @@ Test plugin infrastructure and hooks.
 Copyright 2018 Jared Crapo <jared@kotfu.net>
 Released under MIT license, see LICENSE file
 """
-
-from typing import Tuple
-
 import pytest
 
 import cmd2
 from cmd2 import plugin
 
-from .conftest import StdOut
 
 class Plugin:
-    "A mixin class for testing hook registration and calling"
+    """A mixin class for testing hook registration and calling"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.reset_counters()
@@ -35,19 +31,19 @@ class Plugin:
     #
     ###
     def prepost_hook_one(self) -> None:
-        "Method used for preloop or postloop hooks"
+        """Method used for preloop or postloop hooks"""
         self.poutput("one")
 
     def prepost_hook_two(self) -> None:
-        "Another method used for preloop or postloop hooks"
+        """Another method used for preloop or postloop hooks"""
         self.poutput("two")
 
     def prepost_hook_too_many_parameters(self, param) -> None:
-        "A preloop or postloop hook with too many parameters"
+        """A preloop or postloop hook with too many parameters"""
         pass
 
     def prepost_hook_with_wrong_return_annotation(self) -> bool:
-        "A preloop or postloop hook with incorrect return type"
+        """A preloop or postloop hook with incorrect return type"""
         pass
 
     ###
@@ -56,7 +52,7 @@ class Plugin:
     #
     ###
     def preparse(self, line: str) -> str:
-        "Preparsing hook"
+        """Preparsing hook"""
         self.called_preparse += 1
         return line
 
@@ -66,44 +62,44 @@ class Plugin:
     #
     ###
     def postparse_hook(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-        "A postparsing hook"
+        """A postparsing hook"""
         self.called_postparsing += 1
         return data
 
     def postparse_hook_stop(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-        "A postparsing hook with requests application exit"
+        """A postparsing hook with requests application exit"""
         self.called_postparsing += 1
         data.stop = True
         return data
 
     def postparse_hook_emptystatement(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-        "A postparsing hook with raises an EmptyStatement exception"
+        """A postparsing hook with raises an EmptyStatement exception"""
         self.called_postparsing += 1
         raise cmd2.EmptyStatement
 
     def postparse_hook_exception(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
-        "A postparsing hook which raises an exception"
+        """A postparsing hook which raises an exception"""
         self.called_postparsing += 1
         raise ValueError
 
     def postparse_hook_too_many_parameters(self, data1, data2) -> cmd2.plugin.PostparsingData:
-        "A postparsing hook with too many parameters"
+        """A postparsing hook with too many parameters"""
         pass
 
     def postparse_hook_undeclared_parameter_annotation(self, data) -> cmd2.plugin.PostparsingData:
-        "A postparsing hook with an undeclared parameter type"
+        """A postparsing hook with an undeclared parameter type"""
         pass
 
     def postparse_hook_wrong_parameter_annotation(self, data: str) -> cmd2.plugin.PostparsingData:
-        "A postparsing hook with the wrong parameter type"
+        """A postparsing hook with the wrong parameter type"""
         pass
 
     def postparse_hook_undeclared_return_annotation(self, data: cmd2.plugin.PostparsingData):
-        "A postparsing hook with an undeclared return type"
+        """A postparsing hook with an undeclared return type"""
         pass
 
     def postparse_hook_wrong_return_annotation(self, data: cmd2.plugin.PostparsingData) -> str:
-        "A postparsing hook with the wrong return type"
+        """A postparsing hook with the wrong return type"""
         pass
 
     ###
@@ -112,43 +108,43 @@ class Plugin:
     #
     ###
     def precmd(self, statement: cmd2.Statement) -> cmd2.Statement:
-        "Override cmd.Cmd method"
+        """Override cmd.Cmd method"""
         self.called_precmd += 1
         return statement
 
     def precmd_hook(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
-        "A precommand hook"
+        """A precommand hook"""
         self.called_precmd += 1
         return data
 
     def precmd_hook_emptystatement(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
-        "A precommand hook which raises an EmptyStatement exception"
+        """A precommand hook which raises an EmptyStatement exception"""
         self.called_precmd += 1
         raise cmd2.EmptyStatement
 
     def precmd_hook_exception(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
-        "A precommand hook which raises an exception"
+        """A precommand hook which raises an exception"""
         self.called_precmd += 1
         raise ValueError
 
     def precmd_hook_not_enough_parameters(self) -> plugin.PrecommandData:
-        "A precommand hook with no parameters"
+        """A precommand hook with no parameters"""
         pass
 
     def precmd_hook_too_many_parameters(self, one: plugin.PrecommandData, two: str) -> plugin.PrecommandData:
-        "A precommand hook with too many parameters"
+        """A precommand hook with too many parameters"""
         return one
 
     def precmd_hook_no_parameter_annotation(self, data) -> plugin.PrecommandData:
-        "A precommand hook with no type annotation on the parameter"
+        """A precommand hook with no type annotation on the parameter"""
         return data
 
     def precmd_hook_wrong_parameter_annotation(self, data: str) -> plugin.PrecommandData:
-        "A precommand hook with the incorrect type annotation on the parameter"
+        """A precommand hook with the incorrect type annotation on the parameter"""
         return data
 
     def precmd_hook_no_return_annotation(self, data: plugin.PrecommandData):
-        "A precommand hook with no type annotation on the return value"
+        """A precommand hook with no type annotation on the return value"""
         return data
 
     def precmd_hook_wrong_return_annotation(self, data: plugin.PrecommandData) -> cmd2.Statement:
@@ -160,38 +156,38 @@ class Plugin:
     #
     ###
     def postcmd(self, stop: bool, statement: cmd2.Statement) -> bool:
-        "Override cmd.Cmd method"
+        """Override cmd.Cmd method"""
         self.called_postcmd += 1
         return stop
 
     def postcmd_hook(self, data: plugin.PostcommandData) -> plugin.PostcommandData:
-        "A postcommand hook"
+        """A postcommand hook"""
         self.called_postcmd += 1
         return data
 
     def postcmd_hook_exception(self, data: plugin.PostcommandData) -> plugin.PostcommandData:
-        "A postcommand hook with raises an exception"
+        """A postcommand hook with raises an exception"""
         self.called_postcmd += 1
         raise ZeroDivisionError
 
     def postcmd_hook_not_enough_parameters(self) -> plugin.PostcommandData:
-        "A precommand hook with no parameters"
+        """A precommand hook with no parameters"""
         pass
 
     def postcmd_hook_too_many_parameters(self, one: plugin.PostcommandData, two: str) -> plugin.PostcommandData:
-        "A precommand hook with too many parameters"
+        """A precommand hook with too many parameters"""
         return one
 
     def postcmd_hook_no_parameter_annotation(self, data) -> plugin.PostcommandData:
-        "A precommand hook with no type annotation on the parameter"
+        """A precommand hook with no type annotation on the parameter"""
         return data
 
     def postcmd_hook_wrong_parameter_annotation(self, data: str) -> plugin.PostcommandData:
-        "A precommand hook with the incorrect type annotation on the parameter"
+        """A precommand hook with the incorrect type annotation on the parameter"""
         return data
 
     def postcmd_hook_no_return_annotation(self, data: plugin.PostcommandData):
-        "A precommand hook with no type annotation on the return value"
+        """A precommand hook with no type annotation on the return value"""
         return data
 
     def postcmd_hook_wrong_return_annotation(self, data: plugin.PostcommandData) -> cmd2.Statement:
@@ -208,13 +204,13 @@ class Plugin:
         return data
 
     def cmdfinalization_hook_stop(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
-        "A postparsing hook which requests application exit"
+        """A postparsing hook which requests application exit"""
         self.called_cmdfinalization += 1
         data.stop = True
         return data
 
     def cmdfinalization_hook_exception(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
-        "A postparsing hook which raises an exception"
+        """A postparsing hook which raises an exception"""
         self.called_cmdfinalization += 1
         raise ValueError
 
@@ -244,7 +240,7 @@ class Plugin:
 
 
 class PluggedApp(Plugin, cmd2.Cmd):
-    "A sample app with a plugin mixed in"
+    """A sample app with a plugin mixed in"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
