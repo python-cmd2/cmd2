@@ -262,6 +262,8 @@ class StdSim(object):
 
         def write(self, b: bytes) -> None:
             """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
+            if not isinstance(b, bytes):
+                raise TypeError('a bytes-like object is required, not {}'.format(type(b)))
             self.byte_buf += b
             if self.echo:
                 self.inner_stream.buffer.write(b)
@@ -272,6 +274,8 @@ class StdSim(object):
 
     def write(self, s: str) -> None:
         """Add str to internal bytes buffer and if echo is True, echo contents to inner stream."""
+        if not isinstance(s, str):
+            raise TypeError('write() argument must be str, not {}'.format(type(s)))
         b = s.encode()
         self.buffer.write(b)
 
