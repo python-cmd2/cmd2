@@ -12,14 +12,14 @@ import functools
 import sys
 from typing import List, Callable
 
+from .argparse_completer import _RangeAction
+from .utils import namedtuple_with_defaults, StdSim
+
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
     from contextlib2 import redirect_stdout, redirect_stderr
 else:
     from contextlib import redirect_stdout, redirect_stderr
-
-from .argparse_completer import _RangeAction
-from .utils import namedtuple_with_defaults
 
 
 class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr', 'data'])):
@@ -38,37 +38,12 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
         return not self.stderr and self.data is not None
 
 
-class CopyStream(object):
-    """Copies all data written to a stream"""
-    def __init__(self, inner_stream, echo: bool = False) -> None:
-        self.buffer = ''
-        self.inner_stream = inner_stream
-        self.echo = echo
-
-    def write(self, s):
-        self.buffer += s
-        if self.echo:
-            self.inner_stream.write(s)
-
-    def read(self):
-        raise NotImplementedError
-
-    def clear(self):
-        self.buffer = ''
-
-    def __getattr__(self, item: str):
-        if item in self.__dict__:
-            return self.__dict__[item]
-        else:
-            return getattr(self.inner_stream, item)
-
-
 def _exec_cmd(cmd2_app, func: Callable, echo: bool):
     """Helper to encapsulate executing a command and capturing the results"""
-    copy_stdout = CopyStream(sys.stdout, echo)
-    copy_stderr = CopyStream(sys.stderr, echo)
+    copy_stdout = StdSim(sys.stdout, echo)
+    copy_stderr = StdSim(sys.stderr, echo)
 
-    copy_cmd_stdout = CopyStream(cmd2_app.stdout, echo)
+    copy_cmd_stdout = StdSim(cmd2_app.stdout, echo)
 
     cmd2_app._last_result = None
 
@@ -81,9 +56,9 @@ def _exec_cmd(cmd2_app, func: Callable, echo: bool):
         cmd2_app.stdout = copy_cmd_stdout.inner_stream
 
     # if stderr is empty, set it to None
-    stderr = copy_stderr.buffer if copy_stderr.buffer else None
+    stderr = copy_stderr.getvalue() if copy_stderr.getvalue() else None
 
-    outbuf = copy_cmd_stdout.buffer if copy_cmd_stdout.buffer else copy_stdout.buffer
+    outbuf = copy_cmd_stdout.getvalue() if copy_cmd_stdout.getvalue() else copy_stdout.getvalue()
     result = CommandResult(stdout=outbuf, stderr=stderr, data=cmd2_app._last_result)
     return result
 
