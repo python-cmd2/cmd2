@@ -2228,13 +2228,14 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        if not args.command:
+        stripped_command = args.command.strip()
+        if not stripped_command:
             errmsg = "An alias cannot resolve to an empty string"
             self.perror(errmsg, traceback_war=False)
             return
 
         # Build the alias command string
-        command = args.command + ' ' + ' '.join(utils.quote_string_if_needed(args.command_args))
+        command = stripped_command + ' ' + ' '.join(utils.quote_string_if_needed(args.command_args))
 
         # Set the alias
         self.aliases[args.name] = command
@@ -2290,8 +2291,8 @@ class Cmd(cmd.Cmd):
     alias_subparsers = alias_parser.add_subparsers()
 
     # alias -> create
-    alias_create_help = "define an alias"
-    alias_create_description = "Define an alias"
+    alias_create_help = "create or overwrite an alias"
+    alias_create_description = "Create or overwrite an alias"
 
     alias_create_epilog = "Notes:\n"
     alias_create_epilog += "    If you want to use redirection or pipes in the alias, then quote them to prevent\n"

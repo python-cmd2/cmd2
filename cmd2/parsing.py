@@ -264,7 +264,7 @@ class StatementParser:
         valid = False
 
         if not word:
-            return False, 'cannot be empty'
+            return False, 'cannot be an empty string'
 
         errmsg = 'cannot start with a shortcut: '
         errmsg += ', '.join(shortcut for (shortcut, expansion) in self.shortcuts)
