@@ -2459,9 +2459,12 @@ Usage:  Usage: unalias [-a] name [name ...]
                     doc_block = []
                     found_first = False
                     for doc_line in doc.splitlines():
-                        str(doc_line).strip()
-                        if len(doc_line.strip()) > 0:
-                            doc_block.append(doc_line.strip())
+                        stripped_line = doc_line.strip()
+                        if stripped_line.startswith(':'):
+                            # Stop since we've now hit the :param type lines
+                            break
+                        elif stripped_line:
+                            doc_block.append(stripped_line)
                             found_first = True
                         else:
                             if found_first:
