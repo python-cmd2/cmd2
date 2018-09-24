@@ -6,9 +6,9 @@ import argparse
 import pytest
 
 import cmd2
-from unittest import mock
+from cmd2.utils import StdSim
 
-from .conftest import run_cmd, StdOut
+from .conftest import run_cmd
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
@@ -115,7 +115,7 @@ class ArgparseApp(cmd2.Cmd):
 @pytest.fixture
 def argparse_app():
     app = ArgparseApp()
-    app.stdout = StdOut()
+    app.stdout = StdSim(app.stdout)
     return app
 
 
@@ -217,12 +217,12 @@ class SubcommandApp(cmd2.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help('base')
+            self.do_help(['base'])
 
 @pytest.fixture
 def subcommand_app():
     app = SubcommandApp()
-    app.stdout = StdOut()
+    app.stdout = StdSim(app.stdout)
     return app
 
 

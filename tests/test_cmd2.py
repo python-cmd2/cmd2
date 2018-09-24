@@ -25,7 +25,7 @@ import cmd2
 from cmd2 import clipboard
 from cmd2 import utils
 from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
-    HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, StdOut
+    HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
 
 def test_version(base_app):
@@ -930,7 +930,7 @@ def test_base_cmdloop_with_queue():
     app.use_rawinput = True
     intro = 'Hello World, this is an intro ...'
     app.cmdqueue.append('quit\n')
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
     testargs = ["prog"]
@@ -938,7 +938,7 @@ def test_base_cmdloop_with_queue():
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop with custom intro
         app.cmdloop(intro=intro)
-    out = app.stdout.buffer
+    out = app.stdout.getvalue()
     assert out == expected
 
 
@@ -947,7 +947,7 @@ def test_base_cmdloop_without_queue():
     app = cmd2.Cmd()
     app.use_rawinput = True
     app.intro = 'Hello World, this is an intro ...'
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
@@ -959,7 +959,7 @@ def test_base_cmdloop_without_queue():
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop
         app.cmdloop()
-    out = app.stdout.buffer
+    out = app.stdout.getvalue()
     assert out == expected
 
 
@@ -969,7 +969,7 @@ def test_cmdloop_without_rawinput():
     app.use_rawinput = False
     app.echo = False
     app.intro = 'Hello World, this is an intro ...'
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
@@ -981,7 +981,7 @@ def test_cmdloop_without_rawinput():
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop
         app.cmdloop()
-    out = app.stdout.buffer
+    out = app.stdout.getvalue()
     assert out == expected
 
 
@@ -996,7 +996,7 @@ class HookFailureApp(cmd2.Cmd):
 @pytest.fixture
 def hook_failure():
     app = HookFailureApp()
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
     return app
 
 def test_precmd_hook_success(base_app):
@@ -1020,7 +1020,7 @@ class SayApp(cmd2.Cmd):
 def say_app():
     app = SayApp()
     app.allow_cli_args = False
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
     return app
 
 def test_interrupt_quit(say_app):
@@ -1034,7 +1034,7 @@ def test_interrupt_quit(say_app):
     say_app.cmdloop()
 
     # And verify the expected output to stdout
-    out = say_app.stdout.buffer
+    out = say_app.stdout.getvalue()
     assert out == 'hello\n'
 
 def test_interrupt_noquit(say_app):
@@ -1048,7 +1048,7 @@ def test_interrupt_noquit(say_app):
     say_app.cmdloop()
 
     # And verify the expected output to stdout
-    out = say_app.stdout.buffer
+    out = say_app.stdout.getvalue()
     assert out == 'hello\n^C\ngoodbye\n'
 
 
@@ -1060,7 +1060,7 @@ class ShellApp(cmd2.Cmd):
 @pytest.fixture
 def shell_app():
     app = ShellApp()
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
     return app
 
 def test_default_to_shell_unknown(shell_app):
@@ -1142,7 +1142,7 @@ class HelpApp(cmd2.Cmd):
 @pytest.fixture
 def help_app():
     app = HelpApp()
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
     return app
 
 def test_custom_command_help(help_app):
@@ -1205,7 +1205,7 @@ class HelpCategoriesApp(cmd2.Cmd):
 @pytest.fixture
 def helpcat_app():
     app = HelpCategoriesApp()
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
     return app
 
 def test_help_cat_base(helpcat_app):
@@ -1298,7 +1298,7 @@ class SelectApp(cmd2.Cmd):
 @pytest.fixture
 def select_app():
     app = SelectApp()
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
     return app
 
 def test_select_options(select_app):
@@ -1463,7 +1463,7 @@ class MultilineApp(cmd2.Cmd):
 @pytest.fixture
 def multiline_app():
     app = MultilineApp()
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
     return app
 
 def test_multiline_complete_empty_statement_raises_exception(multiline_app):
@@ -1524,7 +1524,7 @@ class CommandResultApp(cmd2.Cmd):
 @pytest.fixture
 def commandresult_app():
     app = CommandResultApp()
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
     return app
 
 def test_commandresult_truthy(commandresult_app):
@@ -1630,7 +1630,7 @@ def piped_rawinput_true(capsys, echo, command):
     # run the cmdloop, which should pull input from our mock
     app._cmdloop()
     out, err = capsys.readouterr()
-    return (app, out)
+    return app, out
 
 # using the decorator puts the original input function back when this unit test returns
 @mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
@@ -1660,7 +1660,7 @@ def piped_rawinput_false(capsys, echo, command):
     app.echo = echo
     app._cmdloop()
     out, err = capsys.readouterr()
-    return (app, out)
+    return app, out
 
 def test_pseudo_raw_input_piped_rawinput_false_echo_true(capsys):
     command = 'set'
@@ -1717,28 +1717,28 @@ def test_empty_stdin_input():
 def test_poutput_string(base_app):
     msg = 'This is a test'
     base_app.poutput(msg)
-    out = base_app.stdout.buffer
+    out = base_app.stdout.getvalue()
     expected = msg + '\n'
     assert out == expected
 
 def test_poutput_zero(base_app):
     msg = 0
     base_app.poutput(msg)
-    out = base_app.stdout.buffer
+    out = base_app.stdout.getvalue()
     expected = str(msg) + '\n'
     assert out == expected
 
 def test_poutput_empty_string(base_app):
     msg = ''
     base_app.poutput(msg)
-    out = base_app.stdout.buffer
+    out = base_app.stdout.getvalue()
     expected = msg
     assert out == expected
 
 def test_poutput_none(base_app):
     msg = None
     base_app.poutput(msg)
-    out = base_app.stdout.buffer
+    out = base_app.stdout.getvalue()
     expected = ''
     assert out == expected
 
@@ -1828,7 +1828,7 @@ def test_ppaged(base_app):
     msg = 'testing...'
     end = '\n'
     base_app.ppaged(msg)
-    out = base_app.stdout.buffer
+    out = base_app.stdout.getvalue()
     assert out == msg + end
 
 # we override cmd.parseline() so we always get consistent
@@ -1861,14 +1861,14 @@ def test_readline_remove_history_item(base_app):
 def test_onecmd_raw_str_continue(base_app):
     line = "help"
     stop = base_app.onecmd(line)
-    out = base_app.stdout.buffer
+    out = base_app.stdout.getvalue()
     assert not stop
     assert out.strip() == BASE_HELP.strip()
 
 def test_onecmd_raw_str_quit(base_app):
     line = "quit"
     stop = base_app.onecmd(line)
-    out = base_app.stdout.buffer
+    out = base_app.stdout.getvalue()
     assert stop
     assert out == ''
 
@@ -1998,7 +1998,7 @@ def test_exit_code_default(exit_code_repl):
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = exit_code_repl
     app.use_rawinput = True
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='exit')
@@ -2010,14 +2010,14 @@ def test_exit_code_default(exit_code_repl):
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop
         app.cmdloop()
-    out = app.stdout.buffer
+    out = app.stdout.getvalue()
     assert out == expected
 
 def test_exit_code_nonzero(exit_code_repl):
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = exit_code_repl
     app.use_rawinput = True
-    app.stdout = StdOut()
+    app.stdout = utils.StdSim(app.stdout)
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='exit 23')
@@ -2030,5 +2030,5 @@ def test_exit_code_nonzero(exit_code_repl):
         # Run the command loop
         with pytest.raises(SystemExit):
             app.cmdloop()
-    out = app.stdout.buffer
+    out = app.stdout.getvalue()
     assert out == expected

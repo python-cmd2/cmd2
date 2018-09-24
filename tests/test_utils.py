@@ -5,6 +5,10 @@ Unit testing for cmd2/utils.py module.
 Copyright 2018 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import sys
+
+import pytest
+
 from colorama import Fore
 import cmd2.utils as cu
 
@@ -110,4 +114,55 @@ def test_quot_string_if_needed_no():
     assert cu.quote_string_if_needed(your_str) == your_str
 
 
+@pytest.fixture
+def stdout_sim():
+    stdsim = cu.StdSim(sys.stdout)
+    return stdsim
+
+def test_stdsim_write_str(stdout_sim):
+    my_str = 'Hello World'
+    stdout_sim.write(my_str)
+    assert stdout_sim.getvalue() == my_str
+
+def test_stdsim_write_bytes(stdout_sim):
+    b_str = b'Hello World'
+    with pytest.raises(TypeError):
+        stdout_sim.write(b_str)
+
+def test_stdsim_buffer_write_bytes(stdout_sim):
+    b_str = b'Hello World'
+    stdout_sim.buffer.write(b_str)
+    assert stdout_sim.getvalue() == b_str.decode()
+
+def test_stdsim_buffer_write_str(stdout_sim):
+    my_str = 'Hello World'
+    with pytest.raises(TypeError):
+        stdout_sim.buffer.write(my_str)
+
+def test_stdsim_read(stdout_sim):
+    my_str = 'Hello World'
+    stdout_sim.write(my_str)
+    # getvalue() returns the value and leaves it unaffected internally
+    assert stdout_sim.getvalue() == my_str
+    # read() returns the value and then clears the internal buffer
+    assert stdout_sim.read() == my_str
+    assert stdout_sim.getvalue() == ''
+
+def test_stdsim_clear(stdout_sim):
+    my_str = 'Hello World'
+    stdout_sim.write(my_str)
+    assert stdout_sim.getvalue() == my_str
+    stdout_sim.clear()
+    assert stdout_sim.getvalue() == ''
+
+def test_stdsim_getattr_exist(stdout_sim):
+    # Here the StdSim getattr is allowing us to access methods within StdSim
+    my_str = 'Hello World'
+    stdout_sim.write(my_str)
+    val_func = getattr(stdout_sim, 'getvalue')
+    assert val_func() == my_str
+
+def test_stdsim_getattr_noexist(stdout_sim):
+    # Here the StdSim getattr is allowing us to access methods defined by the inner stream
+    assert not stdout_sim.isatty()
 
