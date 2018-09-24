@@ -154,3 +154,15 @@ def test_stdsim_clear(stdout_sim):
     assert stdout_sim.getvalue() == my_str
     stdout_sim.clear()
     assert stdout_sim.getvalue() == ''
+
+def test_stdsim_getattr_exist(stdout_sim):
+    # Here the StdSim getattr is allowing us to access methods within StdSim
+    my_str = 'Hello World'
+    stdout_sim.write(my_str)
+    val_func = getattr(stdout_sim, 'getvalue')
+    assert val_func() == my_str
+
+def test_stdsim_getattr_noexist(stdout_sim):
+    # Here the StdSim getattr is allowing us to access methods defined by the inner stream
+    assert not stdout_sim.isatty()
+
