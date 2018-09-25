@@ -3131,7 +3131,7 @@ Script should contain one command per line, just like command would be typed in 
         runner = unittest.TextTestRunner()
         runner.run(testcase)
 
-    def _clear_input_lines_str(self) -> str:
+    def _clear_input_lines_str(self) -> str:  # pragma: no cover
         """
         Returns a string that if printed will clear the prompt and input lines in the terminal,
         leaving the cursor at the beginning of the first input line
@@ -3175,7 +3175,7 @@ Script should contain one command per line, just like command would be typed in 
 
         return terminal_str
 
-    def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:
+    def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
         Used to display an important message to the user while they are at the prompt in between commands.
         To the user it appears as if an alert message is printed above the prompt and their current input
@@ -3218,7 +3218,7 @@ Script should contain one command per line, just like command would be typed in 
         else:
             raise RuntimeError("another thread holds terminal_lock")
 
-    def async_update_prompt(self, new_prompt: str) -> None:
+    def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
         """
         Updates the prompt while the user is still typing at it. This is good for alerting the user to system
         changes dynamically in between commands. For instance you could alter the color of the prompt to indicate
@@ -3260,7 +3260,7 @@ Script should contain one command per line, just like command would be typed in 
             raise RuntimeError("another thread holds terminal_lock")
 
     @staticmethod
-    def set_window_title(title: str) -> None:
+    def set_window_title(title: str) -> None:  # pragma: no cover
         """
         Sets the terminal window title
         :param title: the new window title

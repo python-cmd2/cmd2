@@ -182,7 +182,7 @@ def rl_make_safe_prompt(prompt: str, start: str = "\x01", end: str = "\x02") -> 
     :param end: end code to tell GNU Readline about end of invisible characters
     :return: prompt safe to pass to GNU Readline
     """
-    if rl_type == RlType.GNU:
+    if rl_type == RlType.GNU:  # pragma: no cover
         escaped = False
         result = ""
 
