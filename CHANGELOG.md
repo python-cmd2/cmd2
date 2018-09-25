@@ -18,6 +18,11 @@
             * Never - output methods strip all ANSI escape sequences
 * Deprecations
     * Deprecated the builtin ``cmd2`` suport for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
+* Deletions
+    * The ``preparse``, ``postparsing_precmd``, and ``postparsing_postcmd`` methods *deprecated* in the previous release 
+    have been deleted
+        * The new application lifecycle hook system allows for registration of callbacks to be called at various points
+        in the lifecycle and is more powerful and flexible than the previous system
     
 ## 0.9.4 (August 21, 2018)
 * Bug Fixes
