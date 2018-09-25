@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Unit/functional testing for argparse completer in cmd2
 
@@ -8,26 +9,27 @@ import os
 import pytest
 from cmd2.cmd2 import Cmd, with_argparser
 from cmd2 import argparse_completer
-from .conftest import run_cmd, StdOut
-from cmd2.utils import namedtuple_with_defaults
+from .conftest import run_cmd
+from cmd2.utils import namedtuple_with_defaults, StdSim
+
 
 class PyscriptExample(Cmd):
     ratings_types = ['G', 'PG', 'PG-13', 'R', 'NC-17']
 
     def _do_media_movies(self, args) -> None:
         if not args.command:
-            self.do_help('media movies')
+            self.do_help(['media movies'])
         else:
-            print('media movies ' + str(args.__dict__))
+            self.poutput('media movies ' + str(args.__dict__))
 
     def _do_media_shows(self, args) -> None:
         if not args.command:
-            self.do_help('media shows')
+            self.do_help(['media shows'])
 
         if not args.command:
-            self.do_help('media shows')
+            self.do_help(['media shows'])
         else:
-            print('media shows ' + str(args.__dict__))
+            self.poutput('media shows ' + str(args.__dict__))
 
     media_parser = argparse_completer.ACArgumentParser(prog='media')
 
@@ -70,7 +72,7 @@ class PyscriptExample(Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help('media')
+            self.do_help(['media'])
 
     foo_parser = argparse_completer.ACArgumentParser(prog='foo')
     foo_parser.add_argument('-c', dest='counter', action='count')
@@ -82,7 +84,7 @@ class PyscriptExample(Cmd):
 
     @with_argparser(foo_parser)
     def do_foo(self, args):
-        print('foo ' + str(args.__dict__))
+        self.poutput('foo ' + str(args.__dict__))
         if self._in_py:
             FooResult = namedtuple_with_defaults('FooResult',
                                                  ['counter', 'trueval', 'constval',
@@ -108,14 +110,13 @@ class PyscriptExample(Cmd):
         out += '{'
         for key in keys:
             out += "'{}':'{}'".format(key, arg_dict[key])
-        print(out)
+        self.poutput(out)
 
 
 @pytest.fixture
 def ps_app():
     c = PyscriptExample()
-    c.stdout = StdOut()
-
+    c.stdout = StdSim(c.stdout)
     return c
 
 
@@ -125,14 +126,13 @@ class PyscriptCustomNameExample(Cmd):
         self.pyscript_name = 'custom'
 
     def do_echo(self, out):
-        print(out)
+        self.poutput(out)
 
 
 @pytest.fixture
 def ps_echo():
     c = PyscriptCustomNameExample()
-    c.stdout = StdOut()
-
+    c.stdout = StdSim(c.stdout)
     return c
 
 
@@ -140,7 +140,7 @@ def ps_echo():
     ('help', 'help.py'),
     ('help media', 'help_media.py'),
 ])
-def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
+def test_pyscript_help(ps_app, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', pyscript_file)
     expected = run_cmd(ps_app, command)
@@ -169,16 +169,14 @@ def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
     ('foo 11 22 33 44 55 66 -ccc', 'foo3.py'),
     ('bar 11 22', 'bar1.py'),
 ])
-def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
+def test_pyscript_out(ps_app, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', pyscript_file)
-    run_cmd(ps_app, command)
-    expected, _ = capsys.readouterr()
+    expected = run_cmd(ps_app, command)
+    assert expected
 
-    assert len(expected) > 0
-    run_cmd(ps_app, 'pyscript {}'.format(python_script))
-    out, _ = capsys.readouterr()
-    assert len(out) > 0
+    out = run_cmd(ps_app, 'pyscript {}'.format(python_script))
+    assert out
     assert out == expected
 
 
@@ -227,14 +225,12 @@ def test_pyscript_dir(ps_app, capsys, request, expected, pyscript_file):
     assert out == expected
 
 
-def test_pyscript_custom_name(ps_echo, capsys, request):
+def test_pyscript_custom_name(ps_echo, request):
     message = 'blah!'
 
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'custom_echo.py')
 
-    run_cmd(ps_echo, 'pyscript {}'.format(python_script))
-    expected, _ = capsys.readouterr()
-    assert len(expected) > 0
-    expected = expected.splitlines()
-    assert message == expected[0]
+    out = run_cmd(ps_echo, 'pyscript {}'.format(python_script))
+    assert out
+    assert message == out[0]

@@ -1649,58 +1649,6 @@ class Cmd(cmd.Cmd):
         """
         return statement
 
-    # -----  Methods which are cmd2-specific lifecycle hooks which are not present in cmd -----
-
-    # noinspection PyMethodMayBeStatic
-    def preparse(self, raw: str) -> str:
-        """Hook method executed before user input is parsed.
-
-        WARNING: If it's a multiline command, `preparse()` may not get all the
-        user input. _complete_statement() really does two things: a) parse the
-        user input, and b) accept more input in case it's a multiline command
-        the passed string doesn't have a terminator. `preparse()` is currently
-        called before we know whether it's a multiline command, and before we
-        know whether the user input includes a termination character.
-
-        If you want a reliable pre parsing hook method, register a postparsing
-        hook, modify the user input, and then reparse it.
-
-        :param raw: raw command line input :return: potentially modified raw command line input
-        :return: a potentially modified version of the raw input string
-        """
-        return raw
-
-    # noinspection PyMethodMayBeStatic
-    def postparsing_precmd(self, statement: Statement) -> Tuple[bool, Statement]:
-        """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
-
-        NOTE: This runs before precmd() and prior to any potential output redirection or piping.
-
-        If you wish to fatally fail this command and exit the application entirely, set stop = True.
-
-        If you wish to just fail this command you can do so by raising an exception:
-
-        - raise EmptyStatement - will silently fail and do nothing
-        - raise <AnyOtherException> - will fail and print an error message
-
-        :param statement: the parsed command-line statement as a Statement object
-        :return: (stop, statement) containing a potentially modified version of the statement object
-        """
-        stop = False
-        return stop, statement
-
-    # noinspection PyMethodMayBeStatic
-    def postparsing_postcmd(self, stop: bool) -> bool:
-        """This runs after everything else, including after postcmd().
-
-        It even runs when an empty line is entered.  Thus, if you need to do something like update the prompt due
-        to notifications from a background thread, then this is the method you want to override to do it.
-
-        :param stop: True implies the entire application should exit.
-        :return: True implies the entire application should exit.
-        """
-        return stop
-
     def parseline(self, line: str) -> Tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.
 
@@ -1740,9 +1688,6 @@ class Cmd(cmd.Cmd):
                 data = func(data)
                 if data.stop:
                     break
-            # postparsing_precmd is deprecated
-            if not data.stop:
-                (data.stop, data.statement) = self.postparsing_precmd(data.statement)
             # unpack the data object
             statement = data.statement
             stop = data.stop
@@ -1807,9 +1752,7 @@ class Cmd(cmd.Cmd):
                 data = func(data)
             # retrieve the final value of stop, ignoring any
             # modifications to the statement
-            stop = data.stop
-            # postparsing_postcmd is deprecated
-            return self.postparsing_postcmd(stop)
+            return data.stop
         except Exception as ex:
             self.perror(ex)
 
@@ -1863,9 +1806,6 @@ class Cmd(cmd.Cmd):
         pipe runs out. We can't refactor it because we need to retain
         backwards compatibility with the standard library version of cmd.
         """
-        # preparse() is deprecated, use self.register_postparsing_hook() instead
-        line = self.preparse(line)
-
         while True:
             try:
                 statement = self.statement_parser.parse(line)
@@ -2220,7 +2160,7 @@ class Cmd(cmd.Cmd):
     def do_alias(self, statement: Statement) -> None:
         """Define or display aliases
 
-Usage:  Usage: alias [name] | [<name> <value>]
+    Usage: alias [name] | [<name> <value>]
     Where:
         name - name of the alias being looked up, added, or replaced
         value - what the alias will be resolved to (if adding or replacing)
@@ -2248,7 +2188,8 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
         # If no args were given, then print a list of current aliases
         if not alias_arg_list:
-            for cur_alias in self.aliases:
+            sorted_aliases = utils.alphabetical_sort(list(self.aliases))
+            for cur_alias in sorted_aliases:
                 self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
             return
 
@@ -2282,9 +2223,6 @@ Usage:  Usage: alias [name] | [<name> <value>]
                 # Set the alias
                 self.aliases[name] = value
                 self.poutput("Alias {!r} created".format(name))
-
-                # Keep aliases in alphabetically sorted order
-                self.aliases = collections.OrderedDict(sorted(self.aliases.items()))
             else:
                 errmsg = "Aliases can not contain: {}".format(invalidchars)
                 self.perror(errmsg, traceback_war=False)
@@ -2305,7 +2243,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
     def do_unalias(self, arglist: List[str]) -> None:
         """Unsets aliases
 
-Usage:  Usage: unalias [-a] name [name ...]
+    Usage: unalias [-a] name [name ...]
     Where:
         name - name of the alias being unset
 
@@ -2454,13 +2392,17 @@ Usage:  Usage: unalias [-a] name [name ...]
                     doc_block = []
                     found_first = False
                     for doc_line in doc.splitlines():
-                        str(doc_line).strip()
-                        if len(doc_line.strip()) > 0:
-                            doc_block.append(doc_line.strip())
-                            found_first = True
-                        else:
+                        stripped_line = doc_line.strip()
+
+                        # Don't include :param type lines
+                        if stripped_line.startswith(':'):
                             if found_first:
                                 break
+                        elif stripped_line:
+                            doc_block.append(stripped_line)
+                            found_first = True
+                        elif found_first:
+                            break
 
                     for doc_line in doc_block:
                         self.stdout.write('{: <{col_width}}{doc}\n'.format(command,
@@ -2686,9 +2628,11 @@ Usage:  Usage: unalias [-a] name [name ...]
         Non-python commands can be issued with ``pyscript_name("your command")``.
         Run python code from external script files with ``run("script.py")``
         """
-        from .pyscript_bridge import PyscriptBridge
+        from .pyscript_bridge import PyscriptBridge, CommandResult
         if self._in_py:
-            self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
+            err = "Recursively entering interactive Python consoles is not allowed."
+            self.perror(err, traceback_war=False)
+            self._last_result = CommandResult('', err)
             return False
         self._in_py = True
 
