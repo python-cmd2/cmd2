@@ -258,4 +258,3 @@ def test_subcommand_help(subcommand_app):
 def test_subcommand_invalid_help(subcommand_app):
     out = run_cmd(subcommand_app, 'help base baz')
     assert out[0].startswith('usage: base')
-    assert out[1].startswith("base: error: invalid choice: 'baz'")
