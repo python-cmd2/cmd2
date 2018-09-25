@@ -1543,17 +1543,9 @@ class Cmd(cmd.Cmd):
     def _get_completable_runnables(self) -> List[str]:
         """Return a list of all commands, aliases, and macros that would show up in tab completion"""
         visible_commands = set(self.get_visible_commands())
-        alias_names = set(self._get_alias_names())
-        macro_names = set(self._get_macro_names())
+        alias_names = set(self.aliases)
+        macro_names = set(self.macros)
         return list(visible_commands | alias_names | macro_names)
-
-    def _get_alias_names(self) -> List[str]:
-        """Returns a list of all alias names"""
-        return list(self.aliases)
-
-    def _get_macro_names(self) -> List[str]:
-        """Returns a list of all macro names"""
-        return list(self.macros)
 
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
                               argparser: argparse.ArgumentParser) -> List[str]:
@@ -2058,7 +2050,7 @@ class Cmd(cmd.Cmd):
 
         # Since we have a valid command store it in the history
         if statement.command not in self.exclude_from_history:
-            self.history.append(statement.raw)
+            self.history.append(statement.command_and_args)
 
         try:
             func = getattr(self, funcname)
@@ -2074,7 +2066,7 @@ class Cmd(cmd.Cmd):
 
         :param statement: Statement object with parsed input
         """
-        arg = statement.raw
+        arg = statement.command_and_args
         if self.default_to_shell:
             result = os.system(arg)
             # If os.system() succeeded, then don't print warning about unknown command
@@ -2242,7 +2234,7 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        if args.name in self._get_macro_names():
+        if args.name in self.macros:
             errmsg = "Aliases cannot have the same name as a macro"
             self.perror(errmsg, traceback_war=False)
             return
@@ -2332,7 +2324,7 @@ class Cmd(cmd.Cmd):
     alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
                                                       description=alias_delete_description)
     setattr(alias_delete_parser.add_argument('name', type=str, nargs='*', help='alias to delete'),
-            ACTION_ARG_CHOICES, _get_alias_names)
+            ACTION_ARG_CHOICES, aliases)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="all aliases will be deleted")
     alias_delete_parser.set_defaults(func=alias_delete)
 
@@ -2346,7 +2338,7 @@ class Cmd(cmd.Cmd):
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
     setattr(alias_list_parser.add_argument('name', type=str, nargs="*", help='alias to list'),
-            ACTION_ARG_CHOICES, _get_alias_names)
+            ACTION_ARG_CHOICES, aliases)
     alias_list_parser.set_defaults(func=alias_list)
 
     @with_argparser(alias_parser)
@@ -2376,7 +2368,7 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        if args.name in self._get_alias_names():
+        if args.name in self.aliases:
             errmsg = "Macros cannot have the same name as an alias"
             self.perror(errmsg, traceback_war=False)
             return
@@ -2483,29 +2475,49 @@ class Cmd(cmd.Cmd):
 
     # macro -> create
     macro_create_help = "create or overwrite a macro"
-    macro_create_description = "Create or overwrite an macro\n"
-    macro_create_description += "\n"
-    macro_create_description += "A macro is similar to an alias, but it can take arguments\n"
-    macro_create_description += "A macro is similar to an alias, but it can take arguments"
+    macro_create_description = "Create or overwrite a macro"
 
-    macro_create_epilog = "Notes:\n"
+    macro_create_epilog = "A macro is similar to an alias, but it can take arguments when called. Arguments are\n"
+    macro_create_epilog += "expressed when creating a macro using {#} notation where {1} means the first argument\n"
+    macro_create_epilog += "while {8} would mean the eighth.\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "The following creates a macro called my_macro that expects two arguments:\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "macro create my_macro make_dinner -meat {1} -veggie {2}\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "When the macro is called, the provided arguments are resolved and the assembled\n"
+    macro_create_epilog += "command is run. The following table shows how my_macro would be resolved.\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "Macro Usage                  Command Run\n"
+    macro_create_epilog += "my_macro beef broccoli       make_dinner -meat beef -veggie broccoli\n"
+    macro_create_epilog += "my_macro chicken spinach     make_dinner -meat chicken -veggie spinach\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "Notes:\n"
+    macro_create_epilog += "    To use the literal string {1} in your command, escape it this way: {{1}}\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "    An argument number can be repeated in a macro. In the following example the first\n"
+    macro_create_epilog += "    argument will populate both {1} instances\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "    macro create ft file_taxes -p {1} -q {2} -r {1}\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "    To quote an argument in the resolved command, quote it during creation:\n"
+    macro_create_epilog += "\n"
+    macro_create_epilog += "    macro create del_file !rm -f \"{1}\"\n"
+    macro_create_epilog += "\n"
     macro_create_epilog += "    Macros can resolve into commands, aliases, and other macros. Therefore it is\n"
-    macro_create_epilog += "    possible to create a macro that results in an infinite cycle. Since all use cases\n"
-    macro_create_epilog += "    are different, cycles will not be prevented. In other words, be careful.\n"
+    macro_create_epilog += "    possible to create a macro that results in infinite recursion if a macro ends up\n"
+    macro_create_epilog += "    resolving back to itself. So be careful.\n"
     macro_create_epilog += "\n"
-    macro_create_epilog += "    If you want to use redirection or pipes in the macro, then quote them to prevent\n"
-    macro_create_epilog += "    the macro command itself from being redirected\n"
+    macro_create_epilog += "    If you want to use redirection or pipes in the macro, then quote them as in the\n"
+    macro_create_epilog += "    following example to prevent the macro command itself from being redirected\n"
     macro_create_epilog += "\n"
-    macro_create_epilog += "Examples:\n"
-    macro_create_epilog += "    macro create quick_meal make_fish -type {1} -style {2}\n"
-    macro_create_epilog += "    macro create dl delete_log -f {1} --now\n"
-    macro_create_epilog += "    macro create save_results print_results -type {1} \">\" {2}\n"
+    macro_create_epilog += "    macro create save_results print_results -type {1} \">\" \"{2}\""
 
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
                                                       epilog=macro_create_epilog)
     setattr(macro_create_parser.add_argument('name', type=str, help='Name of this macro'),
-            ACTION_ARG_CHOICES, _get_macro_names)
+            ACTION_ARG_CHOICES, macros)
     setattr(macro_create_parser.add_argument('command', type=str, help='what the macro resolves to'),
             ACTION_ARG_CHOICES, _get_completable_runnables)
     setattr(macro_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
@@ -2519,7 +2531,7 @@ class Cmd(cmd.Cmd):
     macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
                                                       description=macro_delete_description)
     setattr(macro_delete_parser.add_argument('name', type=str, nargs='*', help='macro to delete'),
-            ACTION_ARG_CHOICES, _get_macro_names)
+            ACTION_ARG_CHOICES, macros)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="all macros will be deleted")
     macro_delete_parser.set_defaults(func=macro_delete)
 
@@ -2533,7 +2545,7 @@ class Cmd(cmd.Cmd):
     macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help,
                                                     description=macro_list_description)
     setattr(macro_list_parser.add_argument('name', type=str, nargs="*", help='macro to list'),
-            ACTION_ARG_CHOICES, _get_macro_names)
+            ACTION_ARG_CHOICES, macros)
     macro_list_parser.set_defaults(func=macro_list)
 
     @with_argparser(macro_parser)
