@@ -1655,58 +1655,6 @@ class Cmd(cmd.Cmd):
         """
         return statement
 
-    # -----  Methods which are cmd2-specific lifecycle hooks which are not present in cmd -----
-
-    # noinspection PyMethodMayBeStatic
-    def preparse(self, raw: str) -> str:
-        """Hook method executed before user input is parsed.
-
-        WARNING: If it's a multiline command, `preparse()` may not get all the
-        user input. _complete_statement() really does two things: a) parse the
-        user input, and b) accept more input in case it's a multiline command
-        the passed string doesn't have a terminator. `preparse()` is currently
-        called before we know whether it's a multiline command, and before we
-        know whether the user input includes a termination character.
-
-        If you want a reliable pre parsing hook method, register a postparsing
-        hook, modify the user input, and then reparse it.
-
-        :param raw: raw command line input :return: potentially modified raw command line input
-        :return: a potentially modified version of the raw input string
-        """
-        return raw
-
-    # noinspection PyMethodMayBeStatic
-    def postparsing_precmd(self, statement: Statement) -> Tuple[bool, Statement]:
-        """This runs after parsing the command-line, but before anything else; even before adding cmd to history.
-
-        NOTE: This runs before precmd() and prior to any potential output redirection or piping.
-
-        If you wish to fatally fail this command and exit the application entirely, set stop = True.
-
-        If you wish to just fail this command you can do so by raising an exception:
-
-        - raise EmptyStatement - will silently fail and do nothing
-        - raise <AnyOtherException> - will fail and print an error message
-
-        :param statement: the parsed command-line statement as a Statement object
-        :return: (stop, statement) containing a potentially modified version of the statement object
-        """
-        stop = False
-        return stop, statement
-
-    # noinspection PyMethodMayBeStatic
-    def postparsing_postcmd(self, stop: bool) -> bool:
-        """This runs after everything else, including after postcmd().
-
-        It even runs when an empty line is entered.  Thus, if you need to do something like update the prompt due
-        to notifications from a background thread, then this is the method you want to override to do it.
-
-        :param stop: True implies the entire application should exit.
-        :return: True implies the entire application should exit.
-        """
-        return stop
-
     def parseline(self, line: str) -> Tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.
 
@@ -1746,9 +1694,6 @@ class Cmd(cmd.Cmd):
                 data = func(data)
                 if data.stop:
                     break
-            # postparsing_precmd is deprecated
-            if not data.stop:
-                (data.stop, data.statement) = self.postparsing_precmd(data.statement)
             # unpack the data object
             statement = data.statement
             stop = data.stop
@@ -1813,9 +1758,7 @@ class Cmd(cmd.Cmd):
                 data = func(data)
             # retrieve the final value of stop, ignoring any
             # modifications to the statement
-            stop = data.stop
-            # postparsing_postcmd is deprecated
-            return self.postparsing_postcmd(stop)
+            return data.stop
         except Exception as ex:
             self.perror(ex)
 
@@ -1869,9 +1812,6 @@ class Cmd(cmd.Cmd):
         pipe runs out. We can't refactor it because we need to retain
         backwards compatibility with the standard library version of cmd.
         """
-        # preparse() is deprecated, use self.register_postparsing_hook() instead
-        line = self.preparse(line)
-
         while True:
             try:
                 statement = self.statement_parser.parse(line)
