@@ -6,7 +6,7 @@ import collections
 import os
 import re
 import unicodedata
-from typing import Any, List, Optional, Union
+from typing import Any, Iterable, List, Optional, Union
 
 from . import constants
 
@@ -194,7 +194,7 @@ def norm_fold(astr: str) -> str:
     return unicodedata.normalize('NFC', astr).casefold()
 
 
-def alphabetical_sort(list_to_sort: List[str]) -> List[str]:
+def alphabetical_sort(list_to_sort: Iterable[str]) -> List[str]:
     """Sorts a list of strings alphabetically.
 
     For example: ['a1', 'A11', 'A2', 'a22', 'a3']
@@ -232,7 +232,7 @@ def natural_keys(input_str: str) -> List[Union[int, str]]:
     return [try_int_or_force_to_lower_case(substr) for substr in re.split('(\d+)', input_str)]
 
 
-def natural_sort(list_to_sort: List[str]) -> List[str]:
+def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
     """
     Sorts a list of strings case insensitively as well as numerically.
 

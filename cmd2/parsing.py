@@ -12,6 +12,50 @@ import attr
 from . import constants
 from . import utils
 
+# Pattern used to find normal argument
+# Match strings like: {5}, {{{{{4}, {2}}}}}
+normal_arg_pattern = re.compile(r'(?<!\{)\{\d+\}|\{\d+\}(?!\})')
+
+# Pattern used to find escaped arguments (2 or more braces on each side of digit)
+# Match strings like: {{5}}, {{{{{4}}, {{2}}}}}, {{{4}}}
+escaped_arg_pattern = re.compile(r'\{{2}\d+\}{2}')
+
+# Finds a string of digits
+digit_pattern = re.compile(r'\d+')
+
+
+@attr.s(frozen=True)
+class Macro:
+    """Defines a cmd2 macro"""
+
+    @attr.s(frozen=True)
+    class ArgInfo:
+        """
+        Information used to replace or unescape arguments in a macro value when the macro is resolved
+        Normal argument syntax  : {5}
+        Escaped argument syntax: {{5}}
+        """
+        # The starting index of this argument in the macro value
+        start_index = attr.ib(validator=attr.validators.instance_of(int), type=int)
+
+        # The number that appears between the braces
+        number = attr.ib(validator=attr.validators.instance_of(int), type=int)
+
+        # Tells if this argument is escaped and therefore needs to be unescaped
+        is_escaped = attr.ib(validator=attr.validators.instance_of(bool), type=bool)
+
+    # Name of the macro
+    name = attr.ib(validator=attr.validators.instance_of(str), type=str)
+
+    # The string the macro resolves to
+    value = attr.ib(validator=attr.validators.instance_of(str), type=str)
+
+    # The minimum number of args the user has to pass to this macro
+    min_arg_count = attr.ib(validator=attr.validators.instance_of(int), type=int)
+
+    # Used to fill in argument placeholders in the macro
+    arg_info_list = attr.ib(factory=list, validator=attr.validators.instance_of(list), type=List[ArgInfo])
+
 
 @attr.s(frozen=True)
 class Statement(str):
