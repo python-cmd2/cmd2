@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""A simple example demonstrating an application that asynchronously prints alerts and updates the prompt"""
+"""
+A simple example demonstrating an application that asynchronously prints alerts, updates the prompt
+and changes the window title
+"""
 
 import random
 import threading
@@ -18,6 +21,7 @@ ALERTS = ["Watch as this application prints alerts and updates the prompt",
           "Keep typing...",
           "Move that cursor...",
           "Pretty seamless, eh?",
+          "Feedback can also be given in the window title. Notice the arg count up there?",
           "You can stop and start the alerts by typing stop_alerts and start_alerts",
           "This demo will now continue to print alerts at random intervals"
           ]
@@ -105,8 +109,8 @@ class AlerterApp(cmd2.Cmd):
                 return []
 
             for i in range(0, rand_num):
-                alerts.append("Alert {}".format(self._alert_count))
                 self._alert_count += 1
+                alerts.append("Alert {}".format(self._alert_count))
 
             self._next_alert_time = 0
 
@@ -180,6 +184,8 @@ class AlerterApp(cmd2.Cmd):
                 if alert_str:
                     # new_prompt is an optional parameter to async_alert()
                     self.async_alert(alert_str, new_prompt)
+                    new_title = "Alerts Printed: {}".format(self._alert_count)
+                    self.set_window_title(new_title)
 
                 # No alerts needed to be printed, check if the prompt changed
                 elif new_prompt != self.prompt:
