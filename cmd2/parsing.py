@@ -25,7 +25,7 @@ digit_pattern = re.compile(r'\d+')
 
 
 @attr.s(frozen=True)
-class MacroArgInfo:
+class MacroArg:
     """
     Information used to replace or unescape arguments in a macro value when the macro is resolved
     Normal argument syntax  : {5}
@@ -51,11 +51,11 @@ class Macro:
     # The string the macro resolves to
     value = attr.ib(validator=attr.validators.instance_of(str), type=str)
 
-    # The minimum number of args the user has to pass to this macro
-    min_arg_count = attr.ib(validator=attr.validators.instance_of(int), type=int)
+    # The required number of args the user has to pass to this macro
+    required_arg_count = attr.ib(validator=attr.validators.instance_of(int), type=int)
 
     # Used to fill in argument placeholders in the macro
-    arg_info_list = attr.ib(factory=list, validator=attr.validators.instance_of(list), type=List[MacroArgInfo])
+    arg_list = attr.ib(factory=list, validator=attr.validators.instance_of(list), type=List[MacroArg])
 
 
 @attr.s(frozen=True)

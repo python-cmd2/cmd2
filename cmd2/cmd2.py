@@ -47,7 +47,8 @@ from . import utils
 from . import plugin
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .parsing import StatementParser, Statement, Macro, MacroArgInfo, macro_normal_arg_pattern, macro_escaped_arg_pattern, digit_pattern
+from .parsing import StatementParser, Statement, Macro, MacroArg, \
+    macro_normal_arg_pattern, macro_escaped_arg_pattern, digit_pattern
 
 # Set up readline
 from .rl_utils import rl_type, RlType
@@ -1970,7 +1971,7 @@ class Cmd(cmd.Cmd):
             result = target
         return result
 
-    def onecmd(self, statement: Union[Statement, str]) -> Optional[bool]:
+    def onecmd(self, statement: Union[Statement, str]) -> bool:
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes _default() instead.
@@ -1983,23 +1984,64 @@ class Cmd(cmd.Cmd):
         if not isinstance(statement, Statement):
             statement = self._complete_statement(statement)
 
-        funcname = self._func_named(statement.command)
-        if not funcname:
-            self.default(statement)
-            return
+        # Check if this is a macro
+        if statement.command in self.macros:
+            stop = self._run_macro(statement)
+        else:
+            funcname = self._func_named(statement.command)
+            if not funcname:
+                self.default(statement)
+                return False
 
-        # Since we have a valid command store it in the history
-        if statement.command not in self.exclude_from_history:
-            self.history.append(statement.command_and_args)
+            # Since we have a valid command store it in the history
+            if statement.command not in self.exclude_from_history:
+                self.history.append(statement.command_and_args)
 
-        try:
-            func = getattr(self, funcname)
-        except AttributeError:
-            self.default(statement)
-            return
+            try:
+                func = getattr(self, funcname)
+            except AttributeError:
+                self.default(statement)
+                return False
 
-        stop = func(statement)
+            stop = func(statement)
+
         return stop
+
+    def _run_macro(self, statement: Statement) -> bool:
+        """
+        Resolves a macro and runs the resulting string
+
+        :param statement: the parsed statement from the command line
+        :return: a flag indicating whether the interpretation of commands should stop
+        """
+        try:
+            macro = self.macros[statement.command]
+        except KeyError:
+            raise KeyError("{} is not a macro".format(statement.command))
+
+        # Confirm we have the correct number of arguments
+        if len(statement.arg_list) != macro.required_arg_count:
+            self.perror('The macro {} expects {} arguments'.format(statement.command, macro.required_arg_count),
+                        traceback_war=False)
+            return False
+
+        # Resolve the arguments in reverse
+        resolved = macro.value
+        reverse_arg_list = sorted(macro.arg_list, key=lambda ma: ma.start_index, reverse=True)
+
+        for arg in reverse_arg_list:
+            if arg.is_escaped:
+                to_replace = '{{' + str(arg.number) + '}}'
+                replacement = '{' + str(arg.number) + '}'
+            else:
+                to_replace = '{' + str(arg.number) + '}'
+                replacement = statement.argv[arg.number]
+
+            parts = resolved.rsplit(to_replace, maxsplit=1)
+            resolved = parts[0] + replacement + parts[1]
+
+        # Run the resolved command
+        return self.onecmd_plus_hooks(resolved)
 
     def default(self, statement: Statement) -> None:
         """Executed when the command given isn't a recognized command implemented by a do_* method.
@@ -2322,7 +2364,7 @@ class Cmd(cmd.Cmd):
             value += ' ' + utils.quote_string_if_needed(cur_arg)
 
         # Find all normal arguments
-        arg_info_list = []
+        arg_list = []
         normal_matches = re.finditer(macro_normal_arg_pattern, value)
         max_arg_num = 0
         num_set = set()
@@ -2333,13 +2375,15 @@ class Cmd(cmd.Cmd):
 
                 # Get the number between the braces
                 cur_num = int(re.findall(digit_pattern, cur_match.group())[0])
+                if cur_num < 1:
+                    self.perror("Argument numbers must be greater than 0", traceback_war=False)
+                    return
+
                 num_set.add(cur_num)
                 if cur_num > max_arg_num:
                     max_arg_num = cur_num
 
-                arg_info_list.append(MacroArgInfo(start_index=cur_match.start(),
-                                                  number=cur_num,
-                                                  is_escaped=False))
+                arg_list.append(MacroArg(start_index=cur_match.start(), number=cur_num, is_escaped=False))
 
             except StopIteration:
                 break
@@ -2360,15 +2404,12 @@ class Cmd(cmd.Cmd):
                 # Get the number between the braces
                 cur_num = int(re.findall(digit_pattern, cur_match.group())[0])
 
-                arg_info_list.append(MacroArgInfo(start_index=cur_match.start(),
-                                                  number=cur_num,
-                                                  is_escaped=True))
+                arg_list.append(MacroArg(start_index=cur_match.start(), number=cur_num, is_escaped=True))
             except StopIteration:
                 break
 
         # Set the macro
-        self.macros[args.name] = Macro(name=args.name, value=value,
-                                       min_arg_count=max_arg_num, arg_info_list=arg_info_list)
+        self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
         self.poutput("Macro {!r} created".format(args.name))
 
     def macro_delete(self, args: argparse.Namespace):
