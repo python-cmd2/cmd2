@@ -209,13 +209,13 @@ async_update_prompt()
     a system status or increase a counter to report an event.
 
 ``cmd2`` also provides a function to change the title of the terminal window. This feature requires the
-application be running in a terminal that support VT100 control characters. Linux, Mac, and Windows 10 and
+application be running in a terminal that supports VT100 control characters. Linux, Mac, and Windows 10 and
 greater all support these.
 
 set_window_title()
     Sets the terminal window title
 
 
-The easiest way to understand these function is to see the AsyncPrinting_ example for a demonstration.
+The easiest way to understand these functions is to see the AsyncPrinting_ example for a demonstration.
 
 .. _AsyncPrinting: https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py

@@ -71,8 +71,8 @@ if 'pyreadline' in sys.modules:
         # Enable VT100 sequences for stdout and stderr
         STD_OUT_HANDLE = -11
         STD_ERROR_HANDLE = -12
-        vt100_support = enable_win_vt100(readline.rl.console.GetStdHandle(STD_OUT_HANDLE)) and \
-                        enable_win_vt100(readline.rl.console.GetStdHandle(STD_ERROR_HANDLE))
+        vt100_support = (enable_win_vt100(readline.rl.console.GetStdHandle(STD_OUT_HANDLE)) and
+                         enable_win_vt100(readline.rl.console.GetStdHandle(STD_ERROR_HANDLE)))
 
     ############################################################################################################
     # pyreadline is incomplete in terms of the Python readline API. Add the missing functions we need.
@@ -174,15 +174,19 @@ def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
         readline.rl._set_prompt(safe_prompt)
 
 
-def rl_make_safe_prompt(prompt: str, start: str = "\x01", end: str = "\x02") -> str:  # pragma: no cover
+def rl_make_safe_prompt(prompt: str) -> str:  # pragma: no cover
     """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
 
     :param prompt: original prompt
-    :param start: start code to tell GNU Readline about beginning of invisible characters
-    :param end: end code to tell GNU Readline about end of invisible characters
     :return: prompt safe to pass to GNU Readline
     """
     if rl_type == RlType.GNU:
+        # start code to tell GNU Readline about beginning of invisible characters
+        start = "\x01"
+
+        # end code to tell GNU Readline about end of invisible characters
+        end = "\x02"
+
         escaped = False
         result = ""
 
