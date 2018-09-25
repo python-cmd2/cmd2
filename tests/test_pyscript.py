@@ -140,7 +140,7 @@ def ps_echo():
     ('help', 'help.py'),
     ('help media', 'help_media.py'),
 ])
-def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
+def test_pyscript_help(ps_app, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', pyscript_file)
     expected = run_cmd(ps_app, command)
@@ -169,7 +169,7 @@ def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
     ('foo 11 22 33 44 55 66 -ccc', 'foo3.py'),
     ('bar 11 22', 'bar1.py'),
 ])
-def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
+def test_pyscript_out(ps_app, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', pyscript_file)
     expected = run_cmd(ps_app, command)
