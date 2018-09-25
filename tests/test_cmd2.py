@@ -1828,7 +1828,22 @@ def test_complete_unalias(base_app):
 
     # Validate that there are now completions
     expected = ['fake', 'fall']
-    assert base_app.complete_unalias(text, line, begidx, endidx) == expected
+    result = base_app.complete_unalias(text, line, begidx, endidx)
+    assert sorted(expected) == sorted(result)
+
+def test_multiple_aliases(base_app):
+    alias1 = 'h1'
+    alias2 = 'h2'
+    run_cmd(base_app, 'alias {} help'.format(alias1))
+    run_cmd(base_app, 'alias {} help -v'.format(alias2))
+    out = run_cmd(base_app, alias1)
+    expected = normalize(BASE_HELP)
+    assert out == expected
+
+    out = run_cmd(base_app, alias2)
+    expected = normalize(BASE_HELP_VERBOSE)
+    assert out == expected
+
 
 def test_ppaged(base_app):
     msg = 'testing...'
