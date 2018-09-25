@@ -47,7 +47,7 @@ from . import utils
 from . import plugin
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .parsing import StatementParser, Statement, Macro, normal_arg_pattern, escaped_arg_pattern, digit_pattern
+from .parsing import StatementParser, Statement, Macro, MacroArgInfo, macro_normal_arg_pattern, macro_escaped_arg_pattern, digit_pattern
 
 # Set up readline
 from .rl_utils import rl_type, RlType
@@ -1513,7 +1513,7 @@ class Cmd(cmd.Cmd):
             else:
                 # Complete token against anything a user can run
                 self.completion_matches = self.basic_complete(text, line, begidx, endidx,
-                                                              self._get_all_runnable_names())
+                                                              self._get_completable_runnables())
 
             # Handle single result
             if len(self.completion_matches) == 1:
@@ -1540,8 +1540,8 @@ class Cmd(cmd.Cmd):
         except IndexError:
             return None
 
-    def _get_all_runnable_names(self) -> List[str]:
-        """Return a list of all commands, aliases, and macros"""
+    def _get_completable_runnables(self) -> List[str]:
+        """Return a list of all commands, aliases, and macros that would show up in tab completion"""
         visible_commands = set(self.get_visible_commands())
         alias_names = set(self._get_alias_names())
         macro_names = set(self._get_macro_names())
@@ -2247,17 +2247,20 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        stripped_command = args.command.strip()
-        if not stripped_command:
-            errmsg = "An alias cannot resolve to an empty string"
+        if not args.command.strip():
+            errmsg = "Aliases cannot resolve to an empty command"
             self.perror(errmsg, traceback_war=False)
             return
 
-        # Build the alias command string
-        command = stripped_command + ' ' + ' '.join(utils.quote_string_if_needed(args.command_args))
+        # Build the alias value string
+        arg_str = ''
+        for cur_arg in args.command_args:
+            arg_str += ' ' + utils.quote_string_if_needed(cur_arg)
+
+        value = utils.quote_string_if_needed(args.command) + arg_str
 
         # Set the alias
-        self.aliases[args.name] = command
+        self.aliases[args.name] = value
         self.poutput("Alias {!r} created".format(args.name))
 
     def alias_delete(self, args: argparse.Namespace):
@@ -2315,9 +2318,9 @@ class Cmd(cmd.Cmd):
                                                       description=alias_create_description,
                                                       epilog=alias_create_epilog)
     setattr(alias_create_parser.add_argument('name', type=str, help='Name of this alias'),
-            ACTION_ARG_CHOICES, _get_all_runnable_names)
+            ACTION_ARG_CHOICES, _get_completable_runnables)
     setattr(alias_create_parser.add_argument('command', type=str, help='what the alias resolves to'),
-            ACTION_ARG_CHOICES, _get_all_runnable_names)
+            ACTION_ARG_CHOICES, _get_completable_runnables)
     setattr(alias_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
                                              help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
@@ -2378,18 +2381,21 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        stripped_command = args.command.strip()
-        if not stripped_command:
-            errmsg = "An macro cannot resolve to an empty string"
+        if not args.command.strip():
+            errmsg = "Macros cannot resolve to an empty command"
             self.perror(errmsg, traceback_war=False)
             return
 
         # Build the macro value string
-        value = stripped_command + ' ' + ' '.join(utils.quote_string_if_needed(args.command_args))
+        arg_str = ''
+        for cur_arg in args.command_args:
+            arg_str += ' ' + utils.quote_string_if_needed(cur_arg)
+
+        value = utils.quote_string_if_needed(args.command) + arg_str
 
         # Find all normal arguments
         arg_info_list = []
-        normal_matches = re.finditer(normal_arg_pattern, value)
+        normal_matches = re.finditer(macro_normal_arg_pattern, value)
         max_arg_num = 0
         num_set = set()
 
@@ -2403,9 +2409,9 @@ class Cmd(cmd.Cmd):
                 if cur_num > max_arg_num:
                     max_arg_num = cur_num
 
-                arg_info_list.append(Macro.ArgInfo(start_index=cur_match.start(),
-                                                   number=cur_num,
-                                                   is_escaped=False))
+                arg_info_list.append(MacroArgInfo(start_index=cur_match.start(),
+                                                  number=cur_num,
+                                                  is_escaped=False))
 
             except StopIteration:
                 break
@@ -2417,7 +2423,7 @@ class Cmd(cmd.Cmd):
             return
 
         # Find all escaped arguments
-        escaped_matches = re.finditer(escaped_arg_pattern, value)
+        escaped_matches = re.finditer(macro_escaped_arg_pattern, value)
 
         while True:
             try:
@@ -2426,9 +2432,9 @@ class Cmd(cmd.Cmd):
                 # Get the number between the braces
                 cur_num = int(re.findall(digit_pattern, cur_match.group())[0])
 
-                arg_info_list.append(Macro.ArgInfo(start_index=cur_match.start(),
-                                                   number=cur_num,
-                                                   is_escaped=True))
+                arg_info_list.append(MacroArgInfo(start_index=cur_match.start(),
+                                                  number=cur_num,
+                                                  is_escaped=True))
             except StopIteration:
                 break
 
@@ -2436,6 +2442,24 @@ class Cmd(cmd.Cmd):
         self.macros[args.name] = Macro(name=args.name, value=value,
                                        min_arg_count=max_arg_num, arg_info_list=arg_info_list)
         self.poutput("Macro {!r} created".format(args.name))
+
+    def macro_delete(self, args: argparse.Namespace):
+        """ Deletes macros """
+        if args.all:
+            self.macros.clear()
+            self.poutput("All macros deleted")
+        elif not args.name:
+            self.do_help(['macro', 'delete'])
+        else:
+            # Get rid of duplicates
+            macros_to_delete = utils.remove_duplicates(args.name)
+
+            for cur_arg in macros_to_delete:
+                if cur_arg in self.macros:
+                    del self.macros[cur_arg]
+                    self.poutput("Macro {!r} cleared".format(cur_arg))
+                else:
+                    self.perror("Macro {!r} does not exist".format(cur_arg), traceback_war=False)
 
     def macro_list(self, args: argparse.Namespace):
         """ Lists some or all macros """
@@ -2483,11 +2507,21 @@ class Cmd(cmd.Cmd):
     setattr(macro_create_parser.add_argument('name', type=str, help='Name of this macro'),
             ACTION_ARG_CHOICES, _get_macro_names)
     setattr(macro_create_parser.add_argument('command', type=str, help='what the macro resolves to'),
-            ACTION_ARG_CHOICES, _get_all_runnable_names)
+            ACTION_ARG_CHOICES, _get_completable_runnables)
     setattr(macro_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
                                              help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     macro_create_parser.set_defaults(func=macro_create)
+
+    # macro -> delete
+    macro_delete_help = "delete macros"
+    macro_delete_description = "Delete specified macros or all macros if --all is used"
+    macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
+                                                      description=macro_delete_description)
+    setattr(macro_delete_parser.add_argument('name', type=str, nargs='*', help='macro to delete'),
+            ACTION_ARG_CHOICES, _get_macro_names)
+    macro_delete_parser.add_argument('-a', '--all', action='store_true', help="all macros will be deleted")
+    macro_delete_parser.set_defaults(func=macro_delete)
 
     # macro -> list
     macro_list_help = "list macros"
