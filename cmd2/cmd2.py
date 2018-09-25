@@ -2874,9 +2874,11 @@ class Cmd(cmd.Cmd):
         Non-python commands can be issued with ``pyscript_name("your command")``.
         Run python code from external script files with ``run("script.py")``
         """
-        from .pyscript_bridge import PyscriptBridge
+        from .pyscript_bridge import PyscriptBridge, CommandResult
         if self._in_py:
-            self.perror("Recursively entering interactive Python consoles is not allowed.", traceback_war=False)
+            err = "Recursively entering interactive Python consoles is not allowed."
+            self.perror(err, traceback_war=False)
+            self._last_result = CommandResult('', err)
             return False
         self._in_py = True
 
