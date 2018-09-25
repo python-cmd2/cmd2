@@ -2245,11 +2245,9 @@ class Cmd(cmd.Cmd):
             return
 
         # Build the alias value string
-        arg_str = ''
+        value = utils.quote_string_if_needed(args.command)
         for cur_arg in args.command_args:
-            arg_str += ' ' + utils.quote_string_if_needed(cur_arg)
-
-        value = utils.quote_string_if_needed(args.command) + arg_str
+            value += ' ' + utils.quote_string_if_needed(cur_arg)
 
         # Set the alias
         self.aliases[args.name] = value
@@ -2379,11 +2377,9 @@ class Cmd(cmd.Cmd):
             return
 
         # Build the macro value string
-        arg_str = ''
+        value = utils.quote_string_if_needed(args.command)
         for cur_arg in args.command_args:
-            arg_str += ' ' + utils.quote_string_if_needed(cur_arg)
-
-        value = utils.quote_string_if_needed(args.command) + arg_str
+            value += ' ' + utils.quote_string_if_needed(cur_arg)
 
         # Find all normal arguments
         arg_info_list = []
