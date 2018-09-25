@@ -2481,13 +2481,17 @@ Usage:  Usage: unalias [-a] name [name ...]
                     doc_block = []
                     found_first = False
                     for doc_line in doc.splitlines():
-                        str(doc_line).strip()
-                        if len(doc_line.strip()) > 0:
-                            doc_block.append(doc_line.strip())
-                            found_first = True
-                        else:
+                        stripped_line = doc_line.strip()
+
+                        # Don't include :param type lines
+                        if stripped_line.startswith(':'):
                             if found_first:
                                 break
+                        elif stripped_line:
+                            doc_block.append(stripped_line)
+                            found_first = True
+                        elif found_first:
+                            break
 
                     for doc_line in doc_block:
                         self.stdout.write('{: <{col_width}}{doc}\n'.format(command,

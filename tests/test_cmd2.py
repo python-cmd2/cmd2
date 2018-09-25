@@ -47,6 +47,11 @@ def test_base_help_verbose(base_app):
     expected = normalize(BASE_HELP_VERBOSE)
     assert out == expected
 
+    # Make sure :param type lines are filtered out of help summary
+    help_doc = base_app.do_help.__func__.__doc__
+    help_doc += "\n:param fake param"
+    base_app.do_help.__func__.__doc__ = help_doc
+
     out = run_cmd(base_app, 'help --verbose')
     assert out == expected
 
