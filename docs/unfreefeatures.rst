@@ -198,12 +198,12 @@ the command line. This means the feedback is provided to the user when they are 
 the prompt. To use this functionality, the application must be running in any terminal that supports
 VT100 control characters and readline. Linux, Mac, and Windows 10 and greater all support these.
 
-_async_alert()
+async_alert()
     Used to display an important message to the user while they are at the prompt in between commands.
     To the user it appears as if an alert message is printed above the prompt and their current input
     text and cursor location is left alone.
 
-_async_update_prompt()
+async_update_prompt()
     Updates the prompt while the user is still typing at it. This is good for alerting the user to system
     changes dynamically in between commands. For instance you could alter the color of the prompt to indicate
     a system status or increase a counter to report an event.

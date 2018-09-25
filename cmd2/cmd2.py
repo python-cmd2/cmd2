@@ -530,7 +530,7 @@ class Cmd(cmd.Cmd):
         # This lock should be acquired before doing any asynchronous changes to the terminal to
         # ensure the updates to the terminal don't interfere with the input being typed. It can be
         # acquired any time there is a readline prompt on screen.
-        self._terminal_lock = threading.RLock()
+        self.terminal_lock = threading.RLock()
 
     # -----  Methods related to presenting output to the user -----
 
@@ -2085,10 +2085,10 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
-                    # Wrap in try since _terminal_lock may not be locked when this function is called from unit tests
+                    # Wrap in try since terminal_lock may not be locked when this function is called from unit tests
                     try:
                         # A prompt is about to be drawn. Allow asynchronous changes to the terminal.
-                        self._terminal_lock.release()
+                        self.terminal_lock.release()
                     except RuntimeError:
                         pass
 
@@ -2104,7 +2104,7 @@ class Cmd(cmd.Cmd):
             finally:
                 if sys.stdin.isatty():
                     # The prompt is gone. Do not allow asynchronous changes to the terminal.
-                    self._terminal_lock.acquire()
+                    self.terminal_lock.acquire()
         else:
             if self.stdin.isatty():
                 # on a tty, print the prompt first, then read the line
@@ -3237,25 +3237,25 @@ Script should contain one command per line, just like command would be typed in 
 
         return terminal_str
 
-    def _async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:
+    def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:
         """
         Used to display an important message to the user while they are at the prompt in between commands.
         To the user it appears as if an alert message is printed above the prompt and their current input
         text and cursor location is left alone.
 
-        IMPORTANT: Do not call this unless you have acquired self._terminal_lock
+        IMPORTANT: Do not call this unless you have acquired self.terminal_lock
                    first, which ensures a prompt is onscreen
 
         :param alert_msg: the message to display to the user
         :param new_prompt: if you also want to change the prompt that is displayed, then include it here
                            see async_update_prompt() docstring for guidance on updating a prompt
-        :raises RuntimeError if called while another thread holds _terminal_lock
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         if not (vt100_support and self.use_rawinput):
             return
 
-        # Sanity check that can't fail if self._terminal_lock was acquired before calling this function
-        if self._terminal_lock.acquire(blocking=False):
+        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
+        if self.terminal_lock.acquire(blocking=False):
 
             # Generate a string to clear the prompt and input lines and replace with the alert
             terminal_str = self._clear_input_lines_str()
@@ -3275,12 +3275,12 @@ Script should contain one command per line, just like command would be typed in 
             # Redraw the prompt and input lines
             rl_force_redisplay()
 
-            self._terminal_lock.release()
+            self.terminal_lock.release()
 
         else:
-            raise RuntimeError("another thread holds _terminal_lock")
+            raise RuntimeError("another thread holds terminal_lock")
 
-    def _async_update_prompt(self, new_prompt: str) -> None:
+    def async_update_prompt(self, new_prompt: str) -> None:
         """
         Updates the prompt while the user is still typing at it. This is good for alerting the user to system
         changes dynamically in between commands. For instance you could alter the color of the prompt to indicate
@@ -3288,17 +3288,17 @@ Script should contain one command per line, just like command would be typed in 
         it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
         be shifted and the update will not be seamless.
 
-        IMPORTANT: Do not call this unless you have acquired self._terminal_lock
+        IMPORTANT: Do not call this unless you have acquired self.terminal_lock
                    first, which ensures a prompt is onscreen
 
         :param new_prompt: what to change the prompt to
-        :raises RuntimeError if called while another thread holds _terminal_lock
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         if not (vt100_support and self.use_rawinput):
             return
 
-        # Sanity check that can't fail if self._terminal_lock was acquired before calling this function
-        if self._terminal_lock.acquire(blocking=False):
+        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
+        if self.terminal_lock.acquire(blocking=False):
 
             # Generate a string to clear the prompt and input lines
             terminal_str = self._clear_input_lines_str()
@@ -3316,10 +3316,10 @@ Script should contain one command per line, just like command would be typed in 
             # Redraw the prompt and input lines
             rl_force_redisplay()
 
-            self._terminal_lock.release()
+            self.terminal_lock.release()
 
         else:
-            raise RuntimeError("another thread holds _terminal_lock")
+            raise RuntimeError("another thread holds terminal_lock")
 
     @staticmethod
     def set_window_title(title: str) -> None:
@@ -3368,7 +3368,7 @@ Script should contain one command per line, just like command would be typed in 
         signal.signal(signal.SIGINT, self.sigint_handler)
 
         # Grab terminal lock before the prompt has been drawn by readline
-        self._terminal_lock.acquire()
+        self.terminal_lock.acquire()
 
         # Always run the preloop first
         for func in self._preloop_hooks:
@@ -3397,7 +3397,7 @@ Script should contain one command per line, just like command would be typed in 
 
         # Release terminal lock now that postloop code should have stopped any terminal updater threads
         # This will also zero the lock count in case cmdloop() is called again
-        self._terminal_lock.release()
+        self.terminal_lock.release()
 
         # Restore the original signal handler
         signal.signal(signal.SIGINT, original_sigint_handler)
