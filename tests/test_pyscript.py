@@ -20,7 +20,7 @@ class PyscriptExample(Cmd):
         if not args.command:
             self.do_help(['media movies'])
         else:
-            print('media movies ' + str(args.__dict__))
+            self.poutput('media movies ' + str(args.__dict__))
 
     def _do_media_shows(self, args) -> None:
         if not args.command:
@@ -29,7 +29,7 @@ class PyscriptExample(Cmd):
         if not args.command:
             self.do_help(['media shows'])
         else:
-            print('media shows ' + str(args.__dict__))
+            self.poutput('media shows ' + str(args.__dict__))
 
     media_parser = argparse_completer.ACArgumentParser(prog='media')
 
@@ -84,7 +84,7 @@ class PyscriptExample(Cmd):
 
     @with_argparser(foo_parser)
     def do_foo(self, args):
-        print('foo ' + str(args.__dict__))
+        self.poutput('foo ' + str(args.__dict__))
         if self._in_py:
             FooResult = namedtuple_with_defaults('FooResult',
                                                  ['counter', 'trueval', 'constval',
@@ -110,7 +110,7 @@ class PyscriptExample(Cmd):
         out += '{'
         for key in keys:
             out += "'{}':'{}'".format(key, arg_dict[key])
-        print(out)
+        self.poutput(out)
 
 
 @pytest.fixture
@@ -126,7 +126,7 @@ class PyscriptCustomNameExample(Cmd):
         self.pyscript_name = 'custom'
 
     def do_echo(self, out):
-        print(out)
+        self.poutput(out)
 
 
 @pytest.fixture
@@ -172,13 +172,11 @@ def test_pyscript_help(ps_app, capsys, request, command, pyscript_file):
 def test_pyscript_out(ps_app, capsys, request, command, pyscript_file):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', pyscript_file)
-    run_cmd(ps_app, command)
-    expected, _ = capsys.readouterr()
+    expected = run_cmd(ps_app, command)
+    assert expected
 
-    assert len(expected) > 0
-    run_cmd(ps_app, 'pyscript {}'.format(python_script))
-    out, _ = capsys.readouterr()
-    assert len(out) > 0
+    out = run_cmd(ps_app, 'pyscript {}'.format(python_script))
+    assert out
     assert out == expected
 
 
@@ -227,14 +225,12 @@ def test_pyscript_dir(ps_app, capsys, request, expected, pyscript_file):
     assert out == expected
 
 
-def test_pyscript_custom_name(ps_echo, capsys, request):
+def test_pyscript_custom_name(ps_echo, request):
     message = 'blah!'
 
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'custom_echo.py')
 
-    run_cmd(ps_echo, 'pyscript {}'.format(python_script))
-    expected, _ = capsys.readouterr()
-    assert len(expected) > 0
-    expected = expected.splitlines()
-    assert message == expected[0]
+    out = run_cmd(ps_echo, 'pyscript {}'.format(python_script))
+    assert out
+    assert message == out[0]
