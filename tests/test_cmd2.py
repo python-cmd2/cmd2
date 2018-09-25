@@ -220,13 +220,13 @@ def test_base_run_pyscript(base_app, capsys, request):
     out, err = capsys.readouterr()
     assert out == expected
 
-def test_recursive_pyscript_not_allowed(base_app, capsys, request):
+def test_recursive_pyscript_not_allowed(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'scripts', 'recursive.py')
-    expected = 'ERROR: Recursively entering interactive Python consoles is not allowed.\n'
+    expected = 'Recursively entering interactive Python consoles is not allowed.'
 
     run_cmd(base_app, "pyscript {}".format(python_script))
-    out, err = capsys.readouterr()
+    err = base_app._last_result.stderr
     assert err == expected
 
 def test_pyscript_with_nonexist_file(base_app, capsys):
