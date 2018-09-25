@@ -40,7 +40,7 @@ if 'pyreadline' in sys.modules:
     import atexit
 
     # Check if we are running in a terminal
-    if sys.stdout.isatty():
+    if sys.stdout.isatty():  # pragma: no cover
         # noinspection PyPep8Naming
         def enable_win_vt100(handle: HANDLE) -> bool:
             """
@@ -121,7 +121,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
 
 
 # noinspection PyProtectedMember
-def rl_force_redisplay() -> None:
+def rl_force_redisplay() -> None:  # pragma: no cover
     """
     Causes readline to display the prompt and input text wherever the cursor is and start
     reading input from this location. This is the proper way to restore the input line after
@@ -130,51 +130,51 @@ def rl_force_redisplay() -> None:
     if not sys.stdout.isatty():
         return
 
-    if rl_type == RlType.GNU:  # pragma: no cover
+    if rl_type == RlType.GNU:
         readline_lib.rl_forced_update_display()
 
         # After manually updating the display, readline asks that rl_display_fixed be set to 1 for efficiency
         display_fixed = ctypes.c_int.in_dll(readline_lib, "rl_display_fixed")
         display_fixed.value = 1
 
-    elif rl_type == RlType.PYREADLINE:  # pragma: no cover
+    elif rl_type == RlType.PYREADLINE:
         # Call _print_prompt() first to set the new location of the prompt
         readline.rl.mode._print_prompt()
         readline.rl.mode._update_line()
 
 
 # noinspection PyProtectedMember
-def rl_get_point() -> int:
+def rl_get_point() -> int:  # pragma: no cover
     """
     Returns the offset of the current cursor position in rl_line_buffer
     """
-    if rl_type == RlType.GNU:  # pragma: no cover
+    if rl_type == RlType.GNU:
         return ctypes.c_int.in_dll(readline_lib, "rl_point").value
 
-    elif rl_type == RlType.PYREADLINE:  # pragma: no cover
+    elif rl_type == RlType.PYREADLINE:
         return readline.rl.mode.l_buffer.point
 
-    else:  # pragma: no cover
+    else:
         return 0
 
 
 # noinspection PyProtectedMember
-def rl_set_prompt(prompt: str) -> None:
+def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
     """
     Sets readline's prompt
     :param prompt: the new prompt value
     """
     safe_prompt = rl_make_safe_prompt(prompt)
 
-    if rl_type == RlType.GNU:  # pragma: no cover
+    if rl_type == RlType.GNU:
         encoded_prompt = bytes(safe_prompt, encoding='utf-8')
         readline_lib.rl_set_prompt(encoded_prompt)
 
-    elif rl_type == RlType.PYREADLINE:  # pragma: no cover
+    elif rl_type == RlType.PYREADLINE:
         readline.rl._set_prompt(safe_prompt)
 
 
-def rl_make_safe_prompt(prompt: str, start: str = "\x01", end: str = "\x02") -> str:
+def rl_make_safe_prompt(prompt: str, start: str = "\x01", end: str = "\x02") -> str:  # pragma: no cover
     """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
 
     :param prompt: original prompt
@@ -182,7 +182,7 @@ def rl_make_safe_prompt(prompt: str, start: str = "\x01", end: str = "\x02") -> 
     :param end: end code to tell GNU Readline about end of invisible characters
     :return: prompt safe to pass to GNU Readline
     """
-    if rl_type == RlType.GNU:  # pragma: no cover
+    if rl_type == RlType.GNU:
         escaped = False
         result = ""
 
