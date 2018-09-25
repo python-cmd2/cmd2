@@ -13,7 +13,7 @@ import os
 import sys
 import tempfile
 
-import colorama
+from colorama import Fore, Back, Style
 import pytest
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
@@ -1099,7 +1099,6 @@ def test_ansi_prompt_not_esacped(base_app):
 
 
 def test_ansi_prompt_escaped():
-    from colorama import Fore
     app = cmd2.Cmd()
     color = Fore.CYAN
     prompt = 'InColor'
@@ -1737,6 +1736,24 @@ def test_poutput_none(base_app):
     expected = ''
     assert out == expected
 
+def test_poutput_color_always(base_app):
+    msg = 'Hello World'
+    color = Fore.CYAN
+    base_app.colors = 'Always'
+    base_app.poutput(msg, color=color)
+    out = base_app.stdout.getvalue()
+    expected = color + msg + '\n' + Fore.RESET
+    assert out == expected
+
+def test_poutput_color_never(base_app):
+    msg = 'Hello World'
+    color = Fore.CYAN
+    base_app.colors = 'Never'
+    base_app.poutput(msg, color=color)
+    out = base_app.stdout.getvalue()
+    expected = msg + '\n'
+    assert out == expected
+
 
 def test_alias(base_app, capsys):
     # Create the alias
@@ -2037,8 +2054,8 @@ class ColorsApp(cmd2.Cmd):
         self.perror(args, False)
 
     def do_echo_error(self, args):
-        color_on = colorama.Fore.RED + colorama.Back.BLACK
-        color_off = colorama.Style.RESET_ALL
+        color_on = Fore.RED + Back.BLACK
+        color_off = Style.RESET_ALL
         self.poutput(color_on + args + color_off)
         # perror uses colors by default
         self.perror(args, False)
