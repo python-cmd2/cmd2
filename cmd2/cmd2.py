@@ -1635,7 +1635,7 @@ class Cmd(cmd.Cmd):
             try:
                 cmd_func = getattr(self, 'do_' + tokens[cmd_index])
                 parser = getattr(cmd_func, 'argparser')
-                completer = AutoCompleter(parser)
+                completer = AutoCompleter(parser, cmd2_app=self)
                 matches = completer.complete_command_help(tokens[1:], text, line, begidx, endidx)
             except AttributeError:
                 pass
@@ -2307,14 +2307,9 @@ class Cmd(cmd.Cmd):
                 # Check to see if this function was decorated with an argparse ArgumentParser
                 func = getattr(self, funcname)
                 if hasattr(func, 'argparser'):
-                    # Function has an argparser, so get help based on all the arguments in case there are sub-commands
-                    new_arglist = arglist[1:]
-                    new_arglist.append('-h')
+                    completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
 
-                    # Temporarily redirect all argparse output to both sys.stdout and sys.stderr to self.stdout
-                    with redirect_stdout(self.stdout):
-                        with redirect_stderr(self.stdout):
-                            func(new_arglist)
+                    self.poutput(completer.format_help(arglist))
                 else:
                     # No special behavior needed, delegate to cmd base class do_help()
                     cmd.Cmd.do_help(self, funcname[3:])
