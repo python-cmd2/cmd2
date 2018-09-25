@@ -993,10 +993,13 @@ def test_cmdloop_without_rawinput():
 class HookFailureApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # register a postparsing hook method
+        self.register_postparsing_hook(self.postparsing_precmd)
 
-    def postparsing_precmd(self, statement):
+    def postparsing_precmd(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """Simulate precmd hook failure."""
-        return True, statement
+        data.stop = True
+        return data
 
 @pytest.fixture
 def hook_failure():
