@@ -51,10 +51,10 @@ class Plugin:
     # preparse hook
     #
     ###
-    def preparse(self, line: str) -> str:
+    def preparse(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """Preparsing hook"""
         self.called_preparse += 1
-        return line
+        return data
 
     ###
     #
@@ -322,6 +322,7 @@ def test_postloop_hooks(capsys):
 ###
 def test_preparse(capsys):
     app = PluggedApp()
+    app.register_postparsing_hook(app.preparse)
     app.onecmd_plus_hooks('say hello')
     out, err = capsys.readouterr()
     assert out == 'hello\n'
