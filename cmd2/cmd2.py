@@ -2150,7 +2150,7 @@ class Cmd(cmd.Cmd):
     def do_alias(self, statement: Statement) -> None:
         """Define or display aliases
 
-Usage:  Usage: alias [name] | [<name> <value>]
+    Usage: alias [name] | [<name> <value>]
     Where:
         name - name of the alias being looked up, added, or replaced
         value - what the alias will be resolved to (if adding or replacing)
@@ -2178,7 +2178,8 @@ Usage:  Usage: alias [name] | [<name> <value>]
 
         # If no args were given, then print a list of current aliases
         if not alias_arg_list:
-            for cur_alias in self.aliases:
+            sorted_aliases = utils.alphabetical_sort(list(self.aliases))
+            for cur_alias in sorted_aliases:
                 self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
             return
 
@@ -2212,9 +2213,6 @@ Usage:  Usage: alias [name] | [<name> <value>]
                 # Set the alias
                 self.aliases[name] = value
                 self.poutput("Alias {!r} created".format(name))
-
-                # Keep aliases in alphabetically sorted order
-                self.aliases = collections.OrderedDict(sorted(self.aliases.items()))
             else:
                 errmsg = "Aliases can not contain: {}".format(invalidchars)
                 self.perror(errmsg, traceback_war=False)
@@ -2235,7 +2233,7 @@ Usage:  Usage: alias [name] | [<name> <value>]
     def do_unalias(self, arglist: List[str]) -> None:
         """Unsets aliases
 
-Usage:  Usage: unalias [-a] name [name ...]
+    Usage: unalias [-a] name [name ...]
     Where:
         name - name of the alias being unset
 
