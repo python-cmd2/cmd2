@@ -3197,7 +3197,8 @@ Script should contain one command per line, just like command would be typed in 
 
             # Generate a string to clear the prompt and input lines and replace with the alert
             terminal_str = self._clear_input_lines_str()
-            terminal_str += alert_msg + '\n'
+            if alert_msg:
+                terminal_str += alert_msg + '\n'
 
             # Set the new prompt now that _clear_input_lines_str is done using the old prompt
             if new_prompt is not None:
@@ -3230,34 +3231,8 @@ Script should contain one command per line, just like command would be typed in 
                    first, which ensures a prompt is onscreen
 
         :param new_prompt: what to change the prompt to
-        :raises RuntimeError if called while another thread holds terminal_lock
         """
-        if not (vt100_support and self.use_rawinput):
-            return
-
-        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
-        if self.terminal_lock.acquire(blocking=False):
-
-            # Generate a string to clear the prompt and input lines
-            terminal_str = self._clear_input_lines_str()
-
-            # Set the new prompt now that _clear_input_lines_str is done using the old prompt
-            self.prompt = new_prompt
-            rl_set_prompt(self.prompt)
-
-            # Print terminal_str to erase the lines
-            if rl_type == RlType.GNU:
-                sys.stderr.write(terminal_str)
-            elif rl_type == RlType.PYREADLINE:
-                readline.rl.mode.console.write(terminal_str)
-
-            # Redraw the prompt and input lines
-            rl_force_redisplay()
-
-            self.terminal_lock.release()
-
-        else:
-            raise RuntimeError("another thread holds terminal_lock")
+        self.async_alert('', new_prompt)
 
     @staticmethod
     def set_window_title(title: str) -> None:  # pragma: no cover
