@@ -1828,7 +1828,8 @@ def test_complete_unalias(base_app):
 
     # Validate that there are now completions
     expected = ['fake', 'fall']
-    assert base_app.complete_unalias(text, line, begidx, endidx) == expected
+    result = base_app.complete_unalias(text, line, begidx, endidx)
+    assert sorted(expected) == sorted(result)
 
 def test_ppaged(base_app):
     msg = 'testing...'
