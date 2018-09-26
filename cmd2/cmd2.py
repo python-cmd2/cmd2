@@ -1452,6 +1452,10 @@ class Cmd(cmd.Cmd):
                         except AttributeError:
                             compfunc = self.completedefault
 
+                # Check if a macro was entered
+                elif command in self.macros:
+                    compfunc = self.path_complete
+
                 # A valid command was not entered
                 else:
                     # Check if this command should be run as a shell command
@@ -2276,6 +2280,9 @@ class Cmd(cmd.Cmd):
     alias_create_epilog = ("Notes:\n"
                            "  If you want to use redirection or pipes in the alias, then quote them to prevent\n"
                            "  the 'alias create' command itself from being redirected\n"
+                           "\n"
+                           "  Since aliases are resolved during parsing, tab completion will function as it would\n"
+                           "  for the actual command the alias resolves to."
                            "\n"
                            "Examples:\n"
                            "  alias ls !ls -lF\n"
