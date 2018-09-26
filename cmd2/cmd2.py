@@ -390,6 +390,10 @@ class Cmd(cmd.Cmd):
         # Call super class constructor
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
+        # Get rid of cmd's complete_help() functions so AutoCompleter will complete our help command
+        if getattr(cmd.Cmd, 'complete_help', None) is not None:
+            delattr(cmd.Cmd, 'complete_help')
+
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', 'eos', '_relative_load']
 
@@ -1625,49 +1629,6 @@ class Cmd(cmd.Cmd):
         return [name[5:] for name in self.get_names()
                 if name.startswith('help_') and callable(getattr(self, name))]
 
-    def complete_help(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """
-        Override of parent class method to handle tab completing subcommands and not showing hidden commands
-        Returns a list of possible tab completions
-        """
-
-        # The command is the token at index 1 in the command line
-        cmd_index = 1
-
-        # The subcommand is the token at index 2 in the command line
-        subcmd_index = 2
-
-        # Get all tokens through the one being completed
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if not tokens:
-            return []
-
-        matches = []
-
-        # Get the index of the token being completed
-        index = len(tokens) - 1
-
-        # Check if we are completing a command or help topic
-        if index == cmd_index:
-
-            # Complete token against topics and visible commands
-            topics = set(self.get_help_topics())
-            visible_commands = set(self.get_visible_commands())
-            strs_to_match = list(topics | visible_commands)
-            matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
-
-        # check if the command uses argparser
-        elif index >= subcmd_index:
-            try:
-                cmd_func = getattr(self, 'do_' + tokens[cmd_index])
-                parser = getattr(cmd_func, 'argparser')
-                completer = AutoCompleter(parser, cmd2_app=self)
-                matches = completer.complete_command_help(tokens[1:], text, line, begidx, endidx)
-            except AttributeError:
-                pass
-
-        return matches
-
     # noinspection PyUnusedLocal
     def sigint_handler(self, signum: int, frame) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
@@ -2586,10 +2547,55 @@ class Cmd(cmd.Cmd):
             # No subcommand was provided, so call help
             self.macro_parser.print_help()
 
+    def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Completes the command argument of help"""
+
+        # Complete token against topics and visible commands
+        topics = set(self.get_help_topics())
+        visible_commands = set(self.get_visible_commands())
+        strs_to_match = list(topics | visible_commands)
+        return self.basic_complete(text, line, begidx, endidx, strs_to_match)
+
+    def complete_help_subcommands(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Completes the subcommands argument of help"""
+
+        # Get all tokens through the one being completed
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
+
+        if not tokens:
+            return []
+
+        # Find where the command is by skipping past any flags
+        cmd_index = 1
+        for cur_token in tokens[cmd_index:]:
+            if not cur_token.startswith('-'):
+                break
+            cmd_index += 1
+
+        if cmd_index >= len(tokens):
+            return []
+
+        command = tokens[cmd_index]
+        matches = []
+
+        # Check if this is a command with an argparse function
+        funcname = self._func_named(command)
+        if funcname:
+            func = getattr(self, funcname)
+            if hasattr(func, 'argparser'):
+                parser = getattr(func, 'argparser')
+                completer = AutoCompleter(parser, cmd2_app=self)
+                matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
+
+        return matches
+
     help_parser = ACArgumentParser()
-    help_parser.add_argument('command', help="command to retrieve help for", nargs="?")
-    help_parser.add_argument('subcommands', help="used to retrieve help on a specific subcommand",
-                             nargs=argparse.REMAINDER)
+
+    setattr(help_parser.add_argument('command', help="command to retrieve help for", nargs="?"),
+            ACTION_ARG_CHOICES, ('complete_help_command',))
+    setattr(help_parser.add_argument('subcommands', help="used to retrieve help on a specific subcommand",
+                                     nargs=argparse.REMAINDER),
+            ACTION_ARG_CHOICES, ('complete_help_subcommands',))
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
