@@ -2312,11 +2312,11 @@ class Cmd(cmd.Cmd):
     alias_create_description = "Create or overwrite an alias"
 
     alias_create_epilog = ("Notes:\n"
-                           "  If you want to use redirection or pipes in the alias, then quote them to prevent\n"
-                           "  the 'alias create' command itself from being redirected\n"
+                           "  If you want to use redirection or pipes in the alias, then quote them to\n"
+                           "  prevent the 'alias create' command from being redirected.\n"
                            "\n"
-                           "  Since aliases are resolved during parsing, tab completion will function as it would\n"
-                           "  for the actual command the alias resolves to."
+                           "  Since aliases are resolved during parsing, tab completion will function as it\n"
+                           "  would for the actual command the alias resolves to.\n"
                            "\n"
                            "Examples:\n"
                            "  alias ls !ls -lF\n"
@@ -2326,7 +2326,7 @@ class Cmd(cmd.Cmd):
     alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
                                                       description=alias_create_description,
                                                       epilog=alias_create_epilog)
-    setattr(alias_create_parser.add_argument('name', type=str, help='Name of this alias'),
+    setattr(alias_create_parser.add_argument('name', type=str, help='name of this alias'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(alias_create_parser.add_argument('command', type=str, help='what the alias resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
@@ -2347,8 +2347,8 @@ class Cmd(cmd.Cmd):
 
     # alias -> list
     alias_list_help = "list aliases"
-    alias_list_description = ("List specified aliases in a reusable form that can be saved to\n"
-                              "a startup_script to preserve aliases across sessions\n"
+    alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup script\n"
+                              "to preserve aliases across sessions\n"
                               "\n"
                               "Without arguments, all aliases will be listed")
 
@@ -2500,8 +2500,9 @@ class Cmd(cmd.Cmd):
     macro_create_help = "create or overwrite a macro"
     macro_create_description = "Create or overwrite a macro"
 
-    macro_create_epilog = ("A macro is similar to an alias, but it can take arguments when called. Arguments are\n"
-                           "expressed when creating a macro using {#} notation where {1} means the first argument.\n"
+    macro_create_epilog = ("A macro is similar to an alias, but it can take arguments when called.\n"
+                           "Arguments are expressed when creating a macro using {#} notation where {1}\n"
+                           "means the first argument.\n"
                            "\n"
                            "The following creates a macro called my_macro that expects two arguments:\n"
                            "\n"
@@ -2515,8 +2516,8 @@ class Cmd(cmd.Cmd):
                            "Notes:\n"
                            "  To use the literal string {1} in your command, escape it this way: {{1}}.\n"
                            "\n"
-                           "  An argument number can be repeated in a macro. In the following example the first\n"
-                           "  argument will populate both {1} instances.\n"
+                           "  An argument number can be repeated in a macro. In the following example the\n"
+                           "  first argument will populate both {1} instances.\n"
                            "\n"
                            "    macro create ft file_taxes -p {1} -q {2} -r {1}\n"
                            "\n"
@@ -2524,22 +2525,21 @@ class Cmd(cmd.Cmd):
                            "\n"
                            "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
                            "\n"
-                           "  Macros can resolve into commands, aliases, and other macros. Therefore it is\n"
-                           "  possible to create a macro that results in infinite recursion if a macro ends up\n"
-                           "  resolving back to itself. So be careful.\n"
+                           "  Macros can resolve into commands, aliases, and macros. Thus it is possible\n"
+                           "  to create a macro that results in infinite recursion. So be careful.\n"
                            "\n"
-                           "  If you want to use redirection or pipes in the macro, then quote them as in the\n"
-                           "  following example to prevent the 'macro create' command itself from being redirected.\n"
+                           "  If you want to use redirection or pipes in the macro, then quote them as in\n"
+                           "  this example to prevent the 'macro create' command from being redirected.\n"
                            "\n"
-                           "    macro create save_results print_results -type {1} \">\" \"{2}\"\n"
+                           "    macro create show_results print_results -type {1} \"|\" less\n"
                            "\n"
-                           "  Because macros do not resolve until after parsing (hitting Enter), tab completion\n"
-                           "  will only complete paths.")
+                           "  Because macros do not resolve until after parsing (hitting Enter), tab\n"
+                           "  completion will only complete paths.")
 
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
                                                       epilog=macro_create_epilog)
-    setattr(macro_create_parser.add_argument('name', type=str, help='Name of this macro'),
+    setattr(macro_create_parser.add_argument('name', type=str, help='name of this macro'),
             ACTION_ARG_CHOICES, macros)
     setattr(macro_create_parser.add_argument('command', type=str, help='what the macro resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
@@ -2560,8 +2560,8 @@ class Cmd(cmd.Cmd):
 
     # macro -> list
     macro_list_help = "list macros"
-    macro_list_description = ("List specified macros in a reusable form that can be saved to\n"
-                              "a startup_script to preserve macros across sessions\n"
+    macro_list_description = ("List specified macros in a reusable form that can be saved to a startup script\n"
+                              "to preserve macros across sessions\n"
                               "\n"
                               "Without arguments, all macros will be listed.")
 
