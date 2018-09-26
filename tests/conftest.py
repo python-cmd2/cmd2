@@ -42,12 +42,12 @@ help                List available commands with "help" or detailed help with "h
 history             View, run, edit, save, or clear previously entered commands
 load                Run commands in script file that is encoded as either ASCII or UTF-8 text
 macro               Manage macros
-py                  Invoke python command or shell
-pyscript            Run a python script file inside the console
+py                  Invoke Python command or shell
+pyscript            Run a Python script file inside the console
 quit                Exit this application
 set                 Set a settable parameter or show current settings of parameters
 shell               Execute a command as if at the OS prompt
-shortcuts           List shortcuts available
+shortcuts           List available shortcuts
 """
 
 # Help text for the history command
@@ -66,12 +66,12 @@ optional arguments:
   -h, --help            show this help message and exit
   -r, --run             run selected history items
   -e, --edit            edit and then run selected history items
-  -s, --script          script format; no separation lines
+  -s, --script          output commands in script format
   -o, --output-file FILE
                         output commands to a script file
   -t, --transcript TRANSCRIPT
                         output commands and results to a transcript file
-  -c, --clear           clears all history
+  -c, --clear           clear all history
 """
 
 # Output from the shortcuts command with default built-in shortcuts

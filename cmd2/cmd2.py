@@ -2723,7 +2723,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(ACArgumentParser())
     def do_shortcuts(self, _: argparse.Namespace) -> None:
-        """List shortcuts available"""
+        """List available shortcuts"""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
@@ -2821,7 +2821,7 @@ class Cmd(cmd.Cmd):
         else:
             raise LookupError("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
 
-    set_description = ("Set a settable parameter or show current settings of parameters.\n"
+    set_description = ("Set a settable parameter or show current settings of parameters\n"
                        "\n"
                        "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
                        "Call without arguments for a list of settable parameters with their values.")
@@ -2932,14 +2932,14 @@ class Cmd(cmd.Cmd):
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
-    py_description = "Invoke python command or shell"
+    py_description = "Invoke Python command or shell"
     py_parser = ACArgumentParser(description=py_description)
     py_parser.add_argument('command', help="command to run", nargs='?')
     py_parser.add_argument('remainder', help="remainder of command", nargs=argparse.REMAINDER)
 
     @with_argparser(py_parser)
     def do_py(self, args: argparse.Namespace) -> bool:
-        """Invoke python command or shell"""
+        """Invoke Python command or shell"""
         from .pyscript_bridge import PyscriptBridge, CommandResult
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
@@ -3046,13 +3046,14 @@ class Cmd(cmd.Cmd):
                 sys.stdin = self.stdin
 
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
-                docstr = 'End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
-                docstr += 'Non-python commands can be issued with: {}("your command")\n'.format(self.pyscript_name)
-                docstr += 'Run python code from external script files with: run("script.py")\n'
+                instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
+                                'Non-Python commands can be issued with: {}("your command")\n'
+                                'Run Python code from external script files with: run("script.py")'
+                                .format(self.pyscript_name))
 
                 try:
-                    interp.interact(banner="Python {} on {}\n{}\n({})\n{}".
-                                    format(sys.version, sys.platform, cprt, self.__class__.__name__, docstr))
+                    interp.interact(banner="Python {} on {}\n{}\n\n{}\n".
+                                    format(sys.version, sys.platform, cprt, instructions))
                 except EmbeddedConsoleExit:
                     pass
 
@@ -3095,7 +3096,7 @@ class Cmd(cmd.Cmd):
 
     @with_argument_list
     def do_pyscript(self, arglist: List[str]) -> None:
-        """\nRun a python script file inside the console
+        """\nRun a Python script file inside the console
 
     Usage: pyscript <script_path> [script_arguments]
 
@@ -3136,8 +3137,8 @@ Paths or arguments that contain spaces must be enclosed in quotes
             from .pyscript_bridge import PyscriptBridge
             bridge = PyscriptBridge(self)
 
-            banner = 'Entering an embedded IPython shell. Type quit() or <Ctrl>-d to exit ...\n'
-            banner += 'Run python code from external files with: run filename.py\n'
+            banner = 'Entering an embedded IPython shell. Type quit() or <Ctrl>-d to exit.\n'
+            banner += 'Run Python code from external files with: run filename.py\n'
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
             if self.locals_in_py:
@@ -3154,10 +3155,10 @@ Paths or arguments that contain spaces must be enclosed in quotes
     history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_parser_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
-    history_parser_group.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    history_parser_group.add_argument('-s', '--script', action='store_true', help='output commands in script format')
     history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output commands to a script file')
     history_parser_group.add_argument('-t', '--transcript', help='output commands and results to a transcript file')
-    history_parser_group.add_argument('-c', '--clear', action="store_true", help='clears all history')
+    history_parser_group.add_argument('-c', '--clear', action="store_true", help='clear all history')
     _history_arg_help = """empty               all history items
 a                   one history item by number
 a..b, a:b, a:, ..b  items by indices (inclusive)
@@ -3309,10 +3310,11 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             msg = '{} {} saved to transcript file {!r}'
             self.pfeedback(msg.format(len(history), plural, transcript_file))
 
-    edit_description = "Edit a file in a text editor\n"
-    edit_description += "\n"
-    edit_description += "The editor used is determined by the ``editor`` settable parameter.\n"
-    edit_description += "`set editor (program-name)` to change or set the EDITOR environment variable.\n"
+    edit_description = ("Edit a file in a text editor\n"
+                        "\n"
+                        "The editor used is determined by a settable parameter. To set it:\n"
+                        "\n"
+                        "  set editor (program-name)")
 
     edit_parser = ACArgumentParser(description=edit_description)
     setattr(edit_parser.add_argument('file_path', help="path to a file to open in editor", nargs="?"),
@@ -3371,9 +3373,10 @@ NOTE: This command is intended to only be used within text file scripts.
         if self._script_dir:
             self._script_dir.pop()
 
-    load_description = "Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
-    load_description += "\n"
-    load_description += "Script should contain one command per line, just like command would be typed in console"
+    load_description = ("Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
+                        "\n"
+                        "Script should contain one command per line, just like the command would be\n"
+                        "typed in the console.")
 
     load_parser = ACArgumentParser(description=load_description)
     setattr(load_parser.add_argument('script_path', help="path to the script file"),
