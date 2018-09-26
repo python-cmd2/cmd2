@@ -10,6 +10,10 @@
     for formatting help/description text
     * Aliases are now sorted alphabetically
     * The **set** command now tab-completes settable parameter names
+    * Added ``async_alert``, ``async_update_prompt``, and ``set_window_title`` functions
+        * These allow you to provide feedback to the user in an asychronous fashion, meaning alerts can
+        display when the user is still entering text at the prompt. See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
+        for an example.
     * Cross-platform colored output support 
         * ``colorama`` gets initialized properly in ``Cmd.__init()``
         * The ``Cmd.colors`` setting is no longer platform dependent and now has three values:
