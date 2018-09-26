@@ -139,23 +139,43 @@ instead.  These methods have these advantages:
 .. automethod:: cmd2.cmd2.Cmd.ppaged
 
 
-color
-=====
+Colored Output
+==============
 
-Text output can be colored by wrapping it in the ``colorize`` method.
+The output methods in the previous section all honor the ``colors`` setting,
+which has three possible values:
 
-.. automethod:: cmd2.cmd2.Cmd.colorize
+Never
+    poutput() and pfeedback() strip all ANSI escape sequences
+    which instruct the terminal to colorize output
+
+Terminal
+    (the default value) poutput() and pfeedback() do not strip any ANSI escape
+    sequences when the output is a terminal, but if the output is a pipe or a
+    file the escape sequences are stripped. If you want colorized output you
+    must add ANSI escape sequences, preferably using some python color library
+    like `plumbum.colors`, `colorama`, `blessings`, or `termcolor`.
+
+Always
+    poutput() and pfeedback() never strip ANSI escape sequences, regardless of
+    the output destination
+
+
+The previously recommended ``colorize`` method is now deprecated.
+
 
 .. _quiet:
 
+Suppressing non-essential output
+================================
 
-quiet
-=====
+The ``quiet`` setting controls whether ``self.pfeedback()`` actually produces
+any output. If ``quiet`` is ``False``, then the output will be produced. If
+``quiet`` is ``True``, no output will be produced.
 
-Controls whether ``self.pfeedback('message')`` output is suppressed;
-useful for non-essential feedback that the user may not always want
-to read.  ``quiet`` is only relevant if
-``app.pfeedback`` is sometimes used.
+This makes ``self.pfeedback()`` useful for non-essential output like status
+messages. Users can control whether they would like to see these messages by changing
+the value of the ``quiet`` setting.
 
 
 select

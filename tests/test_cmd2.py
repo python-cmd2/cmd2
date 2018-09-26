@@ -13,6 +13,7 @@ import os
 import sys
 import tempfile
 
+from colorama import Fore, Back, Style
 import pytest
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
@@ -564,11 +565,11 @@ def test_load_nested_loads(base_app, request):
     expected = """
 %s
 _relative_load precmds.txt
-set colors on
+set colors Always
 help
 shortcuts
 _relative_load postcmds.txt
-set colors off""" % initial_load
+set colors Never""" % initial_load
     assert run_cmd(base_app, 'history -s') == normalize(expected)
 
 
@@ -586,11 +587,11 @@ def test_base_runcmds_plus_hooks(base_app, request):
                                  'load ' + postfilepath])
     expected = """
 load %s
-set colors on
+set colors Always
 help
 shortcuts
 load %s
-set colors off""" % (prefilepath, postfilepath)
+set colors Never""" % (prefilepath, postfilepath)
     assert run_cmd(base_app, 'history -s') == normalize(expected)
 
 
@@ -817,12 +818,7 @@ def test_base_colorize(base_app):
     # But if we create a fresh Cmd() instance, it will
     fresh_app = cmd2.Cmd()
     color_test = fresh_app.colorize('Test', 'red')
-    # Actually, colorization only ANSI escape codes is only applied on non-Windows systems
-    if sys.platform == 'win32':
-        assert color_test == 'Test'
-    else:
-        assert color_test == '\x1b[31mTest\x1b[39m'
-
+    assert color_test == '\x1b[31mTest\x1b[39m'
 
 def _expected_no_editor_error():
     expected_exception = 'OSError'
@@ -1109,22 +1105,22 @@ def test_ansi_prompt_not_esacped(base_app):
 def test_ansi_prompt_escaped():
     from cmd2.rl_utils import rl_make_safe_prompt
     app = cmd2.Cmd()
-    color = 'cyan'
+    color = Fore.CYAN
     prompt = 'InColor'
-    color_prompt = app.colorize(prompt, color)
+    color_prompt = color + prompt + Fore.RESET
 
     readline_hack_start = "\x01"
     readline_hack_end = "\x02"
 
     readline_safe_prompt = rl_make_safe_prompt(color_prompt)
+    assert prompt != color_prompt
     if sys.platform.startswith('win'):
-        # colorize() does nothing on Windows due to lack of ANSI color support
-        assert prompt == color_prompt
-        assert readline_safe_prompt == prompt
+        # PyReadline on Windows doesn't suffer from the GNU readline bug which requires the hack
+        assert readline_safe_prompt.startswith(color)
+        assert readline_safe_prompt.endswith(Fore.RESET)
     else:
-        assert prompt != color_prompt
-        assert readline_safe_prompt.startswith(readline_hack_start + app._colorcodes[color][True] + readline_hack_end)
-        assert readline_safe_prompt.endswith(readline_hack_start + app._colorcodes[color][False] + readline_hack_end)
+        assert readline_safe_prompt.startswith(readline_hack_start + color + readline_hack_end)
+        assert readline_safe_prompt.endswith(readline_hack_start + Fore.RESET + readline_hack_end)
 
 
 class HelpApp(cmd2.Cmd):
@@ -1750,6 +1746,24 @@ def test_poutput_none(base_app):
     expected = ''
     assert out == expected
 
+def test_poutput_color_always(base_app):
+    msg = 'Hello World'
+    color = Fore.CYAN
+    base_app.colors = 'Always'
+    base_app.poutput(msg, color=color)
+    out = base_app.stdout.getvalue()
+    expected = color + msg + '\n' + Fore.RESET
+    assert out == expected
+
+def test_poutput_color_never(base_app):
+    msg = 'Hello World'
+    color = Fore.CYAN
+    base_app.colors = 'Never'
+    base_app.poutput(msg, color=color)
+    out = base_app.stdout.getvalue()
+    expected = msg + '\n'
+    assert out == expected
+
 
 def test_alias(base_app, capsys):
     # Create the alias
@@ -1968,7 +1982,6 @@ def test_bad_history_file_path(capsys, request):
         assert 'readline cannot read' in err
 
 
-
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
@@ -2055,3 +2068,136 @@ def test_exit_code_nonzero(exit_code_repl):
             app.cmdloop()
     out = app.stdout.getvalue()
     assert out == expected
+
+
+class ColorsApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def do_echo(self, args):
+        self.poutput(args)
+        self.perror(args, False)
+
+    def do_echo_error(self, args):
+        color_on = Fore.RED + Back.BLACK
+        color_off = Style.RESET_ALL
+        self.poutput(color_on + args + color_off)
+        # perror uses colors by default
+        self.perror(args, False)
+
+def test_colors_default():
+    app = ColorsApp()
+    assert app.colors == cmd2.constants.COLORS_TERMINAL
+
+def test_colors_pouterr_always_tty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_ALWAYS
+    mocker.patch.object(app.stdout, 'isatty', return_value=True)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=True)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    # if colors are on, the output should have some escape sequences in it
+    assert len(out) > len('oopsie\n')
+    assert 'oopsie' in out
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+    # but this one shouldn't
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    # errors always have colors
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+def test_colors_pouterr_always_notty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_ALWAYS
+    mocker.patch.object(app.stdout, 'isatty', return_value=False)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=False)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    # if colors are on, the output should have some escape sequences in it
+    assert len(out) > len('oopsie\n')
+    assert 'oopsie' in out
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+    # but this one shouldn't
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    # errors always have colors
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+def test_colors_terminal_tty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_TERMINAL
+    mocker.patch.object(app.stdout, 'isatty', return_value=True)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=True)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    # if colors are on, the output should have some escape sequences in it
+    out, err = capsys.readouterr()
+    assert len(out) > len('oopsie\n')
+    assert 'oopsie' in out
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+    # but this one shouldn't
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert len(err) > len('Error: oopsie\n')
+    assert 'ERROR: oopsie' in err
+
+def test_colors_terminal_notty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_TERMINAL
+    mocker.patch.object(app.stdout, 'isatty', return_value=False)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=False)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+def test_colors_never_tty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_NEVER
+    mocker.patch.object(app.stdout, 'isatty', return_value=True)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=True)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+def test_colors_never_notty(mocker, capsys):
+    app = ColorsApp()
+    app.colors = cmd2.constants.COLORS_NEVER
+    mocker.patch.object(app.stdout, 'isatty', return_value=False)
+    mocker.patch.object(sys.stderr, 'isatty', return_value=False)
+
+    app.onecmd_plus_hooks('echo_error oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'
+
+    app.onecmd_plus_hooks('echo oopsie')
+    out, err = capsys.readouterr()
+    assert out == 'oopsie\n'
+    assert err == 'ERROR: oopsie\n'

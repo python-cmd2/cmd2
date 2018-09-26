@@ -1,10 +1,10 @@
 # Run this transcript with "python example.py -t transcript_regex.txt"
-# The regex for colors is because no color on Windows.
+# The regex for colors shows all possible settings for colors
 # The regex for editor will match whatever program you use.
 # Regexes on prompts just make the trailing space obvious
 
 (Cmd) set
-colors: /(True|False)/
+colors: /(Terminal|Always|Never)/
 continuation_prompt: >/ /
 debug: False
 echo: False
