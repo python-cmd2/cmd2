@@ -2901,11 +2901,12 @@ class Cmd(cmd.Cmd):
 
                 :param filename: filename of *.py script file to run
                 """
+                expanded_filename = os.path.expanduser(filename)
                 try:
-                    with open(filename) as f:
+                    with open(expanded_filename) as f:
                         interp.runcode(f.read())
                 except OSError as ex:
-                    error_msg = "Error opening script file '{}': {}".format(filename, ex)
+                    error_msg = "Error opening script file '{}': {}".format(expanded_filename, ex)
                     self.perror(error_msg, traceback_war=False)
 
             bridge = PyscriptBridge(self)
@@ -3052,7 +3053,6 @@ Paths or arguments that contain spaces must be enclosed in quotes
             self.do_help(['pyscript'])
             return
 
-        # Get the absolute path of the script
         script_path = os.path.expanduser(arglist[0])
 
         # Save current command line arguments
