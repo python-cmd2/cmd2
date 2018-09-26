@@ -139,19 +139,21 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
         setattr(func, HELP_CATEGORY, category)
 
 
-def parse_quoted_string(cmdline: str) -> List[str]:
-    """Parse a quoted string into a list of arguments."""
-    if isinstance(cmdline, list):
+def parse_quoted_string(string: str, preserve_quotes: bool) -> List[str]:
+    """
+    Parse a quoted string into a list of arguments
+    :param string: the string being parsed
+    :param preserve_quotes: if True, then quotes will not be stripped
+    """
+    if isinstance(string, list):
         # arguments are already a list, return the list we were passed
-        lexed_arglist = cmdline
+        lexed_arglist = string
     else:
         # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(cmdline, posix=False)
-        # strip off outer quotes for convenience
-        temp_arglist = []
-        for arg in lexed_arglist:
-            temp_arglist.append(utils.strip_quotes(arg))
-        lexed_arglist = temp_arglist
+        lexed_arglist = shlex.split(string, posix=False)
+
+        if not preserve_quotes:
+            lexed_arglist = [utils.strip_quotes(arg) for arg in lexed_arglist]
     return lexed_arglist
 
 
@@ -163,7 +165,7 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 
-def with_argument_list(func: Callable) -> Callable:
+def with_argument_list(func: Callable, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter the arguments passed to a do_* cmd2
     method. Default passes a string of whatever the user typed.
     With this decorator, the decorated method will receive a list
@@ -172,18 +174,19 @@ def with_argument_list(func: Callable) -> Callable:
 
     @functools.wraps(func)
     def cmd_wrapper(self, cmdline):
-        lexed_arglist = parse_quoted_string(cmdline)
+        lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
         return func(self, lexed_arglist)
 
     cmd_wrapper.__doc__ = func.__doc__
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Callable:
+def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: given instance of ArgumentParser
+    :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
     :return: function that gets passed parsed args and a list of unknown args
     """
     import functools
@@ -192,7 +195,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline)
+            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
             try:
                 args, unknown = argparser.parse_known_args(lexed_arglist)
             except SystemExit:
@@ -221,11 +224,12 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     return arg_decorator
 
 
-def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
+def with_argparser(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: given instance of ArgumentParser
+    :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
     :return: function that gets passed parsed args
     """
     import functools
@@ -234,7 +238,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline)
+            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
             try:
                 args = argparser.parse_args(lexed_arglist)
             except SystemExit:
@@ -2205,9 +2209,9 @@ class Cmd(cmd.Cmd):
     def alias_create(self, args: argparse.Namespace):
         """ Creates or overwrites an alias """
         # Validate the alias name
-        valid, errmsg = self.statement_parser.is_valid_command(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name, allow_shortcut=False)
         if not valid:
-            errmsg = "Alias names {}".format(errmsg)
+            errmsg = "Invalid alias name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2216,10 +2220,17 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        if not args.command.strip():
-            errmsg = "Aliases cannot resolve to an empty command"
+        valid, errmsg = self.statement_parser.is_valid_command(args.command, allow_shortcut=True)
+        if not valid:
+            errmsg = "Invalid alias target:  {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
+
+        # Unquote redirection and pipes
+        for i, arg in enumerate(args.command_args):
+            unquoted_arg = utils.strip_quotes(arg)
+            if unquoted_arg in constants.REDIRECTION_TOKENS:
+                args.command_args[i] = unquoted_arg
 
         # Build the alias value string
         value = utils.quote_string_if_needed(args.command)
@@ -2227,8 +2238,9 @@ class Cmd(cmd.Cmd):
             value += ' ' + utils.quote_string_if_needed(cur_arg)
 
         # Set the alias
+        result = "overwritten" if args.name in self.aliases else "created"
         self.aliases[args.name] = value
-        self.poutput("Alias {!r} created".format(args.name))
+        self.poutput("Alias {!r} {}".format(args.name, result))
 
     def alias_delete(self, args: argparse.Namespace):
         """ Deletes aliases """
@@ -2324,7 +2336,7 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, aliases)
     alias_list_parser.set_defaults(func=alias_list)
 
-    @with_argparser(alias_parser)
+    @with_argparser(alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace):
         """Manage aliases"""
         func = getattr(args, 'func', None)
@@ -2340,9 +2352,9 @@ class Cmd(cmd.Cmd):
     def macro_create(self, args: argparse.Namespace):
         """ Creates or overwrites a macro """
         # Validate the macro name
-        valid, errmsg = self.statement_parser.is_valid_command(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name, allow_shortcut=False)
         if not valid:
-            errmsg = "Macro names {}".format(errmsg)
+            errmsg = "Invalid macro name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2356,10 +2368,17 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        if not args.command.strip():
-            errmsg = "Macros cannot resolve to an empty command"
+        valid, errmsg = self.statement_parser.is_valid_command(args.command, allow_shortcut=True)
+        if not valid:
+            errmsg = "Invalid macro target:  {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
+
+        # Unquote redirection and pipes
+        for i, arg in enumerate(args.command_args):
+            unquoted_arg = utils.strip_quotes(arg)
+            if unquoted_arg in constants.REDIRECTION_TOKENS:
+                args.command_args[i] = unquoted_arg
 
         # Build the macro value string
         value = utils.quote_string_if_needed(args.command)
@@ -2412,8 +2431,9 @@ class Cmd(cmd.Cmd):
                 break
 
         # Set the macro
+        result = "overwritten" if args.name in self.macros else "created"
         self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
-        self.poutput("Macro {!r} created".format(args.name))
+        self.poutput("Macro {!r} {}".format(args.name, result))
 
     def macro_delete(self, args: argparse.Namespace):
         """ Deletes macros """
@@ -2533,7 +2553,7 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, macros)
     macro_list_parser.set_defaults(func=macro_list)
 
-    @with_argparser(macro_parser)
+    @with_argparser(macro_parser, preserve_quotes=True)
     def do_macro(self, args: argparse.Namespace):
         """ Manage macros """
         func = getattr(args, 'func', None)

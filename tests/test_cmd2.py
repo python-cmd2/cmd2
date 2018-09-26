@@ -1765,7 +1765,7 @@ def test_alias_create(base_app, capsys):
     out = run_cmd(base_app, 'alias list')
     assert out == normalize('alias create fake pyscript')
 
-    # Lookup the new alias
+    # Look up the new alias
     out = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake pyscript')
 
@@ -1774,7 +1774,7 @@ def test_alias_create_with_quotes(base_app, capsys):
     out = run_cmd(base_app, 'alias create fake help ">" "out file.txt"')
     assert out == normalize("Alias 'fake' created")
 
-    # Lookup the new alias (Only the redirector should be unquoted)
+    # Look up the new alias (Only the redirector should be unquoted)
     out = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake help > "out file.txt"')
 
@@ -1791,7 +1791,7 @@ def test_alias_create_with_quotes(base_app, capsys):
 def test_alias_create_invalid_name(base_app, alias_name, capsys):
     run_cmd(base_app, 'alias create {} help'.format(alias_name))
     out, err = capsys.readouterr()
-    assert "cannot" in err
+    assert "Invalid alias name" in err
 
 def test_alias_create_with_macro_name(base_app, capsys):
     macro = "my_macro"
@@ -1800,13 +1800,22 @@ def test_alias_create_with_macro_name(base_app, capsys):
     out, err = capsys.readouterr()
     assert "cannot have the same name" in err
 
-def test_alias_create_with_empty_command(base_app, capsys):
-    run_cmd(base_app, 'alias create my_alias ""')
+@pytest.mark.parametrize('alias_target', [
+    '""',  # Blank name
+    '">"',
+    '"no>pe"',
+    '"no spaces"',
+    '"nopipe|"',
+    '"noterm;"',
+    'noembedded"quotes',
+])
+def test_alias_create_with_invalid_command(base_app, alias_target, capsys):
+    run_cmd(base_app, 'alias create my_alias {}'.format(alias_target))
     out, err = capsys.readouterr()
-    assert "cannot resolve to an empty command" in err
+    assert "Invalid alias target" in err
 
 def test_alias_list_invalid_alias(base_app, capsys):
-    # Lookup invalid alias
+    # Look up invalid alias
     out = run_cmd(base_app, 'alias list invalid')
     out, err = capsys.readouterr()
     assert "not found" in err
