@@ -1114,8 +1114,13 @@ def test_ansi_prompt_escaped():
 
     readline_safe_prompt = rl_make_safe_prompt(color_prompt)
     assert prompt != color_prompt
-    assert readline_safe_prompt.startswith(readline_hack_start + color + readline_hack_end)
-    assert readline_safe_prompt.endswith(readline_hack_start + Fore.RESET + readline_hack_end)
+    if sys.platform.startswith('win'):
+        # PyReadline on Windows doesn't suffer from the GNU readline bug which requires the hack
+        assert readline_safe_prompt.startswith(color)
+        assert readline_safe_prompt.endswith(Fore.RESET)
+    else:
+        assert readline_safe_prompt.startswith(readline_hack_start + color + readline_hack_end)
+        assert readline_safe_prompt.endswith(readline_hack_start + Fore.RESET + readline_hack_end)
 
 
 class HelpApp(cmd2.Cmd):
