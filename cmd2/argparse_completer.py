@@ -891,6 +891,9 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
             result = super()._format_args(action, default_metavar)
         return result
 
+    def format_help(self):
+        return super().format_help() + '\n'
+
 
 # noinspection PyCompatibility
 class ACArgumentParser(argparse.ArgumentParser):

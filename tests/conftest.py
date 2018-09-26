@@ -36,12 +36,12 @@ edit   history  macro  pyscript  set   shortcuts
 BASE_HELP_VERBOSE = """
 Documented commands (type help <topic>):
 ================================================================================
-alias               Manages aliases
+alias               Manage aliases
 edit                Edit a file in a text editor
 help                List available commands with "help" or detailed help with "help cmd"
 history             View, run, edit, save, or clear previously entered commands
 load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
-macro               Manages macros
+macro               Manage macros
 py                  Invoke python command, shell, or script
 pyscript            Runs a python script file inside the console
 quit                Exits this application

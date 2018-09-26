@@ -1253,11 +1253,11 @@ diddly              This command does diddly
 
 Other
 ================================================================================
-alias               Manages aliases
+alias               Manage aliases
 help                List available commands with "help" or detailed help with "help cmd"
 history             View, run, edit, save, or clear previously entered commands
 load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
-macro               Manages macros
+macro               Manage macros
 py                  Invoke python command, shell, or script
 pyscript            Runs a python script file inside the console
 quit                Exits this application
