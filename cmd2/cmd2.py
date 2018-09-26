@@ -1995,7 +1995,7 @@ class Cmd(cmd.Cmd):
 
             # Since we have a valid command store it in the history
             if statement.command not in self.exclude_from_history:
-                self.history.append(statement.command_and_args)
+                self.history.append(statement.raw)
 
             try:
                 func = getattr(self, funcname)
@@ -2048,7 +2048,7 @@ class Cmd(cmd.Cmd):
 
         :param statement: Statement object with parsed input
         """
-        arg = statement.command_and_args
+        arg = statement.raw
         if self.default_to_shell:
             result = os.system(arg)
             # If os.system() succeeded, then don't print warning about unknown command
