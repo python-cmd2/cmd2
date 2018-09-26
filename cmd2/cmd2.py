@@ -2252,16 +2252,12 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        # Unquote redirection and pipes
-        for i, arg in enumerate(args.command_args):
-            unquoted_arg = utils.strip_quotes(arg)
-            if unquoted_arg in constants.REDIRECTION_TOKENS:
-                args.command_args[i] = unquoted_arg
+        utils.unquote_redirection_tokens(args.command_args)
 
         # Build the alias value string
-        value = utils.quote_string_if_needed(args.command)
+        value = args.command
         for cur_arg in args.command_args:
-            value += ' ' + utils.quote_string_if_needed(cur_arg)
+            value += ' ' + cur_arg
 
         # Set the alias
         result = "overwritten" if args.name in self.aliases else "created"
@@ -2400,16 +2396,12 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        # Unquote redirection and pipes
-        for i, arg in enumerate(args.command_args):
-            unquoted_arg = utils.strip_quotes(arg)
-            if unquoted_arg in constants.REDIRECTION_TOKENS:
-                args.command_args[i] = unquoted_arg
+        utils.unquote_redirection_tokens(args.command_args)
 
         # Build the macro value string
-        value = utils.quote_string_if_needed(args.command)
+        value = args.command
         for cur_arg in args.command_args:
-            value += ' ' + utils.quote_string_if_needed(cur_arg)
+            value += ' ' + cur_arg
 
         # Find all normal arguments
         arg_list = []
