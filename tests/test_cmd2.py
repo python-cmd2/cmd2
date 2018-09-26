@@ -1749,100 +1749,93 @@ def test_poutput_none(base_app):
     assert out == expected
 
 
-# def test_alias(base_app, capsys):
-#     # Create the alias
-#     out = run_cmd(base_app, 'alias fake pyscript')
-#     assert out == normalize("Alias 'fake' created")
-#
-#     # Use the alias
-#     run_cmd(base_app, 'fake')
-#     out, err = capsys.readouterr()
-#     assert "pyscript command requires at least 1 argument" in err
-#
-#     # See a list of aliases
-#     out = run_cmd(base_app, 'alias')
-#     assert out == normalize('alias fake pyscript')
-#
-#     # Lookup the new alias
-#     out = run_cmd(base_app, 'alias fake')
-#     assert out == normalize('alias fake pyscript')
-#
-# def test_alias_with_quotes(base_app, capsys):
-#     # Create the alias
-#     out = run_cmd(base_app, 'alias fake help ">" "out file.txt"')
-#     assert out == normalize("Alias 'fake' created")
-#
-#     # Lookup the new alias (Only the redirector should be unquoted)
-#     out = run_cmd(base_app, 'alias fake')
-#     assert out == normalize('alias fake help > "out file.txt"')
-#
-# def test_alias_lookup_invalid_alias(base_app, capsys):
-#     # Lookup invalid alias
-#     out = run_cmd(base_app, 'alias invalid')
-#     out, err = capsys.readouterr()
-#     assert "not found" in err
-#
-# def test_unalias(base_app):
-#     # Create an alias
-#     run_cmd(base_app, 'alias fake pyscript')
-#
-#     # Remove the alias
-#     out = run_cmd(base_app, 'unalias fake')
-#     assert out == normalize("Alias 'fake' cleared")
-#
-# def test_unalias_all(base_app):
-#     out = run_cmd(base_app, 'unalias -a')
-#     assert out == normalize("All aliases cleared")
-#
-# def test_unalias_non_existing(base_app, capsys):
-#     run_cmd(base_app, 'unalias fake')
-#     out, err = capsys.readouterr()
-#     assert "does not exist" in err
-#
-# @pytest.mark.parametrize('alias_name', [
-#     '">"',
-#     '"no>pe"',
-#     '"no spaces"',
-#     '"nopipe|"',
-#     '"noterm;"',
-#     'noembedded"quotes',
-# ])
-# def test_create_invalid_alias(base_app, alias_name, capsys):
-#     run_cmd(base_app, 'alias {} help'.format(alias_name))
-#     out, err = capsys.readouterr()
-#     assert "can not contain" in err
-#
-# def test_complete_unalias(base_app):
-#     text = 'f'
-#     line = text
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     # Validate there are no completions when there are no aliases
-#     assert base_app.complete_unalias(text, line, begidx, endidx) == []
-#
-#     # Create a few aliases - two the start with 'f' and one that doesn't
-#     run_cmd(base_app, 'alias fall quit')
-#     run_cmd(base_app, 'alias fake pyscript')
-#     run_cmd(base_app, 'alias carapace shell')
-#
-#     # Validate that there are now completions
-#     expected = ['fake', 'fall']
-#     result = base_app.complete_unalias(text, line, begidx, endidx)
-#     assert sorted(expected) == sorted(result)
-#
-# def test_multiple_aliases(base_app):
-#     alias1 = 'h1'
-#     alias2 = 'h2'
-#     run_cmd(base_app, 'alias {} help'.format(alias1))
-#     run_cmd(base_app, 'alias {} help -v'.format(alias2))
-#     out = run_cmd(base_app, alias1)
-#     expected = normalize(BASE_HELP)
-#     assert out == expected
-#
-#     out = run_cmd(base_app, alias2)
-#     expected = normalize(BASE_HELP_VERBOSE)
-#     assert out == expected
+def test_alias_create(base_app, capsys):
+    # Create the alias
+    out = run_cmd(base_app, 'alias create fake pyscript')
+    assert out == normalize("Alias 'fake' created")
+
+    # Use the alias
+    run_cmd(base_app, 'fake')
+    out, err = capsys.readouterr()
+    assert "pyscript command requires at least 1 argument" in err
+
+    # See a list of aliases
+    out = run_cmd(base_app, 'alias list')
+    assert out == normalize('alias create fake pyscript')
+
+    # Lookup the new alias
+    out = run_cmd(base_app, 'alias list fake')
+    assert out == normalize('alias create fake pyscript')
+
+def test_alias_create_with_quotes(base_app, capsys):
+    # Create the alias
+    out = run_cmd(base_app, 'alias create fake help ">" "out file.txt"')
+    assert out == normalize("Alias 'fake' created")
+
+    # Lookup the new alias (Only the redirector should be unquoted)
+    out = run_cmd(base_app, 'alias list fake')
+    assert out == normalize('alias create fake help > "out file.txt"')
+
+@pytest.mark.parametrize('alias_name', [
+    '">"',
+    '"no>pe"',
+    '"no spaces"',
+    '"nopipe|"',
+    '"noterm;"',
+    'noembedded"quotes',
+])
+def test_create_invalid_alias(base_app, alias_name, capsys):
+    run_cmd(base_app, 'alias create {} help'.format(alias_name))
+    out, err = capsys.readouterr()
+    assert "cannot contain" in err
+
+def test_create_alias_with_macro_name(base_app, capsys):
+    macro_name = "my_macro"
+    run_cmd(base_app, 'macro create {} help'.format(macro_name))
+    run_cmd(base_app, 'alias create {} help'.format(macro_name))
+    out, err = capsys.readouterr()
+    assert "cannot have the same name" in err
+
+def test_create_alias_with_empty_command(base_app, capsys):
+    run_cmd(base_app, 'alias create my_alias ""')
+    out, err = capsys.readouterr()
+    assert "cannot resolve to an empty command" in err
+
+def test_alias_list_invalid_alias(base_app, capsys):
+    # Lookup invalid alias
+    out = run_cmd(base_app, 'alias list invalid')
+    out, err = capsys.readouterr()
+    assert "not found" in err
+
+def test_alias_delete(base_app):
+    # Create an alias
+    run_cmd(base_app, 'alias create fake pyscript')
+
+    # Delete the alias
+    out = run_cmd(base_app, 'alias delete fake')
+    assert out == normalize("Alias 'fake' deleted")
+
+def test_alias_delete_all(base_app):
+    out = run_cmd(base_app, 'alias delete --all')
+    assert out == normalize("All aliases deleted")
+
+def test_alias_delete_non_existing(base_app, capsys):
+    run_cmd(base_app, 'alias delete fake')
+    out, err = capsys.readouterr()
+    assert "does not exist" in err
+
+def test_multiple_aliases(base_app):
+    alias1 = 'h1'
+    alias2 = 'h2'
+    run_cmd(base_app, 'alias create {} help'.format(alias1))
+    run_cmd(base_app, 'alias create {} help -v'.format(alias2))
+    out = run_cmd(base_app, alias1)
+    expected = normalize(BASE_HELP)
+    assert out == expected
+
+    out = run_cmd(base_app, alias2)
+    expected = normalize(BASE_HELP_VERBOSE)
+    assert out == expected
 
 
 def test_ppaged(base_app):

@@ -2249,7 +2249,7 @@ class Cmd(cmd.Cmd):
             for cur_arg in aliases_to_delete:
                 if cur_arg in self.aliases:
                     del self.aliases[cur_arg]
-                    self.poutput("Alias {!r} cleared".format(cur_arg))
+                    self.poutput("Alias {!r} deleted".format(cur_arg))
                 else:
                     self.perror("Alias {!r} does not exist".format(cur_arg), traceback_war=False)
 
