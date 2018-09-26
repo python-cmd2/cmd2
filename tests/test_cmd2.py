@@ -1779,6 +1779,8 @@ def test_alias_create_with_quotes(base_app, capsys):
     assert out == normalize('alias create fake help > "out file.txt"')
 
 @pytest.mark.parametrize('alias_name', [
+    '""',  # Blank name
+    '!no_shortcut',
     '">"',
     '"no>pe"',
     '"no spaces"',
@@ -1786,19 +1788,19 @@ def test_alias_create_with_quotes(base_app, capsys):
     '"noterm;"',
     'noembedded"quotes',
 ])
-def test_create_invalid_alias(base_app, alias_name, capsys):
+def test_alias_create_invalid_name(base_app, alias_name, capsys):
     run_cmd(base_app, 'alias create {} help'.format(alias_name))
     out, err = capsys.readouterr()
-    assert "cannot contain" in err
+    assert "cannot" in err
 
-def test_create_alias_with_macro_name(base_app, capsys):
-    macro_name = "my_macro"
-    run_cmd(base_app, 'macro create {} help'.format(macro_name))
-    run_cmd(base_app, 'alias create {} help'.format(macro_name))
+def test_alias_create_with_macro_name(base_app, capsys):
+    macro = "my_macro"
+    run_cmd(base_app, 'macro create {} help'.format(macro))
+    run_cmd(base_app, 'alias create {} help'.format(macro))
     out, err = capsys.readouterr()
     assert "cannot have the same name" in err
 
-def test_create_alias_with_empty_command(base_app, capsys):
+def test_alias_create_with_empty_command(base_app, capsys):
     run_cmd(base_app, 'alias create my_alias ""')
     out, err = capsys.readouterr()
     assert "cannot resolve to an empty command" in err

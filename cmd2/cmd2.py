@@ -2022,7 +2022,7 @@ class Cmd(cmd.Cmd):
 
         # Confirm we have the correct number of arguments
         if len(statement.arg_list) != macro.required_arg_count:
-            self.perror('The macro {} expects {} arguments'.format(statement.command, macro.required_arg_count),
+            self.perror('The macro {!r} expects {} argument(s)'.format(statement.command, macro.required_arg_count),
                         traceback_war=False)
             return False
 
