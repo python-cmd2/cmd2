@@ -441,6 +441,7 @@ class Cmd(cmd.Cmd):
         self.broken_pipe_warning = ''
 
         # Check if history should persist
+        self.persistent_history_file = ''
         if persistent_history_file and rl_type != RlType.NONE:
             persistent_history_file = os.path.expanduser(persistent_history_file)
             read_err = False
