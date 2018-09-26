@@ -32,16 +32,16 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 import argparse
 import cmd
 import collections
+import colorama
 from colorama import Fore
 import glob
 import inspect
 import os
-import platform
 import re
 import shlex
 import sys
 import threading
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
 from . import constants
 from . import utils
@@ -139,19 +139,21 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
         setattr(func, HELP_CATEGORY, category)
 
 
-def parse_quoted_string(cmdline: str) -> List[str]:
-    """Parse a quoted string into a list of arguments."""
-    if isinstance(cmdline, list):
+def parse_quoted_string(string: str, preserve_quotes: bool) -> List[str]:
+    """
+    Parse a quoted string into a list of arguments
+    :param string: the string being parsed
+    :param preserve_quotes: if True, then quotes will not be stripped
+    """
+    if isinstance(string, list):
         # arguments are already a list, return the list we were passed
-        lexed_arglist = cmdline
+        lexed_arglist = string
     else:
         # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(cmdline, posix=False)
-        # strip off outer quotes for convenience
-        temp_arglist = []
-        for arg in lexed_arglist:
-            temp_arglist.append(utils.strip_quotes(arg))
-        lexed_arglist = temp_arglist
+        lexed_arglist = shlex.split(string, posix=False)
+
+        if not preserve_quotes:
+            lexed_arglist = [utils.strip_quotes(arg) for arg in lexed_arglist]
     return lexed_arglist
 
 
@@ -163,7 +165,7 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 
-def with_argument_list(func: Callable) -> Callable:
+def with_argument_list(func: Callable, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter the arguments passed to a do_* cmd2
     method. Default passes a string of whatever the user typed.
     With this decorator, the decorated method will receive a list
@@ -172,18 +174,19 @@ def with_argument_list(func: Callable) -> Callable:
 
     @functools.wraps(func)
     def cmd_wrapper(self, cmdline):
-        lexed_arglist = parse_quoted_string(cmdline)
+        lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
         return func(self, lexed_arglist)
 
     cmd_wrapper.__doc__ = func.__doc__
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Callable:
+def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: given instance of ArgumentParser
+    :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
     :return: function that gets passed parsed args and a list of unknown args
     """
     import functools
@@ -192,7 +195,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline)
+            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
             try:
                 args, unknown = argparser.parse_known_args(lexed_arglist)
             except SystemExit:
@@ -221,11 +224,12 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     return arg_decorator
 
 
-def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
+def with_argparser(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: given instance of ArgumentParser
+    :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
     :return: function that gets passed parsed args
     """
     import functools
@@ -234,7 +238,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline)
+            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
             try:
                 args = argparser.parse_args(lexed_arglist)
             except SystemExit:
@@ -320,7 +324,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
-    colors = (platform.system() != 'Windows')
+    colors = constants.COLORS_TERMINAL
     continuation_prompt = '> '
     debug = False
     echo = False
@@ -340,7 +344,7 @@ class Cmd(cmd.Cmd):
 
     # To make an attribute settable with the "do_set" command, add it to this ...
     # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
-    settable = {'colors': 'Colorized output (*nix only)',
+    settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
@@ -371,6 +375,9 @@ class Cmd(cmd.Cmd):
                 del Cmd.do_ipy
             except AttributeError:
                 pass
+
+        # Override whether ansi codes should be stripped from the output since cmd2 has its own logic for doing this
+        colorama.init(strip=False)
 
         # initialize plugin system
         # needs to be done before we call __init__(0)
@@ -420,13 +427,13 @@ class Cmd(cmd.Cmd):
         self._STOP_AND_EXIT = True  # cmd convention
 
         self._colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
-                            'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
-                            'blue': {True: '\x1b[34m', False: '\x1b[39m'},
-                            'red': {True: '\x1b[31m', False: '\x1b[39m'},
-                            'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
-                            'green': {True: '\x1b[32m', False: '\x1b[39m'},
-                            'underline': {True: '\x1b[4m', False: '\x1b[24m'},
-                            'yellow': {True: '\x1b[33m', False: '\x1b[39m'}}
+                            'cyan': {True: Fore.CYAN, False: Fore.RESET},
+                            'blue': {True: Fore.BLUE, False: Fore.RESET},
+                            'red': {True: Fore.RED, False: Fore.RESET},
+                            'magenta': {True: Fore.MAGENTA, False: Fore.RESET},
+                            'green': {True: Fore.GREEN, False: Fore.RESET},
+                            'underline': {True: '\x1b[4m', False: Fore.RESET},
+                            'yellow': {True: Fore.YELLOW, False: Fore.RESET}}
 
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
@@ -556,34 +563,53 @@ class Cmd(cmd.Cmd):
         # Make sure settable parameters are sorted alphabetically by key
         self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
-    def poutput(self, msg: str, end: str='\n') -> None:
-        """Convenient shortcut for self.stdout.write(); by default adds newline to end if not already present.
+    def decolorized_write(self, fileobj: IO, msg: str) -> None:
+        """Write a string to a fileobject, stripping ANSI escape sequences if necessary
 
-        Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
-        that process terminates before the cmd2 command is finished executing.
+        Honor the current colors setting, which requires us to check whether the
+        fileobject is a tty.
+        """
+        if self.colors.lower() == constants.COLORS_NEVER.lower() or \
+                (self.colors.lower() == constants.COLORS_TERMINAL.lower() and not fileobj.isatty()):
+            msg = utils.strip_ansi(msg)
+        fileobj.write(msg)
+
+    def poutput(self, msg: Any, end: str='\n', color: str='') -> None:
+        """Smarter self.stdout.write(); color aware and adds newline of not present.
+
+        Also handles BrokenPipeError exceptions for when a commands's output has
+        been piped to another process and that process terminates before the
+        cmd2 command is finished executing.
 
         :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
-        :param end: string appended after the end of the message if not already present, default a newline
+        :param end: (optional) string appended after the end of the message if not already present, default a newline
+        :param color: (optional) color escape to output this message with
         """
         if msg is not None and msg != '':
             try:
                 msg_str = '{}'.format(msg)
-                self.stdout.write(msg_str)
                 if not msg_str.endswith(end):
-                    self.stdout.write(end)
+                    msg_str += end
+                if color:
+                    msg_str = color + msg_str + Fore.RESET
+                self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
-                # This occurs if a command's output is being piped to another process and that process closes before the
-                # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.
+                # This occurs if a command's output is being piped to another
+                # process and that process closes before the command is
+                # finished. If you would like your application to print a
+                # warning message, then set the broken_pipe_warning attribute
+                # to the message you want printed.
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, err: Union[str, Exception], traceback_war: bool=True) -> None:
+    def perror(self, err: Union[str, Exception], traceback_war: bool=True, err_color: str=Fore.LIGHTRED_EX,
+               war_color: str=Fore.LIGHTYELLOW_EX) -> None:
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
 
         :param err: an Exception or error message to print out
         :param traceback_war: (optional) if True, print a message to let user know they can enable debug
-        :return:
+        :param err_color: (optional) color escape to output error with
+        :param war_color: (optional) color escape to output warning with
         """
         if self.debug:
             import traceback
@@ -591,14 +617,15 @@ class Cmd(cmd.Cmd):
 
         if isinstance(err, Exception):
             err_msg = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(type(err).__name__, err)
-            sys.stderr.write(self.colorize(err_msg, 'red'))
         else:
-            err_msg = self.colorize("ERROR: {}\n".format(err), 'red')
-            sys.stderr.write(err_msg)
+            err_msg = "ERROR: {}\n".format(err)
+        err_msg = err_color + err_msg + Fore.RESET
+        self.decolorized_write(sys.stderr, err_msg)
 
         if traceback_war:
             war = "To enable full traceback, run the following command:  'set debug true'\n"
-            sys.stderr.write(self.colorize(war, 'yellow'))
+            war = war_color + war + Fore.RESET
+            self.decolorized_write(sys.stderr, war)
 
     def pfeedback(self, msg: str) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -607,7 +634,7 @@ class Cmd(cmd.Cmd):
             if self.feedback_to_output:
                 self.poutput(msg)
             else:
-                sys.stderr.write("{}\n".format(msg))
+                self.decolorized_write(sys.stderr, "{}\n".format(msg))
 
     def ppaged(self, msg: str, end: str='\n', chop: bool=False) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
@@ -643,6 +670,9 @@ class Cmd(cmd.Cmd):
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self.redirecting and not self._in_py and not self._script_dir:
+                    if self.colors.lower() == constants.COLORS_NEVER.lower():
+                        msg_str = utils.strip_ansi(msg_str)
+
                     pager = self.pager
                     if chop:
                         pager = self.pager_chop
@@ -667,7 +697,7 @@ class Cmd(cmd.Cmd):
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.
+                # broken_pipe_warning attribute to the message you want printed.`
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
@@ -678,7 +708,7 @@ class Cmd(cmd.Cmd):
            is running on Windows, will return ``val`` unchanged.
            ``color`` should be one of the supported strings (or styles):
            red/blue/green/cyan/magenta, bold, underline"""
-        if self.colors and (self.stdout == self.initial_stdout):
+        if self.colors.lower() != constants.COLORS_NEVER.lower() and (self.stdout == self.initial_stdout):
             return self._colorcodes[color][True] + val + self._colorcodes[color][False]
         return val
 
@@ -1452,6 +1482,10 @@ class Cmd(cmd.Cmd):
                         except AttributeError:
                             compfunc = self.completedefault
 
+                # Check if a macro was entered
+                elif command in self.macros:
+                    compfunc = self.path_complete
+
                 # A valid command was not entered
                 else:
                     # Check if this command should be run as a shell command
@@ -2201,9 +2235,9 @@ class Cmd(cmd.Cmd):
     def alias_create(self, args: argparse.Namespace):
         """ Creates or overwrites an alias """
         # Validate the alias name
-        valid, errmsg = self.statement_parser.is_valid_command(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name, allow_shortcut=False)
         if not valid:
-            errmsg = "Alias names {}".format(errmsg)
+            errmsg = "Invalid alias name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2212,19 +2246,23 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        if not args.command.strip():
-            errmsg = "Aliases cannot resolve to an empty command"
+        valid, errmsg = self.statement_parser.is_valid_command(args.command, allow_shortcut=True)
+        if not valid:
+            errmsg = "Invalid alias target:  {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
+        utils.unquote_redirection_tokens(args.command_args)
+
         # Build the alias value string
-        value = utils.quote_string_if_needed(args.command)
+        value = args.command
         for cur_arg in args.command_args:
-            value += ' ' + utils.quote_string_if_needed(cur_arg)
+            value += ' ' + cur_arg
 
         # Set the alias
+        result = "overwritten" if args.name in self.aliases else "created"
         self.aliases[args.name] = value
-        self.poutput("Alias {!r} created".format(args.name))
+        self.poutput("Alias {!r} {}".format(args.name, result))
 
     def alias_delete(self, args: argparse.Namespace):
         """ Deletes aliases """
@@ -2259,7 +2297,12 @@ class Cmd(cmd.Cmd):
                 self.poutput("alias create {} {}".format(cur_alias, self.aliases[cur_alias]))
 
     # Top-level parser for alias
-    alias_parser = ACArgumentParser(description="Manage aliases", prog='alias')
+    alias_description = ("Manage aliases\n"
+                         "\n"
+                         "An alias is a command that enables replacement of a word by another string.")
+    alias_epilog = ("See also:\n"
+                    "  macro")
+    alias_parser = ACArgumentParser(description=alias_description, epilog=alias_epilog, prog='alias')
 
     # Add subcommands to alias
     alias_subparsers = alias_parser.add_subparsers()
@@ -2268,14 +2311,17 @@ class Cmd(cmd.Cmd):
     alias_create_help = "create or overwrite an alias"
     alias_create_description = "Create or overwrite an alias"
 
-    alias_create_epilog = "Notes:\n"
-    alias_create_epilog += "    If you want to use redirection or pipes in the alias, then quote them to prevent\n"
-    alias_create_epilog += "    the alias command itself from being redirected\n"
-    alias_create_epilog += "\n"
-    alias_create_epilog += "Examples:\n"
-    alias_create_epilog += "    alias ls !ls -lF\n"
-    alias_create_epilog += "    alias create show_log !cat \"log file.txt\"\n"
-    alias_create_epilog += "    alias create save_results print_results \">\" out.txt\n"
+    alias_create_epilog = ("Notes:\n"
+                           "  If you want to use redirection or pipes in the alias, then quote them to prevent\n"
+                           "  the 'alias create' command itself from being redirected\n"
+                           "\n"
+                           "  Since aliases are resolved during parsing, tab completion will function as it would\n"
+                           "  for the actual command the alias resolves to."
+                           "\n"
+                           "Examples:\n"
+                           "  alias ls !ls -lF\n"
+                           "  alias create show_log !cat \"log file.txt\"\n"
+                           "  alias create save_results print_results \">\" out.txt\n")
 
     alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
                                                       description=alias_create_description,
@@ -2301,10 +2347,10 @@ class Cmd(cmd.Cmd):
 
     # alias -> list
     alias_list_help = "list aliases"
-    alias_list_description = "List specified aliases in a reusable form that can be saved to\n"
-    alias_list_description += "a startup_script to preserve aliases across sessions\n"
-    alias_list_description += "\n"
-    alias_list_description += "Without arguments, all aliases will be listed"
+    alias_list_description = ("List specified aliases in a reusable form that can be saved to\n"
+                              "a startup_script to preserve aliases across sessions\n"
+                              "\n"
+                              "Without arguments, all aliases will be listed")
 
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
@@ -2312,7 +2358,7 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, aliases)
     alias_list_parser.set_defaults(func=alias_list)
 
-    @with_argparser(alias_parser)
+    @with_argparser(alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace):
         """Manage aliases"""
         func = getattr(args, 'func', None)
@@ -2328,9 +2374,9 @@ class Cmd(cmd.Cmd):
     def macro_create(self, args: argparse.Namespace):
         """ Creates or overwrites a macro """
         # Validate the macro name
-        valid, errmsg = self.statement_parser.is_valid_command(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name, allow_shortcut=False)
         if not valid:
-            errmsg = "Macro names {}".format(errmsg)
+            errmsg = "Invalid macro name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2344,15 +2390,18 @@ class Cmd(cmd.Cmd):
             self.perror(errmsg, traceback_war=False)
             return
 
-        if not args.command.strip():
-            errmsg = "Macros cannot resolve to an empty command"
+        valid, errmsg = self.statement_parser.is_valid_command(args.command, allow_shortcut=True)
+        if not valid:
+            errmsg = "Invalid macro target:  {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
+        utils.unquote_redirection_tokens(args.command_args)
+
         # Build the macro value string
-        value = utils.quote_string_if_needed(args.command)
+        value = args.command
         for cur_arg in args.command_args:
-            value += ' ' + utils.quote_string_if_needed(cur_arg)
+            value += ' ' + cur_arg
 
         # Find all normal arguments
         arg_list = []
@@ -2400,8 +2449,9 @@ class Cmd(cmd.Cmd):
                 break
 
         # Set the macro
+        result = "overwritten" if args.name in self.macros else "created"
         self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
-        self.poutput("Macro {!r} created".format(args.name))
+        self.poutput("Macro {!r} {}".format(args.name, result))
 
     def macro_delete(self, args: argparse.Namespace):
         """ Deletes macros """
@@ -2436,7 +2486,12 @@ class Cmd(cmd.Cmd):
                 self.poutput("macro create {} {}".format(cur_macro, self.macros[cur_macro].value))
 
     # Top-level parser for macro
-    macro_parser = ACArgumentParser(description="Manage macros", prog='macro')
+    macro_description = ("Manage macros\n"
+                         "\n"
+                         "A macro is similar to an alias, but it can take arguments when called.")
+    macro_epilog = ("See also:\n"
+                    "  alias")
+    macro_parser = ACArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
 
     # Add subcommands to macro
     macro_subparsers = macro_parser.add_subparsers()
@@ -2445,41 +2500,41 @@ class Cmd(cmd.Cmd):
     macro_create_help = "create or overwrite a macro"
     macro_create_description = "Create or overwrite a macro"
 
-    macro_create_epilog = "A macro is similar to an alias, but it can take arguments when called. Arguments are\n"
-    macro_create_epilog += "expressed when creating a macro using {#} notation where {1} means the first argument\n"
-    macro_create_epilog += "while {8} would mean the eighth.\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "The following creates a macro called my_macro that expects two arguments:\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "macro create my_macro make_dinner -meat {1} -veggie {2}\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "When the macro is called, the provided arguments are resolved and the assembled\n"
-    macro_create_epilog += "command is run. The following table shows how my_macro would be resolved.\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "Macro Usage                  Command Run\n"
-    macro_create_epilog += "my_macro beef broccoli       make_dinner -meat beef -veggie broccoli\n"
-    macro_create_epilog += "my_macro chicken spinach     make_dinner -meat chicken -veggie spinach\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "Notes:\n"
-    macro_create_epilog += "    To use the literal string {1} in your command, escape it this way: {{1}}\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "    An argument number can be repeated in a macro. In the following example the first\n"
-    macro_create_epilog += "    argument will populate both {1} instances\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "    macro create ft file_taxes -p {1} -q {2} -r {1}\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "    To quote an argument in the resolved command, quote it during creation:\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "    macro create del_file !rm -f \"{1}\"\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "    Macros can resolve into commands, aliases, and other macros. Therefore it is\n"
-    macro_create_epilog += "    possible to create a macro that results in infinite recursion if a macro ends up\n"
-    macro_create_epilog += "    resolving back to itself. So be careful.\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "    If you want to use redirection or pipes in the macro, then quote them as in the\n"
-    macro_create_epilog += "    following example to prevent the macro command itself from being redirected\n"
-    macro_create_epilog += "\n"
-    macro_create_epilog += "    macro create save_results print_results -type {1} \">\" \"{2}\""
+    macro_create_epilog = ("A macro is similar to an alias, but it can take arguments when called. Arguments are\n"
+                           "expressed when creating a macro using {#} notation where {1} means the first argument.\n"
+                           "\n"
+                           "The following creates a macro called my_macro that expects two arguments:\n"
+                           "\n"
+                           "  macro create my_macro make_dinner -meat {1} -veggie {2}\n"
+                           "\n"
+                           "When the macro is called, the provided arguments are resolved and the assembled\n"
+                           "command is run. For example:\n"
+                           "\n"
+                           "  my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli\n"
+                           "\n"
+                           "Notes:\n"
+                           "  To use the literal string {1} in your command, escape it this way: {{1}}.\n"
+                           "\n"
+                           "  An argument number can be repeated in a macro. In the following example the first\n"
+                           "  argument will populate both {1} instances.\n"
+                           "\n"
+                           "    macro create ft file_taxes -p {1} -q {2} -r {1}\n"
+                           "\n"
+                           "  To quote an argument in the resolved command, quote it during creation.\n"
+                           "\n"
+                           "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
+                           "\n"
+                           "  Macros can resolve into commands, aliases, and other macros. Therefore it is\n"
+                           "  possible to create a macro that results in infinite recursion if a macro ends up\n"
+                           "  resolving back to itself. So be careful.\n"
+                           "\n"
+                           "  If you want to use redirection or pipes in the macro, then quote them as in the\n"
+                           "  following example to prevent the 'macro create' command itself from being redirected.\n"
+                           "\n"
+                           "    macro create save_results print_results -type {1} \">\" \"{2}\"\n"
+                           "\n"
+                           "  Because macros do not resolve until after parsing (hitting Enter), tab completion\n"
+                           "  will only complete paths.")
 
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
@@ -2505,10 +2560,10 @@ class Cmd(cmd.Cmd):
 
     # macro -> list
     macro_list_help = "list macros"
-    macro_list_description = "List specified macros in a reusable form that can be saved to\n"
-    macro_list_description += "a startup_script to preserve macros across sessions\n"
-    macro_list_description += "\n"
-    macro_list_description += "Without arguments, all macros will be listed"
+    macro_list_description = ("List specified macros in a reusable form that can be saved to\n"
+                              "a startup_script to preserve macros across sessions\n"
+                              "\n"
+                              "Without arguments, all macros will be listed.")
 
     macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help,
                                                     description=macro_list_description)
@@ -2516,7 +2571,7 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, macros)
     macro_list_parser.set_defaults(func=macro_list)
 
-    @with_argparser(macro_parser)
+    @with_argparser(macro_parser, preserve_quotes=True)
     def do_macro(self, args: argparse.Namespace):
         """Manage macros"""
         func = getattr(args, 'func', None)
@@ -2766,10 +2821,10 @@ class Cmd(cmd.Cmd):
         else:
             raise LookupError("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
 
-    set_description = "Set a settable parameter or show current settings of parameters.\n"
-    set_description += "\n"
-    set_description += "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
-    set_description += "Call without arguments for a list of settable parameters with their values."
+    set_description = ("Set a settable parameter or show current settings of parameters.\n"
+                       "\n"
+                       "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
+                       "Call without arguments for a list of settable parameters with their values.")
 
     set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
@@ -2780,7 +2835,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(set_parser)
     def do_set(self, args: argparse.Namespace) -> None:
-        """Set a settable parameter or shows current settings of parameters"""
+        """Set a settable parameter or show current settings of parameters"""
 
         # Check if param was passed in
         if not args.param:

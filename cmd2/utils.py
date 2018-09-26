@@ -304,3 +304,15 @@ class StdSim(object):
             return self.__dict__[item]
         else:
             return getattr(self.inner_stream, item)
+
+
+def unquote_redirection_tokens(args: List[str]) -> None:
+    """
+    Used to unquote redirection tokens in a list of command line arguments
+    This is used when redirection tokens have to be passed to another command
+    :param args: the command line args
+    """
+    for i, arg in enumerate(args):
+        unquoted_arg = strip_quotes(arg)
+        if unquoted_arg in constants.REDIRECTION_TOKENS:
+            args[i] = unquoted_arg
