@@ -124,8 +124,9 @@ HELP_CATEGORY = 'help_category'
 HELP_SUMMARY = 'help_summary'
 
 INTERNAL_COMMAND_EPILOG = ("Notes:\n"
-                           "  This command is for internal use only and should never be called from the\n"
+                           "  This command is for internal use and is not intended to be called from the\n"
                            "  command line.")
+
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """Categorize a function.
@@ -2273,7 +2274,7 @@ class Cmd(cmd.Cmd):
             self.aliases.clear()
             self.poutput("All aliases deleted")
         elif not args.name:
-            self.do_help(['alias', 'delete'])
+            self.do_help('alias delete')
         else:
             # Get rid of duplicates
             aliases_to_delete = utils.remove_duplicates(args.name)
@@ -2462,7 +2463,7 @@ class Cmd(cmd.Cmd):
             self.macros.clear()
             self.poutput("All macros deleted")
         elif not args.name:
-            self.do_help(['macro', 'delete'])
+            self.do_help('macro delete')
         else:
             # Get rid of duplicates
             macros_to_delete = utils.remove_duplicates(args.name)
@@ -2585,28 +2586,37 @@ class Cmd(cmd.Cmd):
             # No subcommand was provided, so call help
             self.macro_parser.print_help()
 
-    @with_argument_list
-    def do_help(self, arglist: List[str]) -> None:
-        """ List available commands with "help" or detailed help with "help cmd" """
-        if not arglist or (len(arglist) == 1 and arglist[0] in ('--verbose', '-v')):
-            verbose = len(arglist) == 1 and arglist[0] in ('--verbose', '-v')
-            self._help_menu(verbose)
-        else:
+    help_parser = ACArgumentParser()
+    help_parser.add_argument('command', help="command to retrieve help for", nargs="?")
+    help_parser.add_argument('subcommands', help="used to retrieve help on a specific subcommand",
+                             nargs=argparse.REMAINDER)
+    help_parser.add_argument('-v', '--verbose', action='store_true',
+                             help="print a list of all commands with descriptions of each")
+
+    @with_argparser(help_parser)
+    def do_help(self, args: argparse.Namespace) -> None:
+        """List available commands or provide detailed help for a specific command"""
+        if not args.command or args.verbose:
+            self._help_menu(args.verbose)
+
+        elif args.command:
             # Getting help for a specific command
-            funcname = self._func_named(arglist[0])
+            funcname = self._func_named(args.command)
             if funcname:
                 # Check to see if this function was decorated with an argparse ArgumentParser
                 func = getattr(self, funcname)
                 if hasattr(func, 'argparser'):
                     completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
 
-                    self.poutput(completer.format_help(arglist))
+                    tokens = [args.command]
+                    tokens.extend(args.subcommands)
+                    self.poutput(completer.format_help(tokens))
                 else:
                     # No special behavior needed, delegate to cmd base class do_help()
-                    cmd.Cmd.do_help(self, funcname[3:])
+                    super().do_help(args.command)
             else:
                 # This could be a help topic
-                cmd.Cmd.do_help(self, arglist[0])
+                super().do_help(args.command)
 
     def _help_menu(self, verbose: bool=False) -> None:
         """Show a list of commands which help can be displayed for.
@@ -2935,8 +2945,7 @@ class Cmd(cmd.Cmd):
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
-    py_description = "Invoke Python command or shell"
-    py_parser = ACArgumentParser(description=py_description)
+    py_parser = ACArgumentParser()
     py_parser.add_argument('command', help="command to run", nargs='?')
     py_parser.add_argument('remainder', help="remainder of command", nargs=argparse.REMAINDER)
 
@@ -3109,7 +3118,7 @@ Paths or arguments that contain spaces must be enclosed in quotes
 """
         if not arglist:
             self.perror("pyscript command requires at least 1 argument ...", traceback_war=False)
-            self.do_help(['pyscript'])
+            self.do_help('pyscript')
             return
 
         script_path = os.path.expanduser(arglist[0])

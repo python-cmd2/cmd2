@@ -1251,7 +1251,7 @@ diddly              This command does diddly
 Other
 ================================================================================
 alias               Manage aliases
-help                List available commands with "help" or detailed help with "help cmd"
+help                List available commands or provide detailed help for a specific command
 history             View, run, edit, save, or clear previously entered commands
 load                Run commands in script file that is encoded as either ASCII or UTF-8 text
 macro               Manage macros

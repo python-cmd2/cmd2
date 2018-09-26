@@ -18,16 +18,16 @@ class PyscriptExample(Cmd):
 
     def _do_media_movies(self, args) -> None:
         if not args.command:
-            self.do_help(['media movies'])
+            self.do_help('media movies')
         else:
             self.poutput('media movies ' + str(args.__dict__))
 
     def _do_media_shows(self, args) -> None:
         if not args.command:
-            self.do_help(['media shows'])
+            self.do_help('media shows')
 
         if not args.command:
-            self.do_help(['media shows'])
+            self.do_help('media shows')
         else:
             self.poutput('media shows ' + str(args.__dict__))
 
@@ -72,7 +72,7 @@ class PyscriptExample(Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help(['media'])
+            self.do_help('media')
 
     foo_parser = argparse_completer.ACArgumentParser(prog='foo')
     foo_parser.add_argument('-c', dest='counter', action='count')

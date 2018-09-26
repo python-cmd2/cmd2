@@ -835,7 +835,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help(['base'])
+            self.do_help('base')
 
 
 @pytest.fixture
