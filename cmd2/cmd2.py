@@ -123,6 +123,9 @@ except ImportError:  # pragma: no cover
 HELP_CATEGORY = 'help_category'
 HELP_SUMMARY = 'help_summary'
 
+INTERNAL_COMMAND_EPILOG = ("Notes:\n"
+                           "  This command is for internal use only and should never be called from the\n"
+                           "  command line.")
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """Categorize a function.
@@ -2727,7 +2730,7 @@ class Cmd(cmd.Cmd):
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
-    @with_argparser(ACArgumentParser())
+    @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
     def do_eof(self, _: argparse.Namespace) -> bool:
         """Called when <Ctrl>-D is pressed"""
         # End of script should not exit app, but <Ctrl>-D should.
@@ -3341,33 +3344,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         else:
             return None
 
-    @with_argument_list
-    def do__relative_load(self, arglist: List[str]) -> None:
-        """Runs commands in script file that is encoded as either ASCII or UTF-8 text
-
-    Usage:  _relative_load <file_path>
-
-    optional argument:
-    file_path   a file path pointing to a script
-
-Script should contain one command per line, just like command would be typed in console.
-
-If this is called from within an already-running script, the filename will be interpreted
-relative to the already-running script's directory.
-
-NOTE: This command is intended to only be used within text file scripts.
-        """
-        # If arg is None or arg is an empty string this is an error
-        if not arglist:
-            self.perror('_relative_load command requires a file path:', traceback_war=False)
-            return
-
-        file_path = arglist[0].strip()
-        # NOTE: Relative path is an absolute path, it is just relative to the current script directory
-        relative_path = os.path.join(self._current_script_dir or '', file_path)
-        self.do_load(relative_path)
-
-    @with_argparser(ACArgumentParser())
+    @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
     def do_eos(self, _: argparse.Namespace) -> None:
         """Handle cleanup when a script has finished executing"""
         if self._script_dir:
@@ -3418,6 +3395,25 @@ NOTE: This command is intended to only be used within text file scripts.
             return
 
         self._script_dir.append(os.path.dirname(expanded_path))
+
+    relative_load_description = load_description
+    relative_load_description += ("\n\n"
+                                  "If this is called from within an already-running script, the filename will be\n"
+                                  "interpreted relative to the already-running script's directory.")
+
+    relative_load_epilog = ("Notes:\n"
+                            "  This command is intended to only be used within text file scripts.")
+
+    relative_load_parser = ACArgumentParser(description=relative_load_description, epilog=relative_load_epilog)
+    relative_load_parser.add_argument('file_path', help='a file path pointing to a script')
+
+    @with_argparser(relative_load_parser)
+    def do__relative_load(self, args: argparse.Namespace) -> None:
+        """"""
+        file_path = args.file_path
+        # NOTE: Relative path is an absolute path, it is just relative to the current script directory
+        relative_path = os.path.join(self._current_script_dir or '', file_path)
+        self.do_load(relative_path)
 
     def run_transcript_tests(self, callargs: List[str]) -> None:
         """Runs transcript tests for provided file(s).

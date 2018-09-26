@@ -614,8 +614,7 @@ def test_base_relative_load(base_app, request):
 def test_relative_load_requires_an_argument(base_app, capsys):
     run_cmd(base_app, '_relative_load')
     out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith('ERROR: _relative_load command requires a file path:\n')
+    assert 'Error: the following arguments' in err
     assert base_app.cmdqueue == []
 
 
