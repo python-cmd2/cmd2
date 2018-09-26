@@ -84,7 +84,7 @@ class PyscriptExample(Cmd):
 
     @with_argparser(foo_parser)
     def do_foo(self, args):
-        self.poutput('foo ' + str(args.__dict__))
+        self.poutput('foo ' + str(sorted(args.__dict__)))
         if self._in_py:
             FooResult = namedtuple_with_defaults('FooResult',
                                                  ['counter', 'trueval', 'constval',
