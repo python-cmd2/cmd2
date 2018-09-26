@@ -1514,7 +1514,7 @@ class Cmd(cmd.Cmd):
             else:
                 # Complete token against anything a user can run
                 self.completion_matches = self.basic_complete(text, line, begidx, endidx,
-                                                              self._get_completable_runnables())
+                                                              self.get_commands_aliases_and_macros_for_completion())
 
             # Handle single result
             if len(self.completion_matches) == 1:
@@ -1540,13 +1540,6 @@ class Cmd(cmd.Cmd):
             return self.completion_matches[state]
         except IndexError:
             return None
-
-    def _get_completable_runnables(self) -> List[str]:
-        """Return a list of all commands, aliases, and macros that would show up in tab completion"""
-        visible_commands = set(self.get_visible_commands())
-        alias_names = set(self.aliases)
-        macro_names = set(self.macros)
-        return list(visible_commands | alias_names | macro_names)
 
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
                               argparser: argparse.ArgumentParser) -> List[str]:
@@ -1574,6 +1567,13 @@ class Cmd(cmd.Cmd):
                 commands.remove(name)
 
         return commands
+
+    def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
+        """Return a list of visible commands, aliases, and macros for tab completion"""
+        visible_commands = set(self.get_visible_commands())
+        alias_names = set(self.aliases)
+        macro_names = set(self.macros)
+        return list(visible_commands | alias_names | macro_names)
 
     def get_help_topics(self) -> List[str]:
         """ Returns a list of help topics """
@@ -2290,9 +2290,9 @@ class Cmd(cmd.Cmd):
                                                       description=alias_create_description,
                                                       epilog=alias_create_epilog)
     setattr(alias_create_parser.add_argument('name', type=str, help='Name of this alias'),
-            ACTION_ARG_CHOICES, _get_completable_runnables)
+            ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(alias_create_parser.add_argument('command', type=str, help='what the alias resolves to'),
-            ACTION_ARG_CHOICES, _get_completable_runnables)
+            ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(alias_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
                                              help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
@@ -2496,7 +2496,7 @@ class Cmd(cmd.Cmd):
     setattr(macro_create_parser.add_argument('name', type=str, help='Name of this macro'),
             ACTION_ARG_CHOICES, macros)
     setattr(macro_create_parser.add_argument('command', type=str, help='what the macro resolves to'),
-            ACTION_ARG_CHOICES, _get_completable_runnables)
+            ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(macro_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
                                              help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
