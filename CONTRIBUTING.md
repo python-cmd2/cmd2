@@ -12,7 +12,7 @@ Remember to feel free to ask for help by leaving a comment within the Issue.
 
 Working on your first pull request? You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github).
 
-###### If you've found a bug that is not on the board, [follow these steps](Readme.md#found-a-bug).
+###### If you've found a bug that is not on the board, [follow these steps](README.md#found-a-bug).
 
 --------------------------------------------------------------------------------
 
