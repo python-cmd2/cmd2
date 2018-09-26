@@ -2573,7 +2573,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(macro_parser, preserve_quotes=True)
     def do_macro(self, args: argparse.Namespace):
-        """ Manage macros """
+        """Manage macros"""
         func = getattr(args, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected
