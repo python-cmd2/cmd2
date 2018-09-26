@@ -34,9 +34,9 @@ optional arguments:
                         	single value - maximum duration
                         	[a, b] - duration range'''
 
-MEDIA_MOVIES_ADD_HELP = '''Usage: media movies add title {G, PG, PG-13, R, NC-17} [actor [...]]
-                        -d DIRECTOR{1..2}
+MEDIA_MOVIES_ADD_HELP = '''Usage: media movies add -d DIRECTOR{1..2}
                         [-h]
+                        title {G, PG, PG-13, R, NC-17} [actor [...]]
 
 positional arguments:
   title                 Movie Title

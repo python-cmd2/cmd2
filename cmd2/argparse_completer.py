@@ -719,7 +719,7 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
 
     def _format_usage(self, usage, actions, groups, prefix) -> str:
         if prefix is None:
-            prefix = _('usage: ')
+            prefix = _('Usage: ')
 
         # if usage is specified, use that
         if usage is not None:
