@@ -32,16 +32,16 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 import argparse
 import cmd
 import collections
+import colorama
 from colorama import Fore
 import glob
 import inspect
 import os
-import platform
 import re
 import shlex
 import sys
 import threading
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
 from . import constants
 from . import utils
@@ -324,7 +324,7 @@ class Cmd(cmd.Cmd):
     reserved_words = []
 
     # Attributes which ARE dynamically settable at runtime
-    colors = (platform.system() != 'Windows')
+    colors = constants.COLORS_TERMINAL
     continuation_prompt = '> '
     debug = False
     echo = False
@@ -344,7 +344,7 @@ class Cmd(cmd.Cmd):
 
     # To make an attribute settable with the "do_set" command, add it to this ...
     # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
-    settable = {'colors': 'Colorized output (*nix only)',
+    settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
@@ -375,6 +375,9 @@ class Cmd(cmd.Cmd):
                 del Cmd.do_ipy
             except AttributeError:
                 pass
+
+        # Override whether ansi codes should be stripped from the output since cmd2 has its own logic for doing this
+        colorama.init(strip=False)
 
         # initialize plugin system
         # needs to be done before we call __init__(0)
@@ -424,13 +427,13 @@ class Cmd(cmd.Cmd):
         self._STOP_AND_EXIT = True  # cmd convention
 
         self._colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
-                            'cyan': {True: '\x1b[36m', False: '\x1b[39m'},
-                            'blue': {True: '\x1b[34m', False: '\x1b[39m'},
-                            'red': {True: '\x1b[31m', False: '\x1b[39m'},
-                            'magenta': {True: '\x1b[35m', False: '\x1b[39m'},
-                            'green': {True: '\x1b[32m', False: '\x1b[39m'},
-                            'underline': {True: '\x1b[4m', False: '\x1b[24m'},
-                            'yellow': {True: '\x1b[33m', False: '\x1b[39m'}}
+                            'cyan': {True: Fore.CYAN, False: Fore.RESET},
+                            'blue': {True: Fore.BLUE, False: Fore.RESET},
+                            'red': {True: Fore.RED, False: Fore.RESET},
+                            'magenta': {True: Fore.MAGENTA, False: Fore.RESET},
+                            'green': {True: Fore.GREEN, False: Fore.RESET},
+                            'underline': {True: '\x1b[4m', False: Fore.RESET},
+                            'yellow': {True: Fore.YELLOW, False: Fore.RESET}}
 
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
@@ -560,34 +563,53 @@ class Cmd(cmd.Cmd):
         # Make sure settable parameters are sorted alphabetically by key
         self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
-    def poutput(self, msg: str, end: str='\n') -> None:
-        """Convenient shortcut for self.stdout.write(); by default adds newline to end if not already present.
+    def decolorized_write(self, fileobj: IO, msg: str) -> None:
+        """Write a string to a fileobject, stripping ANSI escape sequences if necessary
 
-        Also handles BrokenPipeError exceptions for when a commands's output has been piped to another process and
-        that process terminates before the cmd2 command is finished executing.
+        Honor the current colors setting, which requires us to check whether the
+        fileobject is a tty.
+        """
+        if self.colors.lower() == constants.COLORS_NEVER.lower() or \
+                (self.colors.lower() == constants.COLORS_TERMINAL.lower() and not fileobj.isatty()):
+            msg = utils.strip_ansi(msg)
+        fileobj.write(msg)
+
+    def poutput(self, msg: Any, end: str='\n', color: str='') -> None:
+        """Smarter self.stdout.write(); color aware and adds newline of not present.
+
+        Also handles BrokenPipeError exceptions for when a commands's output has
+        been piped to another process and that process terminates before the
+        cmd2 command is finished executing.
 
         :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
-        :param end: string appended after the end of the message if not already present, default a newline
+        :param end: (optional) string appended after the end of the message if not already present, default a newline
+        :param color: (optional) color escape to output this message with
         """
         if msg is not None and msg != '':
             try:
                 msg_str = '{}'.format(msg)
-                self.stdout.write(msg_str)
                 if not msg_str.endswith(end):
-                    self.stdout.write(end)
+                    msg_str += end
+                if color:
+                    msg_str = color + msg_str + Fore.RESET
+                self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
-                # This occurs if a command's output is being piped to another process and that process closes before the
-                # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.
+                # This occurs if a command's output is being piped to another
+                # process and that process closes before the command is
+                # finished. If you would like your application to print a
+                # warning message, then set the broken_pipe_warning attribute
+                # to the message you want printed.
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, err: Union[str, Exception], traceback_war: bool=True) -> None:
+    def perror(self, err: Union[str, Exception], traceback_war: bool=True, err_color: str=Fore.LIGHTRED_EX,
+               war_color: str=Fore.LIGHTYELLOW_EX) -> None:
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
 
         :param err: an Exception or error message to print out
         :param traceback_war: (optional) if True, print a message to let user know they can enable debug
-        :return:
+        :param err_color: (optional) color escape to output error with
+        :param war_color: (optional) color escape to output warning with
         """
         if self.debug:
             import traceback
@@ -595,14 +617,15 @@ class Cmd(cmd.Cmd):
 
         if isinstance(err, Exception):
             err_msg = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(type(err).__name__, err)
-            sys.stderr.write(self.colorize(err_msg, 'red'))
         else:
-            err_msg = self.colorize("ERROR: {}\n".format(err), 'red')
-            sys.stderr.write(err_msg)
+            err_msg = "ERROR: {}\n".format(err)
+        err_msg = err_color + err_msg + Fore.RESET
+        self.decolorized_write(sys.stderr, err_msg)
 
         if traceback_war:
             war = "To enable full traceback, run the following command:  'set debug true'\n"
-            sys.stderr.write(self.colorize(war, 'yellow'))
+            war = war_color + war + Fore.RESET
+            self.decolorized_write(sys.stderr, war)
 
     def pfeedback(self, msg: str) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -611,7 +634,7 @@ class Cmd(cmd.Cmd):
             if self.feedback_to_output:
                 self.poutput(msg)
             else:
-                sys.stderr.write("{}\n".format(msg))
+                self.decolorized_write(sys.stderr, "{}\n".format(msg))
 
     def ppaged(self, msg: str, end: str='\n', chop: bool=False) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
@@ -647,6 +670,9 @@ class Cmd(cmd.Cmd):
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self.redirecting and not self._in_py and not self._script_dir:
+                    if self.colors.lower() == constants.COLORS_NEVER.lower():
+                        msg_str = utils.strip_ansi(msg_str)
+
                     pager = self.pager
                     if chop:
                         pager = self.pager_chop
@@ -671,7 +697,7 @@ class Cmd(cmd.Cmd):
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.
+                # broken_pipe_warning attribute to the message you want printed.`
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
@@ -682,7 +708,7 @@ class Cmd(cmd.Cmd):
            is running on Windows, will return ``val`` unchanged.
            ``color`` should be one of the supported strings (or styles):
            red/blue/green/cyan/magenta, bold, underline"""
-        if self.colors and (self.stdout == self.initial_stdout):
+        if self.colors.lower() != constants.COLORS_NEVER.lower() and (self.stdout == self.initial_stdout):
             return self._colorcodes[color][True] + val + self._colorcodes[color][False]
         return val
 

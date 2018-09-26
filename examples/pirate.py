@@ -8,7 +8,20 @@ It demonstrates many features of cmd2.
 """
 import argparse
 
+from colorama import Fore
+
 import cmd2
+
+COLORS = {
+    'black': Fore.BLACK,
+    'red': Fore.RED,
+    'green': Fore.GREEN,
+    'yellow': Fore.YELLOW,
+    'blue': Fore.BLUE,
+    'magenta': Fore.MAGENTA,
+    'cyan': Fore.CYAN,
+    'white': Fore.WHITE,
+}
 
 
 class Pirate(cmd2.Cmd):
@@ -17,10 +30,10 @@ class Pirate(cmd2.Cmd):
         self.default_to_shell = True
         self.multiline_commands = ['sing']
         self.terminators = self.terminators + ['...']
-        self.songcolor = 'blue'
+        self.songcolor = Fore.BLUE
 
         # Add stuff to settable and/or shortcuts before calling base class initializer
-        self.settable['songcolor'] = 'Color to ``sing`` in (red/blue/green/cyan/magenta, bold, underline)'
+        self.settable['songcolor'] = 'Color to ``sing`` in (black/red/green/yellow/blue/magenta/cyan/white)'
         self.shortcuts.update({'~': 'sing'})
 
         """Initialize the base class as well as this one"""
@@ -68,7 +81,8 @@ class Pirate(cmd2.Cmd):
 
     def do_sing(self, arg):
         """Sing a colorful song."""
-        self.poutput(self.colorize(arg, self.songcolor))
+        color_escape = COLORS.get(self.songcolor, default=Fore.RESET)
+        self.poutput(arg, color=color_escape)
 
     yo_parser = argparse.ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")
