@@ -2075,11 +2075,11 @@ class Cmd(cmd.Cmd):
 
         for arg in reverse_arg_list:
             if arg.is_escaped:
-                to_replace = '{{' + str(arg.number) + '}}'
-                replacement = '{' + str(arg.number) + '}'
+                to_replace = '{{' + arg.number_str + '}}'
+                replacement = '{' + arg.number_str + '}'
             else:
-                to_replace = '{' + str(arg.number) + '}'
-                replacement = statement.argv[arg.number]
+                to_replace = '{' + arg.number_str + '}'
+                replacement = statement.argv[int(arg.number_str)]
 
             parts = resolved.rsplit(to_replace, maxsplit=1)
             resolved = parts[0] + replacement + parts[1]
@@ -2416,8 +2416,9 @@ class Cmd(cmd.Cmd):
             try:
                 cur_match = normal_matches.__next__()
 
-                # Get the number between the braces
-                cur_num = int(re.findall(MacroArg.digit_pattern, cur_match.group())[0])
+                # Get the number string between the braces
+                cur_num_str = (re.findall(MacroArg.digit_pattern, cur_match.group())[0])
+                cur_num = int(cur_num_str)
                 if cur_num < 1:
                     self.perror("Argument numbers must be greater than 0", traceback_war=False)
                     return
@@ -2426,7 +2427,7 @@ class Cmd(cmd.Cmd):
                 if cur_num > max_arg_num:
                     max_arg_num = cur_num
 
-                arg_list.append(MacroArg(start_index=cur_match.start(), number=cur_num, is_escaped=False))
+                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=False))
 
             except StopIteration:
                 break
@@ -2444,10 +2445,10 @@ class Cmd(cmd.Cmd):
             try:
                 cur_match = escaped_matches.__next__()
 
-                # Get the number between the braces
-                cur_num = int(re.findall(MacroArg.digit_pattern, cur_match.group())[0])
+                # Get the number string between the braces
+                cur_num_str = re.findall(MacroArg.digit_pattern, cur_match.group())[0]
 
-                arg_list.append(MacroArg(start_index=cur_match.start(), number=cur_num, is_escaped=True))
+                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=True))
             except StopIteration:
                 break
 

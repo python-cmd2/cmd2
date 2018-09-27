@@ -786,6 +786,10 @@ def test_macro_normal_arg_pattern():
     matches = pattern.findall('{3} text {4} stuff {5}}}}')
     assert matches == ['{3}', '{4}', '{5}']
 
+    # Unicode digit
+    matches = pattern.findall('{\N{ARABIC-INDIC DIGIT ONE}}')
+    assert matches == ['{\N{ARABIC-INDIC DIGIT ONE}}']
+
     # Invalid strings
     matches = pattern.findall('5')
     assert not matches
@@ -831,6 +835,10 @@ def test_macro_escaped_arg_pattern():
 
     matches = pattern.findall('{{3}} text {{4}} stuff {{5}}}}')
     assert matches == ['{{3}}', '{{4}}', '{{5}}']
+
+    # Unicode digit
+    matches = pattern.findall('{{\N{ARABIC-INDIC DIGIT ONE}}}')
+    assert matches == ['{{\N{ARABIC-INDIC DIGIT ONE}}}']
 
     # Invalid strings
     matches = pattern.findall('5')

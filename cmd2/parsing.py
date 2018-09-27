@@ -21,13 +21,15 @@ class MacroArg:
     Escaped argument syntax: {{5}}
     """
     # The starting index of this argument in the macro value
-    start_index = attr.ib(validator=attr.validators.instance_of(int), type=int)
+    start_index = attr.ib(validator=attr.validators.instance_of(int))
 
-    # The number that appears between the braces
-    number = attr.ib(validator=attr.validators.instance_of(int), type=int)
+    # The number string that appears between the braces
+    # This is a string instead of an int because we support unicode digits and must be able
+    # to reproduce this string later
+    number_str = attr.ib(validator=attr.validators.instance_of(str))
 
     # Tells if this argument is escaped and therefore needs to be unescaped
-    is_escaped = attr.ib(validator=attr.validators.instance_of(bool), type=bool)
+    is_escaped = attr.ib(validator=attr.validators.instance_of(bool))
 
     # Pattern used to find normal argument
     # Digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
@@ -48,16 +50,16 @@ class Macro:
     """Defines a cmd2 macro"""
 
     # Name of the macro
-    name = attr.ib(validator=attr.validators.instance_of(str), type=str)
+    name = attr.ib(validator=attr.validators.instance_of(str))
 
     # The string the macro resolves to
-    value = attr.ib(validator=attr.validators.instance_of(str), type=str)
+    value = attr.ib(validator=attr.validators.instance_of(str))
 
     # The required number of args the user has to pass to this macro
-    required_arg_count = attr.ib(validator=attr.validators.instance_of(int), type=int)
+    required_arg_count = attr.ib(validator=attr.validators.instance_of(int))
 
     # Used to fill in argument placeholders in the macro
-    arg_list = attr.ib(factory=list, validator=attr.validators.instance_of(list), type=List[MacroArg])
+    arg_list = attr.ib(factory=list, validator=attr.validators.instance_of(list))
 
 
 @attr.s(frozen=True)
