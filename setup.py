@@ -16,7 +16,7 @@ https://cmd2.readthedocs.io/
 
 Main features:
 
-    - Searchable command history (`history` command and `<Ctrl>+r`)
+    - Searchable command history (`history` command and `<Ctrl>+r`) - optionally persistent
     - Text file scripting of your application with `load` (`@`) and `_relative_load` (`@@`)
     - Python scripting of your application with ``pyscript``
     - Run shell commands with ``!``
@@ -24,8 +24,12 @@ Main features:
     - Redirect command output to file with `>`, `>>`
     - Bare `>`, `>>` with no filename send output to paste buffer (clipboard)
     - `py` enters interactive Python console (opt-in `ipy` for IPython console)
+    - Option to display long output using a pager with ``cmd2.Cmd.ppaged()``
     - Multi-line commands
     - Special-character command shortcuts (beyond cmd's `?` and `!`)
+    - Command aliasing similar to bash `alias` command
+    - Macros, which are similar to aliases, but can take arguments when called
+    - Ability to load commands at startup from an initialization script
     - Settable environment parameters
     - Parsing commands with arguments using `argparse`, including support for sub-commands
     - Unicode character support
@@ -34,6 +38,7 @@ Main features:
     - Trivial to provide built-in help for all commands
     - Built-in regression testing framework for your applications (transcript-based testing)
     - Transcripts for use with built-in regression can be automatically generated from `history -t`
+    - Alerts that seamlessly print while user enters text at prompt
 
 Usable without modification anywhere cmd is used; simply import cmd2.Cmd in place of cmd.Cmd.
 
