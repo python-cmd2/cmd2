@@ -2244,21 +2244,17 @@ class Cmd(cmd.Cmd):
 
     def alias_create(self, args: argparse.Namespace):
         """ Creates or overwrites an alias """
+
         # Validate the alias name
-        valid, errmsg = self.statement_parser.is_valid_command(args.name, allow_shortcut=False)
+        alias_name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(alias_name)
         if not valid:
             errmsg = "Invalid alias name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
-        if args.name in self.macros:
+        if alias_name in self.macros:
             errmsg = "Aliases cannot have the same name as a macro"
-            self.perror(errmsg, traceback_war=False)
-            return
-
-        valid, errmsg = self.statement_parser.is_valid_command(args.command, allow_shortcut=True)
-        if not valid:
-            errmsg = "Invalid alias target:  {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2270,9 +2266,9 @@ class Cmd(cmd.Cmd):
             value += ' ' + cur_arg
 
         # Set the alias
-        result = "overwritten" if args.name in self.aliases else "created"
-        self.aliases[args.name] = value
-        self.poutput("Alias {!r} {}".format(args.name, result))
+        result = "overwritten" if alias_name in self.aliases else "created"
+        self.aliases[alias_name] = value
+        self.poutput("Alias {!r} {}".format(alias_name, result))
 
     def alias_delete(self, args: argparse.Namespace):
         """ Deletes aliases """
@@ -2285,22 +2281,24 @@ class Cmd(cmd.Cmd):
             # Get rid of duplicates
             aliases_to_delete = utils.remove_duplicates(args.name)
 
-            for cur_arg in aliases_to_delete:
-                if cur_arg in self.aliases:
-                    del self.aliases[cur_arg]
-                    self.poutput("Alias {!r} deleted".format(cur_arg))
+            for cur_name in aliases_to_delete:
+                stripped_name = utils.strip_quotes(cur_name)
+                if stripped_name in self.aliases:
+                    del self.aliases[stripped_name]
+                    self.poutput("Alias {!r} deleted".format(stripped_name))
                 else:
-                    self.perror("Alias {!r} does not exist".format(cur_arg), traceback_war=False)
+                    self.perror("Alias {!r} does not exist".format(stripped_name), traceback_war=False)
 
     def alias_list(self, args: argparse.Namespace):
         """ Lists some or all aliases """
         if args.name:
             names_to_view = utils.remove_duplicates(args.name)
             for cur_name in names_to_view:
-                if cur_name in self.aliases:
-                    self.poutput("alias create {} {}".format(cur_name, self.aliases[cur_name]))
+                stripped_name = utils.strip_quotes(cur_name)
+                if stripped_name in self.aliases:
+                    self.poutput("alias create {} {}".format(stripped_name, self.aliases[stripped_name]))
                 else:
-                    self.perror("Alias {!r} not found".format(cur_name), traceback_war=False)
+                    self.perror("Alias {!r} not found".format(stripped_name), traceback_war=False)
         else:
             sorted_aliases = utils.alphabetical_sort(self.aliases)
             for cur_alias in sorted_aliases:
@@ -2377,32 +2375,28 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.alias_parser.print_help()
+            self.do_help('alias')
 
     # -----  Macro subcommand functions -----
 
     def macro_create(self, args: argparse.Namespace):
         """ Creates or overwrites a macro """
+
         # Validate the macro name
-        valid, errmsg = self.statement_parser.is_valid_command(args.name, allow_shortcut=False)
+        macro_name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(macro_name)
         if not valid:
             errmsg = "Invalid macro name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
-        if args.name in self.get_all_commands():
+        if macro_name in self.get_all_commands():
             errmsg = "Macros cannot have the same name as a command"
             self.perror(errmsg, traceback_war=False)
             return
 
-        if args.name in self.aliases:
+        if macro_name in self.aliases:
             errmsg = "Macros cannot have the same name as an alias"
-            self.perror(errmsg, traceback_war=False)
-            return
-
-        valid, errmsg = self.statement_parser.is_valid_command(args.command, allow_shortcut=True)
-        if not valid:
-            errmsg = "Invalid macro target:  {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2459,9 +2453,9 @@ class Cmd(cmd.Cmd):
                 break
 
         # Set the macro
-        result = "overwritten" if args.name in self.macros else "created"
-        self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
-        self.poutput("Macro {!r} {}".format(args.name, result))
+        result = "overwritten" if macro_name in self.macros else "created"
+        self.macros[macro_name] = Macro(name=macro_name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
+        self.poutput("Macro {!r} {}".format(macro_name, result))
 
     def macro_delete(self, args: argparse.Namespace):
         """ Deletes macros """
@@ -2474,22 +2468,24 @@ class Cmd(cmd.Cmd):
             # Get rid of duplicates
             macros_to_delete = utils.remove_duplicates(args.name)
 
-            for cur_arg in macros_to_delete:
-                if cur_arg in self.macros:
-                    del self.macros[cur_arg]
-                    self.poutput("Macro {!r} deleted".format(cur_arg))
+            for cur_name in macros_to_delete:
+                stripped_name = utils.strip_quotes(cur_name)
+                if stripped_name in self.macros:
+                    del self.macros[stripped_name]
+                    self.poutput("Macro {!r} deleted".format(stripped_name))
                 else:
-                    self.perror("Macro {!r} does not exist".format(cur_arg), traceback_war=False)
+                    self.perror("Macro {!r} does not exist".format(stripped_name), traceback_war=False)
 
     def macro_list(self, args: argparse.Namespace):
         """ Lists some or all macros """
         if args.name:
             names_to_view = utils.remove_duplicates(args.name)
             for cur_name in names_to_view:
-                if cur_name in self.macros:
-                    self.poutput("macro create {} {}".format(cur_name, self.macros[cur_name].value))
+                stripped_name = utils.strip_quotes(cur_name)
+                if stripped_name in self.macros:
+                    self.poutput("macro create {} {}".format(stripped_name, self.macros[stripped_name].value))
                 else:
-                    self.perror("Macro {!r} not found".format(cur_name), traceback_war=False)
+                    self.perror("Macro {!r} not found".format(stripped_name), traceback_war=False)
         else:
             sorted_macros = utils.alphabetical_sort(self.macros)
             for cur_macro in sorted_macros:
@@ -2589,7 +2585,7 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.macro_parser.print_help()
+            self.do_help('macro')
 
     @with_argument_list
     def do_help(self, arglist: List[str]) -> None:

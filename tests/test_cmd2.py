@@ -1765,9 +1765,10 @@ def test_poutput_color_never(base_app):
     assert out == expected
 
 
-# These are invalid targets for aliases and macros
-invalid_alias_and_macro_targets = [
+# These are invalid names for aliases and macros
+invalid_command_name = [
     '""',  # Blank name
+    '!no_shortcut',
     '">"',
     '"no>pe"',
     '"no spaces"',
@@ -1775,9 +1776,6 @@ invalid_alias_and_macro_targets = [
     '"noterm;"',
     'noembedded"quotes',
 ]
-
-# These are invalid names for aliases and macros
-invalid_alias_and_macro_names = invalid_alias_and_macro_targets + ['!no_shortcut']
 
 def test_get_alias_names(base_app):
     assert len(base_app.aliases) == 0
@@ -1792,6 +1790,10 @@ def test_get_macro_names(base_app):
     run_cmd(base_app, 'macro create bar !echo bar')
     assert len(base_app.macros) == 2
     assert sorted(base_app.get_macro_names()) == ['bar', 'foo']
+
+def test_alias_no_subcommand(base_app, capsys):
+    out = run_cmd(base_app, 'alias')
+    assert "Usage: alias [-h]" in out[0]
 
 def test_alias_create(base_app, capsys):
     # Create the alias
@@ -1820,7 +1822,7 @@ def test_alias_create_with_quotes(base_app, capsys):
     out = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake help > "out file.txt"')
 
-@pytest.mark.parametrize('alias_name', invalid_alias_and_macro_names)
+@pytest.mark.parametrize('alias_name', invalid_command_name)
 def test_alias_create_invalid_name(base_app, alias_name, capsys):
     run_cmd(base_app, 'alias create {} help'.format(alias_name))
     out, err = capsys.readouterr()
@@ -1832,12 +1834,6 @@ def test_alias_create_with_macro_name(base_app, capsys):
     run_cmd(base_app, 'alias create {} help'.format(macro))
     out, err = capsys.readouterr()
     assert "Aliases cannot have the same name as a macro" in err
-
-@pytest.mark.parametrize('alias_target', invalid_alias_and_macro_targets)
-def test_alias_create_with_invalid_target(base_app, alias_target, capsys):
-    run_cmd(base_app, 'alias create my_alias {}'.format(alias_target))
-    out, err = capsys.readouterr()
-    assert "Invalid alias target" in err
 
 def test_alias_list_invalid_alias(base_app, capsys):
     # Look up invalid alias
@@ -1862,6 +1858,10 @@ def test_alias_delete_non_existing(base_app, capsys):
     out, err = capsys.readouterr()
     assert "Alias 'fake' does not exist" in err
 
+def test_alias_delete_no_name(base_app, capsys):
+    out = run_cmd(base_app, 'alias delete')
+    assert "Usage: alias delete" in out[0]
+
 def test_multiple_aliases(base_app):
     alias1 = 'h1'
     alias2 = 'h2'
@@ -1874,6 +1874,10 @@ def test_multiple_aliases(base_app):
     out = run_cmd(base_app, alias2)
     expected = normalize(BASE_HELP_VERBOSE)
     assert out == expected
+
+def test_macro_no_subcommand(base_app, capsys):
+    out = run_cmd(base_app, 'macro')
+    assert "Usage: macro [-h]" in out[0]
 
 def test_macro_create(base_app, capsys):
     # Create the macro
@@ -1902,7 +1906,7 @@ def test_macro_create_with_quotes(base_app, capsys):
     out = run_cmd(base_app, 'macro list fake')
     assert out == normalize('macro create fake help > "out file.txt"')
 
-@pytest.mark.parametrize('macro_name', invalid_alias_and_macro_names)
+@pytest.mark.parametrize('macro_name', invalid_command_name)
 def test_macro_create_invalid_name(base_app, macro_name, capsys):
     run_cmd(base_app, 'macro create {} help'.format(macro_name))
     out, err = capsys.readouterr()
@@ -1920,12 +1924,6 @@ def test_macro_create_with_command_name(base_app, capsys):
     run_cmd(base_app, 'macro create help stuff')
     out, err = capsys.readouterr()
     assert "Macros cannot have the same name as a command" in err
-
-@pytest.mark.parametrize('macro_target', invalid_alias_and_macro_targets)
-def test_macro_create_with_invalid_target(base_app, macro_target, capsys):
-    run_cmd(base_app, 'macro create my_macro {}'.format(macro_target))
-    out, err = capsys.readouterr()
-    assert "Invalid macro target" in err
 
 def test_macro_create_with_args(base_app, capsys):
     # Create the macro
@@ -1980,6 +1978,10 @@ def test_macro_delete_non_existing(base_app, capsys):
     run_cmd(base_app, 'macro delete fake')
     out, err = capsys.readouterr()
     assert "Macro 'fake' does not exist" in err
+
+def test_macro_delete_no_name(base_app, capsys):
+    out = run_cmd(base_app, 'macro delete')
+    assert "Usage: macro delete" in out[0]
 
 def test_multiple_macros(base_app):
     macro1 = 'h1'
