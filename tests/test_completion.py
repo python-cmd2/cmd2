@@ -98,7 +98,7 @@ def test_complete_empty_arg(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = sorted(cmd2_app.complete_help(text, line, begidx, endidx))
+    expected = sorted(cmd2_app.get_visible_commands())
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
     assert first_match is not None and \
@@ -134,7 +134,11 @@ def test_cmd2_help_completion_single(cmd2_app):
     line = 'help {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.complete_help(text, line, begidx, endidx) == ['help']
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and cmd2_app.completion_matches == ['help ']
 
 def test_cmd2_help_completion_multiple(cmd2_app):
     text = 'h'
@@ -142,15 +146,18 @@ def test_cmd2_help_completion_multiple(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    matches = sorted(cmd2_app.complete_help(text, line, begidx, endidx))
-    assert matches == ['help', 'history']
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == ['help', 'history']
+
 
 def test_cmd2_help_completion_nomatch(cmd2_app):
     text = 'fakecommand'
     line = 'help {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.complete_help(text, line, begidx, endidx) == []
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is None
 
 
 def test_shell_command_completion_shortcut(cmd2_app):
@@ -725,7 +732,11 @@ def test_cmd2_help_subcommand_completion_single(sc_app):
     line = 'help {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert sc_app.complete_help(text, line, begidx, endidx) == ['base']
+
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and sc_app.completion_matches == ['base ']
 
 def test_cmd2_help_subcommand_completion_multiple(sc_app):
     text = ''
@@ -733,8 +744,8 @@ def test_cmd2_help_subcommand_completion_multiple(sc_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    matches = sorted(sc_app.complete_help(text, line, begidx, endidx))
-    assert matches == ['bar', 'foo', 'sport']
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
+    assert first_match is not None and sc_app.completion_matches == ['bar', 'foo', 'sport']
 
 
 def test_cmd2_help_subcommand_completion_nomatch(sc_app):
@@ -742,7 +753,9 @@ def test_cmd2_help_subcommand_completion_nomatch(sc_app):
     line = 'help base {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert sc_app.complete_help(text, line, begidx, endidx) == []
+
+    first_match = complete_tester(text, line, begidx, endidx, sc_app)
+    assert first_match is None
 
 def test_subcommand_tab_completion(sc_app):
     # This makes sure the correct completer for the sport subcommand is called
@@ -884,7 +897,11 @@ def test_cmd2_help_subcommand_completion_single_scu(scu_app):
     line = 'help {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert scu_app.complete_help(text, line, begidx, endidx) == ['base']
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+
+    # It is at end of line, so extra space is present
+    assert first_match is not None and scu_app.completion_matches == ['base ']
 
 
 def test_cmd2_help_subcommand_completion_multiple_scu(scu_app):
@@ -893,8 +910,8 @@ def test_cmd2_help_subcommand_completion_multiple_scu(scu_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    matches = sorted(scu_app.complete_help(text, line, begidx, endidx))
-    assert matches == ['bar', 'foo', 'sport']
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
 
 
 def test_cmd2_help_subcommand_completion_nomatch_scu(scu_app):
@@ -902,7 +919,9 @@ def test_cmd2_help_subcommand_completion_nomatch_scu(scu_app):
     line = 'help base {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert scu_app.complete_help(text, line, begidx, endidx) == []
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match == None
 
 
 def test_subcommand_tab_completion_scu(scu_app):
