@@ -307,7 +307,6 @@ class Cmd(cmd.Cmd):
     # Attributes used to configure the StatementParser, best not to change these at runtime
     multiline_commands = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    aliases = dict()
     terminators = [';']
 
     # Attributes which are NOT dynamically settable at runtime
@@ -385,6 +384,9 @@ class Cmd(cmd.Cmd):
 
         # Commands to exclude from the history command
         self.exclude_from_history = '''history edit eof eos'''.split()
+
+        # Command aliases
+        self.aliases = dict()
 
         self._finalize_app_parameters()
 
