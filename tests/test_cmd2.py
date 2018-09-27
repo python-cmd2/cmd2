@@ -1765,6 +1765,20 @@ def test_poutput_color_never(base_app):
     assert out == expected
 
 
+def test_get_alias_names(base_app):
+    assert len(base_app.aliases) == 0
+    run_cmd(base_app, 'alias create fake pyscript')
+    run_cmd(base_app, 'alias create ls !ls -hal')
+    assert len(base_app.aliases) == 2
+    assert sorted(base_app.get_alias_names()) == ['fake', 'ls']
+
+def test_get_macro_names(base_app):
+    assert len(base_app.macros) == 0
+    run_cmd(base_app, 'macro create foo !echo foo')
+    run_cmd(base_app, 'macro create bar !echo bar')
+    assert len(base_app.macros) == 2
+    assert sorted(base_app.get_macro_names()) == ['bar', 'foo']
+
 def test_alias_create(base_app, capsys):
     # Create the alias
     out = run_cmd(base_app, 'alias create fake pyscript')

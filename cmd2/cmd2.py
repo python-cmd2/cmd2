@@ -312,8 +312,6 @@ class Cmd(cmd.Cmd):
     # Attributes used to configure the StatementParser, best not to change these at runtime
     multiline_commands = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    aliases = dict()
-    macros = dict()
     terminators = [';']
 
     # Attributes which are NOT dynamically settable at runtime
@@ -391,6 +389,10 @@ class Cmd(cmd.Cmd):
 
         # Commands to exclude from the history command
         self.exclude_from_history = '''history edit eof eos'''.split()
+
+        # Command aliases and macros
+        self.aliases = dict()
+        self.macros = dict()
 
         self._finalize_app_parameters()
 
@@ -1609,6 +1611,16 @@ class Cmd(cmd.Cmd):
 
         return commands
 
+    def get_alias_names(self) -> List[str]:
+        """Return a list of alias names."""
+        alias_names = set(self.aliases)
+        return list(alias_names)
+
+    def get_macro_names(self) -> List[str]:
+        """Return a list of macro names."""
+        macro_names = set(self.macros)
+        return list(macro_names)
+
     def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
         visible_commands = set(self.get_visible_commands())
@@ -2341,7 +2353,7 @@ class Cmd(cmd.Cmd):
     alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
                                                       description=alias_delete_description)
     setattr(alias_delete_parser.add_argument('name', type=str, nargs='*', help='alias to delete'),
-            ACTION_ARG_CHOICES, aliases)
+            ACTION_ARG_CHOICES, get_alias_names)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="all aliases will be deleted")
     alias_delete_parser.set_defaults(func=alias_delete)
 
@@ -2355,7 +2367,7 @@ class Cmd(cmd.Cmd):
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
     setattr(alias_list_parser.add_argument('name', type=str, nargs="*", help='alias to list'),
-            ACTION_ARG_CHOICES, aliases)
+            ACTION_ARG_CHOICES, get_alias_names)
     alias_list_parser.set_defaults(func=alias_list)
 
     @with_argparser(alias_parser, preserve_quotes=True)
@@ -2540,7 +2552,7 @@ class Cmd(cmd.Cmd):
                                                       description=macro_create_description,
                                                       epilog=macro_create_epilog)
     setattr(macro_create_parser.add_argument('name', type=str, help='name of this macro'),
-            ACTION_ARG_CHOICES, macros)
+            ACTION_ARG_CHOICES, get_macro_names)
     setattr(macro_create_parser.add_argument('command', type=str, help='what the macro resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(macro_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
@@ -2554,7 +2566,7 @@ class Cmd(cmd.Cmd):
     macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
                                                       description=macro_delete_description)
     setattr(macro_delete_parser.add_argument('name', type=str, nargs='*', help='macro to delete'),
-            ACTION_ARG_CHOICES, macros)
+            ACTION_ARG_CHOICES, get_macro_names)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="all macros will be deleted")
     macro_delete_parser.set_defaults(func=macro_delete)
 
@@ -2568,7 +2580,7 @@ class Cmd(cmd.Cmd):
     macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help,
                                                     description=macro_list_description)
     setattr(macro_list_parser.add_argument('name', type=str, nargs="*", help='macro to list'),
-            ACTION_ARG_CHOICES, macros)
+            ACTION_ARG_CHOICES, get_macro_names)
     macro_list_parser.set_defaults(func=macro_list)
 
     @with_argparser(macro_parser, preserve_quotes=True)
