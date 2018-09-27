@@ -191,7 +191,9 @@ def test_shell_command_completion_doesnt_match_wildcards(cmd2_app):
     line = 'shell {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is None
 
 def test_shell_command_completion_multiple(cmd2_app):
     if sys.platform == "win32":
@@ -204,21 +206,27 @@ def test_shell_command_completion_multiple(cmd2_app):
     line = 'shell {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert expected in cmd2_app.complete_shell(text, line, begidx, endidx)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and expected in cmd2_app.completion_matches
 
 def test_shell_command_completion_nomatch(cmd2_app):
     text = 'zzzz'
     line = 'shell {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is None
 
 def test_shell_command_completion_doesnt_complete_when_just_shell(cmd2_app):
     text = ''
     line = 'shell {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
-    assert cmd2_app.complete_shell(text, line, begidx, endidx) == []
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is None
 
 def test_shell_command_completion_does_path_completion_when_after_command(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -229,7 +237,8 @@ def test_shell_command_completion_does_path_completion_when_after_command(cmd2_a
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.complete_shell(text, line, begidx, endidx) == [text + '.py']
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == [text + '.py ']
 
 
 def test_path_completion_single_end(cmd2_app, request):

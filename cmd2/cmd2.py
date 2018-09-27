@@ -2892,14 +2892,20 @@ class Cmd(cmd.Cmd):
             if onchange_hook is not None:
                 onchange_hook(old=current_value, new=value)
 
-    def do_shell(self, statement: Statement) -> None:
-        """Execute a command as if at the OS prompt
+    shell_parser = ACArgumentParser()
+    setattr(shell_parser.add_argument('command', help='the command to run'),
+            ACTION_ARG_CHOICES, ('shell_cmd_complete',))
+    setattr(shell_parser.add_argument('command_args', nargs=argparse.REMAINDER,
+                                      help='arguments being passed to command'),
+            ACTION_ARG_CHOICES, ('path_complete',))
 
-    Usage:  shell <command> [arguments]"""
+    @with_argparser(shell_parser, preserve_quotes=True)
+    def do_shell(self, args: argparse.Namespace) -> None:
+        """Execute a command as if at the OS prompt"""
         import subprocess
 
-        # Get list of arguments to shell with quotes preserved
-        tokens = statement.arg_list
+        # Create a list of arguments to shell
+        tokens = [args.command] + args.command_args
 
         # Support expanding ~ in quoted paths
         for index, _ in enumerate(tokens):
@@ -2919,18 +2925,6 @@ class Cmd(cmd.Cmd):
         expanded_command = ' '.join(tokens)
         proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
         proc.communicate()
-
-    def complete_shell(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Handles tab completion of executable commands and local file system paths for the shell command
-
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: the current input line with leading whitespace removed
-        :param begidx: the beginning index of the prefix text
-        :param endidx: the ending index of the prefix text
-        :return: a list of possible tab completions
-        """
-        index_dict = {1: self.shell_cmd_complete}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
     @staticmethod
     def _reset_py_display() -> None:
