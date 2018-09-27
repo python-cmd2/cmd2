@@ -2251,14 +2251,14 @@ class Cmd(cmd.Cmd):
         """ Creates or overwrites an alias """
 
         # Validate the alias name
-        alias_name = utils.strip_quotes(args.name)
-        valid, errmsg = self.statement_parser.is_valid_command(alias_name)
+        args.name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
             errmsg = "Invalid alias name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
-        if alias_name in self.macros:
+        if args.name in self.macros:
             errmsg = "Alias cannot have the same name as a macro"
             self.perror(errmsg, traceback_war=False)
             return
@@ -2271,9 +2271,9 @@ class Cmd(cmd.Cmd):
             value += ' ' + ' '.join(args.command_args)
 
         # Set the alias
-        result = "overwritten" if alias_name in self.aliases else "created"
-        self.aliases[alias_name] = value
-        self.poutput("Alias '{}' {}".format(alias_name, result))
+        result = "overwritten" if args.name in self.aliases else "created"
+        self.aliases[args.name] = value
+        self.poutput("Alias '{}' {}".format(args.name, result))
 
     def alias_delete(self, args: argparse.Namespace):
         """ Deletes aliases """
@@ -2389,19 +2389,19 @@ class Cmd(cmd.Cmd):
         """ Creates or overwrites a macro """
 
         # Validate the macro name
-        macro_name = utils.strip_quotes(args.name)
-        valid, errmsg = self.statement_parser.is_valid_command(macro_name)
+        args.name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
             errmsg = "Invalid macro name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
-        if macro_name in self.get_all_commands():
+        if args.name in self.get_all_commands():
             errmsg = "Macro cannot have the same name as a command"
             self.perror(errmsg, traceback_war=False)
             return
 
-        if macro_name in self.aliases:
+        if args.name in self.aliases:
             errmsg = "Macro cannot have the same name as an alias"
             self.perror(errmsg, traceback_war=False)
             return
@@ -2460,9 +2460,9 @@ class Cmd(cmd.Cmd):
                 break
 
         # Set the macro
-        result = "overwritten" if macro_name in self.macros else "created"
-        self.macros[macro_name] = Macro(name=macro_name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
-        self.poutput("Macro '{}' {}".format(macro_name, result))
+        result = "overwritten" if args.name in self.macros else "created"
+        self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
+        self.poutput("Macro '{}' {}".format(args.name, result))
 
     def macro_delete(self, args: argparse.Namespace):
         """ Deletes macros """
