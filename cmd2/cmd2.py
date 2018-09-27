@@ -1613,19 +1613,17 @@ class Cmd(cmd.Cmd):
 
     def get_alias_names(self) -> List[str]:
         """Return a list of alias names."""
-        alias_names = set(self.aliases)
-        return list(alias_names)
+        return list(self.aliases)
 
     def get_macro_names(self) -> List[str]:
         """Return a list of macro names."""
-        macro_names = set(self.macros)
-        return list(macro_names)
+        return list(self.macros)
 
     def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
         visible_commands = set(self.get_visible_commands())
-        alias_names = set(self.aliases)
-        macro_names = set(self.macros)
+        alias_names = set(self.get_alias_names())
+        macro_names = set(self.get_macro_names())
         return list(visible_commands | alias_names | macro_names)
 
     def get_help_topics(self) -> List[str]:
