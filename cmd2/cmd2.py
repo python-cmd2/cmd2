@@ -2477,7 +2477,7 @@ class Cmd(cmd.Cmd):
             for cur_arg in macros_to_delete:
                 if cur_arg in self.macros:
                     del self.macros[cur_arg]
-                    self.poutput("Macro {!r} cleared".format(cur_arg))
+                    self.poutput("Macro {!r} deleted".format(cur_arg))
                 else:
                     self.perror("Macro {!r} does not exist".format(cur_arg), traceback_war=False)
 
