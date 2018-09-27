@@ -21,8 +21,11 @@
             if the output is a pipe or a file the escape sequences are stripped
             * Always - output methods **never** strip ANSI escape sequences, regardless of the output destination
             * Never - output methods strip all ANSI escape sequences
+    * Added ``macro`` command to create macros, which are similar to aliases, but can take arguments when called
+    * ``alias`` is now an argparse command with subcommands to create, list, and delete aliases 
 * Deprecations
-    * Deprecated the builtin ``cmd2`` suport for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
+    * Deprecated the builtin ``cmd2`` support for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
+    * `unalias` is no longer a command since ``alias delete`` replaced it
 * Deletions
     * The ``preparse``, ``postparsing_precmd``, and ``postparsing_postcmd`` methods *deprecated* in the previous release 
     have been deleted
@@ -139,7 +142,7 @@
     * Fixed ``AttributeError`` on Windows when running a ``select`` command cause by **pyreadline** not implementing ``remove_history_item``
 * Enhancements
     * Added warning about **libedit** variant of **readline** not being supported on macOS
-    * Added tab-completion of alias names in value filed of **alias** command
+    * Added tab-completion of alias names in value field of **alias** command
     * Enhanced the ``py`` console in the following ways
         * Added tab completion of Python identifiers instead of **cmd2** commands
         * Separated the ``py`` console history from the **cmd2** history

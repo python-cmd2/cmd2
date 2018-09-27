@@ -1992,9 +1992,19 @@ def test_macro_create_with_invalid_arg_num(base_app, capsys):
     out, err = capsys.readouterr()
     assert "Argument numbers must be greater than 0" in err
 
+def test_macro_create_with_wrong_arg_count(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake help {1} {2}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    run_cmd(base_app, 'fake arg1')
+    out, err = capsys.readouterr()
+    assert "expects 2 argument(s)" in err
+
 def test_macro_list_invalid_macro(base_app, capsys):
     # Look up invalid macro
-    out = run_cmd(base_app, 'macro list invalid')
+    run_cmd(base_app, 'macro list invalid')
     out, err = capsys.readouterr()
     assert "Macro 'invalid' not found" in err
 
@@ -2031,6 +2041,17 @@ def test_multiple_macros(base_app):
     out = run_cmd(base_app, macro2)
     expected = normalize(BASE_HELP_VERBOSE)
     assert out == expected
+
+def test_nonexistent_macro(base_app, capsys):
+    from cmd2.parsing import StatementParser
+    exception = None
+
+    try:
+        base_app._run_macro(StatementParser().parse('fake'))
+    except KeyError as e:
+        exception = e
+
+    assert exception is not None
 
 
 def test_ppaged(base_app):

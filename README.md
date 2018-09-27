@@ -31,6 +31,7 @@ Main Features
 - Multi-line commands
 - Special-character command shortcuts (beyond cmd's `?` and `!`)
 - Command aliasing similar to bash `alias` command
+- Macros, which are similar to aliases, but can take arguments when called
 - Ability to load commands at startup from an initialization script
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
