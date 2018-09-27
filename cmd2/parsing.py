@@ -291,7 +291,7 @@ class StatementParser:
         expr = r'\A\s*(\S*?)({})'.format(second_group)
         self._command_pattern = re.compile(expr)
 
-    def is_valid_command(self, word: str, allow_shortcut: bool) -> Tuple[bool, str]:
+    def is_valid_command(self, word: str) -> Tuple[bool, str]:
         """Determine whether a word is a valid name for a command.
 
         Commands can not include redirection characters, whitespace,
@@ -311,12 +311,11 @@ class StatementParser:
         if not word:
             return False, 'cannot be an empty string'
 
-        if not allow_shortcut:
-            errmsg = 'cannot start with a shortcut: '
-            errmsg += ', '.join(shortcut for (shortcut, expansion) in self.shortcuts)
-            for (shortcut, expansion) in self.shortcuts:
-                if word.startswith(shortcut):
-                    return False, errmsg
+        errmsg = 'cannot start with a shortcut: '
+        errmsg += ', '.join(shortcut for (shortcut, expansion) in self.shortcuts)
+        for (shortcut, expansion) in self.shortcuts:
+            if word.startswith(shortcut):
+                return False, errmsg
 
         errmsg = 'cannot contain: whitespace, quotes, '
         errchars = []

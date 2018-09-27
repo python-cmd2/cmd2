@@ -316,8 +316,6 @@ class Cmd(cmd.Cmd):
     # Attributes used to configure the StatementParser, best not to change these at runtime
     multiline_commands = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    aliases = dict()
-    macros = dict()
     terminators = [';']
 
     # Attributes which are NOT dynamically settable at runtime
@@ -399,6 +397,10 @@ class Cmd(cmd.Cmd):
 
         # Commands to exclude from the history command
         self.exclude_from_history = '''history edit eof eos'''.split()
+
+        # Command aliases and macros
+        self.aliases = dict()
+        self.macros = dict()
 
         self._finalize_app_parameters()
 
@@ -1617,11 +1619,19 @@ class Cmd(cmd.Cmd):
 
         return commands
 
+    def get_alias_names(self) -> List[str]:
+        """Return a list of alias names."""
+        return list(self.aliases)
+
+    def get_macro_names(self) -> List[str]:
+        """Return a list of macro names."""
+        return list(self.macros)
+
     def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
         visible_commands = set(self.get_visible_commands())
-        alias_names = set(self.aliases)
-        macro_names = set(self.macros)
+        alias_names = set(self.get_alias_names())
+        macro_names = set(self.get_macro_names())
         return list(visible_commands | alias_names | macro_names)
 
     def get_help_topics(self) -> List[str]:
@@ -2199,21 +2209,17 @@ class Cmd(cmd.Cmd):
 
     def alias_create(self, args: argparse.Namespace):
         """ Creates or overwrites an alias """
+
         # Validate the alias name
-        valid, errmsg = self.statement_parser.is_valid_command(args.name, allow_shortcut=False)
+        alias_name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(alias_name)
         if not valid:
             errmsg = "Invalid alias name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
-        if args.name in self.macros:
+        if alias_name in self.macros:
             errmsg = "Aliases cannot have the same name as a macro"
-            self.perror(errmsg, traceback_war=False)
-            return
-
-        valid, errmsg = self.statement_parser.is_valid_command(args.command, allow_shortcut=True)
-        if not valid:
-            errmsg = "Invalid alias target:  {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2225,9 +2231,9 @@ class Cmd(cmd.Cmd):
             value += ' ' + cur_arg
 
         # Set the alias
-        result = "overwritten" if args.name in self.aliases else "created"
-        self.aliases[args.name] = value
-        self.poutput("Alias {!r} {}".format(args.name, result))
+        result = "overwritten" if alias_name in self.aliases else "created"
+        self.aliases[alias_name] = value
+        self.poutput("Alias {!r} {}".format(alias_name, result))
 
     def alias_delete(self, args: argparse.Namespace):
         """ Deletes aliases """
@@ -2240,22 +2246,24 @@ class Cmd(cmd.Cmd):
             # Get rid of duplicates
             aliases_to_delete = utils.remove_duplicates(args.name)
 
-            for cur_arg in aliases_to_delete:
-                if cur_arg in self.aliases:
-                    del self.aliases[cur_arg]
-                    self.poutput("Alias {!r} deleted".format(cur_arg))
+            for cur_name in aliases_to_delete:
+                stripped_name = utils.strip_quotes(cur_name)
+                if stripped_name in self.aliases:
+                    del self.aliases[stripped_name]
+                    self.poutput("Alias {!r} deleted".format(stripped_name))
                 else:
-                    self.perror("Alias {!r} does not exist".format(cur_arg), traceback_war=False)
+                    self.perror("Alias {!r} does not exist".format(stripped_name), traceback_war=False)
 
     def alias_list(self, args: argparse.Namespace):
         """ Lists some or all aliases """
         if args.name:
             names_to_view = utils.remove_duplicates(args.name)
             for cur_name in names_to_view:
-                if cur_name in self.aliases:
-                    self.poutput("alias create {} {}".format(cur_name, self.aliases[cur_name]))
+                stripped_name = utils.strip_quotes(cur_name)
+                if stripped_name in self.aliases:
+                    self.poutput("alias create {} {}".format(stripped_name, self.aliases[stripped_name]))
                 else:
-                    self.perror("Alias {!r} not found".format(cur_name), traceback_war=False)
+                    self.perror("Alias {!r} not found".format(stripped_name), traceback_war=False)
         else:
             sorted_aliases = utils.alphabetical_sort(self.aliases)
             for cur_alias in sorted_aliases:
@@ -2291,11 +2299,11 @@ class Cmd(cmd.Cmd):
     alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
                                                       description=alias_create_description,
                                                       epilog=alias_create_epilog)
-    setattr(alias_create_parser.add_argument('name', type=str, help='name of this alias'),
+    setattr(alias_create_parser.add_argument('name', help='name of this alias'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
-    setattr(alias_create_parser.add_argument('command', type=str, help='what the alias resolves to'),
+    setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
-    setattr(alias_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
+    setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
                                              help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     alias_create_parser.set_defaults(func=alias_create)
@@ -2305,8 +2313,8 @@ class Cmd(cmd.Cmd):
     alias_delete_description = "Delete specified aliases or all aliases if --all is used"
     alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
                                                       description=alias_delete_description)
-    setattr(alias_delete_parser.add_argument('name', type=str, nargs='*', help='alias to delete'),
-            ACTION_ARG_CHOICES, aliases)
+    setattr(alias_delete_parser.add_argument('name', nargs='*', help='alias to delete'),
+            ACTION_ARG_CHOICES, get_alias_names)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="all aliases will be deleted")
     alias_delete_parser.set_defaults(func=alias_delete)
 
@@ -2319,8 +2327,8 @@ class Cmd(cmd.Cmd):
 
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
-    setattr(alias_list_parser.add_argument('name', type=str, nargs="*", help='alias to list'),
-            ACTION_ARG_CHOICES, aliases)
+    setattr(alias_list_parser.add_argument('name', nargs="*", help='alias to list'),
+            ACTION_ARG_CHOICES, get_alias_names)
     alias_list_parser.set_defaults(func=alias_list)
 
     @with_argparser(alias_parser, preserve_quotes=True)
@@ -2332,32 +2340,28 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.alias_parser.print_help()
+            self.do_help('alias')
 
     # -----  Macro subcommand functions -----
 
     def macro_create(self, args: argparse.Namespace):
         """ Creates or overwrites a macro """
+
         # Validate the macro name
-        valid, errmsg = self.statement_parser.is_valid_command(args.name, allow_shortcut=False)
+        macro_name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(macro_name)
         if not valid:
             errmsg = "Invalid macro name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
-        if args.name in self.get_all_commands():
+        if macro_name in self.get_all_commands():
             errmsg = "Macros cannot have the same name as a command"
             self.perror(errmsg, traceback_war=False)
             return
 
-        if args.name in self.aliases:
+        if macro_name in self.aliases:
             errmsg = "Macros cannot have the same name as an alias"
-            self.perror(errmsg, traceback_war=False)
-            return
-
-        valid, errmsg = self.statement_parser.is_valid_command(args.command, allow_shortcut=True)
-        if not valid:
-            errmsg = "Invalid macro target:  {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2414,9 +2418,9 @@ class Cmd(cmd.Cmd):
                 break
 
         # Set the macro
-        result = "overwritten" if args.name in self.macros else "created"
-        self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
-        self.poutput("Macro {!r} {}".format(args.name, result))
+        result = "overwritten" if macro_name in self.macros else "created"
+        self.macros[macro_name] = Macro(name=macro_name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
+        self.poutput("Macro {!r} {}".format(macro_name, result))
 
     def macro_delete(self, args: argparse.Namespace):
         """ Deletes macros """
@@ -2429,22 +2433,24 @@ class Cmd(cmd.Cmd):
             # Get rid of duplicates
             macros_to_delete = utils.remove_duplicates(args.name)
 
-            for cur_arg in macros_to_delete:
-                if cur_arg in self.macros:
-                    del self.macros[cur_arg]
-                    self.poutput("Macro {!r} cleared".format(cur_arg))
+            for cur_name in macros_to_delete:
+                stripped_name = utils.strip_quotes(cur_name)
+                if stripped_name in self.macros:
+                    del self.macros[stripped_name]
+                    self.poutput("Macro {!r} deleted".format(stripped_name))
                 else:
-                    self.perror("Macro {!r} does not exist".format(cur_arg), traceback_war=False)
+                    self.perror("Macro {!r} does not exist".format(stripped_name), traceback_war=False)
 
     def macro_list(self, args: argparse.Namespace):
         """ Lists some or all macros """
         if args.name:
             names_to_view = utils.remove_duplicates(args.name)
             for cur_name in names_to_view:
-                if cur_name in self.macros:
-                    self.poutput("macro create {} {}".format(cur_name, self.macros[cur_name].value))
+                stripped_name = utils.strip_quotes(cur_name)
+                if stripped_name in self.macros:
+                    self.poutput("macro create {} {}".format(stripped_name, self.macros[stripped_name].value))
                 else:
-                    self.perror("Macro {!r} not found".format(cur_name), traceback_war=False)
+                    self.perror("Macro {!r} not found".format(stripped_name), traceback_war=False)
         else:
             sorted_macros = utils.alphabetical_sort(self.macros)
             for cur_macro in sorted_macros:
@@ -2504,11 +2510,11 @@ class Cmd(cmd.Cmd):
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
                                                       epilog=macro_create_epilog)
-    setattr(macro_create_parser.add_argument('name', type=str, help='name of this macro'),
-            ACTION_ARG_CHOICES, macros)
-    setattr(macro_create_parser.add_argument('command', type=str, help='what the macro resolves to'),
+    setattr(macro_create_parser.add_argument('name', help='name of this macro'),
+            ACTION_ARG_CHOICES, get_macro_names)
+    setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
-    setattr(macro_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
+    setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
                                              help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     macro_create_parser.set_defaults(func=macro_create)
@@ -2518,8 +2524,8 @@ class Cmd(cmd.Cmd):
     macro_delete_description = "Delete specified macros or all macros if --all is used"
     macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
                                                       description=macro_delete_description)
-    setattr(macro_delete_parser.add_argument('name', type=str, nargs='*', help='macro to delete'),
-            ACTION_ARG_CHOICES, macros)
+    setattr(macro_delete_parser.add_argument('name', nargs='*', help='macro to delete'),
+            ACTION_ARG_CHOICES, get_macro_names)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="all macros will be deleted")
     macro_delete_parser.set_defaults(func=macro_delete)
 
@@ -2530,10 +2536,9 @@ class Cmd(cmd.Cmd):
                               "\n"
                               "Without arguments, all macros will be listed.")
 
-    macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help,
-                                                    description=macro_list_description)
-    setattr(macro_list_parser.add_argument('name', type=str, nargs="*", help='macro to list'),
-            ACTION_ARG_CHOICES, macros)
+    macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
+    setattr(macro_list_parser.add_argument('name', nargs="*", help='macro to list'),
+            ACTION_ARG_CHOICES, get_macro_names)
     macro_list_parser.set_defaults(func=macro_list)
 
     @with_argparser(macro_parser, preserve_quotes=True)
@@ -2545,7 +2550,7 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.macro_parser.print_help()
+            self.do_help('macro')
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
