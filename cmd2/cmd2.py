@@ -2336,11 +2336,11 @@ class Cmd(cmd.Cmd):
     alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
                                                       description=alias_create_description,
                                                       epilog=alias_create_epilog)
-    setattr(alias_create_parser.add_argument('name', type=str, help='name of this alias'),
+    setattr(alias_create_parser.add_argument('name', help='name of this alias'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
-    setattr(alias_create_parser.add_argument('command', type=str, help='what the alias resolves to'),
+    setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
-    setattr(alias_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
+    setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
                                              help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     alias_create_parser.set_defaults(func=alias_create)
@@ -2350,7 +2350,7 @@ class Cmd(cmd.Cmd):
     alias_delete_description = "Delete specified aliases or all aliases if --all is used"
     alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
                                                       description=alias_delete_description)
-    setattr(alias_delete_parser.add_argument('name', type=str, nargs='*', help='alias to delete'),
+    setattr(alias_delete_parser.add_argument('name', nargs='*', help='alias to delete'),
             ACTION_ARG_CHOICES, get_alias_names)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="all aliases will be deleted")
     alias_delete_parser.set_defaults(func=alias_delete)
@@ -2364,7 +2364,7 @@ class Cmd(cmd.Cmd):
 
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
-    setattr(alias_list_parser.add_argument('name', type=str, nargs="*", help='alias to list'),
+    setattr(alias_list_parser.add_argument('name', nargs="*", help='alias to list'),
             ACTION_ARG_CHOICES, get_alias_names)
     alias_list_parser.set_defaults(func=alias_list)
 
@@ -2549,11 +2549,11 @@ class Cmd(cmd.Cmd):
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
                                                       epilog=macro_create_epilog)
-    setattr(macro_create_parser.add_argument('name', type=str, help='name of this macro'),
+    setattr(macro_create_parser.add_argument('name', help='name of this macro'),
             ACTION_ARG_CHOICES, get_macro_names)
-    setattr(macro_create_parser.add_argument('command', type=str, help='what the macro resolves to'),
+    setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
-    setattr(macro_create_parser.add_argument('command_args', type=str, nargs=argparse.REMAINDER,
+    setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
                                              help='arguments being passed to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     macro_create_parser.set_defaults(func=macro_create)
@@ -2563,7 +2563,7 @@ class Cmd(cmd.Cmd):
     macro_delete_description = "Delete specified macros or all macros if --all is used"
     macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
                                                       description=macro_delete_description)
-    setattr(macro_delete_parser.add_argument('name', type=str, nargs='*', help='macro to delete'),
+    setattr(macro_delete_parser.add_argument('name', nargs='*', help='macro to delete'),
             ACTION_ARG_CHOICES, get_macro_names)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="all macros will be deleted")
     macro_delete_parser.set_defaults(func=macro_delete)
@@ -2575,9 +2575,8 @@ class Cmd(cmd.Cmd):
                               "\n"
                               "Without arguments, all macros will be listed.")
 
-    macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help,
-                                                    description=macro_list_description)
-    setattr(macro_list_parser.add_argument('name', type=str, nargs="*", help='macro to list'),
+    macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
+    setattr(macro_list_parser.add_argument('name', nargs="*", help='macro to list'),
             ACTION_ARG_CHOICES, get_macro_names)
     macro_list_parser.set_defaults(func=macro_list)
 
