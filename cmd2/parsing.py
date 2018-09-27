@@ -59,7 +59,7 @@ class Macro:
     required_arg_count = attr.ib(validator=attr.validators.instance_of(int))
 
     # Used to fill in argument placeholders in the macro
-    arg_list = attr.ib(factory=list, validator=attr.validators.instance_of(list))
+    arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
 
 
 @attr.s(frozen=True)

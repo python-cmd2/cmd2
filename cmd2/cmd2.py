@@ -1618,12 +1618,6 @@ class Cmd(cmd.Cmd):
         """Return a list of macro names."""
         return list(self.macros)
 
-    def get_commands_and_aliases_for_completion(self) -> List[str]:
-        """Return a list of visible commands and aliases for tab completion"""
-        visible_commands = set(self.get_visible_commands())
-        alias_names = set(self.get_alias_names())
-        return list(visible_commands | alias_names)
-
     def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
         visible_commands = set(self.get_visible_commands())
@@ -2339,8 +2333,7 @@ class Cmd(cmd.Cmd):
     alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
                                                       description=alias_create_description,
                                                       epilog=alias_create_epilog)
-    setattr(alias_create_parser.add_argument('name', help='name of this alias'),
-            ACTION_ARG_CHOICES, get_commands_and_aliases_for_completion)
+    alias_create_parser.add_argument('name', help='name of this alias')
     setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
@@ -2552,8 +2545,7 @@ class Cmd(cmd.Cmd):
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
                                                       epilog=macro_create_epilog)
-    setattr(macro_create_parser.add_argument('name', help='name of this macro'),
-            ACTION_ARG_CHOICES, get_macro_names)
+    macro_create_parser.add_argument('name', help='name of this macro')
     setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,

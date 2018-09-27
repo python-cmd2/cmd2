@@ -24,7 +24,7 @@
     * Added ``macro`` command to create macros, which are similar to aliases, but can take arguments when called
     * ``alias`` is now an argparse command with subcommands to create, list, and delete aliases 
 * Deprecations
-    * Deprecated the builtin ``cmd2`` support for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
+    * Deprecated the built-in ``cmd2`` support for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
     * `unalias` is no longer a command since ``alias delete`` replaced it
 * Deletions
     * The ``preparse``, ``postparsing_precmd``, and ``postparsing_postcmd`` methods *deprecated* in the previous release 
