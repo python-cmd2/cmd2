@@ -754,3 +754,96 @@ def test_statement_is_immutable():
         statement.args = 'bar'
     with pytest.raises(attr.exceptions.FrozenInstanceError):
         statement.raw = 'baz'
+
+
+def test_macro_normal_arg_pattern():
+    # This pattern matches digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
+    from cmd2.parsing import MacroArg
+    pattern = MacroArg.macro_normal_arg_pattern
+
+    # Valid strings
+    matches = pattern.findall('{5}')
+    assert matches == ['{5}']
+
+    matches = pattern.findall('{233}')
+    assert matches == ['{233}']
+
+    matches = pattern.findall('{{{{{4}')
+    assert matches == ['{4}']
+
+    matches = pattern.findall('{2}}}}}')
+    assert matches == ['{2}']
+
+    matches = pattern.findall('{3}{4}{5}')
+    assert matches == ['{3}', '{4}', '{5}']
+
+    matches = pattern.findall('{3} {4} {5}')
+    assert matches == ['{3}', '{4}', '{5}']
+
+    matches = pattern.findall('{3} {{{4} {5}}}}')
+    assert matches == ['{3}', '{4}', '{5}']
+
+    matches = pattern.findall('{3} text {4} stuff {5}}}}')
+    assert matches == ['{3}', '{4}', '{5}']
+
+    # Invalid strings
+    matches = pattern.findall('5')
+    assert not matches
+
+    matches = pattern.findall('{5')
+    assert not matches
+
+    matches = pattern.findall('5}')
+    assert not matches
+
+    matches = pattern.findall('{{5}}')
+    assert not matches
+
+    matches = pattern.findall('{5text}')
+    assert not matches
+
+def test_macro_escaped_arg_pattern():
+    # This pattern matches digits surrounded by 2 or more braces on both sides
+    from cmd2.parsing import MacroArg
+    pattern = MacroArg.macro_escaped_arg_pattern
+
+    # Valid strings
+    matches = pattern.findall('{{5}}')
+    assert matches == ['{{5}}']
+
+    matches = pattern.findall('{{233}}')
+    assert matches == ['{{233}}']
+
+    matches = pattern.findall('{{{{{4}}')
+    assert matches == ['{{4}}']
+
+    matches = pattern.findall('{{2}}}}}')
+    assert matches == ['{{2}}']
+
+    matches = pattern.findall('{{3}}{{4}}{{5}}')
+    assert matches == ['{{3}}', '{{4}}', '{{5}}']
+
+    matches = pattern.findall('{{3}} {{4}} {{5}}')
+    assert matches == ['{{3}}', '{{4}}', '{{5}}']
+
+    matches = pattern.findall('{{3}} {{{4}} {{5}}}}')
+    assert matches == ['{{3}}', '{{4}}', '{{5}}']
+
+    matches = pattern.findall('{{3}} text {{4}} stuff {{5}}}}')
+    assert matches == ['{{3}}', '{{4}}', '{{5}}']
+
+    # Invalid strings
+    matches = pattern.findall('5')
+    assert not matches
+
+    matches = pattern.findall('{{5')
+    assert not matches
+
+    matches = pattern.findall('5}}')
+    assert not matches
+
+    matches = pattern.findall('{5}')
+    assert not matches
+
+    matches = pattern.findall('{{5text}}')
+    assert not matches
