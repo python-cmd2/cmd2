@@ -816,7 +816,7 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
                 else:
                     indent = ' ' * len(prefix)
                     # Begin cmd2 customization
-                    parts = pos_parts + req_parts + opt_parts
+                    parts = req_parts + opt_parts + pos_parts
                     lines = get_lines(parts, indent)
                     if len(lines) > 1:
                         lines = []
