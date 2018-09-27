@@ -1831,7 +1831,7 @@ def test_alias_create_with_macro_name(base_app, capsys):
     run_cmd(base_app, 'macro create {} help'.format(macro))
     run_cmd(base_app, 'alias create {} help'.format(macro))
     out, err = capsys.readouterr()
-    assert "Aliases cannot have the same name" in err
+    assert "Aliases cannot have the same name as a macro" in err
 
 @pytest.mark.parametrize('alias_target', invalid_alias_and_macro_targets)
 def test_alias_create_with_invalid_target(base_app, alias_target, capsys):
@@ -1913,13 +1913,50 @@ def test_macro_create_with_alias_name(base_app, capsys):
     run_cmd(base_app, 'alias create {} help'.format(macro))
     run_cmd(base_app, 'macro create {} help'.format(macro))
     out, err = capsys.readouterr()
-    assert "Macros cannot have the same name" in err
+    assert "Macros cannot have the same name as an alias" in err
+
+def test_macro_create_with_command_name(base_app, capsys):
+    macro = "my_macro"
+    run_cmd(base_app, 'macro create help stuff')
+    out, err = capsys.readouterr()
+    assert "Macros cannot have the same name as a command" in err
 
 @pytest.mark.parametrize('macro_target', invalid_alias_and_macro_targets)
 def test_macro_create_with_invalid_target(base_app, macro_target, capsys):
     run_cmd(base_app, 'macro create my_macro {}'.format(macro_target))
     out, err = capsys.readouterr()
     assert "Invalid macro target" in err
+
+def test_macro_create_with_args(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake {1} {2}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    out = run_cmd(base_app, 'fake help -v')
+    expected = normalize(BASE_HELP_VERBOSE)
+    assert out == expected
+
+def test_macro_create_with_escaped_args(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake help {{1}}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    out = run_cmd(base_app, 'fake')
+    assert 'No help on {1}' in out[0]
+
+def test_macro_create_with_missing_arg_nums(base_app, capsys):
+    # Create the macro
+    run_cmd(base_app, 'macro create fake help {1} {3}')
+    out, err = capsys.readouterr()
+    assert "Not all numbers between 1 and 3" in err
+
+def test_macro_create_with_invalid_arg_num(base_app, capsys):
+    # Create the macro
+    run_cmd(base_app, 'macro create fake help {1} {-1} {0}')
+    out, err = capsys.readouterr()
+    assert "Argument numbers must be greater than 0" in err
 
 def test_macro_list_invalid_macro(base_app, capsys):
     # Look up invalid macro
