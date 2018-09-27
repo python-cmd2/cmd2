@@ -48,8 +48,7 @@ from . import utils
 from . import plugin
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .parsing import StatementParser, Statement, Macro, MacroArg, \
-    macro_normal_arg_pattern, macro_escaped_arg_pattern, digit_pattern
+from .parsing import StatementParser, Statement, Macro, MacroArg
 
 # Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
@@ -2041,11 +2040,11 @@ class Cmd(cmd.Cmd):
 
         for arg in reverse_arg_list:
             if arg.is_escaped:
-                to_replace = '{{' + str(arg.number) + '}}'
-                replacement = '{' + str(arg.number) + '}'
+                to_replace = '{{' + arg.number_str + '}}'
+                replacement = '{' + arg.number_str + '}'
             else:
-                to_replace = '{' + str(arg.number) + '}'
-                replacement = statement.argv[arg.number]
+                to_replace = '{' + arg.number_str + '}'
+                replacement = statement.argv[int(arg.number_str)]
 
             parts = resolved.rsplit(to_replace, maxsplit=1)
             resolved = parts[0] + replacement + parts[1]
@@ -2374,7 +2373,7 @@ class Cmd(cmd.Cmd):
 
         # Find all normal arguments
         arg_list = []
-        normal_matches = re.finditer(macro_normal_arg_pattern, value)
+        normal_matches = re.finditer(MacroArg.macro_normal_arg_pattern, value)
         max_arg_num = 0
         num_set = set()
 
@@ -2382,8 +2381,9 @@ class Cmd(cmd.Cmd):
             try:
                 cur_match = normal_matches.__next__()
 
-                # Get the number between the braces
-                cur_num = int(re.findall(digit_pattern, cur_match.group())[0])
+                # Get the number string between the braces
+                cur_num_str = (re.findall(MacroArg.digit_pattern, cur_match.group())[0])
+                cur_num = int(cur_num_str)
                 if cur_num < 1:
                     self.perror("Argument numbers must be greater than 0", traceback_war=False)
                     return
@@ -2392,7 +2392,7 @@ class Cmd(cmd.Cmd):
                 if cur_num > max_arg_num:
                     max_arg_num = cur_num
 
-                arg_list.append(MacroArg(start_index=cur_match.start(), number=cur_num, is_escaped=False))
+                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=False))
 
             except StopIteration:
                 break
@@ -2404,16 +2404,16 @@ class Cmd(cmd.Cmd):
             return
 
         # Find all escaped arguments
-        escaped_matches = re.finditer(macro_escaped_arg_pattern, value)
+        escaped_matches = re.finditer(MacroArg.macro_escaped_arg_pattern, value)
 
         while True:
             try:
                 cur_match = escaped_matches.__next__()
 
-                # Get the number between the braces
-                cur_num = int(re.findall(digit_pattern, cur_match.group())[0])
+                # Get the number string between the braces
+                cur_num_str = re.findall(MacroArg.digit_pattern, cur_match.group())[0]
 
-                arg_list.append(MacroArg(start_index=cur_match.start(), number=cur_num, is_escaped=True))
+                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=True))
             except StopIteration:
                 break
 

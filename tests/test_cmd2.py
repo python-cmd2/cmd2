@@ -2002,6 +2002,21 @@ def test_macro_create_with_wrong_arg_count(base_app, capsys):
     out, err = capsys.readouterr()
     assert "expects 2 argument(s)" in err
 
+def test_macro_create_with_unicode_numbered_arg(base_app, capsys):
+    # Create the macro expecting 1 argument
+    out = run_cmd(base_app, 'macro create fake help {\N{ARABIC-INDIC DIGIT ONE}}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    out = run_cmd(base_app, 'fake')
+    out, err = capsys.readouterr()
+    assert "expects 1 argument(s)" in err
+
+def test_macro_create_with_missing_unicode_arg_nums(base_app, capsys):
+    run_cmd(base_app, 'macro create fake help {1} {\N{ARABIC-INDIC DIGIT THREE}}')
+    out, err = capsys.readouterr()
+    assert "Not all numbers between 1 and 3" in err
+
 def test_macro_list_invalid_macro(base_app, capsys):
     # Look up invalid macro
     run_cmd(base_app, 'macro list invalid')
