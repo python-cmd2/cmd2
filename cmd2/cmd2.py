@@ -2278,27 +2278,27 @@ class Cmd(cmd.Cmd):
         elif not args.name:
             self.do_help(['alias', 'delete'])
         else:
-            # Get rid of duplicates
-            aliases_to_delete = utils.remove_duplicates(args.name)
+            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            aliases_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in aliases_to_delete:
-                stripped_name = utils.strip_quotes(cur_name)
-                if stripped_name in self.aliases:
-                    del self.aliases[stripped_name]
-                    self.poutput("Alias {!r} deleted".format(stripped_name))
+                if cur_name in self.aliases:
+                    del self.aliases[cur_name]
+                    self.poutput("Alias {!r} deleted".format(cur_name))
                 else:
-                    self.perror("Alias {!r} does not exist".format(stripped_name), traceback_war=False)
+                    self.perror("Alias {!r} does not exist".format(cur_name), traceback_war=False)
 
     def alias_list(self, args: argparse.Namespace):
         """ Lists some or all aliases """
         if args.name:
-            names_to_view = utils.remove_duplicates(args.name)
+            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
+
             for cur_name in names_to_view:
-                stripped_name = utils.strip_quotes(cur_name)
-                if stripped_name in self.aliases:
-                    self.poutput("alias create {} {}".format(stripped_name, self.aliases[stripped_name]))
+                if cur_name in self.aliases:
+                    self.poutput("alias create {} {}".format(cur_name, self.aliases[cur_name]))
                 else:
-                    self.perror("Alias {!r} not found".format(stripped_name), traceback_war=False)
+                    self.perror("Alias {!r} not found".format(cur_name), traceback_war=False)
         else:
             sorted_aliases = utils.alphabetical_sort(self.aliases)
             for cur_alias in sorted_aliases:
@@ -2375,7 +2375,7 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help('alias')
+            self.do_help(['alias'])
 
     # -----  Macro subcommand functions -----
 
@@ -2465,27 +2465,27 @@ class Cmd(cmd.Cmd):
         elif not args.name:
             self.do_help(['macro', 'delete'])
         else:
-            # Get rid of duplicates
-            macros_to_delete = utils.remove_duplicates(args.name)
+            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            macros_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in macros_to_delete:
-                stripped_name = utils.strip_quotes(cur_name)
-                if stripped_name in self.macros:
-                    del self.macros[stripped_name]
-                    self.poutput("Macro {!r} deleted".format(stripped_name))
+                if cur_name in self.macros:
+                    del self.macros[cur_name]
+                    self.poutput("Macro {!r} deleted".format(cur_name))
                 else:
-                    self.perror("Macro {!r} does not exist".format(stripped_name), traceback_war=False)
+                    self.perror("Macro {!r} does not exist".format(cur_name), traceback_war=False)
 
     def macro_list(self, args: argparse.Namespace):
         """ Lists some or all macros """
         if args.name:
-            names_to_view = utils.remove_duplicates(args.name)
+            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
+
             for cur_name in names_to_view:
-                stripped_name = utils.strip_quotes(cur_name)
-                if stripped_name in self.macros:
-                    self.poutput("macro create {} {}".format(stripped_name, self.macros[stripped_name].value))
+                if cur_name in self.macros:
+                    self.poutput("macro create {} {}".format(cur_name, self.macros[cur_name].value))
                 else:
-                    self.perror("Macro {!r} not found".format(stripped_name), traceback_war=False)
+                    self.perror("Macro {!r} not found".format(cur_name), traceback_war=False)
         else:
             sorted_macros = utils.alphabetical_sort(self.macros)
             for cur_macro in sorted_macros:
@@ -2585,7 +2585,7 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help('macro')
+            self.do_help(['macro'])
 
     @with_argument_list
     def do_help(self, arglist: List[str]) -> None:
