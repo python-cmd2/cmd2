@@ -2340,7 +2340,7 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help(['alias'])
+            self.do_help('alias')
 
     # -----  Macro subcommand functions -----
 
@@ -2550,7 +2550,7 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help(['macro'])
+            self.do_help('macro')
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
