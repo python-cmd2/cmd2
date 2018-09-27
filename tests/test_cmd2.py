@@ -247,7 +247,7 @@ def test_pyscript_with_exception(base_app, capsys, request):
 def test_pyscript_requires_an_argument(base_app, capsys):
     run_cmd(base_app, "pyscript")
     out, err = capsys.readouterr()
-    assert err.startswith('ERROR: pyscript command requires at least 1 argument ...')
+    assert "the following arguments are required: script_path" in err
 
 
 def test_base_error(base_app):
@@ -1804,7 +1804,7 @@ def test_alias_create(base_app, capsys):
     # Use the alias
     run_cmd(base_app, 'fake')
     out, err = capsys.readouterr()
-    assert "pyscript command requires at least 1 argument" in err
+    assert "the following arguments are required: script_path" in err
 
     # See a list of aliases
     out = run_cmd(base_app, 'alias list')
@@ -1906,7 +1906,7 @@ def test_macro_create(base_app, capsys):
     # Use the macro
     run_cmd(base_app, 'fake')
     out, err = capsys.readouterr()
-    assert "pyscript command requires at least 1 argument" in err
+    assert "the following arguments are required: script_path" in err
 
     # See a list of macros
     out = run_cmd(base_app, 'macro list')

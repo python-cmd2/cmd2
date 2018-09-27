@@ -3111,40 +3111,28 @@ class Cmd(cmd.Cmd):
             self._in_py = False
         return self._should_quit
 
-    @with_argument_list
-    def do_pyscript(self, arglist: List[str]) -> None:
-        """\nRun a Python script file inside the console
+    pyscript_parser = ACArgumentParser()
+    setattr(pyscript_parser.add_argument('script_path', help='path to the script file'),
+            ACTION_ARG_CHOICES, ('path_complete',))
+    pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
+                                 help='arguments being passed to script')
 
-    Usage: pyscript <script_path> [script_arguments]
-
-Console commands can be executed inside this script with cmd("your command")
-However, you cannot run nested "py" or "pyscript" commands from within this script
-Paths or arguments that contain spaces must be enclosed in quotes
-"""
-        if not arglist:
-            self.perror("pyscript command requires at least 1 argument ...", traceback_war=False)
-            self.do_help('pyscript')
-            return
-
-        script_path = os.path.expanduser(arglist[0])
+    @with_argparser(pyscript_parser)
+    def do_pyscript(self, args: argparse.Namespace) -> None:
+        """Run a Python script file inside the console"""
+        script_path = os.path.expanduser(args.script_path)
 
         # Save current command line arguments
         orig_args = sys.argv
 
         # Overwrite sys.argv to allow the script to take command line arguments
-        sys.argv = [script_path]
-        sys.argv.extend(arglist[1:])
+        sys.argv = [script_path] + args.script_arguments
 
         # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
         self.do_py("run({!r})".format(script_path))
 
         # Restore command line arguments to original state
         sys.argv = orig_args
-
-    def complete_pyscript(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Enable tab-completion for pyscript command."""
-        index_dict = {1: self.path_complete}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict)
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:
