@@ -308,7 +308,7 @@ class StatementParser:
 
         valid, errmsg = statement_parser.is_valid_command('>')
         if not valid:
-            errmsg = "Aliases {}".format(errmsg)
+            errmsg = "Alias {}".format(errmsg)
         """
         valid = False
 
