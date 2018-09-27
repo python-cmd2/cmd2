@@ -1622,7 +1622,7 @@ class Cmd(cmd.Cmd):
         """Return a list of visible commands and aliases for tab completion"""
         visible_commands = set(self.get_visible_commands())
         alias_names = set(self.get_alias_names())
-        return list(visible_commands | alias_names | macro_names)
+        return list(visible_commands | alias_names)
 
     def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
