@@ -2304,7 +2304,7 @@ class Cmd(cmd.Cmd):
     setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                             help='arguments being passed to command'),
+                                             help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     alias_create_parser.set_defaults(func=alias_create)
 
@@ -2515,7 +2515,7 @@ class Cmd(cmd.Cmd):
     setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                             help='arguments being passed to command'),
+                                             help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     macro_create_parser.set_defaults(func=macro_create)
 
@@ -2561,8 +2561,8 @@ class Cmd(cmd.Cmd):
         strs_to_match = list(topics | visible_commands)
         return self.basic_complete(text, line, begidx, endidx, strs_to_match)
 
-    def complete_help_subcommands(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Completes the subcommands argument of help"""
+    def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Completes the subcommand argument of help"""
 
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
@@ -2598,9 +2598,9 @@ class Cmd(cmd.Cmd):
 
     setattr(help_parser.add_argument('command', help="command to retrieve help for", nargs="?"),
             ACTION_ARG_CHOICES, ('complete_help_command',))
-    setattr(help_parser.add_argument('subcommands', help="used to retrieve help on a specific subcommand",
+    setattr(help_parser.add_argument('subcommand', help="subcommand to retrieve help for",
                                      nargs=argparse.REMAINDER),
-            ACTION_ARG_CHOICES, ('complete_help_subcommands',))
+            ACTION_ARG_CHOICES, ('complete_help_subcommand',))
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
@@ -2620,7 +2620,7 @@ class Cmd(cmd.Cmd):
                     completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
 
                     tokens = [args.command]
-                    tokens.extend(args.subcommands)
+                    tokens.extend(args.subcommand)
                     self.poutput(completer.format_help(tokens))
                 else:
                     # No special behavior needed, delegate to cmd base class do_help()
@@ -2896,7 +2896,7 @@ class Cmd(cmd.Cmd):
     setattr(shell_parser.add_argument('command', help='the command to run'),
             ACTION_ARG_CHOICES, ('shell_cmd_complete',))
     setattr(shell_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                      help='arguments being passed to command'),
+                                      help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
 
     @with_argparser(shell_parser, preserve_quotes=True)
@@ -3115,7 +3115,7 @@ class Cmd(cmd.Cmd):
     setattr(pyscript_parser.add_argument('script_path', help='path to the script file'),
             ACTION_ARG_CHOICES, ('path_complete',))
     pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
-                                 help='arguments being passed to script')
+                                 help='arguments to pass to script')
 
     @with_argparser(pyscript_parser)
     def do_pyscript(self, args: argparse.Namespace) -> None:
