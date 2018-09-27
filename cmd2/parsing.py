@@ -12,17 +12,6 @@ import attr
 from . import constants
 from . import utils
 
-# Pattern used to find normal argument
-# Match strings like: {5}, {{{{{4}, {2}}}}}
-macro_normal_arg_pattern = re.compile(r'(?<!\{)\{\d+\}|\{\d+\}(?!\})')
-
-# Pattern used to find escaped arguments (2 or more braces on each side of digit)
-# Match strings like: {{5}}, {{{{{4}}, {{2}}}}}, {{{4}}}
-macro_escaped_arg_pattern = re.compile(r'\{{2}\d+\}{2}')
-
-# Finds a string of digits
-digit_pattern = re.compile(r'\d+')
-
 
 @attr.s(frozen=True)
 class MacroArg:
@@ -39,6 +28,17 @@ class MacroArg:
 
     # Tells if this argument is escaped and therefore needs to be unescaped
     is_escaped = attr.ib(validator=attr.validators.instance_of(bool), type=bool)
+
+    # Pattern used to find normal argument
+    # Match strings like: {5}, {{{{{4}, {2}}}}}
+    macro_normal_arg_pattern = re.compile(r'(?<!\{)\{\d+\}|\{\d+\}(?!\})')
+
+    # Pattern used to find escaped arguments (2 or more braces on each side of digit)
+    # Match strings like: {{5}}, {{{{{4}}, {{2}}}}}, {{{4}}}
+    macro_escaped_arg_pattern = re.compile(r'\{{2}\d+\}{2}')
+
+    # Finds a string of digits
+    digit_pattern = re.compile(r'\d+')
 
 
 @attr.s(frozen=True)
