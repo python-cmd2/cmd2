@@ -2283,7 +2283,7 @@ class Cmd(cmd.Cmd):
         elif not args.name:
             self.do_help(['alias', 'delete'])
         else:
-            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
             aliases_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in aliases_to_delete:
@@ -2296,7 +2296,7 @@ class Cmd(cmd.Cmd):
     def alias_list(self, args: argparse.Namespace):
         """ Lists some or all aliases """
         if args.name:
-            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
             names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in names_to_view:
@@ -2472,7 +2472,7 @@ class Cmd(cmd.Cmd):
         elif not args.name:
             self.do_help(['macro', 'delete'])
         else:
-            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
             macros_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in macros_to_delete:
@@ -2485,7 +2485,7 @@ class Cmd(cmd.Cmd):
     def macro_list(self, args: argparse.Namespace):
         """ Lists some or all macros """
         if args.name:
-            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
             names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in names_to_view:
