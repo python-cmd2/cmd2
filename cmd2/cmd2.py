@@ -105,9 +105,9 @@ except ImportError:
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
-    from contextlib2 import redirect_stdout, redirect_stderr
+    from contextlib2 import redirect_stdout
 else:
-    from contextlib import redirect_stdout, redirect_stderr
+    from contextlib import redirect_stdout
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
@@ -125,6 +125,9 @@ HELP_SUMMARY = 'help_summary'
 INTERNAL_COMMAND_EPILOG = ("Notes:\n"
                            "  This command is for internal use and is not intended to be called from the\n"
                            "  command line.")
+
+# All command functions start with this
+COMMAND_PREFIX = 'do_'
 
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
@@ -408,7 +411,7 @@ class Cmd(cmd.Cmd):
         self.pystate = {}
         self.py_history = []
         self.pyscript_name = 'app'
-        self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
+        self.keywords = self.reserved_words + self.get_all_commands()
         self.statement_parser = StatementParser(
             allow_redirection=self.allow_redirection,
             terminators=self.terminators,
@@ -1479,16 +1482,15 @@ class Cmd(cmd.Cmd):
                 # Check if a valid command was entered
                 if command in self.get_all_commands():
                     # Get the completer function for this command
-                    try:
-                        compfunc = getattr(self, 'complete_' + command)
-                    except AttributeError:
+                    compfunc = getattr(self, 'complete_' + command, None)
+
+                    if compfunc is None:
                         # There's no completer function, next see if the command uses argparser
-                        try:
-                            cmd_func = getattr(self, 'do_' + command)
-                            argparser = getattr(cmd_func, 'argparser')
-                            # Command uses argparser, switch to the default argparse completer
-                            compfunc = functools.partial(self._autocomplete_default, argparser=argparser)
-                        except AttributeError:
+                        cmd_func = self._cmd_func(command)
+                        if cmd_func and hasattr(cmd_func, 'argparser'):
+                            compfunc = functools.partial(self._autocomplete_default,
+                                                         argparser=getattr(cmd_func, 'argparser'))
+                        else:
                             compfunc = self.completedefault
 
                 # Check if a macro was entered
@@ -1604,8 +1606,8 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
-        return [name[3:] for name in self.get_names()
-                if name.startswith('do_') and callable(getattr(self, name))]
+        return [name[len(COMMAND_PREFIX):] for name in self.get_names()
+                if name.startswith(COMMAND_PREFIX) and callable(getattr(self, name))]
 
     def get_visible_commands(self) -> List[str]:
         """Returns a list of commands that have not been hidden."""
@@ -1968,17 +1970,24 @@ class Cmd(cmd.Cmd):
 
         self.redirecting = False
 
-    def _func_named(self, arg: str) -> str:
-        """Gets the method name associated with a given command.
+    def _cmd_func(self, command: str) -> Optional[Callable]:
+        """
+        Get the function for a command
+        :param arg: the name of the command
+        """
+        func_name = self._cmd_func_name(command)
+        if func_name:
+            return getattr(self, func_name)
+        return None
+
+    def _cmd_func_name(self, command: str) -> str:
+        """Get the method name associated with a given command.
 
         :param arg: command to look up method name which implements it
         :return: method name which implements the given command
         """
-        result = None
-        target = 'do_' + arg
-        if target in dir(self):
-            result = target
-        return result
+        target = COMMAND_PREFIX + command
+        return target if callable(getattr(self, target, None)) else ''
 
     def onecmd(self, statement: Union[Statement, str]) -> bool:
         """ This executes the actual do_* method for a command.
@@ -1997,40 +2006,35 @@ class Cmd(cmd.Cmd):
         if statement.command in self.macros:
             stop = self._run_macro(statement)
         else:
-            funcname = self._func_named(statement.command)
-            if not funcname:
+            cmd_func = self._cmd_func(statement.command)
+            if cmd_func:
+                stop = cmd_func(statement)
+
+                # Since we have a valid command store it in the history
+                if statement.command not in self.exclude_from_history:
+                    self.history.append(statement.raw)
+
+            else:
                 self.default(statement)
-                return False
-
-            # Since we have a valid command store it in the history
-            if statement.command not in self.exclude_from_history:
-                self.history.append(statement.raw)
-
-            try:
-                func = getattr(self, funcname)
-            except AttributeError:
-                self.default(statement)
-                return False
-
-            stop = func(statement)
+                stop = False
 
         return stop
 
     def _run_macro(self, statement: Statement) -> bool:
         """
-        Resolves a macro and runs the resulting string
+        Resolve a macro and run the resulting string
 
         :param statement: the parsed statement from the command line
         :return: a flag indicating whether the interpretation of commands should stop
         """
-        try:
-            macro = self.macros[statement.command]
-        except KeyError:
-            raise KeyError("{} is not a macro".format(statement.command))
+        if statement.command not in self.macros.keys():
+            raise KeyError('{} is not a macro'.format(statement.command))
 
-        # Confirm we have the correct number of arguments
+        macro = self.macros[statement.command]
+
+        # For macros, every argument must be provided and there can be no extra arguments.
         if len(statement.arg_list) != macro.required_arg_count:
-            self.perror('The macro {!r} expects {} argument(s)'.format(statement.command, macro.required_arg_count),
+            self.perror("The macro '{}' expects {} argument(s)".format(statement.command, macro.required_arg_count),
                         traceback_war=False)
             return False
 
@@ -2210,15 +2214,15 @@ class Cmd(cmd.Cmd):
         """ Creates or overwrites an alias """
 
         # Validate the alias name
-        alias_name = utils.strip_quotes(args.name)
-        valid, errmsg = self.statement_parser.is_valid_command(alias_name)
+        args.name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
             errmsg = "Invalid alias name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
-        if alias_name in self.macros:
-            errmsg = "Aliases cannot have the same name as a macro"
+        if args.name in self.macros:
+            errmsg = "Alias cannot have the same name as a macro"
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2226,13 +2230,13 @@ class Cmd(cmd.Cmd):
 
         # Build the alias value string
         value = args.command
-        for cur_arg in args.command_args:
-            value += ' ' + cur_arg
+        if args.command_args:
+            value += ' ' + ' '.join(args.command_args)
 
         # Set the alias
-        result = "overwritten" if alias_name in self.aliases else "created"
-        self.aliases[alias_name] = value
-        self.poutput("Alias {!r} {}".format(alias_name, result))
+        result = "overwritten" if args.name in self.aliases else "created"
+        self.aliases[args.name] = value
+        self.poutput("Alias '{}' {}".format(args.name, result))
 
     def alias_delete(self, args: argparse.Namespace):
         """ Deletes aliases """
@@ -2242,27 +2246,27 @@ class Cmd(cmd.Cmd):
         elif not args.name:
             self.do_help('alias delete')
         else:
-            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
             aliases_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in aliases_to_delete:
                 if cur_name in self.aliases:
                     del self.aliases[cur_name]
-                    self.poutput("Alias {!r} deleted".format(cur_name))
+                    self.poutput("Alias '{}' deleted".format(cur_name))
                 else:
-                    self.perror("Alias {!r} does not exist".format(cur_name), traceback_war=False)
+                    self.perror("Alias '{}' does not exist".format(cur_name), traceback_war=False)
 
     def alias_list(self, args: argparse.Namespace):
         """ Lists some or all aliases """
         if args.name:
-            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
             names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in names_to_view:
                 if cur_name in self.aliases:
                     self.poutput("alias create {} {}".format(cur_name, self.aliases[cur_name]))
                 else:
-                    self.perror("Alias {!r} not found".format(cur_name), traceback_war=False)
+                    self.perror("Alias '{}' not found".format(cur_name), traceback_war=False)
         else:
             sorted_aliases = utils.alphabetical_sort(self.aliases)
             for cur_alias in sorted_aliases:
@@ -2298,8 +2302,7 @@ class Cmd(cmd.Cmd):
     alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
                                                       description=alias_create_description,
                                                       epilog=alias_create_epilog)
-    setattr(alias_create_parser.add_argument('name', help='name of this alias'),
-            ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
+    alias_create_parser.add_argument('name', help='name of this alias')
     setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
@@ -2314,7 +2317,7 @@ class Cmd(cmd.Cmd):
                                                       description=alias_delete_description)
     setattr(alias_delete_parser.add_argument('name', nargs='*', help='alias to delete'),
             ACTION_ARG_CHOICES, get_alias_names)
-    alias_delete_parser.add_argument('-a', '--all', action='store_true', help="all aliases will be deleted")
+    alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
     alias_delete_parser.set_defaults(func=alias_delete)
 
     # alias -> list
@@ -2322,7 +2325,7 @@ class Cmd(cmd.Cmd):
     alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup script\n"
                               "to preserve aliases across sessions\n"
                               "\n"
-                              "Without arguments, all aliases will be listed")
+                              "Without arguments, all aliases will be listed.")
 
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
@@ -2330,6 +2333,7 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, get_alias_names)
     alias_list_parser.set_defaults(func=alias_list)
 
+    # Preserve quotes since we are passing strings to other commands
     @with_argparser(alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace):
         """Manage aliases"""
@@ -2347,20 +2351,20 @@ class Cmd(cmd.Cmd):
         """ Creates or overwrites a macro """
 
         # Validate the macro name
-        macro_name = utils.strip_quotes(args.name)
-        valid, errmsg = self.statement_parser.is_valid_command(macro_name)
+        args.name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
             errmsg = "Invalid macro name: {}".format(errmsg)
             self.perror(errmsg, traceback_war=False)
             return
 
-        if macro_name in self.get_all_commands():
-            errmsg = "Macros cannot have the same name as a command"
+        if args.name in self.get_all_commands():
+            errmsg = "Macro cannot have the same name as a command"
             self.perror(errmsg, traceback_war=False)
             return
 
-        if macro_name in self.aliases:
-            errmsg = "Macros cannot have the same name as an alias"
+        if args.name in self.aliases:
+            errmsg = "Macro cannot have the same name as an alias"
             self.perror(errmsg, traceback_war=False)
             return
 
@@ -2368,14 +2372,14 @@ class Cmd(cmd.Cmd):
 
         # Build the macro value string
         value = args.command
-        for cur_arg in args.command_args:
-            value += ' ' + cur_arg
+        if args.command_args:
+            value += ' ' + ' '.join(args.command_args)
 
         # Find all normal arguments
         arg_list = []
         normal_matches = re.finditer(MacroArg.macro_normal_arg_pattern, value)
         max_arg_num = 0
-        num_set = set()
+        arg_nums = set()
 
         while True:
             try:
@@ -2388,7 +2392,7 @@ class Cmd(cmd.Cmd):
                     self.perror("Argument numbers must be greater than 0", traceback_war=False)
                     return
 
-                num_set.add(cur_num)
+                arg_nums.add(cur_num)
                 if cur_num > max_arg_num:
                     max_arg_num = cur_num
 
@@ -2398,7 +2402,7 @@ class Cmd(cmd.Cmd):
                 break
 
         # Make sure the argument numbers are continuous
-        if len(num_set) != max_arg_num:
+        if len(arg_nums) != max_arg_num:
             self.perror("Not all numbers between 1 and {} are present "
                         "in the argument placeholders".format(max_arg_num), traceback_war=False)
             return
@@ -2418,9 +2422,9 @@ class Cmd(cmd.Cmd):
                 break
 
         # Set the macro
-        result = "overwritten" if macro_name in self.macros else "created"
-        self.macros[macro_name] = Macro(name=macro_name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
-        self.poutput("Macro {!r} {}".format(macro_name, result))
+        result = "overwritten" if args.name in self.macros else "created"
+        self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
+        self.poutput("Macro '{}' {}".format(args.name, result))
 
     def macro_delete(self, args: argparse.Namespace):
         """ Deletes macros """
@@ -2430,27 +2434,27 @@ class Cmd(cmd.Cmd):
         elif not args.name:
             self.do_help('macro delete')
         else:
-            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
             macros_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in macros_to_delete:
                 if cur_name in self.macros:
                     del self.macros[cur_name]
-                    self.poutput("Macro {!r} deleted".format(cur_name))
+                    self.poutput("Macro '{}' deleted".format(cur_name))
                 else:
-                    self.perror("Macro {!r} does not exist".format(cur_name), traceback_war=False)
+                    self.perror("Macro '{}' does not exist".format(cur_name), traceback_war=False)
 
     def macro_list(self, args: argparse.Namespace):
         """ Lists some or all macros """
         if args.name:
-            # Get rid of duplicates and strip quotes since the argparse decorator for alias command preserves them
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
             names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
             for cur_name in names_to_view:
                 if cur_name in self.macros:
                     self.poutput("macro create {} {}".format(cur_name, self.macros[cur_name].value))
                 else:
-                    self.perror("Macro {!r} not found".format(cur_name), traceback_war=False)
+                    self.perror("Macro '{}' not found".format(cur_name), traceback_war=False)
         else:
             sorted_macros = utils.alphabetical_sort(self.macros)
             for cur_macro in sorted_macros:
@@ -2496,8 +2500,8 @@ class Cmd(cmd.Cmd):
                            "\n"
                            "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
                            "\n"
-                           "  Macros can resolve into commands, aliases, and macros. Thus it is possible\n"
-                           "  to create a macro that results in infinite recursion. So be careful.\n"
+                           "  Be careful! Since macros can resolve into commands, aliases, and macros,\n"
+                           "  it is possible to create a macro that results in infinite recursion.\n"
                            "\n"
                            "  If you want to use redirection or pipes in the macro, then quote them as in\n"
                            "  this example to prevent the 'macro create' command from being redirected.\n"
@@ -2510,8 +2514,7 @@ class Cmd(cmd.Cmd):
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
                                                       epilog=macro_create_epilog)
-    setattr(macro_create_parser.add_argument('name', help='name of this macro'),
-            ACTION_ARG_CHOICES, get_macro_names)
+    macro_create_parser.add_argument('name', help='name of this macro')
     setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
@@ -2526,7 +2529,7 @@ class Cmd(cmd.Cmd):
                                                       description=macro_delete_description)
     setattr(macro_delete_parser.add_argument('name', nargs='*', help='macro to delete'),
             ACTION_ARG_CHOICES, get_macro_names)
-    macro_delete_parser.add_argument('-a', '--all', action='store_true', help="all macros will be deleted")
+    macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
     macro_delete_parser.set_defaults(func=macro_delete)
 
     # macro -> list
@@ -2541,6 +2544,7 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, get_macro_names)
     macro_list_parser.set_defaults(func=macro_list)
 
+    # Preserve quotes since we are passing strings to other commands
     @with_argparser(macro_parser, preserve_quotes=True)
     def do_macro(self, args: argparse.Namespace):
         """Manage macros"""
@@ -2584,13 +2588,10 @@ class Cmd(cmd.Cmd):
         matches = []
 
         # Check if this is a command with an argparse function
-        funcname = self._func_named(command)
-        if funcname:
-            func = getattr(self, funcname)
-            if hasattr(func, 'argparser'):
-                parser = getattr(func, 'argparser')
-                completer = AutoCompleter(parser, cmd2_app=self)
-                matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
+        cmd_func = self._cmd_func(command)
+        if cmd_func and hasattr(cmd_func, 'argparser'):
+            completer = AutoCompleter(getattr(cmd_func, 'argparser'), cmd2_app=self)
+            matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
 
         return matches
 
@@ -2612,13 +2613,11 @@ class Cmd(cmd.Cmd):
 
         elif args.command:
             # Getting help for a specific command
-            funcname = self._func_named(args.command)
-            if funcname:
+            cmd_func = self._cmd_func(args.command)
+            if cmd_func:
                 # Check to see if this function was decorated with an argparse ArgumentParser
-                func = getattr(self, funcname)
-                if hasattr(func, 'argparser'):
-                    completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
-
+                if hasattr(cmd_func, 'argparser'):
+                    completer = AutoCompleter(getattr(cmd_func, 'argparser'), cmd2_app=self)
                     tokens = [args.command]
                     tokens.extend(args.subcommand)
                     self.poutput(completer.format_help(tokens))
@@ -2643,11 +2642,12 @@ class Cmd(cmd.Cmd):
         cmds_cats = {}
 
         for command in visible_commands:
-            if command in help_topics or getattr(self, self._func_named(command)).__doc__:
+            cmd_func = self._cmd_func(command)
+            if command in help_topics or cmd_func.__doc__:
                 if command in help_topics:
                     help_topics.remove(command)
-                if hasattr(getattr(self, self._func_named(command)), HELP_CATEGORY):
-                    category = getattr(getattr(self, self._func_named(command)), HELP_CATEGORY)
+                if hasattr(cmd_func, HELP_CATEGORY):
+                    category = getattr(cmd_func, HELP_CATEGORY)
                     cmds_cats.setdefault(category, [])
                     cmds_cats[category].append(command)
                 else:
@@ -2700,12 +2700,13 @@ class Cmd(cmd.Cmd):
                         func = getattr(self, 'help_' + command)
                     except AttributeError:
                         # Couldn't find a help function
+                        cmd_func = self._cmd_func(command)
                         try:
                             # Now see if help_summary has been set
-                            doc = getattr(self, self._func_named(command)).help_summary
+                            doc = cmd_func.help_summary
                         except AttributeError:
                             # Last, try to directly access the function's doc-string
-                            doc = getattr(self, self._func_named(command)).__doc__
+                            doc = cmd_func.__doc__
                     else:
                         # we found the help function
                         result = io.StringIO()

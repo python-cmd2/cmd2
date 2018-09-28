@@ -2,13 +2,12 @@
 # coding=utf-8
 """A simple example demonstrating the following:
     1) How arguments and options get parsed and passed to commands
-    2) How to change what syntax get parsed as a comment and stripped from
-       the arguments
+    2) How to change what syntax get parsed as a comment and stripped from the arguments
 
 This is intended to serve as a live demonstration so that developers can
 experiment with and understand how command and argument parsing work.
 
-It also serves as an example of how to create command aliases (shortcuts).
+It also serves as an example of how to create shortcuts.
 """
 import argparse
 
@@ -18,7 +17,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     """ Example cmd2 application where we create commands that just print the arguments they are called with."""
 
     def __init__(self):
-        # Create command aliases which are shorter
+        # Create command shortcuts which are typically 1 character abbreviations which can be used in place of a command
         self.shortcuts.update({'$': 'aprint', '%': 'oprint'})
 
         # Make sure to call this super class __init__ *after* setting and/or updating shortcuts

@@ -59,7 +59,7 @@ class Macro:
     required_arg_count = attr.ib(validator=attr.validators.instance_of(int))
 
     # Used to fill in argument placeholders in the macro
-    arg_list = attr.ib(factory=list, validator=attr.validators.instance_of(list))
+    arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
 
 
 @attr.s(frozen=True)
@@ -308,17 +308,17 @@ class StatementParser:
 
         valid, errmsg = statement_parser.is_valid_command('>')
         if not valid:
-            errmsg = "Aliases {}".format(errmsg)
+            errmsg = "Alias {}".format(errmsg)
         """
         valid = False
 
         if not word:
             return False, 'cannot be an empty string'
 
-        errmsg = 'cannot start with a shortcut: '
-        errmsg += ', '.join(shortcut for (shortcut, expansion) in self.shortcuts)
         for (shortcut, expansion) in self.shortcuts:
             if word.startswith(shortcut):
+                errmsg = 'cannot start with a shortcut: '
+                errmsg += ', '.join(shortcut for (shortcut, expansion) in self.shortcuts)
                 return False, errmsg
 
         errmsg = 'cannot contain: whitespace, quotes, '

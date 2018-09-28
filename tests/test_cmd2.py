@@ -1852,7 +1852,7 @@ def test_alias_create_with_macro_name(base_app, capsys):
     run_cmd(base_app, 'macro create {} help'.format(macro))
     run_cmd(base_app, 'alias create {} help'.format(macro))
     out, err = capsys.readouterr()
-    assert "Aliases cannot have the same name as a macro" in err
+    assert "Alias cannot have the same name as a macro" in err
 
 def test_alias_list_invalid_alias(base_app, capsys):
     # Look up invalid alias
@@ -1953,13 +1953,13 @@ def test_macro_create_with_alias_name(base_app, capsys):
     run_cmd(base_app, 'alias create {} help'.format(macro))
     run_cmd(base_app, 'macro create {} help'.format(macro))
     out, err = capsys.readouterr()
-    assert "Macros cannot have the same name as an alias" in err
+    assert "Macro cannot have the same name as an alias" in err
 
 def test_macro_create_with_command_name(base_app, capsys):
     macro = "my_macro"
     run_cmd(base_app, 'macro create help stuff')
     out, err = capsys.readouterr()
-    assert "Macros cannot have the same name as a command" in err
+    assert "Macro cannot have the same name as a command" in err
 
 def test_macro_create_with_args(base_app, capsys):
     # Create the macro

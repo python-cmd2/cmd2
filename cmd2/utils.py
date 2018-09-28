@@ -308,7 +308,7 @@ class StdSim(object):
 
 def unquote_redirection_tokens(args: List[str]) -> None:
     """
-    Used to unquote redirection tokens in a list of command line arguments
+    Unquote redirection tokens in a list of command-line arguments
     This is used when redirection tokens have to be passed to another command
     :param args: the command line args
     """
