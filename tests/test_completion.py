@@ -15,7 +15,7 @@ import sys
 import pytest
 import cmd2
 from cmd2 import utils
-from .conftest import complete_tester
+from .conftest import base_app, complete_tester, normalize, run_cmd
 from examples.subcommands import SubcommandsExample
 
 # List of strings used with completion functions
@@ -112,6 +112,23 @@ def test_complete_bogus_command(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is None
+
+def test_complete_macro(base_app, request):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake pyscript {1}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Macros do path completion
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = os.path.join(test_dir, 'script.py')
+    line = 'fake {}'.format(text)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, base_app)
+    assert first_match == text + ' '
 
 
 def test_cmd2_command_completion_multiple(cmd2_app):

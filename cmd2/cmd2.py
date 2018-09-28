@@ -2009,11 +2009,8 @@ class Cmd(cmd.Cmd):
         :param arg: command to look up method name which implements it
         :return: method name which implements the given command
         """
-        result = None
         target = 'do_' + arg
-        if target in dir(self):
-            result = target
-        return result
+        return target if callable(getattr(self, target, None)) else ''
 
     def onecmd(self, statement: Union[Statement, str]) -> bool:
         """ This executes the actual do_* method for a command.
@@ -2033,21 +2030,17 @@ class Cmd(cmd.Cmd):
             stop = self._run_macro(statement)
         else:
             funcname = self._func_named(statement.command)
-            if not funcname:
-                self.default(statement)
-                return False
-
-            # Since we have a valid command store it in the history
-            if statement.command not in self.exclude_from_history:
-                self.history.append(statement.raw)
-
-            try:
+            if funcname:
                 func = getattr(self, funcname)
-            except AttributeError:
-                self.default(statement)
-                return False
+                stop = func(statement)
 
-            stop = func(statement)
+                # Since we have a valid command store it in the history
+                if statement.command not in self.exclude_from_history:
+                    self.history.append(statement.raw)
+
+            else:
+                self.default(statement)
+                stop = False
 
         return stop
 
