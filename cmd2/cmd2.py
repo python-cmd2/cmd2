@@ -2005,7 +2005,7 @@ class Cmd(cmd.Cmd):
     def _cmd_func(self, command: str) -> Optional[Callable]:
         """
         Get the function for a command
-        :param arg: the name of the command
+        :param command: the name of the command
         """
         func_name = self._cmd_func_name(command)
         if func_name:
@@ -2015,7 +2015,7 @@ class Cmd(cmd.Cmd):
     def _cmd_func_name(self, command: str) -> str:
         """Get the method name associated with a given command.
 
-        :param arg: command to look up method name which implements it
+        :param command: command to look up method name which implements it
         :return: method name which implements the given command
         """
         target = COMMAND_PREFIX + command
