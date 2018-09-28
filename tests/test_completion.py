@@ -939,6 +939,15 @@ def test_cmd2_help_subcommand_completion_multiple_scu(scu_app):
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
     assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
 
+def test_cmd2_help_subcommand_completion_with_flags_before_command(scu_app):
+    text = ''
+    line = 'help -h -v base {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
+
 
 def test_cmd2_help_subcommand_completion_nomatch_scu(scu_app):
     text = 'z'
