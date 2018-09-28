@@ -101,8 +101,7 @@ def test_complete_empty_arg(cmd2_app):
     expected = sorted(cmd2_app.get_visible_commands())
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
-    assert first_match is not None and \
-        cmd2_app.completion_matches == expected
+    assert first_match is not None and cmd2_app.completion_matches == expected
 
 def test_complete_bogus_command(cmd2_app):
     text = ''
@@ -121,14 +120,15 @@ def test_complete_macro(base_app, request):
     # Macros do path completion
     test_dir = os.path.dirname(request.module.__file__)
 
-    text = os.path.join(test_dir, 'script.py')
+    text = os.path.join(test_dir, 's')
     line = 'fake {}'.format(text)
 
     endidx = len(line)
     begidx = endidx - len(text)
 
+    expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
     first_match = complete_tester(text, line, begidx, endidx, base_app)
-    assert first_match == text + ' '
+    assert first_match is not None and base_app.completion_matches
 
 
 def test_cmd2_command_completion_multiple(cmd2_app):

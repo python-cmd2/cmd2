@@ -25,12 +25,14 @@
     * ``alias`` is now an argparse command with subcommands to create, list, and delete aliases 
 * Deprecations
     * Deprecated the built-in ``cmd2`` support for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
-    * `unalias` is no longer a command since ``alias delete`` replaced it
-* Deletions
+* Deletions (potentially breaking changes)
     * The ``preparse``, ``postparsing_precmd``, and ``postparsing_postcmd`` methods *deprecated* in the previous release 
     have been deleted
         * The new application lifecycle hook system allows for registration of callbacks to be called at various points
         in the lifecycle and is more powerful and flexible than the previous system
+    * ``alias`` is now a command with subcommands to create, list, and delete aliases. Therefore its syntax
+      has changed. All current alias commands in startup scripts or transcripts will break with this release.
+    * `unalias` was deleted since ``alias delete`` replaced it
     
 ## 0.9.4 (August 21, 2018)
 * Bug Fixes

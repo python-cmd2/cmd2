@@ -229,7 +229,7 @@ def natural_keys(input_str: str) -> List[Union[int, str]]:
     :param input_str: string to convert
     :return: list of strings and integers
     """
-    return [try_int_or_force_to_lower_case(substr) for substr in re.split('(\d+)', input_str)]
+    return [try_int_or_force_to_lower_case(substr) for substr in re.split(r'(\d+)', input_str)]
 
 
 def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
