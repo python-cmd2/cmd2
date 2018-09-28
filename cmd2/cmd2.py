@@ -2596,16 +2596,11 @@ class Cmd(cmd.Cmd):
         else:
             # Getting help for a specific command
             func = self.cmd_func(arglist[0])
-            if func:
-                # Check to see if this function was decorated with an argparse ArgumentParser
-                if hasattr(func, 'argparser'):
-                    completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
-                    self.poutput(completer.format_help(arglist))
-                else:
-                    # No special behavior needed, delegate to cmd base class do_help()
-                    super().do_help(arglist[0])
+            if func and hasattr(func, 'argparser'):
+                completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
+                self.poutput(completer.format_help(arglist))
             else:
-                # This could be a help topic
+                # No special behavior needed, delegate to cmd base class do_help()
                 super().do_help(arglist[0])
 
     def _help_menu(self, verbose: bool=False) -> None:
