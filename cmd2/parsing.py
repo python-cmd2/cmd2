@@ -34,12 +34,12 @@ class MacroArg:
     # Pattern used to find normal argument
     # Digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
     # Match strings like: {5}, {{{{{4}, {2}}}}}
-    macro_normal_arg_pattern = re.compile(r'(?<!\{)\{\d+\}|\{\d+\}(?!\})')
+    macro_normal_arg_pattern = re.compile(r'(?<!{){\d+}|{\d+}(?!})')
 
     # Pattern used to find escaped arguments
     # Digits surrounded by 2 or more braces on both sides
     # Match strings like: {{5}}, {{{{{4}}, {{2}}}}}
-    macro_escaped_arg_pattern = re.compile(r'\{{2}\d+\}{2}')
+    macro_escaped_arg_pattern = re.compile(r'{{2}\d+}{2}')
 
     # Finds a string of digits
     digit_pattern = re.compile(r'\d+')
