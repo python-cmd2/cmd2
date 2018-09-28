@@ -122,6 +122,9 @@ except ImportError:  # pragma: no cover
 HELP_CATEGORY = 'help_category'
 HELP_SUMMARY = 'help_summary'
 
+# All command functions start with this
+COMMAND_PREFIX = 'do_'
+
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """Categorize a function.
@@ -400,7 +403,7 @@ class Cmd(cmd.Cmd):
         self.pystate = {}
         self.py_history = []
         self.pyscript_name = 'app'
-        self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
+        self.keywords = self.reserved_words + self.get_all_commands()
         self.statement_parser = StatementParser(
             allow_redirection=self.allow_redirection,
             terminators=self.terminators,
@@ -1471,16 +1474,15 @@ class Cmd(cmd.Cmd):
                 # Check if a valid command was entered
                 if command in self.get_all_commands():
                     # Get the completer function for this command
-                    try:
-                        compfunc = getattr(self, 'complete_' + command)
-                    except AttributeError:
+                    compfunc = getattr(self, 'complete_' + command, None)
+
+                    if compfunc is None:
                         # There's no completer function, next see if the command uses argparser
-                        try:
-                            cmd_func = getattr(self, 'do_' + command)
-                            argparser = getattr(cmd_func, 'argparser')
-                            # Command uses argparser, switch to the default argparse completer
-                            compfunc = functools.partial(self._autocomplete_default, argparser=argparser)
-                        except AttributeError:
+                        cmd_func = self._cmd_func(command)
+                        if cmd_func and hasattr(cmd_func, 'argparser'):
+                            compfunc = functools.partial(self._autocomplete_default,
+                                                         argparser=getattr(cmd_func, 'argparser'))
+                        else:
                             compfunc = self.completedefault
 
                 # Check if a macro was entered
@@ -1596,8 +1598,8 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
-        return [name[3:] for name in self.get_names()
-                if name.startswith('do_') and callable(getattr(self, name))]
+        return [name[len(COMMAND_PREFIX):] for name in self.get_names()
+                if name.startswith(COMMAND_PREFIX) and callable(getattr(self, name))]
 
     def get_visible_commands(self) -> List[str]:
         """Returns a list of commands that have not been hidden."""
@@ -1663,13 +1665,10 @@ class Cmd(cmd.Cmd):
 
         # check if the command uses argparser
         elif index >= subcmd_index:
-            try:
-                cmd_func = getattr(self, 'do_' + tokens[cmd_index])
-                parser = getattr(cmd_func, 'argparser')
-                completer = AutoCompleter(parser, cmd2_app=self)
+            cmd_func = self._cmd_func(tokens[cmd_index])
+            if cmd_func and hasattr(cmd_func, 'argparser'):
+                completer = AutoCompleter(getattr(cmd_func, 'argparser'), cmd2_app=self)
                 matches = completer.complete_command_help(tokens[1:], text, line, begidx, endidx)
-            except AttributeError:
-                pass
 
         return matches
 
@@ -2003,13 +2002,23 @@ class Cmd(cmd.Cmd):
 
         self.redirecting = False
 
-    def _func_named(self, arg: str) -> str:
-        """Gets the method name associated with a given command.
+    def _cmd_func(self, command: str) -> Optional[Callable]:
+        """
+        Get the function for a command
+        :param arg: the name of the command
+        """
+        func_name = self._cmd_func_name(command)
+        if func_name:
+            return getattr(self, func_name)
+        return None
+
+    def _cmd_func_name(self, command: str) -> str:
+        """Get the method name associated with a given command.
 
         :param arg: command to look up method name which implements it
         :return: method name which implements the given command
         """
-        target = 'do_' + arg
+        target = COMMAND_PREFIX + command
         return target if callable(getattr(self, target, None)) else ''
 
     def onecmd(self, statement: Union[Statement, str]) -> bool:
@@ -2029,10 +2038,9 @@ class Cmd(cmd.Cmd):
         if statement.command in self.macros:
             stop = self._run_macro(statement)
         else:
-            funcname = self._func_named(statement.command)
-            if funcname:
-                func = getattr(self, funcname)
-                stop = func(statement)
+            cmd_func = self._cmd_func(statement.command)
+            if cmd_func:
+                stop = cmd_func(statement)
 
                 # Since we have a valid command store it in the history
                 if statement.command not in self.exclude_from_history:
@@ -2588,20 +2596,18 @@ class Cmd(cmd.Cmd):
             self._help_menu(verbose)
         else:
             # Getting help for a specific command
-            funcname = self._func_named(arglist[0])
-            if funcname:
+            cmd_func = self._cmd_func(arglist[0])
+            if cmd_func:
                 # Check to see if this function was decorated with an argparse ArgumentParser
-                func = getattr(self, funcname)
-                if hasattr(func, 'argparser'):
-                    completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
-
+                if hasattr(cmd_func, 'argparser'):
+                    completer = AutoCompleter(getattr(cmd_func, 'argparser'), cmd2_app=self)
                     self.poutput(completer.format_help(arglist))
                 else:
                     # No special behavior needed, delegate to cmd base class do_help()
-                    cmd.Cmd.do_help(self, funcname[3:])
+                    super().do_help(arglist[0])
             else:
                 # This could be a help topic
-                cmd.Cmd.do_help(self, arglist[0])
+                super().do_help(arglist[0])
 
     def _help_menu(self, verbose: bool=False) -> None:
         """Show a list of commands which help can be displayed for.
@@ -2617,11 +2623,12 @@ class Cmd(cmd.Cmd):
         cmds_cats = {}
 
         for command in visible_commands:
-            if command in help_topics or getattr(self, self._func_named(command)).__doc__:
+            cmd_func = self._cmd_func(command)
+            if command in help_topics or cmd_func.__doc__:
                 if command in help_topics:
                     help_topics.remove(command)
-                if hasattr(getattr(self, self._func_named(command)), HELP_CATEGORY):
-                    category = getattr(getattr(self, self._func_named(command)), HELP_CATEGORY)
+                if hasattr(cmd_func, HELP_CATEGORY):
+                    category = getattr(cmd_func, HELP_CATEGORY)
                     cmds_cats.setdefault(category, [])
                     cmds_cats[category].append(command)
                 else:
@@ -2674,12 +2681,13 @@ class Cmd(cmd.Cmd):
                         func = getattr(self, 'help_' + command)
                     except AttributeError:
                         # Couldn't find a help function
+                        cmd_func = self._cmd_func(command)
                         try:
                             # Now see if help_summary has been set
-                            doc = getattr(self, self._func_named(command)).help_summary
+                            doc = cmd_func.help_summary
                         except AttributeError:
                             # Last, try to directly access the function's doc-string
-                            doc = getattr(self, self._func_named(command)).__doc__
+                            doc = cmd_func.__doc__
                     else:
                         # we found the help function
                         result = io.StringIO()
