@@ -2590,7 +2590,7 @@ class Cmd(cmd.Cmd):
         func = self.cmd_func(command)
         if func and hasattr(func, 'argparser'):
             completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
-            matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)        
+            matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
 
         return matches
 
@@ -3129,15 +3129,15 @@ class Cmd(cmd.Cmd):
         sys.argv = orig_args
 
     # Only include the do_ipy() method if IPython is available on the system
-    if ipython_available:
+    if ipython_available:  # pragma: no cover
         @with_argparser(ACArgumentParser())
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
             from .pyscript_bridge import PyscriptBridge
             bridge = PyscriptBridge(self)
 
-            banner = 'Entering an embedded IPython shell. Type quit() or <Ctrl>-d to exit.\n'
-            banner += 'Run Python code from external files with: run filename.py\n'
+            banner = ('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
+                      'Run Python code from external files with: run filename.py\n')
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
             if self.locals_in_py:
