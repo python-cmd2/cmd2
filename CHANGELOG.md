@@ -22,7 +22,7 @@
             * Always - output methods **never** strip ANSI escape sequences, regardless of the output destination
             * Never - output methods strip all ANSI escape sequences
     * Added ``macro`` command to create macros, which are similar to aliases, but can take arguments when called
-    * ``alias`` is now an argparse command with subcommands to create, list, and delete aliases 
+    * All cmd2 command functions have been converted to use argparse.
 * Deprecations
     * Deprecated the built-in ``cmd2`` support for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
 * Deletions (potentially breaking changes)
