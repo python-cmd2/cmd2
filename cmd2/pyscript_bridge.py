@@ -179,7 +179,10 @@ class ArgparseFunctor:
 
     def _run(self):
         # look up command function
-        func = getattr(self._cmd2_app, 'do_' + self._command_name)
+        func = self._cmd2_app.cmd_func(self._command_name)
+        if func is None:
+            raise AttributeError("{!r} object has no command called {!r}".format(self._cmd2_app.__class__.__name__,
+                                                                                 self._command_name))
 
         # reconstruct the cmd2 command from the python call
         cmd_str = ['']
@@ -248,23 +251,20 @@ class PyscriptBridge(object):
 
     def __getattr__(self, item: str):
         """Check if the attribute is a command. If so, return a callable."""
-        commands = self._cmd2_app.get_all_commands()
-        if item in commands:
-            func = getattr(self._cmd2_app, 'do_' + item)
+        func = self._cmd2_app.cmd_func(item)
 
-            try:
-                # See if the command uses argparse
-                parser = getattr(func, 'argparser')
-            except AttributeError:
-                # Command doesn't, we will accept parameters in the form of a command string
+        if func:
+            if hasattr(func, 'argparser'):
+                # Command uses argparse, return an object that can traverse the argparse subcommands and arguments
+                return ArgparseFunctor(self.cmd_echo, self._cmd2_app, item, getattr(func, 'argparser'))
+            else:
+                # Command doesn't use argparse, we will accept parameters in the form of a command string
                 def wrap_func(args=''):
                     return _exec_cmd(self._cmd2_app, functools.partial(func, args), self.cmd_echo)
-                return wrap_func
-            else:
-                # Command does use argparse, return an object that can traverse the argparse subcommands and arguments
-                return ArgparseFunctor(self.cmd_echo, self._cmd2_app, item, parser)
 
-        return super().__getattr__(item)
+                return wrap_func
+        else:
+            return super().__getattr__(item)
 
     def __dir__(self):
         """Return a custom set of attribute names to match the available commands"""
