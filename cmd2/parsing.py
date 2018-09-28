@@ -315,10 +315,11 @@ class StatementParser:
         if not word:
             return False, 'cannot be an empty string'
 
-        for (shortcut, expansion) in self.shortcuts:
+        for (shortcut, _) in self.shortcuts:
             if word.startswith(shortcut):
+                # Build an error string with all shortcuts listed
                 errmsg = 'cannot start with a shortcut: '
-                errmsg += ', '.join(shortcut for (shortcut, expansion) in self.shortcuts)
+                errmsg += ', '.join(shortcut for (shortcut, _) in self.shortcuts)
                 return False, errmsg
 
         errmsg = 'cannot contain: whitespace, quotes, '
