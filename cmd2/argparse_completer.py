@@ -750,7 +750,7 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
 
             # build full usage string
             format = self._format_actions_usage
-            action_usage = format(positionals + required_options + optionals, groups)
+            action_usage = format(required_options + optionals + positionals, groups)
             usage = ' '.join([s for s in [prog, action_usage] if s])
 
             # wrap the usage parts if it's too long
@@ -761,15 +761,15 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
 
                 # break usage into wrappable parts
                 part_regexp = r'\(.*?\)+|\[.*?\]+|\S+'
+                req_usage = format(required_options, groups)
                 opt_usage = format(optionals, groups)
                 pos_usage = format(positionals, groups)
-                req_usage = format(required_options, groups)
+                req_parts = _re.findall(part_regexp, req_usage)
                 opt_parts = _re.findall(part_regexp, opt_usage)
                 pos_parts = _re.findall(part_regexp, pos_usage)
-                req_parts = _re.findall(part_regexp, req_usage)
+                assert ' '.join(req_parts) == req_usage
                 assert ' '.join(opt_parts) == opt_usage
                 assert ' '.join(pos_parts) == pos_usage
-                assert ' '.join(req_parts) == req_usage
 
                 # End cmd2 customization
 
@@ -799,13 +799,15 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
                 if len(prefix) + len(prog) <= 0.75 * text_width:
                     indent = ' ' * (len(prefix) + len(prog) + 1)
                     # Begin cmd2 customization
-                    if opt_parts:
-                        lines = get_lines([prog] + pos_parts, indent, prefix)
-                        lines.extend(get_lines(req_parts, indent))
+                    if req_parts:
+                        lines = get_lines([prog] + req_parts, indent, prefix)
                         lines.extend(get_lines(opt_parts, indent))
+                        lines.extend(get_lines(pos_parts, indent))
+                    elif opt_parts:
+                        lines = get_lines([prog] + opt_parts, indent, prefix)
+                        lines.extend(get_lines(pos_parts, indent))
                     elif pos_parts:
                         lines = get_lines([prog] + pos_parts, indent, prefix)
-                        lines.extend(get_lines(req_parts, indent))
                     else:
                         lines = [prog]
                     # End cmd2 customization
@@ -814,13 +816,13 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
                 else:
                     indent = ' ' * len(prefix)
                     # Begin cmd2 customization
-                    parts = pos_parts + req_parts + opt_parts
+                    parts = req_parts + opt_parts + pos_parts
                     lines = get_lines(parts, indent)
                     if len(lines) > 1:
                         lines = []
-                        lines.extend(get_lines(pos_parts, indent))
                         lines.extend(get_lines(req_parts, indent))
                         lines.extend(get_lines(opt_parts, indent))
+                        lines.extend(get_lines(pos_parts, indent))
                     # End cmd2 customization
                     lines = [prog] + lines
 
@@ -888,6 +890,9 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
         else:
             result = super()._format_args(action, default_metavar)
         return result
+
+    def format_help(self):
+        return super().format_help() + '\n'
 
 
 # noinspection PyCompatibility

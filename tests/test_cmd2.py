@@ -78,7 +78,7 @@ def test_base_invalid_option(base_app, capsys):
     out = normalize(out)
     err = normalize(err)
     assert 'Error: unrecognized arguments: -z' in err[0]
-    assert out[0] == 'Usage: set [param] [value] [-h] [-a] [-l]'
+    assert out[0] == 'Usage: set [-h] [-a] [-l] [param] [value]'
 
 def test_base_shortcuts(base_app):
     out = run_cmd(base_app, 'shortcuts')
@@ -1159,8 +1159,8 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-alias  help     load  pyscript  set    shortcuts  unalias
-edit   history  py    quit      shell  squat
+alias  help     load   py        quit  shell      squat
+edit   history  macro  pyscript  set   shortcuts
 
 Undocumented commands:
 ======================
@@ -1226,7 +1226,7 @@ diddly
 
 Other
 =====
-alias  help  history  load  py  pyscript  quit  set  shell  shortcuts  unalias
+alias  help  history  load  macro  py  pyscript  quit  set  shell  shortcuts
 
 Undocumented commands:
 ======================
@@ -1249,17 +1249,17 @@ diddly              This command does diddly
 
 Other
 ================================================================================
-alias               Define or display aliases
+alias               Manage aliases
 help                List available commands with "help" or detailed help with "help cmd"
 history             View, run, edit, save, or clear previously entered commands
 load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
+macro               Manage macros
 py                  Invoke python command, shell, or script
 pyscript            Runs a python script file inside the console
 quit                Exits this application
 set                 Sets a settable parameter or shows current settings of parameters
 shell               Execute a command as if at the OS prompt
 shortcuts           Lists shortcuts available
-unalias             Unsets aliases
 
 Undocumented commands:
 ======================
@@ -1765,9 +1765,39 @@ def test_poutput_color_never(base_app):
     assert out == expected
 
 
-def test_alias(base_app, capsys):
+# These are invalid names for aliases and macros
+invalid_command_name = [
+    '""',  # Blank name
+    '!no_shortcut',
+    '">"',
+    '"no>pe"',
+    '"no spaces"',
+    '"nopipe|"',
+    '"noterm;"',
+    'noembedded"quotes',
+]
+
+def test_get_alias_names(base_app):
+    assert len(base_app.aliases) == 0
+    run_cmd(base_app, 'alias create fake pyscript')
+    run_cmd(base_app, 'alias create ls !ls -hal')
+    assert len(base_app.aliases) == 2
+    assert sorted(base_app.get_alias_names()) == ['fake', 'ls']
+
+def test_get_macro_names(base_app):
+    assert len(base_app.macros) == 0
+    run_cmd(base_app, 'macro create foo !echo foo')
+    run_cmd(base_app, 'macro create bar !echo bar')
+    assert len(base_app.macros) == 2
+    assert sorted(base_app.get_macro_names()) == ['bar', 'foo']
+
+def test_alias_no_subcommand(base_app, capsys):
+    out = run_cmd(base_app, 'alias')
+    assert "Usage: alias [-h]" in out[0]
+
+def test_alias_create(base_app, capsys):
     # Create the alias
-    out = run_cmd(base_app, 'alias fake pyscript')
+    out = run_cmd(base_app, 'alias create fake pyscript')
     assert out == normalize("Alias 'fake' created")
 
     # Use the alias
@@ -1776,82 +1806,85 @@ def test_alias(base_app, capsys):
     assert "pyscript command requires at least 1 argument" in err
 
     # See a list of aliases
-    out = run_cmd(base_app, 'alias')
-    assert out == normalize('alias fake pyscript')
+    out = run_cmd(base_app, 'alias list')
+    assert out == normalize('alias create fake pyscript')
 
-    # Lookup the new alias
-    out = run_cmd(base_app, 'alias fake')
-    assert out == normalize('alias fake pyscript')
+    # Look up the new alias
+    out = run_cmd(base_app, 'alias list fake')
+    assert out == normalize('alias create fake pyscript')
 
-def test_alias_with_quotes(base_app, capsys):
+def test_alias_quoted_name(base_app, capsys):
+    """Demonstrate that names can be quoted in alias commands because they will be stripped"""
     # Create the alias
-    out = run_cmd(base_app, 'alias fake help ">" "out file.txt"')
+    out = run_cmd(base_app, 'alias create "fake" pyscript')
+
+    # The quotes on names are stripped
     assert out == normalize("Alias 'fake' created")
 
-    # Lookup the new alias (Only the redirector should be unquoted)
-    out = run_cmd(base_app, 'alias fake')
-    assert out == normalize('alias fake help > "out file.txt"')
+    # Look up the new alias and quote the name
+    out = run_cmd(base_app, 'alias list "fake"')
+    assert out == normalize('alias create fake pyscript')
 
-def test_alias_lookup_invalid_alias(base_app, capsys):
-    # Lookup invalid alias
-    out = run_cmd(base_app, 'alias invalid')
+    # Delete the alias using quotes
+    out = run_cmd(base_app, 'alias delete "fake"')
+    assert out == normalize("Alias 'fake' deleted")
+
+def test_alias_create_with_quoted_value(base_app, capsys):
+    """Demonstrate that quotes in alias value will be preserved (except for redirectors)"""
+
+    # Create the alias
+    out = run_cmd(base_app, 'alias create fake help ">" "out file.txt"')
+    assert out == normalize("Alias 'fake' created")
+
+    # Look up the new alias (Only the redirector should be unquoted)
+    out = run_cmd(base_app, 'alias list fake')
+    assert out == normalize('alias create fake help > "out file.txt"')
+
+@pytest.mark.parametrize('alias_name', invalid_command_name)
+def test_alias_create_invalid_name(base_app, alias_name, capsys):
+    run_cmd(base_app, 'alias create {} help'.format(alias_name))
     out, err = capsys.readouterr()
-    assert "not found" in err
+    assert "Invalid alias name" in err
 
-def test_unalias(base_app):
+def test_alias_create_with_macro_name(base_app, capsys):
+    macro = "my_macro"
+    run_cmd(base_app, 'macro create {} help'.format(macro))
+    run_cmd(base_app, 'alias create {} help'.format(macro))
+    out, err = capsys.readouterr()
+    assert "Alias cannot have the same name as a macro" in err
+
+def test_alias_list_invalid_alias(base_app, capsys):
+    # Look up invalid alias
+    out = run_cmd(base_app, 'alias list invalid')
+    out, err = capsys.readouterr()
+    assert "Alias 'invalid' not found" in err
+
+def test_alias_delete(base_app):
     # Create an alias
-    run_cmd(base_app, 'alias fake pyscript')
+    run_cmd(base_app, 'alias create fake pyscript')
 
-    # Remove the alias
-    out = run_cmd(base_app, 'unalias fake')
-    assert out == normalize("Alias 'fake' cleared")
+    # Delete the alias
+    out = run_cmd(base_app, 'alias delete fake')
+    assert out == normalize("Alias 'fake' deleted")
 
-def test_unalias_all(base_app):
-    out = run_cmd(base_app, 'unalias -a')
-    assert out == normalize("All aliases cleared")
+def test_alias_delete_all(base_app):
+    out = run_cmd(base_app, 'alias delete --all')
+    assert out == normalize("All aliases deleted")
 
-def test_unalias_non_existing(base_app, capsys):
-    run_cmd(base_app, 'unalias fake')
+def test_alias_delete_non_existing(base_app, capsys):
+    run_cmd(base_app, 'alias delete fake')
     out, err = capsys.readouterr()
-    assert "does not exist" in err
+    assert "Alias 'fake' does not exist" in err
 
-@pytest.mark.parametrize('alias_name', [
-    '">"',
-    '"no>pe"',
-    '"no spaces"',
-    '"nopipe|"',
-    '"noterm;"',
-    'noembedded"quotes',
-])
-def test_create_invalid_alias(base_app, alias_name, capsys):
-    run_cmd(base_app, 'alias {} help'.format(alias_name))
-    out, err = capsys.readouterr()
-    assert "can not contain" in err
-
-def test_complete_unalias(base_app):
-    text = 'f'
-    line = text
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # Validate there are no completions when there are no aliases
-    assert base_app.complete_unalias(text, line, begidx, endidx) == []
-
-    # Create a few aliases - two the start with 'f' and one that doesn't
-    run_cmd(base_app, 'alias fall quit')
-    run_cmd(base_app, 'alias fake pyscript')
-    run_cmd(base_app, 'alias carapace shell')
-
-    # Validate that there are now completions
-    expected = ['fake', 'fall']
-    result = base_app.complete_unalias(text, line, begidx, endidx)
-    assert sorted(expected) == sorted(result)
+def test_alias_delete_no_name(base_app, capsys):
+    out = run_cmd(base_app, 'alias delete')
+    assert "Usage: alias delete" in out[0]
 
 def test_multiple_aliases(base_app):
     alias1 = 'h1'
     alias2 = 'h2'
-    run_cmd(base_app, 'alias {} help'.format(alias1))
-    run_cmd(base_app, 'alias {} help -v'.format(alias2))
+    run_cmd(base_app, 'alias create {} help'.format(alias1))
+    run_cmd(base_app, 'alias create {} help -v'.format(alias2))
     out = run_cmd(base_app, alias1)
     expected = normalize(BASE_HELP)
     assert out == expected
@@ -1859,6 +1892,180 @@ def test_multiple_aliases(base_app):
     out = run_cmd(base_app, alias2)
     expected = normalize(BASE_HELP_VERBOSE)
     assert out == expected
+
+def test_macro_no_subcommand(base_app, capsys):
+    out = run_cmd(base_app, 'macro')
+    assert "Usage: macro [-h]" in out[0]
+
+def test_macro_create(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake pyscript')
+    assert out == normalize("Macro 'fake' created")
+
+    # Use the macro
+    run_cmd(base_app, 'fake')
+    out, err = capsys.readouterr()
+    assert "pyscript command requires at least 1 argument" in err
+
+    # See a list of macros
+    out = run_cmd(base_app, 'macro list')
+    assert out == normalize('macro create fake pyscript')
+
+    # Look up the new macro
+    out = run_cmd(base_app, 'macro list fake')
+    assert out == normalize('macro create fake pyscript')
+
+def test_macro_create_quoted_name(base_app, capsys):
+    """Demonstrate that names can be quoted in macro commands because they will be stripped"""
+    # Create the macro
+    out = run_cmd(base_app, 'macro create "fake" pyscript')
+
+    # The quotes on names are stripped
+    assert out == normalize("Macro 'fake' created")
+
+    # Look up the new macro and quote the name
+    out = run_cmd(base_app, 'macro list "fake"')
+    assert out == normalize('macro create fake pyscript')
+
+    # Delete the macro using quotes
+    out = run_cmd(base_app, 'macro delete "fake"')
+    assert out == normalize("Macro 'fake' deleted")
+
+def test_macro_create_with_quoted_value(base_app, capsys):
+    """Demonstrate that quotes in macro value will be preserved (except for redirectors)"""
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake help ">" "out file.txt"')
+    assert out == normalize("Macro 'fake' created")
+
+    # Look up the new macro (Only the redirector should be unquoted)
+    out = run_cmd(base_app, 'macro list fake')
+    assert out == normalize('macro create fake help > "out file.txt"')
+
+@pytest.mark.parametrize('macro_name', invalid_command_name)
+def test_macro_create_invalid_name(base_app, macro_name, capsys):
+    run_cmd(base_app, 'macro create {} help'.format(macro_name))
+    out, err = capsys.readouterr()
+    assert "Invalid macro name" in err
+
+def test_macro_create_with_alias_name(base_app, capsys):
+    macro = "my_macro"
+    run_cmd(base_app, 'alias create {} help'.format(macro))
+    run_cmd(base_app, 'macro create {} help'.format(macro))
+    out, err = capsys.readouterr()
+    assert "Macro cannot have the same name as an alias" in err
+
+def test_macro_create_with_command_name(base_app, capsys):
+    macro = "my_macro"
+    run_cmd(base_app, 'macro create help stuff')
+    out, err = capsys.readouterr()
+    assert "Macro cannot have the same name as a command" in err
+
+def test_macro_create_with_args(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake {1} {2}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    out = run_cmd(base_app, 'fake help -v')
+    expected = normalize(BASE_HELP_VERBOSE)
+    assert out == expected
+
+def test_macro_create_with_escaped_args(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake help {{1}}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    out = run_cmd(base_app, 'fake')
+    assert 'No help on {1}' in out[0]
+
+def test_macro_create_with_missing_arg_nums(base_app, capsys):
+    # Create the macro
+    run_cmd(base_app, 'macro create fake help {1} {3}')
+    out, err = capsys.readouterr()
+    assert "Not all numbers between 1 and 3" in err
+
+def test_macro_create_with_invalid_arg_num(base_app, capsys):
+    # Create the macro
+    run_cmd(base_app, 'macro create fake help {1} {-1} {0}')
+    out, err = capsys.readouterr()
+    assert "Argument numbers must be greater than 0" in err
+
+def test_macro_create_with_wrong_arg_count(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake help {1} {2}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    run_cmd(base_app, 'fake arg1')
+    out, err = capsys.readouterr()
+    assert "expects 2 argument(s)" in err
+
+def test_macro_create_with_unicode_numbered_arg(base_app, capsys):
+    # Create the macro expecting 1 argument
+    out = run_cmd(base_app, 'macro create fake help {\N{ARABIC-INDIC DIGIT ONE}}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    out = run_cmd(base_app, 'fake')
+    out, err = capsys.readouterr()
+    assert "expects 1 argument(s)" in err
+
+def test_macro_create_with_missing_unicode_arg_nums(base_app, capsys):
+    run_cmd(base_app, 'macro create fake help {1} {\N{ARABIC-INDIC DIGIT THREE}}')
+    out, err = capsys.readouterr()
+    assert "Not all numbers between 1 and 3" in err
+
+def test_macro_list_invalid_macro(base_app, capsys):
+    # Look up invalid macro
+    run_cmd(base_app, 'macro list invalid')
+    out, err = capsys.readouterr()
+    assert "Macro 'invalid' not found" in err
+
+def test_macro_delete(base_app):
+    # Create an macro
+    run_cmd(base_app, 'macro create fake pyscript')
+
+    # Delete the macro
+    out = run_cmd(base_app, 'macro delete fake')
+    assert out == normalize("Macro 'fake' deleted")
+
+def test_macro_delete_all(base_app):
+    out = run_cmd(base_app, 'macro delete --all')
+    assert out == normalize("All macros deleted")
+
+def test_macro_delete_non_existing(base_app, capsys):
+    run_cmd(base_app, 'macro delete fake')
+    out, err = capsys.readouterr()
+    assert "Macro 'fake' does not exist" in err
+
+def test_macro_delete_no_name(base_app, capsys):
+    out = run_cmd(base_app, 'macro delete')
+    assert "Usage: macro delete" in out[0]
+
+def test_multiple_macros(base_app):
+    macro1 = 'h1'
+    macro2 = 'h2'
+    run_cmd(base_app, 'macro create {} help'.format(macro1))
+    run_cmd(base_app, 'macro create {} help -v'.format(macro2))
+    out = run_cmd(base_app, macro1)
+    expected = normalize(BASE_HELP)
+    assert out == expected
+
+    out = run_cmd(base_app, macro2)
+    expected = normalize(BASE_HELP_VERBOSE)
+    assert out == expected
+
+def test_nonexistent_macro(base_app, capsys):
+    from cmd2.parsing import StatementParser
+    exception = None
+
+    try:
+        base_app._run_macro(StatementParser().parse('fake'))
+    except KeyError as e:
+        exception = e
+
+    assert exception is not None
 
 
 def test_ppaged(base_app):
@@ -1985,8 +2192,8 @@ def test_bad_history_file_path(capsys, request):
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
-    expected_commands = ['_relative_load', 'alias', 'edit', 'eof', 'eos', 'help', 'history', 'load', 'py', 'pyscript',
-                         'quit', 'set', 'shell', 'shortcuts', 'unalias']
+    expected_commands = ['_relative_load', 'alias', 'edit', 'eof', 'eos', 'help', 'history', 'load', 'macro',
+                         'py', 'pyscript', 'quit', 'set', 'shell', 'shortcuts']
     assert commands == expected_commands
 
 def test_get_help_topics(base_app):

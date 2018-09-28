@@ -14,6 +14,55 @@ from . import utils
 
 
 @attr.s(frozen=True)
+class MacroArg:
+    """
+    Information used to replace or unescape arguments in a macro value when the macro is resolved
+    Normal argument syntax  : {5}
+    Escaped argument syntax: {{5}}
+    """
+    # The starting index of this argument in the macro value
+    start_index = attr.ib(validator=attr.validators.instance_of(int))
+
+    # The number string that appears between the braces
+    # This is a string instead of an int because we support unicode digits and must be able
+    # to reproduce this string later
+    number_str = attr.ib(validator=attr.validators.instance_of(str))
+
+    # Tells if this argument is escaped and therefore needs to be unescaped
+    is_escaped = attr.ib(validator=attr.validators.instance_of(bool))
+
+    # Pattern used to find normal argument
+    # Digits surrounded by exactly 1 brace on a side and 1 or more braces on the opposite side
+    # Match strings like: {5}, {{{{{4}, {2}}}}}
+    macro_normal_arg_pattern = re.compile(r'(?<!{){\d+}|{\d+}(?!})')
+
+    # Pattern used to find escaped arguments
+    # Digits surrounded by 2 or more braces on both sides
+    # Match strings like: {{5}}, {{{{{4}}, {{2}}}}}
+    macro_escaped_arg_pattern = re.compile(r'{{2}\d+}{2}')
+
+    # Finds a string of digits
+    digit_pattern = re.compile(r'\d+')
+
+
+@attr.s(frozen=True)
+class Macro:
+    """Defines a cmd2 macro"""
+
+    # Name of the macro
+    name = attr.ib(validator=attr.validators.instance_of(str))
+
+    # The string the macro resolves to
+    value = attr.ib(validator=attr.validators.instance_of(str))
+
+    # The required number of args the user has to pass to this macro
+    required_arg_count = attr.ib(validator=attr.validators.instance_of(int))
+
+    # Used to fill in argument placeholders in the macro
+    arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
+
+
+@attr.s(frozen=True)
 class Statement(str):
     """String subclass with additional attributes to store the results of parsing.
 
@@ -247,23 +296,33 @@ class StatementParser:
         self._command_pattern = re.compile(expr)
 
     def is_valid_command(self, word: str) -> Tuple[bool, str]:
-        """Determine whether a word is a valid alias.
+        """Determine whether a word is a valid name for a command.
 
-        Aliases can not include redirection characters, whitespace,
-        or termination characters.
+        Commands can not include redirection characters, whitespace,
+        or termination characters. They also cannot start with a
+        shortcut.
 
-        If word is not a valid command, return False and a comma
-        separated string of characters that can not appear in a command.
+        If word is not a valid command, return False and error text
         This string is suitable for inclusion in an error message of your
         choice:
 
-        valid, invalidchars = statement_parser.is_valid_command('>')
+        valid, errmsg = statement_parser.is_valid_command('>')
         if not valid:
-            errmsg = "Aliases can not contain: {}".format(invalidchars)
+            errmsg = "Alias {}".format(errmsg)
         """
         valid = False
 
-        errmsg = 'whitespace, quotes, '
+        if not word:
+            return False, 'cannot be an empty string'
+
+        for (shortcut, _) in self.shortcuts:
+            if word.startswith(shortcut):
+                # Build an error string with all shortcuts listed
+                errmsg = 'cannot start with a shortcut: '
+                errmsg += ', '.join(shortcut for (shortcut, _) in self.shortcuts)
+                return False, errmsg
+
+        errmsg = 'cannot contain: whitespace, quotes, '
         errchars = []
         errchars.extend(constants.REDIRECTION_CHARS)
         errchars.extend(self.terminators)

@@ -48,7 +48,7 @@ from . import utils
 from . import plugin
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .parsing import StatementParser, Statement
+from .parsing import StatementParser, Statement, Macro, MacroArg
 
 # Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
@@ -105,9 +105,9 @@ except ImportError:
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
-    from contextlib2 import redirect_stdout, redirect_stderr
+    from contextlib2 import redirect_stdout
 else:
-    from contextlib import redirect_stdout, redirect_stderr
+    from contextlib import redirect_stdout
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
@@ -121,6 +121,9 @@ except ImportError:  # pragma: no cover
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
 HELP_CATEGORY = 'help_category'
 HELP_SUMMARY = 'help_summary'
+
+# All command functions start with this
+COMMAND_PREFIX = 'do_'
 
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
@@ -138,19 +141,21 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
         setattr(func, HELP_CATEGORY, category)
 
 
-def parse_quoted_string(cmdline: str) -> List[str]:
-    """Parse a quoted string into a list of arguments."""
-    if isinstance(cmdline, list):
+def parse_quoted_string(string: str, preserve_quotes: bool) -> List[str]:
+    """
+    Parse a quoted string into a list of arguments
+    :param string: the string being parsed
+    :param preserve_quotes: if True, then quotes will not be stripped
+    """
+    if isinstance(string, list):
         # arguments are already a list, return the list we were passed
-        lexed_arglist = cmdline
+        lexed_arglist = string
     else:
         # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(cmdline, posix=False)
-        # strip off outer quotes for convenience
-        temp_arglist = []
-        for arg in lexed_arglist:
-            temp_arglist.append(utils.strip_quotes(arg))
-        lexed_arglist = temp_arglist
+        lexed_arglist = shlex.split(string, posix=False)
+
+        if not preserve_quotes:
+            lexed_arglist = [utils.strip_quotes(arg) for arg in lexed_arglist]
     return lexed_arglist
 
 
@@ -162,7 +167,7 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 
-def with_argument_list(func: Callable) -> Callable:
+def with_argument_list(func: Callable, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter the arguments passed to a do_* cmd2
     method. Default passes a string of whatever the user typed.
     With this decorator, the decorated method will receive a list
@@ -171,18 +176,19 @@ def with_argument_list(func: Callable) -> Callable:
 
     @functools.wraps(func)
     def cmd_wrapper(self, cmdline):
-        lexed_arglist = parse_quoted_string(cmdline)
+        lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
         return func(self, lexed_arglist)
 
     cmd_wrapper.__doc__ = func.__doc__
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Callable:
+def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: given instance of ArgumentParser
+    :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
     :return: function that gets passed parsed args and a list of unknown args
     """
     import functools
@@ -191,7 +197,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline)
+            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
             try:
                 args, unknown = argparser.parse_known_args(lexed_arglist)
             except SystemExit:
@@ -220,11 +226,12 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser) -> Calla
     return arg_decorator
 
 
-def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
+def with_argparser(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> Callable:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: given instance of ArgumentParser
+    :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
     :return: function that gets passed parsed args
     """
     import functools
@@ -233,7 +240,7 @@ def with_argparser(argparser: argparse.ArgumentParser) -> Callable:
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline)
+            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
             try:
                 args = argparser.parse_args(lexed_arglist)
             except SystemExit:
@@ -385,8 +392,9 @@ class Cmd(cmd.Cmd):
         # Commands to exclude from the history command
         self.exclude_from_history = '''history edit eof eos'''.split()
 
-        # Command aliases
+        # Command aliases and macros
         self.aliases = dict()
+        self.macros = dict()
 
         self._finalize_app_parameters()
 
@@ -395,7 +403,7 @@ class Cmd(cmd.Cmd):
         self.pystate = {}
         self.py_history = []
         self.pyscript_name = 'app'
-        self.keywords = self.reserved_words + [fname[3:] for fname in dir(self) if fname.startswith('do_')]
+        self.keywords = self.reserved_words + self.get_all_commands()
         self.statement_parser = StatementParser(
             allow_redirection=self.allow_redirection,
             terminators=self.terminators,
@@ -1466,17 +1474,20 @@ class Cmd(cmd.Cmd):
                 # Check if a valid command was entered
                 if command in self.get_all_commands():
                     # Get the completer function for this command
-                    try:
-                        compfunc = getattr(self, 'complete_' + command)
-                    except AttributeError:
+                    compfunc = getattr(self, 'complete_' + command, None)
+
+                    if compfunc is None:
                         # There's no completer function, next see if the command uses argparser
-                        try:
-                            cmd_func = getattr(self, 'do_' + command)
-                            argparser = getattr(cmd_func, 'argparser')
-                            # Command uses argparser, switch to the default argparse completer
-                            compfunc = functools.partial(self._autocomplete_default, argparser=argparser)
-                        except AttributeError:
+                        func = self.cmd_func(command)
+                        if func and hasattr(func, 'argparser'):
+                            compfunc = functools.partial(self._autocomplete_default,
+                                                         argparser=getattr(func, 'argparser'))
+                        else:
                             compfunc = self.completedefault
+
+                # Check if a macro was entered
+                elif command in self.macros:
+                    compfunc = self.path_complete
 
                 # A valid command was not entered
                 else:
@@ -1545,11 +1556,9 @@ class Cmd(cmd.Cmd):
                             [shortcut_to_restore + match for match in self.completion_matches]
 
             else:
-                # Complete token against aliases and command names
-                alias_names = set(self.aliases.keys())
-                visible_commands = set(self.get_visible_commands())
-                strs_to_match = list(alias_names | visible_commands)
-                self.completion_matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
+                # Complete token against anything a user can run
+                self.completion_matches = self.basic_complete(text, line, begidx, endidx,
+                                                              self.get_commands_aliases_and_macros_for_completion())
 
             # Handle single result
             if len(self.completion_matches) == 1:
@@ -1589,8 +1598,8 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
-        return [name[3:] for name in self.get_names()
-                if name.startswith('do_') and callable(getattr(self, name))]
+        return [name[len(COMMAND_PREFIX):] for name in self.get_names()
+                if name.startswith(COMMAND_PREFIX) and callable(getattr(self, name))]
 
     def get_visible_commands(self) -> List[str]:
         """Returns a list of commands that have not been hidden."""
@@ -1602,6 +1611,21 @@ class Cmd(cmd.Cmd):
                 commands.remove(name)
 
         return commands
+
+    def get_alias_names(self) -> List[str]:
+        """Return a list of alias names."""
+        return list(self.aliases)
+
+    def get_macro_names(self) -> List[str]:
+        """Return a list of macro names."""
+        return list(self.macros)
+
+    def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
+        """Return a list of visible commands, aliases, and macros for tab completion"""
+        visible_commands = set(self.get_visible_commands())
+        alias_names = set(self.get_alias_names())
+        macro_names = set(self.get_macro_names())
+        return list(visible_commands | alias_names | macro_names)
 
     def get_help_topics(self) -> List[str]:
         """ Returns a list of help topics """
@@ -1641,13 +1665,10 @@ class Cmd(cmd.Cmd):
 
         # check if the command uses argparser
         elif index >= subcmd_index:
-            try:
-                cmd_func = getattr(self, 'do_' + tokens[cmd_index])
-                parser = getattr(cmd_func, 'argparser')
-                completer = AutoCompleter(parser, cmd2_app=self)
+            func = self.cmd_func(tokens[cmd_index])
+            if func and hasattr(func, 'argparser'):
+                completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
                 matches = completer.complete_command_help(tokens[1:], text, line, begidx, endidx)
-            except AttributeError:
-                pass
 
         return matches
 
@@ -1981,19 +2002,25 @@ class Cmd(cmd.Cmd):
 
         self.redirecting = False
 
-    def _func_named(self, arg: str) -> str:
-        """Gets the method name associated with a given command.
+    def cmd_func(self, command: str) -> Optional[Callable]:
+        """
+        Get the function for a command
+        :param command: the name of the command
+        """
+        func_name = self.cmd_func_name(command)
+        if func_name:
+            return getattr(self, func_name)
 
-        :param arg: command to look up method name which implements it
+    def cmd_func_name(self, command: str) -> str:
+        """Get the method name associated with a given command.
+
+        :param command: command to look up method name which implements it
         :return: method name which implements the given command
         """
-        result = None
-        target = 'do_' + arg
-        if target in dir(self):
-            result = target
-        return result
+        target = COMMAND_PREFIX + command
+        return target if callable(getattr(self, target, None)) else ''
 
-    def onecmd(self, statement: Union[Statement, str]) -> Optional[bool]:
+    def onecmd(self, statement: Union[Statement, str]) -> bool:
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes _default() instead.
@@ -2006,23 +2033,59 @@ class Cmd(cmd.Cmd):
         if not isinstance(statement, Statement):
             statement = self._complete_statement(statement)
 
-        funcname = self._func_named(statement.command)
-        if not funcname:
-            self.default(statement)
-            return
+        # Check if this is a macro
+        if statement.command in self.macros:
+            stop = self._run_macro(statement)
+        else:
+            func = self.cmd_func(statement.command)
+            if func:
+                stop = func(statement)
 
-        # Since we have a valid command store it in the history
-        if statement.command not in self.exclude_from_history:
-            self.history.append(statement.raw)
+                # Since we have a valid command store it in the history
+                if statement.command not in self.exclude_from_history:
+                    self.history.append(statement.raw)
 
-        try:
-            func = getattr(self, funcname)
-        except AttributeError:
-            self.default(statement)
-            return
+            else:
+                self.default(statement)
+                stop = False
 
-        stop = func(statement)
         return stop
+
+    def _run_macro(self, statement: Statement) -> bool:
+        """
+        Resolve a macro and run the resulting string
+
+        :param statement: the parsed statement from the command line
+        :return: a flag indicating whether the interpretation of commands should stop
+        """
+        if statement.command not in self.macros.keys():
+            raise KeyError('{} is not a macro'.format(statement.command))
+
+        macro = self.macros[statement.command]
+
+        # For macros, every argument must be provided and there can be no extra arguments.
+        if len(statement.arg_list) != macro.required_arg_count:
+            self.perror("The macro '{}' expects {} argument(s)".format(statement.command, macro.required_arg_count),
+                        traceback_war=False)
+            return False
+
+        # Resolve the arguments in reverse
+        resolved = macro.value
+        reverse_arg_list = sorted(macro.arg_list, key=lambda ma: ma.start_index, reverse=True)
+
+        for arg in reverse_arg_list:
+            if arg.is_escaped:
+                to_replace = '{{' + arg.number_str + '}}'
+                replacement = '{' + arg.number_str + '}'
+            else:
+                to_replace = '{' + arg.number_str + '}'
+                replacement = statement.argv[int(arg.number_str)]
+
+            parts = resolved.rsplit(to_replace, maxsplit=1)
+            resolved = parts[0] + replacement + parts[1]
+
+        # Run the resolved command
+        return self.onecmd_plus_hooks(resolved)
 
     def default(self, statement: Statement) -> None:
         """Executed when the command given isn't a recognized command implemented by a do_* method.
@@ -2176,120 +2239,353 @@ class Cmd(cmd.Cmd):
 
             return stop
 
-    def do_alias(self, statement: Statement) -> None:
-        """Define or display aliases
+    # -----  Alias subcommand functions -----
 
-    Usage: alias [name] | [<name> <value>]
-    Where:
-        name - name of the alias being looked up, added, or replaced
-        value - what the alias will be resolved to (if adding or replacing)
-                this can contain spaces and does not need to be quoted
+    def alias_create(self, args: argparse.Namespace):
+        """ Creates or overwrites an alias """
 
-    Without arguments, 'alias' prints a list of all aliases in a reusable form which
-    can be outputted to a startup_script to preserve aliases across sessions.
-
-    With one argument, 'alias' shows the value of the specified alias.
-    Example: alias ls  (Prints the value of the alias called 'ls' if it exists)
-
-    With two or more arguments, 'alias' creates or replaces an alias.
-
-    Example: alias ls !ls -lF
-
-    If you want to use redirection or pipes in the alias, then quote them to prevent
-    the alias command itself from being redirected
-
-    Examples:
-        alias save_results print_results ">" out.txt
-        alias save_results print_results '>' out.txt
-"""
-        # Get alias arguments as a list with quotes preserved
-        alias_arg_list = statement.arg_list
-
-        # If no args were given, then print a list of current aliases
-        if not alias_arg_list:
-            sorted_aliases = utils.alphabetical_sort(list(self.aliases))
-            for cur_alias in sorted_aliases:
-                self.poutput("alias {} {}".format(cur_alias, self.aliases[cur_alias]))
+        # Validate the alias name
+        args.name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
+        if not valid:
+            errmsg = "Invalid alias name: {}".format(errmsg)
+            self.perror(errmsg, traceback_war=False)
             return
 
-        # Get the alias name
-        name = alias_arg_list[0]
+        if args.name in self.macros:
+            errmsg = "Alias cannot have the same name as a macro"
+            self.perror(errmsg, traceback_war=False)
+            return
 
-        # The user is looking up an alias
-        if len(alias_arg_list) == 1:
-            if name in self.aliases:
-                self.poutput("alias {} {}".format(name, self.aliases[name]))
-            else:
-                self.perror("Alias {!r} not found".format(name), traceback_war=False)
+        utils.unquote_redirection_tokens(args.command_args)
 
-        # The user is creating an alias
-        else:
-            # Unquote redirection and pipes
-            index = 1
-            while index < len(alias_arg_list):
-                unquoted_arg = utils.strip_quotes(alias_arg_list[index])
-                if unquoted_arg in constants.REDIRECTION_TOKENS:
-                    alias_arg_list[index] = unquoted_arg
-                index += 1
+        # Build the alias value string
+        value = args.command
+        if args.command_args:
+            value += ' ' + ' '.join(args.command_args)
 
-            # Build the alias value string
-            value = ' '.join(alias_arg_list[1:])
+        # Set the alias
+        result = "overwritten" if args.name in self.aliases else "created"
+        self.aliases[args.name] = value
+        self.poutput("Alias '{}' {}".format(args.name, result))
 
-            # Validate the alias to ensure it doesn't include weird characters
-            # like terminators, output redirection, or whitespace
-            valid, invalidchars = self.statement_parser.is_valid_command(name)
-            if valid:
-                # Set the alias
-                self.aliases[name] = value
-                self.poutput("Alias {!r} created".format(name))
-            else:
-                errmsg = "Aliases can not contain: {}".format(invalidchars)
-                self.perror(errmsg, traceback_war=False)
-
-    def complete_alias(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """ Tab completion for alias """
-        alias_names = set(self.aliases.keys())
-        visible_commands = set(self.get_visible_commands())
-
-        index_dict = \
-            {
-                1: alias_names,
-                2: list(alias_names | visible_commands)
-            }
-        return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
-
-    @with_argument_list
-    def do_unalias(self, arglist: List[str]) -> None:
-        """Unsets aliases
-
-    Usage: unalias [-a] name [name ...]
-    Where:
-        name - name of the alias being unset
-
-    Options:
-        -a     remove all alias definitions
-"""
-        if not arglist:
-            self.do_help(['unalias'])
-
-        if '-a' in arglist:
+    def alias_delete(self, args: argparse.Namespace):
+        """ Deletes aliases """
+        if args.all:
             self.aliases.clear()
-            self.poutput("All aliases cleared")
-
+            self.poutput("All aliases deleted")
+        elif not args.name:
+            self.do_help(['alias', 'delete'])
         else:
-            # Get rid of duplicates
-            arglist = utils.remove_duplicates(arglist)
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
+            aliases_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
 
-            for cur_arg in arglist:
-                if cur_arg in self.aliases:
-                    del self.aliases[cur_arg]
-                    self.poutput("Alias {!r} cleared".format(cur_arg))
+            for cur_name in aliases_to_delete:
+                if cur_name in self.aliases:
+                    del self.aliases[cur_name]
+                    self.poutput("Alias '{}' deleted".format(cur_name))
                 else:
-                    self.perror("Alias {!r} does not exist".format(cur_arg), traceback_war=False)
+                    self.perror("Alias '{}' does not exist".format(cur_name), traceback_war=False)
 
-    def complete_unalias(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """ Tab completion for unalias """
-        return self.basic_complete(text, line, begidx, endidx, self.aliases)
+    def alias_list(self, args: argparse.Namespace):
+        """ Lists some or all aliases """
+        if args.name:
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
+            names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
+
+            for cur_name in names_to_view:
+                if cur_name in self.aliases:
+                    self.poutput("alias create {} {}".format(cur_name, self.aliases[cur_name]))
+                else:
+                    self.perror("Alias '{}' not found".format(cur_name), traceback_war=False)
+        else:
+            sorted_aliases = utils.alphabetical_sort(self.aliases)
+            for cur_alias in sorted_aliases:
+                self.poutput("alias create {} {}".format(cur_alias, self.aliases[cur_alias]))
+
+    # Top-level parser for alias
+    alias_description = ("Manage aliases\n"
+                         "\n"
+                         "An alias is a command that enables replacement of a word by another string.")
+    alias_epilog = ("See also:\n"
+                    "  macro")
+    alias_parser = ACArgumentParser(description=alias_description, epilog=alias_epilog, prog='alias')
+
+    # Add subcommands to alias
+    alias_subparsers = alias_parser.add_subparsers()
+
+    # alias -> create
+    alias_create_help = "create or overwrite an alias"
+    alias_create_description = "Create or overwrite an alias"
+
+    alias_create_epilog = ("Notes:\n"
+                           "  If you want to use redirection or pipes in the alias, then quote them to\n"
+                           "  prevent the 'alias create' command from being redirected.\n"
+                           "\n"
+                           "  Since aliases are resolved during parsing, tab completion will function as it\n"
+                           "  would for the actual command the alias resolves to.\n"
+                           "\n"
+                           "Examples:\n"
+                           "  alias ls !ls -lF\n"
+                           "  alias create show_log !cat \"log file.txt\"\n"
+                           "  alias create save_results print_results \">\" out.txt\n")
+
+    alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_help,
+                                                      description=alias_create_description,
+                                                      epilog=alias_create_epilog)
+    alias_create_parser.add_argument('name', help='name of this alias')
+    setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
+            ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
+    setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
+                                             help='arguments being passed to command'),
+            ACTION_ARG_CHOICES, ('path_complete',))
+    alias_create_parser.set_defaults(func=alias_create)
+
+    # alias -> delete
+    alias_delete_help = "delete aliases"
+    alias_delete_description = "Delete specified aliases or all aliases if --all is used"
+    alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
+                                                      description=alias_delete_description)
+    setattr(alias_delete_parser.add_argument('name', nargs='*', help='alias to delete'),
+            ACTION_ARG_CHOICES, get_alias_names)
+    alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
+    alias_delete_parser.set_defaults(func=alias_delete)
+
+    # alias -> list
+    alias_list_help = "list aliases"
+    alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup script\n"
+                              "to preserve aliases across sessions\n"
+                              "\n"
+                              "Without arguments, all aliases will be listed.")
+
+    alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
+                                                    description=alias_list_description)
+    setattr(alias_list_parser.add_argument('name', nargs="*", help='alias to list'),
+            ACTION_ARG_CHOICES, get_alias_names)
+    alias_list_parser.set_defaults(func=alias_list)
+
+    # Preserve quotes since we are passing strings to other commands
+    @with_argparser(alias_parser, preserve_quotes=True)
+    def do_alias(self, args: argparse.Namespace):
+        """Manage aliases"""
+        func = getattr(args, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, args)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help(['alias'])
+
+    # -----  Macro subcommand functions -----
+
+    def macro_create(self, args: argparse.Namespace):
+        """ Creates or overwrites a macro """
+
+        # Validate the macro name
+        args.name = utils.strip_quotes(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
+        if not valid:
+            errmsg = "Invalid macro name: {}".format(errmsg)
+            self.perror(errmsg, traceback_war=False)
+            return
+
+        if args.name in self.get_all_commands():
+            errmsg = "Macro cannot have the same name as a command"
+            self.perror(errmsg, traceback_war=False)
+            return
+
+        if args.name in self.aliases:
+            errmsg = "Macro cannot have the same name as an alias"
+            self.perror(errmsg, traceback_war=False)
+            return
+
+        utils.unquote_redirection_tokens(args.command_args)
+
+        # Build the macro value string
+        value = args.command
+        if args.command_args:
+            value += ' ' + ' '.join(args.command_args)
+
+        # Find all normal arguments
+        arg_list = []
+        normal_matches = re.finditer(MacroArg.macro_normal_arg_pattern, value)
+        max_arg_num = 0
+        arg_nums = set()
+
+        while True:
+            try:
+                cur_match = normal_matches.__next__()
+
+                # Get the number string between the braces
+                cur_num_str = (re.findall(MacroArg.digit_pattern, cur_match.group())[0])
+                cur_num = int(cur_num_str)
+                if cur_num < 1:
+                    self.perror("Argument numbers must be greater than 0", traceback_war=False)
+                    return
+
+                arg_nums.add(cur_num)
+                if cur_num > max_arg_num:
+                    max_arg_num = cur_num
+
+                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=False))
+
+            except StopIteration:
+                break
+
+        # Make sure the argument numbers are continuous
+        if len(arg_nums) != max_arg_num:
+            self.perror("Not all numbers between 1 and {} are present "
+                        "in the argument placeholders".format(max_arg_num), traceback_war=False)
+            return
+
+        # Find all escaped arguments
+        escaped_matches = re.finditer(MacroArg.macro_escaped_arg_pattern, value)
+
+        while True:
+            try:
+                cur_match = escaped_matches.__next__()
+
+                # Get the number string between the braces
+                cur_num_str = re.findall(MacroArg.digit_pattern, cur_match.group())[0]
+
+                arg_list.append(MacroArg(start_index=cur_match.start(), number_str=cur_num_str, is_escaped=True))
+            except StopIteration:
+                break
+
+        # Set the macro
+        result = "overwritten" if args.name in self.macros else "created"
+        self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
+        self.poutput("Macro '{}' {}".format(args.name, result))
+
+    def macro_delete(self, args: argparse.Namespace):
+        """ Deletes macros """
+        if args.all:
+            self.macros.clear()
+            self.poutput("All macros deleted")
+        elif not args.name:
+            self.do_help(['macro', 'delete'])
+        else:
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
+            macros_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
+
+            for cur_name in macros_to_delete:
+                if cur_name in self.macros:
+                    del self.macros[cur_name]
+                    self.poutput("Macro '{}' deleted".format(cur_name))
+                else:
+                    self.perror("Macro '{}' does not exist".format(cur_name), traceback_war=False)
+
+    def macro_list(self, args: argparse.Namespace):
+        """ Lists some or all macros """
+        if args.name:
+            # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
+            names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
+
+            for cur_name in names_to_view:
+                if cur_name in self.macros:
+                    self.poutput("macro create {} {}".format(cur_name, self.macros[cur_name].value))
+                else:
+                    self.perror("Macro '{}' not found".format(cur_name), traceback_war=False)
+        else:
+            sorted_macros = utils.alphabetical_sort(self.macros)
+            for cur_macro in sorted_macros:
+                self.poutput("macro create {} {}".format(cur_macro, self.macros[cur_macro].value))
+
+    # Top-level parser for macro
+    macro_description = ("Manage macros\n"
+                         "\n"
+                         "A macro is similar to an alias, but it can take arguments when called.")
+    macro_epilog = ("See also:\n"
+                    "  alias")
+    macro_parser = ACArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
+
+    # Add subcommands to macro
+    macro_subparsers = macro_parser.add_subparsers()
+
+    # macro -> create
+    macro_create_help = "create or overwrite a macro"
+    macro_create_description = "Create or overwrite a macro"
+
+    macro_create_epilog = ("A macro is similar to an alias, but it can take arguments when called.\n"
+                           "Arguments are expressed when creating a macro using {#} notation where {1}\n"
+                           "means the first argument.\n"
+                           "\n"
+                           "The following creates a macro called my_macro that expects two arguments:\n"
+                           "\n"
+                           "  macro create my_macro make_dinner -meat {1} -veggie {2}\n"
+                           "\n"
+                           "When the macro is called, the provided arguments are resolved and the assembled\n"
+                           "command is run. For example:\n"
+                           "\n"
+                           "  my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli\n"
+                           "\n"
+                           "Notes:\n"
+                           "  To use the literal string {1} in your command, escape it this way: {{1}}.\n"
+                           "\n"
+                           "  An argument number can be repeated in a macro. In the following example the\n"
+                           "  first argument will populate both {1} instances.\n"
+                           "\n"
+                           "    macro create ft file_taxes -p {1} -q {2} -r {1}\n"
+                           "\n"
+                           "  To quote an argument in the resolved command, quote it during creation.\n"
+                           "\n"
+                           "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
+                           "\n"
+                           "  Be careful! Since macros can resolve into commands, aliases, and macros,\n"
+                           "  it is possible to create a macro that results in infinite recursion.\n"
+                           "\n"
+                           "  If you want to use redirection or pipes in the macro, then quote them as in\n"
+                           "  this example to prevent the 'macro create' command from being redirected.\n"
+                           "\n"
+                           "    macro create show_results print_results -type {1} \"|\" less\n"
+                           "\n"
+                           "  Because macros do not resolve until after parsing (hitting Enter), tab\n"
+                           "  completion will only complete paths.")
+
+    macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
+                                                      description=macro_create_description,
+                                                      epilog=macro_create_epilog)
+    macro_create_parser.add_argument('name', help='name of this macro')
+    setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
+            ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
+    setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
+                                             help='arguments being passed to command'),
+            ACTION_ARG_CHOICES, ('path_complete',))
+    macro_create_parser.set_defaults(func=macro_create)
+
+    # macro -> delete
+    macro_delete_help = "delete macros"
+    macro_delete_description = "Delete specified macros or all macros if --all is used"
+    macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
+                                                      description=macro_delete_description)
+    setattr(macro_delete_parser.add_argument('name', nargs='*', help='macro to delete'),
+            ACTION_ARG_CHOICES, get_macro_names)
+    macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
+    macro_delete_parser.set_defaults(func=macro_delete)
+
+    # macro -> list
+    macro_list_help = "list macros"
+    macro_list_description = ("List specified macros in a reusable form that can be saved to a startup script\n"
+                              "to preserve macros across sessions\n"
+                              "\n"
+                              "Without arguments, all macros will be listed.")
+
+    macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
+    setattr(macro_list_parser.add_argument('name', nargs="*", help='macro to list'),
+            ACTION_ARG_CHOICES, get_macro_names)
+    macro_list_parser.set_defaults(func=macro_list)
+
+    # Preserve quotes since we are passing strings to other commands
+    @with_argparser(macro_parser, preserve_quotes=True)
+    def do_macro(self, args: argparse.Namespace):
+        """Manage macros"""
+        func = getattr(args, 'func', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(self, args)
+        else:
+            # No subcommand was provided, so call help
+            self.do_help(['macro'])
 
     @with_argument_list
     def do_help(self, arglist: List[str]) -> None:
@@ -2299,20 +2595,13 @@ class Cmd(cmd.Cmd):
             self._help_menu(verbose)
         else:
             # Getting help for a specific command
-            funcname = self._func_named(arglist[0])
-            if funcname:
-                # Check to see if this function was decorated with an argparse ArgumentParser
-                func = getattr(self, funcname)
-                if hasattr(func, 'argparser'):
-                    completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
-
-                    self.poutput(completer.format_help(arglist))
-                else:
-                    # No special behavior needed, delegate to cmd base class do_help()
-                    cmd.Cmd.do_help(self, funcname[3:])
+            func = self.cmd_func(arglist[0])
+            if func and hasattr(func, 'argparser'):
+                completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
+                self.poutput(completer.format_help(arglist))
             else:
-                # This could be a help topic
-                cmd.Cmd.do_help(self, arglist[0])
+                # No special behavior needed, delegate to cmd base class do_help()
+                super().do_help(arglist[0])
 
     def _help_menu(self, verbose: bool=False) -> None:
         """Show a list of commands which help can be displayed for.
@@ -2328,11 +2617,12 @@ class Cmd(cmd.Cmd):
         cmds_cats = {}
 
         for command in visible_commands:
-            if command in help_topics or getattr(self, self._func_named(command)).__doc__:
+            func = self.cmd_func(command)
+            if command in help_topics or func.__doc__:
                 if command in help_topics:
                     help_topics.remove(command)
-                if hasattr(getattr(self, self._func_named(command)), HELP_CATEGORY):
-                    category = getattr(getattr(self, self._func_named(command)), HELP_CATEGORY)
+                if hasattr(func, HELP_CATEGORY):
+                    category = getattr(func, HELP_CATEGORY)
                     cmds_cats.setdefault(category, [])
                     cmds_cats[category].append(command)
                 else:
@@ -2385,12 +2675,13 @@ class Cmd(cmd.Cmd):
                         func = getattr(self, 'help_' + command)
                     except AttributeError:
                         # Couldn't find a help function
+                        func = self.cmd_func(command)
                         try:
                             # Now see if help_summary has been set
-                            doc = getattr(self, self._func_named(command)).help_summary
+                            doc = func.help_summary
                         except AttributeError:
                             # Last, try to directly access the function's doc-string
-                            doc = getattr(self, self._func_named(command)).__doc__
+                            doc = func.__doc__
                     else:
                         # we found the help function
                         result = io.StringIO()
@@ -2527,10 +2818,10 @@ class Cmd(cmd.Cmd):
         else:
             raise LookupError("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
 
-    set_description = "Sets a settable parameter or shows current settings of parameters.\n"
-    set_description += "\n"
-    set_description += "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
-    set_description += "Call without arguments for a list of settable parameters with their values."
+    set_description = ("Sets a settable parameter or shows current settings of parameters.\n"
+                       "\n"
+                       "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
+                       "Call without arguments for a list of settable parameters with their values.")
 
     set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')

@@ -6,7 +6,7 @@ import collections
 import os
 import re
 import unicodedata
-from typing import Any, List, Optional, Union
+from typing import Any, Iterable, List, Optional, Union
 
 from . import constants
 
@@ -194,7 +194,7 @@ def norm_fold(astr: str) -> str:
     return unicodedata.normalize('NFC', astr).casefold()
 
 
-def alphabetical_sort(list_to_sort: List[str]) -> List[str]:
+def alphabetical_sort(list_to_sort: Iterable[str]) -> List[str]:
     """Sorts a list of strings alphabetically.
 
     For example: ['a1', 'A11', 'A2', 'a22', 'a3']
@@ -229,10 +229,10 @@ def natural_keys(input_str: str) -> List[Union[int, str]]:
     :param input_str: string to convert
     :return: list of strings and integers
     """
-    return [try_int_or_force_to_lower_case(substr) for substr in re.split('(\d+)', input_str)]
+    return [try_int_or_force_to_lower_case(substr) for substr in re.split(r'(\d+)', input_str)]
 
 
-def natural_sort(list_to_sort: List[str]) -> List[str]:
+def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
     """
     Sorts a list of strings case insensitively as well as numerically.
 
@@ -304,3 +304,15 @@ class StdSim(object):
             return self.__dict__[item]
         else:
             return getattr(self.inner_stream, item)
+
+
+def unquote_redirection_tokens(args: List[str]) -> None:
+    """
+    Unquote redirection tokens in a list of command-line arguments
+    This is used when redirection tokens have to be passed to another command
+    :param args: the command line args
+    """
+    for i, arg in enumerate(args):
+        unquoted_arg = strip_quotes(arg)
+        if unquoted_arg in constants.REDIRECTION_TOKENS:
+            args[i] = unquoted_arg

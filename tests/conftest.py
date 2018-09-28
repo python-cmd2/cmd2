@@ -29,29 +29,29 @@ except ImportError:
 # Help text for base cmd2.Cmd application
 BASE_HELP = """Documented commands (type help <topic>):
 ========================================
-alias  help     load  pyscript  set    shortcuts
-edit   history  py    quit      shell  unalias
+alias  help     load   py        quit  shell    
+edit   history  macro  pyscript  set   shortcuts
 """
 
 BASE_HELP_VERBOSE = """
 Documented commands (type help <topic>):
 ================================================================================
-alias               Define or display aliases
+alias               Manage aliases
 edit                Edit a file in a text editor
 help                List available commands with "help" or detailed help with "help cmd"
 history             View, run, edit, save, or clear previously entered commands
 load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
+macro               Manage macros
 py                  Invoke python command, shell, or script
 pyscript            Runs a python script file inside the console
 quit                Exits this application
 set                 Sets a settable parameter or shows current settings of parameters
 shell               Execute a command as if at the OS prompt
 shortcuts           Lists shortcuts available
-unalias             Unsets aliases
 """
 
 # Help text for the history command
-HELP_HISTORY = """Usage: history [arg] [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT | -c]
+HELP_HISTORY = """Usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT | -c] [arg]
 
 View, run, edit, save, or clear previously entered commands
 
@@ -160,11 +160,8 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Opti
     def get_endidx():
         return endidx
 
-    first_match = None
+    # Run the readline tab-completion function with readline mocks in place
     with mock.patch.object(readline, 'get_line_buffer', get_line):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
-                # Run the readline tab-completion function with readline mocks in place
-                first_match = app.complete(text, 0)
-
-    return first_match
+                return app.complete(text, 0)

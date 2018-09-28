@@ -210,7 +210,7 @@ def test_pyscript_results(ps_app, capsys, request, pyscript_file, exp_out):
 
 
 @pytest.mark.parametrize('expected, pyscript_file', [
-    ("['_relative_load', 'alias', 'bar', 'cmd_echo', 'edit', 'eof', 'eos', 'foo', 'help', 'history', 'load', 'media', 'py', 'pyscript', 'quit', 'set', 'shell', 'shortcuts', 'unalias']",
+    ("['_relative_load', 'alias', 'bar', 'cmd_echo', 'edit', 'eof', 'eos', 'foo', 'help', 'history', 'load', 'macro', 'media', 'py', 'pyscript', 'quit', 'set', 'shell', 'shortcuts']",
      'pyscript_dir1.py'),
     ("['movies', 'shows']", 'pyscript_dir2.py')
 ])
