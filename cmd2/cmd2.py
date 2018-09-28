@@ -105,9 +105,9 @@ except ImportError:
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
-    from contextlib2 import redirect_stdout, redirect_stderr
+    from contextlib2 import redirect_stdout
 else:
-    from contextlib import redirect_stdout, redirect_stderr
+    from contextlib import redirect_stdout
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
