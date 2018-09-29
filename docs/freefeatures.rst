@@ -174,13 +174,9 @@ More Python examples:
     Type "help", "copyright", "credits" or "license" for more information.
     (CmdLineApp)
 
-        Invoke python command, shell, or script
-
-        py <command>: Executes a Python command.
-        py: Enters interactive Python mode.
-        End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
-        Non-python commands can be issued with ``app("your command")``.
-        Run python code from external script files with ``run("script.py")``
+    End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.
+    Non-python commands can be issued with: app("your command")
+    Run python code from external script files with: run("script.py")
 
     >>> import os
     >>> os.uname()

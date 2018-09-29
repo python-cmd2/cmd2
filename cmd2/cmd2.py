@@ -122,6 +122,10 @@ except ImportError:  # pragma: no cover
 HELP_CATEGORY = 'help_category'
 HELP_SUMMARY = 'help_summary'
 
+INTERNAL_COMMAND_EPILOG = ("Notes:\n"
+                           "  This command is for internal use and is not intended to be called from the\n"
+                           "  command line.")
+
 # All command functions start with this
 COMMAND_PREFIX = 'do_'
 
@@ -385,6 +389,10 @@ class Cmd(cmd.Cmd):
 
         # Call super class constructor
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
+
+        # Get rid of cmd's complete_help() functions so AutoCompleter will complete our help command
+        if getattr(cmd.Cmd, 'complete_help', None) is not None:
+            delattr(cmd.Cmd, 'complete_help')
 
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', 'eos', '_relative_load']
@@ -1632,46 +1640,6 @@ class Cmd(cmd.Cmd):
         return [name[5:] for name in self.get_names()
                 if name.startswith('help_') and callable(getattr(self, name))]
 
-    def complete_help(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """
-        Override of parent class method to handle tab completing subcommands and not showing hidden commands
-        Returns a list of possible tab completions
-        """
-
-        # The command is the token at index 1 in the command line
-        cmd_index = 1
-
-        # The subcommand is the token at index 2 in the command line
-        subcmd_index = 2
-
-        # Get all tokens through the one being completed
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if not tokens:
-            return []
-
-        matches = []
-
-        # Get the index of the token being completed
-        index = len(tokens) - 1
-
-        # Check if we are completing a command or help topic
-        if index == cmd_index:
-
-            # Complete token against topics and visible commands
-            topics = set(self.get_help_topics())
-            visible_commands = set(self.get_visible_commands())
-            strs_to_match = list(topics | visible_commands)
-            matches = self.basic_complete(text, line, begidx, endidx, strs_to_match)
-
-        # check if the command uses argparser
-        elif index >= subcmd_index:
-            func = self.cmd_func(tokens[cmd_index])
-            if func and hasattr(func, 'argparser'):
-                completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
-                matches = completer.complete_command_help(tokens[1:], text, line, begidx, endidx)
-
-        return matches
-
     # noinspection PyUnusedLocal
     def sigint_handler(self, signum: int, frame) -> None:
         """Signal handler for SIGINTs which typically come from Ctrl-C events.
@@ -2275,7 +2243,7 @@ class Cmd(cmd.Cmd):
             self.aliases.clear()
             self.poutput("All aliases deleted")
         elif not args.name:
-            self.do_help(['alias', 'delete'])
+            self.do_help('alias delete')
         else:
             # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
             aliases_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
@@ -2337,7 +2305,7 @@ class Cmd(cmd.Cmd):
     setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                             help='arguments being passed to command'),
+                                             help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     alias_create_parser.set_defaults(func=alias_create)
 
@@ -2374,7 +2342,7 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help(['alias'])
+            self.do_help('alias')
 
     # -----  Macro subcommand functions -----
 
@@ -2463,7 +2431,7 @@ class Cmd(cmd.Cmd):
             self.macros.clear()
             self.poutput("All macros deleted")
         elif not args.name:
-            self.do_help(['macro', 'delete'])
+            self.do_help('macro delete')
         else:
             # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
             macros_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
@@ -2549,7 +2517,7 @@ class Cmd(cmd.Cmd):
     setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
             ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
     setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                             help='arguments being passed to command'),
+                                             help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
     macro_create_parser.set_defaults(func=macro_create)
 
@@ -2585,23 +2553,77 @@ class Cmd(cmd.Cmd):
             func(self, args)
         else:
             # No subcommand was provided, so call help
-            self.do_help(['macro'])
+            self.do_help('macro')
 
-    @with_argument_list
-    def do_help(self, arglist: List[str]) -> None:
-        """ List available commands with "help" or detailed help with "help cmd" """
-        if not arglist or (len(arglist) == 1 and arglist[0] in ('--verbose', '-v')):
-            verbose = len(arglist) == 1 and arglist[0] in ('--verbose', '-v')
-            self._help_menu(verbose)
+    def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Completes the command argument of help"""
+
+        # Complete token against topics and visible commands
+        topics = set(self.get_help_topics())
+        visible_commands = set(self.get_visible_commands())
+        strs_to_match = list(topics | visible_commands)
+        return self.basic_complete(text, line, begidx, endidx, strs_to_match)
+
+    def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Completes the subcommand argument of help"""
+
+        # Get all tokens through the one being completed
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
+
+        if not tokens:
+            return []
+
+        # Must have at least 3 args for 'help command subcommand'
+        if len(tokens) < 3:
+            return []
+
+        # Find where the command is by skipping past any flags
+        cmd_index = 1
+        for cur_token in tokens[cmd_index:]:
+            if not cur_token.startswith('-'):
+                break
+            cmd_index += 1
+
+        if cmd_index >= len(tokens):
+            return []
+
+        command = tokens[cmd_index]
+        matches = []
+
+        # Check if this is a command with an argparse function
+        func = self.cmd_func(command)
+        if func and hasattr(func, 'argparser'):
+            completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
+            matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
+
+        return matches
+
+    help_parser = ACArgumentParser()
+
+    setattr(help_parser.add_argument('command', help="command to retrieve help for", nargs="?"),
+            ACTION_ARG_CHOICES, ('complete_help_command',))
+    setattr(help_parser.add_argument('subcommand', help="subcommand to retrieve help for",
+                                     nargs=argparse.REMAINDER),
+            ACTION_ARG_CHOICES, ('complete_help_subcommand',))
+    help_parser.add_argument('-v', '--verbose', action='store_true',
+                             help="print a list of all commands with descriptions of each")
+
+    @with_argparser(help_parser)
+    def do_help(self, args: argparse.Namespace) -> None:
+        """List available commands or provide detailed help for a specific command"""
+        if not args.command or args.verbose:
+            self._help_menu(args.verbose)
+
         else:
             # Getting help for a specific command
-            func = self.cmd_func(arglist[0])
+            func = self.cmd_func(args.command)
             if func and hasattr(func, 'argparser'):
                 completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
-                self.poutput(completer.format_help(arglist))
+                tokens = [args.command] + args.subcommand
+                self.poutput(completer.format_help(tokens))
             else:
                 # No special behavior needed, delegate to cmd base class do_help()
-                super().do_help(arglist[0])
+                super().do_help(args.command)
 
     def _help_menu(self, verbose: bool=False) -> None:
         """Show a list of commands which help can be displayed for.
@@ -2721,18 +2743,21 @@ class Cmd(cmd.Cmd):
                         command = ''
                 self.stdout.write("\n")
 
-    def do_shortcuts(self, _: str) -> None:
-        """Lists shortcuts available"""
+    @with_argparser(ACArgumentParser())
+    def do_shortcuts(self, _: argparse.Namespace) -> None:
+        """List available shortcuts"""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}\n".format(result))
 
-    def do_eof(self, _: str) -> bool:
+    @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
+    def do_eof(self, _: argparse.Namespace) -> bool:
         """Called when <Ctrl>-D is pressed"""
         # End of script should not exit app, but <Ctrl>-D should.
         return self._STOP_AND_EXIT
 
-    def do_quit(self, _: str) -> bool:
-        """Exits this application"""
+    @with_argparser(ACArgumentParser())
+    def do_quit(self, _: argparse.Namespace) -> bool:
+        """Exit this application"""
         self._should_quit = True
         return self._STOP_AND_EXIT
 
@@ -2818,7 +2843,7 @@ class Cmd(cmd.Cmd):
         else:
             raise LookupError("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
 
-    set_description = ("Sets a settable parameter or shows current settings of parameters.\n"
+    set_description = ("Set a settable parameter or show current settings of parameters\n"
                        "\n"
                        "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
                        "Call without arguments for a list of settable parameters with their values.")
@@ -2832,7 +2857,7 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(set_parser)
     def do_set(self, args: argparse.Namespace) -> None:
-        """Sets a settable parameter or shows current settings of parameters"""
+        """Set a settable parameter or show current settings of parameters"""
 
         # Check if param was passed in
         if not args.param:
@@ -2865,14 +2890,20 @@ class Cmd(cmd.Cmd):
             if onchange_hook is not None:
                 onchange_hook(old=current_value, new=value)
 
-    def do_shell(self, statement: Statement) -> None:
-        """Execute a command as if at the OS prompt
+    shell_parser = ACArgumentParser()
+    setattr(shell_parser.add_argument('command', help='the command to run'),
+            ACTION_ARG_CHOICES, ('shell_cmd_complete',))
+    setattr(shell_parser.add_argument('command_args', nargs=argparse.REMAINDER,
+                                      help='arguments to pass to command'),
+            ACTION_ARG_CHOICES, ('path_complete',))
 
-    Usage:  shell <command> [arguments]"""
+    @with_argparser(shell_parser, preserve_quotes=True)
+    def do_shell(self, args: argparse.Namespace) -> None:
+        """Execute a command as if at the OS prompt"""
         import subprocess
 
-        # Get list of arguments to shell with quotes preserved
-        tokens = statement.arg_list
+        # Create a list of arguments to shell
+        tokens = [args.command] + args.command_args
 
         # Support expanding ~ in quoted paths
         for index, _ in enumerate(tokens):
@@ -2892,18 +2923,6 @@ class Cmd(cmd.Cmd):
         expanded_command = ' '.join(tokens)
         proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
         proc.communicate()
-
-    def complete_shell(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Handles tab completion of executable commands and local file system paths for the shell command
-
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: the current input line with leading whitespace removed
-        :param begidx: the beginning index of the prefix text
-        :param endidx: the ending index of the prefix text
-        :return: a list of possible tab completions
-        """
-        index_dict = {1: self.shell_cmd_complete}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict, self.path_complete)
 
     @staticmethod
     def _reset_py_display() -> None:
@@ -2929,16 +2948,13 @@ class Cmd(cmd.Cmd):
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
-    def do_py(self, arg: str) -> bool:
-        """
-        Invoke python command, shell, or script
+    py_parser = ACArgumentParser()
+    py_parser.add_argument('command', help="command to run", nargs='?')
+    py_parser.add_argument('remainder', help="remainder of command", nargs=argparse.REMAINDER)
 
-        py <command>: Executes a Python command.
-        py: Enters interactive Python mode.
-        End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
-        Non-python commands can be issued with ``pyscript_name("your command")``.
-        Run python code from external script files with ``run("script.py")``
-        """
+    @with_argparser(py_parser)
+    def do_py(self, args: argparse.Namespace) -> bool:
+        """Invoke Python command or shell"""
         from .pyscript_bridge import PyscriptBridge, CommandResult
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
@@ -2949,19 +2965,18 @@ class Cmd(cmd.Cmd):
 
         # noinspection PyBroadException
         try:
-            arg = arg.strip()
-
             # Support the run command even if called prior to invoking an interactive interpreter
             def run(filename: str):
                 """Run a Python script file in the interactive console.
 
                 :param filename: filename of *.py script file to run
                 """
+                expanded_filename = os.path.expanduser(filename)
                 try:
-                    with open(filename) as f:
+                    with open(expanded_filename) as f:
                         interp.runcode(f.read())
                 except OSError as ex:
-                    error_msg = "Error opening script file '{}': {}".format(filename, ex)
+                    error_msg = "Error opening script file '{}': {}".format(expanded_filename, ex)
                     self.perror(error_msg, traceback_war=False)
 
             bridge = PyscriptBridge(self)
@@ -2976,8 +2991,12 @@ class Cmd(cmd.Cmd):
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
-            if arg:
-                interp.runcode(arg)
+            if args.command:
+                full_command = utils.quote_string_if_needed(args.command)
+                for cur_token in args.remainder:
+                    full_command += ' ' + utils.quote_string_if_needed(cur_token)
+
+                interp.runcode(full_command)
 
             # If there are no args, then we will open an interactive Python console
             else:
@@ -3042,11 +3061,14 @@ class Cmd(cmd.Cmd):
                 sys.stdin = self.stdin
 
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
-                docstr = self.do_py.__doc__.replace('pyscript_name', self.pyscript_name)
+                instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
+                                'Non-Python commands can be issued with: {}("your command")\n'
+                                'Run Python code from external script files with: run("script.py")'
+                                .format(self.pyscript_name))
 
                 try:
-                    interp.interact(banner="Python {} on {}\n{}\n({})\n{}".
-                                    format(sys.version, sys.platform, cprt, self.__class__.__name__, docstr))
+                    interp.interact(banner="Python {} on {}\n{}\n\n{}\n".
+                                    format(sys.version, sys.platform, cprt, instructions))
                 except EmbeddedConsoleExit:
                     pass
 
@@ -3087,30 +3109,22 @@ class Cmd(cmd.Cmd):
             self._in_py = False
         return self._should_quit
 
-    @with_argument_list
-    def do_pyscript(self, arglist: List[str]) -> None:
-        """\nRuns a python script file inside the console
+    pyscript_parser = ACArgumentParser()
+    setattr(pyscript_parser.add_argument('script_path', help='path to the script file'),
+            ACTION_ARG_CHOICES, ('path_complete',))
+    pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
+                                 help='arguments to pass to script')
 
-    Usage: pyscript <script_path> [script_arguments]
-
-Console commands can be executed inside this script with cmd("your command")
-However, you cannot run nested "py" or "pyscript" commands from within this script
-Paths or arguments that contain spaces must be enclosed in quotes
-"""
-        if not arglist:
-            self.perror("pyscript command requires at least 1 argument ...", traceback_war=False)
-            self.do_help(['pyscript'])
-            return
-
-        # Get the absolute path of the script
-        script_path = os.path.expanduser(arglist[0])
+    @with_argparser(pyscript_parser)
+    def do_pyscript(self, args: argparse.Namespace) -> None:
+        """Run a Python script file inside the console"""
+        script_path = os.path.expanduser(args.script_path)
 
         # Save current command line arguments
         orig_args = sys.argv
 
         # Overwrite sys.argv to allow the script to take command line arguments
-        sys.argv = [script_path]
-        sys.argv.extend(arglist[1:])
+        sys.argv = [script_path] + args.script_arguments
 
         # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
         self.do_py("run({!r})".format(script_path))
@@ -3118,33 +3132,24 @@ Paths or arguments that contain spaces must be enclosed in quotes
         # Restore command line arguments to original state
         sys.argv = orig_args
 
-    def complete_pyscript(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Enable tab-completion for pyscript command."""
-        index_dict = {1: self.path_complete}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict)
-
     # Only include the do_ipy() method if IPython is available on the system
-    if ipython_available:
-        # noinspection PyMethodMayBeStatic,PyUnusedLocal
-        def do_ipy(self, arg: str) -> None:
-            """Enters an interactive IPython shell.
-
-            Run python code from external files with ``run filename.py``
-            End with ``Ctrl-D`` (Unix) / ``Ctrl-Z`` (Windows), ``quit()``, '`exit()``.
-            """
+    if ipython_available:  # pragma: no cover
+        @with_argparser(ACArgumentParser())
+        def do_ipy(self, _: argparse.Namespace) -> None:
+            """Enter an interactive IPython shell"""
             from .pyscript_bridge import PyscriptBridge
             bridge = PyscriptBridge(self)
 
+            banner = ('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
+                      'Run Python code from external files with: run filename.py\n')
+            exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
+
             if self.locals_in_py:
                 def load_ipy(self, app):
-                    banner = 'Entering an embedded IPython shell. Type quit() or <Ctrl>-d to exit ...'
-                    exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(self, bridge)
             else:
                 def load_ipy(app):
-                    banner = 'Entering an embedded IPython shell. Type quit() or <Ctrl>-d to exit ...'
-                    exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(bridge)
 
@@ -3153,10 +3158,10 @@ Paths or arguments that contain spaces must be enclosed in quotes
     history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_parser_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
-    history_parser_group.add_argument('-s', '--script', action='store_true', help='script format; no separation lines')
+    history_parser_group.add_argument('-s', '--script', action='store_true', help='output commands in script format')
     history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output commands to a script file')
     history_parser_group.add_argument('-t', '--transcript', help='output commands and results to a transcript file')
-    history_parser_group.add_argument('-c', '--clear', action="store_true", help='clears all history')
+    history_parser_group.add_argument('-c', '--clear', action="store_true", help='clear all history')
     _history_arg_help = """empty               all history items
 a                   one history item by number
 a..b, a:b, a:, ..b  items by indices (inclusive)
@@ -3308,29 +3313,28 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             msg = '{} {} saved to transcript file {!r}'
             self.pfeedback(msg.format(len(history), plural, transcript_file))
 
-    @with_argument_list
-    def do_edit(self, arglist: List[str]) -> None:
-        """Edit a file in a text editor
+    edit_description = ("Edit a file in a text editor\n"
+                        "\n"
+                        "The editor used is determined by a settable parameter. To set it:\n"
+                        "\n"
+                        "  set editor (program-name)")
 
-Usage:  edit [file_path]
-    Where:
-        * file_path - path to a file to open in editor
+    edit_parser = ACArgumentParser(description=edit_description)
+    setattr(edit_parser.add_argument('file_path', help="path to a file to open in editor", nargs="?"),
+            ACTION_ARG_CHOICES, ('path_complete',))
 
-The editor used is determined by the ``editor`` settable parameter.
-"set editor (program-name)" to change or set the EDITOR environment variable.
-"""
+    @with_argparser(edit_parser)
+    def do_edit(self, args: argparse.Namespace) -> None:
+        """Edit a file in a text editor"""
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
-        filename = arglist[0] if arglist else ''
-        if filename:
-            os.system('"{}" "{}"'.format(self.editor, filename))
-        else:
-            os.system('"{}"'.format(self.editor))
 
-    def complete_edit(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Enable tab-completion for edit command."""
-        index_dict = {1: self.path_complete}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict)
+        editor = utils.quote_string_if_needed(self.editor)
+        if args.file_path:
+            expanded_path = utils.quote_string_if_needed(os.path.expanduser(args.file_path))
+            os.system('{} {}'.format(editor, expanded_path))
+        else:
+            os.system('{}'.format(editor))
 
     @property
     def _current_script_dir(self) -> Optional[str]:
@@ -3340,54 +3344,25 @@ The editor used is determined by the ``editor`` settable parameter.
         else:
             return None
 
-    @with_argument_list
-    def do__relative_load(self, arglist: List[str]) -> None:
-        """Runs commands in script file that is encoded as either ASCII or UTF-8 text
-
-    Usage:  _relative_load <file_path>
-
-    optional argument:
-    file_path   a file path pointing to a script
-
-Script should contain one command per line, just like command would be typed in console.
-
-If this is called from within an already-running script, the filename will be interpreted
-relative to the already-running script's directory.
-
-NOTE: This command is intended to only be used within text file scripts.
-        """
-        # If arg is None or arg is an empty string this is an error
-        if not arglist:
-            self.perror('_relative_load command requires a file path:', traceback_war=False)
-            return
-
-        file_path = arglist[0].strip()
-        # NOTE: Relative path is an absolute path, it is just relative to the current script directory
-        relative_path = os.path.join(self._current_script_dir or '', file_path)
-        self.do_load([relative_path])
-
-    def do_eos(self, _: str) -> None:
-        """Handles cleanup when a script has finished executing"""
+    @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
+    def do_eos(self, _: argparse.Namespace) -> None:
+        """Handle cleanup when a script has finished executing"""
         if self._script_dir:
             self._script_dir.pop()
 
-    @with_argument_list
-    def do_load(self, arglist: List[str]) -> None:
-        """Runs commands in script file that is encoded as either ASCII or UTF-8 text
+    load_description = ("Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
+                        "\n"
+                        "Script should contain one command per line, just like the command would be\n"
+                        "typed in the console.")
 
-    Usage:  load <file_path>
+    load_parser = ACArgumentParser(description=load_description)
+    setattr(load_parser.add_argument('script_path', help="path to the script file"),
+            ACTION_ARG_CHOICES, ('path_complete',))
 
-    * file_path - a file path pointing to a script
-
-Script should contain one command per line, just like command would be typed in console.
-        """
-        # If arg is None or arg is an empty string this is an error
-        if not arglist:
-            self.perror('load command requires a file path', traceback_war=False)
-            return
-
-        file_path = arglist[0].strip()
-        expanded_path = os.path.abspath(os.path.expanduser(file_path))
+    @with_argparser(load_parser)
+    def do_load(self, args: argparse.Namespace) -> None:
+        """Run commands in script file that is encoded as either ASCII or UTF-8 text"""
+        expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
 
         # Make sure the path exists and we can access it
         if not os.path.exists(expanded_path):
@@ -3421,10 +3396,24 @@ Script should contain one command per line, just like command would be typed in 
 
         self._script_dir.append(os.path.dirname(expanded_path))
 
-    def complete_load(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Enable tab-completion for load command."""
-        index_dict = {1: self.path_complete}
-        return self.index_based_complete(text, line, begidx, endidx, index_dict)
+    relative_load_description = load_description
+    relative_load_description += ("\n\n"
+                                  "If this is called from within an already-running script, the filename will be\n"
+                                  "interpreted relative to the already-running script's directory.")
+
+    relative_load_epilog = ("Notes:\n"
+                            "  This command is intended to only be used within text file scripts.")
+
+    relative_load_parser = ACArgumentParser(description=relative_load_description, epilog=relative_load_epilog)
+    relative_load_parser.add_argument('file_path', help='a file path pointing to a script')
+
+    @with_argparser(relative_load_parser)
+    def do__relative_load(self, args: argparse.Namespace) -> None:
+        """"""
+        file_path = args.file_path
+        # NOTE: Relative path is an absolute path, it is just relative to the current script directory
+        relative_path = os.path.join(self._current_script_dir or '', file_path)
+        self.do_load(relative_path)
 
     def run_transcript_tests(self, callargs: List[str]) -> None:
         """Runs transcript tests for provided file(s).

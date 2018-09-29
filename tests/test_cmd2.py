@@ -70,7 +70,7 @@ def test_base_argparse_help(base_app, capsys):
     assert out1 == out2
     assert out1[0].startswith('Usage: set')
     assert out1[1] == ''
-    assert out1[2].startswith('Sets a settable parameter')
+    assert out1[2].startswith('Set a settable parameter')
 
 def test_base_invalid_option(base_app, capsys):
     run_cmd(base_app, 'set -z')
@@ -184,6 +184,30 @@ now: True
     assert out == ['quiet: True']
 
 
+class OnChangeHookApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _onchange_quiet(self, old, new) -> None:
+        """Runs when quiet is changed via set command"""
+        self.poutput("You changed quiet")
+
+@pytest.fixture
+def onchange_app():
+    app = OnChangeHookApp()
+    app.stdout = utils.StdSim(app.stdout)
+    return app
+
+def test_set_onchange_hook(onchange_app):
+    out = run_cmd(onchange_app, 'set quiet True')
+    expected = normalize("""
+quiet - was: False
+now: True
+You changed quiet
+""")
+    assert out == expected
+
+
 def test_base_shell(base_app, monkeypatch):
     m = mock.Mock()
     monkeypatch.setattr("{}.Popen".format('subprocess'), m)
@@ -247,7 +271,7 @@ def test_pyscript_with_exception(base_app, capsys, request):
 def test_pyscript_requires_an_argument(base_app, capsys):
     run_cmd(base_app, "pyscript")
     out, err = capsys.readouterr()
-    assert err.startswith('ERROR: pyscript command requires at least 1 argument ...')
+    assert "the following arguments are required: script_path" in err
 
 
 def test_base_error(base_app):
@@ -477,7 +501,7 @@ def test_load_with_empty_args(base_app, capsys):
     out, err = capsys.readouterr()
 
     # The load command requires a file path argument, so we should get an error message
-    assert "load command requires a file path" in str(err)
+    assert "the following arguments are required" in str(err)
     assert base_app.cmdqueue == []
 
 
@@ -614,8 +638,7 @@ def test_base_relative_load(base_app, request):
 def test_relative_load_requires_an_argument(base_app, capsys):
     run_cmd(base_app, '_relative_load')
     out, err = capsys.readouterr()
-    assert out == ''
-    assert err.startswith('ERROR: _relative_load command requires a file path:\n')
+    assert 'Error: the following arguments' in err
     assert base_app.cmdqueue == []
 
 
@@ -858,7 +881,8 @@ def test_edit_file(base_app, request, monkeypatch):
     run_cmd(base_app, 'edit {}'.format(filename))
 
     # We think we have an editor, so should expect a system call
-    m.assert_called_once_with('"{}" "{}"'.format(base_app.editor, filename))
+    m.assert_called_once_with('{} {}'.format(utils.quote_string_if_needed(base_app.editor),
+                                             utils.quote_string_if_needed(filename)))
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
@@ -874,7 +898,8 @@ def test_edit_file_with_spaces(base_app, request, monkeypatch):
     run_cmd(base_app, 'edit "{}"'.format(filename))
 
     # We think we have an editor, so should expect a system call
-    m.assert_called_once_with('"{}" "{}"'.format(base_app.editor, filename))
+    m.assert_called_once_with('{} {}'.format(utils.quote_string_if_needed(base_app.editor),
+                                             utils.quote_string_if_needed(filename)))
 
 def test_edit_blank(base_app, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
@@ -1250,16 +1275,16 @@ diddly              This command does diddly
 Other
 ================================================================================
 alias               Manage aliases
-help                List available commands with "help" or detailed help with "help cmd"
+help                List available commands or provide detailed help for a specific command
 history             View, run, edit, save, or clear previously entered commands
-load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
+load                Run commands in script file that is encoded as either ASCII or UTF-8 text
 macro               Manage macros
-py                  Invoke python command, shell, or script
-pyscript            Runs a python script file inside the console
-quit                Exits this application
-set                 Sets a settable parameter or shows current settings of parameters
+py                  Invoke Python command or shell
+pyscript            Run a Python script file inside the console
+quit                Exit this application
+set                 Set a settable parameter or show current settings of parameters
 shell               Execute a command as if at the OS prompt
-shortcuts           Lists shortcuts available
+shortcuts           List available shortcuts
 
 Undocumented commands:
 ======================
@@ -1556,7 +1581,7 @@ def test_is_text_file_bad_input(base_app):
 
 def test_eof(base_app):
     # Only thing to verify is that it returns True
-    assert base_app.do_eof('dont care')
+    assert base_app.do_eof('')
 
 def test_eos(base_app):
     sdir = 'dummy_dir'
@@ -1564,7 +1589,7 @@ def test_eos(base_app):
     assert len(base_app._script_dir) == 1
 
     # Assert that it does NOT return true
-    assert not base_app.do_eos('dont care')
+    assert not base_app.do_eos('')
 
     # And make sure it reduced the length of the script dir list
     assert len(base_app._script_dir) == 0
@@ -1803,7 +1828,7 @@ def test_alias_create(base_app, capsys):
     # Use the alias
     run_cmd(base_app, 'fake')
     out, err = capsys.readouterr()
-    assert "pyscript command requires at least 1 argument" in err
+    assert "the following arguments are required: script_path" in err
 
     # See a list of aliases
     out = run_cmd(base_app, 'alias list')
@@ -1905,7 +1930,7 @@ def test_macro_create(base_app, capsys):
     # Use the macro
     run_cmd(base_app, 'fake')
     out, err = capsys.readouterr()
-    assert "pyscript command requires at least 1 argument" in err
+    assert "the following arguments are required: script_path" in err
 
     # See a list of macros
     out = run_cmd(base_app, 'macro list')
