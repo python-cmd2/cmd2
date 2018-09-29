@@ -184,6 +184,30 @@ now: True
     assert out == ['quiet: True']
 
 
+class OnChangeHookApp(cmd2.Cmd):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _onchange_quiet(self, old, new) -> None:
+        """Runs when quiet is changed via set command"""
+        self.poutput("You changed quiet")
+
+@pytest.fixture
+def onchange_app():
+    app = OnChangeHookApp()
+    app.stdout = utils.StdSim(app.stdout)
+    return app
+
+def test_set_onchange_hook(onchange_app):
+    out = run_cmd(onchange_app, 'set quiet True')
+    expected = normalize("""
+quiet - was: False
+now: True
+You changed quiet
+""")
+    assert out == expected
+
+
 def test_base_shell(base_app, monkeypatch):
     m = mock.Mock()
     monkeypatch.setattr("{}.Popen".format('subprocess'), m)
