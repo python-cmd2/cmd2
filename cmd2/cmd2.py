@@ -2573,6 +2573,10 @@ class Cmd(cmd.Cmd):
         if not tokens:
             return []
 
+        # Must have at least 3 args for 'help command subcommand'
+        if len(tokens) < 3:
+            return []
+
         # Find where the command is by skipping past any flags
         cmd_index = 1
         for cur_token in tokens[cmd_index:]:
