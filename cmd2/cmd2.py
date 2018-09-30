@@ -2216,13 +2216,11 @@ class Cmd(cmd.Cmd):
         args.name = utils.strip_quotes(args.name)
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
-            errmsg = "Invalid alias name: {}".format(errmsg)
-            self.perror(errmsg, traceback_war=False)
+            self.perror("Invalid alias name: {}".format(errmsg), traceback_war=False)
             return
 
         if args.name in self.macros:
-            errmsg = "Alias cannot have the same name as a macro"
-            self.perror(errmsg, traceback_war=False)
+            self.perror("Alias cannot have the same name as a macro", traceback_war=False)
             return
 
         utils.unquote_redirection_tokens(args.command_args)
@@ -2353,18 +2351,15 @@ class Cmd(cmd.Cmd):
         args.name = utils.strip_quotes(args.name)
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
-            errmsg = "Invalid macro name: {}".format(errmsg)
-            self.perror(errmsg, traceback_war=False)
+            self.perror("Invalid macro name: {}".format(errmsg), traceback_war=False)
             return
 
         if args.name in self.get_all_commands():
-            errmsg = "Macro cannot have the same name as a command"
-            self.perror(errmsg, traceback_war=False)
+            self.perror("Macro cannot have the same name as a command", traceback_war=False)
             return
 
         if args.name in self.aliases:
-            errmsg = "Macro cannot have the same name as an alias"
-            self.perror(errmsg, traceback_war=False)
+            self.perror("Macro cannot have the same name as an alias", traceback_war=False)
             return
 
         utils.unquote_redirection_tokens(args.command_args)
