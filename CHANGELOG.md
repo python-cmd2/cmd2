@@ -3,6 +3,7 @@
     * Fixed bug where ``get_all_commands`` could return non-callable attributes
     * Fixed bug where **alias** command was dropping quotes around arguments
     * Fixed bug where running help on argparse commands didn't work if they didn't support -h
+    * Fixed transcript testing bug where last command in transcript has no expected output
 * Enhancements
     * Added ``exit_code`` attribute of ``cmd2.Cmd`` class
         * Enables applications to return a non-zero exit code when exiting from ``cmdloop``

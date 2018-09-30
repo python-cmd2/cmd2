@@ -1,4 +1,4 @@
-# ensure the transcript can play a command with no output
+# ensure the transcript can play a command with no output from a command somewhere in the middle
 
 (Cmd) say something
 something
