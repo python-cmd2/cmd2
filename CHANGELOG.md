@@ -2,11 +2,37 @@
 * Bug Fixes
     * Fixed bug where ``get_all_commands`` could return non-callable attributes
     * Fixed bug where **alias** command was dropping quotes around arguments
+    * Fixed bug where running help on argparse commands didn't work if they didn't support -h
 * Enhancements
     * Added ``exit_code`` attribute of ``cmd2.Cmd`` class
         * Enables applications to return a non-zero exit code when exiting from ``cmdloop``
     * ``ACHelpFormatter`` now inherits from ``argparse.RawTextHelpFormatter`` to make it easier
     for formatting help/description text
+    * Aliases are now sorted alphabetically
+    * The **set** command now tab-completes settable parameter names
+    * Added ``async_alert``, ``async_update_prompt``, and ``set_window_title`` functions
+        * These allow you to provide feedback to the user in an asychronous fashion, meaning alerts can
+        display when the user is still entering text at the prompt. See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
+        for an example.
+    * Cross-platform colored output support 
+        * ``colorama`` gets initialized properly in ``Cmd.__init()``
+        * The ``Cmd.colors`` setting is no longer platform dependent and now has three values:
+            * Terminal (default) - output methods do not strip any ANSI escape sequences when output is a terminal, but 
+            if the output is a pipe or a file the escape sequences are stripped
+            * Always - output methods **never** strip ANSI escape sequences, regardless of the output destination
+            * Never - output methods strip all ANSI escape sequences
+    * Added ``macro`` command to create macros, which are similar to aliases, but can take arguments when called
+    * All cmd2 command functions have been converted to use argparse.
+* Deprecations
+    * Deprecated the built-in ``cmd2`` support for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
+* Deletions (potentially breaking changes)
+    * The ``preparse``, ``postparsing_precmd``, and ``postparsing_postcmd`` methods *deprecated* in the previous release 
+    have been deleted
+        * The new application lifecycle hook system allows for registration of callbacks to be called at various points
+        in the lifecycle and is more powerful and flexible than the previous system
+    * ``alias`` is now a command with subcommands to create, list, and delete aliases. Therefore its syntax
+      has changed. All current alias commands in startup scripts or transcripts will break with this release.
+    * `unalias` was deleted since ``alias delete`` replaced it
     
 ## 0.9.4 (August 21, 2018)
 * Bug Fixes
@@ -118,7 +144,7 @@
     * Fixed ``AttributeError`` on Windows when running a ``select`` command cause by **pyreadline** not implementing ``remove_history_item``
 * Enhancements
     * Added warning about **libedit** variant of **readline** not being supported on macOS
-    * Added tab-completion of alias names in value filed of **alias** command
+    * Added tab-completion of alias names in value field of **alias** command
     * Enhanced the ``py`` console in the following ways
         * Added tab completion of Python identifiers instead of **cmd2** commands
         * Separated the ``py`` console history from the **cmd2** history

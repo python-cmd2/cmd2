@@ -17,6 +17,8 @@ This application and the "scripts/conditional.py" script serve as an example for
 import argparse
 import os
 
+from colorama import Fore
+
 import cmd2
 
 
@@ -27,20 +29,20 @@ class CmdLineApp(cmd2.Cmd):
         # Enable the optional ipy command if IPython is installed by setting use_ipython=True
         super().__init__(use_ipython=True)
         self._set_prompt()
-        self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇  (Python 3 only)  💩'
+        self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇 💩'
         self.locals_in_py = True
 
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.prompt = self.colorize('{!r} $ '.format(self.cwd), 'cyan')
+        self.prompt = Fore.CYAN + '{!r} $ '.format(self.cwd) + Fore.RESET
 
-    def postcmd(self, stop, line):
+    def postcmd(self, stop: bool, line: str) -> bool:
         """Hook method executed just after a command dispatch is finished.
 
-        :param stop: bool - if True, the command has indicated the application should exit
-        :param line: str - the command line text for this command
-        :return: bool - if this is True, the application will exit after this command and the postloop() will run
+        :param stop: if True, the command has indicated the application should exit
+        :param line: the command line text for this command
+        :return: if this is True, the application will exit after this command and the postloop() will run
         """
         """Override this so prompt always displays cwd."""
         self._set_prompt()

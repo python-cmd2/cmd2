@@ -1,1 +1,1 @@
-set colors on
+set colors Always

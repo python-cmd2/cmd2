@@ -76,24 +76,21 @@ Command Processing Loop
 When you call `.cmdloop()`, the following sequence of events are repeated until
 the application exits:
 
-1. Output the prompt
-2. Accept user input
-3. Call `preparse()` - for backwards compatibility with prior releases of cmd2, now deprecated
-4. Parse user input into `Statement` object
-5. Call methods registered with `register_postparsing_hook()`
-6. Call `postparsing_precmd()` - for backwards compatibility with prior releases of cmd2, now deprecated
-7. Redirect output, if user asked for it and it's allowed
-8. Start timer
-9. Call methods registered with `register_precmd_hook()`
-10. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
-11. Add statement to history
-12. Call `do_command` method
-13. Call methods registered with `register_postcmd_hook()`
-14. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
-15. Stop timer and display the elapsed time
-16. Stop redirecting output if it was redirected
-17. Call methods registered with `register_cmdfinalization_hook()`
-18. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
+#. Output the prompt
+#. Accept user input
+#. Parse user input into `Statement` object
+#. Call methods registered with `register_postparsing_hook()`
+#. Redirect output, if user asked for it and it's allowed
+#. Start timer
+#. Call methods registered with `register_precmd_hook()`
+#. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
+#. Add statement to history
+#. Call `do_command` method
+#. Call methods registered with `register_postcmd_hook()`
+#. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
+#. Stop timer and display the elapsed time
+#. Stop redirecting output if it was redirected
+#. Call methods registered with `register_cmdfinalization_hook()`
 
 By registering hook methods, steps 4, 8, 12, and 16 allow you to run code
 during, and control the flow of the command processing loop. Be aware that
@@ -305,21 +302,3 @@ If any command finalization hook raises an exception, no more command
 finalization hooks will be called. If the last hook to return a value returned
 ``True``, then the exception will be rendered, and the application will
 terminate.
-
-Deprecated Command Processing Hooks
------------------------------------
-
-Inside the main loop, every time the user hits <Enter> the line is processed by the ``onecmd_plus_hooks`` method.
-
-.. automethod:: cmd2.cmd2.Cmd.onecmd_plus_hooks
-
-As the ``onecmd_plus_hooks`` name implies, there are a number of *hook* methods that can be defined in order to inject
-application-specific behavior at various points during the processing of a line of text entered by the user.  ``cmd2``
-increases the 2 hooks provided by ``cmd`` (**precmd** and **postcmd**) to 6 for greater flexibility.  Here are
-the various hook methods, presented in chronological order starting with the ones called earliest in the process.
-
-.. automethod:: cmd2.cmd2.Cmd.preparse
-
-.. automethod:: cmd2.cmd2.Cmd.postparsing_precmd
-
-.. automethod:: cmd2.cmd2.Cmd.postparsing_postcmd

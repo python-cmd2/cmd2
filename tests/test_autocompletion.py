@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Unit/functional testing for argparse completer in cmd2
 
@@ -5,16 +6,17 @@ Copyright 2018 Eric Lin <anselor@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import pytest
-from .conftest import run_cmd, normalize, StdOut, complete_tester
+
+from cmd2.utils import StdSim
+from .conftest import run_cmd, normalize, complete_tester
 
 from examples.tab_autocompletion import TabCompleteExample
 
 @pytest.fixture
 def cmd2_app():
-    c = TabCompleteExample()
-    c.stdout = StdOut()
-
-    return c
+    app = TabCompleteExample()
+    app.stdout = StdSim(app.stdout)
+    return app
 
 
 SUGGEST_HELP = '''Usage: suggest -t {movie, show} [-h] [-d DURATION{1..2}]
@@ -32,9 +34,9 @@ optional arguments:
                         	single value - maximum duration
                         	[a, b] - duration range'''
 
-MEDIA_MOVIES_ADD_HELP = '''Usage: media movies add title {G, PG, PG-13, R, NC-17} [actor [...]]
-                        -d DIRECTOR{1..2}
+MEDIA_MOVIES_ADD_HELP = '''Usage: media movies add -d DIRECTOR{1..2}
                         [-h]
+                        title {G, PG, PG-13, R, NC-17} [actor [...]]
 
 positional arguments:
   title                 Movie Title

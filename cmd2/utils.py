@@ -4,8 +4,9 @@
 
 import collections
 import os
-from typing import Any, List, Optional, Union
+import re
 import unicodedata
+from typing import Any, Iterable, List, Optional, Union
 
 from . import constants
 
@@ -19,6 +20,28 @@ def strip_ansi(text: str) -> str:
     return constants.ANSI_ESCAPE_RE.sub('', text)
 
 
+def is_quoted(arg: str) -> bool:
+    """
+    Checks if a string is quoted
+    :param arg: the string being checked for quotes
+    :return: True if a string is quoted
+    """
+    return len(arg) > 1 and arg[0] == arg[-1] and arg[0] in constants.QUOTES
+
+
+def quote_string_if_needed(arg: str) -> str:
+    """ Quotes a string if it contains spaces and isn't already quoted """
+    if is_quoted(arg) or ' ' not in arg:
+        return arg
+
+    if '"' in arg:
+        quote = "'"
+    else:
+        quote = '"'
+
+    return quote + arg + quote
+
+
 def strip_quotes(arg: str) -> str:
     """ Strip outer quotes from a string.
 
@@ -27,7 +50,7 @@ def strip_quotes(arg: str) -> str:
     :param arg:  string to strip outer quotes from
     :return: same string with potentially outer quotes stripped
     """
-    if len(arg) > 1 and arg[0] == arg[-1] and arg[0] in constants.QUOTES:
+    if is_quoted(arg):
         arg = arg[1:-1]
     return arg
 
@@ -66,10 +89,12 @@ def cast(current: Any, new: str) -> Any:
     """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
 
     :param current: current value for the parameter, type varies
-    :param new: str - new value
+    :param new: new value
     :return: new value with same type as current, or the current value if there was an error casting
     """
     typ = type(current)
+    orig_new = new
+
     if typ == bool:
         try:
             return bool(int(new))
@@ -77,18 +102,18 @@ def cast(current: Any, new: str) -> Any:
             pass
         try:
             new = new.lower()
+            if (new == 'on') or (new[0] in ('y', 't')):
+                return True
+            if (new == 'off') or (new[0] in ('n', 'f')):
+                return False
         except AttributeError:
             pass
-        if (new == 'on') or (new[0] in ('y', 't')):
-            return True
-        if (new == 'off') or (new[0] in ('n', 'f')):
-            return False
     else:
         try:
             return typ(new)
         except (ValueError, TypeError):
             pass
-    print("Problem setting parameter (now %s) to %s; incorrect type?" % (current, new))
+    print("Problem setting parameter (now {}) to {}; incorrect type?".format(current, orig_new))
     return current
 
 
@@ -169,10 +194,125 @@ def norm_fold(astr: str) -> str:
     return unicodedata.normalize('NFC', astr).casefold()
 
 
-def alphabetical_sort(list_to_sort: List[str]) -> List[str]:
+def alphabetical_sort(list_to_sort: Iterable[str]) -> List[str]:
     """Sorts a list of strings alphabetically.
+
+    For example: ['a1', 'A11', 'A2', 'a22', 'a3']
+
+    To sort a list in place, don't call this method, which makes a copy. Instead, do this:
+
+    my_list.sort(key=norm_fold)
 
     :param list_to_sort: the list being sorted
     :return: the sorted list
     """
     return sorted(list_to_sort, key=norm_fold)
+
+
+def try_int_or_force_to_lower_case(input_str: str) -> Union[int, str]:
+    """
+    Tries to convert the passed-in string to an integer. If that fails, it converts it to lower case using norm_fold.
+    :param input_str: string to convert
+    :return: the string as an integer or a lower case version of the string
+    """
+    try:
+        return int(input_str)
+    except ValueError:
+        return norm_fold(input_str)
+
+
+def natural_keys(input_str: str) -> List[Union[int, str]]:
+    """
+    Converts a string into a list of integers and strings to support natural sorting (see natural_sort).
+
+    For example: natural_keys('abc123def') -> ['abc', '123', 'def']
+    :param input_str: string to convert
+    :return: list of strings and integers
+    """
+    return [try_int_or_force_to_lower_case(substr) for substr in re.split(r'(\d+)', input_str)]
+
+
+def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
+    """
+    Sorts a list of strings case insensitively as well as numerically.
+
+    For example: ['a1', 'A2', 'a3', 'A11', 'a22']
+
+    To sort a list in place, don't call this method, which makes a copy. Instead, do this:
+
+    my_list.sort(key=natural_keys)
+
+    :param list_to_sort: the list being sorted
+    :return: the list sorted naturally
+    """
+    return sorted(list_to_sort, key=natural_keys)
+
+
+class StdSim(object):
+    """Class to simulate behavior of sys.stdout or sys.stderr.
+
+    Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
+    """
+    class ByteBuf(object):
+        """Inner class which stores an actual bytes buffer and does the actual output if echo is enabled."""
+        def __init__(self, inner_stream, echo: bool = False) -> None:
+            self.byte_buf = b''
+            self.inner_stream = inner_stream
+            self.echo = echo
+
+        def write(self, b: bytes) -> None:
+            """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
+            if not isinstance(b, bytes):
+                raise TypeError('a bytes-like object is required, not {}'.format(type(b)))
+            self.byte_buf += b
+            if self.echo:
+                self.inner_stream.buffer.write(b)
+
+    def __init__(self, inner_stream, echo: bool = False) -> None:
+        self.buffer = self.ByteBuf(inner_stream, echo)
+        self.inner_stream = inner_stream
+
+    def write(self, s: str) -> None:
+        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream."""
+        if not isinstance(s, str):
+            raise TypeError('write() argument must be str, not {}'.format(type(s)))
+        b = s.encode()
+        self.buffer.write(b)
+
+    def getvalue(self) -> str:
+        """Get the internal contents as a str.
+
+        :return string from the internal contents
+        """
+        return self.buffer.byte_buf.decode()
+
+    def read(self) -> str:
+        """Read from the internal contents as a str and then clear them out.
+
+        :return: string from the internal contents
+        """
+        result = self.getvalue()
+        self.clear()
+        return result
+
+    def clear(self) -> None:
+        """Clear the internal contents."""
+        self.buffer.byte_buf = b''
+
+    def __getattr__(self, item: str):
+        if item in self.__dict__:
+            return self.__dict__[item]
+        else:
+            return getattr(self.inner_stream, item)
+
+
+def unquote_redirection_tokens(args: List[str]) -> None:
+    """
+    Unquote redirection tokens in a list of command-line arguments
+    This is used when redirection tokens have to be passed to another command
+    :param args: the command line args
+    """
+    for i, arg in enumerate(args):
+        unquoted_arg = strip_quotes(arg)
+        if unquoted_arg in constants.REDIRECTION_TOKENS:
+            args[i] = unquoted_arg

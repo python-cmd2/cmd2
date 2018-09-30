@@ -50,17 +50,54 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
 Aliases
 =======
 
-In addition to shortcuts, ``cmd2`` provides a full alias feature via the ``alias`` command which is similar to the
-``alias`` command in Bash.
+In addition to shortcuts, ``cmd2`` provides a full alias feature via the ``alias`` command. Aliases work in a similar
+fashion to aliases in the Bash shell.
 
-The syntax to create an alias is ``alias <name> <value>``. ``value`` can contain spaces and does not need
-to be quoted. Ex: ``alias ls !ls -lF``
+The syntax to create an alias is: ``alias create name command [args]``.
 
-If ``alias`` is run without arguments, then a list of all aliases will be printed to stdout and are in the proper
-``alias`` command syntax, meaning they can easily be reused.
+  Ex: ``alias create ls !ls -lF``
 
-The ``unalias`` is used to clear aliases. Using the ``-a`` flag will clear all aliases. Otherwise provide a list of
-aliases to clear. Ex: ``unalias ls cd pwd`` will clear the aliases called ls, cd, and pwd.
+For more details run: ``help alias create``
+
+Use ``alias list`` to see all or some of your aliases. The output of this command displays your aliases using the same command that
+was used to create them. Therefore you can place this output in a ``cmd2`` startup script to recreate your aliases each time
+you start the application
+
+  Ex: ``alias list``
+
+For more details run: ``help alias list``
+
+Use ``alias delete`` to remove aliases
+
+For more details run: ``help alias delete``
+
+Macros
+======
+
+``cmd2`` provides a feature that is similar to aliases called macros. The major difference between macros and aliases
+is that macros are intended to take arguments when called. These can be useful if you need to run a complex command
+frequently with different arguments that appear in various parts of the command.
+
+Arguments are expressed when creating a macro using {#} notation where {1} means the first argument.
+
+The following creates a macro called my_macro that expects two arguments:
+
+  macro create my_macro make_dinner -meat {1} -veggie {2}
+
+When the macro is called, the provided arguments are resolved and the assembled
+command is run. For example:
+
+  my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli
+
+For more details run: ``help macro create``
+
+The macro command has ``list`` and ``delete`` subcommands that function identically to the alias subcommands of the
+same name. Like aliases, macros can be created via a ``cmd2`` startup script to preserve them across application
+sessions.
+
+For more details on listing macros run: ``help macro list``
+
+For more details on deleting macros run: ``help macro delete``
 
 
 Default to shell
@@ -137,7 +174,7 @@ comments, is viewable from within a running application
 with::
 
     (Cmd) set --long
-    colors: True                   # Colorized output (*nix only)
+    colors: Terminal               # Allow colorized output
     continuation_prompt: >         # On 2nd+ line of input
     debug: False                   # Show full error stack on error
     echo: False                    # Echo command issued into output
@@ -150,5 +187,5 @@ with::
 
 Any of these user-settable parameters can be set while running your app with the ``set`` command like so::
 
-    set colors False
+    set colors Never
 

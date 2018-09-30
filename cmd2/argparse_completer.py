@@ -510,6 +510,18 @@ class AutoCompleter(object):
                             return self.basic_complete(text, line, begidx, endidx, completers.keys())
         return []
 
+    def format_help(self, tokens: List[str]) -> str:
+        """Supports the completion of sub-commands for commands through the cmd2 help command."""
+        for idx, token in enumerate(tokens):
+            if idx >= self._token_start_index:
+                if self._positional_completers:
+                    # For now argparse only allows 1 sub-command group per level
+                    # so this will only loop once.
+                    for completers in self._positional_completers.values():
+                        if token in completers:
+                            return completers[token].format_help(tokens)
+        return self._parser.format_help()
+
     @staticmethod
     def _process_action_nargs(action: argparse.Action, arg_state: _ArgumentState) -> None:
         if isinstance(action, _RangeAction):
@@ -654,12 +666,19 @@ class AutoCompleter(object):
             else:
                 prefix = ''
 
+        if action.help is None:
+            help_text = ''
+        else:
+            help_text = action.help
+
+        # is there anything to print for this parameter?
+        if not prefix and not help_text:
+            return
+
         prefix = '  {0: <{width}}    '.format(prefix, width=20)
         pref_len = len(prefix)
-        if action.help is not None:
-            help_lines = action.help.splitlines()
-        else:
-            help_lines = ['']
+        help_lines = help_text.splitlines()
+
         if len(help_lines) == 1:
             print('\nHint:\n{}{}\n'.format(prefix, help_lines[0]))
         else:
@@ -676,12 +695,12 @@ class AutoCompleter(object):
         """
         Performs tab completion against a list
 
-        :param text: str - the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: str - the current input line with leading whitespace removed
-        :param begidx: int - the beginning index of the prefix text
-        :param endidx: int - the ending index of the prefix text
-        :param match_against: Collection - the list being matched against
-        :return: List[str] - a list of possible tab completions
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param match_against: the list being matched against
+        :return: a list of possible tab completions
         """
         return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
@@ -731,7 +750,7 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
 
             # build full usage string
             format = self._format_actions_usage
-            action_usage = format(positionals + required_options + optionals, groups)
+            action_usage = format(required_options + optionals + positionals, groups)
             usage = ' '.join([s for s in [prog, action_usage] if s])
 
             # wrap the usage parts if it's too long
@@ -742,15 +761,15 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
 
                 # break usage into wrappable parts
                 part_regexp = r'\(.*?\)+|\[.*?\]+|\S+'
+                req_usage = format(required_options, groups)
                 opt_usage = format(optionals, groups)
                 pos_usage = format(positionals, groups)
-                req_usage = format(required_options, groups)
+                req_parts = _re.findall(part_regexp, req_usage)
                 opt_parts = _re.findall(part_regexp, opt_usage)
                 pos_parts = _re.findall(part_regexp, pos_usage)
-                req_parts = _re.findall(part_regexp, req_usage)
+                assert ' '.join(req_parts) == req_usage
                 assert ' '.join(opt_parts) == opt_usage
                 assert ' '.join(pos_parts) == pos_usage
-                assert ' '.join(req_parts) == req_usage
 
                 # End cmd2 customization
 
@@ -780,13 +799,15 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
                 if len(prefix) + len(prog) <= 0.75 * text_width:
                     indent = ' ' * (len(prefix) + len(prog) + 1)
                     # Begin cmd2 customization
-                    if opt_parts:
-                        lines = get_lines([prog] + pos_parts, indent, prefix)
-                        lines.extend(get_lines(req_parts, indent))
+                    if req_parts:
+                        lines = get_lines([prog] + req_parts, indent, prefix)
                         lines.extend(get_lines(opt_parts, indent))
+                        lines.extend(get_lines(pos_parts, indent))
+                    elif opt_parts:
+                        lines = get_lines([prog] + opt_parts, indent, prefix)
+                        lines.extend(get_lines(pos_parts, indent))
                     elif pos_parts:
                         lines = get_lines([prog] + pos_parts, indent, prefix)
-                        lines.extend(get_lines(req_parts, indent))
                     else:
                         lines = [prog]
                     # End cmd2 customization
@@ -795,13 +816,13 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
                 else:
                     indent = ' ' * len(prefix)
                     # Begin cmd2 customization
-                    parts = pos_parts + req_parts + opt_parts
+                    parts = req_parts + opt_parts + pos_parts
                     lines = get_lines(parts, indent)
                     if len(lines) > 1:
                         lines = []
-                        lines.extend(get_lines(pos_parts, indent))
                         lines.extend(get_lines(req_parts, indent))
                         lines.extend(get_lines(opt_parts, indent))
+                        lines.extend(get_lines(pos_parts, indent))
                     # End cmd2 customization
                     lines = [prog] + lines
 
@@ -869,6 +890,9 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
         else:
             result = super()._format_args(action, default_metavar)
         return result
+
+    def format_help(self):
+        return super().format_help() + '\n'
 
 
 # noinspection PyCompatibility

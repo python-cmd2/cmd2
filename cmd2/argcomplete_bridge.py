@@ -23,16 +23,18 @@ else:
     import os
     import shlex
     import sys
+    from typing import List, Tuple, Union
 
     from . import constants
     from . import utils
 
 
-    def tokens_for_completion(line, endidx):
+    def tokens_for_completion(line: str, endidx: int) -> Union[Tuple[List[str], List[str], int, int],
+                                                               Tuple[None, None, None, None]]:
         """
         Used by tab completion functions to get all tokens through the one being completed
-        :param line: str - the current input line with leading whitespace removed
-        :param endidx: int - the ending index of the prefix text
+        :param line: the current input line with leading whitespace removed
+        :param endidx: the ending index of the prefix text
         :return: A 4 item tuple where the items are
                  On Success
                      tokens: list of unquoted tokens
@@ -46,7 +48,7 @@ else:
                      The last item in both lists is the token being tab completed
 
                  On Failure
-                    Both items are None
+                    All 4 items are None
         """
         unclosed_quote = ''
         quotes_to_try = copy.copy(constants.QUOTES)

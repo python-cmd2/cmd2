@@ -135,22 +135,19 @@ script file.
 The **onecmd_plus_hooks()** method will do the following to execute a single
 ``cmd2`` command in a normal fashion:
 
-1. Call `preparse()` - for backwards compatibility with prior releases of cmd2, now deprecated
-2. Parse user input into `Statement` object
-3. Call methods registered with `register_postparsing_hook()`
-4. Call `postparsing_precmd()` - for backwards compatibility with prior releases of cmd2, now deprecated
-5. Redirect output, if user asked for it and it's allowed
-6. Start timer
-7. Call methods registered with `register_precmd_hook()`
-8. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
-9. Add statement to history
-10. Call `do_command` method
-11. Call methods registered with `register_postcmd_hook()`
-12. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
-13. Stop timer and display the elapsed time
-14. Stop redirecting output if it was redirected
-15. Call methods registered with `register_cmdfinalization_hook()`
-16. Call `postparsing_postcmd()` - for backwards compatibility - deprecated
+#. Parse user input into `Statement` object
+#. Call methods registered with `register_postparsing_hook()`
+#. Redirect output, if user asked for it and it's allowed
+#. Start timer
+#. Call methods registered with `register_precmd_hook()`
+#. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
+#. Add statement to history
+#. Call `do_command` method
+#. Call methods registered with `register_postcmd_hook()`
+#. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
+#. Stop timer and display the elapsed time
+#. Stop redirecting output if it was redirected
+#. Call methods registered with `register_cmdfinalization_hook()`
 
 Running in this fashion enables the ability to integrate with an external event
 loop.  However, how to integrate with any specific event loop is beyond the

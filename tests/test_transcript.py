@@ -16,8 +16,10 @@ from unittest import mock
 import pytest
 
 import cmd2
-from .conftest import run_cmd, StdOut
+from .conftest import run_cmd
 from cmd2 import transcript
+from cmd2.utils import StdSim
+
 
 class CmdLineApp(cmd2.Cmd):
 
@@ -87,9 +89,9 @@ def test_commands_at_invocation():
     expected = "This is an intro banner ...\nhello\nGracie\n"
     with mock.patch.object(sys, 'argv', testargs):
         app = CmdLineApp()
-        app.stdout = StdOut()
+        app.stdout = StdSim(app.stdout)
         app.cmdloop()
-        out = app.stdout.buffer
+        out = app.stdout.getvalue()
         assert out == expected
 
 @pytest.mark.parametrize('filename,feedback_to_output', [
@@ -134,7 +136,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
 
 def test_history_transcript(request, capsys):
     app = CmdLineApp()
-    app.stdout = StdOut()
+    app.stdout = StdSim(app.stdout)
     run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')
     run_cmd(app, 'speak /tmp/file.txt is not a regex')
 
@@ -155,13 +157,13 @@ this is a \/multiline\/ command
 
     # read in the transcript created by the history command
     with open(history_fname) as f:
-        transcript = f.read()
+        xscript = f.read()
 
-    assert transcript == expected
+    assert xscript == expected
 
 def test_history_transcript_bad_filename(request, capsys):
     app = CmdLineApp()
-    app.stdout = StdOut()
+    app.stdout = StdSim(app.stdout)
     run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')
     run_cmd(app, 'speak /tmp/file.txt is not a regex')
 

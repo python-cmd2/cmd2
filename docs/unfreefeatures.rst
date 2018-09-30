@@ -139,23 +139,43 @@ instead.  These methods have these advantages:
 .. automethod:: cmd2.cmd2.Cmd.ppaged
 
 
-color
-=====
+Colored Output
+==============
 
-Text output can be colored by wrapping it in the ``colorize`` method.
+The output methods in the previous section all honor the ``colors`` setting,
+which has three possible values:
 
-.. automethod:: cmd2.cmd2.Cmd.colorize
+Never
+    poutput() and pfeedback() strip all ANSI escape sequences
+    which instruct the terminal to colorize output
+
+Terminal
+    (the default value) poutput() and pfeedback() do not strip any ANSI escape
+    sequences when the output is a terminal, but if the output is a pipe or a
+    file the escape sequences are stripped. If you want colorized output you
+    must add ANSI escape sequences, preferably using some python color library
+    like `plumbum.colors`, `colorama`, `blessings`, or `termcolor`.
+
+Always
+    poutput() and pfeedback() never strip ANSI escape sequences, regardless of
+    the output destination
+
+
+The previously recommended ``colorize`` method is now deprecated.
+
 
 .. _quiet:
 
+Suppressing non-essential output
+================================
 
-quiet
-=====
+The ``quiet`` setting controls whether ``self.pfeedback()`` actually produces
+any output. If ``quiet`` is ``False``, then the output will be produced. If
+``quiet`` is ``True``, no output will be produced.
 
-Controls whether ``self.pfeedback('message')`` output is suppressed;
-useful for non-essential feedback that the user may not always want
-to read.  ``quiet`` is only relevant if
-``app.pfeedback`` is sometimes used.
+This makes ``self.pfeedback()`` useful for non-essential output like status
+messages. Users can control whether they would like to see these messages by changing
+the value of the ``quiet`` setting.
 
 
 select
@@ -189,3 +209,33 @@ Exit code to shell
 The ``self.exit_code`` attribute of your ``cmd2`` application controls
 what exit code is sent to the shell when your application exits from
 ``cmdloop()``.
+
+
+Asynchronous Feedback
+=====================
+``cmd2`` provides two functions to provide asynchronous feedback to the user without interfering with
+the command line. This means the feedback is provided to the user when they are still entering text at
+the prompt. To use this functionality, the application must be running in a terminal that supports
+VT100 control characters and readline. Linux, Mac, and Windows 10 and greater all support these.
+
+async_alert()
+    Used to display an important message to the user while they are at the prompt in between commands.
+    To the user it appears as if an alert message is printed above the prompt and their current input
+    text and cursor location is left alone.
+
+async_update_prompt()
+    Updates the prompt while the user is still typing at it. This is good for alerting the user to system
+    changes dynamically in between commands. For instance you could alter the color of the prompt to indicate
+    a system status or increase a counter to report an event.
+
+``cmd2`` also provides a function to change the title of the terminal window. This feature requires the
+application be running in a terminal that supports VT100 control characters. Linux, Mac, and Windows 10 and
+greater all support these.
+
+set_window_title()
+    Sets the terminal window title
+
+
+The easiest way to understand these functions is to see the AsyncPrinting_ example for a demonstration.
+
+.. _AsyncPrinting: https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py

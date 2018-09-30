@@ -14,8 +14,8 @@ applications.  It provides a simple API which is an extension of Python's built-
 of cmd to make your life easier and eliminates much of the boilerplate code which would be necessary
 when using cmd.
 
-[![Screenshot](cmd2.png)](https://github.com/python-cmd2/cmd2/blob/master/cmd2.png)
-
+Click on image below to watch a short video demonstrating the capabilities of cmd2:
+[![Screenshot](cmd2.png)](https://youtu.be/DDU_JH6cFsA)
 
 Main Features
 -------------
@@ -31,6 +31,7 @@ Main Features
 - Multi-line commands
 - Special-character command shortcuts (beyond cmd's `?` and `!`)
 - Command aliasing similar to bash `alias` command
+- Macros, which are similar to aliases, but can take arguments when called
 - Ability to load commands at startup from an initialization script
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
@@ -40,6 +41,7 @@ Main Features
 - Trivial to provide built-in help for all commands
 - Built-in regression testing framework for your applications (transcript-based testing)
 - Transcripts for use with built-in regression can be automatically generated from `history -t`
+- Alerts that seamlessly print while user enters text at prompt
 
 Python 2.7 support is EOL
 -------------------------
@@ -259,3 +261,15 @@ timing: False
 Note how a regular expression `/(True|False)/` is used for output of the **show color** command since
 colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
 transcript file simply by enclosing them within forward slashes, `/`.
+
+
+Found a bug?
+------------
+
+If you think you've found a bug, please first read through the open [Issues](https://github.com/python-cmd2/cmd2/issues). If you're confident it's a new bug, go ahead and create a new GitHub issue. Be sure to include as much information as possible so we can reproduce the bug.  At a minimum, please state the following:
+
+* ``cmd2`` version
+* Python version
+* OS name and version
+* What you did to cause the bug to occur
+* Include any traceback or error message associated with the bug
