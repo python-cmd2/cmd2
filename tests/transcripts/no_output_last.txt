@@ -1,0 +1,7 @@
+# ensure the transcript can play a command with no output from the last command
+
+(Cmd) say something
+something
+(Cmd) say something else
+something else
+(Cmd) nothing
