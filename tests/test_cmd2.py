@@ -219,9 +219,14 @@ def test_base_py(base_app, capsys):
     run_cmd(base_app, 'py qqq=3')
     out, err = capsys.readouterr()
     assert out == ''
+
     run_cmd(base_app, 'py print(qqq)')
     out, err = capsys.readouterr()
     assert out.rstrip() == '3'
+
+    run_cmd(base_app, 'py print("spaces" + " in this " + "command")')
+    out, err = capsys.readouterr()
+    assert out.rstrip() == 'spaces in this command'
 
 
 @pytest.mark.skipif(sys.platform == 'win32',

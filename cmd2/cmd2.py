@@ -2892,6 +2892,7 @@ class Cmd(cmd.Cmd):
                                       help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
 
+    # Preserve quotes since we are passing these strings to the shell
     @with_argparser(shell_parser, preserve_quotes=True)
     def do_shell(self, args: argparse.Namespace) -> None:
         """Execute a command as if at the OS prompt"""
@@ -2947,7 +2948,8 @@ class Cmd(cmd.Cmd):
     py_parser.add_argument('command', help="command to run", nargs='?')
     py_parser.add_argument('remainder', help="remainder of command", nargs=argparse.REMAINDER)
 
-    @with_argparser(py_parser)
+    # Preserve quotes since we are passing these strings to Python
+    @with_argparser(py_parser, preserve_quotes=True)
     def do_py(self, args: argparse.Namespace) -> bool:
         """Invoke Python command or shell"""
         from .pyscript_bridge import PyscriptBridge, CommandResult
@@ -2987,9 +2989,9 @@ class Cmd(cmd.Cmd):
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
             if args.command:
-                full_command = utils.quote_string_if_needed(args.command)
-                for cur_token in args.remainder:
-                    full_command += ' ' + utils.quote_string_if_needed(cur_token)
+                full_command = args.command
+                if args.remainder:
+                    full_command += ' ' + ' '.join(args.remainder)
 
                 interp.runcode(full_command)
 
