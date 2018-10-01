@@ -216,17 +216,34 @@ def test_base_shell(base_app, monkeypatch):
     assert m.called
 
 def test_base_py(base_app, capsys):
+    # Create a variable and make sure we can see it
     run_cmd(base_app, 'py qqq=3')
     out, err = capsys.readouterr()
     assert out == ''
-
     run_cmd(base_app, 'py print(qqq)')
     out, err = capsys.readouterr()
     assert out.rstrip() == '3'
 
+    # Add a more complex statement
     run_cmd(base_app, 'py print("spaces" + " in this " + "command")')
     out, err = capsys.readouterr()
     assert out.rstrip() == 'spaces in this command'
+
+    # Set locals_in_py to True and make sure we see self
+    out = run_cmd(base_app, 'set locals_in_py True')
+    assert 'now: True' in out
+
+    run_cmd(base_app, 'py print(self)')
+    out, err = capsys.readouterr()
+    assert 'cmd2.cmd2.Cmd object' in out
+
+    # Set locals_in_py to False and make sure we can't see self
+    out = run_cmd(base_app, 'set locals_in_py False')
+    assert 'now: False' in out
+
+    run_cmd(base_app, 'py print(self)')
+    out, err = capsys.readouterr()
+    assert "name 'self' is not defined" in err
 
 
 @pytest.mark.skipif(sys.platform == 'win32',
