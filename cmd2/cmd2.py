@@ -2982,6 +2982,8 @@ class Cmd(cmd.Cmd):
 
             if self.locals_in_py:
                 self.pystate['self'] = self
+            elif 'self' in self.pystate:
+                del self.pystate['self']
 
             localvars = self.pystate
             from code import InteractiveConsole
