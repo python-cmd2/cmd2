@@ -10,7 +10,7 @@ Released under MIT license, see LICENSE file
 import argparse
 import functools
 import sys
-from typing import List, Callable
+from typing import List, Callable, Optional
 
 from .argparse_completer import _RangeAction
 from .utils import namedtuple_with_defaults, StdSim
@@ -38,7 +38,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
         return not self.stderr and self.data is not None
 
 
-def _exec_cmd(cmd2_app, func: Callable, echo: bool):
+def _exec_cmd(cmd2_app, func: Callable, echo: bool) -> CommandResult:
     """Helper to encapsulate executing a command and capturing the results"""
     copy_stdout = StdSim(sys.stdout, echo)
     copy_stderr = StdSim(sys.stderr, echo)
@@ -65,7 +65,7 @@ def _exec_cmd(cmd2_app, func: Callable, echo: bool):
 
 class ArgparseFunctor:
     """
-    Encapsulates translating python object traversal
+    Encapsulates translating Python object traversal
     """
     def __init__(self, echo: bool, cmd2_app, command_name: str, parser: argparse.ArgumentParser):
         self._echo = echo
@@ -250,7 +250,7 @@ class PyscriptBridge(object):
         self.cmd_echo = False
 
     def __getattr__(self, item: str):
-        """Check if the attribute is a command. If so, return a callable."""
+        """If attribute is a command, return a callable. Otherwise return the attribute."""
         func = self._cmd2_app.cmd_func(item)
 
         if func:
@@ -264,7 +264,7 @@ class PyscriptBridge(object):
 
                 return wrap_func
         else:
-            return super().__getattr__(item)
+            return getattr(self._cmd2_app, item)
 
     def __dir__(self):
         """Return a custom set of attribute names to match the available commands"""
@@ -272,6 +272,15 @@ class PyscriptBridge(object):
         commands.insert(0, 'cmd_echo')
         return commands
 
-    def __call__(self, args: str):
+    def __call__(self, args: str, echo: Optional[bool]=None) -> CommandResult:
+        """
+        Call a command function (ex: do_help)
+        :param args: The string being passed to the command
+        :param echo: If True, output will be echoed while the command runs
+                     This temporarily overrides the value of self.cmd_echo
+        """
+        if echo is None:
+            echo = self.cmd_echo
+
         return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'),
-                         self.cmd_echo)
+                         echo)

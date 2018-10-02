@@ -2944,7 +2944,21 @@ class Cmd(cmd.Cmd):
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
-    py_parser = ACArgumentParser()
+    py_description = ("Invoke Python command or shell\n"
+                      "\n"
+                      "When invoking a command directly from the command line, note this shell has\n"
+                      "limited ability to parse Python statements into tokens. If an opening quote is\n"
+                      "not preceded by whitespace, its closing quote should appear before any\n"
+                      "whitespace. Otherwise whitespace in the parsed tokens will get lost.\n"
+                      "\n"
+                      "Note the opening quote before 'This' in the following commands\n"
+                      'py print("This " + "is bad")\n'
+                      'py print("This" + " is good")\n'
+                      "\n"
+                      "If you see strange parsing behavior, its best to just open the Python shell by\n"
+                      "providing no arguments to py and run more complex statements there.")
+
+    py_parser = ACArgumentParser(description=py_description)
     py_parser.add_argument('command', help="command to run", nargs='?')
     py_parser.add_argument('remainder', help="remainder of command", nargs=argparse.REMAINDER)
 
