@@ -2060,15 +2060,14 @@ class Cmd(cmd.Cmd):
 
         :param statement: Statement object with parsed input
         """
-        arg = statement.raw
         if self.default_to_shell:
-            result = os.system(arg)
+            result = os.system(statement.command_and_args)
             # If os.system() succeeded, then don't print warning about unknown command
             if not result:
                 return
 
         # Print out a message stating this is an unknown command
-        self.poutput('*** Unknown syntax: {}\n'.format(arg))
+        self.poutput('*** Unknown syntax: {}\n'.format(statement.command_and_args))
 
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -2946,16 +2945,11 @@ class Cmd(cmd.Cmd):
 
     py_description = ("Invoke Python command or shell\n"
                       "\n"
-                      "When invoking a command directly from the command line, note this shell has\n"
-                      "limited ability to parse Python statements into tokens. If an opening quote is\n"
-                      "not preceded by whitespace, its closing quote should appear before any\n"
-                      "whitespace. Otherwise whitespace in the parsed tokens will get lost.\n"
+                      "Note that, when invoking a command directly from the command line, this shell\n"
+                      "has limited ability to parse Python statements into tokens. In particular,\n"
+                      "there may be problems with whitespace and quotes depending on their placement.\n"
                       "\n"
-                      "Note the opening quote before 'This' in the following commands\n"
-                      'py print("This " + "is bad")\n'
-                      'py print("This" + " is good")\n'
-                      "\n"
-                      "If you see strange parsing behavior, its best to just open the Python shell by\n"
+                      "If you see strange parsing behavior, it's best to just open the Python shell by\n"
                       "providing no arguments to py and run more complex statements there.")
 
     py_parser = ACArgumentParser(description=py_description)
