@@ -250,7 +250,10 @@ class PyscriptBridge(object):
         self.cmd_echo = False
 
     def __getattr__(self, item: str):
-        """If attribute is a command, return a callable. Otherwise return the attribute."""
+        """
+        Provide a way to call application commands via the PyscriptBridge
+        ex: app.help()
+        """
         func = self._cmd2_app.cmd_func(item)
 
         if func:
@@ -264,7 +267,8 @@ class PyscriptBridge(object):
 
                 return wrap_func
         else:
-            return getattr(self._cmd2_app, item)
+            # item does not refer to a command
+            raise AttributeError("'{}' object has no attribute '{}'".format(self._cmd2_app.pyscript_name, item))
 
     def __dir__(self):
         """Return a custom set of attribute names to match the available commands"""
