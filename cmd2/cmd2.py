@@ -2207,7 +2207,7 @@ class Cmd(cmd.Cmd):
     # -----  Alias subcommand functions -----
 
     def alias_create(self, args: argparse.Namespace):
-        """Create or overwrites an alias"""
+        """Create or overwrite an alias"""
 
         # Validate the alias name
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
@@ -2335,7 +2335,7 @@ class Cmd(cmd.Cmd):
     # -----  Macro subcommand functions -----
 
     def macro_create(self, args: argparse.Namespace):
-        """Create or overwrites a macro"""
+        """Create or overwrite a macro"""
 
         # Validate the macro name
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
