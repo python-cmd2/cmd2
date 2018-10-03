@@ -268,38 +268,38 @@ class StdSim(object):
             if self.echo:
                 self.inner_stream.buffer.write(b)
 
-    def __init__(self, inner_stream, echo: bool = False) -> None:
+    def __init__(self, inner_stream, echo: bool = False,
+                 encoding: str='utf-8', errors: str='replace') -> None:
+        """
+        Initializer
+        :param inner_stream: the stream this sits on top of
+        :param echo: if True, then all contents will be echoed to inner_stream
+        :param encoding: codec for encoding/decoding strings (defaults to utf-8)
+        :param errors: how to handle encoding/decoding errors (defaults to replace)
+        """
         self.buffer = self.ByteBuf(inner_stream, echo)
         self.inner_stream = inner_stream
+        self.encoding = encoding
+        self.errors = errors
 
-    def write(self, s: str, encoding: str = 'utf-8') -> None:
-        """
-        Add str to internal bytes buffer and if echo is True, echo contents to inner stream.
-        :param: s: string to write
-        :param encoding: how to encode the string (defaults to utf-8)
-        """
+    def write(self, s: str) -> None:
+        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream"""
         if not isinstance(s, str):
             raise TypeError('write() argument must be str, not {}'.format(type(s)))
-        b = s.encode(encoding=encoding)
+        b = s.encode(encoding=self.encoding, errors=self.errors)
         self.buffer.write(b)
 
-    def getvalue(self, encoding: str = 'utf-8') -> str:
-        """
-        Get the internal contents as a str
-        :param encoding: how to decode the bytes (defaults to utf-8)
-        """
-        return self.buffer.byte_buf.decode(encoding=encoding, errors='replace')
+    def getvalue(self) -> str:
+        """Get the internal contents as a str"""
+        return self.buffer.byte_buf.decode(encoding=self.encoding, errors=self.errors)
 
     def getbytes(self) -> bytes:
         """Get the internal contents as bytes"""
         return self.buffer.byte_buf
 
-    def read(self, encoding: str = 'utf-8') -> str:
-        """
-        Read from the internal contents as a str and then clear them out
-        :param encoding: how to decode the bytes (defaults to utf-8)
-        """
-        result = self.getvalue(encoding)
+    def read(self) -> str:
+        """Read from the internal contents as a str and then clear them out"""
+        result = self.getvalue()
         self.clear()
         return result
 
