@@ -756,30 +756,36 @@ def test_statement_is_immutable():
         statement.raw = 'baz'
 
 
-def test_is_valid_command(parser):
+def test_is_valid_command_invalid(parser):
     # Empty command
     valid, errmsg = parser.is_valid_command('')
     assert not valid and 'cannot be an empty string' in errmsg
 
     # Starts with shortcut
-    valid, errmsg = parser.is_valid_command('!cmd')
+    valid, errmsg = parser.is_valid_command('!ls')
     assert not valid and 'cannot start with a shortcut' in errmsg
 
     # Contains whitespace
-    valid, errmsg = parser.is_valid_command(' ')
+    valid, errmsg = parser.is_valid_command('shell ls')
     assert not valid and 'cannot contain: whitespace, quotes,' in errmsg
 
     # Contains a quote
-    valid, errmsg = parser.is_valid_command('"cmd')
+    valid, errmsg = parser.is_valid_command('"shell"')
     assert not valid and 'cannot contain: whitespace, quotes,' in errmsg
 
     # Contains a redirector
-    valid, errmsg = parser.is_valid_command('>cmd')
+    valid, errmsg = parser.is_valid_command('>shell')
     assert not valid and 'cannot contain: whitespace, quotes,' in errmsg
 
     # Contains a terminator
-    valid, errmsg = parser.is_valid_command(';cmd')
+    valid, errmsg = parser.is_valid_command(';shell')
     assert not valid and 'cannot contain: whitespace, quotes,' in errmsg
+
+def test_is_valid_command_valid(parser):
+    # Empty command
+    valid, errmsg = parser.is_valid_command('shell')
+    assert valid
+    assert not errmsg
 
 
 def test_macro_normal_arg_pattern():
