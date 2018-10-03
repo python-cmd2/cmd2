@@ -247,7 +247,7 @@ class PyscriptBridge(object):
     def __init__(self, cmd2_app):
         self._cmd2_app = cmd2_app
         self._last_result = None
-        self.cmd_echo = False
+        self.cmd_echo = True
 
     def __getattr__(self, item: str):
         """
@@ -271,10 +271,10 @@ class PyscriptBridge(object):
             raise AttributeError("'{}' object has no attribute '{}'".format(self._cmd2_app.pyscript_name, item))
 
     def __dir__(self):
-        """Return a custom set of attribute names to match the available commands"""
-        commands = list(self._cmd2_app.get_all_commands())
-        commands.insert(0, 'cmd_echo')
-        return commands
+        """Return a custom set of attribute names"""
+        attributes = self._cmd2_app.get_all_commands()
+        attributes.insert(0, 'cmd_echo')
+        return attributes
 
     def __call__(self, args: str, echo: Optional[bool]=None) -> CommandResult:
         """

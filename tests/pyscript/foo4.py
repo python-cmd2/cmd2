@@ -1,4 +1,3 @@
-app.cmd_echo = True
 result = app.foo('aaa', 'bbb', counter=3)
 out_text = 'Fail'
 if result:

@@ -1,2 +1,1 @@
-app.cmd_echo = True
 app.media.movies.list(rating=('PG', 'PG-13'))
