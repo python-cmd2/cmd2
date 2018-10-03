@@ -1236,6 +1236,11 @@ class HelpCategoriesApp(cmd2.Cmd):
         """This command does diddly"""
         pass
 
+    # This command will be in the "Some Category" section of the help menu even though it has no docstring
+    @cmd2.with_category("Some Category")
+    def do_cat_nodoc(self, arg):
+        pass
+
     def do_squat(self, arg):
         """This docstring help will never be shown because the help_squat method overrides it."""
         pass
@@ -1269,7 +1274,7 @@ edit  squat
 
 Some Category
 =============
-diddly
+cat_nodoc  diddly
 
 Other
 =====
@@ -1292,6 +1297,7 @@ squat               This command does diddly squat...
 
 Some Category
 ================================================================================
+cat_nodoc
 diddly              This command does diddly
 
 Other
