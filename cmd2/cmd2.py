@@ -2209,10 +2209,9 @@ class Cmd(cmd.Cmd):
     # -----  Alias subcommand functions -----
 
     def alias_create(self, args: argparse.Namespace):
-        """ Creates or overwrites an alias """
+        """Create or overwrites an alias"""
 
         # Validate the alias name
-        args.name = utils.strip_quotes(args.name)
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
             self.perror("Invalid alias name: {}".format(errmsg), traceback_war=False)
@@ -2235,17 +2234,14 @@ class Cmd(cmd.Cmd):
         self.poutput("Alias '{}' {}".format(args.name, result))
 
     def alias_delete(self, args: argparse.Namespace):
-        """ Deletes aliases """
+        """Delete aliases"""
         if args.all:
             self.aliases.clear()
             self.poutput("All aliases deleted")
         elif not args.name:
             self.do_help('alias delete')
         else:
-            # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
-            aliases_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
-
-            for cur_name in aliases_to_delete:
+            for cur_name in utils.remove_duplicates(args.name):
                 if cur_name in self.aliases:
                     del self.aliases[cur_name]
                     self.poutput("Alias '{}' deleted".format(cur_name))
@@ -2253,12 +2249,9 @@ class Cmd(cmd.Cmd):
                     self.perror("Alias '{}' does not exist".format(cur_name), traceback_war=False)
 
     def alias_list(self, args: argparse.Namespace):
-        """ Lists some or all aliases """
+        """List some or all aliases"""
         if args.name:
-            # Get rid of duplicates and strip quotes since the argparse decorator for do_alias() preserves them
-            names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
-
-            for cur_name in names_to_view:
+            for cur_name in utils.remove_duplicates(args.name):
                 if cur_name in self.aliases:
                     self.poutput("alias create {} {}".format(cur_name, self.aliases[cur_name]))
                 else:
@@ -2344,10 +2337,9 @@ class Cmd(cmd.Cmd):
     # -----  Macro subcommand functions -----
 
     def macro_create(self, args: argparse.Namespace):
-        """ Creates or overwrites a macro """
+        """Create or overwrites a macro"""
 
         # Validate the macro name
-        args.name = utils.strip_quotes(args.name)
         valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
             self.perror("Invalid macro name: {}".format(errmsg), traceback_war=False)
@@ -2420,17 +2412,14 @@ class Cmd(cmd.Cmd):
         self.poutput("Macro '{}' {}".format(args.name, result))
 
     def macro_delete(self, args: argparse.Namespace):
-        """ Deletes macros """
+        """Delete macros"""
         if args.all:
             self.macros.clear()
             self.poutput("All macros deleted")
         elif not args.name:
             self.do_help('macro delete')
         else:
-            # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
-            macros_to_delete = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
-
-            for cur_name in macros_to_delete:
+            for cur_name in utils.remove_duplicates(args.name):
                 if cur_name in self.macros:
                     del self.macros[cur_name]
                     self.poutput("Macro '{}' deleted".format(cur_name))
@@ -2438,12 +2427,9 @@ class Cmd(cmd.Cmd):
                     self.perror("Macro '{}' does not exist".format(cur_name), traceback_war=False)
 
     def macro_list(self, args: argparse.Namespace):
-        """ Lists some or all macros """
+        """List some or all macros"""
         if args.name:
-            # Get rid of duplicates and strip quotes since the argparse decorator for do_macro() preserves them
-            names_to_view = [utils.strip_quotes(cur_name) for cur_name in utils.remove_duplicates(args.name)]
-
-            for cur_name in names_to_view:
+            for cur_name in utils.remove_duplicates(args.name):
                 if cur_name in self.macros:
                     self.poutput("macro create {} {}".format(cur_name, self.macros[cur_name].value))
                 else:
