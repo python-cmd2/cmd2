@@ -2687,9 +2687,11 @@ class Cmd(cmd.Cmd):
                 topics = self.get_help_topics()
 
                 for command in cmds:
-                    # First see if there's a help function implemented
-                    if command in topics:
-                        func = getattr(self, HELP_FUNC_PREFIX + command)
+                    cmd_func = self.cmd_func(command)
+
+                    # Non-argparse commands can have help_functions for their documentation
+                    if not hasattr(cmd_func, 'argparser') and command in topics:
+                        help_func = getattr(self, HELP_FUNC_PREFIX + command)
                         result = io.StringIO()
 
                         # try to redirect system stdout
@@ -2699,16 +2701,14 @@ class Cmd(cmd.Cmd):
                             try:
                                 # redirect our internal stdout
                                 self.stdout = result
-                                func()
+                                help_func()
                             finally:
                                 # restore internal stdout
                                 self.stdout = stdout_orig
                         doc = result.getvalue()
 
                     else:
-                        # Couldn't find a help function
-                        func = self.cmd_func(command)
-                        doc = func.__doc__
+                        doc = cmd_func.__doc__
 
                     # Attempt to locate the first documentation block
                     doc_block = []
