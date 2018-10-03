@@ -251,7 +251,7 @@ class PyscriptBridge(object):
 
     def __getattr__(self, item: str):
         """
-        Provide a way to call application commands via the PyscriptBridge
+        Provide functionality to call application commands as a method of PyscriptBridge
         ex: app.help()
         """
         func = self._cmd2_app.cmd_func(item)
@@ -278,7 +278,8 @@ class PyscriptBridge(object):
 
     def __call__(self, args: str, echo: Optional[bool]=None) -> CommandResult:
         """
-        Call a command function (ex: do_help)
+        Provide functionality to call application commands by calling PyscriptBridge
+        ex: app('help')
         :param args: The string being passed to the command
         :param echo: If True, output will be echoed while the command runs
                      This temporarily overrides the value of self.cmd_echo
@@ -286,5 +287,6 @@ class PyscriptBridge(object):
         if echo is None:
             echo = self.cmd_echo
 
-        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'),
+        return _exec_cmd(self._cmd2_app,
+                         functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'),
                          echo)
