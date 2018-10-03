@@ -268,35 +268,49 @@ class StdSim(object):
             if self.echo:
                 self.inner_stream.buffer.write(b)
 
-    def __init__(self, inner_stream, echo: bool = False) -> None:
+    def __init__(self, inner_stream, echo: bool = False,
+                 encoding: str='utf-8', errors: str='replace') -> None:
+        """
+        Initializer
+        :param inner_stream: the emulated stream
+        :param echo: if True, then all input will be echoed to inner_stream
+        :param encoding: codec for encoding/decoding strings (defaults to utf-8)
+        :param errors: how to handle encoding/decoding errors (defaults to replace)
+        """
         self.buffer = self.ByteBuf(inner_stream, echo)
         self.inner_stream = inner_stream
+        self.encoding = encoding
+        self.errors = errors
 
     def write(self, s: str) -> None:
-        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream."""
+        """Add str to internal bytes buffer and if echo is True, echo contents to inner stream"""
         if not isinstance(s, str):
             raise TypeError('write() argument must be str, not {}'.format(type(s)))
-        b = s.encode()
+        b = s.encode(encoding=self.encoding, errors=self.errors)
         self.buffer.write(b)
 
     def getvalue(self) -> str:
-        """Get the internal contents as a str.
+        """Get the internal contents as a str"""
+        return self.buffer.byte_buf.decode(encoding=self.encoding, errors=self.errors)
 
-        :return string from the internal contents
-        """
-        return self.buffer.byte_buf.decode()
+    def getbytes(self) -> bytes:
+        """Get the internal contents as bytes"""
+        return self.buffer.byte_buf
 
     def read(self) -> str:
-        """Read from the internal contents as a str and then clear them out.
-
-        :return: string from the internal contents
-        """
+        """Read from the internal contents as a str and then clear them out"""
         result = self.getvalue()
         self.clear()
         return result
 
+    def readbytes(self) -> bytes:
+        """Read from the internal contents as bytes and then clear them out"""
+        result = self.getbytes()
+        self.clear()
+        return result
+
     def clear(self) -> None:
-        """Clear the internal contents."""
+        """Clear the internal contents"""
         self.buffer.byte_buf = b''
 
     def __getattr__(self, item: str):
