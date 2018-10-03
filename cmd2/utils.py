@@ -272,8 +272,8 @@ class StdSim(object):
                  encoding: str='utf-8', errors: str='replace') -> None:
         """
         Initializer
-        :param inner_stream: the stream this sits on top of
-        :param echo: if True, then all contents will be echoed to inner_stream
+        :param inner_stream: the emulated stream
+        :param echo: if True, then all input will be echoed to inner_stream
         :param encoding: codec for encoding/decoding strings (defaults to utf-8)
         :param errors: how to handle encoding/decoding errors (defaults to replace)
         """
