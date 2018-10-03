@@ -2633,15 +2633,22 @@ class Cmd(cmd.Cmd):
 
         for command in visible_commands:
             func = self.cmd_func(command)
-            if command in help_topics or func.__doc__:
-                if command in help_topics:
-                    help_topics.remove(command)
-                if hasattr(func, HELP_CATEGORY):
-                    category = getattr(func, HELP_CATEGORY)
-                    cmds_cats.setdefault(category, [])
-                    cmds_cats[category].append(command)
-                else:
-                    cmds_doc.append(command)
+            has_help_func = False
+
+            if command in help_topics:
+                # Prevent the command from showing as both a command and help topic in the output
+                help_topics.remove(command)
+
+                # Non-argparse commands can have help_functions for their documentation
+                if not hasattr(func, 'argparser'):
+                    has_help_func = True
+
+            if hasattr(func, HELP_CATEGORY):
+                category = getattr(func, HELP_CATEGORY)
+                cmds_cats.setdefault(category, [])
+                cmds_cats[category].append(command)
+            elif func.__doc__ or has_help_func:
+                cmds_doc.append(command)
             else:
                 cmds_undoc.append(command)
 
@@ -2711,20 +2718,23 @@ class Cmd(cmd.Cmd):
                         doc = cmd_func.__doc__
 
                     # Attempt to locate the first documentation block
-                    doc_block = []
-                    found_first = False
-                    for doc_line in doc.splitlines():
-                        stripped_line = doc_line.strip()
+                    if not doc:
+                        doc_block = ['']
+                    else:
+                        doc_block = []
+                        found_first = False
+                        for doc_line in doc.splitlines():
+                            stripped_line = doc_line.strip()
 
-                        # Don't include :param type lines
-                        if stripped_line.startswith(':'):
-                            if found_first:
+                            # Don't include :param type lines
+                            if stripped_line.startswith(':'):
+                                if found_first:
+                                    break
+                            elif stripped_line:
+                                doc_block.append(stripped_line)
+                                found_first = True
+                            elif found_first:
                                 break
-                        elif stripped_line:
-                            doc_block.append(stripped_line)
-                            found_first = True
-                        elif found_first:
-                            break
 
                     for doc_line in doc_block:
                         self.stdout.write('{: <{col_width}}{doc}\n'.format(command,
