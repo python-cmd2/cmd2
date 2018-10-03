@@ -120,14 +120,16 @@ except ImportError:  # pragma: no cover
 
 # optional attribute, when tagged on a function, allows cmd2 to categorize commands
 HELP_CATEGORY = 'help_category'
-HELP_SUMMARY = 'help_summary'
 
 INTERNAL_COMMAND_EPILOG = ("Notes:\n"
                            "  This command is for internal use and is not intended to be called from the\n"
                            "  command line.")
 
 # All command functions start with this
-COMMAND_PREFIX = 'do_'
+COMMAND_FUNC_PREFIX = 'do_'
+
+# All help functions start with this
+HELP_FUNC_PREFIX = 'help_'
 
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
@@ -211,16 +213,14 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
-        argparser.prog = func.__name__[3:]
+        argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
 
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
 
-        if func.__doc__:
-            setattr(cmd_wrapper, HELP_SUMMARY, func.__doc__)
-
-        cmd_wrapper.__doc__ = argparser.format_help()
+        # If argparser.description is None, this will show under 'Undocumented commands'
+        cmd_wrapper.__doc__ = argparser.description
 
         # Mark this function as having an argparse ArgumentParser
         setattr(cmd_wrapper, 'argparser', argparser)
@@ -254,16 +254,14 @@ def with_argparser(argparser: argparse.ArgumentParser, preserve_quotes: bool=Fal
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
-        argparser.prog = func.__name__[3:]
+        argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
 
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
 
-        if func.__doc__:
-            setattr(cmd_wrapper, HELP_SUMMARY, func.__doc__)
-
-        cmd_wrapper.__doc__ = argparser.format_help()
+        # If argparser.description is None, this will show under 'Undocumented commands'
+        cmd_wrapper.__doc__ = argparser.description
 
         # Mark this function as having an argparse ArgumentParser
         setattr(cmd_wrapper, 'argparser', argparser)
@@ -1606,8 +1604,8 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self) -> List[str]:
         """Returns a list of all commands."""
-        return [name[len(COMMAND_PREFIX):] for name in self.get_names()
-                if name.startswith(COMMAND_PREFIX) and callable(getattr(self, name))]
+        return [name[len(COMMAND_FUNC_PREFIX):] for name in self.get_names()
+                if name.startswith(COMMAND_FUNC_PREFIX) and callable(getattr(self, name))]
 
     def get_visible_commands(self) -> List[str]:
         """Returns a list of commands that have not been hidden."""
@@ -1637,8 +1635,8 @@ class Cmd(cmd.Cmd):
 
     def get_help_topics(self) -> List[str]:
         """ Returns a list of help topics """
-        return [name[5:] for name in self.get_names()
-                if name.startswith('help_') and callable(getattr(self, name))]
+        return [name[len(HELP_FUNC_PREFIX):] for name in self.get_names()
+                if name.startswith(HELP_FUNC_PREFIX) and callable(getattr(self, name))]
 
     # noinspection PyUnusedLocal
     def sigint_handler(self, signum: int, frame) -> None:
@@ -1985,7 +1983,7 @@ class Cmd(cmd.Cmd):
         :param command: command to look up method name which implements it
         :return: method name which implements the given command
         """
-        target = COMMAND_PREFIX + command
+        target = COMMAND_FUNC_PREFIX + command
         return target if callable(getattr(self, target, None)) else ''
 
     def onecmd(self, statement: Union[Statement, str]) -> bool:
@@ -2685,23 +2683,15 @@ class Cmd(cmd.Cmd):
                 if self.ruler:
                     self.stdout.write('{:{ruler}<{width}}\n'.format('', ruler=self.ruler, width=80))
 
+                # Try to get the documentation string for each command
+                topics = self.get_help_topics()
+
                 for command in cmds:
-                    # Try to get the documentation string
-                    try:
-                        # first see if there's a help function implemented
-                        func = getattr(self, 'help_' + command)
-                    except AttributeError:
-                        # Couldn't find a help function
-                        func = self.cmd_func(command)
-                        try:
-                            # Now see if help_summary has been set
-                            doc = func.help_summary
-                        except AttributeError:
-                            # Last, try to directly access the function's doc-string
-                            doc = func.__doc__
-                    else:
-                        # we found the help function
+                    # First see if there's a help function implemented
+                    if command in topics:
+                        func = getattr(self, HELP_FUNC_PREFIX + command)
                         result = io.StringIO()
+
                         # try to redirect system stdout
                         with redirect_stdout(result):
                             # save our internal stdout
@@ -2714,6 +2704,11 @@ class Cmd(cmd.Cmd):
                                 # restore internal stdout
                                 self.stdout = stdout_orig
                         doc = result.getvalue()
+
+                    else:
+                        # Couldn't find a help function
+                        func = self.cmd_func(command)
+                        doc = func.__doc__
 
                     # Attempt to locate the first documentation block
                     doc_block = []
@@ -3408,7 +3403,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     @with_argparser(relative_load_parser)
     def do__relative_load(self, args: argparse.Namespace) -> None:
-        """"""
+        """Run commands in script file that is encoded as either ASCII or UTF-8 text"""
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
