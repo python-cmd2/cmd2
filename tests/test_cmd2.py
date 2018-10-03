@@ -1866,22 +1866,6 @@ def test_alias_create(base_app, capsys):
     out = run_cmd(base_app, 'alias list fake')
     assert out == normalize('alias create fake pyscript')
 
-def test_alias_quoted_name(base_app, capsys):
-    """Demonstrate that names can be quoted in alias commands because they will be stripped"""
-    # Create the alias
-    out = run_cmd(base_app, 'alias create "fake" pyscript')
-
-    # The quotes on names are stripped
-    assert out == normalize("Alias 'fake' created")
-
-    # Look up the new alias and quote the name
-    out = run_cmd(base_app, 'alias list "fake"')
-    assert out == normalize('alias create fake pyscript')
-
-    # Delete the alias using quotes
-    out = run_cmd(base_app, 'alias delete "fake"')
-    assert out == normalize("Alias 'fake' deleted")
-
 def test_alias_create_with_quoted_value(base_app, capsys):
     """Demonstrate that quotes in alias value will be preserved (except for redirectors)"""
 
@@ -1967,22 +1951,6 @@ def test_macro_create(base_app, capsys):
     # Look up the new macro
     out = run_cmd(base_app, 'macro list fake')
     assert out == normalize('macro create fake pyscript')
-
-def test_macro_create_quoted_name(base_app, capsys):
-    """Demonstrate that names can be quoted in macro commands because they will be stripped"""
-    # Create the macro
-    out = run_cmd(base_app, 'macro create "fake" pyscript')
-
-    # The quotes on names are stripped
-    assert out == normalize("Macro 'fake' created")
-
-    # Look up the new macro and quote the name
-    out = run_cmd(base_app, 'macro list "fake"')
-    assert out == normalize('macro create fake pyscript')
-
-    # Delete the macro using quotes
-    out = run_cmd(base_app, 'macro delete "fake"')
-    assert out == normalize("Macro 'fake' deleted")
 
 def test_macro_create_with_quoted_value(base_app, capsys):
     """Demonstrate that quotes in macro value will be preserved (except for redirectors)"""

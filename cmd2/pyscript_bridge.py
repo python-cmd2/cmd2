@@ -10,7 +10,7 @@ Released under MIT license, see LICENSE file
 import argparse
 import functools
 import sys
-from typing import List, Callable
+from typing import List, Callable, Optional
 
 from .argparse_completer import _RangeAction
 from .utils import namedtuple_with_defaults, StdSim
@@ -38,7 +38,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
         return not self.stderr and self.data is not None
 
 
-def _exec_cmd(cmd2_app, func: Callable, echo: bool):
+def _exec_cmd(cmd2_app, func: Callable, echo: bool) -> CommandResult:
     """Helper to encapsulate executing a command and capturing the results"""
     copy_stdout = StdSim(sys.stdout, echo)
     copy_stderr = StdSim(sys.stderr, echo)
@@ -65,7 +65,7 @@ def _exec_cmd(cmd2_app, func: Callable, echo: bool):
 
 class ArgparseFunctor:
     """
-    Encapsulates translating python object traversal
+    Encapsulates translating Python object traversal
     """
     def __init__(self, echo: bool, cmd2_app, command_name: str, parser: argparse.ArgumentParser):
         self._echo = echo
@@ -169,7 +169,7 @@ class ArgparseFunctor:
         # Check if there are any extra arguments we don't know how to handle
         for kw in kwargs:
             if kw not in self._args:  # consumed_kw:
-                raise TypeError('{}() got an unexpected keyword argument \'{}\''.format(
+                raise TypeError("{}() got an unexpected keyword argument '{}'".format(
                     self.__current_subcommand_parser.prog, kw))
 
         if has_subcommand:
@@ -181,7 +181,7 @@ class ArgparseFunctor:
         # look up command function
         func = self._cmd2_app.cmd_func(self._command_name)
         if func is None:
-            raise AttributeError("{!r} object has no command called {!r}".format(self._cmd2_app.__class__.__name__,
+            raise AttributeError("'{}' object has no command called '{}'".format(self._cmd2_app.__class__.__name__,
                                                                                  self._command_name))
 
         # reconstruct the cmd2 command from the python call
@@ -250,7 +250,10 @@ class PyscriptBridge(object):
         self.cmd_echo = False
 
     def __getattr__(self, item: str):
-        """Check if the attribute is a command. If so, return a callable."""
+        """
+        Provide functionality to call application commands as a method of PyscriptBridge
+        ex: app.help()
+        """
         func = self._cmd2_app.cmd_func(item)
 
         if func:
@@ -264,14 +267,26 @@ class PyscriptBridge(object):
 
                 return wrap_func
         else:
-            return super().__getattr__(item)
+            # item does not refer to a command
+            raise AttributeError("'{}' object has no attribute '{}'".format(self._cmd2_app.pyscript_name, item))
 
     def __dir__(self):
-        """Return a custom set of attribute names to match the available commands"""
-        commands = list(self._cmd2_app.get_all_commands())
-        commands.insert(0, 'cmd_echo')
-        return commands
+        """Return a custom set of attribute names"""
+        attributes = self._cmd2_app.get_all_commands()
+        attributes.insert(0, 'cmd_echo')
+        return attributes
 
-    def __call__(self, args: str):
-        return _exec_cmd(self._cmd2_app, functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'),
-                         self.cmd_echo)
+    def __call__(self, args: str, echo: Optional[bool]=None) -> CommandResult:
+        """
+        Provide functionality to call application commands by calling PyscriptBridge
+        ex: app('help')
+        :param args: The string being passed to the command
+        :param echo: If True, output will be echoed while the command runs
+                     This temporarily overrides the value of self.cmd_echo
+        """
+        if echo is None:
+            echo = self.cmd_echo
+
+        return _exec_cmd(self._cmd2_app,
+                         functools.partial(self._cmd2_app.onecmd_plus_hooks, args + '\n'),
+                         echo)
