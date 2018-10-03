@@ -215,8 +215,10 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
         # we want it to be the name of our command
         argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
 
-        if argparser.description is None:
+        if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
+
+        # If argparser.description is None, this will show under 'Undocumented commands'
         cmd_wrapper.__doc__ = argparser.description
 
         # Mark this function as having an argparse ArgumentParser
@@ -253,8 +255,10 @@ def with_argparser(argparser: argparse.ArgumentParser, preserve_quotes: bool=Fal
         # we want it to be the name of our command
         argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
 
-        if argparser.description is None:
+        if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
+
+        # If argparser.description is None, this will show under 'Undocumented commands'
         cmd_wrapper.__doc__ = argparser.description
 
         # Mark this function as having an argparse ArgumentParser
