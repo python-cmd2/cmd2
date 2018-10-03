@@ -169,7 +169,7 @@ class ArgparseFunctor:
         # Check if there are any extra arguments we don't know how to handle
         for kw in kwargs:
             if kw not in self._args:  # consumed_kw:
-                raise TypeError('{}() got an unexpected keyword argument \'{}\''.format(
+                raise TypeError("{}() got an unexpected keyword argument '{}'".format(
                     self.__current_subcommand_parser.prog, kw))
 
         if has_subcommand:
@@ -181,7 +181,7 @@ class ArgparseFunctor:
         # look up command function
         func = self._cmd2_app.cmd_func(self._command_name)
         if func is None:
-            raise AttributeError("{!r} object has no command called {!r}".format(self._cmd2_app.__class__.__name__,
+            raise AttributeError("'{}' object has no command called '{}'".format(self._cmd2_app.__class__.__name__,
                                                                                  self._command_name))
 
         # reconstruct the cmd2 command from the python call
