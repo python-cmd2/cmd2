@@ -215,6 +215,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
         # we want it to be the name of our command
         argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
 
+        # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
 
@@ -255,6 +256,7 @@ def with_argparser(argparser: argparse.ArgumentParser, preserve_quotes: bool=Fal
         # we want it to be the name of our command
         argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
 
+        # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
             argparser.description = func.__doc__
 
