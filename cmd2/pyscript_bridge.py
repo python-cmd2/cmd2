@@ -247,7 +247,7 @@ class PyscriptBridge(object):
     def __init__(self, cmd2_app):
         self._cmd2_app = cmd2_app
         self._last_result = None
-        self.cmd_echo = True
+        self.cmd_echo = False
 
     def __getattr__(self, item: str):
         """

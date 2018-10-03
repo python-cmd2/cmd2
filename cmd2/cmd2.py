@@ -2989,6 +2989,8 @@ class Cmd(cmd.Cmd):
                 if args.remainder:
                     full_command += ' ' + ' '.join(args.remainder)
 
+                # If running at the CLI, print the output of the command
+                bridge.cmd_echo = True
                 interp.runcode(full_command)
 
             # If there are no args, then we will open an interactive Python console
