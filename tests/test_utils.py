@@ -133,6 +133,7 @@ def test_stdsim_buffer_write_bytes(stdout_sim):
     b_str = b'Hello World'
     stdout_sim.buffer.write(b_str)
     assert stdout_sim.getvalue() == b_str.decode()
+    assert stdout_sim.getbytes() == b_str
 
 def test_stdsim_buffer_write_str(stdout_sim):
     my_str = 'Hello World'
@@ -147,6 +148,15 @@ def test_stdsim_read(stdout_sim):
     # read() returns the value and then clears the internal buffer
     assert stdout_sim.read() == my_str
     assert stdout_sim.getvalue() == ''
+
+def test_stdsim_read_bytes(stdout_sim):
+    b_str = b'Hello World'
+    stdout_sim.buffer.write(b_str)
+    # getbytes() returns the value and leaves it unaffected internally
+    assert stdout_sim.getbytes() == b_str
+    # read_bytes() returns the value and then clears the internal buffer
+    assert stdout_sim.readbytes() == b_str
+    assert stdout_sim.getbytes() == b''
 
 def test_stdsim_clear(stdout_sim):
     my_str = 'Hello World'
