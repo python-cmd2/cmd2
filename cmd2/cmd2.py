@@ -2005,11 +2005,11 @@ class Cmd(cmd.Cmd):
         else:
             func = self.cmd_func(statement.command)
             if func:
-                stop = func(statement)
-
                 # Since we have a valid command store it in the history
                 if statement.command not in self.exclude_from_history:
                     self.history.append(statement.raw)
+
+                stop = func(statement)
 
             else:
                 self.default(statement)
