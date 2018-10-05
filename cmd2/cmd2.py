@@ -2268,7 +2268,7 @@ class Cmd(cmd.Cmd):
     alias_parser = ACArgumentParser(description=alias_description, epilog=alias_epilog, prog='alias')
 
     # Add subcommands to alias
-    alias_subparsers = alias_parser.add_subparsers()
+    alias_subparsers = alias_parser.add_subparsers(title='sub-commands')
 
     # alias -> create
     alias_create_help = "create or overwrite an alias"
@@ -2446,7 +2446,7 @@ class Cmd(cmd.Cmd):
     macro_parser = ACArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
 
     # Add subcommands to macro
-    macro_subparsers = macro_parser.add_subparsers()
+    macro_subparsers = macro_parser.add_subparsers(title='sub-commands')
 
     # macro -> create
     macro_create_help = "create or overwrite a macro"
