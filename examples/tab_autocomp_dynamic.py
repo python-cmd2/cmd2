@@ -25,7 +25,7 @@ def query_actors() -> List[str]:
 
 
 class TabCompleteExample(cmd2.Cmd):
-    """ Example cmd2 application where we a base command which has a couple subcommands."""
+    """ Example cmd2 application where we a base command which has a couple sub-commands."""
 
     CAT_AUTOCOMPLETE = 'AutoComplete Examples'
 
@@ -225,7 +225,7 @@ class TabCompleteExample(cmd2.Cmd):
     @cmd2.with_category(CAT_AUTOCOMPLETE)
     @cmd2.with_argparser(video_parser)
     def do_video(self, args):
-        """Video management command demonstrates multiple layers of subcommands being handled by AutoCompleter"""
+        """Video management command demonstrates multiple layers of sub-commands being handled by AutoCompleter"""
         func = getattr(args, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected

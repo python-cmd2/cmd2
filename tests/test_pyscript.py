@@ -65,7 +65,7 @@ class PyscriptExample(Cmd):
 
     @with_argparser(media_parser)
     def do_media(self, args):
-        """Media management command demonstrates multiple layers of subcommands being handled by AutoCompleter"""
+        """Media management command demonstrates multiple layers of sub-commands being handled by AutoCompleter"""
         func = getattr(args, 'func', None)
         if func is not None:
             # Call whatever subcommand function was selected

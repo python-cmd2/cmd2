@@ -179,31 +179,31 @@ def test_arglist_decorator_twice(argparse_app):
 
 
 class SubcommandApp(cmd2.Cmd):
-    """ Example cmd2 application where we a base command which has a couple subcommands."""
+    """ Example cmd2 application where we a base command which has a couple sub-commands."""
 
     def __init__(self):
         cmd2.Cmd.__init__(self)
 
-    # subcommand functions for the base command
+    # sub-command functions for the base command
     def base_foo(self, args):
-        """foo subcommand of base command"""
+        """foo sub-command of base command"""
         self.poutput(args.x * args.y)
 
     def base_bar(self, args):
-        """bar subcommand of base command"""
+        """bar sub-command of base command"""
         self.poutput('((%s))' % args.z)
 
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
-    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+    base_subparsers = base_parser.add_subparsers(title='sub-commands', help='sub-command help')
 
-    # create the parser for the "foo" subcommand
+    # create the parser for the "foo" sub-command
     parser_foo = base_subparsers.add_parser('foo', help='foo help')
     parser_foo.add_argument('-x', type=int, default=1, help='integer')
     parser_foo.add_argument('y', type=float, help='float')
     parser_foo.set_defaults(func=base_foo)
 
-    # create the parser for the "bar" subcommand
+    # create the parser for the "bar" sub-command
     parser_bar = base_subparsers.add_parser('bar', help='bar help')
     parser_bar.add_argument('z', help='string')
     parser_bar.set_defaults(func=base_bar)
@@ -213,10 +213,10 @@ class SubcommandApp(cmd2.Cmd):
         """Base command help"""
         func = getattr(args, 'func', None)
         if func is not None:
-            # Call whatever subcommand function was selected
+            # Call whatever sub-command function was selected
             func(self, args)
         else:
-            # No subcommand was provided, so call help
+            # No sub-command was provided, so call help
             self.do_help('base')
 
 @pytest.fixture
