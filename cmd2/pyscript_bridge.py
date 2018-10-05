@@ -87,7 +87,7 @@ class ArgparseFunctor:
         return commands
 
     def __getattr__(self, item: str):
-        """Search for a subcommand matching this item and update internal state to track the traversal"""
+        """Search for a sub-command matching this item and update internal state to track the traversal"""
         # look for sub-command under the current command/sub-command layer
         for action in self.__current_subcommand_parser._actions:
             if not action.option_strings and isinstance(action, argparse._SubParsersAction):

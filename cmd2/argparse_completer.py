@@ -917,6 +917,13 @@ class ACArgumentParser(argparse.ArgumentParser):
         self._custom_error_message = custom_message
     # End cmd2 customization
 
+    def add_subparsers(self, **kwargs):
+        """Custom override. Sets a default title if one was not given."""
+        if 'title' not in kwargs:
+            kwargs['title'] = 'sub-commands'
+
+        return super().add_subparsers(**kwargs)
+
     def error(self, message: str) -> None:
         """Custom error override. Allows application to control the error being displayed by argparse"""
         if len(self._custom_error_message) > 0:

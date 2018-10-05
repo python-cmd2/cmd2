@@ -31,7 +31,7 @@
     have been deleted
         * The new application lifecycle hook system allows for registration of callbacks to be called at various points
         in the lifecycle and is more powerful and flexible than the previous system
-    * ``alias`` is now a command with subcommands to create, list, and delete aliases. Therefore its syntax
+    * ``alias`` is now a command with sub-commands to create, list, and delete aliases. Therefore its syntax
       has changed. All current alias commands in startup scripts or transcripts will break with this release.
     * `unalias` was deleted since ``alias delete`` replaced it
     

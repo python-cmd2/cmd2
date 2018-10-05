@@ -784,7 +784,7 @@ def test_cmd2_help_subcommand_completion_nomatch(sc_app):
     assert first_match is None
 
 def test_subcommand_tab_completion(sc_app):
-    # This makes sure the correct completer for the sport subcommand is called
+    # This makes sure the correct completer for the sport sub-command is called
     text = 'Foot'
     line = 'base sport {}'.format(text)
     endidx = len(line)
@@ -797,8 +797,8 @@ def test_subcommand_tab_completion(sc_app):
 
 
 def test_subcommand_tab_completion_with_no_completer(sc_app):
-    # This tests what happens when a subcommand has no completer
-    # In this case, the foo subcommand has no completer defined
+    # This tests what happens when a sub-command has no completer
+    # In this case, the foo sub-command has no completer defined
     text = 'Foot'
     line = 'base foo {}'.format(text)
     endidx = len(line)
@@ -825,42 +825,42 @@ def test_subcommand_tab_completion_space_in_text(sc_app):
 
 class SubcommandsWithUnknownExample(cmd2.Cmd):
     """
-    Example cmd2 application where we a base command which has a couple subcommands
-    and the "sport" subcommand has tab completion enabled.
+    Example cmd2 application where we a base command which has a couple sub-commands
+    and the "sport" sub-command has tab completion enabled.
     """
 
     def __init__(self):
         cmd2.Cmd.__init__(self)
 
-    # subcommand functions for the base command
+    # sub-command functions for the base command
     def base_foo(self, args):
-        """foo subcommand of base command"""
+        """foo sub-command of base command"""
         self.poutput(args.x * args.y)
 
     def base_bar(self, args):
-        """bar subcommand of base command"""
+        """bar sub-command of base command"""
         self.poutput('((%s))' % args.z)
 
     def base_sport(self, args):
-        """sport subcommand of base command"""
+        """sport sub-command of base command"""
         self.poutput('Sport is {}'.format(args.sport))
 
     # create the top-level parser for the base command
     base_parser = argparse.ArgumentParser(prog='base')
-    base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
+    base_subparsers = base_parser.add_subparsers(title='sub-commands', help='sub-command help')
 
-    # create the parser for the "foo" subcommand
+    # create the parser for the "foo" sub-command
     parser_foo = base_subparsers.add_parser('foo', help='foo help')
     parser_foo.add_argument('-x', type=int, default=1, help='integer')
     parser_foo.add_argument('y', type=float, help='float')
     parser_foo.set_defaults(func=base_foo)
 
-    # create the parser for the "bar" subcommand
+    # create the parser for the "bar" sub-command
     parser_bar = base_subparsers.add_parser('bar', help='bar help')
     parser_bar.add_argument('z', help='string')
     parser_bar.set_defaults(func=base_bar)
 
-    # create the parser for the "sport" subcommand
+    # create the parser for the "sport" sub-command
     parser_sport = base_subparsers.add_parser('sport', help='sport help')
     sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
     setattr(sport_arg, 'arg_choices', sport_item_strs)
@@ -870,10 +870,10 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
         """Base command help"""
         func = getattr(args, 'func', None)
         if func is not None:
-            # Call whatever subcommand function was selected
+            # Call whatever sub-command function was selected
             func(self, args)
         else:
-            # No subcommand was provided, so call help
+            # No sub-command was provided, so call help
             self.do_help('base')
 
 
@@ -977,7 +977,7 @@ def test_cmd2_help_subcommand_completion_nomatch_scu(scu_app):
 
 
 def test_subcommand_tab_completion_scu(scu_app):
-    # This makes sure the correct completer for the sport subcommand is called
+    # This makes sure the correct completer for the sport sub-command is called
     text = 'Foot'
     line = 'base sport {}'.format(text)
     endidx = len(line)
@@ -990,8 +990,8 @@ def test_subcommand_tab_completion_scu(scu_app):
 
 
 def test_subcommand_tab_completion_with_no_completer_scu(scu_app):
-    # This tests what happens when a subcommand has no completer
-    # In this case, the foo subcommand has no completer defined
+    # This tests what happens when a sub-command has no completer
+    # In this case, the foo sub-command has no completer defined
     text = 'Foot'
     line = 'base foo {}'.format(text)
     endidx = len(line)
