@@ -548,8 +548,8 @@ class Cmd(cmd.Cmd):
         self.exit_code = None
 
         # This lock should be acquired before doing any asynchronous changes to the terminal to
-        # ensure the updates to the terminal don't interfere with the input being typed. It can be
-        # acquired any time there is a readline prompt on screen.
+        # ensure the updates to the terminal don't interfere with the input being typed or output
+        # being printed by a command.
         self.terminal_lock = threading.RLock()
 
     # -----  Methods related to presenting output to the user -----
@@ -3481,12 +3481,13 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
-        Used to display an important message to the user while they are at the prompt in between commands.
+        Display an important message to the user while they are at the prompt in between commands.
         To the user it appears as if an alert message is printed above the prompt and their current input
         text and cursor location is left alone.
 
-        IMPORTANT: Do not call this unless you have acquired self.terminal_lock
-                   first, which ensures a prompt is onscreen
+        IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
+                   a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
+                   to guarantee the alert prints.
 
         :param alert_msg: the message to display to the user
         :param new_prompt: if you also want to change the prompt that is displayed, then include it here
@@ -3525,34 +3526,48 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
         """
-        Updates the prompt while the user is still typing at it. This is good for alerting the user to system
+        Update the prompt while the user is still typing at it. This is good for alerting the user to system
         changes dynamically in between commands. For instance you could alter the color of the prompt to indicate
         a system status or increase a counter to report an event. If you do alter the actual text of the prompt,
         it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
         be shifted and the update will not be seamless.
 
-        IMPORTANT: Do not call this unless you have acquired self.terminal_lock
-                   first, which ensures a prompt is onscreen
+        IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
+                   a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
+                   to guarantee the prompt changes.
 
         :param new_prompt: what to change the prompt to
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         self.async_alert('', new_prompt)
 
-    @staticmethod
-    def set_window_title(title: str) -> None:  # pragma: no cover
+    def set_window_title(self, title: str) -> None:  # pragma: no cover
         """
-        Sets the terminal window title
+        Set the terminal window title
+
+        IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid
+                   writing to stderr while a command is running. Therefore it is best to acquire the lock
+                   before calling this function to guarantee the title changes.
+
         :param title: the new window title
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         if not vt100_support:
             return
 
-        import colorama.ansi as ansi
-        try:
-            sys.stderr.write(ansi.set_title(title))
-        except AttributeError:
-            # Debugging in Pycharm has issues with setting terminal title
-            pass
+        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
+        if self.terminal_lock.acquire(blocking=False):
+            try:
+                import colorama.ansi as ansi
+                sys.stderr.write(ansi.set_title(title))
+            except AttributeError:
+                # Debugging in Pycharm has issues with setting terminal title
+                pass
+
+            self.terminal_lock.release()
+
+        else:
+            raise RuntimeError("another thread holds terminal_lock")
 
     def cmdloop(self, intro: Optional[str]=None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
