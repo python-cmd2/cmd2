@@ -38,7 +38,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
 
         # If data has a __bool__ method, then call it to determine success of command
         if self.data is not None and callable(getattr(self.data, '__bool__', None)):
-            return True if self.data else False
+            return bool(self.data)
 
         # Otherwise check if stderr was filled out
         else:
