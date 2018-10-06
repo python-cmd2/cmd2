@@ -548,8 +548,8 @@ class Cmd(cmd.Cmd):
         self.exit_code = None
 
         # This lock should be acquired before doing any asynchronous changes to the terminal to
-        # ensure the updates to the terminal don't interfere with the input being typed. It can be
-        # acquired any time there is a readline prompt on screen.
+        # ensure the updates to the terminal don't interfere with the input being typed or output
+        # being printed by a command.
         self.terminal_lock = threading.RLock()
 
     # -----  Methods related to presenting output to the user -----
@@ -2204,7 +2204,7 @@ class Cmd(cmd.Cmd):
 
             return stop
 
-    # -----  Alias subcommand functions -----
+    # -----  Alias sub-command functions -----
 
     def alias_create(self, args: argparse.Namespace):
         """Create or overwrite an alias"""
@@ -2267,8 +2267,8 @@ class Cmd(cmd.Cmd):
                     "  macro")
     alias_parser = ACArgumentParser(description=alias_description, epilog=alias_epilog, prog='alias')
 
-    # Add subcommands to alias
-    alias_subparsers = alias_parser.add_subparsers(title='sub-commands')
+    # Add sub-commands to alias
+    alias_subparsers = alias_parser.add_subparsers()
 
     # alias -> create
     alias_create_help = "create or overwrite an alias"
@@ -2326,13 +2326,13 @@ class Cmd(cmd.Cmd):
         """Manage aliases"""
         func = getattr(args, 'func', None)
         if func is not None:
-            # Call whatever subcommand function was selected
+            # Call whatever sub-command function was selected
             func(self, args)
         else:
-            # No subcommand was provided, so call help
+            # No sub-command was provided, so call help
             self.do_help('alias')
 
-    # -----  Macro subcommand functions -----
+    # -----  Macro sub-command functions -----
 
     def macro_create(self, args: argparse.Namespace):
         """Create or overwrite a macro"""
@@ -2445,8 +2445,8 @@ class Cmd(cmd.Cmd):
                     "  alias")
     macro_parser = ACArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
 
-    # Add subcommands to macro
-    macro_subparsers = macro_parser.add_subparsers(title='sub-commands')
+    # Add sub-commands to macro
+    macro_subparsers = macro_parser.add_subparsers()
 
     # macro -> create
     macro_create_help = "create or overwrite a macro"
@@ -2527,10 +2527,10 @@ class Cmd(cmd.Cmd):
         """Manage macros"""
         func = getattr(args, 'func', None)
         if func is not None:
-            # Call whatever subcommand function was selected
+            # Call whatever sub-command function was selected
             func(self, args)
         else:
-            # No subcommand was provided, so call help
+            # No sub-command was provided, so call help
             self.do_help('macro')
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
@@ -2551,7 +2551,7 @@ class Cmd(cmd.Cmd):
         if not tokens:
             return []
 
-        # Must have at least 3 args for 'help command subcommand'
+        # Must have at least 3 args for 'help command sub-command'
         if len(tokens) < 3:
             return []
 
@@ -2580,7 +2580,7 @@ class Cmd(cmd.Cmd):
 
     setattr(help_parser.add_argument('command', help="command to retrieve help for", nargs="?"),
             ACTION_ARG_CHOICES, ('complete_help_command',))
-    setattr(help_parser.add_argument('subcommand', help="subcommand to retrieve help for",
+    setattr(help_parser.add_argument('subcommand', help="sub-command to retrieve help for",
                                      nargs=argparse.REMAINDER),
             ACTION_ARG_CHOICES, ('complete_help_subcommand',))
     help_parser.add_argument('-v', '--verbose', action='store_true',
@@ -3481,12 +3481,13 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
-        Used to display an important message to the user while they are at the prompt in between commands.
+        Display an important message to the user while they are at the prompt in between commands.
         To the user it appears as if an alert message is printed above the prompt and their current input
         text and cursor location is left alone.
 
-        IMPORTANT: Do not call this unless you have acquired self.terminal_lock
-                   first, which ensures a prompt is onscreen
+        IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
+                   a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
+                   to guarantee the alert prints.
 
         :param alert_msg: the message to display to the user
         :param new_prompt: if you also want to change the prompt that is displayed, then include it here
@@ -3525,34 +3526,48 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
     def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
         """
-        Updates the prompt while the user is still typing at it. This is good for alerting the user to system
+        Update the prompt while the user is still typing at it. This is good for alerting the user to system
         changes dynamically in between commands. For instance you could alter the color of the prompt to indicate
         a system status or increase a counter to report an event. If you do alter the actual text of the prompt,
         it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
         be shifted and the update will not be seamless.
 
-        IMPORTANT: Do not call this unless you have acquired self.terminal_lock
-                   first, which ensures a prompt is onscreen
+        IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
+                   a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
+                   to guarantee the prompt changes.
 
         :param new_prompt: what to change the prompt to
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         self.async_alert('', new_prompt)
 
-    @staticmethod
-    def set_window_title(title: str) -> None:  # pragma: no cover
+    def set_window_title(self, title: str) -> None:  # pragma: no cover
         """
-        Sets the terminal window title
+        Set the terminal window title
+
+        IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid
+                   writing to stderr while a command is running. Therefore it is best to acquire the lock
+                   before calling this function to guarantee the title changes.
+
         :param title: the new window title
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         if not vt100_support:
             return
 
-        import colorama.ansi as ansi
-        try:
-            sys.stderr.write(ansi.set_title(title))
-        except AttributeError:
-            # Debugging in Pycharm has issues with setting terminal title
-            pass
+        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
+        if self.terminal_lock.acquire(blocking=False):
+            try:
+                import colorama.ansi as ansi
+                sys.stderr.write(ansi.set_title(title))
+            except AttributeError:
+                # Debugging in Pycharm has issues with setting terminal title
+                pass
+
+            self.terminal_lock.release()
+
+        else:
+            raise RuntimeError("another thread holds terminal_lock")
 
     def cmdloop(self, intro: Optional[str]=None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.

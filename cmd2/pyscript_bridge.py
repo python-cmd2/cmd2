@@ -33,9 +33,16 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
 
     NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
     """
-    def __bool__(self):
-        """If stderr is None and data is not None the command is considered a success"""
-        return not self.stderr and self.data is not None
+    def __bool__(self) -> bool:
+        """Returns True if the command succeeded, otherwise False"""
+
+        # If data has a __bool__ method, then call it to determine success of command
+        if self.data is not None and callable(getattr(self.data, '__bool__', None)):
+            return bool(self.data)
+
+        # Otherwise check if stderr was filled out
+        else:
+            return not self.stderr
 
 
 def _exec_cmd(cmd2_app, func: Callable, echo: bool) -> CommandResult:
@@ -91,7 +98,7 @@ class ArgparseFunctor:
         return commands
 
     def __getattr__(self, item: str):
-        """Search for a subcommand matching this item and update internal state to track the traversal"""
+        """Search for a sub-command matching this item and update internal state to track the traversal"""
         # look for sub-command under the current command/sub-command layer
         for action in self.__current_subcommand_parser._actions:
             if not action.option_strings and isinstance(action, argparse._SubParsersAction):
