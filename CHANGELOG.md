@@ -34,6 +34,7 @@
             * Never - output methods strip all ANSI escape sequences
     * Added ``macro`` command to create macros, which are similar to aliases, but can take arguments when called
     * All cmd2 command functions have been converted to use argparse.
+    * Renamed argparse_example.py to decorator_example.py to help clarify its intent
 * Deprecations
     * Deprecated the built-in ``cmd2`` support for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
 * Deletions (potentially breaking changes)

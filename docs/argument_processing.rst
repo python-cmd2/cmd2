@@ -15,11 +15,11 @@ Argument Processing
 
 These features are all provided by the ``@with_argparser`` decorator which is importable from ``cmd2``.
 
-See the either the argprint_ or argparse_ example to learn more about how to use the various ``cmd2`` argument
+See the either the argprint_ or decorator_ example to learn more about how to use the various ``cmd2`` argument
 processing decorators in your ``cmd2`` applications.
 
 .. _argprint: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
-.. _argparse: https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py
+.. _decorator: https://github.com/python-cmd2/cmd2/blob/master/examples/decorator_example.py
 
 Using the argument parser decorator
 ===================================
@@ -170,6 +170,14 @@ Which yields:
      -h, --help  show this help message and exit
 
    This command can not generate tags with no content, like <br/>
+
+.. warning::
+
+    If a command **foo** is decorated with one of cmd2's argparse decorators, then **help_foo** will not
+    be invoked when ``help foo`` is called.  The argparse_ module provides a rich API which can be used to
+    tweak every aspect of the displayed help and we encourage ``cmd2`` developers to utilize that.
+
+.. _argparse: https://docs.python.org/3/library/argparse.html
 
 
 Grouping Commands
