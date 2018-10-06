@@ -75,6 +75,10 @@ class ArgparseFunctor:
 
         # Dictionary mapping command argument name to value
         self._args = {}
+        # tag the argument that's a remainder type
+        self._remainder_arg = None
+        # separately track flag arguments so they will be printed before positionals
+        self._flag_args = []
         # argparse object for the current command layer
         self.__current_subcommand_parser = parser
 
@@ -109,7 +113,6 @@ class ArgparseFunctor:
         next_pos_index = 0
 
         has_subcommand = False
-        consumed_kw = []
 
         # Iterate through the current sub-command's arguments in order
         for action in self.__current_subcommand_parser._actions:
@@ -118,7 +121,7 @@ class ArgparseFunctor:
                 # this is a flag argument, search for the argument by name in the parameters
                 if action.dest in kwargs:
                     self._args[action.dest] = kwargs[action.dest]
-                    consumed_kw.append(action.dest)
+                    self._flag_args.append(action.dest)
             else:
                 # This is a positional argument, search the positional arguments passed in.
                 if not isinstance(action, argparse._SubParsersAction):
@@ -157,6 +160,10 @@ class ArgparseFunctor:
                             elif action.nargs == '*':
                                 self._args[action.dest] = args[next_pos_index:next_pos_index + pos_remain]
                                 next_pos_index += pos_remain
+                            elif action.nargs == argparse.REMAINDER:
+                                self._args[action.dest] = args[next_pos_index:next_pos_index + pos_remain]
+                                next_pos_index += pos_remain
+                                self._remainder_arg = action.dest
                             elif action.nargs == '?':
                                 self._args[action.dest] = args[next_pos_index]
                                 next_pos_index += 1
@@ -168,7 +175,7 @@ class ArgparseFunctor:
 
         # Check if there are any extra arguments we don't know how to handle
         for kw in kwargs:
-            if kw not in self._args:  # consumed_kw:
+            if kw not in self._args:
                 raise TypeError("{}() got an unexpected keyword argument '{}'".format(
                     self.__current_subcommand_parser.prog, kw))
 
@@ -214,27 +221,53 @@ class ArgparseFunctor:
                     if ' ' in item:
                         item = '"{}"'.format(item)
                     cmd_str[0] += '{} '.format(item)
+
+                # If this is a flag parameter that can accept a variable number of arguments and we have not
+                # reached the max number, add a list completion suffix to tell argparse to move to the next
+                # parameter
+                if action.option_strings and isinstance(action, _RangeAction) \
+                        and action.nargs_max > len(value):
+                    cmd_str[0] += '{0}{0} '.format(self._parser.prefix_chars[0])
+
             else:
                 value = str(value).strip()
                 if ' ' in value:
                     value = '"{}"'.format(value)
                 cmd_str[0] += '{} '.format(value)
 
+                # If this is a flag parameter that can accept a variable number of arguments and we have not
+                # reached the max number, add a list completion suffix to tell argparse to move to the next
+                # parameter
+                if action.option_strings and isinstance(action, _RangeAction) \
+                        and action.nargs_max > 1:
+                    cmd_str[0] += '{0}{0} '.format(self._parser.prefix_chars[0])
+
+        def process_action(action):
+            if isinstance(action, argparse._SubParsersAction):
+                cmd_str[0] += '{} '.format(self._args[action.dest])
+                traverse_parser(action.choices[self._args[action.dest]])
+            elif isinstance(action, argparse._AppendAction):
+                if isinstance(self._args[action.dest], list) or isinstance(self._args[action.dest], tuple):
+                    for values in self._args[action.dest]:
+                        process_flag(action, values)
+                else:
+                    process_flag(action, self._args[action.dest])
+            else:
+                process_flag(action, self._args[action.dest])
+
         def traverse_parser(parser):
+            # first process optional flag arguments
             for action in parser._actions:
-                # was something provided for the argument
-                if action.dest in self._args:
-                    if isinstance(action, argparse._SubParsersAction):
-                        cmd_str[0] += '{} '.format(self._args[action.dest])
-                        traverse_parser(action.choices[self._args[action.dest]])
-                    elif isinstance(action, argparse._AppendAction):
-                        if isinstance(self._args[action.dest], list) or isinstance(self._args[action.dest], tuple):
-                            for values in self._args[action.dest]:
-                                process_flag(action, values)
-                        else:
-                            process_flag(action, self._args[action.dest])
-                    else:
-                        process_flag(action, self._args[action.dest])
+                if action.dest in self._args and action.dest in self._flag_args and action.dest != self._remainder_arg:
+                    process_action(action)
+            # next process positional arguments
+            for action in parser._actions:
+                if action.dest in self._args and action.dest not in self._flag_args and action.dest != self._remainder_arg:
+                    process_action(action)
+            # Keep remainder argument last
+            for action in parser._actions:
+                if action.dest in self._args and action.dest == self._remainder_arg:
+                    process_action(action)
 
         traverse_parser(self._parser)
 
