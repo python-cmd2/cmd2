@@ -298,6 +298,8 @@ class TabCompleteExample(cmd2.Cmd):
                       .format(movie['title'], movie['rating'], movie_id,
                               ', '.join(movie['director']),
                               '\n    '.join(movie['actor'])))
+        elif args.command == 'add':
+            print('Adding Movie\n----------------\nTitle: {}\nRating: {}\nDirectors: {}\nActors: {}\n\n'.format(args.title, args.rating, ', '.join(args.director), ', '.join(args.actor)))
 
     def _do_media_shows(self, args) -> None:
         if not args.command:

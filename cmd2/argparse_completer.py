@@ -318,6 +318,7 @@ class AutoCompleter(object):
         flag_arg = AutoCompleter._ArgumentState()
         flag_action = None
 
+        # dict is used because object wrapper is necessary to allow inner functions to modify outer variables
         remainder = {'arg': None, 'action': None}
 
         matched_flags = []
@@ -334,7 +335,8 @@ class AutoCompleter(object):
             """Consuming token as a flag argument"""
             # we're consuming flag arguments
             # if this is not empty and is not another potential flag, count towards flag arguments
-            if token and token[0] not in self._parser.prefix_chars and flag_action is not None:
+            # if the token is a single character length, it doesn't matter that it matches a flag prefix
+            if token and (len(token) == 1 or token[0] not in self._parser.prefix_chars) and flag_action is not None:
                 flag_arg.count += 1
 
                 # does this complete a option item for the flag
@@ -377,7 +379,6 @@ class AutoCompleter(object):
                     arg_state.max = float('inf')
                     arg_state.variable = True
                     if action.nargs == argparse.REMAINDER:
-                        print("Setting remainder")
                         remainder['action'] = action
                         remainder['arg'] = arg_state
                 elif action.nargs == '?':
@@ -407,25 +408,35 @@ class AutoCompleter(object):
             is_last_token = idx >= len(tokens) - 1
             # Only start at the start token index
             if idx >= self._token_start_index:
+                # If a remainder action is found, force all future tokens to go to that 
                 if remainder['arg'] is not None:
-                    print("In Remainder mode")
                     if remainder['action'] == pos_action:
                         consume_positional_argument()
                         continue
                     elif remainder['action'] == flag_action:
                         consume_flag_argument()
                         continue
-                else:
-                    print("!!")
                 current_is_positional = False
                 # Are we consuming flag arguments?
                 if not flag_arg.needed:
+                    # Special case when each of the following is true:
+                    #   - We're not in the middle of consuming flag arguments
+                    #   - The current positional argument count has hit the max count
+                    #   - The next positional argument is a REMAINDER argument
+                    # Argparse will now treat all future tokens as arguments to the positional including tokens that look like flags
+                    # so the completer should skip any flag related processing once this happens
+                    skip_flag = False
+                    if (pos_action is not None) and pos_arg.count >= pos_arg.max and next_pos_arg_index < len(self._positional_actions) and \
+                            self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
+                        skip_flag = True
+
+
                     # At this point we're no longer consuming flag arguments. Is the current argument a potential flag?
                     # If the argument is the start of a flag and this is the last token, we proceed forward to try
                     # and match against our known flags. 
                     # If this argument is not the last token and the argument is exactly a flag prefix, then this
                     # token should be consumed as an argument to a prior flag or positional argument.
-                    if len(token) > 0 and token[0] in self._parser.prefix_chars and\
+                    if len(token) > 0 and token[0] in self._parser.prefix_chars and not skip_flag and\
                             (is_last_token or (not is_last_token and token not in self._parser.prefix_chars)):
                         # reset some tracking values
                         flag_arg.reset()
