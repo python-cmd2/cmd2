@@ -10,7 +10,7 @@
     ArgparseFunctor should now be compliant with how argparse expects
     REMAINDER arguments to be ordered.
     * Fixed bugs with how AutoCompleter handles flag prefixes. It is no
-    longer hard-coded to use '-' and will check againstn the prefix_chars in
+    longer hard-coded to use '-' and will check against the prefix_chars in
     the argparse object. Also, single-character tokens that happen to be a
     prefix char are not treated as flags by argparse and AutoCompleter now
     matches that behavior.

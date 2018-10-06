@@ -232,8 +232,8 @@ class ArgparseFunctor:
                 # If this is a flag parameter that can accept a variable number of arguments and we have not
                 # reached the max number, add a list completion suffix to tell argparse to move to the next
                 # parameter
-                if action.option_strings and isinstance(action, _RangeAction) \
-                        and action.nargs_max > len(value):
+                if action.option_strings and isinstance(action, _RangeAction) and action.nargs_max is not None and \
+                        action.nargs_max > len(value):
                     cmd_str[0] += '{0}{0} '.format(self._parser.prefix_chars[0])
 
             else:
@@ -245,8 +245,8 @@ class ArgparseFunctor:
                 # If this is a flag parameter that can accept a variable number of arguments and we have not
                 # reached the max number, add a list completion suffix to tell argparse to move to the next
                 # parameter
-                if action.option_strings and isinstance(action, _RangeAction) \
-                        and action.nargs_max > 1:
+                if action.option_strings and isinstance(action, _RangeAction) and action.nargs_max is not None and \
+                        action.nargs_max > 1:
                     cmd_str[0] += '{0}{0} '.format(self._parser.prefix_chars[0])
 
         def process_action(action):
@@ -269,7 +269,8 @@ class ArgparseFunctor:
                     process_action(action)
             # next process positional arguments
             for action in parser._actions:
-                if action.dest in self._args and action.dest not in self._flag_args and action.dest != self._remainder_arg:
+                if action.dest in self._args and action.dest not in self._flag_args and \
+                        action.dest != self._remainder_arg:
                     process_action(action)
             # Keep remainder argument last
             for action in parser._actions:

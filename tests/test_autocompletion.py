@@ -36,7 +36,7 @@ optional arguments:
 
 MEDIA_MOVIES_ADD_HELP = '''Usage: media movies add -d DIRECTOR{1..2}
                         [-h]
-                        title {G, PG, PG-13, R, NC-17} [actor [...]]
+                        title {G, PG, PG-13, R, NC-17} ...
 
 positional arguments:
   title                 Movie Title
