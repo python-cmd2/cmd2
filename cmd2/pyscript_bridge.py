@@ -204,9 +204,13 @@ class ArgparseFunctor:
         def has_optional_prefix(arg: str) -> bool:
             """
             Checks if an argument value begins with prefix characters intended for argparse optional values
+            Allows anything that appears to be a negative number
             :param arg: argument value being checked
             :return: True if arg begins with one of the prefix characters
             """
+            if self._parser._negative_number_matcher.match(arg):
+                return False
+
             for char in self._parser.prefix_chars:
                 if arg.startswith(char):
                     return True
@@ -232,14 +236,11 @@ class ArgparseFunctor:
             # was the argument a flag?
             if action.option_strings:
                 cmd_str[0] += '{} '.format(action.option_strings[0])
-                is_flag = True
-            else:
-                is_flag = False
 
             if isinstance(value, List) or isinstance(value, tuple):
                 for item in value:
                     item = str(item).strip()
-                    if not is_flag and has_optional_prefix(item):
+                    if has_optional_prefix(item):
                         raise ValueError('Value provided for {} ({}) appears to be an optional'.
                                          format(action.dest, item))
                     item = quote_string_if_needed(item)
@@ -254,7 +255,7 @@ class ArgparseFunctor:
 
             else:
                 value = str(value).strip()
-                if not is_flag and has_optional_prefix(value):
+                if has_optional_prefix(value):
                     raise ValueError('Value provided for {} ({}) appears to be an optional'.format(action.dest, value))
                 value = quote_string_if_needed(value)
                 cmd_str[0] += '{} '.format(value)
