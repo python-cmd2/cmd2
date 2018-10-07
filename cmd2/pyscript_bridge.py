@@ -201,21 +201,6 @@ class ArgparseFunctor:
         # reconstruct the cmd2 command from the python call
         cmd_str = ['']
 
-        def has_optional_prefix(arg: str) -> bool:
-            """
-            Checks if an argument value begins with prefix characters intended for argparse optional values
-            Allows anything that appears to be a negative number
-            :param arg: argument value being checked
-            :return: True if arg begins with one of the prefix characters
-            """
-            if self._parser._negative_number_matcher.match(arg):
-                return False
-
-            for char in self._parser.prefix_chars:
-                if arg.startswith(char):
-                    return True
-            return False
-
         def process_argument(action, value):
             if isinstance(action, argparse._CountAction):
                 if isinstance(value, int):
@@ -240,7 +225,7 @@ class ArgparseFunctor:
             if isinstance(value, List) or isinstance(value, tuple):
                 for item in value:
                     item = str(item).strip()
-                    if has_optional_prefix(item):
+                    if self._parser._parse_optional(item) is not None:
                         raise ValueError('Value provided for {} ({}) appears to be an optional'.
                                          format(action.dest, item))
                     item = quote_string_if_needed(item)
@@ -255,7 +240,7 @@ class ArgparseFunctor:
 
             else:
                 value = str(value).strip()
-                if has_optional_prefix(value):
+                if self._parser._parse_optional(value) is not None:
                     raise ValueError('Value provided for {} ({}) appears to be an optional'.format(action.dest, value))
                 value = quote_string_if_needed(value)
                 cmd_str[0] += '{} '.format(value)
