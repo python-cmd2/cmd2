@@ -201,7 +201,18 @@ class ArgparseFunctor:
         # reconstruct the cmd2 command from the python call
         cmd_str = ['']
 
-        def process_flag(action, value):
+        def has_optional_prefix(arg: str) -> bool:
+            """
+            Checks if an argument value begins with prefix characters intended for argparse optional values
+            :param arg: argument value being checked
+            :return: True if arg begins with one of the prefix characters
+            """
+            for char in self._parser.prefix_chars:
+                if arg.startswith(char):
+                    return True
+            return False
+
+        def process_argument(action, value):
             if isinstance(action, argparse._CountAction):
                 if isinstance(value, int):
                     for _ in range(value):
@@ -221,10 +232,16 @@ class ArgparseFunctor:
             # was the argument a flag?
             if action.option_strings:
                 cmd_str[0] += '{} '.format(action.option_strings[0])
+                is_flag = True
+            else:
+                is_flag = False
 
             if isinstance(value, List) or isinstance(value, tuple):
                 for item in value:
                     item = str(item).strip()
+                    if not is_flag and has_optional_prefix(item):
+                        raise ValueError('Value provided for {} ({}) appears to be an optional'.
+                                         format(action.dest, item))
                     item = quote_string_if_needed(item)
                     cmd_str[0] += '{} '.format(item)
 
@@ -237,6 +254,8 @@ class ArgparseFunctor:
 
             else:
                 value = str(value).strip()
+                if not is_flag and has_optional_prefix(value):
+                    raise ValueError('Value provided for {} ({}) appears to be an optional'.format(action.dest, value))
                 value = quote_string_if_needed(value)
                 cmd_str[0] += '{} '.format(value)
 
@@ -254,11 +273,11 @@ class ArgparseFunctor:
             elif isinstance(action, argparse._AppendAction):
                 if isinstance(self._args[action.dest], list) or isinstance(self._args[action.dest], tuple):
                     for values in self._args[action.dest]:
-                        process_flag(action, values)
+                        process_argument(action, values)
                 else:
-                    process_flag(action, self._args[action.dest])
+                    process_argument(action, self._args[action.dest])
             else:
-                process_flag(action, self._args[action.dest])
+                process_argument(action, self._args[action.dest])
 
         def traverse_parser(parser):
             # first process optional flag arguments
