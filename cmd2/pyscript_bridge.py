@@ -13,7 +13,7 @@ import sys
 from typing import List, Callable, Optional
 
 from .argparse_completer import _RangeAction
-from .utils import namedtuple_with_defaults, StdSim
+from .utils import namedtuple_with_defaults, StdSim, quote_string_if_needed
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
@@ -225,8 +225,7 @@ class ArgparseFunctor:
             if isinstance(value, List) or isinstance(value, tuple):
                 for item in value:
                     item = str(item).strip()
-                    if ' ' in item:
-                        item = '"{}"'.format(item)
+                    item = quote_string_if_needed(item)
                     cmd_str[0] += '{} '.format(item)
 
                 # If this is a flag parameter that can accept a variable number of arguments and we have not
@@ -238,8 +237,7 @@ class ArgparseFunctor:
 
             else:
                 value = str(value).strip()
-                if ' ' in value:
-                    value = '"{}"'.format(value)
+                value = quote_string_if_needed(value)
                 cmd_str[0] += '{} '.format(value)
 
                 # If this is a flag parameter that can accept a variable number of arguments and we have not
