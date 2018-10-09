@@ -209,7 +209,7 @@ def register_custom_actions(parser: argparse.ArgumentParser) -> None:
     parser.register('action', 'append', _AppendRangeAction)
 
 
-def token_resembles_flag(token: str, parser: argparse.ArgumentParser):
+def token_resembles_flag(token: str, parser: argparse.ArgumentParser) -> bool:
     """Determine if a token looks like a flag. Based on argparse._parse_optional()."""
     # if it's an empty string, it was meant to be a positional
     if not token:
@@ -235,6 +235,7 @@ def token_resembles_flag(token: str, parser: argparse.ArgumentParser):
 
     # Looks like a flag
     return True
+
 
 class AutoCompleter(object):
     """Automatically command line tab completion based on argparse parameters"""
