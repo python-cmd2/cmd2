@@ -12,7 +12,7 @@ import functools
 import sys
 from typing import List, Callable, Optional
 
-from .argparse_completer import _RangeAction
+from .argparse_completer import _RangeAction, token_resembles_flag
 from .utils import namedtuple_with_defaults, StdSim, quote_string_if_needed
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
@@ -225,9 +225,9 @@ class ArgparseFunctor:
             if isinstance(value, List) or isinstance(value, tuple):
                 for item in value:
                     item = str(item).strip()
-                    if self._parser._parse_optional(item) is not None:
-                        raise ValueError('Value provided for {} ({}) appears to be an optional'.
-                                         format(action.dest, item))
+                    if token_resembles_flag(item, self._parser):
+                        raise ValueError('{} appears to be a flag and should be supplied as a keyword argument '
+                                         'to the function.'.format(item))
                     item = quote_string_if_needed(item)
                     cmd_str[0] += '{} '.format(item)
 
@@ -240,8 +240,9 @@ class ArgparseFunctor:
 
             else:
                 value = str(value).strip()
-                if self._parser._parse_optional(value) is not None:
-                    raise ValueError('Value provided for {} ({}) appears to be an optional'.format(action.dest, value))
+                if token_resembles_flag(value, self._parser):
+                    raise ValueError('{} appears to be a flag and should be supplied as a keyword argument '
+                                     'to the function.'.format(value))
                 value = quote_string_if_needed(value)
                 cmd_str[0] += '{} '.format(value)
 

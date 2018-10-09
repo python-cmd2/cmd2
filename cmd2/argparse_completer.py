@@ -209,6 +209,33 @@ def register_custom_actions(parser: argparse.ArgumentParser) -> None:
     parser.register('action', 'append', _AppendRangeAction)
 
 
+def token_resembles_flag(token: str, parser: argparse.ArgumentParser):
+    """Determine if a token looks like a flag. Based on argparse._parse_optional()."""
+    # if it's an empty string, it was meant to be a positional
+    if not token:
+        return False
+
+    # if it doesn't start with a prefix, it was meant to be positional
+    if not token[0] in parser.prefix_chars:
+        return False
+
+    # if it's just a single character, it was meant to be positional
+    if len(token) == 1:
+        return False
+
+    # if it looks like a negative number, it was meant to be positional
+    # unless there are negative-number-like options
+    if parser._negative_number_matcher.match(token):
+        if not parser._has_negative_number_optionals:
+            return False
+
+    # if it contains a space, it was meant to be a positional
+    if ' ' in token:
+        return False
+
+    # Looks like a flag
+    return True
+
 class AutoCompleter(object):
     """Automatically command line tab completion based on argparse parameters"""
 
@@ -334,9 +361,8 @@ class AutoCompleter(object):
         def consume_flag_argument() -> None:
             """Consuming token as a flag argument"""
             # we're consuming flag arguments
-            # if this is not empty and is not another potential flag, count towards flag arguments
-            # if the token is a single character, it doesn't matter whether it matches a flag prefix
-            if token and (len(token) == 1 or token[0] not in self._parser.prefix_chars) and flag_action is not None:
+            # if the token does not look like a new flag, then count towards flag arguments
+            if not token_resembles_flag(token, self._parser) and flag_action is not None:
                 flag_arg.count += 1
 
                 # does this complete a option item for the flag
@@ -431,12 +457,7 @@ class AutoCompleter(object):
                         skip_flag = True
 
                     # At this point we're no longer consuming flag arguments. Is the current argument a potential flag?
-                    # If the argument is the start of a flag and this is the last token, we proceed forward to try
-                    # and match against our known flags.
-                    # If this argument is not the last token and the argument is exactly a flag prefix, then this
-                    # token should be consumed as an argument to a prior flag or positional argument.
-                    if len(token) > 0 and token[0] in self._parser.prefix_chars and not skip_flag and \
-                            (is_last_token or token not in self._parser.prefix_chars):
+                    if token_resembles_flag(token, self._parser) and not skip_flag:
                         # reset some tracking values
                         flag_arg.reset()
                         # don't reset positional tracking because flags can be interspersed anywhere between positionals
