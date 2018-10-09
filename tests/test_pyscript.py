@@ -9,7 +9,7 @@ import os
 import pytest
 from cmd2.cmd2 import Cmd, with_argparser
 from cmd2 import argparse_completer
-from .conftest import run_cmd
+from .conftest import run_cmd, normalize
 from cmd2.utils import namedtuple_with_defaults, StdSim
 
 
@@ -234,3 +234,20 @@ def test_pyscript_custom_name(ps_echo, request):
     out = run_cmd(ps_echo, 'pyscript {}'.format(python_script))
     assert out
     assert message == out[0]
+
+
+def test_pyscript_argparse_checks(ps_app, capsys):
+    # Test command that has nargs.REMAINDER and make sure all tokens are accepted
+    run_cmd(ps_app, 'py app.alias.create("my_alias", "alias_command", "command_arg1", "command_arg2")')
+    out = run_cmd(ps_app, 'alias list my_alias')
+    assert out == normalize('alias create my_alias alias_command command_arg1 command_arg2')
+
+    # Specify flag outside of keyword argument
+    run_cmd(ps_app, 'py app.help("-h")')
+    _, err = capsys.readouterr()
+    assert '-h appears to be a flag' in err
+
+    # Specify list with flag outside of keyword argument
+    run_cmd(ps_app, 'py app.help(["--help"])')
+    _, err = capsys.readouterr()
+    assert '--help appears to be a flag' in err
