@@ -238,9 +238,10 @@ def test_pyscript_custom_name(ps_echo, request):
 
 def test_pyscript_argparse_checks(ps_app, capsys):
     # Test command that has nargs.REMAINDER and make sure all tokens are accepted
-    run_cmd(ps_app, 'py app.alias.create("my_alias", "alias_command", "command_arg1", "command_arg2")')
+    # Include a flag in the REMAINDER section to show that they are processed as literals in that section
+    run_cmd(ps_app, 'py app.alias.create("my_alias", "alias_command", "command_arg1", "-h")')
     out = run_cmd(ps_app, 'alias list my_alias')
-    assert out == normalize('alias create my_alias alias_command command_arg1 command_arg2')
+    assert out == normalize('alias create my_alias alias_command command_arg1 -h')
 
     # Specify flag outside of keyword argument
     run_cmd(ps_app, 'py app.help("-h")')
