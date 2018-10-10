@@ -440,16 +440,6 @@ class AutoCompleter(object):
             # Only start at the start token index
             if idx >= self._token_start_index:
 
-                # all args after -- are non-flags
-                if remainder['arg'] is None and token == '--':
-                    flag_action = None
-                    flag_arg.reset()
-                    if is_last_token:
-                        break
-                    else:
-                        skip_remaining_flags = True
-                        continue
-
                 # If a remainder action is found, force all future tokens to go to that
                 if remainder['arg'] is not None:
                     if remainder['action'] == pos_action:
@@ -481,6 +471,14 @@ class AutoCompleter(object):
                         flag_arg.reset()
                         # don't reset positional tracking because flags can be interspersed anywhere between positionals
                         flag_action = None
+
+                        if token == '--':
+                            if is_last_token:
+                                # Exit loop and see if -- can be completed into a flag
+                                break
+                            else:
+                                # In argparse, all args after -- are non-flags
+                                skip_remaining_flags = True
 
                         # does the token fully match a known flag?
                         if token in self._flag_to_action:

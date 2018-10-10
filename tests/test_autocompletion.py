@@ -279,20 +279,29 @@ def test_autcomp_custom_func_list_and_dict_arg(cmd2_app):
            cmd2_app.completion_matches == ['S01E02', 'S01E03', 'S02E01', 'S02E03']
 
 
-def test_argparse_remainder_completion(cmd2_app):
+def test_argparse_remainder_flag_completion(cmd2_app):
     import cmd2
     import argparse
 
-    # First test a positional with nargs=argparse.REMAINDER
+    # Test flag completion as first arg of positional with nargs=argparse.REMAINDER
+    text = '--h'
+    line = 'help command {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # --h should not complete into --help because we are in the argparse.REMAINDER section
+    assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
+
+    # Test flag completion within an already started positional with nargs=argparse.REMAINDER
     text = '--h'
     line = 'help command subcommand {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # --h should not complete into --help because we are in the argparse.REMAINDER sections
+    # --h should not complete into --help because we are in the argparse.REMAINDER section
     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
 
-    # Now test a flag with nargs=argparse.REMAINDER
+    # Test a flag with nargs=argparse.REMAINDER
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', nargs=argparse.REMAINDER)
 
@@ -304,18 +313,24 @@ def test_argparse_remainder_completion(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # --h should not complete into --help because we are in the argparse.REMAINDER sections
+    # --h should not complete into --help because we are in the argparse.REMAINDER section
     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
 
 
 def test_completion_after_double_dash(cmd2_app):
-    # Test -- as the last token before an argparse.REMAINDER sections
+    """
+    Test completion after --, which argparse says (all args after -- are non-options)
+    All of these tests occur outside of an argparse.REMAINDER section since those tests
+    are handled in test_argparse_remainder_flag_completion
+    """
+
+    # Test -- as the last token
     text = '--'
     line = 'help {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # Since -- is the last token in a non-remainder section, then it should show flag choices
+    # Since -- is the last token, then it should show flag choices
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and '--help' in cmd2_app.completion_matches
 
@@ -325,5 +340,5 @@ def test_completion_after_double_dash(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # Since -- appeared before the -- being completed, no more flags should be completed
+    # Since -- appeared before the -- being completed, nothing should be completed
     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
