@@ -298,6 +298,8 @@ class TabCompleteExample(cmd2.Cmd):
                       .format(movie['title'], movie['rating'], movie_id,
                               ', '.join(movie['director']),
                               '\n    '.join(movie['actor'])))
+        elif args.command == 'add':
+            print('Adding Movie\n----------------\nTitle: {}\nRating: {}\nDirectors: {}\nActors: {}\n\n'.format(args.title, args.rating, ', '.join(args.director), ', '.join(args.actor)))
 
     def _do_media_shows(self, args) -> None:
         if not args.command:
@@ -336,7 +338,7 @@ class TabCompleteExample(cmd2.Cmd):
     movies_add_parser.add_argument('title', help='Movie Title')
     movies_add_parser.add_argument('rating', help='Movie Rating', choices=ratings_types)
     movies_add_parser.add_argument('-d', '--director', help='Director', nargs=(1, 2), required=True)
-    movies_add_parser.add_argument('actor', help='Actors', nargs='*')
+    movies_add_parser.add_argument('actor', help='Actors', nargs=argparse.REMAINDER)
 
     movies_delete_parser = movies_commands_subparsers.add_parser('delete')
     movies_delete_movie_id = movies_delete_parser.add_argument('movie_id', help='Movie ID')

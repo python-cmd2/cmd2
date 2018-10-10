@@ -193,7 +193,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
-    :param argparser: given instance of ArgumentParser
+    :param argparser: unique instance of ArgumentParser
     :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
     :return: function that gets passed parsed args and a list of unknown args
     """
@@ -234,7 +234,7 @@ def with_argparser(argparser: argparse.ArgumentParser, preserve_quotes: bool=Fal
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
-    :param argparser: given instance of ArgumentParser
+    :param argparser: unique instance of ArgumentParser
     :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
     :return: function that gets passed parsed args
     """

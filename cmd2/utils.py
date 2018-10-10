@@ -255,10 +255,13 @@ class StdSim(object):
     """
     class ByteBuf(object):
         """Inner class which stores an actual bytes buffer and does the actual output if echo is enabled."""
-        def __init__(self, inner_stream, echo: bool = False) -> None:
+        def __init__(self, inner_stream, echo: bool = False,
+                     encoding: str='utf-8', errors: str='replace') -> None:
             self.byte_buf = b''
             self.inner_stream = inner_stream
             self.echo = echo
+            self.encoding = encoding
+            self.errors = errors
 
         def write(self, b: bytes) -> None:
             """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
@@ -266,7 +269,10 @@ class StdSim(object):
                 raise TypeError('a bytes-like object is required, not {}'.format(type(b)))
             self.byte_buf += b
             if self.echo:
-                self.inner_stream.buffer.write(b)
+                if hasattr(self.inner_stream, 'buffer'):
+                    self.inner_stream.buffer.write(b)
+                else:
+                    self.inner_stream.write(b.decode(encoding=self.encoding, errors=self.errors))
 
     def __init__(self, inner_stream, echo: bool = False,
                  encoding: str='utf-8', errors: str='replace') -> None:

@@ -11,7 +11,6 @@ You can quit out of the pager by typing "q".  You can also search for text withi
 WARNING: This example requires the tableformatter module: https://github.com/python-tableformatter/tableformatter
 - pip install tableformatter
 """
-import argparse
 from typing import Tuple
 
 import cmd2
@@ -142,6 +141,21 @@ def high_density_objs(row_obj: CityInfo) -> dict:
     return opts
 
 
+def make_table_parser() -> cmd2.argparse_completer.ACArgumentParser:
+    """Create a unique instance of an argparse Argument parser for processing table arguments.
+
+    NOTE: The two cmd2 argparse decorators require that each parser be unique, even if they are essentially a deep copy
+    of each other.  For cases like that, you can create a function to return a unique instance of a parser, which is
+    what is being done here.
+    """
+    table_parser = cmd2.argparse_completer.ACArgumentParser()
+    table_item_group = table_parser.add_mutually_exclusive_group()
+    table_item_group.add_argument('-c', '--color', action='store_true', help='Enable color')
+    table_item_group.add_argument('-f', '--fancy', action='store_true', help='Fancy Grid')
+    table_item_group.add_argument('-s', '--sparse', action='store_true', help='Sparse Grid')
+    return table_parser
+
+
 class TableDisplay(cmd2.Cmd):
     """Example cmd2 application showing how you can display tabular data."""
 
@@ -169,18 +183,12 @@ class TableDisplay(cmd2.Cmd):
         formatted_table = tf.generate_table(rows=rows, columns=columns, grid_style=grid, row_tagger=row_stylist)
         self.ppaged(formatted_table, chop=True)
 
-    table_parser = argparse.ArgumentParser()
-    table_item_group = table_parser.add_mutually_exclusive_group()
-    table_item_group.add_argument('-c', '--color', action='store_true', help='Enable color')
-    table_item_group.add_argument('-f', '--fancy', action='store_true', help='Fancy Grid')
-    table_item_group.add_argument('-s', '--sparse', action='store_true', help='Sparse Grid')
-
-    @cmd2.with_argparser(table_parser)
+    @cmd2.with_argparser(make_table_parser())
     def do_table(self, args):
         """Display data in iterable form on the Earth's most populated cities in a table."""
         self.ptable(EXAMPLE_ITERABLE_DATA, COLUMNS, args, high_density_tuples)
 
-    @cmd2.with_argparser(table_parser)
+    @cmd2.with_argparser(make_table_parser())
     def do_object_table(self, args):
         """Display data in object form on the Earth's most populated cities in a table."""
         self.ptable(EXAMPLE_OBJECT_DATA, OBJ_COLS, args, high_density_objs)

@@ -12,8 +12,8 @@ import functools
 import sys
 from typing import List, Callable, Optional
 
-from .argparse_completer import _RangeAction
-from .utils import namedtuple_with_defaults, StdSim
+from .argparse_completer import _RangeAction, token_resembles_flag
+from .utils import namedtuple_with_defaults, StdSim, quote_string_if_needed
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
@@ -82,6 +82,10 @@ class ArgparseFunctor:
 
         # Dictionary mapping command argument name to value
         self._args = {}
+        # tag the argument that's a remainder type
+        self._remainder_arg = None
+        # separately track flag arguments so they will be printed before positionals
+        self._flag_args = []
         # argparse object for the current command layer
         self.__current_subcommand_parser = parser
 
@@ -116,7 +120,6 @@ class ArgparseFunctor:
         next_pos_index = 0
 
         has_subcommand = False
-        consumed_kw = []
 
         # Iterate through the current sub-command's arguments in order
         for action in self.__current_subcommand_parser._actions:
@@ -125,7 +128,7 @@ class ArgparseFunctor:
                 # this is a flag argument, search for the argument by name in the parameters
                 if action.dest in kwargs:
                     self._args[action.dest] = kwargs[action.dest]
-                    consumed_kw.append(action.dest)
+                    self._flag_args.append(action.dest)
             else:
                 # This is a positional argument, search the positional arguments passed in.
                 if not isinstance(action, argparse._SubParsersAction):
@@ -164,6 +167,10 @@ class ArgparseFunctor:
                             elif action.nargs == '*':
                                 self._args[action.dest] = args[next_pos_index:next_pos_index + pos_remain]
                                 next_pos_index += pos_remain
+                            elif action.nargs == argparse.REMAINDER:
+                                self._args[action.dest] = args[next_pos_index:next_pos_index + pos_remain]
+                                next_pos_index += pos_remain
+                                self._remainder_arg = action.dest
                             elif action.nargs == '?':
                                 self._args[action.dest] = args[next_pos_index]
                                 next_pos_index += 1
@@ -175,7 +182,7 @@ class ArgparseFunctor:
 
         # Check if there are any extra arguments we don't know how to handle
         for kw in kwargs:
-            if kw not in self._args:  # consumed_kw:
+            if kw not in self._args:
                 raise TypeError("{}() got an unexpected keyword argument '{}'".format(
                     self.__current_subcommand_parser.prog, kw))
 
@@ -194,7 +201,7 @@ class ArgparseFunctor:
         # reconstruct the cmd2 command from the python call
         cmd_str = ['']
 
-        def process_flag(action, value):
+        def process_argument(action, value):
             if isinstance(action, argparse._CountAction):
                 if isinstance(value, int):
                     for _ in range(value):
@@ -218,30 +225,61 @@ class ArgparseFunctor:
             if isinstance(value, List) or isinstance(value, tuple):
                 for item in value:
                     item = str(item).strip()
-                    if ' ' in item:
-                        item = '"{}"'.format(item)
+                    if token_resembles_flag(item, self._parser):
+                        raise ValueError('{} appears to be a flag and should be supplied as a keyword argument '
+                                         'to the function.'.format(item))
+                    item = quote_string_if_needed(item)
                     cmd_str[0] += '{} '.format(item)
+
+                # If this is a flag parameter that can accept a variable number of arguments and we have not
+                # reached the max number, add a list completion suffix to tell argparse to move to the next
+                # parameter
+                if action.option_strings and isinstance(action, _RangeAction) and action.nargs_max is not None and \
+                        action.nargs_max > len(value):
+                    cmd_str[0] += '{0}{0} '.format(self._parser.prefix_chars[0])
+
             else:
                 value = str(value).strip()
-                if ' ' in value:
-                    value = '"{}"'.format(value)
+                if token_resembles_flag(value, self._parser):
+                    raise ValueError('{} appears to be a flag and should be supplied as a keyword argument '
+                                     'to the function.'.format(value))
+                value = quote_string_if_needed(value)
                 cmd_str[0] += '{} '.format(value)
 
+                # If this is a flag parameter that can accept a variable number of arguments and we have not
+                # reached the max number, add a list completion suffix to tell argparse to move to the next
+                # parameter
+                if action.option_strings and isinstance(action, _RangeAction) and action.nargs_max is not None and \
+                        action.nargs_max > 1:
+                    cmd_str[0] += '{0}{0} '.format(self._parser.prefix_chars[0])
+
+        def process_action(action):
+            if isinstance(action, argparse._SubParsersAction):
+                cmd_str[0] += '{} '.format(self._args[action.dest])
+                traverse_parser(action.choices[self._args[action.dest]])
+            elif isinstance(action, argparse._AppendAction):
+                if isinstance(self._args[action.dest], list) or isinstance(self._args[action.dest], tuple):
+                    for values in self._args[action.dest]:
+                        process_argument(action, values)
+                else:
+                    process_argument(action, self._args[action.dest])
+            else:
+                process_argument(action, self._args[action.dest])
+
         def traverse_parser(parser):
+            # first process optional flag arguments
             for action in parser._actions:
-                # was something provided for the argument
-                if action.dest in self._args:
-                    if isinstance(action, argparse._SubParsersAction):
-                        cmd_str[0] += '{} '.format(self._args[action.dest])
-                        traverse_parser(action.choices[self._args[action.dest]])
-                    elif isinstance(action, argparse._AppendAction):
-                        if isinstance(self._args[action.dest], list) or isinstance(self._args[action.dest], tuple):
-                            for values in self._args[action.dest]:
-                                process_flag(action, values)
-                        else:
-                            process_flag(action, self._args[action.dest])
-                    else:
-                        process_flag(action, self._args[action.dest])
+                if action.dest in self._args and action.dest in self._flag_args and action.dest != self._remainder_arg:
+                    process_action(action)
+            # next process positional arguments
+            for action in parser._actions:
+                if action.dest in self._args and action.dest not in self._flag_args and \
+                        action.dest != self._remainder_arg:
+                    process_action(action)
+            # Keep remainder argument last
+            for action in parser._actions:
+                if action.dest in self._args and action.dest == self._remainder_arg:
+                    process_action(action)
 
         traverse_parser(self._parser)
 

@@ -119,10 +119,22 @@ def stdout_sim():
     stdsim = cu.StdSim(sys.stdout)
     return stdsim
 
+@pytest.fixture
+def stringio_sim():
+    import io
+    stdsim = cu.StdSim(io.StringIO(), echo=True)
+    return stdsim
+
+
 def test_stdsim_write_str(stdout_sim):
     my_str = 'Hello World'
     stdout_sim.write(my_str)
     assert stdout_sim.getvalue() == my_str
+
+def test_stdsim_write_str_inner_no_buffer(stringio_sim):
+    my_str = 'Hello World'
+    stringio_sim.write(my_str)
+    assert stringio_sim.getvalue() == my_str
 
 def test_stdsim_write_bytes(stdout_sim):
     b_str = b'Hello World'

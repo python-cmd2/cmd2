@@ -15,20 +15,20 @@ Argument Processing
 
 These features are all provided by the ``@with_argparser`` decorator which is importable from ``cmd2``.
 
-See the either the argprint_ or argparse_ example to learn more about how to use the various ``cmd2`` argument
+See the either the argprint_ or decorator_ example to learn more about how to use the various ``cmd2`` argument
 processing decorators in your ``cmd2`` applications.
 
 .. _argprint: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
-.. _argparse: https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_example.py
+.. _decorator: https://github.com/python-cmd2/cmd2/blob/master/examples/decorator_example.py
 
 Using the argument parser decorator
 ===================================
 
 For each command in the ``cmd2`` subclass which requires argument parsing,
-create an instance of ``argparse.ArgumentParser()`` which can parse the
+create a unique instance of ``argparse.ArgumentParser()`` which can parse the
 input appropriately for the command. Then decorate the command method with
 the ``@with_argparser`` decorator, passing the argument parser as the
-first parameter to the decorator. This changes the second argumen to the command method, which will contain the results
+first parameter to the decorator. This changes the second argument to the command method, which will contain the results
 of ``ArgumentParser.parse_args()``.
 
 Here's what it looks like::
@@ -54,12 +54,24 @@ Here's what it looks like::
          for i in range(min(repetitions, self.maxrepeats)):
             self.poutput(arg)
 
+.. warning::
+
+    It is important that each command which uses the ``@with_argparser`` decorator be passed a unique instance of a
+    parser.  This limitation is due to bugs in CPython prior to Python 3.7 which make it impossible to make a deep copy
+    of an instance of a ``argparse.ArgumentParser``.
+
+    See the table_display_ example for a work-around that demonstrates how to create a function which returns a unique
+    instance of the parser you want.
+
+
 .. note::
 
    The ``@with_argparser`` decorator sets the ``prog`` variable in
    the argument parser based on the name of the method it is decorating.
    This will override anything you specify in ``prog`` variable when
    creating the argument parser.
+
+.. _table_display: https://github.com/python-cmd2/cmd2/blob/master/examples/table_display.py
 
 
 Help Messages
@@ -158,6 +170,14 @@ Which yields:
      -h, --help  show this help message and exit
 
    This command can not generate tags with no content, like <br/>
+
+.. warning::
+
+    If a command **foo** is decorated with one of cmd2's argparse decorators, then **help_foo** will not
+    be invoked when ``help foo`` is called.  The argparse_ module provides a rich API which can be used to
+    tweak every aspect of the displayed help and we encourage ``cmd2`` developers to utilize that.
+
+.. _argparse: https://docs.python.org/3/library/argparse.html
 
 
 Grouping Commands

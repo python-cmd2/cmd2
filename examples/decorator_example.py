@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""A sample application for cmd2 showing how to use argparse to
+"""A sample application showing how to use cmd2's argparse decorators to
 process command line arguments for your application.
 
 Thanks to cmd2's built-in transcript testing capability, it also
-serves as a test suite for argparse_example.py when used with the
-exampleSession.txt transcript.
+serves as a test suite when used with the exampleSession.txt transcript.
 
-Running `python argparse_example.py -t exampleSession.txt` will run
-all the commands in the transcript against argparse_example.py,
+Running `python decorator_example.py -t exampleSession.txt` will run
+all the commands in the transcript against decorator_example.py,
 verifying that the output produced matches the transcript.
 """
 import argparse
