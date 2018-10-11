@@ -493,7 +493,7 @@ mostly automated. The manual steps are all git operations. Here's the checklist:
 1. Make sure `CHANGELOG.md` describes the version and has the correct release date
 1. Add a git tag representing the version number using ``invoke tag x.y.z`` 
     * Where x, y, and z are all small non-negative integers
-1. (Optional) Run `invoke pypi_test` to clean, build, and upload a new release to [Test PyPi](https://test.pypi.org)
+1. (Optional) Run `invoke pypi-test` to clean, build, and upload a new release to [Test PyPi](https://test.pypi.org)
 1. Run `invoke pypi` to clean, build, and upload a new release to [PyPi](https://pypi.org/)
 
 ## Acknowledgement
