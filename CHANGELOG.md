@@ -14,6 +14,8 @@
     the argparse object. Also, single-character tokens that happen to be a
     prefix char are not treated as flags by argparse and AutoCompleter now
     matches that behavior.
+    * Fixed bug where AutoCompleter was not distinguishing between a negative number and a flag 
+    * Fixed bug where AutoCompleter did not handle -- the same way argparse does (all args after -- are non-options)  
 * Enhancements
     * Added ``exit_code`` attribute of ``cmd2.Cmd`` class
         * Enables applications to return a non-zero exit code when exiting from ``cmdloop``

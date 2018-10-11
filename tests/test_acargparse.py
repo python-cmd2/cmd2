@@ -5,7 +5,7 @@ Copyright 2018 Eric Lin <anselor@gmail.com>
 Released under MIT license, see LICENSE file
 """
 import pytest
-from cmd2.argparse_completer import ACArgumentParser, token_resembles_flag
+from cmd2.argparse_completer import ACArgumentParser, is_potential_flag
 
 
 def test_acarg_narg_empty_tuple():
@@ -53,16 +53,16 @@ def test_acarg_narg_tuple_zero_to_one():
     parser.add_argument('tuple', nargs=(0, 1))
 
 
-def test_token_resembles_flag():
+def test_is_potential_flag():
     parser = ACArgumentParser()
 
     # Not valid flags
-    assert not token_resembles_flag('', parser)
-    assert not token_resembles_flag('non-flag', parser)
-    assert not token_resembles_flag('-', parser)
-    assert not token_resembles_flag('--has space', parser)
-    assert not token_resembles_flag('-2', parser)
+    assert not is_potential_flag('', parser)
+    assert not is_potential_flag('non-flag', parser)
+    assert not is_potential_flag('-', parser)
+    assert not is_potential_flag('--has space', parser)
+    assert not is_potential_flag('-2', parser)
 
     # Valid flags
-    assert token_resembles_flag('-flag', parser)
-    assert token_resembles_flag('--flag', parser)
+    assert is_potential_flag('-flag', parser)
+    assert is_potential_flag('--flag', parser)

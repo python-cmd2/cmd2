@@ -163,7 +163,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     # This variant demonstrates the AutoCompleter working with the orginial argparse.
     # Base argparse is unable to specify narg ranges. Autocompleter will keep expecting additional arguments
-    # for the -d/--duration flag until you specify a new flaw or end the list it with '--'
+    # for the -d/--duration flag until you specify a new flag or end processing of flags with '--'
 
     suggest_parser_orig = argparse.ArgumentParser()
 

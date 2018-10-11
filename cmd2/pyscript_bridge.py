@@ -12,7 +12,7 @@ import functools
 import sys
 from typing import List, Callable, Optional
 
-from .argparse_completer import _RangeAction, token_resembles_flag
+from .argparse_completer import _RangeAction, is_potential_flag
 from .utils import namedtuple_with_defaults, StdSim, quote_string_if_needed
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
@@ -222,10 +222,12 @@ class ArgparseFunctor:
             if action.option_strings:
                 cmd_str[0] += '{} '.format(action.option_strings[0])
 
+            is_remainder_arg = action.dest == self._remainder_arg
+
             if isinstance(value, List) or isinstance(value, tuple):
                 for item in value:
                     item = str(item).strip()
-                    if token_resembles_flag(item, self._parser):
+                    if not is_remainder_arg and is_potential_flag(item, self._parser):
                         raise ValueError('{} appears to be a flag and should be supplied as a keyword argument '
                                          'to the function.'.format(item))
                     item = quote_string_if_needed(item)
@@ -240,7 +242,7 @@ class ArgparseFunctor:
 
             else:
                 value = str(value).strip()
-                if token_resembles_flag(value, self._parser):
+                if not is_remainder_arg and is_potential_flag(value, self._parser):
                     raise ValueError('{} appears to be a flag and should be supplied as a keyword argument '
                                      'to the function.'.format(value))
                 value = quote_string_if_needed(value)

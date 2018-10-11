@@ -716,31 +716,6 @@ def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
            os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
            cmd2_app.display_matches == expected_display
 
-def test_argparse_remainder_completion(cmd2_app):
-    # First test a positional with nargs=argparse.REMAINDER
-    text = '--h'
-    line = 'help command subcommand {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # --h should not complete into --help because we are in the argparse.REMAINDER sections
-    assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
-
-    # Now test a flag with nargs=argparse.REMAINDER
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-f', nargs=argparse.REMAINDER)
-
-    # Overwrite eof's parser for this test
-    cmd2.Cmd.do_eof.argparser = parser
-
-    text = '--h'
-    line = 'eof -f {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # --h should not complete into --help because we are in the argparse.REMAINDER sections
-    assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
-
 @pytest.fixture
 def sc_app():
     c = SubcommandsExample()
