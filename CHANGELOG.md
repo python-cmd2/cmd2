@@ -1,4 +1,4 @@
-## 0.9.5 (October TBD, 2018)
+## 0.9.5 (October 11, 2018)
 * Bug Fixes
     * Fixed bug where ``get_all_commands`` could return non-callable attributes
     * Fixed bug where **alias** command was dropping quotes around arguments
