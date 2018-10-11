@@ -3563,8 +3563,8 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             except AttributeError:
                 # Debugging in Pycharm has issues with setting terminal title
                 pass
-
-            self.terminal_lock.release()
+            finally:
+                self.terminal_lock.release()
 
         else:
             raise RuntimeError("another thread holds terminal_lock")
