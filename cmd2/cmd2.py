@@ -2033,18 +2033,22 @@ class Cmd(cmd.Cmd):
         :param statement: the parsed statement from the command line
         :return: a flag indicating whether the interpretation of commands should stop
         """
+        from itertools import islice
+
         if statement.command not in self.macros.keys():
             raise KeyError('{} is not a macro'.format(statement.command))
 
         macro = self.macros[statement.command]
 
-        # For macros, every argument must be provided and there can be no extra arguments.
-        if len(statement.arg_list) != macro.required_arg_count:
-            self.perror("The macro '{}' expects {} argument(s)".format(statement.command, macro.required_arg_count),
+        # Make sure enough arguments were passed in
+        if len(statement.arg_list) < macro.minimum_arg_count:
+            self.perror("The macro '{}' expects at least {} argument(s)".format(statement.command,
+                                                                                macro.minimum_arg_count),
                         traceback_war=False)
             return False
 
-        # Resolve the arguments in reverse
+        # Resolve the arguments in reverse and read their values from statement.argv since those
+        # are unquoted. Macro args should have been quoted when the macro was created.
         resolved = macro.value
         reverse_arg_list = sorted(macro.arg_list, key=lambda ma: ma.start_index, reverse=True)
 
@@ -2058,6 +2062,10 @@ class Cmd(cmd.Cmd):
 
             parts = resolved.rsplit(to_replace, maxsplit=1)
             resolved = parts[0] + replacement + parts[1]
+
+        # Append extra arguments and use statement.arg_list since these arguments need their quotes preserved
+        for arg in islice(statement.arg_list, macro.minimum_arg_count, None):
+            resolved += ' ' + arg
 
         # Run the resolved command
         return self.onecmd_plus_hooks(resolved)
@@ -2407,7 +2415,7 @@ class Cmd(cmd.Cmd):
 
         # Set the macro
         result = "overwritten" if args.name in self.macros else "created"
-        self.macros[args.name] = Macro(name=args.name, value=value, required_arg_count=max_arg_num, arg_list=arg_list)
+        self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
         self.poutput("Macro '{}' {}".format(args.name, result))
 
     def macro_delete(self, args: argparse.Namespace):
@@ -2468,6 +2476,8 @@ class Cmd(cmd.Cmd):
                            "\n"
                            "Notes:\n"
                            "  To use the literal string {1} in your command, escape it this way: {{1}}.\n"
+                           "\n"
+                           "  Extra arguments passed when calling a macro are tacked onto resolved command.\n"
                            "\n"
                            "  An argument number can be repeated in a macro. In the following example the\n"
                            "  first argument will populate both {1} instances.\n"
