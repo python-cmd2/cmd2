@@ -457,6 +457,9 @@ class Cmd(cmd.Cmd):
         # Used to keep track of whether we are redirecting or piping output
         self.redirecting = False
 
+        # Used to keep track of whether a continuation prompt is being displayed
+        self.at_continuation_prompt = False
+
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
 
@@ -1845,6 +1848,7 @@ class Cmd(cmd.Cmd):
             #   - a multiline command with unclosed quotation marks
             if not self.quit_on_sigint:
                 try:
+                    self.at_continuation_prompt = True
                     newline = self.pseudo_raw_input(self.continuation_prompt)
                     if newline == 'eof':
                         # they entered either a blank line, or we hit an EOF
@@ -1858,8 +1862,13 @@ class Cmd(cmd.Cmd):
                     self.poutput('^C')
                     statement = self.statement_parser.parse('')
                     break
+                finally:
+                    self.at_continuation_prompt = False
             else:
+                self.at_continuation_prompt = True
                 newline = self.pseudo_raw_input(self.continuation_prompt)
+                self.at_continuation_prompt = False
+
                 if newline == 'eof':
                     # they entered either a blank line, or we hit an EOF
                     # for some other reason. Turn the literal 'eof'
@@ -2074,11 +2083,6 @@ class Cmd(cmd.Cmd):
         - if input is a pipe (instead of a tty), look at self.echo
           to decide whether to print the prompt and the input
         """
-
-        # Temporarily save over self.prompt to reflect what will be on screen
-        orig_prompt = self.prompt
-        self.prompt = prompt
-
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
@@ -2121,9 +2125,6 @@ class Cmd(cmd.Cmd):
                         self.poutput('{}{}'.format(self.prompt, line))
                 else:
                     line = 'eof'
-
-        # Restore prompt
-        self.prompt = orig_prompt
 
         return line.strip()
 
@@ -3500,24 +3501,30 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
 
+            # Only update if there are changes
+            do_update = False
+
             # Generate a string to clear the prompt and input lines and replace with the alert
             terminal_str = self._clear_input_lines_str()
             if alert_msg:
                 terminal_str += alert_msg + '\n'
+                do_update = True
 
             # Set the new prompt now that _clear_input_lines_str is done using the old prompt
-            if new_prompt is not None:
+            if new_prompt is not None and not self.at_continuation_prompt:
                 self.prompt = new_prompt
                 rl_set_prompt(self.prompt)
+                do_update = True
 
-            # Print terminal_str to erase the lines
-            if rl_type == RlType.GNU:
-                sys.stderr.write(terminal_str)
-            elif rl_type == RlType.PYREADLINE:
-                readline.rl.mode.console.write(terminal_str)
+            if do_update:
+                # Print terminal_str to erase the lines
+                if rl_type == RlType.GNU:
+                    sys.stderr.write(terminal_str)
+                elif rl_type == RlType.PYREADLINE:
+                    readline.rl.mode.console.write(terminal_str)
 
-            # Redraw the prompt and input lines
-            rl_force_redisplay()
+                # Redraw the prompt and input lines
+                rl_force_redisplay()
 
             self.terminal_lock.release()
 
@@ -3535,6 +3542,9 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
                    to guarantee the prompt changes.
+
+                   The prompt will not update if a continuation prompt is being displayed
+                   while entering a multiline command.
 
         :param new_prompt: what to change the prompt to
         :raises RuntimeError if called while another thread holds terminal_lock
