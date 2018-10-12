@@ -310,7 +310,12 @@ class PyscriptBridge(object):
             else:
                 # Command doesn't use argparse, we will accept parameters in the form of a command string
                 def wrap_func(args=''):
-                    return _exec_cmd(self._cmd2_app, functools.partial(func, args), self.cmd_echo)
+                    command = item
+                    if args:
+                        command += ' ' + args
+                    return _exec_cmd(self._cmd2_app,
+                                     functools.partial(self._cmd2_app.onecmd_plus_hooks, command + '\n'),
+                                     self.cmd_echo)
 
                 return wrap_func
         else:
