@@ -32,8 +32,6 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 import argparse
 import cmd
 import collections
-import colorama
-from colorama import Fore
 import glob
 import inspect
 import os
@@ -43,15 +41,20 @@ import sys
 import threading
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
+import colorama
+from colorama import Fore
+from wcwidth import wcswidth
+
 from . import constants
-from . import utils
 from . import plugin
+from . import utils
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .parsing import StatementParser, Statement, Macro, MacroArg
 
 # Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
+
 if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
@@ -70,9 +73,6 @@ else:
         orig_pyreadline_display = readline.rl.mode._display_completions
 
     elif rl_type == RlType.GNU:
-
-        # We need wcswidth to calculate display width of tab completions
-        from wcwidth import wcswidth
 
         # Get the readline lib so we can make changes to it
         import ctypes
@@ -3436,11 +3436,12 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         runner = unittest.TextTestRunner()
         runner.run(testcase)
 
-    def _clear_input_lines_str(self) -> str:  # pragma: no cover
+    def _clear_input_lines_str(self, current_prompt: str) -> str:  # pragma: no cover
         """
         Returns a string that if printed will clear the prompt and input lines in the terminal,
         leaving the cursor at the beginning of the first input line
-        :return: the string to print
+
+        :param current_prompt: the currently displayed prompt
         """
         if not (vt100_support and self.use_rawinput):
             return ''
@@ -3449,17 +3450,18 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         import colorama.ansi as ansi
         from colorama import Cursor
 
-        visible_prompt = self.visible_prompt
+        # Remove ansi characters to get the visible width of the prompt
+        prompt_width = wcswidth(utils.strip_ansi(current_prompt))
 
         # Get the size of the terminal
         terminal_size = shutil.get_terminal_size()
 
         # Figure out how many lines the prompt and user input take up
-        total_str_size = len(visible_prompt) + len(readline.get_line_buffer())
+        total_str_size = prompt_width + wcswidth(readline.get_line_buffer())
         num_input_lines = int(total_str_size / terminal_size.columns) + 1
 
         # Get the cursor's offset from the beginning of the first input line
-        cursor_input_offset = len(visible_prompt) + rl_get_point()
+        cursor_input_offset = prompt_width + rl_get_point()
 
         # Calculate what input line the cursor is on
         cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
@@ -3505,16 +3507,20 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             do_update = False
 
             # Generate a string to clear the prompt and input lines and replace with the alert
-            terminal_str = self._clear_input_lines_str()
+            current_prompt = self.continuation_prompt if self.at_continuation_prompt else self.prompt
+            terminal_str = self._clear_input_lines_str(current_prompt)
+
             if alert_msg:
                 terminal_str += alert_msg + '\n'
                 do_update = True
 
-            # Set the new prompt now that _clear_input_lines_str is done using the old prompt
-            if new_prompt is not None and not self.at_continuation_prompt:
+            # Set the prompt if its changed
+            if new_prompt is not None and new_prompt != self.prompt:
                 self.prompt = new_prompt
-                rl_set_prompt(self.prompt)
-                do_update = True
+
+                if not self.at_continuation_prompt:
+                    rl_set_prompt(self.prompt)
+                    do_update = True
 
             if do_update:
                 # Print terminal_str to erase the lines
@@ -3543,8 +3549,9 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
                    to guarantee the prompt changes.
 
-                   The prompt will not update if a continuation prompt is being displayed
-                   while entering a multiline command.
+                   If a continuation prompt is currently being displayed while entering a multiline
+                   command, the onscreen prompt will not change. However self.prompt will still be updated
+                   and display immediately after the multiline line command completes.
 
         :param new_prompt: what to change the prompt to
         :raises RuntimeError if called while another thread holds terminal_lock

@@ -66,13 +66,11 @@ Topic :: Software Development :: Libraries :: Python Modules
 
 SETUP_REQUIRES = ['setuptools_scm']
 
-INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama', 'attrs >= 16.3.0']
+INSTALL_REQUIRES = ['pyperclip >= 1.5.27', 'colorama', 'attrs >= 16.3.0', 'wcwidth']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
     ":sys_platform=='win32'": ['pyreadline'],
-    # POSIX OSes also require wcwidth for correctly estimating the displayed width of unicode chars
-    ":sys_platform!='win32'": ['wcwidth'],
     # Python 3.4 and earlier require contextlib2 for temporarily redirecting stderr and stdout
     ":python_version<'3.5'": ['contextlib2', 'typing'],
     # Extra dependencies for running unit tests

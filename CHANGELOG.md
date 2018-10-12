@@ -1,3 +1,7 @@
+## 0.9.6 (TBD)
+* Enhancements
+    * All platforms now depend on [wcwidth](https://pypi.python.org/pypi/wcwidth) to assist with asynchronous alerts.
+
 ## 0.9.5 (October 11, 2018)
 * Bug Fixes
     * Fixed bug where ``get_all_commands`` could return non-callable attributes
