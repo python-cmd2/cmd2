@@ -199,20 +199,21 @@ class ArgparseFunctor:
                                                                                  self._command_name))
 
         # reconstruct the cmd2 command from the python call
-        cmd_str = ['']
+        command = self._command_name + ' '
 
         def process_argument(action, value):
+            nonlocal command
             if isinstance(action, argparse._CountAction):
                 if isinstance(value, int):
                     for _ in range(value):
-                        cmd_str[0] += '{} '.format(action.option_strings[0])
+                        command += '{} '.format(action.option_strings[0])
                     return
                 else:
                     raise TypeError('Expected int for ' + action.dest)
             if isinstance(action, argparse._StoreConstAction) or isinstance(action, argparse._AppendConstAction):
                 if value:
                     # Nothing else to append to the command string, just the flag is enough.
-                    cmd_str[0] += '{} '.format(action.option_strings[0])
+                    command += '{} '.format(action.option_strings[0])
                     return
                 else:
                     # value is not True so we default to false, which means don't include the flag
@@ -220,7 +221,7 @@ class ArgparseFunctor:
 
             # was the argument a flag?
             if action.option_strings:
-                cmd_str[0] += '{} '.format(action.option_strings[0])
+                command += '{} '.format(action.option_strings[0])
 
             is_remainder_arg = action.dest == self._remainder_arg
 
@@ -231,14 +232,14 @@ class ArgparseFunctor:
                         raise ValueError('{} appears to be a flag and should be supplied as a keyword argument '
                                          'to the function.'.format(item))
                     item = quote_string_if_needed(item)
-                    cmd_str[0] += '{} '.format(item)
+                    command += '{} '.format(item)
 
                 # If this is a flag parameter that can accept a variable number of arguments and we have not
                 # reached the max number, add a list completion suffix to tell argparse to move to the next
                 # parameter
                 if action.option_strings and isinstance(action, _RangeAction) and action.nargs_max is not None and \
                         action.nargs_max > len(value):
-                    cmd_str[0] += '{0}{0} '.format(self._parser.prefix_chars[0])
+                    command += '{0}{0} '.format(self._parser.prefix_chars[0])
 
             else:
                 value = str(value).strip()
@@ -246,18 +247,19 @@ class ArgparseFunctor:
                     raise ValueError('{} appears to be a flag and should be supplied as a keyword argument '
                                      'to the function.'.format(value))
                 value = quote_string_if_needed(value)
-                cmd_str[0] += '{} '.format(value)
+                command += '{} '.format(value)
 
                 # If this is a flag parameter that can accept a variable number of arguments and we have not
                 # reached the max number, add a list completion suffix to tell argparse to move to the next
                 # parameter
                 if action.option_strings and isinstance(action, _RangeAction) and action.nargs_max is not None and \
                         action.nargs_max > 1:
-                    cmd_str[0] += '{0}{0} '.format(self._parser.prefix_chars[0])
+                    command += '{0}{0} '.format(self._parser.prefix_chars[0])
 
         def process_action(action):
+            nonlocal command
             if isinstance(action, argparse._SubParsersAction):
-                cmd_str[0] += '{} '.format(self._args[action.dest])
+                command += '{} '.format(self._args[action.dest])
                 traverse_parser(action.choices[self._args[action.dest]])
             elif isinstance(action, argparse._AppendAction):
                 if isinstance(self._args[action.dest], list) or isinstance(self._args[action.dest], tuple):
@@ -284,8 +286,9 @@ class ArgparseFunctor:
                     process_action(action)
 
         traverse_parser(self._parser)
-
-        return _exec_cmd(self._cmd2_app, functools.partial(func, cmd_str[0]), self._echo)
+        return _exec_cmd(self._cmd2_app,
+                         functools.partial(self._cmd2_app.onecmd_plus_hooks, command.strip() + '\n'),
+                         self._echo)
 
 
 class PyscriptBridge(object):
@@ -310,9 +313,7 @@ class PyscriptBridge(object):
             else:
                 # Command doesn't use argparse, we will accept parameters in the form of a command string
                 def wrap_func(args=''):
-                    command = item
-                    if args:
-                        command += ' ' + args
+                    command = (item + ' ' + args).strip()
                     return _exec_cmd(self._cmd2_app,
                                      functools.partial(self._cmd2_app.onecmd_plus_hooks, command + '\n'),
                                      self.cmd_echo)
