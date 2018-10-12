@@ -55,8 +55,8 @@ class Macro:
     # The string the macro resolves to
     value = attr.ib(validator=attr.validators.instance_of(str))
 
-    # The required number of args the user has to pass to this macro
-    required_arg_count = attr.ib(validator=attr.validators.instance_of(int))
+    # The minimum number of args the user has to pass to this macro
+    minimum_arg_count = attr.ib(validator=attr.validators.instance_of(int))
 
     # Used to fill in argument placeholders in the macro
     arg_list = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))

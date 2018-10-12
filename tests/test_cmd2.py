@@ -2014,6 +2014,25 @@ def test_macro_create_with_escaped_args(base_app, capsys):
     out = run_cmd(base_app, 'fake')
     assert 'No help on {1}' in out[0]
 
+def test_macro_usage_with_missing_args(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake help {1} {2}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    run_cmd(base_app, 'fake arg1')
+    out, err = capsys.readouterr()
+    assert "expects at least 2 argument(s)" in err
+
+def test_macro_usage_with_exta_args(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake help {1}')
+    assert out == normalize("Macro 'fake' created")
+
+    # Run the macro
+    out = run_cmd(base_app, 'fake alias create')
+    assert "Usage: alias create" in out[0]
+
 def test_macro_create_with_missing_arg_nums(base_app, capsys):
     # Create the macro
     run_cmd(base_app, 'macro create fake help {1} {3}')
@@ -2026,16 +2045,6 @@ def test_macro_create_with_invalid_arg_num(base_app, capsys):
     out, err = capsys.readouterr()
     assert "Argument numbers must be greater than 0" in err
 
-def test_macro_create_with_wrong_arg_count(base_app, capsys):
-    # Create the macro
-    out = run_cmd(base_app, 'macro create fake help {1} {2}')
-    assert out == normalize("Macro 'fake' created")
-
-    # Run the macro
-    run_cmd(base_app, 'fake arg1')
-    out, err = capsys.readouterr()
-    assert "expects 2 argument(s)" in err
-
 def test_macro_create_with_unicode_numbered_arg(base_app, capsys):
     # Create the macro expecting 1 argument
     out = run_cmd(base_app, 'macro create fake help {\N{ARABIC-INDIC DIGIT ONE}}')
@@ -2044,7 +2053,7 @@ def test_macro_create_with_unicode_numbered_arg(base_app, capsys):
     # Run the macro
     out = run_cmd(base_app, 'fake')
     out, err = capsys.readouterr()
-    assert "expects 1 argument(s)" in err
+    assert "expects at least 1 argument(s)" in err
 
 def test_macro_create_with_missing_unicode_arg_nums(base_app, capsys):
     run_cmd(base_app, 'macro create fake help {1} {\N{ARABIC-INDIC DIGIT THREE}}')
