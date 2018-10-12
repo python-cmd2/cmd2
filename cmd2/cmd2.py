@@ -3436,52 +3436,6 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         runner = unittest.TextTestRunner()
         runner.run(testcase)
 
-    def _clear_input_lines_str(self, current_prompt: str) -> str:  # pragma: no cover
-        """
-        Returns a string that if printed will clear the prompt and input lines in the terminal,
-        leaving the cursor at the beginning of the first input line
-
-        :param current_prompt: the currently displayed prompt
-        """
-        if not (vt100_support and self.use_rawinput):
-            return ''
-
-        import shutil
-        import colorama.ansi as ansi
-        from colorama import Cursor
-
-        # Remove ansi characters to get the visible width of the prompt
-        prompt_width = wcswidth(utils.strip_ansi(current_prompt))
-
-        # Get the size of the terminal
-        terminal_size = shutil.get_terminal_size()
-
-        # Figure out how many lines the prompt and user input take up
-        total_str_size = prompt_width + wcswidth(readline.get_line_buffer())
-        num_input_lines = int(total_str_size / terminal_size.columns) + 1
-
-        # Get the cursor's offset from the beginning of the first input line
-        cursor_input_offset = prompt_width + rl_get_point()
-
-        # Calculate what input line the cursor is on
-        cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
-
-        # Create a string that will clear all input lines and print the alert
-        terminal_str = ''
-
-        # Move the cursor down to the last input line
-        if cursor_input_line != num_input_lines:
-            terminal_str += Cursor.DOWN(num_input_lines - cursor_input_line)
-
-        # Clear each input line from the bottom up so that the cursor ends up on the original first input line
-        terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (num_input_lines - 1)
-        terminal_str += ansi.clear_line()
-
-        # Move the cursor to the beginning of the first input line
-        terminal_str += '\r'
-
-        return terminal_str
-
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
         Display an important message to the user while they are at the prompt in between commands.
@@ -3500,30 +3454,63 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         if not (vt100_support and self.use_rawinput):
             return
 
+        import shutil
+        import colorama.ansi as ansi
+        from colorama import Cursor
+
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
 
-            # Only update if there are changes
-            do_update = False
-
-            # Generate a string to clear the prompt and input lines and replace with the alert
+            # Figure out what prompt is displaying
             current_prompt = self.continuation_prompt if self.at_continuation_prompt else self.prompt
-            terminal_str = self._clear_input_lines_str(current_prompt)
+
+            # Only update terminal if there are changes
+            update_terminal = False
 
             if alert_msg:
-                terminal_str += alert_msg + '\n'
-                do_update = True
+                alert_msg += '\n'
+                update_terminal = True
 
             # Set the prompt if its changed
             if new_prompt is not None and new_prompt != self.prompt:
                 self.prompt = new_prompt
 
+                # If we aren't at a continuation prompt, then redraw the prompt now
                 if not self.at_continuation_prompt:
                     rl_set_prompt(self.prompt)
-                    do_update = True
+                    update_terminal = True
 
-            if do_update:
-                # Print terminal_str to erase the lines
+            if update_terminal:
+                # Remove ansi characters to get the visible width of the prompt
+                prompt_width = wcswidth(utils.strip_ansi(current_prompt))
+
+                # Get the size of the terminal
+                terminal_size = shutil.get_terminal_size()
+
+                # Figure out how many lines the prompt and user input take up
+                total_str_size = prompt_width + wcswidth(readline.get_line_buffer())
+                num_input_lines = int(total_str_size / terminal_size.columns) + 1
+
+                # Get the cursor's offset from the beginning of the first input line
+                cursor_input_offset = prompt_width + rl_get_point()
+
+                # Calculate what input line the cursor is on
+                cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
+
+                # Create a string that when printed will clear all input lines and display the alert
+                terminal_str = ''
+
+                # Move the cursor down to the last input line
+                if cursor_input_line != num_input_lines:
+                    terminal_str += Cursor.DOWN(num_input_lines - cursor_input_line)
+
+                # Clear each input line from the bottom up so that the cursor ends up on the original first input line
+                terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (num_input_lines - 1)
+                terminal_str += ansi.clear_line()
+
+                # Move the cursor to the beginning of the first input line and print the alert
+                terminal_str += '\r' + alert_msg
+
                 if rl_type == RlType.GNU:
                     sys.stderr.write(terminal_str)
                 elif rl_type == RlType.PYREADLINE:
