@@ -101,13 +101,11 @@ the following Python packages are installed:
   * attrs
   * colorama
   * pyperclip
+  * wcwidth
 
 On Windows, there is an additional dependency:
 
   * pyreadline
-
-On macOS or Linux, there is an additional dependency:
-  * wcwidth
 
 
 Upgrading cmd2

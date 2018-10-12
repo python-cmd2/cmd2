@@ -32,8 +32,6 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 import argparse
 import cmd
 import collections
-import colorama
-from colorama import Fore
 import glob
 import inspect
 import os
@@ -43,15 +41,20 @@ import sys
 import threading
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
+import colorama
+from colorama import Fore
+from wcwidth import wcswidth
+
 from . import constants
-from . import utils
 from . import plugin
+from . import utils
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .parsing import StatementParser, Statement, Macro, MacroArg
 
 # Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
+
 if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
@@ -70,9 +73,6 @@ else:
         orig_pyreadline_display = readline.rl.mode._display_completions
 
     elif rl_type == RlType.GNU:
-
-        # We need wcswidth to calculate display width of tab completions
-        from wcwidth import wcswidth
 
         # Get the readline lib so we can make changes to it
         import ctypes
@@ -456,6 +456,9 @@ class Cmd(cmd.Cmd):
 
         # Used to keep track of whether we are redirecting or piping output
         self.redirecting = False
+
+        # Used to keep track of whether a continuation prompt is being displayed
+        self.at_continuation_prompt = False
 
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
@@ -1845,6 +1848,7 @@ class Cmd(cmd.Cmd):
             #   - a multiline command with unclosed quotation marks
             if not self.quit_on_sigint:
                 try:
+                    self.at_continuation_prompt = True
                     newline = self.pseudo_raw_input(self.continuation_prompt)
                     if newline == 'eof':
                         # they entered either a blank line, or we hit an EOF
@@ -1858,8 +1862,13 @@ class Cmd(cmd.Cmd):
                     self.poutput('^C')
                     statement = self.statement_parser.parse('')
                     break
+                finally:
+                    self.at_continuation_prompt = False
             else:
+                self.at_continuation_prompt = True
                 newline = self.pseudo_raw_input(self.continuation_prompt)
+                self.at_continuation_prompt = False
+
                 if newline == 'eof':
                     # they entered either a blank line, or we hit an EOF
                     # for some other reason. Turn the literal 'eof'
@@ -2074,11 +2083,6 @@ class Cmd(cmd.Cmd):
         - if input is a pipe (instead of a tty), look at self.echo
           to decide whether to print the prompt and the input
         """
-
-        # Temporarily save over self.prompt to reflect what will be on screen
-        orig_prompt = self.prompt
-        self.prompt = prompt
-
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
@@ -2121,9 +2125,6 @@ class Cmd(cmd.Cmd):
                         self.poutput('{}{}'.format(self.prompt, line))
                 else:
                     line = 'eof'
-
-        # Restore prompt
-        self.prompt = orig_prompt
 
         return line.strip()
 
@@ -3435,50 +3436,6 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         runner = unittest.TextTestRunner()
         runner.run(testcase)
 
-    def _clear_input_lines_str(self) -> str:  # pragma: no cover
-        """
-        Returns a string that if printed will clear the prompt and input lines in the terminal,
-        leaving the cursor at the beginning of the first input line
-        :return: the string to print
-        """
-        if not (vt100_support and self.use_rawinput):
-            return ''
-
-        import shutil
-        import colorama.ansi as ansi
-        from colorama import Cursor
-
-        visible_prompt = self.visible_prompt
-
-        # Get the size of the terminal
-        terminal_size = shutil.get_terminal_size()
-
-        # Figure out how many lines the prompt and user input take up
-        total_str_size = len(visible_prompt) + len(readline.get_line_buffer())
-        num_input_lines = int(total_str_size / terminal_size.columns) + 1
-
-        # Get the cursor's offset from the beginning of the first input line
-        cursor_input_offset = len(visible_prompt) + rl_get_point()
-
-        # Calculate what input line the cursor is on
-        cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
-
-        # Create a string that will clear all input lines and print the alert
-        terminal_str = ''
-
-        # Move the cursor down to the last input line
-        if cursor_input_line != num_input_lines:
-            terminal_str += Cursor.DOWN(num_input_lines - cursor_input_line)
-
-        # Clear each input line from the bottom up so that the cursor ends up on the original first input line
-        terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (num_input_lines - 1)
-        terminal_str += ansi.clear_line()
-
-        # Move the cursor to the beginning of the first input line
-        terminal_str += '\r'
-
-        return terminal_str
-
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
         Display an important message to the user while they are at the prompt in between commands.
@@ -3497,27 +3454,70 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         if not (vt100_support and self.use_rawinput):
             return
 
+        import shutil
+        import colorama.ansi as ansi
+        from colorama import Cursor
+
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
 
-            # Generate a string to clear the prompt and input lines and replace with the alert
-            terminal_str = self._clear_input_lines_str()
+            # Figure out what prompt is displaying
+            current_prompt = self.continuation_prompt if self.at_continuation_prompt else self.prompt
+
+            # Only update terminal if there are changes
+            update_terminal = False
+
             if alert_msg:
-                terminal_str += alert_msg + '\n'
+                alert_msg += '\n'
+                update_terminal = True
 
-            # Set the new prompt now that _clear_input_lines_str is done using the old prompt
-            if new_prompt is not None:
+            # Set the prompt if its changed
+            if new_prompt is not None and new_prompt != self.prompt:
                 self.prompt = new_prompt
-                rl_set_prompt(self.prompt)
 
-            # Print terminal_str to erase the lines
-            if rl_type == RlType.GNU:
-                sys.stderr.write(terminal_str)
-            elif rl_type == RlType.PYREADLINE:
-                readline.rl.mode.console.write(terminal_str)
+                # If we aren't at a continuation prompt, then redraw the prompt now
+                if not self.at_continuation_prompt:
+                    rl_set_prompt(self.prompt)
+                    update_terminal = True
 
-            # Redraw the prompt and input lines
-            rl_force_redisplay()
+            if update_terminal:
+                # Remove ansi characters to get the visible width of the prompt
+                prompt_width = wcswidth(utils.strip_ansi(current_prompt))
+
+                # Get the size of the terminal
+                terminal_size = shutil.get_terminal_size()
+
+                # Figure out how many lines the prompt and user input take up
+                total_str_size = prompt_width + wcswidth(readline.get_line_buffer())
+                num_input_lines = int(total_str_size / terminal_size.columns) + 1
+
+                # Get the cursor's offset from the beginning of the first input line
+                cursor_input_offset = prompt_width + rl_get_point()
+
+                # Calculate what input line the cursor is on
+                cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
+
+                # Create a string that when printed will clear all input lines and display the alert
+                terminal_str = ''
+
+                # Move the cursor down to the last input line
+                if cursor_input_line != num_input_lines:
+                    terminal_str += Cursor.DOWN(num_input_lines - cursor_input_line)
+
+                # Clear each input line from the bottom up so that the cursor ends up on the original first input line
+                terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (num_input_lines - 1)
+                terminal_str += ansi.clear_line()
+
+                # Move the cursor to the beginning of the first input line and print the alert
+                terminal_str += '\r' + alert_msg
+
+                if rl_type == RlType.GNU:
+                    sys.stderr.write(terminal_str)
+                elif rl_type == RlType.PYREADLINE:
+                    readline.rl.mode.console.write(terminal_str)
+
+                # Redraw the prompt and input lines
+                rl_force_redisplay()
 
             self.terminal_lock.release()
 
@@ -3535,6 +3535,10 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
                    to guarantee the prompt changes.
+
+                   If a continuation prompt is currently being displayed while entering a multiline
+                   command, the onscreen prompt will not change. However self.prompt will still be updated
+                   and display immediately after the multiline line command completes.
 
         :param new_prompt: what to change the prompt to
         :raises RuntimeError if called while another thread holds terminal_lock
