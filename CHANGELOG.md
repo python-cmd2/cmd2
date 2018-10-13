@@ -2,6 +2,7 @@
 * Enhancements
     * All platforms now depend on [wcwidth](https://pypi.python.org/pypi/wcwidth) to assist with asynchronous alerts.
     * Macros now accept extra arguments when called. These will be tacked onto the resolved command.
+    * All cmd2 commands run via py now go through onecmd_plus_hooks.
 
 ## 0.9.5 (October 11, 2018)
 * Bug Fixes
