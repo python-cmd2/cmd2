@@ -1,11 +1,11 @@
-## 0.9.6 (TBD)
+## 0.9.6 (October 13, 2018)
+* Bug Fixes
+    * Fixed bug introduced in 0.9.5 caused by backing up and restoring `self.prompt` in `pseudo_raw_input`.
+      As part of this fix, continuation prompts will not be redrawn with `async_update_prompt` or `async_alert`.
 * Enhancements
     * All platforms now depend on [wcwidth](https://pypi.python.org/pypi/wcwidth) to assist with asynchronous alerts.
     * Macros now accept extra arguments when called. These will be tacked onto the resolved command.
     * All cmd2 commands run via py now go through onecmd_plus_hooks.
-* Bug Fixes
-    * Fixed bug introduced in 0.9.5 caused by backing up and restoring self.prompt in pseudo_raw_input().
-      As part of this fix, continuation prompts will not be redrawn with `async_update_prompt` or `async_alert`.
 
 ## 0.9.5 (October 11, 2018)
 * Bug Fixes
