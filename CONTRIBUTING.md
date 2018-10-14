@@ -180,23 +180,20 @@ $ git push origin [name_of_your_new_branch]
 
 
 ### Setting up for cmd2 development
-For doing cmd2 development, you actually do NOT want to have cmd2 installed as a Python package.
-So if you have previously installed cmd2, make sure to uninstall it:
+For doing cmd2 development, it is recommended you create a virutal environment and install the package from the source.
 ```sh
-$ pip uninstall cmd2
+# Create a new environment for cmd2
+$ conda create -n cmd2 python=3.6
+
+# Activate cmd virtual environment
+$ source activate cmd2
 ```
 
-Assuming you cloned the repository to `~/src/cmd2`:
-```sh
-$ cd ~/src/cmd2
-$ pip install -e .
-```
-will install cmd2 in [editable mode](https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs).
+Assuming you cloned the repository to `~/src/cmd2` you can install cmd2 in 
+[editable mode](https://pip.pypa.io/en/stable/reference/pip_install/#editable-installs).
 Changes to the source code are immediately available when the python interpreter
 imports `cmd2`, there is no need to re-install the module after every change. This
-command will also install all of the runtime dependencies for `cmd2`.
-
-Next you should install all the modules used for development of `cmd2`:
+command will also install all of the runtime dependencies for `cmd2` and modules used for development of `cmd2`:
 ```sh
 $ cd ~/src/cmd2
 $ pip install -e .[dev]
@@ -229,11 +226,17 @@ have a look at `tasks.py`.
 Now you can check if everything is installed and working:
 ```sh
 $ cd ~src/cmd2
+$ invoke pytest
+```
+
+If the tests are executed it means that dependencies and project are installed succesfully.
+
+You can also run the example app and see a prompt that says "(Cmd)" running the command:
+```sh
 $ python examples/example.py
 ```
 
-If the example app loads, you should see a prompt that says "(Cmd)".  You can
-type `help` to get help or `quit` to quit. If you see that, then congratulations
+You can type `help` to get help or `quit` to quit. If you see that, then congratulations
 – you're all set. Otherwise, refer to the cmd2 [installation instructions](https://cmd2.readthedocs.io/en/latest/install.html#installing).
 There also might be an error in the console of your Bash / terminal / command line
 that will help identify the problem.
