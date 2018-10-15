@@ -180,13 +180,30 @@ $ git push origin [name_of_your_new_branch]
 
 
 ### Setting up for cmd2 development
-For doing cmd2 development, it is recommended you create a virutal environment and install the package from the source.
-```sh
-# Create a new environment for cmd2
-$ conda create -n cmd2 python=3.6
+For doing cmd2 development, it is recommended you create a virutal environment using Conda or Virtualenv and install the package from the source.
 
-# Activate cmd virtual environment
+#### Create a new environment for cmd2 using Conda
+```sh
+$ conda create -n cmd2_py36 python=3.6
 $ source activate cmd2
+```
+
+#### Create a new environment for cmd using Virtualenv
+We recommend that you use [pyenv](https://github.com/pyenv/pyenv) to manage your installed python versions.
+
+```sh
+# Check pyenv versions installed
+pyenv versions
+
+# Install python version defined
+pyenv install 3.6.3
+```
+With the Python version installed, you can set the virutalenv properly. 
+
+```sh
+$ cd ~/src/cmd2
+$ virtualenv -p $(pyenv root)/versions/3.6.3/ cmd_py36 
+$ source ~/src/cmd2/bin/activate
 ```
 
 Assuming you cloned the repository to `~/src/cmd2` you can install cmd2 in 
