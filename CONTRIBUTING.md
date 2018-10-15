@@ -185,7 +185,7 @@ For doing cmd2 development, it is recommended you create a virutal environment u
 #### Create a new environment for cmd2 using Conda
 ```sh
 $ conda create -n cmd2_py36 python=3.6
-$ source activate cmd2
+$ conda activate cmd2
 ```
 
 #### Create a new environment for cmd using Virtualenv
