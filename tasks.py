@@ -176,7 +176,7 @@ def clean_all(context):
 namespace_clean.add_task(clean_all, 'all')
 
 @invoke.task
-def tag(context, name='', message=''):
+def tag(context, name, message=''):
     "Add a Git tag and push it to origin"
     # If a tag was provided on the command-line, then add a Git tag and push it to origin
     if name:

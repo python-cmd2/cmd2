@@ -11,7 +11,7 @@ Multi-line commands
 Special-character shortcut commands (beyond cmd's "@" and "!")
 Settable environment parameters
 Parsing commands with `argparse` argument parsers (flags)
-Redirection to file with >, >>; input from file with <
+Redirection to file or paste buffer (clipboard) with > or >>
 Easy transcript-based testing of applications (see examples/example.py)
 Bash-style ``select`` available
 
