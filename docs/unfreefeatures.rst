@@ -161,9 +161,6 @@ Always
     the output destination
 
 
-The previously recommended ``colorize`` method is now deprecated.
-
-
 .. _quiet:
 
 Suppressing non-essential output

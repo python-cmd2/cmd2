@@ -436,15 +436,6 @@ class Cmd(cmd.Cmd):
         # Codes used for exit conditions
         self._STOP_AND_EXIT = True  # cmd convention
 
-        self._colorcodes = {'bold': {True: '\x1b[1m', False: '\x1b[22m'},
-                            'cyan': {True: Fore.CYAN, False: Fore.RESET},
-                            'blue': {True: Fore.BLUE, False: Fore.RESET},
-                            'red': {True: Fore.RED, False: Fore.RESET},
-                            'magenta': {True: Fore.MAGENTA, False: Fore.RESET},
-                            'green': {True: Fore.GREEN, False: Fore.RESET},
-                            'underline': {True: '\x1b[4m', False: Fore.RESET},
-                            'yellow': {True: Fore.YELLOW, False: Fore.RESET}}
-
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
 
@@ -713,17 +704,6 @@ class Cmd(cmd.Cmd):
                 # broken_pipe_warning attribute to the message you want printed.`
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
-
-    def colorize(self, val: str, color: str) -> str:
-        """Given a string (``val``), returns that string wrapped in UNIX-style
-           special characters that turn on (and then off) text color and style.
-           If the ``colors`` environment parameter is ``False``, or the application
-           is running on Windows, will return ``val`` unchanged.
-           ``color`` should be one of the supported strings (or styles):
-           red/blue/green/cyan/magenta, bold, underline"""
-        if self.colors.lower() != constants.COLORS_NEVER.lower() and (self.stdout == self.initial_stdout):
-            return self._colorcodes[color][True] + val + self._colorcodes[color][False]
-        return val
 
     # -----  Methods related to tab completion -----
 

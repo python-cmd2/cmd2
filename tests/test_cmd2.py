@@ -855,16 +855,6 @@ now: True
     assert str(err).startswith('Traceback (most recent call last):')
 
 
-def test_base_colorize(base_app):
-    # If using base_app test fixture it won't get colorized because we replaced self.stdout
-    color_test = base_app.colorize('Test', 'red')
-    assert color_test == 'Test'
-
-    # But if we create a fresh Cmd() instance, it will
-    fresh_app = cmd2.Cmd()
-    color_test = fresh_app.colorize('Test', 'red')
-    assert color_test == '\x1b[31mTest\x1b[39m'
-
 def _expected_no_editor_error():
     expected_exception = 'OSError'
     # If PyPy, expect a different exception than with Python 3
