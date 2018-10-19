@@ -1,3 +1,7 @@
+## 0.9.7 (TBD, 2018)
+* Deletions (potentially breaking changes)
+    * Deleted ``Cmd.colorize()`` and ``Cmd._colorcodes`` which were deprecated in 0.9.5
+    
 ## 0.9.6 (October 13, 2018)
 * Bug Fixes
     * Fixed bug introduced in 0.9.5 caused by backing up and restoring `self.prompt` in `pseudo_raw_input`.
