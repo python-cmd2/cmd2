@@ -140,6 +140,10 @@ set to ``False``, then the current line will simply be cancelled.
   (Cmd) typing a comma^C
   (Cmd)
 
+.. warning::
+    The default SIGINT behavior will only function properly if **cmdloop** is running
+    in the main thread.
+
 
 Timing
 ======

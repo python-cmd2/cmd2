@@ -1,4 +1,6 @@
 ## 0.9.7 (TBD, 2018)
+* Enhancements
+    * **cmdloop** now only attempts to register a custom signal handler for SIGINT if running in the main thread
 * Deletions (potentially breaking changes)
     * Deleted ``Cmd.colorize()`` and ``Cmd._colorcodes`` which were deprecated in 0.9.5
     

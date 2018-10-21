@@ -3588,10 +3588,12 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             if callargs:
                 self.cmdqueue.extend(callargs)
 
-        # Register a SIGINT signal handler for Ctrl+C
-        import signal
-        original_sigint_handler = signal.getsignal(signal.SIGINT)
-        signal.signal(signal.SIGINT, self.sigint_handler)
+        # Only the main thread is allowed to set a new signal handler in Python, so only attempt if that is the case
+        if threading.current_thread() is threading.main_thread():
+            # Register a SIGINT signal handler for Ctrl+C
+            import signal
+            original_sigint_handler = signal.getsignal(signal.SIGINT)
+            signal.signal(signal.SIGINT, self.sigint_handler)
 
         # Grab terminal lock before the prompt has been drawn by readline
         self.terminal_lock.acquire()
@@ -3625,8 +3627,9 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         # This will also zero the lock count in case cmdloop() is called again
         self.terminal_lock.release()
 
-        # Restore the original signal handler
-        signal.signal(signal.SIGINT, original_sigint_handler)
+        if threading.current_thread() is threading.main_thread():
+            # Restore the original signal handler
+            signal.signal(signal.SIGINT, original_sigint_handler)
 
         if self.exit_code is not None:
             sys.exit(self.exit_code)
