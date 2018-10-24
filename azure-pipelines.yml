@@ -38,7 +38,7 @@ jobs:
 
     # Install dependencies - install specific PyPI packages with pip, including cmd2 dependencies
   - script: |
-      python -m pip install --upgrade pip && pip3 install --upgrade setuptools gnureadline tox
+      python -m pip install --upgrade pip && pip3 install --upgrade setuptools tox
     displayName: 'Upgrade pip and setuptools'
     continueOnError: false
 
