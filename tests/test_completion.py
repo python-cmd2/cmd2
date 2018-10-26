@@ -257,6 +257,21 @@ def test_shell_command_completion_does_path_completion_when_after_command(cmd2_a
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == [text + '.py ']
 
+def test_shell_commmand_complete_in_path(cmd2_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+
+    text = os.path.join(test_dir, 's')
+    line = 'shell {}'.format(text)
+
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # Since this will look for directories and executables in the given path,
+    # we expect to see the scripts dir among the results
+    expected = os.path.join(test_dir, 'scripts' + os.path.sep)
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and expected in cmd2_app.completion_matches
+
 
 def test_path_completion_single_end(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
