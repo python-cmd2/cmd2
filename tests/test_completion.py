@@ -399,7 +399,7 @@ def test_path_completion_directories_only(cmd2_app, request):
 
     expected = [text + 'cripts' + os.path.sep]
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx, dir_only=True) == expected
+    assert cmd2_app.path_complete(text, line, begidx, endidx, os.path.isdir) == expected
 
 def test_basic_completion_single(cmd2_app):
     text = 'Pi'
