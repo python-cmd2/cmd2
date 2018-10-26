@@ -201,7 +201,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: unique instance of ArgumentParser
-    :param preserve_quotes: if True, then arguments passed to arparse maintain their quotes
+    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
     :return: function that gets passed argparse-parsed args and a list of unknown argument strings
     """
     import functools
