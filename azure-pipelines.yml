@@ -16,12 +16,16 @@ jobs:
     matrix:
       Python34:
         python.version: '3.4'
+        TOXENV: 'py34'
       Python35:
         python.version: '3.5'
+        TOXENV: 'py35'
       Python36:
         python.version: '3.6'
+        TOXENV: 'py36'
       Python37:
         python.version: '3.7'
+        TOXENV: 'py37'
     # Increase the maxParallel value to simultaneously run the job for all versions in the matrix (max 10 for free open-source)
     maxParallel: 4
 
@@ -34,8 +38,7 @@ jobs:
 
     # Install dependencies - install specific PyPI packages with pip, including cmd2 dependencies
   - script: |
-      python -m pip install --upgrade pip && pip3 install --upgrade setuptools gnureadline
-      pip install -e .
+      python -m pip install --upgrade pip && pip3 install --upgrade setuptools tox
     displayName: 'Upgrade pip and setuptools'
     continueOnError: false
 
@@ -43,8 +46,7 @@ jobs:
 
     # Test - test with pytest, collect coverage metrics with pytest-cov, and publish these metrics to codecov.io
   - script: |
-      pip install pytest pytest-cov pytest-mock codecov mock
-      py.test tests --cov --junitxml=junit/test-results.xml && codecov
+      tox -e $(TOXENV)
     displayName: 'Run tests and code coverage'
     continueOnError: false
 
