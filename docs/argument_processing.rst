@@ -21,6 +21,20 @@ processing decorators in your ``cmd2`` applications.
 .. _argprint: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
 .. _decorator: https://github.com/python-cmd2/cmd2/blob/master/examples/decorator_example.py
 
+
+Decorators provided by cmd2 for argument processing
+===================================================
+``cmd2`` provides the following decorators for assisting with parsing arguments passed to commands:
+
+.. automethod:: cmd2.cmd2.with_argument_list
+.. automethod:: cmd2.cmd2.with_argparser
+.. automethod:: cmd2.cmd2.with_argparser_and_unknown_args
+
+All of these decorators accept an optional **preserve_quotes** argument which defaults to ``False``.
+Setting this argument to ``True`` is useful for cases where you are passing the arguments to another
+command which might have its own argument parsing.
+
+
 Using the argument parser decorator
 ===================================
 
@@ -402,3 +416,6 @@ See the subcommands_ and tab_autocompletion_ example to learn more about how to 
 
 .. _subcommands: https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py
 .. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
+
+
+
