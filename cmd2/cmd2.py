@@ -243,7 +243,7 @@ def with_argparser(argparser: argparse.ArgumentParser,
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: unique instance of ArgumentParser
-    :param preserve_quotes: if True, then arguments passed to arparse maintain their quotes
+    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
     :return: function that gets passed the argparse-parsed args
     """
     import functools
