@@ -173,11 +173,16 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 
-def with_argument_list(func: Callable, preserve_quotes: bool=False) -> Callable:
-    """A decorator to alter the arguments passed to a do_* cmd2
-    method. Default passes a string of whatever the user typed.
-    With this decorator, the decorated method will receive a list
-    of arguments parsed from user input using shlex.split()."""
+def with_argument_list(func: Callable[[Statement], Optional[bool]],
+                       preserve_quotes: bool=False) -> Callable[[List], Optional[bool]]:
+    """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
+    typed. With this decorator, the decorated method will receive a list of arguments parsed from user input using
+    shlex.split().
+
+    :param func: do_* method this decorator is wrapping
+    :param preserve_quotes: if True, then argument quotes will not be stripped
+    :return: function that gets passed a list of argument strings
+    """
     import functools
 
     @functools.wraps(func)
@@ -189,18 +194,19 @@ def with_argument_list(func: Callable, preserve_quotes: bool=False) -> Callable:
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> Callable:
+def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> \
+        Callable[[argparse.Namespace, List], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: unique instance of ArgumentParser
-    :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
-    :return: function that gets passed parsed args and a list of unknown args
+    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
+    :return: function that gets passed argparse-parsed args and a list of unknown argument strings
     """
     import functools
 
     # noinspection PyProtectedMember
-    def arg_decorator(func: Callable):
+    def arg_decorator(func: Callable[[Statement], Optional[bool]]):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
@@ -230,18 +236,19 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     return arg_decorator
 
 
-def with_argparser(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> Callable:
+def with_argparser(argparser: argparse.ArgumentParser,
+                   preserve_quotes: bool=False) -> Callable[[argparse.Namespace], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: unique instance of ArgumentParser
-    :param preserve_quotes: if True, then the arguments passed to arparse be maintain their quotes
-    :return: function that gets passed parsed args
+    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
+    :return: function that gets passed the argparse-parsed args
     """
     import functools
 
     # noinspection PyProtectedMember
-    def arg_decorator(func: Callable):
+    def arg_decorator(func: Callable[[Statement], Optional[bool]]):
         @functools.wraps(func)
         def cmd_wrapper(instance, cmdline):
             lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)

@@ -34,6 +34,7 @@ Main features:
     - Parsing commands with arguments using `argparse`, including support for sub-commands
     - Unicode character support
     - Good tab-completion of commands, sub-commands, file system paths, and shell commands
+    - Automatic tab-completion of `argparse` flags when using one of the `cmd2` `argparse` decorators
     - Support for Python 3.4+ on Windows, macOS, and Linux
     - Trivial to provide built-in help for all commands
     - Built-in regression testing framework for your applications (transcript-based testing)
