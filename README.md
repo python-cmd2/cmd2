@@ -192,6 +192,16 @@ Instructions for implementing each feature follow.
 
     To create a single-character shortcut for a command, update `Cmd.shortcuts`.
 
+- Asynchronous alerts based on events happening in background threads
+    - `cmd2` provides the following helper methods for providing information to users asynchronously even though the `cmd2`
+    REPL is a line-oriented command interpreter:
+        - `async_alert` - display an important message to the user while they are at the prompt in between commands
+            - To the user it appears as if an alert message is printed above the prompt
+        - `async_update_prompt` - update the prompt while the user is still typing at it
+            - This is good for alerting the user to system changes dynamically in between commands
+        - `set_window_title` - set the terminal window title
+            - This changes the window title of the terminal that the user is running the `cmd2` app within
+
 
 Tutorials
 ---------
