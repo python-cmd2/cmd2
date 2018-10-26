@@ -1007,16 +1007,17 @@ class Cmd(cmd.Cmd):
         return matches
 
     # noinspection PyUnusedLocal
-    def path_complete(self, text: str, line: str, begidx: int, endidx: int, dir_exe_only: bool=False,
-                      dir_only: bool=False) -> List[str]:
+    def path_complete(self, text: str, line: str, begidx: int, endidx: int,
+                      path_filter: Optional[Callable[[str], bool]] = None) -> List[str]:
         """Performs completion of local file system paths
 
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param dir_exe_only: only return directories and executables, not non-executable files
-        :param dir_only: only return directories
+        :param path_filter: optional filter function that determines if a path belongs in the results
+                            this function takes a path as its argument and returns True if the path should
+                            be kept in the results
         :return: a list of possible tab completions
         """
 
@@ -1076,7 +1077,7 @@ class Cmd(cmd.Cmd):
             search_str = os.path.join(os.getcwd(), '*')
             cwd_added = True
         else:
-            # Purposely don't match any path containing wildcards - what we are doing is complicated enough!
+            # Purposely don't match any path containing wildcards
             wildcards = ['*', '?']
             for wildcard in wildcards:
                 if wildcard in text:
@@ -1112,11 +1113,9 @@ class Cmd(cmd.Cmd):
         # Find all matching path completions
         matches = glob.glob(search_str)
 
-        # Filter based on type
-        if dir_exe_only:
-            matches = [c for c in matches if os.path.isdir(c) or os.access(c, os.X_OK)]
-        elif dir_only:
-            matches = [c for c in matches if os.path.isdir(c)]
+        # Filter out results that don't belong
+        if path_filter is not None:
+            matches = [c for c in matches if path_filter(c)]
 
         # Don't append a space or closing quote to directory
         if len(matches) == 1 and os.path.isdir(matches[0]):
@@ -1199,7 +1198,8 @@ class Cmd(cmd.Cmd):
 
         # Otherwise look for executables in the given path
         else:
-            return self.path_complete(text, line, begidx, endidx, dir_exe_only=True)
+            return self.path_complete(text, line, begidx, endidx,
+                                      lambda path: os.path.isdir(path) or os.access(path, os.X_OK))
 
     def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: Callable) -> List[str]:
         """Called by complete() as the first tab completion function for all commands
