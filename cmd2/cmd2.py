@@ -180,7 +180,7 @@ def with_argument_list(func: Callable[[Statement], Optional[bool]],
     shlex.split().
 
     :param func: do_* method this decorator is wrapping
-    :param preserve_quotes: if True, then arguments passed to arparse maintain their quotes
+    preserve_quotes: if True, then argument quotes will not be stripped
     :return: function that gets passed a list of argument strings
     """
     """"""
