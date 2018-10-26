@@ -316,8 +316,8 @@ def test_default_to_shell_completion(cmd2_app, request):
     assert first_match is not None and cmd2_app.completion_matches == [text + '.py ']
 
 
-def test_path_completion_cwd(cmd2_app):
-    # Run path complete with no search text
+def test_path_completion_no_text(cmd2_app):
+    # Run path complete with no search text which should show what's in cwd
     text = ''
     line = 'shell ls {}'.format(text)
     endidx = len(line)
@@ -330,8 +330,29 @@ def test_path_completion_cwd(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    # We have to strip off the text from the beginning since the matches are entire paths
+    # We have to strip off the path from the beginning since the matches are entire paths
     completions_cwd = [match.replace(text, '', 1) for match in cmd2_app.path_complete(text, line, begidx, endidx)]
+
+    # Verify that the first test gave results for entries in the cwd
+    assert completions_no_text == completions_cwd
+    assert completions_cwd
+
+def test_path_completion_no_path(cmd2_app):
+    # Run path complete with search text that isn't preceded by a path. This should use CWD as the path.
+    text = 's'
+    line = 'shell ls {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    completions_no_text = cmd2_app.path_complete(text, line, begidx, endidx)
+
+    # Run path complete with path set to the CWD
+    text = os.getcwd() + os.path.sep + 's'
+    line = 'shell ls {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # We have to strip off the path from the beginning since the matches are entire paths (Leave the 's')
+    completions_cwd = [match.replace(text[:-1], '', 1) for match in cmd2_app.path_complete(text, line, begidx, endidx)]
 
     # Verify that the first test gave results for entries in the cwd
     assert completions_no_text == completions_cwd
