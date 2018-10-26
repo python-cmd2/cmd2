@@ -76,6 +76,7 @@ EXTRAS_REQUIRE = {
     ":python_version<'3.5'": ['contextlib2', 'typing'],
     # Extra dependencies for running unit tests
     'test': ["argcomplete ; sys_platform!='win32'",  # include argcomplete tests where available
+             "gnureadline; sys_platform=='darwin'",  # include gnureadline on macOS to ensure it is available in tox env
              "mock ; python_version<'3.6'",  # for python 3.5 and earlier we need the third party mock module
              'codecov', 'pytest', 'pytest-cov', 'pytest-mock'],
     # development only dependencies:  install with 'pip install -e .[dev]'
