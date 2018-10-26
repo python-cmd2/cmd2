@@ -89,7 +89,7 @@ class Cmd2TestCase(unittest.TestCase):
             if utils.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
                 message = '\nFile {}, line {}\nCommand was:\n{}\nExpected: (nothing)\nGot:\n{}\n'.format(
                           fname, line_num, command, result)
-                self.assert_(not (result.strip()), message)
+                self.assertTrue(not (result.strip()), message)
                 continue
             expected = []
             while not utils.strip_ansi(line).startswith(self.cmdapp.visible_prompt):

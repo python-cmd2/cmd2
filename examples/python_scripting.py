@@ -88,7 +88,7 @@ class CmdLineApp(cmd2.Cmd):
 
     # Enable tab completion for cd command
     def complete_cd(self, text, line, begidx, endidx):
-        return self.path_complete(text, line, begidx, endidx, dir_only=True)
+        return self.path_complete(text, line, begidx, endidx, path_filter=os.path.isdir)
 
     dir_parser = argparse.ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")

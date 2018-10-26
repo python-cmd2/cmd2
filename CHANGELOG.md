@@ -3,6 +3,8 @@
     * **cmdloop** now only attempts to register a custom signal handler for SIGINT if running in the main thread
 * Deletions (potentially breaking changes)
     * Deleted ``Cmd.colorize()`` and ``Cmd._colorcodes`` which were deprecated in 0.9.5
+    * Replaced ``dir_exe_only`` and  ``dir_only`` flags in ``path_complete`` with optional ``path_filter`` function
+    that is used to filter paths out of completion results. 
     
 ## 0.9.6 (October 13, 2018)
 * Bug Fixes

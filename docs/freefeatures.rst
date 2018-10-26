@@ -350,4 +350,4 @@ path completion of directories only for this command by adding a line of code si
 which inherits from ``cmd2.Cmd``::
 
     # Make sure you have an "import functools" somewhere at the top
-    complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, dir_only=True)
+    complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.path.isdir)
