@@ -78,7 +78,7 @@ Feature Overview
 Instructions for implementing each feature follow.
 
 - Extension of the `cmd` module.  So capabilities provided by `cmd` still exist
-    - Your applicaiton inherits from `cmd2.Cmd`, lets say you call this class `MyApp`
+    - Your applicaiton inherits from `cmd2.Cmd`, let's say you call this class `MyApp`
     ```Python
     import cmd2
     class MyApp(cmd2.Cmd):
