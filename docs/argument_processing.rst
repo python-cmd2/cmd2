@@ -416,6 +416,3 @@ See the subcommands_ and tab_autocompletion_ example to learn more about how to 
 
 .. _subcommands: https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py
 .. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
-
-
-
