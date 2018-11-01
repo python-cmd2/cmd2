@@ -703,11 +703,8 @@ class Cmd(cmd.Cmd):
                         else:
                             break
                     self.pipe_proc = None
-                elif self.redirecting and self.colors.lower() in (constants.COLORS_NEVER.lower(),
-                                                                  constants.COLORS_TERMINAL.lower()):
-                    self.decolorized_write(self.stdout, msg_str)
                 else:
-                    self.stdout.write(msg_str)
+                    self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished. If you would like your application to print a warning message, then set the
