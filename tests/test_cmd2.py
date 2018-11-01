@@ -2109,6 +2109,24 @@ def test_ppaged(base_app):
     out = base_app.stdout.getvalue()
     assert out == msg + end
 
+def test_ppaged_strips_color_when_redirecting(base_app):
+    msg = 'testing...'
+    end = '\n'
+    base_app.colors = cmd2.constants.COLORS_TERMINAL
+    base_app.redirecting = True
+    base_app.ppaged(Fore.RED + msg)
+    out = base_app.stdout.getvalue()
+    assert out == msg + end
+
+def test_ppaged_strips_color_when_redirecting_if_always(base_app):
+    msg = 'testing...'
+    end = '\n'
+    base_app.colors = cmd2.constants.COLORS_ALWAYS
+    base_app.redirecting = True
+    base_app.ppaged(Fore.RED + msg)
+    out = base_app.stdout.getvalue()
+    assert out == Fore.RED + msg + end
+
 # we override cmd.parseline() so we always get consistent
 # command parsing by parent methods we don't override
 # don't need to test all the parsing logic here, because

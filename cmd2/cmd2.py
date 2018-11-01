@@ -703,6 +703,9 @@ class Cmd(cmd.Cmd):
                         else:
                             break
                     self.pipe_proc = None
+                elif self.redirecting and self.colors.lower() in (constants.COLORS_NEVER.lower(),
+                                                                  constants.COLORS_TERMINAL.lower()):
+                    self.decolorized_write(self.stdout, msg_str)
                 else:
                     self.stdout.write(msg_str)
             except BrokenPipeError:
