@@ -9,19 +9,20 @@ different output colors ca
 The colors setting has three possible values:
 
 Never
-    poutput() and pfeedback() strip all ANSI escape sequences
+    poutput(), pfeedback(), and ppaged() strip all ANSI escape sequences
     which instruct the terminal to colorize output
 
 Terminal
-    (the default value) poutput() and pfeedback() do not strip any ANSI escape
-    sequences when the output is a terminal, but if the output is a pipe or a
-    file the escape sequences are stripped. If you want colorized output you
-    must add ANSI escape sequences, preferably using some python color library
-    like `plumbum.colors`, `colorama`, `blessings`, or `termcolor`.
+    (the default value) poutput(), pfeedback(), and ppaged() do not strip any
+    ANSI escape sequences when the output is a terminal, but if the output is
+    a pipe or a file the escape sequences are stripped. If you want colorized
+    output you must add ANSI escape sequences, preferably using some python
+    color library like `plumbum.colors`, `colorama`, `blessings`, or
+    `termcolor`.
 
 Always
-    poutput() and pfeedback() never strip ANSI escape sequences, regardless of
-    the output destination
+    poutput(), pfeedback(), and ppaged() never strip ANSI escape sequences,
+    regardless of the output destination
 
 WARNING: This example requires the plumbum package, which isn't normally required by cmd2.
 """
