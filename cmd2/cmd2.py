@@ -43,7 +43,6 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Un
 
 import colorama
 from colorama import Fore
-from wcwidth import wcswidth
 
 from . import constants
 from . import plugin
@@ -1302,7 +1301,7 @@ class Cmd(cmd.Cmd):
                 longest_match_length = 0
 
                 for cur_match in matches_to_display:
-                    cur_length = wcswidth(cur_match)
+                    cur_length = utils.display_width(cur_match)
                     if cur_length > longest_match_length:
                         longest_match_length = cur_length
             else:
@@ -2662,7 +2661,7 @@ class Cmd(cmd.Cmd):
                 widest = 0
                 # measure the commands
                 for command in cmds:
-                    width = len(command)
+                    width = utils.display_width(command)
                     if width > widest:
                         widest = width
                 # add a 4-space pad
@@ -3478,14 +3477,14 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
                     update_terminal = True
 
             if update_terminal:
-                # Remove ansi characters to get the visible width of the prompt
-                prompt_width = wcswidth(utils.strip_ansi(current_prompt))
+                # Get the display width of the prompt
+                prompt_width = utils.display_width(current_prompt)
 
                 # Get the size of the terminal
                 terminal_size = shutil.get_terminal_size()
 
                 # Figure out how many lines the prompt and user input take up
-                total_str_size = prompt_width + wcswidth(readline.get_line_buffer())
+                total_str_size = prompt_width + utils.display_width(readline.get_line_buffer())
                 num_input_lines = int(total_str_size / terminal_size.columns) + 1
 
                 # Get the cursor's offset from the beginning of the first input line

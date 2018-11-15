@@ -8,6 +8,8 @@ import re
 import unicodedata
 from typing import Any, Iterable, List, Optional, Union
 
+from wcwidth import wcswidth
+
 from . import constants
 
 
@@ -18,6 +20,15 @@ def strip_ansi(text: str) -> str:
     :return: the same string with any ANSI escape codes removed
     """
     return constants.ANSI_ESCAPE_RE.sub('', text)
+
+
+def display_width(text: str) -> int:
+    """
+    Return the printable length of a string. This can be different than character count in unicode strings.
+    :param text: the string being measured
+    """
+    # Strip ANSI escape codes since they cause wcswidth to return -1
+    return wcswidth(strip_ansi(text))
 
 
 def is_quoted(arg: str) -> bool:
