@@ -21,10 +21,10 @@ def test_strip_ansi():
     assert base_str != ansi_str
     assert base_str == cu.strip_ansi(ansi_str)
 
-def test_display_width():
+def test_ansi_safe_wcswidth():
     base_str = HELLO_WORLD
     ansi_str = Fore.GREEN + base_str + Fore.RESET
-    assert cu.display_width(ansi_str) != len(ansi_str)
+    assert cu.ansi_safe_wcswidth(ansi_str) != len(ansi_str)
 
 def test_strip_quotes_no_quotes():
     base_str = HELLO_WORLD
