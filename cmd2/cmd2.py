@@ -1301,7 +1301,7 @@ class Cmd(cmd.Cmd):
                 longest_match_length = 0
 
                 for cur_match in matches_to_display:
-                    cur_length = utils.display_width(cur_match)
+                    cur_length = utils.ansi_safe_wcswidth(cur_match)
                     if cur_length > longest_match_length:
                         longest_match_length = cur_length
             else:
@@ -2661,7 +2661,7 @@ class Cmd(cmd.Cmd):
                 widest = 0
                 # measure the commands
                 for command in cmds:
-                    width = utils.display_width(command)
+                    width = utils.ansi_safe_wcswidth(command)
                     if width > widest:
                         widest = width
                 # add a 4-space pad
@@ -3478,13 +3478,13 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
 
             if update_terminal:
                 # Get the display width of the prompt
-                prompt_width = utils.display_width(current_prompt)
+                prompt_width = utils.ansi_safe_wcswidth(current_prompt)
 
                 # Get the size of the terminal
                 terminal_size = shutil.get_terminal_size()
 
                 # Figure out how many lines the prompt and user input take up
-                total_str_size = prompt_width + utils.display_width(readline.get_line_buffer())
+                total_str_size = prompt_width + utils.ansi_safe_wcswidth(readline.get_line_buffer())
                 num_input_lines = int(total_str_size / terminal_size.columns) + 1
 
                 # Get the cursor's offset from the beginning of the first input line

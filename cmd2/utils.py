@@ -22,9 +22,10 @@ def strip_ansi(text: str) -> str:
     return constants.ANSI_ESCAPE_RE.sub('', text)
 
 
-def display_width(text: str) -> int:
+def ansi_safe_wcswidth(text: str) -> int:
     """
-    Return the printable length of a string. This can be different than character count in unicode strings.
+    Wraps wcswidth to make it compatible with colored strings
+
     :param text: the string being measured
     """
     # Strip ANSI escape codes since they cause wcswidth to return -1
