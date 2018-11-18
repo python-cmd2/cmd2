@@ -31,8 +31,8 @@ optional arguments:
   -h, --help            show this help message and exit
   -d, --duration DURATION{1..2}
                         Duration constraint in minutes.
-                        	single value - maximum duration
-                        	[a, b] - duration range'''
+                                single value - maximum duration
+                                [a, b] - duration range'''
 
 MEDIA_MOVIES_ADD_HELP = '''Usage: media movies add -d DIRECTOR{1..2}
                         [-h]
@@ -99,8 +99,8 @@ def test_autcomp_hint(cmd2_app, capsys):
     assert out == '''
 Hint:
   -d, --duration DURATION    Duration constraint in minutes.
-                             	single value - maximum duration
-                             	[a, b] - duration range
+                                single value - maximum duration
+                                [a, b] - duration range
 
 '''
 
@@ -140,8 +140,8 @@ def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
     assert out == '''
 Hint:
   -d, --duration DURATION    Duration constraint in minutes.
-                             	single value - maximum duration
-                             	[a, b] - duration range
+                                single value - maximum duration
+                                [a, b] - duration range
 
 '''
 
