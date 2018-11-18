@@ -31,6 +31,7 @@ import random
 import argparse
 
 import cmd2
+from colorama import Fore, Back
 from plumbum.colors import fg, bg, reset
 
 FG_COLORS = {
