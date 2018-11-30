@@ -81,7 +81,7 @@ class Pirate(cmd2.Cmd):
 
     def do_sing(self, arg):
         """Sing a colorful song."""
-        color_escape = COLORS.get(self.songcolor, default=Fore.RESET)
+        color_escape = COLORS.get(self.songcolor, Fore.RESET)
         self.poutput(arg, color=color_escape)
 
     yo_parser = argparse.ArgumentParser()
