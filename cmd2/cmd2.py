@@ -632,7 +632,7 @@ class Cmd(cmd.Cmd):
         err_msg = err_color + err_msg + Fore.RESET
         self.decolorized_write(sys.stderr, err_msg)
 
-        if traceback_war:
+        if traceback_war and not self.debug:
             war = "To enable full traceback, run the following command:  'set debug true'\n"
             war = war_color + war + Fore.RESET
             self.decolorized_write(sys.stderr, war)
@@ -1893,6 +1893,8 @@ class Cmd(cmd.Cmd):
             try:
                 self.pipe_proc = subprocess.Popen(statement.pipe_to, stdin=subproc_stdin)
             except Exception as ex:
+                self.perror('Not piping because - {}'.format(ex), traceback_war=False)
+
                 # Restore stdout to what it was and close the pipe
                 self.stdout.close()
                 subproc_stdin.close()
@@ -1901,8 +1903,6 @@ class Cmd(cmd.Cmd):
                 self.kept_state = None
                 self.redirecting = False
 
-                # Re-raise the exception
-                raise ex
         elif statement.output:
             import tempfile
             if (not statement.output_to) and (not self.can_clip):
@@ -1920,7 +1920,7 @@ class Cmd(cmd.Cmd):
                 try:
                     sys.stdout = self.stdout = open(statement.output_to, mode)
                 except OSError as ex:
-                    self.perror('Not Redirecting because - {}'.format(ex), traceback_war=False)
+                    self.perror('Not redirecting because - {}'.format(ex), traceback_war=False)
                     self.redirecting = False
             else:
                 # going to a paste buffer
@@ -1998,17 +1998,28 @@ class Cmd(cmd.Cmd):
         if statement.command in self.macros:
             stop = self._run_macro(statement)
         else:
-            func = self.cmd_func(statement.command)
+            command = statement.command
+            func = self.cmd_func(command)
+            func_arg = statement.args
+
+            if not func and self.default_to_shell:
+                command = 'shell'
+                func = self.cmd_func(command)
+                func_arg = statement.command_and_args
+
             if func:
-                # Since we have a valid command store it in the history
-                if statement.command not in self.exclude_from_history:
+                # Check if this command should be stored in the history
+                if command not in self.exclude_from_history:
                     self.history.append(statement.raw)
 
-                stop = func(statement)
+                stop = func(func_arg)
 
             else:
                 self.default(statement)
                 stop = False
+
+        if stop is None:
+            stop = False
 
         return stop
 
@@ -2057,18 +2068,11 @@ class Cmd(cmd.Cmd):
         return self.onecmd_plus_hooks(resolved)
 
     def default(self, statement: Statement) -> None:
-        """Executed when the command given isn't a recognized command implemented by a do_* method.
+        """Called on an input line when the command prefix is not recognized.
 
         :param statement: Statement object with parsed input
         """
-        if self.default_to_shell:
-            result = os.system(statement.command_and_args)
-            # If os.system() succeeded, then don't print warning about unknown command
-            if not result:
-                return
-
-        # Print out a message stating this is an unknown command
-        self.poutput('*** Unknown syntax: {}\n'.format(statement.command_and_args))
+        self.poutput('*** {} is not a recognized command, alias, or macro\n'.format(statement.command))
 
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -2803,7 +2807,7 @@ class Cmd(cmd.Cmd):
         :param args: argparse parsed arguments from the set command
         :param parameter: optional search parameter
         """
-        param = parameter.strip().lower()
+        param = utils.norm_fold(parameter.strip())
         result = {}
         maxlen = 0
 
@@ -2844,7 +2848,7 @@ class Cmd(cmd.Cmd):
         # Check if param was passed in
         if not args.param:
             return self.show(args)
-        param = args.param.strip().lower()
+        param = utils.norm_fold(args.param.strip())
 
         # Check if value was passed in
         if not args.value:
@@ -3156,15 +3160,19 @@ class Cmd(cmd.Cmd):
     history_parser_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
     history_parser_group.add_argument('-s', '--script', action='store_true', help='output commands in script format')
-    history_parser_group.add_argument('-o', '--output-file', metavar='FILE', help='output commands to a script file')
-    history_parser_group.add_argument('-t', '--transcript', help='output commands and results to a transcript file')
+    setattr(history_parser_group.add_argument('-o', '--output-file', metavar='FILE',
+                                              help='output commands to a script file'),
+            ACTION_ARG_CHOICES, ('path_complete',))
+    setattr(history_parser_group.add_argument('-t', '--transcript',
+                                              help='output commands and results to a transcript file'),
+            ACTION_ARG_CHOICES, ('path_complete',))
     history_parser_group.add_argument('-c', '--clear', action="store_true", help='clear all history')
-    _history_arg_help = """empty               all history items
-a                   one history item by number
-a..b, a:b, a:, ..b  items by indices (inclusive)
-[string]            items containing string
-/regex/             items matching regular expression"""
-    history_parser.add_argument('arg', nargs='?', help=_history_arg_help)
+    history_arg_help = ("empty               all history items\n"
+                        "a                   one history item by number\n"
+                        "a..b, a:b, a:, ..b  items by indices (inclusive)\n"
+                        "string              items containing string\n"
+                        "/regex/             items matching regular expression")
+    history_parser.add_argument('arg', nargs='?', help=history_arg_help)
 
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> None:
@@ -3851,7 +3859,6 @@ class History(list):
                     end = int(end)
                 return self[start:end]
 
-            # noinspection PyUnresolvedReferences
             getme = getme.strip()
 
             if getme.startswith(r'/') and getme.endswith(r'/'):
@@ -3871,7 +3878,7 @@ class History(list):
                     :param hi: HistoryItem
                     :return: bool - True if search matches
                     """
-                    return getme.lower() in hi.lowercase
+                    return utils.norm_fold(getme) in utils.norm_fold(hi)
             return [itm for itm in self if isin(itm)]
 
 
