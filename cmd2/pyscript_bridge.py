@@ -242,8 +242,8 @@ class ArgparseFunctor:
                     command += ' {}'.format(item)
 
                 # If this is a flag parameter that can accept a variable number of arguments and we have not
-                # reached the max number, add a list completion suffix to tell argparse to move to the next
-                # parameter
+                # reached the max number, add 2 prefix chars (ex: --) to tell argparse to stop processing the
+                # parameter. This also means the remaining arguments will be treated as positionals by argparse.
                 if action.option_strings and isinstance(action, _RangeAction) and action.nargs_max is not None and \
                         action.nargs_max > len(value):
                     command += ' {0}{0}'.format(self._parser.prefix_chars[0])
@@ -257,8 +257,8 @@ class ArgparseFunctor:
                 command += ' {}'.format(value)
 
                 # If this is a flag parameter that can accept a variable number of arguments and we have not
-                # reached the max number, add a list completion suffix to tell argparse to move to the next
-                # parameter
+                # reached the max number, add 2 prefix chars (ex: --) to tell argparse to stop processing the
+                # parameter. This also means the remaining arguments will be treated as positionals by argparse.
                 if action.option_strings and isinstance(action, _RangeAction) and action.nargs_max is not None and \
                         action.nargs_max > 1:
                     command += ' {0}{0}'.format(self._parser.prefix_chars[0])
