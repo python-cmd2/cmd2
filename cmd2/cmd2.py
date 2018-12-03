@@ -288,27 +288,36 @@ class EmptyStatement(Exception):
 
 
 class HistoryItem(str):
-    """Class used to represent an item in the History list.
+    """Class used to represent an item in the History list"""
+    listformat = ' {:>4}  {}\n'
+    ex_listformat = '  Ex:  {}\n'
 
-    Thin wrapper around str class which adds a custom format for printing. It
-    also keeps track of its index in the list as well as a lowercase
-    representation of itself for convenience/efficiency.
+    def __new__(cls, statement: Statement):
+        """Create a new instance of HistoryItem
 
-    """
-    listformat = '-------------------------[{}]\n{}\n'
+        We must override __new__ because we are subclassing `str` which is
+        immutable and takes a different number of arguments as Statement.
+        """
+        hi = super().__new__(cls, statement.raw)
+        hi.statement = statement
+        hi.idx = None
+        return hi
 
-    # noinspection PyUnusedLocal
-    def __init__(self, instr: str) -> None:
-        str.__init__(self)
-        self.lowercase = self.lower()
-        self.idx = None
+    @property
+    def expanded(self) -> str:
+        """Return the command as run which includes shortcuts and aliases resolved plus any changes made in hooks"""
+        return self.statement.expanded_command_line
 
-    def pr(self) -> str:
+    def pr(self, verbose: bool) -> str:
         """Represent a HistoryItem in a pretty fashion suitable for printing.
 
         :return: pretty print string version of a HistoryItem
         """
-        return self.listformat.format(self.idx, str(self).rstrip())
+        ret_str = self.listformat.format(self.idx, str(self).rstrip())
+        if verbose and self != self.expanded:
+            ret_str += self.ex_listformat.format(self.expanded.rstrip())
+
+        return ret_str
 
 
 class Cmd(cmd.Cmd):
@@ -2002,7 +2011,7 @@ class Cmd(cmd.Cmd):
             if func:
                 # Since we have a valid command store it in the history
                 if statement.command not in self.exclude_from_history:
-                    self.history.append(statement.raw)
+                    self.history.append(statement)
 
                 stop = func(statement)
 
@@ -2065,7 +2074,7 @@ class Cmd(cmd.Cmd):
         """
         if self.default_to_shell:
             if 'shell' not in self.exclude_from_history:
-                self.history.append(statement.raw)
+                self.history.append(statement)
 
             return self.do_shell(statement.command_and_args)
         else:
@@ -3163,6 +3172,9 @@ class Cmd(cmd.Cmd):
     setattr(history_parser_group.add_argument('-t', '--transcript',
                                               help='output commands and results to a transcript file'),
             ACTION_ARG_CHOICES, ('path_complete',))
+    history_parser_group.add_argument('-v', '--verbose', action='store_true',
+                                      help='display history and include expanded commands if they'
+                                           ' differ from the typed command.')
     history_parser_group.add_argument('-c', '--clear', action="store_true", help='clear all history')
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"
@@ -3246,7 +3258,7 @@ class Cmd(cmd.Cmd):
                 if args.script:
                     self.poutput(hi)
                 else:
-                    self.poutput(hi.pr())
+                    self.poutput(hi.pr(args.verbose))
 
     def _generate_transcript(self, history: List[HistoryItem], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""
@@ -3820,7 +3832,7 @@ class History(list):
 
     rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*-\s*(?P<end>[\d]+)?\s*$')
 
-    def append(self, new: str) -> None:
+    def append(self, new: Statement) -> None:
         """Append a HistoryItem to end of the History list
 
         :param new: command line to convert to HistoryItem and add to the end of the History list

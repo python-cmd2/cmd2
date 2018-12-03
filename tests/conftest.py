@@ -51,7 +51,7 @@ shortcuts           List available shortcuts
 """
 
 # Help text for the history command
-HELP_HISTORY = """Usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT | -c] [arg]
+HELP_HISTORY = """Usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT | -v | -c] [arg]
 
 View, run, edit, save, or clear previously entered commands
 
@@ -71,6 +71,7 @@ optional arguments:
                         output commands to a script file
   -t, --transcript TRANSCRIPT
                         output commands and results to a transcript file
+  -v, --verbose         display history and include expanded commands if they differ from the typed command.
   -c, --clear           clear all history
 """
 

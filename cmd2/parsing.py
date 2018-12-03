@@ -188,6 +188,26 @@ class Statement(str):
         return rtn
 
     @property
+    def expanded_command_line(self) -> str:
+        """Contains command_and_args plus any ending terminator, suffix, and redirection chars"""
+        rtn = self.command_and_args
+        if self.terminator:
+            rtn += self.terminator
+
+        if self.suffix:
+            rtn += ' ' + self.suffix
+
+        if self.pipe_to:
+            rtn += ' | ' + self.pipe_to
+
+        if self.output:
+            rtn += ' ' + self.output
+            if self.output_to:
+                rtn += ' ' + self.output_to
+
+        return rtn
+
+    @property
     def argv(self) -> List[str]:
         """a list of arguments a la sys.argv.
 

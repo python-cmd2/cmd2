@@ -303,8 +303,12 @@ def test_base_error(base_app):
 
 @pytest.fixture
 def hist():
+    from cmd2.parsing import Statement
     from cmd2.cmd2 import History, HistoryItem
-    h = History([HistoryItem('first'), HistoryItem('second'), HistoryItem('third'), HistoryItem('fourth')])
+    h = History([HistoryItem(Statement('', raw='first')),
+                 HistoryItem(Statement('', raw='second')),
+                 HistoryItem(Statement('', raw='third')),
+                 HistoryItem(Statement('', raw='fourth'))])
     return h
 
 def test_history_span(hist):
@@ -334,24 +338,20 @@ def test_base_history(base_app):
     run_cmd(base_app, 'shortcuts')
     out = run_cmd(base_app, 'history')
     expected = normalize("""
--------------------------[1]
-help
--------------------------[2]
-shortcuts
+    1  help
+    2  shortcuts
 """)
     assert out == expected
 
     out = run_cmd(base_app, 'history he')
     expected = normalize("""
--------------------------[1]
-help
+    1  help
 """)
     assert out == expected
 
     out = run_cmd(base_app, 'history sh')
     expected = normalize("""
--------------------------[2]
-shortcuts
+    2  shortcuts
 """)
     assert out == expected
 
@@ -371,10 +371,8 @@ def test_history_with_string_argument(base_app):
     run_cmd(base_app, 'help history')
     out = run_cmd(base_app, 'history help')
     expected = normalize("""
--------------------------[1]
-help
--------------------------[3]
-help history
+    1  help
+    3  help history
 """)
     assert out == expected
 
@@ -384,8 +382,7 @@ def test_history_with_integer_argument(base_app):
     run_cmd(base_app, 'shortcuts')
     out = run_cmd(base_app, 'history 1')
     expected = normalize("""
--------------------------[1]
-help
+    1  help
 """)
     assert out == expected
 
@@ -396,10 +393,8 @@ def test_history_with_integer_span(base_app):
     run_cmd(base_app, 'help history')
     out = run_cmd(base_app, 'history 1..2')
     expected = normalize("""
--------------------------[1]
-help
--------------------------[2]
-shortcuts
+    1  help
+    2  shortcuts
 """)
     assert out == expected
 
@@ -409,10 +404,8 @@ def test_history_with_span_start(base_app):
     run_cmd(base_app, 'help history')
     out = run_cmd(base_app, 'history 2:')
     expected = normalize("""
--------------------------[2]
-shortcuts
--------------------------[3]
-help history
+    2  shortcuts
+    3  help history
 """)
     assert out == expected
 
@@ -422,10 +415,8 @@ def test_history_with_span_end(base_app):
     run_cmd(base_app, 'help history')
     out = run_cmd(base_app, 'history :2')
     expected = normalize("""
--------------------------[1]
-help
--------------------------[2]
-shortcuts
+    1  help
+    2  shortcuts
 """)
     assert out == expected
 
@@ -435,8 +426,7 @@ def test_history_with_span_index_error(base_app):
     run_cmd(base_app, '!ls -hal :')
     out = run_cmd(base_app, 'history "hal :"')
     expected = normalize("""
--------------------------[3]
-!ls -hal :
+    3  !ls -hal :
 """)
     assert out == expected
 
@@ -956,8 +946,7 @@ def test_exclude_from_history(base_app, monkeypatch):
     run_cmd(base_app, 'help')
     # And verify we have a history now ...
     out = run_cmd(base_app, 'history')
-    expected = normalize("""-------------------------[1]
-help""")
+    expected = normalize("""    1  help""")
     assert out == expected
 
 
