@@ -1998,25 +1998,16 @@ class Cmd(cmd.Cmd):
         if statement.command in self.macros:
             stop = self._run_macro(statement)
         else:
-            command = statement.command
-            func = self.cmd_func(command)
-            func_arg = statement.args
-
-            if not func and self.default_to_shell:
-                command = 'shell'
-                func = self.cmd_func(command)
-                func_arg = statement.command_and_args
-
+            func = self.cmd_func(statement.command)
             if func:
-                # Check if this command should be stored in the history
-                if command not in self.exclude_from_history:
+                # Since we have a valid command store it in the history
+                if statement.command not in self.exclude_from_history:
                     self.history.append(statement.raw)
 
-                stop = func(func_arg)
+                stop = func(statement)
 
             else:
-                self.default(statement)
-                stop = False
+                stop = self.default(statement)
 
         if stop is None:
             stop = False
@@ -2067,12 +2058,18 @@ class Cmd(cmd.Cmd):
         # Run the resolved command
         return self.onecmd_plus_hooks(resolved)
 
-    def default(self, statement: Statement) -> None:
-        """Called on an input line when the command prefix is not recognized.
+    def default(self, statement: Statement) -> Optional[bool]:
+        """Executed when the command given isn't a recognized command implemented by a do_* method.
 
         :param statement: Statement object with parsed input
         """
-        self.poutput('*** {} is not a recognized command, alias, or macro\n'.format(statement.command))
+        if self.default_to_shell:
+            if 'shell' not in self.exclude_from_history:
+                self.history.append(statement.raw)
+
+            return self.do_shell(statement.command_and_args)
+        else:
+            self.poutput('*** {} is not a recognized command, alias, or macro\n'.format(statement.command))
 
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
