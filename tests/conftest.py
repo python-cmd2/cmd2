@@ -59,7 +59,7 @@ positional arguments:
   arg                   empty               all history items
                         a                   one history item by number
                         a..b, a:b, a:, ..b  items by indices (inclusive)
-                        [string]            items containing string
+                        string              items containing string
                         /regex/             items matching regular expression
 
 optional arguments:

@@ -298,7 +298,7 @@ def test_pyscript_requires_an_argument(base_app, capsys):
 
 def test_base_error(base_app):
     out = run_cmd(base_app, 'meow')
-    assert out == ["*** Unknown syntax: meow"]
+    assert "is not a recognized command" in out[0]
 
 
 @pytest.fixture
@@ -803,8 +803,7 @@ def test_pipe_to_shell_error(base_app, capsys):
     run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
     out, err = capsys.readouterr()
     assert not out
-    expected_error = 'FileNotFoundError'
-    assert err.startswith("EXCEPTION of type '{}' occurred with message:".format(expected_error))
+    assert err.startswith("ERROR: Not piping because")
 
 
 @pytest.mark.skipif(not clipboard.can_clip,
@@ -1042,12 +1041,12 @@ def hook_failure():
 
 def test_precmd_hook_success(base_app):
     out = base_app.onecmd_plus_hooks('help')
-    assert out is None
+    assert out is False
 
 
 def test_precmd_hook_failure(hook_failure):
     out = hook_failure.onecmd_plus_hooks('help')
-    assert out == True
+    assert out is True
 
 
 class SayApp(cmd2.Cmd):
@@ -1098,40 +1097,18 @@ class ShellApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
         self.default_to_shell = True
 
-@pytest.fixture
-def shell_app():
-    app = ShellApp()
-    app.stdout = utils.StdSim(app.stdout)
-    return app
-
-def test_default_to_shell_unknown(shell_app):
-    unknown_command = 'zyxcw23'
-    out = run_cmd(shell_app, unknown_command)
-    assert out == ["*** Unknown syntax: {}".format(unknown_command)]
-
-def test_default_to_shell_good(capsys):
-    app = cmd2.Cmd()
-    app.default_to_shell = True
+def test_default_to_shell(base_app, monkeypatch):
     if sys.platform.startswith('win'):
         line = 'dir'
     else:
         line = 'ls'
-    statement = app.statement_parser.parse(line)
-    retval = app.default(statement)
-    assert not retval
-    out, err = capsys.readouterr()
-    assert out == ''
 
-def test_default_to_shell_failure(capsys):
-    app = cmd2.Cmd()
-    app.default_to_shell = True
-    line = 'ls does_not_exist.xyz'
-    statement = app.statement_parser.parse(line)
-    retval = app.default(statement)
-    assert not retval
-    out, err = capsys.readouterr()
-    assert out == "*** Unknown syntax: {}\n".format(line)
-
+    base_app.default_to_shell = True
+    m = mock.Mock()
+    monkeypatch.setattr("{}.Popen".format('subprocess'), m)
+    out = run_cmd(base_app, line)
+    assert out == []
+    assert m.called
 
 def test_ansi_prompt_not_esacped(base_app):
     from cmd2.rl_utils import rl_make_safe_prompt
