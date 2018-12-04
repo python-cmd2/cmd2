@@ -394,10 +394,6 @@ class Cmd(cmd.Cmd):
         # Call super class constructor
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
-        # Get rid of cmd's complete_help() functions so AutoCompleter will complete our help command
-        if getattr(cmd.Cmd, 'complete_help', None) is not None:
-            delattr(cmd.Cmd, 'complete_help')
-
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', 'eos', '_relative_load']
 
@@ -2583,6 +2579,10 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, ('complete_help_subcommand',))
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
+
+    # Get rid of cmd's complete_help() functions so AutoCompleter will complete the help command
+    if getattr(cmd.Cmd, 'complete_help', None) is not None:
+        delattr(cmd.Cmd, 'complete_help')
 
     @with_argparser(help_parser)
     def do_help(self, args: argparse.Namespace) -> None:
