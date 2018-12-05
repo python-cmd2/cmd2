@@ -403,10 +403,6 @@ class Cmd(cmd.Cmd):
         # Call super class constructor
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
-        # Get rid of cmd's complete_help() functions so AutoCompleter will complete our help command
-        if getattr(cmd.Cmd, 'complete_help', None) is not None:
-            delattr(cmd.Cmd, 'complete_help')
-
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', 'eos', '_relative_load']
 
@@ -1037,7 +1033,7 @@ class Cmd(cmd.Cmd):
         """
 
         # Used to complete ~ and ~user strings
-        def complete_users():
+        def complete_users() -> List[str]:
 
             # We are returning ~user strings that resolve to directories,
             # so don't append a space or quote in the case of a single result.
@@ -2211,7 +2207,7 @@ class Cmd(cmd.Cmd):
 
     # -----  Alias sub-command functions -----
 
-    def alias_create(self, args: argparse.Namespace):
+    def alias_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite an alias"""
 
         # Validate the alias name
@@ -2236,7 +2232,7 @@ class Cmd(cmd.Cmd):
         self.aliases[args.name] = value
         self.poutput("Alias '{}' {}".format(args.name, result))
 
-    def alias_delete(self, args: argparse.Namespace):
+    def alias_delete(self, args: argparse.Namespace) -> None:
         """Delete aliases"""
         if args.all:
             self.aliases.clear()
@@ -2251,7 +2247,7 @@ class Cmd(cmd.Cmd):
                 else:
                     self.perror("Alias '{}' does not exist".format(cur_name), traceback_war=False)
 
-    def alias_list(self, args: argparse.Namespace):
+    def alias_list(self, args: argparse.Namespace) -> None:
         """List some or all aliases"""
         if args.name:
             for cur_name in utils.remove_duplicates(args.name):
@@ -2327,7 +2323,7 @@ class Cmd(cmd.Cmd):
 
     # Preserve quotes since we are passing strings to other commands
     @with_argparser(alias_parser, preserve_quotes=True)
-    def do_alias(self, args: argparse.Namespace):
+    def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases"""
         func = getattr(args, 'func', None)
         if func is not None:
@@ -2339,7 +2335,7 @@ class Cmd(cmd.Cmd):
 
     # -----  Macro sub-command functions -----
 
-    def macro_create(self, args: argparse.Namespace):
+    def macro_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite a macro"""
 
         # Validate the macro name
@@ -2414,7 +2410,7 @@ class Cmd(cmd.Cmd):
         self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
         self.poutput("Macro '{}' {}".format(args.name, result))
 
-    def macro_delete(self, args: argparse.Namespace):
+    def macro_delete(self, args: argparse.Namespace) -> None:
         """Delete macros"""
         if args.all:
             self.macros.clear()
@@ -2429,7 +2425,7 @@ class Cmd(cmd.Cmd):
                 else:
                     self.perror("Macro '{}' does not exist".format(cur_name), traceback_war=False)
 
-    def macro_list(self, args: argparse.Namespace):
+    def macro_list(self, args: argparse.Namespace) -> None:
         """List some or all macros"""
         if args.name:
             for cur_name in utils.remove_duplicates(args.name):
@@ -2530,7 +2526,7 @@ class Cmd(cmd.Cmd):
 
     # Preserve quotes since we are passing strings to other commands
     @with_argparser(macro_parser, preserve_quotes=True)
-    def do_macro(self, args: argparse.Namespace):
+    def do_macro(self, args: argparse.Namespace) -> None:
         """Manage macros"""
         func = getattr(args, 'func', None)
         if func is not None:
@@ -2592,6 +2588,10 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, ('complete_help_subcommand',))
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
+
+    # Get rid of cmd's complete_help() functions so AutoCompleter will complete the help command
+    if getattr(cmd.Cmd, 'complete_help', None) is not None:
+        delattr(cmd.Cmd, 'complete_help')
 
     @with_argparser(help_parser)
     def do_help(self, args: argparse.Namespace) -> None:
