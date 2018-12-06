@@ -633,7 +633,7 @@ class Cmd(cmd.Cmd):
         if isinstance(err, Exception):
             err_msg = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(type(err).__name__, err)
         else:
-            err_msg = "ERROR: {}\n".format(err)
+            err_msg = "{}\n".format(err)
         err_msg = err_color + err_msg + Fore.RESET
         self.decolorized_write(sys.stderr, err_msg)
 
