@@ -123,7 +123,7 @@ def argparse_app():
 def test_invalid_syntax(argparse_app, capsys):
     run_cmd(argparse_app, 'speak "')
     out, err = capsys.readouterr()
-    assert err == "ERROR: Invalid syntax: No closing quotation\n"
+    assert err == "Invalid syntax: No closing quotation\n"
 
 def test_argparse_basic_command(argparse_app):
     out = run_cmd(argparse_app, 'say hello')

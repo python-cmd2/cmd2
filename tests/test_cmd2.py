@@ -569,7 +569,6 @@ def test_load_with_binary_file(base_app, capsys, request):
     out, err = capsys.readouterr()
 
     # The load command requires non-empty scripts files
-    assert str(err).startswith("ERROR")
     assert "is not an ASCII or UTF-8 encoded text file" in str(err)
     assert base_app.cmdqueue == []
 
@@ -804,7 +803,7 @@ def test_pipe_to_shell_error(base_app, capsys):
     run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
     out, err = capsys.readouterr()
     assert not out
-    assert err.startswith("ERROR: Not piping because")
+    assert err.startswith("Not piping because")
 
 
 @pytest.mark.skipif(not clipboard.can_clip,
@@ -2337,16 +2336,16 @@ def test_colors_pouterr_always_tty(mocker, capsys):
     # if colors are on, the output should have some escape sequences in it
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
-    assert len(err) > len('Error: oopsie\n')
-    assert 'ERROR: oopsie' in err
+    assert len(err) > len('oopsie\n')
+    assert 'oopsie' in err
 
     # but this one shouldn't
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
     assert out == 'oopsie\n'
     # errors always have colors
-    assert len(err) > len('Error: oopsie\n')
-    assert 'ERROR: oopsie' in err
+    assert len(err) > len('oopsie\n')
+    assert 'oopsie' in err
 
 def test_colors_pouterr_always_notty(mocker, capsys):
     app = ColorsApp()
@@ -2359,16 +2358,16 @@ def test_colors_pouterr_always_notty(mocker, capsys):
     # if colors are on, the output should have some escape sequences in it
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
-    assert len(err) > len('Error: oopsie\n')
-    assert 'ERROR: oopsie' in err
+    assert len(err) > len('oopsie\n')
+    assert 'oopsie' in err
 
     # but this one shouldn't
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
     assert out == 'oopsie\n'
     # errors always have colors
-    assert len(err) > len('Error: oopsie\n')
-    assert 'ERROR: oopsie' in err
+    assert len(err) > len('oopsie\n')
+    assert 'oopsie' in err
 
 def test_colors_terminal_tty(mocker, capsys):
     app = ColorsApp()
@@ -2381,15 +2380,15 @@ def test_colors_terminal_tty(mocker, capsys):
     out, err = capsys.readouterr()
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
-    assert len(err) > len('Error: oopsie\n')
-    assert 'ERROR: oopsie' in err
+    assert len(err) > len('oopsie\n')
+    assert 'oopsie' in err
 
     # but this one shouldn't
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
     assert out == 'oopsie\n'
-    assert len(err) > len('Error: oopsie\n')
-    assert 'ERROR: oopsie' in err
+    assert len(err) > len('oopsie\n')
+    assert 'oopsie' in err
 
 def test_colors_terminal_notty(mocker, capsys):
     app = ColorsApp()
@@ -2399,13 +2398,11 @@ def test_colors_terminal_notty(mocker, capsys):
 
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    assert err == 'ERROR: oopsie\n'
+    assert out == err == 'oopsie\n'
 
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    assert err == 'ERROR: oopsie\n'
+    assert out == err == 'oopsie\n'
 
 def test_colors_never_tty(mocker, capsys):
     app = ColorsApp()
@@ -2415,13 +2412,11 @@ def test_colors_never_tty(mocker, capsys):
 
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    assert err == 'ERROR: oopsie\n'
+    assert out == err == 'oopsie\n'
 
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    assert err == 'ERROR: oopsie\n'
+    assert out == err == 'oopsie\n'
 
 def test_colors_never_notty(mocker, capsys):
     app = ColorsApp()
@@ -2431,10 +2426,8 @@ def test_colors_never_notty(mocker, capsys):
 
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    assert err == 'ERROR: oopsie\n'
+    assert out == err == 'oopsie\n'
 
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
-    assert out == 'oopsie\n'
-    assert err == 'ERROR: oopsie\n'
+    assert out == err == 'oopsie\n'
