@@ -1,4 +1,5 @@
 # coding=utf-8
+# flake8: noqa E302
 """
 Cmd2 functional testing based on transcript
 

@@ -51,8 +51,7 @@ class Pirate(cmd2.Cmd):
     def postcmd(self, stop, line):
         """Runs right before a command is about to return."""
         if self.gold != self.initial_gold:
-            self.poutput('Now we gots {0} doubloons'
-                  .format(self.gold))
+            self.poutput('Now we gots {0} doubloons'.format(self.gold))
         if self.gold < 0:
             self.poutput("Off to debtorrr's prison.")
             stop = True

@@ -1,4 +1,5 @@
 # coding=utf-8
+# flake8: noqa F821
 """
 This is a Python script intended to be used with the "python_scripting.py" cmd2 example application.
 
@@ -11,7 +12,6 @@ application instance.
 """
 import os
 import sys
-
 
 if len(sys.argv) > 1:
     directory = sys.argv[1]

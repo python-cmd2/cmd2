@@ -60,7 +60,7 @@ except ImportError:
     pass
 
 # Intentionally below the bash completion code to reduce tab completion lag
-import cmd2
+import cmd2  # noqa: E402
 
 
 class DummyApp(cmd2.Cmd):

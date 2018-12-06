@@ -8,9 +8,8 @@ Released under MIT license, see LICENSE file
 """
 
 import argparse
-import functools
 import sys
-from typing import List, Callable, Optional
+from typing import List, Optional
 
 from .argparse_completer import _RangeAction, is_potential_flag
 from .utils import namedtuple_with_defaults, StdSim, quote_string_if_needed

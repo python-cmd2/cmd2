@@ -63,7 +63,7 @@ Programming Language :: Python :: 3.6
 Programming Language :: Python :: 3.7
 Programming Language :: Python :: Implementation :: CPython
 Topic :: Software Development :: Libraries :: Python Modules
-""".splitlines())))
+""".splitlines())))  # noqa: E128
 
 SETUP_REQUIRES = ['setuptools_scm']
 
@@ -83,7 +83,7 @@ EXTRAS_REQUIRE = {
     'dev': ["mock ; python_version<'3.6'",  # for python 3.5 and earlier we need the third party mock module
             'pytest', 'codecov', 'pytest-cov', 'pytest-mock', 'tox', 'pylint',
             'sphinx', 'sphinx-rtd-theme', 'sphinx-autobuild', 'invoke', 'twine>=1.11',
-    ]
+            ]
 }
 
 setup(

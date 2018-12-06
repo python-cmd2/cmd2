@@ -1,3 +1,4 @@
+# flake8: noqa F821
 app.cmd_echo = True
 result = app.foo('aaa', 'bbb', counter=3)
 out_text = 'Fail'

@@ -77,7 +77,8 @@ class Cmd2TestCase(unittest.TestCase):
                 try:
                     line = next(transcript)
                 except StopIteration as exc:
-                    msg = 'Transcript broke off while reading command beginning at line {} with\n{}'.format(line_num, command[0])
+                    msg = 'Transcript broke off while reading command beginning at line {} with\n{}'.format(line_num,
+                                                                                                            command[0])
                     raise StopIteration(msg) from exc
                 line_num += 1
             command = ''.join(command)
@@ -138,7 +139,7 @@ class Cmd2TestCase(unittest.TestCase):
                 # there is a slash, add everything we have found so far
                 # add stuff before the first slash as plain text
                 regex += re.escape(s[start:first_slash_pos])
-                start = first_slash_pos+1
+                start = first_slash_pos + 1
                 # and go find the next one
                 (regex, second_slash_pos, start) = self._escaped_find(regex, s, start, True)
                 if second_slash_pos > 0:
@@ -151,7 +152,7 @@ class Cmd2TestCase(unittest.TestCase):
                 else:
                     # No closing slash, we have to add the first slash,
                     # and the rest of the text
-                    regex += re.escape(s[start-1:])
+                    regex += re.escape(s[start - 1:])
                     break
         return regex
 
@@ -178,24 +179,24 @@ class Cmd2TestCase(unittest.TestCase):
                 break
             else:
                 # check if the slash is preceeded by a backslash
-                if s[pos-1:pos] == '\\':
+                if s[pos - 1:pos] == '\\':
                     # it is.
                     if in_regex:
                         # add everything up to the backslash as a
                         # regular expression
-                        regex += s[start:pos-1]
+                        regex += s[start:pos - 1]
                         # skip the backslash, and add the slash
                         regex += s[pos]
                     else:
                         # add everything up to the backslash as escaped
                         # plain text
-                        regex += re.escape(s[start:pos-1])
+                        regex += re.escape(s[start:pos - 1])
                         # and then add the slash as escaped
                         # plain text
                         regex += re.escape(s[pos])
                     # update start to show we have handled everything
                     # before it
-                    start = pos+1
+                    start = pos + 1
                     # and continue to look
                 else:
                     # slash is not escaped, this is what we are looking for
