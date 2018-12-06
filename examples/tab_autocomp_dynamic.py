@@ -6,8 +6,6 @@ A example usage of AutoCompleter with delayed initialization of the argparse obj
 Copyright 2018 Eric Lin <anselor@gmail.com>
 Released under MIT license, see LICENSE file
 """
-import argparse
-import itertools
 from typing import List
 
 import cmd2
@@ -87,17 +85,14 @@ class TabCompleteExample(cmd2.Cmd):
         # Add the 'movies' parser as a parent of sub-parser
         video_types_subparsers.add_parser('movies', parents=[vid_movies_parser], add_help=False)
 
-
-
         vid_shows_parser = argparse_completer.ACArgumentParser(prog='shows')
         vid_shows_parser.set_defaults(func=TabCompleteExample._do_vid_media_shows)
 
         vid_shows_commands_subparsers = vid_shows_parser.add_subparsers(title='Commands', dest='command')
 
-        vid_shows_list_parser = vid_shows_commands_subparsers.add_parser('list')
+        vid_shows_commands_subparsers.add_parser('list')
 
         video_types_subparsers.add_parser('shows', parents=[vid_shows_parser], add_help=False)
-
 
     # For mocking a data source for the example commands
     ratings_types = ['G', 'PG', 'PG-13', 'R', 'NC-17']
@@ -126,10 +121,10 @@ class TabCompleteExample(cmd2.Cmd):
                                             'Alec Guinness', 'Peter Mayhew', 'Anthony Daniels']
                                   },
                       'SW_EP1': {'title': 'Star Wars: Episode I - The Phantom Menace',
-                                  'rating': 'PG',
-                                  'director': ['George Lucas'],
-                                  'actor': ['Liam Neeson', 'Ewan McGregor', 'Natalie Portman', 'Jake Lloyd']
-                                  },
+                                 'rating': 'PG',
+                                 'director': ['George Lucas'],
+                                 'actor': ['Liam Neeson', 'Ewan McGregor', 'Natalie Portman', 'Jake Lloyd']
+                                 },
                       'SW_EP02': {'title': 'Star Wars: Episode II - Attack of the Clones',
                                   'rating': 'PG',
                                   'director': ['George Lucas'],
@@ -146,21 +141,21 @@ class TabCompleteExample(cmd2.Cmd):
                       }
     USER_SHOW_LIBRARY = {'SW_REB': ['S01E01', 'S02E02']}
     SHOW_DATABASE_IDS = ['SW_CW', 'SW_TCW', 'SW_REB']
-    SHOW_DATABASE = {'SW_CW':   {'title': 'Star Wars: Clone Wars',
-                                 'rating': 'TV-Y7',
-                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
-                                             2: ['S02E01', 'S02E02', 'S02E03']}
-                                 },
-                     'SW_TCW':  {'title': 'Star Wars: The Clone Wars',
-                                 'rating': 'TV-PG',
-                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
-                                             2: ['S02E01', 'S02E02', 'S02E03']}
-                                 },
-                     'SW_REB':  {'title': 'Star Wars: Rebels',
-                                 'rating': 'TV-Y7',
-                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
-                                             2: ['S02E01', 'S02E02', 'S02E03']}
-                                 },
+    SHOW_DATABASE = {'SW_CW': {'title': 'Star Wars: Clone Wars',
+                               'rating': 'TV-Y7',
+                               'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                           2: ['S02E01', 'S02E02', 'S02E03']}
+                               },
+                     'SW_TCW': {'title': 'Star Wars: The Clone Wars',
+                                'rating': 'TV-PG',
+                                'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                            2: ['S02E01', 'S02E02', 'S02E03']}
+                                },
+                     'SW_REB': {'title': 'Star Wars: Rebels',
+                                'rating': 'TV-Y7',
+                                'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                            2: ['S02E01', 'S02E02', 'S02E03']}
+                                },
                      }
 
     file_list = \
@@ -187,12 +182,10 @@ class TabCompleteExample(cmd2.Cmd):
 
         return completions_with_desc
 
-
     ###################################################################################
     # The media command demonstrates a completer with multiple layers of subcommands
     #   - This example demonstrates how to tag a completion attribute on each action, enabling argument
     #       completion without implementing a complete_COMMAND function
-
     def _do_vid_media_movies(self, args) -> None:
         if not args.command:
             self.do_help('video movies')

@@ -59,10 +59,10 @@ class TabCompleteExample(cmd2.Cmd):
                                             'Alec Guinness', 'Peter Mayhew', 'Anthony Daniels']
                                   },
                       'SW_EP1': {'title': 'Star Wars: Episode I - The Phantom Menace',
-                                  'rating': 'PG',
-                                  'director': ['George Lucas'],
-                                  'actor': ['Liam Neeson', 'Ewan McGregor', 'Natalie Portman', 'Jake Lloyd']
-                                  },
+                                 'rating': 'PG',
+                                 'director': ['George Lucas'],
+                                 'actor': ['Liam Neeson', 'Ewan McGregor', 'Natalie Portman', 'Jake Lloyd']
+                                 },
                       'SW_EP02': {'title': 'Star Wars: Episode II - Attack of the Clones',
                                   'rating': 'PG',
                                   'director': ['George Lucas'],
@@ -79,21 +79,21 @@ class TabCompleteExample(cmd2.Cmd):
                       }
     USER_SHOW_LIBRARY = {'SW_REB': ['S01E01', 'S02E02']}
     SHOW_DATABASE_IDS = ['SW_CW', 'SW_TCW', 'SW_REB']
-    SHOW_DATABASE = {'SW_CW':   {'title': 'Star Wars: Clone Wars',
-                                 'rating': 'TV-Y7',
-                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
-                                             2: ['S02E01', 'S02E02', 'S02E03']}
-                                 },
-                     'SW_TCW':  {'title': 'Star Wars: The Clone Wars',
-                                 'rating': 'TV-PG',
-                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
-                                             2: ['S02E01', 'S02E02', 'S02E03']}
-                                 },
-                     'SW_REB':  {'title': 'Star Wars: Rebels',
-                                 'rating': 'TV-Y7',
-                                 'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
-                                             2: ['S02E01', 'S02E02', 'S02E03']}
-                                 },
+    SHOW_DATABASE = {'SW_CW': {'title': 'Star Wars: Clone Wars',
+                               'rating': 'TV-Y7',
+                               'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                           2: ['S02E01', 'S02E02', 'S02E03']}
+                               },
+                     'SW_TCW': {'title': 'Star Wars: The Clone Wars',
+                                'rating': 'TV-PG',
+                                'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                            2: ['S02E01', 'S02E02', 'S02E03']}
+                                },
+                     'SW_REB': {'title': 'Star Wars: Rebels',
+                                'rating': 'TV-Y7',
+                                'seasons': {1: ['S01E01', 'S01E02', 'S01E03'],
+                                            2: ['S02E01', 'S02E02', 'S02E03']}
+                                },
                      }
 
     file_list = \
@@ -299,7 +299,8 @@ class TabCompleteExample(cmd2.Cmd):
                               ', '.join(movie['director']),
                               '\n    '.join(movie['actor'])))
         elif args.command == 'add':
-            print('Adding Movie\n----------------\nTitle: {}\nRating: {}\nDirectors: {}\nActors: {}\n\n'.format(args.title, args.rating, ', '.join(args.director), ', '.join(args.actor)))
+            print('Adding Movie\n----------------\nTitle: {}\nRating: {}\nDirectors: {}\nActors: {}\n\n'
+                  .format(args.title, args.rating, ', '.join(args.director), ', '.join(args.actor)))
 
     def _do_media_shows(self, args) -> None:
         if not args.command:
@@ -366,7 +367,6 @@ class TabCompleteExample(cmd2.Cmd):
         else:
             # No subcommand was provided, so call help
             self.do_help('media')
-
 
     # This completer is implemented using a single dictionary to look up completion lists for all layers of
     # subcommands. For each argument, AutoCompleter will search for completion values from the provided

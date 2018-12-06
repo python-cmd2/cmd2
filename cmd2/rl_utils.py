@@ -71,8 +71,9 @@ if 'pyreadline' in sys.modules:
         # Enable VT100 sequences for stdout and stderr
         STD_OUT_HANDLE = -11
         STD_ERROR_HANDLE = -12
-        vt100_support = (enable_win_vt100(readline.rl.console.GetStdHandle(STD_OUT_HANDLE)) and
-                         enable_win_vt100(readline.rl.console.GetStdHandle(STD_ERROR_HANDLE)))
+        vt100_stdout_support = enable_win_vt100(readline.rl.console.GetStdHandle(STD_OUT_HANDLE))
+        vt100_stderr_support = enable_win_vt100(readline.rl.console.GetStdHandle(STD_ERROR_HANDLE))
+        vt100_support = vt100_stdout_support and vt100_stderr_support
 
     ############################################################################################################
     # pyreadline is incomplete in terms of the Python readline API. Add the missing functions we need.

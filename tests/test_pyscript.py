@@ -1,4 +1,5 @@
 # coding=utf-8
+# flake8: noqa E302
 """
 Unit/functional testing for argparse completer in cmd2
 

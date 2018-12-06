@@ -13,6 +13,7 @@ import argparse
 
 import cmd2
 
+
 class ArgumentAndOptionPrinter(cmd2.Cmd):
     """ Example cmd2 application where we create commands that just print the arguments they are called with."""
 
@@ -52,6 +53,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     pprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     pprint_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     pprint_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+
     @cmd2.with_argparser_and_unknown_args(pprint_parser)
     def do_pprint(self, args, unknown):
         """Print the options and argument list this options command was called with."""

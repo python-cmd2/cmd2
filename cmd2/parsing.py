@@ -400,14 +400,14 @@ class StatementParser:
 
         if terminator:
             if terminator == constants.LINE_FEED:
-                terminator_pos = len(tokens)+1
+                terminator_pos = len(tokens) + 1
 
             # everything before the first terminator is the command and the args
             (command, args) = self._command_and_args(tokens[:terminator_pos])
             arg_list = tokens[1:terminator_pos]
             # we will set the suffix later
             # remove all the tokens before and including the terminator
-            tokens = tokens[terminator_pos+1:]
+            tokens = tokens[terminator_pos + 1:]
         else:
             (testcommand, testargs) = self._command_and_args(tokens)
             if testcommand in self.multiline_commands:
@@ -427,7 +427,7 @@ class StatementParser:
             # find the first pipe if it exists
             pipe_pos = tokens.index(constants.REDIRECTION_PIPE)
             # save everything after the first pipe as tokens
-            pipe_to = tokens[pipe_pos+1:]
+            pipe_to = tokens[pipe_pos + 1:]
 
             for pos, cur_token in enumerate(pipe_to):
                 unquoted_token = utils.strip_quotes(cur_token)

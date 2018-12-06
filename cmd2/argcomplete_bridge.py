@@ -28,7 +28,6 @@ else:
     from . import constants
     from . import utils
 
-
     def tokens_for_completion(line: str, endidx: int) -> Union[Tuple[List[str], List[str], int, int],
                                                                Tuple[None, None, None, None]]:
         """
@@ -253,7 +252,6 @@ else:
             output_stream.flush()
             argcomplete.debug_stream.flush()
             exit_method(0)
-
 
     def bash_complete(action, show_hint: bool = True):
         """Helper function to configure an argparse action to fall back to bash completion.

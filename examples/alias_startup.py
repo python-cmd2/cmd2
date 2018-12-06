@@ -7,6 +7,7 @@
 import os
 import cmd2
 
+
 class AliasAndStartup(cmd2.Cmd):
     """ Example cmd2 application where we create commands that just print the arguments they are called with."""
 

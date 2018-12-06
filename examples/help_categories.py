@@ -8,6 +8,7 @@ import argparse
 
 import cmd2
 
+
 class HelpCategories(cmd2.Cmd):
     """ Example cmd2 application. """
 
@@ -81,14 +82,14 @@ class HelpCategories(cmd2.Cmd):
 
     # Tag the above command functions under the category Application Management
     cmd2.categorize((do_list,
-                do_deploy,
-                do_start,
-                do_sessions,
-                do_redeploy,
-                do_expire,
-                do_undeploy,
-                do_stop,
-                do_findleakers), CMD_CAT_APP_MGMT)
+                     do_deploy,
+                     do_start,
+                     do_sessions,
+                     do_redeploy,
+                     do_expire,
+                     do_undeploy,
+                     do_stop,
+                     do_findleakers), CMD_CAT_APP_MGMT)
 
     def do_resources(self, _):
         """Resources command"""

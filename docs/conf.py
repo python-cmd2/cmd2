@@ -19,6 +19,9 @@ documentation root, use os.path.abspath to make it absolute, like shown here.
 """
 import os
 import sys
+
+from pkg_resources import get_distribution
+
 # Import for custom theme from Read the Docs
 import sphinx_rtd_theme
 
@@ -59,7 +62,6 @@ author = 'Catherine Devlin and Todd Leonhardt'
 # |version| and |release|, also used in various other places throughout the
 # built documents.
 #
-from pkg_resources import get_distribution
 # version will look like x.y.z
 version = get_distribution('cmd2').version
 # release will look like x.y

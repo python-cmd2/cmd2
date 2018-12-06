@@ -52,11 +52,11 @@ EXAMPLE_ITERABLE_DATA = [['Shanghai (上海)', 'Shanghai', 'China', 'Asia', 2418
                          ['Guangzho (广州市)', 'Guangdong', 'China', 'Asia', 13081000, 1347.81],
                          ['Mumbai (मुंबई)', 'Maharashtra', 'India', 'Asia', 12442373, 465.78],
                          ['Istanbul (İstanbuld)', 'Istanbul', 'Turkey', 'Eurasia', 12661000, 620.29],
-                        ]
+                         ]
 
 # Calculate population density
 for row in EXAMPLE_ITERABLE_DATA:
-    row.append(row[-2]/row[-1])
+    row.append(row[-2] / row[-1])
 
 
 # Column headers plus optional formatting info for each column
@@ -69,7 +69,7 @@ COLUMNS = [tf.Column('City', width=11, header_halign=tf.ColumnAlignment.AlignCen
                      cell_halign=tf.ColumnAlignment.AlignRight, formatter=two_dec),
            tf.Column('Pop. Density (/km²)', width=12, header_halign=tf.ColumnAlignment.AlignCenter,
                      cell_halign=tf.ColumnAlignment.AlignRight, formatter=no_dec),
-          ]
+           ]
 
 
 # ######## Table data formatted as an iterable of python objects #########
@@ -119,7 +119,7 @@ OBJ_COLS = [tf.Column('City', attrib='city', header_halign=tf.ColumnAlignment.Al
                       cell_halign=tf.ColumnAlignment.AlignRight, formatter=two_dec),
             tf.Column('Pop. Density (/km²)', width=12, header_halign=tf.ColumnAlignment.AlignCenter,
                       cell_halign=tf.ColumnAlignment.AlignRight, obj_formatter=pop_density),
-           ]
+            ]
 
 
 EXTREMELY_HIGH_POULATION_DENSITY = 25000

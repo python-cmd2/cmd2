@@ -1,5 +1,6 @@
 #
 # coding=utf-8
+# flake8: noqa E302
 """Development related tasks to be run with 'invoke'.
 
 Make sure you satisfy the following Python module requirements if you are trying to publish a release to PyPI:

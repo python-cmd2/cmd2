@@ -21,7 +21,7 @@ class PagedOutput(cmd2.Cmd):
             with open(filename, 'r') as f:
                 text = f.read()
             self.ppaged(text, chop=chop)
-        except FileNotFoundError as ex:
+        except FileNotFoundError:
             self.perror('ERROR: file {!r} not found'.format(filename), traceback_war=False)
 
     @cmd2.with_argument_list

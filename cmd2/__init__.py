@@ -1,5 +1,6 @@
 #
 # -*- coding: utf-8 -*-
+# flake8: noqa F401
 """This simply imports certain things for backwards compatibility."""
 
 from pkg_resources import get_distribution, DistributionNotFound
