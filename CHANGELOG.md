@@ -1,10 +1,13 @@
 ## 0.9.7 (TBD, 2018)
 * Enhancements
     * **cmdloop** now only attempts to register a custom signal handler for SIGINT if running in the main thread
+    * commands run as a result of ``default_to_shell`` being **True** now run via ``do_shell()`` and are saved
+    to history. 
 * Deletions (potentially breaking changes)
     * Deleted ``Cmd.colorize()`` and ``Cmd._colorcodes`` which were deprecated in 0.9.5
     * Replaced ``dir_exe_only`` and  ``dir_only`` flags in ``path_complete`` with optional ``path_filter`` function
     that is used to filter paths out of completion results. 
+    * ``perror()`` no longer prepends "ERROR: " to the error message being printed
     
 ## 0.9.6 (October 13, 2018)
 * Bug Fixes
