@@ -5,7 +5,6 @@ Cmd2 unit/functional testing
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
-import sys
 from typing import Optional
 from unittest import mock
 
@@ -31,7 +30,7 @@ BASE_HELP = """Documented commands (type help <topic>):
 ========================================
 alias  help     load   py        quit  shell    
 edit   history  macro  pyscript  set   shortcuts
-"""
+"""  # noqa: W291
 
 BASE_HELP_VERBOSE = """
 Documented commands (type help <topic>):
@@ -108,6 +107,7 @@ prompt: (Cmd)             # The prompt issued to solicit input
 quiet: False              # Don't print nonessential feedback
 timing: False             # Report execution times
 """
+
 
 def normalize(block):
     """ Normalize a block of text to perform comparison.

@@ -1,4 +1,5 @@
 # coding=utf-8
+# flake8: noqa E302
 """
 Unit/functional testing for readline tab-completion functions in the cmd2.py module.
 

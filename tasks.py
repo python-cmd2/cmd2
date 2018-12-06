@@ -1,5 +1,6 @@
 #
 # coding=utf-8
+# flake8: noqa E302
 """Development related tasks to be run with 'invoke'.
 
 Make sure you satisfy the following Python module requirements if you are trying to publish a release to PyPI:
@@ -226,3 +227,11 @@ def pypi_test(context):
     "Build and upload a distribution to https://test.pypi.org"
     context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
 namespace.add_task(pypi_test)
+
+
+# Flake8 - linter and tool for style guide enforcement and linting
+@invoke.task
+def flake8(context):
+    "Run flake8 linter and tool for style guide enforcement"
+    context.run("flake8 --ignore=E252 --max-complexity=31 --max-line-length=127 --show-source --statistics")
+namespace.add_task(flake8)

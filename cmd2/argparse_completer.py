@@ -1,4 +1,7 @@
 # coding=utf-8
+# flake8: noqa C901
+# NOTE: Ignoreing flake8 cyclomatic complexity in this file because the complexity due to copy-and-paste overrides from
+#       argparse
 """
 AutoCompleter interprets the argparse.ArgumentParser internals to automatically
 generate the completion options for each argument.
@@ -595,7 +598,7 @@ class AutoCompleter(object):
             fill_width = int(term_size.columns * .6) - (token_width + 2)
             for item in completions:
                 entry = '{: <{token_width}}{: <{fill_width}}'.format(item, item.description,
-                                                                     token_width=token_width+2,
+                                                                     token_width=token_width + 2,
                                                                      fill_width=fill_width)
                 completions_with_desc.append(entry)
 
@@ -603,7 +606,7 @@ class AutoCompleter(object):
                 desc_header = action.desc_header
             except AttributeError:
                 desc_header = 'Description'
-            header = '\n{: <{token_width}}{}'.format(action.dest.upper(), desc_header, token_width=token_width+2)
+            header = '\n{: <{token_width}}{}'.format(action.dest.upper(), desc_header, token_width=token_width + 2)
 
             self._cmd2_app.completion_header = header
             self._cmd2_app.display_matches = completions_with_desc
