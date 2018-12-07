@@ -12,6 +12,7 @@ cmd2.egg-info
 # Code Coverage
 .coverage
 htmlcov
+junit
 
 # PyCharm
 .idea
