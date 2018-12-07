@@ -200,15 +200,15 @@ this is a \/multiline\/ command
     ( '/tmp is nice', re.escape('/tmp is nice') ),
     ( 'slash at end/', re.escape('slash at end/') ),
     # escaped slashes
-    ( 'not this slash\/ or this one\/', re.escape('not this slash/ or this one/' ) ),
+    ( r'not this slash\/ or this one\/', re.escape('not this slash/ or this one/' ) ),
     # regexes
     ( '/.*/', '.*' ),
     ( 'specials ^ and + /[0-9]+/', re.escape('specials ^ and + ') + '[0-9]+' ),
-    ( '/a{6}/ but not \/a{6} with /.*?/ more', 'a{6}' + re.escape(' but not /a{6} with ') + '.*?' + re.escape(' more') ),
-    ( 'not \/, use /\|?/, not \/', re.escape('not /, use ') + '\|?' + re.escape(', not /') ),
+    ( r'/a{6}/ but not \/a{6} with /.*?/ more', 'a{6}' + re.escape(' but not /a{6} with ') + '.*?' + re.escape(' more') ),
+    ( r'not \/, use /\|?/, not \/', re.escape('not /, use ') + r'\|?' + re.escape(', not /') ),
     # inception: slashes in our regex. backslashed on input, bare on output
-    ( 'not \/, use /\/?/, not \/', re.escape('not /, use ') + '/?' + re.escape(', not /') ),
-    ( 'lots /\/?/ more /.*/ stuff', re.escape('lots ') + '/?' + re.escape(' more ') + '.*' + re.escape(' stuff') ),
+    ( r'not \/, use /\/?/, not \/', re.escape('not /, use ') + '/?' + re.escape(', not /') ),
+    ( r'lots /\/?/ more /.*/ stuff', re.escape('lots ') + '/?' + re.escape(' more ') + '.*' + re.escape(' stuff') ),
     ])
 def test_parse_transcript_expected(expected, transformed):
     app = CmdLineApp()

@@ -124,13 +124,13 @@ def my_fdopen(fd, mode, *args):
 
 # noinspection PyShadowingNames
 @pytest.mark.skipif(skip_no_argcomplete or skip_windows, reason=skip_reason)
-def test_invalid_ifs(parser1, mock):
+def test_invalid_ifs(parser1, mocker):
     completer = CompletionFinder()
 
-    mock.patch.dict(os.environ, {'_ARGCOMPLETE': '1',
+    mocker.patch.dict(os.environ, {'_ARGCOMPLETE': '1',
                                  '_ARGCOMPLETE_IFS': '\013\013'})
 
-    mock.patch.object(os, 'fdopen', my_fdopen)
+    mocker.patch.object(os, 'fdopen', my_fdopen)
 
     with pytest.raises(SystemExit):
         completer(parser1, AutoCompleter(parser1), exit_method=sys.exit)
@@ -178,16 +178,16 @@ def fdopen_fail_8(fd, mode, *args):
 
 # noinspection PyShadowingNames
 @pytest.mark.skipif(skip_no_argcomplete or skip_windows, reason=skip_reason)
-def test_fail_alt_stdout(parser1, mock):
+def test_fail_alt_stdout(parser1, mocker):
     completer = CompletionFinder()
 
     comp_line = 'media movies list '
-    mock.patch.dict(os.environ, {'_ARGCOMPLETE': '1',
+    mocker.patch.dict(os.environ, {'_ARGCOMPLETE': '1',
                                  '_ARGCOMPLETE_IFS': '\013',
                                  'COMP_TYPE': '63',
                                  'COMP_LINE': comp_line,
                                  'COMP_POINT': str(len(comp_line))})
-    mock.patch.object(os, 'fdopen', fdopen_fail_8)
+    mocker.patch.object(os, 'fdopen', fdopen_fail_8)
 
     try:
         choices = {'actor': query_actors,  # function
