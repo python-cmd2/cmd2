@@ -1,4 +1,6 @@
 ## 0.9.7 (TBD, 2018)
+* Bug Fixes
+    * Fixed bug when user chooses a zero or negative index when calling ``Cmd.select()``
 * Enhancements
     * **cmdloop** now only attempts to register a custom signal handler for SIGINT if running in the main thread
     * commands run as a result of ``default_to_shell`` being **True** now run via ``do_shell()`` and are saved
