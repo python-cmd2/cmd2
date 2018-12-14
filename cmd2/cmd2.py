@@ -2780,6 +2780,8 @@ class Cmd(cmd.Cmd):
 
             try:
                 choice = int(response)
+                if choice < 1:
+                    raise IndexError
                 result = fulloptions[choice - 1][0]
                 break
             except (ValueError, IndexError):
