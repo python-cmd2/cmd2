@@ -11,6 +11,8 @@ import sys
 import tempfile
 from typing import List
 
+ASTERISKS = "********************************************************"
+
 
 def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
     """Returns a list of sub-commands for an ArgumentParser"""
@@ -43,7 +45,7 @@ if 'self' not in globals():
 elif len(sys.argv) != 2:
     print("Usage: {} <output_file>".format(os.path.basename(sys.argv[0])))
 else:
-    outfile = sys.argv[1]
+    outfile = os.path.expanduser(sys.argv[1])
 
     # Get a list of all commands and help topics and then filter out duplicates
     to_print = set(self.get_all_commands()) | set(self.get_help_topics())
@@ -55,11 +57,20 @@ else:
         temp.write('!rm -f {}\n'.format(outfile))
 
         for item in to_print:
+            header = '{}\\nCOMMAND: {}\\n{}\\n'.format(ASTERISKS, item, ASTERISKS)
+            temp.write('py print("{}") >> {}\n'.format(header, outfile))
             temp.write('help {} >> {}\n'.format(item, outfile))
 
             # Add any sub-commands
             for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
-                temp.write('help {} {} >> {}\n'.format(item, subcmd, outfile))
+                full_cmd = '{} {}'.format(item, subcmd)
+                header = '{}\\nCOMMAND: {}\\n{}\\n'.format(ASTERISKS, full_cmd, ASTERISKS)
+
+                temp.write('py print("{}") >> {}\n'.format(header, outfile))
+                temp.write('help {} >> {}\n'.format(full_cmd, outfile))
+
+        # Inform the user where output was written
+        temp.write('py print("Output written to {}")\n'.format(outfile))
 
         # Have the script delete itself as its last step
         temp.write('!rm -f {}\n'.format(temp.name))
