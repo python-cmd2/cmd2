@@ -1,7 +1,7 @@
 # coding=utf-8
 # flake8: noqa F821
 """
-A cmd2 script that saves the help text for every command and sub-command to a file.
+A cmd2 script that saves the help text for every command, sub-command, and topic to a file.
 This is meant to be run within a cmd2 session using pyscript.
 """
 
@@ -36,12 +36,22 @@ def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
     return sub_cmds
 
 
-def add_help_to_file(command: str, outfile: TextIO) -> None:
-    """Write a header and help text for a command to the output file"""
-    header = '{}\nCOMMAND: {}\n{}\n'.format(ASTERISKS, command, ASTERISKS)
+def add_help_to_file(item: str, outfile: TextIO, is_command: bool) -> None:
+    """
+    Write help text for commands and topics to the output file
+    :param item: what is having its help text saved
+    :param outfile: file being written to
+    :param is_command: tells if the item is a command and not just a help topic
+    """
+    if is_command:
+        label = "COMMAND"
+    else:
+        label = "TOPIC"
+
+    header = '{}\n{}: {}\n{}\n'.format(ASTERISKS, label, item, ASTERISKS)
     outfile.write(header)
 
-    result = app('help {}'.format(command))
+    result = app('help {}'.format(item))
     outfile.write(result.stdout)
 
 
@@ -66,17 +76,28 @@ def main() -> None:
         print("Error opening {} because: {}".format(outfile_path, e))
         return
 
+    # Write the help summary
+    header = '{0}\nSUMMARY\n{0}\n'.format(ASTERISKS)
+    outfile.write(header)
+
+    result = app('help -v')
+    outfile.write(result.stdout)
+
     # Get a list of all commands and help topics and then filter out duplicates
-    to_save = list(set(self.get_all_commands()) | set(self.get_help_topics()))
+    all_commands = set(self.get_all_commands())
+    all_topics = set(self.get_help_topics())
+    to_save = list(all_commands | all_topics)
     to_save.sort()
 
     for item in to_save:
-        add_help_to_file(item, outfile)
+        is_command = item in all_commands
+        add_help_to_file(item, outfile, is_command)
 
-        # Add any sub-commands
-        for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
-            full_cmd = '{} {}'.format(item, subcmd)
-            add_help_to_file(full_cmd, outfile)
+        if is_command:
+            # Add any sub-commands
+            for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
+                full_cmd = '{} {}'.format(item, subcmd)
+                add_help_to_file(full_cmd, outfile, is_command)
 
     outfile.close()
     print("Output written to {}".format(outfile_path))
