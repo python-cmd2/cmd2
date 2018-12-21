@@ -37,9 +37,7 @@ def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
 
 
 def add_help_to_file(command: str, outfile: TextIO) -> None:
-    """
-    Write a header and help text for a command to the output file
-    """
+    """Write a header and help text for a command to the output file"""
     header = '{}\nCOMMAND: {}\n{}\n'.format(ASTERISKS, command, ASTERISKS)
     outfile.write(header)
 
