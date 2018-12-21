@@ -1,0 +1,86 @@
+# coding=utf-8
+# flake8: noqa F821
+"""
+A cmd2 script that saves the help text for every command and sub-command to a file.
+This is meant to be run within a cmd2 session using pyscript.
+"""
+
+import argparse
+import os
+import sys
+from typing import List, TextIO
+
+ASTERISKS = "********************************************************"
+
+
+def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
+    """Get a list of sub-commands for an ArgumentParser"""
+    sub_cmds = []
+
+    # Check if this is parser has sub-commands
+    if parser is not None and parser._subparsers is not None:
+
+        # Find the _SubParsersAction for the sub-commands of this parser
+        for action in parser._subparsers._actions:
+            if isinstance(action, argparse._SubParsersAction):
+                for sub_cmd, sub_cmd_parser in action.choices.items():
+                    sub_cmds.append(sub_cmd)
+
+                    # Look for nested sub-commands
+                    for nested_sub_cmd in get_sub_commands(sub_cmd_parser):
+                        sub_cmds.append('{} {}'.format(sub_cmd, nested_sub_cmd))
+
+                break
+
+    sub_cmds.sort()
+    return sub_cmds
+
+
+def add_help_to_file(command: str, outfile: TextIO) -> None:
+    """Write a header and help text for a command to the output file"""
+    header = '{}\nCOMMAND: {}\n{}\n'.format(ASTERISKS, command, ASTERISKS)
+    outfile.write(header)
+
+    result = app('help {}'.format(command))
+    outfile.write(result.stdout)
+
+
+def main() -> None:
+    """Main function of this script"""
+
+    # Make sure we have access to self
+    if 'self' not in globals():
+        print("Run 'set locals_in_py true' and then rerun this script")
+        return
+
+    # Make sure the user passed in an output file
+    if len(sys.argv) != 2:
+        print("Usage: {} <output_file>".format(os.path.basename(sys.argv[0])))
+        return
+
+    # Open the output file
+    outfile_path = os.path.expanduser(sys.argv[1])
+    try:
+        outfile = open(outfile_path, 'w')
+    except OSError as e:
+        print("Error opening {} because: {}".format(outfile_path, e))
+        return
+
+    # Get a list of all commands and help topics and then filter out duplicates
+    to_save = list(set(self.get_all_commands()) | set(self.get_help_topics()))
+    to_save.sort()
+
+    for item in to_save:
+        add_help_to_file(item, outfile)
+
+        # Add any sub-commands
+        for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
+            full_cmd = '{} {}'.format(item, subcmd)
+            add_help_to_file(full_cmd, outfile)
+
+    outfile.close()
+    print("Output written to {}".format(outfile_path))
+
+
+# Run main function
+main()
