@@ -8,7 +8,6 @@ This is meant to be run within a cmd2 session using pyscript.
 import argparse
 import os
 import sys
-import tempfile
 from typing import List, TextIO
 
 ASTERISKS = "********************************************************"
@@ -33,20 +32,22 @@ def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
 
                 break
 
+    sub_cmds.sort()
     return sub_cmds
 
 
-def add_command_to_script(command: str, temp_file: TextIO, outfile_path: str) -> None:
+def add_help_to_file(command: str, outfile: TextIO) -> None:
     """
-    Write to the script the commands necessary to write both a
-    header and help text for a command to the output file
+    Write a header and help text for a command to the output file
     """
-    header = '{}\\nCOMMAND: {}\\n{}\\n'.format(ASTERISKS, command, ASTERISKS)
-    temp_file.write('py print("{}") >> {}\n'.format(header, outfile_path))
-    temp_file.write('help {} >> {}\n'.format(command, outfile_path))
+    header = '{}\nCOMMAND: {}\n{}\n'.format(ASTERISKS, command, ASTERISKS)
+    outfile.write(header)
+
+    result = app('help {}'.format(command))
+    outfile.write(result.stdout)
 
 
-def main():
+def main() -> None:
     """Main function of this script"""
 
     # Make sure we have access to self
@@ -59,34 +60,28 @@ def main():
         print("Usage: {} <output_file>".format(os.path.basename(sys.argv[0])))
         return
 
-    # Get output file path
-    outfile = os.path.expanduser(sys.argv[1])
+    # Open the output file
+    outfile_path = os.path.expanduser(sys.argv[1])
+    try:
+        outfile = open(outfile_path, 'w')
+    except OSError as e:
+        print("Error opening {} because: {}".format(outfile_path, e))
+        return
 
-    # Create a script that will call help on each command and topic and write its output to a file
-    with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp_file:
+    # Get a list of all commands and help topics and then filter out duplicates
+    to_save = list(set(self.get_all_commands()) | set(self.get_help_topics()))
+    to_save.sort()
 
-        # First delete any existing output file
-        temp_file.write('py if os.path.exists("{0}"): os.remove("{0}")\n'.format(outfile))
+    for item in to_save:
+        add_help_to_file(item, outfile)
 
-        # Get a list of all commands and help topics and then filter out duplicates
-        to_save = set(self.get_all_commands()) | set(self.get_help_topics())
+        # Add any sub-commands
+        for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
+            full_cmd = '{} {}'.format(item, subcmd)
+            add_help_to_file(full_cmd, outfile)
 
-        for item in to_save:
-            add_command_to_script(item, temp_file, outfile)
-
-            # Add any sub-commands
-            for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
-                full_cmd = '{} {}'.format(item, subcmd)
-                add_command_to_script(full_cmd, temp_file, outfile)
-
-        # Inform the user where output was written
-        temp_file.write('py print("Output written to {}")\n'.format(outfile))
-
-        # Have the script delete itself as its last step
-        temp_file.write('py os.remove("{}")\n'.format(temp_file.name))
-
-        # Tell cmd2 to run the script as its next command
-        self.cmdqueue.insert(0, 'load "{}"'.format(temp_file.name))
+    outfile.close()
+    print("Output written to {}".format(outfile_path))
 
 
 # Run main function
