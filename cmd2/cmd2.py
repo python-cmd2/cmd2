@@ -2968,6 +2968,10 @@ class Cmd(cmd.Cmd):
                 :param filename: filename of *.py script file to run
                 """
                 expanded_filename = os.path.expanduser(filename)
+
+                # cmd_echo defaults to False for scripts. The user can always toggle this value in their script.
+                bridge.cmd_echo = False
+
                 try:
                     with open(expanded_filename) as f:
                         interp.runcode(f.read())
