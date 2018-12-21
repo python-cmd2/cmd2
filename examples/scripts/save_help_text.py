@@ -1,8 +1,8 @@
 # coding=utf-8
 # flake8: noqa F821
 """
-A cmd2 script that saves the help text for every command and sub-commands to a file
-This is meant to be run with pyscript within a cmd2 session.
+A cmd2 script that saves the help text for every command and sub-command to a file.
+This is meant to be run within a cmd2 session using pyscript.
 """
 
 import argparse
