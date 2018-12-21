@@ -9,14 +9,13 @@ import argparse
 import os
 import sys
 import tempfile
-from typing import List
+from typing import List, TextIO
 
 ASTERISKS = "********************************************************"
 
 
 def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
-    """Returns a list of sub-commands for an ArgumentParser"""
-
+    """Get a list of sub-commands for an ArgumentParser"""
     sub_cmds = []
 
     # Check if this is parser has sub-commands
@@ -37,43 +36,58 @@ def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
     return sub_cmds
 
 
-# Make sure we have access to self
-if 'self' not in globals():
-    print("Run 'set locals_in_py true' and then rerun this script")
+def add_command_to_script(command: str, temp_file: TextIO, outfile_path: str) -> None:
+    """
+    Write to the script the commands necessary to write both a
+    header and help text for a command to the output file
+    """
+    header = '{}\\nCOMMAND: {}\\n{}\\n'.format(ASTERISKS, command, ASTERISKS)
+    temp_file.write('py print("{}") >> {}\n'.format(header, outfile_path))
+    temp_file.write('help {} >> {}\n'.format(command, outfile_path))
 
-# Make sure the user passed in an output file
-elif len(sys.argv) != 2:
-    print("Usage: {} <output_file>".format(os.path.basename(sys.argv[0])))
-else:
+
+def main():
+    """Main function of this script"""
+
+    # Make sure we have access to self
+    if 'self' not in globals():
+        print("Run 'set locals_in_py true' and then rerun this script")
+        return
+
+    # Make sure the user passed in an output file
+    if len(sys.argv) != 2:
+        print("Usage: {} <output_file>".format(os.path.basename(sys.argv[0])))
+        return
+
+    # Get output file path
     outfile = os.path.expanduser(sys.argv[1])
 
-    # Get a list of all commands and help topics and then filter out duplicates
-    to_print = set(self.get_all_commands()) | set(self.get_help_topics())
-
     # Create a script that will call help on each command and topic and write its output to a file
-    with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp:
+    with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as temp_file:
 
         # First delete any existing output file
-        temp.write('!rm -f {}\n'.format(outfile))
+        temp_file.write('py if os.path.exists("{0}"): os.remove("{0}")\n'.format(outfile))
 
-        for item in to_print:
-            header = '{}\\nCOMMAND: {}\\n{}\\n'.format(ASTERISKS, item, ASTERISKS)
-            temp.write('py print("{}") >> {}\n'.format(header, outfile))
-            temp.write('help {} >> {}\n'.format(item, outfile))
+        # Get a list of all commands and help topics and then filter out duplicates
+        to_save = set(self.get_all_commands()) | set(self.get_help_topics())
+
+        for item in to_save:
+            add_command_to_script(item, temp_file, outfile)
 
             # Add any sub-commands
             for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
                 full_cmd = '{} {}'.format(item, subcmd)
-                header = '{}\\nCOMMAND: {}\\n{}\\n'.format(ASTERISKS, full_cmd, ASTERISKS)
-
-                temp.write('py print("{}") >> {}\n'.format(header, outfile))
-                temp.write('help {} >> {}\n'.format(full_cmd, outfile))
+                add_command_to_script(full_cmd, temp_file, outfile)
 
         # Inform the user where output was written
-        temp.write('py print("Output written to {}")\n'.format(outfile))
+        temp_file.write('py print("Output written to {}")\n'.format(outfile))
 
         # Have the script delete itself as its last step
-        temp.write('!rm -f {}\n'.format(temp.name))
+        temp_file.write('py os.remove("{}")\n'.format(temp_file.name))
 
         # Tell cmd2 to run the script as its next command
-        self.cmdqueue.insert(0, "load '{}'".format(temp.name))
+        self.cmdqueue.insert(0, 'load "{}"'.format(temp_file.name))
+
+
+# Run main function
+main()
