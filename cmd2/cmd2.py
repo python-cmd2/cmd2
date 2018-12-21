@@ -2993,12 +2993,14 @@ class Cmd(cmd.Cmd):
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
+            # Check if the user is running a Python statement on the command line
             if args.command:
                 full_command = args.command
                 if args.remainder:
                     full_command += ' ' + ' '.join(args.remainder)
 
-                # If running at the CLI, print the output of the command
+                # Set cmd_echo to True so PyscriptBridge statements like: py app('help')
+                # run at the command line will print their output.
                 bridge.cmd_echo = True
                 interp.runcode(full_command)
 
