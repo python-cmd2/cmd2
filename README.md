@@ -132,6 +132,7 @@ Instructions for implementing each feature follow.
     argparser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     argparser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     argparser.add_argument('words', nargs='+', help='words to say')
+
     @with_argparser(argparser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
@@ -253,6 +254,7 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     speak_parser.add_argument('words', nargs='+', help='words to say')
+
     @cmd2.with_argparser(speak_parser)
     def do_speak(self, args):
         """Repeats what you tell me to."""
@@ -274,6 +276,7 @@ class CmdLineApp(cmd2.Cmd):
     mumble_parser = argparse.ArgumentParser()
     mumble_parser.add_argument('-r', '--repeat', type=int, help='how many times to repeat')
     mumble_parser.add_argument('words', nargs='+', help='words to say')
+
     @cmd2.with_argparser(mumble_parser)
     def do_mumble(self, args):
         """Mumbles what you tell me to."""
