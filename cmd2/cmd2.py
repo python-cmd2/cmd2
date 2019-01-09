@@ -3118,8 +3118,9 @@ class Cmd(cmd.Cmd):
     pyscript_parser = ACArgumentParser()
     setattr(pyscript_parser.add_argument('script_path', help='path to the script file'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
-                                 help='arguments to pass to script')
+    setattr(pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
+                                         help='arguments to pass to script'),
+            ACTION_ARG_CHOICES, ('path_complete',))
 
     @with_argparser(pyscript_parser)
     def do_pyscript(self, args: argparse.Namespace) -> None:
