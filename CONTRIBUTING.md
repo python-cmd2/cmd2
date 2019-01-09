@@ -510,7 +510,7 @@ Since 0.9.2, the process of publishing a new release of `cmd2` to [PyPi](https:/
 mostly automated. The manual steps are all git operations. Here's the checklist:
 
 1. Make sure you're on the proper branch (almost always **master**)
-1. Make sure all the unit tests pass wih `invoke pypi-test` or `py.test`
+1. Make sure all the unit tests pass with `invoke pytest` or `py.test`
 1. Make sure `CHANGELOG.md` describes the version and has the correct release date
 1. Add a git tag representing the version number using ``invoke tag x.y.z`` 
     * Where x, y, and z are all small non-negative integers

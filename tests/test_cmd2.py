@@ -1333,11 +1333,11 @@ def test_select_options(select_app):
     # And verify the expected output to stdout
     assert out == expected
 
-def test_select_invalid_option(select_app):
+def test_select_invalid_option_too_big(select_app):
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input')
     # If side_effect is an iterable then each call to the mock will return the next value from the iterable.
-    m.side_effect = ['3', '1']  # First pass and invalid selection, then pass a valid one
+    m.side_effect = ['3', '1']  # First pass an invalid selection, then pass a valid one
     builtins.input = m
 
     food = 'fish'
@@ -1346,6 +1346,30 @@ def test_select_invalid_option(select_app):
    1. sweet
    2. salty
 '3' isn't a valid choice. Pick a number between 1 and 2:
+{} with sweet sauce, yum!
+""".format(food))
+
+    # Make sure our mock was called exactly twice with the expected arguments
+    arg = 'Sauce? '
+    calls = [mock.call(arg), mock.call(arg)]
+    m.assert_has_calls(calls)
+
+    # And verify the expected output to stdout
+    assert out == expected
+
+def test_select_invalid_option_too_small(select_app):
+    # Mock out the input call so we don't actually wait for a user's response on stdin
+    m = mock.MagicMock(name='input')
+    # If side_effect is an iterable then each call to the mock will return the next value from the iterable.
+    m.side_effect = ['0', '1']  # First pass an invalid selection, then pass a valid one
+    builtins.input = m
+
+    food = 'fish'
+    out = run_cmd(select_app, "eat {}".format(food))
+    expected = normalize("""
+   1. sweet
+   2. salty
+'0' isn't a valid choice. Pick a number between 1 and 2:
 {} with sweet sauce, yum!
 """.format(food))
 
