@@ -1,11 +1,12 @@
-## 0.9.7 (TBD, 2018)
+## 0.9.7 (January 08, 2019)
 * Bug Fixes
     * Fixed bug when user chooses a zero or negative index when calling ``Cmd.select()``
     * Restored behavior where ``cmd_echo`` always starts as False in a py script. This was broken in 0.9.5.
 * Enhancements
     * **cmdloop** now only attempts to register a custom signal handler for SIGINT if running in the main thread
     * commands run as a result of ``default_to_shell`` being **True** now run via ``do_shell()`` and are saved
-    to history. 
+    to history.
+    * Added more tab completion to pyscript command.
 * Deletions (potentially breaking changes)
     * Deleted ``Cmd.colorize()`` and ``Cmd._colorcodes`` which were deprecated in 0.9.5
     * Replaced ``dir_exe_only`` and  ``dir_only`` flags in ``path_complete`` with optional ``path_filter`` function
