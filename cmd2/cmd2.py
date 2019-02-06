@@ -2957,161 +2957,170 @@ class Cmd(cmd.Cmd):
             self.perror(err, traceback_war=False)
             self._last_result = CommandResult('', err)
             return False
-        self._in_py = True
 
-        # Support the run command even if called prior to invoking an interactive interpreter
-        def py_run(filename: str):
-            """Run a Python script file in the interactive console.
-            :param filename: filename of *.py script file to run
-            """
-            expanded_filename = os.path.expanduser(filename)
+        try:
+            self._in_py = True
 
-            # cmd_echo defaults to False for scripts. The user can always toggle this value in their script.
-            bridge.cmd_echo = False
+            # Support the run command even if called prior to invoking an interactive interpreter
+            def py_run(filename: str):
+                """Run a Python script file in the interactive console.
+                :param filename: filename of *.py script file to run
+                """
+                expanded_filename = os.path.expanduser(filename)
 
-            try:
-                with open(expanded_filename) as f:
-                    interp.runcode(f.read())
-            except OSError as ex:
-                error_msg = "Error opening script file '{}': {}".format(expanded_filename, ex)
-                self.perror(error_msg, traceback_war=False)
+                # cmd_echo defaults to False for scripts. The user can always toggle this value in their script.
+                bridge.cmd_echo = False
 
-        def py_quit():
-            """Function callable from the interactive Python console to exit that environment"""
-            raise EmbeddedConsoleExit
+                try:
+                    with open(expanded_filename) as f:
+                        interp.runcode(f.read())
+                except OSError as ex:
+                    error_msg = "Error opening script file '{}': {}".format(expanded_filename, ex)
+                    self.perror(error_msg, traceback_war=False)
 
-        # Set up Python environment
-        bridge = PyscriptBridge(self)
-        self.pystate[self.pyscript_name] = bridge
-        self.pystate['run'] = py_run
-        self.pystate['quit'] = py_quit
-        self.pystate['exit'] = py_quit
+            def py_quit():
+                """Function callable from the interactive Python console to exit that environment"""
+                raise EmbeddedConsoleExit
 
-        if self.locals_in_py:
-            self.pystate['self'] = self
-        elif 'self' in self.pystate:
-            del self.pystate['self']
+            # Set up Python environment
+            bridge = PyscriptBridge(self)
+            self.pystate[self.pyscript_name] = bridge
+            self.pystate['run'] = py_run
+            self.pystate['quit'] = py_quit
+            self.pystate['exit'] = py_quit
 
-        localvars = self.pystate
-        from code import InteractiveConsole
-        interp = InteractiveConsole(locals=localvars)
-        interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
+            if self.locals_in_py:
+                self.pystate['self'] = self
+            elif 'self' in self.pystate:
+                del self.pystate['self']
 
-        # Check if the user is running a Python statement on the command line
-        if args.command:
-            full_command = args.command
-            if args.remainder:
-                full_command += ' ' + ' '.join(args.remainder)
+            localvars = self.pystate
+            from code import InteractiveConsole
+            interp = InteractiveConsole(locals=localvars)
+            interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
-            # Set cmd_echo to True so PyscriptBridge statements like: py app('help')
-            # run at the command line will print their output.
-            bridge.cmd_echo = True
+            # Check if the user is running a Python statement on the command line
+            if args.command:
+                full_command = args.command
+                if args.remainder:
+                    full_command += ' ' + ' '.join(args.remainder)
 
-            # noinspection PyBroadException
-            try:
-                interp.runcode(full_command)
-            except BaseException:
-                pass
+                # Set cmd_echo to True so PyscriptBridge statements like: py app('help')
+                # run at the command line will print their output.
+                bridge.cmd_echo = True
 
-        # If there are no args, then we will open an interactive Python console
-        else:
-            # Set up readline for Python console
-            if rl_type != RlType.NONE:
-                # Save cmd2 history
-                saved_cmd2_history = []
-                for i in range(1, readline.get_current_history_length() + 1):
-                    saved_cmd2_history.append(readline.get_history_item(i))
+                # noinspection PyBroadException
+                try:
+                    interp.runcode(full_command)
+                except BaseException:
+                    # We don't care about any exception that happened in the interactive console
+                    pass
 
-                readline.clear_history()
-
-                # Restore py's history
-                for item in self.py_history:
-                    readline.add_history(item)
-
-                if self.use_rawinput and self.completekey:
-                    # Set up tab completion for the Python console
-                    # rlcompleter relies on the default settings of the Python readline module
-                    if rl_type == RlType.GNU:
-                        old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-                        rl_basic_quote_characters.value = orig_rl_basic_quotes
-
-                        if 'gnureadline' in sys.modules:
-                            # rlcompleter imports readline by name, so it won't use gnureadline
-                            # Force rlcompleter to use gnureadline instead so it has our settings and history
-                            saved_readline = None
-                            if 'readline' in sys.modules:
-                                saved_readline = sys.modules['readline']
-
-                            sys.modules['readline'] = sys.modules['gnureadline']
-
-                    old_delims = readline.get_completer_delims()
-                    readline.set_completer_delims(orig_rl_delims)
-
-                    # rlcompleter will not need cmd2's custom display function
-                    # This will be restored by cmd2 the next time complete() is called
-                    if rl_type == RlType.GNU:
-                        readline.set_completion_display_matches_hook(None)
-                    elif rl_type == RlType.PYREADLINE:
-                        readline.rl.mode._display_completions = self._display_matches_pyreadline
-
-                    # Save off the current completer and set a new one in the Python console
-                    # Make sure it tab completes from its locals() dictionary
-                    old_completer = readline.get_completer()
-                    interp.runcode("from rlcompleter import Completer")
-                    interp.runcode("import readline")
-                    interp.runcode("readline.set_completer(Completer(locals()).complete)")
-
-            # Set up sys module for the Python console
-            self._reset_py_display()
-            keepstate = Statekeeper(sys, ('stdin', 'stdout'))
-            sys.stdout = self.stdout
-            sys.stdin = self.stdin
-
-            cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
-            instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
-                            'Non-Python commands can be issued with: {}("your command")\n'
-                            'Run Python code from external script files with: run("script.py")'
-                            .format(self.pyscript_name))
-
-            # noinspection PyBroadException
-            try:
-                interp.interact(banner="Python {} on {}\n{}\n\n{}\n".
-                                format(sys.version, sys.platform, cprt, instructions))
-            except BaseException:
-                pass
-
-            finally:
-                keepstate.restore()
-
-                # Set up readline for cmd2
+            # If there are no args, then we will open an interactive Python console
+            else:
+                # Set up readline for Python console
                 if rl_type != RlType.NONE:
-                    # Save py's history
-                    self.py_history.clear()
+                    # Save cmd2 history
+                    saved_cmd2_history = []
                     for i in range(1, readline.get_current_history_length() + 1):
-                        self.py_history.append(readline.get_history_item(i))
+                        saved_cmd2_history.append(readline.get_history_item(i))
 
                     readline.clear_history()
 
-                    # Restore cmd2's history
-                    for item in saved_cmd2_history:
+                    # Restore py's history
+                    for item in self.py_history:
                         readline.add_history(item)
 
                     if self.use_rawinput and self.completekey:
-                        # Restore cmd2's tab completion settings
-                        readline.set_completer(old_completer)
-                        readline.set_completer_delims(old_delims)
-
+                        # Set up tab completion for the Python console
+                        # rlcompleter relies on the default settings of the Python readline module
                         if rl_type == RlType.GNU:
-                            rl_basic_quote_characters.value = old_basic_quotes
+                            old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                            rl_basic_quote_characters.value = orig_rl_basic_quotes
 
                             if 'gnureadline' in sys.modules:
-                                # Restore what the readline module pointed to
-                                if saved_readline is None:
-                                    del(sys.modules['readline'])
-                                else:
-                                    sys.modules['readline'] = saved_readline
+                                # rlcompleter imports readline by name, so it won't use gnureadline
+                                # Force rlcompleter to use gnureadline instead so it has our settings and history
+                                saved_readline = None
+                                if 'readline' in sys.modules:
+                                    saved_readline = sys.modules['readline']
 
-        self._in_py = False
+                                sys.modules['readline'] = sys.modules['gnureadline']
+
+                        old_delims = readline.get_completer_delims()
+                        readline.set_completer_delims(orig_rl_delims)
+
+                        # rlcompleter will not need cmd2's custom display function
+                        # This will be restored by cmd2 the next time complete() is called
+                        if rl_type == RlType.GNU:
+                            readline.set_completion_display_matches_hook(None)
+                        elif rl_type == RlType.PYREADLINE:
+                            readline.rl.mode._display_completions = self._display_matches_pyreadline
+
+                        # Save off the current completer and set a new one in the Python console
+                        # Make sure it tab completes from its locals() dictionary
+                        old_completer = readline.get_completer()
+                        interp.runcode("from rlcompleter import Completer")
+                        interp.runcode("import readline")
+                        interp.runcode("readline.set_completer(Completer(locals()).complete)")
+
+                # Set up sys module for the Python console
+                self._reset_py_display()
+                keepstate = Statekeeper(sys, ('stdin', 'stdout'))
+                sys.stdout = self.stdout
+                sys.stdin = self.stdin
+
+                cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
+                instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
+                                'Non-Python commands can be issued with: {}("your command")\n'
+                                'Run Python code from external script files with: run("script.py")'
+                                .format(self.pyscript_name))
+
+                # noinspection PyBroadException
+                try:
+                    interp.interact(banner="Python {} on {}\n{}\n\n{}\n".
+                                    format(sys.version, sys.platform, cprt, instructions))
+                except BaseException:
+                    # We don't care about any exception that happened in the interactive console
+                    pass
+
+                finally:
+                    keepstate.restore()
+
+                    # Set up readline for cmd2
+                    if rl_type != RlType.NONE:
+                        # Save py's history
+                        self.py_history.clear()
+                        for i in range(1, readline.get_current_history_length() + 1):
+                            self.py_history.append(readline.get_history_item(i))
+
+                        readline.clear_history()
+
+                        # Restore cmd2's history
+                        for item in saved_cmd2_history:
+                            readline.add_history(item)
+
+                        if self.use_rawinput and self.completekey:
+                            # Restore cmd2's tab completion settings
+                            readline.set_completer(old_completer)
+                            readline.set_completer_delims(old_delims)
+
+                            if rl_type == RlType.GNU:
+                                rl_basic_quote_characters.value = old_basic_quotes
+
+                                if 'gnureadline' in sys.modules:
+                                    # Restore what the readline module pointed to
+                                    if saved_readline is None:
+                                        del(sys.modules['readline'])
+                                    else:
+                                        sys.modules['readline'] = saved_readline
+
+        except KeyboardInterrupt:
+            pass
+
+        finally:
+            self._in_py = False
+
         return self._should_quit
 
     pyscript_parser = ACArgumentParser()
@@ -3125,18 +3134,25 @@ class Cmd(cmd.Cmd):
     def do_pyscript(self, args: argparse.Namespace) -> bool:
         """Run a Python script file inside the console"""
         script_path = os.path.expanduser(args.script_path)
+        py_return = False
 
         # Save current command line arguments
         orig_args = sys.argv
 
-        # Overwrite sys.argv to allow the script to take command line arguments
-        sys.argv = [script_path] + args.script_arguments
+        try:
+            # Overwrite sys.argv to allow the script to take command line arguments
+            sys.argv = [script_path] + args.script_arguments
 
-        # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
-        py_return = self.do_py("run({!r})".format(script_path))
+            # Run the script - use repr formatting to escape things which
+            # need to be escaped to prevent issues on Windows
+            py_return = self.do_py("run({!r})".format(script_path))
 
-        # Restore command line arguments to original state
-        sys.argv = orig_args
+        except KeyboardInterrupt:
+            pass
+
+        finally:
+            # Restore command line arguments to original state
+            sys.argv = orig_args
 
         return py_return
 
