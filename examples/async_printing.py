@@ -143,7 +143,7 @@ class AlerterApp(cmd2.Cmd):
 
     def _generate_colored_prompt(self) -> str:
         """
-        Randomly generates a colored the prompt
+        Randomly generates a colored prompt
         :return: the new prompt
         """
         rand_num = random.randint(1, 20)
