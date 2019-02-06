@@ -1,4 +1,4 @@
-## 0.9.8 (February 05, 2019)
+## 0.9.8 (February 06, 2019)
 * Bug Fixes
     * Fixed issue with echoing strings in StdSim. Because they were being sent to a binary buffer, line buffering
     was being ignored.
