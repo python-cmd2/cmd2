@@ -2979,9 +2979,17 @@ class Cmd(cmd.Cmd):
                     error_msg = "Error opening script file '{}': {}".format(expanded_filename, ex)
                     self.perror(error_msg, traceback_war=False)
 
+            # noinspection PyShadowingBuiltins
+            def quit():
+                """Function callable from the interactive Python console to exit that environment"""
+                raise EmbeddedConsoleExit
+
+            # Set up Python environment
             bridge = PyscriptBridge(self)
-            self.pystate['run'] = run
             self.pystate[self.pyscript_name] = bridge
+            self.pystate['run'] = run
+            self.pystate['quit'] = quit
+            self.pystate['exit'] = quit
 
             if self.locals_in_py:
                 self.pystate['self'] = self
@@ -2991,7 +2999,11 @@ class Cmd(cmd.Cmd):
             localvars = self.pystate
             from code import InteractiveConsole
             interp = InteractiveConsole(locals=localvars)
-            interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
+
+            try:
+                interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
+            except EmbeddedConsoleExit:
+                pass
 
             # Check if the user is running a Python statement on the command line
             if args.command:
@@ -3006,14 +3018,6 @@ class Cmd(cmd.Cmd):
 
             # If there are no args, then we will open an interactive Python console
             else:
-                # noinspection PyShadowingBuiltins
-                def quit():
-                    """Function callable from the interactive Python console to exit that environment"""
-                    raise EmbeddedConsoleExit
-
-                self.pystate['quit'] = quit
-                self.pystate['exit'] = quit
-
                 # Set up readline for Python console
                 if rl_type != RlType.NONE:
                     # Save cmd2 history
@@ -3113,7 +3117,7 @@ class Cmd(cmd.Cmd):
             pass
         finally:
             self._in_py = False
-        return self._should_quit
+            return self._should_quit
 
     pyscript_parser = ACArgumentParser()
     setattr(pyscript_parser.add_argument('script_path', help='path to the script file'),
@@ -3134,10 +3138,12 @@ class Cmd(cmd.Cmd):
         sys.argv = [script_path] + args.script_arguments
 
         # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
-        self.do_py("run({!r})".format(script_path))
+        py_return = self.do_py("run({!r})".format(script_path))
 
         # Restore command line arguments to original state
         sys.argv = orig_args
+
+        return py_return
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
