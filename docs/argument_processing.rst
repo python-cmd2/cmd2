@@ -93,7 +93,8 @@ Help Messages
 
 By default, cmd2 uses the docstring of the command method when a user asks
 for help on the command. When you use the ``@with_argparser``
-decorator, the docstring for the ``do_*`` method is used to set the description for the ``argparse.ArgumentParser`` is
+decorator, the docstring for the ``do_*`` method is used to set the description for the ``argparse.ArgumentParser``.
+
 With this code::
 
    import argparse
@@ -108,7 +109,7 @@ With this code::
       self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
       self.stdout.write('\n')
 
-The ``help tag`` command displays:
+the ``help tag`` command displays:
 
 .. code-block:: none
 

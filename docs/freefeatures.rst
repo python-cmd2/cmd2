@@ -135,7 +135,6 @@ You may optionally enable full access to to your application by setting
 session, which is a reference to your Cmd2 application. This can be useful for
 debugging your application.  To prevent users from enabling this ability
 manually you'll need to remove ``locals_in_py`` from the ``settable`` dictionary.
-That session can call
 
 The ``app`` object (or your custom name) provides access to application commands
 through either raw commands or through a python API wrapper.  For example, any
