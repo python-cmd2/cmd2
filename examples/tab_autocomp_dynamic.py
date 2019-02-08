@@ -75,7 +75,7 @@ class TabCompleteExample(cmd2.Cmd):
                  {'delimiter': '/',
                   'match_against': TabCompleteExample.file_list}))
         setattr(vid_movie_fread_action, argparse_completer.ACTION_ARG_CHOICES,
-                ('path_complete', [False, False]))
+                ('path_complete',))
 
         vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
         vid_delete_movie_id = vid_movies_delete_parser.add_argument('movie_id', help='Movie ID')

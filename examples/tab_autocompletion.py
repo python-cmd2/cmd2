@@ -258,7 +258,7 @@ class TabCompleteExample(cmd2.Cmd):
              {'delimiter': '/',
               'match_against': file_list}))
     setattr(vid_movie_fread_action, argparse_completer.ACTION_ARG_CHOICES,
-            ('path_complete', [False, False]))
+            ('path_complete',))
 
     vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
     vid_delete_movie_id = vid_movies_delete_parser.add_argument('movie_id', help='Movie ID')
@@ -376,7 +376,7 @@ class TabCompleteExample(cmd2.Cmd):
         """ Adds tab completion to media"""
         choices = {'actor': query_actors,  # function
                    'director': TabCompleteExample.static_list_directors,  # static list
-                   'movie_file': (self.path_complete, [False, False])
+                   'movie_file': (self.path_complete,)
                    }
         completer = argparse_completer.AutoCompleter(TabCompleteExample.media_parser, arg_choices=choices, cmd2_app=self)
 
