@@ -2966,14 +2966,13 @@ class Cmd(cmd.Cmd):
             self.perror(err, traceback_war=False)
             self._last_result = CommandResult('', err)
             return False
-        self._in_py = True
 
-        # noinspection PyBroadException
         try:
-            # Support the run command even if called prior to invoking an interactive interpreter
-            def run(filename: str):
-                """Run a Python script file in the interactive console.
+            self._in_py = True
 
+            # Support the run command even if called prior to invoking an interactive interpreter
+            def py_run(filename: str):
+                """Run a Python script file in the interactive console.
                 :param filename: filename of *.py script file to run
                 """
                 expanded_filename = os.path.expanduser(filename)
@@ -2988,9 +2987,16 @@ class Cmd(cmd.Cmd):
                     error_msg = "Error opening script file '{}': {}".format(expanded_filename, ex)
                     self.perror(error_msg, traceback_war=False)
 
+            def py_quit():
+                """Function callable from the interactive Python console to exit that environment"""
+                raise EmbeddedConsoleExit
+
+            # Set up Python environment
             bridge = PyscriptBridge(self)
-            self.pystate['run'] = run
             self.pystate[self.pyscript_name] = bridge
+            self.pystate['run'] = py_run
+            self.pystate['quit'] = py_quit
+            self.pystate['exit'] = py_quit
 
             if self.locals_in_py:
                 self.pystate['self'] = self
@@ -3011,18 +3017,16 @@ class Cmd(cmd.Cmd):
                 # Set cmd_echo to True so PyscriptBridge statements like: py app('help')
                 # run at the command line will print their output.
                 bridge.cmd_echo = True
-                interp.runcode(full_command)
+
+                # noinspection PyBroadException
+                try:
+                    interp.runcode(full_command)
+                except BaseException:
+                    # We don't care about any exception that happened in the interactive console
+                    pass
 
             # If there are no args, then we will open an interactive Python console
             else:
-                # noinspection PyShadowingBuiltins
-                def quit():
-                    """Function callable from the interactive Python console to exit that environment"""
-                    raise EmbeddedConsoleExit
-
-                self.pystate['quit'] = quit
-                self.pystate['exit'] = quit
-
                 # Set up readline for Python console
                 if rl_type != RlType.NONE:
                     # Save cmd2 history
@@ -3081,10 +3085,12 @@ class Cmd(cmd.Cmd):
                                 'Run Python code from external script files with: run("script.py")'
                                 .format(self.pyscript_name))
 
+                # noinspection PyBroadException
                 try:
                     interp.interact(banner="Python {} on {}\n{}\n\n{}\n".
                                     format(sys.version, sys.platform, cprt, instructions))
-                except EmbeddedConsoleExit:
+                except BaseException:
+                    # We don't care about any exception that happened in the interactive console
                     pass
 
                 finally:
@@ -3118,10 +3124,12 @@ class Cmd(cmd.Cmd):
                                     else:
                                         sys.modules['readline'] = saved_readline
 
-        except Exception:
+        except KeyboardInterrupt:
             pass
+
         finally:
             self._in_py = False
+
         return self._should_quit
 
     pyscript_parser = ACArgumentParser()
@@ -3132,21 +3140,30 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, ('path_complete',))
 
     @with_argparser(pyscript_parser)
-    def do_pyscript(self, args: argparse.Namespace) -> None:
+    def do_pyscript(self, args: argparse.Namespace) -> bool:
         """Run a Python script file inside the console"""
         script_path = os.path.expanduser(args.script_path)
+        py_return = False
 
         # Save current command line arguments
         orig_args = sys.argv
 
-        # Overwrite sys.argv to allow the script to take command line arguments
-        sys.argv = [script_path] + args.script_arguments
+        try:
+            # Overwrite sys.argv to allow the script to take command line arguments
+            sys.argv = [script_path] + args.script_arguments
 
-        # Run the script - use repr formatting to escape things which need to be escaped to prevent issues on Windows
-        self.do_py("run({!r})".format(script_path))
+            # Run the script - use repr formatting to escape things which
+            # need to be escaped to prevent issues on Windows
+            py_return = self.do_py("run({!r})".format(script_path))
 
-        # Restore command line arguments to original state
-        sys.argv = orig_args
+        except KeyboardInterrupt:
+            pass
+
+        finally:
+            # Restore command line arguments to original state
+            sys.argv = orig_args
+
+        return py_return
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover

@@ -122,7 +122,7 @@ def test_quot_string_if_needed_no():
 
 @pytest.fixture
 def stdout_sim():
-    stdsim = cu.StdSim(sys.stdout)
+    stdsim = cu.StdSim(sys.stdout, echo=True)
     return stdsim
 
 @pytest.fixture

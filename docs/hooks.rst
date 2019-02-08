@@ -239,7 +239,7 @@ Here's how to define and register a postcommand hook::
             self.register_postcmd_hook(self.myhookmethod)
 
         def myhookmethod(self, data: cmd2.plugin.PostcommandData) -> cmd2.plugin.PostcommandData:
-            return stop
+            return data
 
 Your hook will be passed a ``PostcommandData`` object, which has a ``statement``
 attribute that describes the command which was executed. If your postcommand
@@ -254,10 +254,11 @@ After all registered postcommand hooks have been called,
 ``self.postcmd(statement)`` will be called to retain full backward compatibility
 with ``cmd.Cmd``.
 
-If any postcommand hook (registered or ``self.postcmd()``) returns ``True``,
-subsequent postcommand hooks will still be called, as will the command
-finalization hooks, but once those hooks have all been called, the application
-will terminate.
+If any postcommand hook (registered or ``self.postcmd()``) returns a ``PostcommandData`` object
+with the stop attribute set to ``True``, subsequent postcommand hooks will still be called, as
+will the command finalization hooks, but once those hooks have all been called, the application
+will terminate.  Likewise, if ``self.postcmd()`` returns ``True``, the command finalization hooks
+will be called before the application terminates.
 
 Any postcommand hook can change the value of the ``stop`` parameter before
 returning it, and the modified value will be passed to the next postcommand

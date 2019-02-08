@@ -1,3 +1,11 @@
+## 0.9.8 (February 06, 2019)
+* Bug Fixes
+    * Fixed issue with echoing strings in StdSim. Because they were being sent to a binary buffer, line buffering
+    was being ignored.
+* Enhancements
+    * Made quit() and exit() functions available to scripts run with pyscript. This allows those scripts to exit
+    back to the console's prompt instead of exiting the whole application.
+
 ## 0.9.7 (January 08, 2019)
 * Bug Fixes
     * Fixed bug when user chooses a zero or negative index when calling ``Cmd.select()``

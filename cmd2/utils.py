@@ -281,10 +281,7 @@ class StdSim(object):
                 raise TypeError('a bytes-like object is required, not {}'.format(type(b)))
             self.byte_buf += b
             if self.echo:
-                if hasattr(self.inner_stream, 'buffer'):
-                    self.inner_stream.buffer.write(b)
-                else:
-                    self.inner_stream.write(b.decode(encoding=self.encoding, errors=self.errors))
+                self.inner_stream.buffer.write(b)
 
     def __init__(self, inner_stream, echo: bool = False,
                  encoding: str='utf-8', errors: str='replace') -> None:
@@ -297,6 +294,7 @@ class StdSim(object):
         """
         self.buffer = self.ByteBuf(inner_stream, echo)
         self.inner_stream = inner_stream
+        self.echo = echo
         self.encoding = encoding
         self.errors = errors
 
@@ -304,8 +302,9 @@ class StdSim(object):
         """Add str to internal bytes buffer and if echo is True, echo contents to inner stream"""
         if not isinstance(s, str):
             raise TypeError('write() argument must be str, not {}'.format(type(s)))
-        b = s.encode(encoding=self.encoding, errors=self.errors)
-        self.buffer.write(b)
+        self.buffer.byte_buf += s.encode(encoding=self.encoding, errors=self.errors)
+        if self.echo:
+            self.inner_stream.write(s)
 
     def getvalue(self) -> str:
         """Get the internal contents as a str"""
