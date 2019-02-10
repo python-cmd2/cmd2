@@ -56,10 +56,6 @@ def test_base_help_verbose(base_app):
     out = run_cmd(base_app, 'help --verbose')
     assert out == expected
 
-def test_base_help_history(base_app):
-    out = run_cmd(base_app, 'help history')
-    assert out == normalize(HELP_HISTORY)
-
 def test_base_argparse_help(base_app, capsys):
     # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
     run_cmd(base_app, 'set -h')
@@ -735,29 +731,6 @@ def test_base_py_interactive(base_app):
 
     # Make sure our mock was called once and only once
     m.assert_called_once()
-
-
-def test_exclude_from_history(base_app, monkeypatch):
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
-
-    # Run edit command
-    run_cmd(base_app, 'edit')
-
-    # Run history command
-    run_cmd(base_app, 'history')
-
-    # Verify that the history is empty
-    out = run_cmd(base_app, 'history')
-    assert out == []
-
-    # Now run a command which isn't excluded from the history
-    run_cmd(base_app, 'help')
-    # And verify we have a history now ...
-    out = run_cmd(base_app, 'history')
-    expected = normalize("""    1  help""")
-    assert out == expected
 
 
 def test_base_cmdloop_with_queue():
@@ -1946,20 +1919,12 @@ def test_parseline(base_app):
     assert line == statement.strip()
 
 
-def test_readline_remove_history_item(base_app):
-    from cmd2.rl_utils import readline
-    assert readline.get_current_history_length() == 0
-    readline.add_history('this is a test')
-    assert readline.get_current_history_length() == 1
-    readline.remove_history_item(0)
-    assert readline.get_current_history_length() == 0
-
 def test_onecmd_raw_str_continue(base_app):
     line = "help"
     stop = base_app.onecmd(line)
     out = base_app.stdout.getvalue()
     assert not stop
-    assert out.strip() == BASE_HELP.strip()
+    assert normalize(out) == normalize(BASE_HELP)
 
 def test_onecmd_raw_str_quit(base_app):
     line = "quit"
@@ -1967,78 +1932,6 @@ def test_onecmd_raw_str_quit(base_app):
     out = base_app.stdout.getvalue()
     assert stop
     assert out == ''
-
-
-@pytest.fixture(scope="session")
-def hist_file():
-    fd, filename = tempfile.mkstemp(prefix='hist_file', suffix='.txt')
-    os.close(fd)
-    yield filename
-    # teardown code
-    try:
-        os.remove(filename)
-    except FileNotFoundError:
-        pass
-
-def test_existing_history_file(hist_file, capsys):
-    import atexit
-    import readline
-
-    # Create the history file before making cmd2 app
-    with open(hist_file, 'w'):
-        pass
-
-    # Create a new cmd2 app
-    app = cmd2.Cmd(persistent_history_file=hist_file)
-    out, err = capsys.readouterr()
-
-    # Make sure there were no errors
-    assert err == ''
-
-    # Unregister the call to write_history_file that cmd2 did
-    atexit.unregister(readline.write_history_file)
-
-    # Remove created history file
-    os.remove(hist_file)
-
-
-def test_new_history_file(hist_file, capsys):
-    import atexit
-    import readline
-
-    # Remove any existing history file
-    try:
-        os.remove(hist_file)
-    except OSError:
-        pass
-
-    # Create a new cmd2 app
-    app = cmd2.Cmd(persistent_history_file=hist_file)
-    out, err = capsys.readouterr()
-
-    # Make sure there were no errors
-    assert err == ''
-
-    # Unregister the call to write_history_file that cmd2 did
-    atexit.unregister(readline.write_history_file)
-
-    # Remove created history file
-    os.remove(hist_file)
-
-def test_bad_history_file_path(capsys, request):
-    # Use a directory path as the history file
-    test_dir = os.path.dirname(request.module.__file__)
-
-    # Create a new cmd2 app
-    app = cmd2.Cmd(persistent_history_file=test_dir)
-    out, err = capsys.readouterr()
-
-    if sys.platform == 'win32':
-        # pyreadline masks the read exception. Therefore the bad path error occurs when trying to write the file.
-        assert 'readline cannot write' in err
-    else:
-        # GNU readline raises an exception upon trying to read the directory as a file
-        assert 'readline cannot read' in err
 
 
 def test_get_all_commands(base_app):

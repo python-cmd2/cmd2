@@ -3172,7 +3172,7 @@ class Cmd(cmd.Cmd):
     history_format_group.add_argument('-x', '--expanded', action='store_true', help='output expanded commands instead of entered command')
     history_format_group.add_argument('-v', '--verbose', action='store_true',
                                       help='display history and include expanded commands if they'
-                                           ' differ from the typed command.')
+                                           ' differ from the typed command')
 
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"
