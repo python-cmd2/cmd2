@@ -29,7 +29,7 @@ def hist():
                  HistoryItem(Statement('', raw='fourth'))])
     return h
 
-def test_history_span(hist):
+def test_history_class_span(hist):
     h = hist
     assert h == ['first', 'second', 'third', 'fourth']
     assert h.span('-2..') == ['third', 'fourth']
@@ -41,7 +41,7 @@ def test_history_span(hist):
     assert h.span('-2..-3') == ['third', 'second']
     assert h.span('*') == h
 
-def test_history_get(hist):
+def test_history_class_get(hist):
     h = hist
     assert h == ['first', 'second', 'third', 'fourth']
     assert h.get('') == h
@@ -207,3 +207,60 @@ def test_history_clear(base_app):
     # Make sure history is empty
     out = run_cmd(base_app, 'history')
     assert out == []
+
+def test_history_verbose_with_other_options(base_app):
+    # make sure -v shows a usage error if any other options are present
+    options_to_test = ['-r', '-e', '-o file', '-t file', '-c', '-x']
+    for opt in options_to_test:
+        output = run_cmd(base_app, 'history -v ' + opt)
+        assert len(output) == 3
+        assert output[1].startswith('Usage:')
+
+def test_history_verbose(base_app):
+    # validate function of -v option
+    run_cmd(base_app, 'alias create s shortcuts')
+    run_cmd(base_app, 's')
+    output = run_cmd(base_app, 'history -v')
+    assert len(output) == 3
+    # TODO test for basic formatting once we figure it out
+
+def test_history_script_with_invalid_options(base_app):
+    # make sure -s shows a usage error if -c, -r, -e, -o, or -t are present
+    options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
+    for opt in options_to_test:
+        output = run_cmd(base_app, 'history -s ' + opt)
+        assert len(output) == 3
+        assert output[1].startswith('Usage:')
+
+def test_history_script(base_app):
+    cmds = ['alias create s shortcuts', 's']
+    for cmd in cmds:
+        run_cmd(base_app, cmd)
+    output = run_cmd(base_app, 'history -s')
+    assert output == cmds
+
+def test_history_expanded_with_invalid_options(base_app):
+    # make sure -x shows a usage error if -c, -r, -e, -o, or -t are present
+    options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
+    for opt in options_to_test:
+        output = run_cmd(base_app, 'history -x ' + opt)
+        assert len(output) == 3
+        assert output[1].startswith('Usage:')
+
+def test_history_expanded(base_app):
+    # validate function of -x option
+    cmds = ['alias create s shortcuts', 's']
+    for cmd in cmds:
+        run_cmd(base_app, cmd)
+    output = run_cmd(base_app, 'history -x')
+    expected = ['    1  alias create s shortcuts', '    2  shortcuts']
+    assert output == expected
+
+def test_history_script_expanded(base_app):
+    # validate function of -s -x options together
+    cmds = ['alias create s shortcuts', 's']
+    for cmd in cmds:
+        run_cmd(base_app, cmd)
+    output = run_cmd(base_app, 'history -sx')
+    expected = ['alias create s shortcuts', 'shortcuts']
+    assert output == expected

@@ -14,7 +14,7 @@ from .parsing import Statement
 class HistoryItem(str):
     """Class used to represent one command in the History list"""
     listformat = ' {:>4}  {}\n'
-    ex_listformat = '  Ex:  {}\n'
+    ex_listformat = ' {:>4}x {}\n'
 
     def __new__(cls, statement: Statement):
         """Create a new instance of HistoryItem
@@ -32,15 +32,30 @@ class HistoryItem(str):
         """Return the command as run which includes shortcuts and aliases resolved plus any changes made in hooks"""
         return self.statement.expanded_command_line
 
-    def pr(self, verbose: bool) -> str:
+    def pr(self, script=False, expanded=False, verbose=False) -> str:
         """Represent a HistoryItem in a pretty fashion suitable for printing.
+
+        If you pass verbose=True, script and expanded will be ignored
 
         :return: pretty print string version of a HistoryItem
         """
-        ret_str = self.listformat.format(self.idx, str(self).rstrip())
-        if verbose and self != self.expanded:
-            ret_str += self.ex_listformat.format(self.expanded.rstrip())
-
+        if verbose:
+            ret_str = self.listformat.format(self.idx, str(self).rstrip())
+            if self != self.expanded:
+                ret_str += self.ex_listformat.format(self.idx, self.expanded.rstrip())
+        else:
+            if script:
+                # display without entry numbers
+                if expanded:
+                    ret_str = self.expanded.rstrip()
+                else:
+                    ret_str = str(self)
+            else:
+                # display a numbered list
+                if expanded:
+                    ret_str = self.listformat.format(self.idx, self.expanded.rstrip())
+                else:
+                    ret_str = self.listformat.format(self.idx, str(self).rstrip())
         return ret_str
 
 

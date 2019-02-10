@@ -3155,21 +3155,25 @@ class Cmd(cmd.Cmd):
                 load_ipy(bridge)
 
     history_parser = ACArgumentParser()
-    history_parser_group = history_parser.add_mutually_exclusive_group()
-    history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
-    history_parser_group.add_argument('-e', '--edit', action='store_true',
+    history_action_group = history_parser.add_mutually_exclusive_group()
+    history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
+    history_action_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
-    history_parser_group.add_argument('-s', '--script', action='store_true', help='output commands in script format')
-    setattr(history_parser_group.add_argument('-o', '--output-file', metavar='FILE',
-                                              help='output commands to a script file'),
+    setattr(history_action_group.add_argument('-o', '--output-file', metavar='FILE',
+                                              help='output commands to a script file, implies -s'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    setattr(history_parser_group.add_argument('-t', '--transcript',
-                                              help='output commands and results to a transcript file'),
+    setattr(history_action_group.add_argument('-t', '--transcript',
+                                              help='output commands and results to a transcript file, implies -s'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    history_parser_group.add_argument('-v', '--verbose', action='store_true',
+    history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
+
+    history_format_group = history_parser.add_argument_group(title='formatting')
+    history_format_group.add_argument('-s', '--script', action='store_true', help='output commands in script format, i.e. without command numbers')
+    history_format_group.add_argument('-x', '--expanded', action='store_true', help='output expanded commands instead of entered command')
+    history_format_group.add_argument('-v', '--verbose', action='store_true',
                                       help='display history and include expanded commands if they'
                                            ' differ from the typed command.')
-    history_parser_group.add_argument('-c', '--clear', action="store_true", help='clear all history')
+
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"
                         "a..b, a:b, a:, ..b  items by indices (inclusive)\n"
@@ -3180,6 +3184,19 @@ class Cmd(cmd.Cmd):
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> None:
         """View, run, edit, save, or clear previously entered commands"""
+
+        # -v must be used alone with no other options
+        if args.verbose:
+            if args.clear or args.edit  or args.output_file or args.run or args.transcript or args.expanded or args.script:
+                self.poutput("-v can not be used with any other options")
+                self.poutput(self.history_parser.format_usage())
+                return
+
+        # -s and -x can only be used if none of these options are present: [-c -r -e -o -t]
+        if (args.script or args.expanded) and (args.clear or args.edit or args.output_file or args.run or args.transcript):
+                self.poutput("-s and -x can not be used with -c, -r, -e, -o, or -t")
+                self.poutput(self.history_parser.format_usage())
+                return
 
         if args.clear:
             # Clear command and readline history
@@ -3249,10 +3266,7 @@ class Cmd(cmd.Cmd):
         else:
             # Display the history items retrieved
             for hi in history:
-                if args.script:
-                    self.poutput(hi)
-                else:
-                    self.poutput(hi.pr(args.verbose))
+                self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
 
     def _generate_transcript(self, history: List[HistoryItem], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""
