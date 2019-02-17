@@ -2251,7 +2251,7 @@ class Cmd(cmd.Cmd):
                            "  would for the actual command the alias resolves to.\n"
                            "\n"
                            "Examples:\n"
-                           "  alias ls !ls -lF\n"
+                           "  alias create ls !ls -lF\n"
                            "  alias create show_log !cat \"log file.txt\"\n"
                            "  alias create save_results print_results \">\" out.txt\n")
 
