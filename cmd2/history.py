@@ -154,7 +154,7 @@ class History(list):
                     :param hi: HistoryItem
                     :return: bool - True if search matches
                     """
-                    return finder.search(hi)
+                    return finder.search(hi) or finder.search(hi.expanded)
             else:
                 def isin(hi):
                     """Listcomp filter function for doing a case-insensitive string search of History.
@@ -162,5 +162,6 @@ class History(list):
                     :param hi: HistoryItem
                     :return: bool - True if search matches
                     """
-                    return utils.norm_fold(getme) in utils.norm_fold(hi)
+                    srch = utils.norm_fold(getme)
+                    return srch in utils.norm_fold(hi) or srch in utils.norm_fold(hi.expanded)
             return [itm for itm in self if isin(itm)]

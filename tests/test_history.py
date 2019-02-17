@@ -123,6 +123,31 @@ def test_history_with_string_argument(base_app):
 """)
     assert out == expected
 
+def test_history_expanded_with_string_argument(base_app):
+    run_cmd(base_app, 'alias create sc shortcuts')
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'help history')
+    run_cmd(base_app, 'sc')
+    out = run_cmd(base_app, 'history -v shortcuts')
+    expected = normalize("""
+    1  alias create sc shortcuts
+    4  sc
+    4x shortcuts
+""")
+    assert out == expected
+
+def test_history_expanded_with_regex_argument(base_app):
+    run_cmd(base_app, 'alias create sc shortcuts')
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'help history')
+    run_cmd(base_app, 'sc')
+    out = run_cmd(base_app, 'history -v /sh.*cuts/')
+    expected = normalize("""
+    1  alias create sc shortcuts
+    4  sc
+    4x shortcuts
+""")
+    assert out == expected
 
 def test_history_with_integer_argument(base_app):
     run_cmd(base_app, 'help')
