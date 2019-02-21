@@ -69,12 +69,14 @@ class CmdLineApp(cmd2.Cmd):
         self.multiline_commands = ['orate']
         self.maxrepeats = 3
 
-        # Add stuff to settable and shortcuts before calling base class initializer
-        self.settable['maxrepeats'] = 'max repetitions for speak command'
+        # Add stuff to shortcuts before calling base class initializer
         self.shortcuts.update({'&': 'speak'})
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         super().__init__(use_ipython=True)
+
+        # Make maxrepeats settable at runtime
+        self.settable['maxrepeats'] = 'max repetitions for speak command'
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')

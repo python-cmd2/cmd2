@@ -32,10 +32,11 @@ class CmdLineApp(cmd2.Cmd):
         self.multiline_commands = ['orate']
         self.maxrepeats = 3
 
-        # Add stuff to settable and/or shortcuts before calling base class initializer
+        super().__init__(*args, **kwargs)
+
+        # Make maxrepeats settable at runtime
         self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
 
-        super().__init__(*args, **kwargs)
         self.intro = 'This is an intro banner ...'
 
     speak_parser = argparse.ArgumentParser()
