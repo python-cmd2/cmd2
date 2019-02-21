@@ -1604,12 +1604,16 @@ class Cmd(cmd.Cmd):
         return commands
 
     def get_alias_names(self) -> List[str]:
-        """Return a list of alias names."""
+        """Return list of current alias names"""
         return list(self.aliases)
 
     def get_macro_names(self) -> List[str]:
-        """Return a list of macro names."""
+        """Return list of current macro names"""
         return list(self.macros)
+
+    def get_settable_names(self) -> List[str]:
+        """Return list of current settable names"""
+        return list(self.settable)
 
     def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
@@ -2837,7 +2841,7 @@ class Cmd(cmd.Cmd):
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     setattr(set_parser.add_argument('param', nargs='?', help='parameter to set or view'),
-            ACTION_ARG_CHOICES, settable)
+            ACTION_ARG_CHOICES, get_settable_names)
     set_parser.add_argument('value', nargs='?', help='the new value for settable')
 
     @with_argparser(set_parser)
