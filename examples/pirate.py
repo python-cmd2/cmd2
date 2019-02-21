@@ -32,12 +32,15 @@ class Pirate(cmd2.Cmd):
         self.terminators = self.terminators + ['...']
         self.songcolor = Fore.BLUE
 
-        # Add stuff to settable and/or shortcuts before calling base class initializer
-        self.settable['songcolor'] = 'Color to ``sing`` in (black/red/green/yellow/blue/magenta/cyan/white)'
+        # Add stuff to shortcuts before calling base class initializer
         self.shortcuts.update({'~': 'sing'})
 
         """Initialize the base class as well as this one"""
         super().__init__()
+
+        # Make songcolor settable at runtime
+        self.settable['songcolor'] = 'Color to ``sing`` in (black/red/green/yellow/blue/magenta/cyan/white)'
+
         # prompts and defaults
         self.gold = 0
         self.initial_gold = self.gold
