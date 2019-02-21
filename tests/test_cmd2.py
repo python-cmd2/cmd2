@@ -1621,6 +1621,9 @@ def test_get_macro_names(base_app):
     assert len(base_app.macros) == 2
     assert sorted(base_app.get_macro_names()) == ['bar', 'foo']
 
+def test_get_settable_names(base_app):
+    assert sorted(base_app.get_settable_names()) == sorted(base_app.settable.keys())
+
 def test_alias_no_subcommand(base_app, capsys):
     out = run_cmd(base_app, 'alias')
     assert "Usage: alias [-h]" in out[0]

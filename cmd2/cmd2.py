@@ -31,7 +31,6 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 # setting is True
 import argparse
 import cmd
-import collections
 import glob
 import inspect
 import os
@@ -328,7 +327,6 @@ class Cmd(cmd.Cmd):
     timing = False  # Prints elapsed time for each command
 
     # To make an attribute settable with the "do_set" command, add it to this ...
-    # This starts out as a dictionary but gets converted to an OrderedDict sorted alphabetically by key
     settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
@@ -539,12 +537,9 @@ class Cmd(cmd.Cmd):
         return utils.strip_ansi(self.prompt)
 
     def _finalize_app_parameters(self) -> None:
-        """Finalize the shortcuts and settable parameters."""
+        """Finalize the shortcuts"""
         # noinspection PyUnresolvedReferences
         self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
-
-        # Make sure settable parameters are sorted alphabetically by key
-        self.settable = collections.OrderedDict(sorted(self.settable.items(), key=lambda t: t[0]))
 
     def decolorized_write(self, fileobj: IO, msg: str) -> None:
         """Write a string to a fileobject, stripping ANSI escape sequences if necessary
@@ -1581,12 +1576,16 @@ class Cmd(cmd.Cmd):
         return commands
 
     def get_alias_names(self) -> List[str]:
-        """Return a list of alias names."""
+        """Return list of current alias names"""
         return list(self.aliases)
 
     def get_macro_names(self) -> List[str]:
-        """Return a list of macro names."""
+        """Return list of current macro names"""
         return list(self.macros)
+
+    def get_settable_names(self) -> List[str]:
+        """Return list of current settable names"""
+        return list(self.settable)
 
     def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
@@ -2814,7 +2813,7 @@ class Cmd(cmd.Cmd):
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     setattr(set_parser.add_argument('param', nargs='?', help='parameter to set or view'),
-            ACTION_ARG_CHOICES, settable)
+            ACTION_ARG_CHOICES, get_settable_names)
     set_parser.add_argument('value', nargs='?', help='the new value for settable')
 
     @with_argparser(set_parser)
