@@ -2431,7 +2431,7 @@ class Cmd(cmd.Cmd):
     # Top-level parser for macro
     macro_description = ("Manage macros\n"
                          "\n"
-                         "A macro is similar to an alias, but it can take arguments when called.")
+                         "A macro is similar to an alias, but it can contain argument placeholders.")
     macro_epilog = ("See also:\n"
                     "  alias")
     macro_parser = ACArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
@@ -2443,7 +2443,7 @@ class Cmd(cmd.Cmd):
     macro_create_help = "create or overwrite a macro"
     macro_create_description = "Create or overwrite a macro"
 
-    macro_create_epilog = ("A macro is similar to an alias, but it can take arguments when called.\n"
+    macro_create_epilog = ("A macro is similar to an alias, but it can contain argument placeholders.\n"
                            "Arguments are expressed when creating a macro using {#} notation where {1}\n"
                            "means the first argument.\n"
                            "\n"
