@@ -1,3 +1,7 @@
+## 0.9.10 (February 22, 2019)
+* Bug Fixes
+    * Fixed unit test that hangs on Windows
+
 ## 0.9.9 (February 21, 2019)
 * Bug Fixes
     * Fixed bug where the ``set`` command was not tab completing from the current ``settable`` dictionary.

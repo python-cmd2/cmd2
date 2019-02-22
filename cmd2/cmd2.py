@@ -3356,9 +3356,9 @@ class Cmd(cmd.Cmd):
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
 
-        command = utils.quote_string_if_needed(self.editor)
+        command = utils.quote_string_if_needed(os.path.expanduser(self.editor))
         if args.file_path:
-            command += " " + utils.quote_string_if_needed(args.file_path)
+            command += " " + utils.quote_string_if_needed(os.path.expanduser(args.file_path))
 
         self.do_shell(command)
 
