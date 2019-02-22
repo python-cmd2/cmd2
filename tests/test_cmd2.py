@@ -882,7 +882,7 @@ def test_edit_file(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
-    # Mock out the os.system call so we don't actually open an editor
+    # Mock out the subprocess.Popen call so we don't actually open an editor
     m = mock.MagicMock(name='Popen')
     monkeypatch.setattr("subprocess.Popen", m)
 
@@ -936,9 +936,12 @@ def test_base_py_interactive(base_app):
 
 
 def test_exclude_from_history(base_app, monkeypatch):
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
+    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the subprocess.Popen call so we don't actually open an editor
+    m = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", m)
 
     # Run edit command
     run_cmd(base_app, 'edit')
@@ -952,6 +955,7 @@ def test_exclude_from_history(base_app, monkeypatch):
 
     # Now run a command which isn't excluded from the history
     run_cmd(base_app, 'help')
+
     # And verify we have a history now ...
     out = run_cmd(base_app, 'history')
     expected = normalize("""-------------------------[1]
