@@ -459,15 +459,15 @@ def test_history_edit(base_app, monkeypatch):
     # going to call it due to the mock
     base_app.editor = 'fooedit'
 
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
+    # Mock out the subprocess.Popen call so we don't actually open an editor
+    m = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", m)
 
     # Run help command just so we have a command in history
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'history -e 1')
 
-    # We have an editor, so should expect a system call
+    # We have an editor, so should expect a Popen call
     m.assert_called_once()
 
 def test_history_run_all_commands(base_app):
@@ -883,46 +883,44 @@ def test_edit_file(base_app, request, monkeypatch):
     base_app.editor = 'fooedit'
 
     # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
+    m = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", m)
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
     run_cmd(base_app, 'edit {}'.format(filename))
 
-    # We think we have an editor, so should expect a system call
-    m.assert_called_once_with('{} {}'.format(utils.quote_string_if_needed(base_app.editor),
-                                             utils.quote_string_if_needed(filename)))
+    # We think we have an editor, so should expect a Popen call
+    m.assert_called_once()
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
+    # Mock out the subprocess.Popen call so we don't actually open an editor
+    m = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", m)
 
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'my commands.txt')
 
     run_cmd(base_app, 'edit "{}"'.format(filename))
 
-    # We think we have an editor, so should expect a system call
-    m.assert_called_once_with('{} {}'.format(utils.quote_string_if_needed(base_app.editor),
-                                             utils.quote_string_if_needed(filename)))
+    # We think we have an editor, so should expect a Popen call
+    m.assert_called_once()
 
 def test_edit_blank(base_app, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
 
-    # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
+    # Mock out the subprocess.Popen call so we don't actually open an editor
+    m = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", m)
 
     run_cmd(base_app, 'edit')
 
-    # We have an editor, so should expect a system call
+    # We have an editor, so should expect a Popen call
     m.assert_called_once()
 
 

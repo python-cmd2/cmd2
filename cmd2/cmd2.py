@@ -3248,7 +3248,7 @@ class Cmd(cmd.Cmd):
                 for command in history:
                     fobj.write('{}\n'.format(command))
             try:
-                os.system('"{}" "{}"'.format(self.editor, fname))
+                self.do_edit(fname)
                 self.do_load(fname)
             except Exception:
                 raise
@@ -3356,12 +3356,11 @@ class Cmd(cmd.Cmd):
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
 
-        editor = utils.quote_string_if_needed(self.editor)
+        command = utils.quote_string_if_needed(self.editor)
         if args.file_path:
-            expanded_path = utils.quote_string_if_needed(os.path.expanduser(args.file_path))
-            os.system('{} {}'.format(editor, expanded_path))
-        else:
-            os.system('{}'.format(editor))
+            command += " " + utils.quote_string_if_needed(args.file_path)
+
+        self.do_shell(command)
 
     @property
     def _current_script_dir(self) -> Optional[str]:
