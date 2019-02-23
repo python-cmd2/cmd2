@@ -17,7 +17,7 @@ How to supply completion options for each argument:
             parser = argparse.ArgumentParser()
             parser.add_argument('-o', '--options', dest='options')
             choices = {}
-            mycompleter = AutoCompleter(parser, completer, 1, choices)
+            mycompleter = AutoCompleter(parser, cmd2_app, completer, 1, choices)
 
         - static list - provide a static list for each argument name
           ex:
@@ -261,21 +261,21 @@ class AutoCompleter(object):
 
     def __init__(self,
                  parser: argparse.ArgumentParser,
+                 cmd2_app,
                  token_start_index: int = 1,
                  arg_choices: Dict[str, Union[List, Tuple, Callable]] = None,
                  subcmd_args_lookup: dict = None,
-                 tab_for_arg_help: bool = True,
-                 cmd2_app=None) -> None:
+                 tab_for_arg_help: bool = True) -> None:
         """
         Create an AutoCompleter
 
         :param parser: ArgumentParser instance
+        :param cmd2_app: reference to the Cmd2 application. Enables argparse argument completion with class methods
         :param token_start_index: index of the token to start parsing at
         :param arg_choices: dictionary mapping from argparse argument 'dest' name to list of choices
         :param subcmd_args_lookup: mapping a sub-command group name to a tuple to fill the child\
         AutoCompleter's arg_choices and subcmd_args_lookup parameters
         :param tab_for_arg_help: Enable of disable argument help when there's no completion result
-        :param cmd2_app: reference to the Cmd2 application. Enables argparse argument completion with class methods
         """
         if not subcmd_args_lookup:
             subcmd_args_lookup = {}
@@ -283,10 +283,10 @@ class AutoCompleter(object):
         else:
             forward_arg_choices = False
         self._parser = parser
+        self._cmd2_app = cmd2_app
         self._arg_choices = arg_choices.copy() if arg_choices is not None else {}
         self._token_start_index = token_start_index
         self._tab_for_arg_help = tab_for_arg_help
-        self._cmd2_app = cmd2_app
 
         self._flags = []  # all flags in this command
         self._flags_without_args = []  # all flags that don't take arguments
@@ -328,11 +328,12 @@ class AutoCompleter(object):
                             subcmd in args_for_action else \
                             (arg_choices, subcmd_args_lookup) if forward_arg_choices else ({}, {})
                         subcmd_start = token_start_index + len(self._positional_actions)
-                        sub_completers[subcmd] = AutoCompleter(action.choices[subcmd], subcmd_start,
+                        sub_completers[subcmd] = AutoCompleter(action.choices[subcmd],
+                                                               cmd2_app,
+                                                               token_start_index=subcmd_start,
                                                                arg_choices=subcmd_args,
                                                                subcmd_args_lookup=subcmd_lookup,
-                                                               tab_for_arg_help=tab_for_arg_help,
-                                                               cmd2_app=cmd2_app)
+                                                               tab_for_arg_help=tab_for_arg_help)
                         sub_commands.append(subcmd)
                     self._positional_completers[action.dest] = sub_completers
                     self._arg_choices[action.dest] = sub_commands
@@ -558,8 +559,8 @@ class AutoCompleter(object):
         # a flag prefix then we'll complete the list of flag options
         if not flag_arg.needed and len(tokens[-1]) > 0 and tokens[-1][0] in self._parser.prefix_chars and \
                 not skip_remaining_flags:
-            return AutoCompleter.basic_complete(text, line, begidx, endidx,
-                                                [flag for flag in self._flags if flag not in matched_flags])
+            return self._cmd2_app.basic_complete(text, line, begidx, endidx,
+                                                 [flag for flag in self._flags if flag not in matched_flags])
         # we're not at a positional argument, see if we're in a flag argument
         elif not current_is_positional:
             if flag_action is not None:
@@ -610,7 +611,6 @@ class AutoCompleter(object):
 
             self._cmd2_app.completion_header = header
             self._cmd2_app.display_matches = completions_with_desc
-            self._cmd2_app.matches_sorted = True
 
         return completions
 
@@ -625,7 +625,7 @@ class AutoCompleter(object):
                         if token in completers:
                             return completers[token].complete_command_help(tokens, text, line, begidx, endidx)
                         else:
-                            return self.basic_complete(text, line, begidx, endidx, completers.keys())
+                            return self._cmd2_app.basic_complete(text, line, begidx, endidx, completers.keys())
         return []
 
     def format_help(self, tokens: List[str]) -> str:
@@ -687,8 +687,8 @@ class AutoCompleter(object):
                     # assume this is due to an incorrect function signature, return nothing.
                     return []
             else:
-                return AutoCompleter.basic_complete(text, line, begidx, endidx,
-                                                    self._resolve_choices_for_arg(action, used_values))
+                return self._cmd2_app.basic_complete(text, line, begidx, endidx,
+                                                     self._resolve_choices_for_arg(action, used_values))
 
         return []
 
@@ -708,12 +708,9 @@ class AutoCompleter(object):
             # is the provided argument a callable. If so, call it
             if callable(args):
                 try:
-                    if self._cmd2_app is not None:
-                        try:
-                            args = args(self._cmd2_app)
-                        except TypeError:
-                            args = args()
-                    else:
+                    try:
+                        args = args(self._cmd2_app)
+                    except TypeError:
                         args = args()
                 except TypeError:
                     return []
@@ -780,21 +777,6 @@ class AutoCompleter(object):
 
         # Redraw prompt and input line
         rl_force_redisplay()
-
-    # noinspection PyUnusedLocal
-    @staticmethod
-    def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against: List[str]) -> List[str]:
-        """
-        Performs tab completion against a list
-
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: the current input line with leading whitespace removed
-        :param begidx: the beginning index of the prefix text
-        :param endidx: the ending index of the prefix text
-        :param match_against: the list being matched against
-        :return: a list of possible tab completions
-        """
-        return [cur_match for cur_match in match_against if cur_match.startswith(text)]
 
 
 ###############################################################################
@@ -1142,7 +1124,7 @@ class ACArgumentParser(argparse.ArgumentParser):
             # all args after -- are non-options
             if arg_string == '--':
                 arg_string_pattern_parts.append('-')
-                for arg_string in arg_strings_iter:
+                for cur_string in arg_strings_iter:
                     arg_string_pattern_parts.append('A')
 
             # otherwise, add the arg to the arg strings

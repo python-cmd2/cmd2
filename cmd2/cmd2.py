@@ -1574,7 +1574,7 @@ class Cmd(cmd.Cmd):
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
                               argparser: argparse.ArgumentParser) -> List[str]:
         """Default completion function for argparse commands."""
-        completer = AutoCompleter(argparser, cmd2_app=self)
+        completer = AutoCompleter(argparser, self)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         if not tokens:
@@ -2564,7 +2564,7 @@ class Cmd(cmd.Cmd):
         # Check if this is a command with an argparse function
         func = self.cmd_func(command)
         if func and hasattr(func, 'argparser'):
-            completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
+            completer = AutoCompleter(getattr(func, 'argparser'), self)
             matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
 
         return matches
@@ -2593,7 +2593,7 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             func = self.cmd_func(args.command)
             if func and hasattr(func, 'argparser'):
-                completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
+                completer = AutoCompleter(getattr(func, 'argparser'), self)
                 tokens = [args.command] + args.subcommand
                 self.poutput(completer.format_help(tokens))
             else:

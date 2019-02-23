@@ -378,7 +378,9 @@ class TabCompleteExample(cmd2.Cmd):
                    'director': TabCompleteExample.static_list_directors,  # static list
                    'movie_file': (self.path_complete,)
                    }
-        completer = argparse_completer.AutoCompleter(TabCompleteExample.media_parser, arg_choices=choices, cmd2_app=self)
+        completer = argparse_completer.AutoCompleter(TabCompleteExample.media_parser,
+                                                     self,
+                                                     arg_choices=choices)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)
@@ -525,6 +527,7 @@ class TabCompleteExample(cmd2.Cmd):
         library_subcommand_groups = {'type': library_type_params}
 
         completer = argparse_completer.AutoCompleter(TabCompleteExample.library_parser,
+                                                     self,
                                                      subcmd_args_lookup=library_subcommand_groups)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)

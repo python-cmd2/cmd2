@@ -1,3 +1,16 @@
+## 0.9.11 (TBD, 2019)
+* Enhancements
+    * Simplified examples that illustrate ``argparse`` tab completion via ``AutoCompleter`` 
+* Deprecations
+    * Deprecated support for bash completion since this feature had slow performance. Also it relied on
+    ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods. 
+* Potentially breaking changes
+    * Made ``cmd2_app`` a positional and required argument of ``AutoCompleter`` since certain functionality now
+    requires that it can't be ``None``.
+    * ``AutoCompleter`` no longer assumes ``CompletionItem`` results are sorted. Therefore you should follow the
+    ``cmd2`` convention of setting ``self.matches_sorted`` to True before return the results if you have already
+    sorted the ``CompletionItem`` list. Otherwise ``cmd2`` will just sort them alphabetically.
+
 ## 0.9.10 (February 22, 2019)
 * Bug Fixes
     * Fixed unit test that hangs on Windows
