@@ -8,7 +8,7 @@
     * Made ``cmd2_app`` a positional and required argument of ``AutoCompleter`` since certain functionality now
     requires that it can't be ``None``.
     * ``AutoCompleter`` no longer assumes ``CompletionItem`` results are sorted. Therefore you should follow the
-    ``cmd2`` convention of setting ``self.matches_sorted`` to True before return the results if you have already
+    ``cmd2`` convention of setting ``self.matches_sorted`` to True before returning the results if you have already
     sorted the ``CompletionItem`` list. Otherwise ``cmd2`` will just sort them alphabetically.
 
 ## 0.9.10 (February 22, 2019)
