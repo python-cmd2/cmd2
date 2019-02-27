@@ -75,10 +75,8 @@ Macros
 ======
 
 ``cmd2`` provides a feature that is similar to aliases called macros. The major difference between macros and aliases
-is that macros are intended to take arguments when called. These can be useful if you need to run a complex command
-frequently with different arguments that appear in various parts of the command.
-
-Arguments are expressed when creating a macro using {#} notation where {1} means the first argument.
+is that macros can contain argument placeholders. Arguments are expressed when creating a macro using {#} notation
+where {1} means the first argument.
 
 The following creates a macro called my_macro that expects two arguments:
 

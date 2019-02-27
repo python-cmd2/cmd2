@@ -221,8 +221,8 @@ def test_history_edit(base_app, monkeypatch):
     base_app.editor = 'fooedit'
 
     # Mock out the os.system call so we don't actually open an editor
-    m = mock.MagicMock(name='system')
-    monkeypatch.setattr("os.system", m)
+    m = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", m)
 
     # Run help command just so we have a command in history
     run_cmd(base_app, 'help')

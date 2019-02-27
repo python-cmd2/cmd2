@@ -2408,7 +2408,7 @@ class Cmd(cmd.Cmd):
     # Top-level parser for macro
     macro_description = ("Manage macros\n"
                          "\n"
-                         "A macro is similar to an alias, but it can take arguments when called.")
+                         "A macro is similar to an alias, but it can contain argument placeholders.")
     macro_epilog = ("See also:\n"
                     "  alias")
     macro_parser = ACArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
@@ -2420,7 +2420,7 @@ class Cmd(cmd.Cmd):
     macro_create_help = "create or overwrite a macro"
     macro_create_description = "Create or overwrite a macro"
 
-    macro_create_epilog = ("A macro is similar to an alias, but it can take arguments when called.\n"
+    macro_create_epilog = ("A macro is similar to an alias, but it can contain argument placeholders.\n"
                            "Arguments are expressed when creating a macro using {#} notation where {1}\n"
                            "means the first argument.\n"
                            "\n"
@@ -3247,7 +3247,7 @@ class Cmd(cmd.Cmd):
                 for command in history:
                     fobj.write('{}\n'.format(command))
             try:
-                os.system('"{}" "{}"'.format(self.editor, fname))
+                self.do_edit(fname)
                 self.do_load(fname)
             except Exception:
                 raise
@@ -3352,12 +3352,11 @@ class Cmd(cmd.Cmd):
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
 
-        editor = utils.quote_string_if_needed(self.editor)
+        command = utils.quote_string_if_needed(os.path.expanduser(self.editor))
         if args.file_path:
-            expanded_path = utils.quote_string_if_needed(os.path.expanduser(args.file_path))
-            os.system('{} {}'.format(editor, expanded_path))
-        else:
-            os.system('{}'.format(editor))
+            command += " " + utils.quote_string_if_needed(os.path.expanduser(args.file_path))
+
+        self.do_shell(command)
 
     @property
     def _current_script_dir(self) -> Optional[str]:
