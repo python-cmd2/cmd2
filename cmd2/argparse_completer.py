@@ -61,20 +61,18 @@ Released under MIT license, see LICENSE file
 """
 
 import argparse
-from colorama import Fore
 import os
+import re as _re
 import sys
-from typing import List, Dict, Tuple, Callable, Union
-
 
 # imports copied from argparse to support our customized argparse functions
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
+from typing import List, Dict, Tuple, Callable, Union
 
-import re as _re
-
+from colorama import Fore
+from wcwidth import wcswidth
 
 from .rl_utils import rl_force_redisplay
-
 
 # attribute that can optionally added to an argparse argument (called an Action) to
 # define the completion choices for the argument. You may provide a Collection or a Function.
@@ -588,12 +586,19 @@ class AutoCompleter(object):
 
     def _format_completions(self, action, completions: List[Union[str, CompletionItem]]) -> List[str]:
         if completions and len(completions) > 1 and isinstance(completions[0], CompletionItem):
-            token_width = len(action.dest)
+
+            # If the user has not already sorted the CompletionItems, then do that now
+            if not self._cmd2_app.matches_sorted:
+                completions.sort(key=self._cmd2_app.matches_sort_key)
+                self._cmd2_app.matches_sorted = True
+
+            token_width = wcswidth(action.dest)
             completions_with_desc = []
 
             for item in completions:
-                if len(item) > token_width:
-                    token_width = len(item)
+                item_width = wcswidth(item)
+                if item_width > token_width:
+                    token_width = item_width
 
             term_size = os.get_terminal_size()
             fill_width = int(term_size.columns * .6) - (token_width + 2)
