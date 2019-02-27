@@ -224,7 +224,7 @@ def test_history_edit(base_app, monkeypatch):
     # going to call it due to the mock
     base_app.editor = 'fooedit'
 
-    # Mock out the os.system call so we don't actually open an editor
+    # Mock out the Popen call so we don't actually open an editor
     m = mock.MagicMock(name='Popen')
     monkeypatch.setattr("subprocess.Popen", m)
 
@@ -232,7 +232,7 @@ def test_history_edit(base_app, monkeypatch):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'history -e 1')
 
-    # We have an editor, so should expect a system call
+    # We have an editor, so should expect a Popen call
     m.assert_called_once()
 
 def test_history_run_all_commands(base_app):
