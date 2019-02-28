@@ -70,6 +70,13 @@ class CompletionsExample(cmd2.Cmd):
     def complete_test_delimited(self, text, line, begidx, endidx):
         return self.delimiter_complete(text, line, begidx, endidx, delimited_strs, '/')
 
+    def do_test_sort_key(self, args):
+        pass
+
+    def complete_test_sort_key(self, text, line, begidx, endidx):
+        num_strs = ['2', '11', '1']
+        return self.basic_complete(text, line, begidx, endidx, num_strs)
+
 
 @pytest.fixture
 def cmd2_app():
@@ -129,7 +136,26 @@ def test_complete_macro(base_app, request):
 
     expected = [text + 'cript.py', text + 'cript.txt', text + 'cripts' + os.path.sep]
     first_match = complete_tester(text, line, begidx, endidx, base_app)
-    assert first_match is not None and base_app.completion_matches
+    assert first_match is not None and base_app.completion_matches == expected
+
+
+def test_matches_sort_key(cmd2_app):
+    text = ''
+    line = 'test_sort_key {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # First do alphabetical sorting
+    cmd2_app.matches_sort_key = cmd2.cmd2.ALPHABETICAL_SORT_KEY
+    expected = ['1', '11', '2']
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
+
+    # Now switch to natural sorting
+    cmd2_app.matches_sort_key = cmd2.cmd2.NATURAL_SORT_KEY
+    expected = ['1', '2', '11']
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
 
 
 def test_cmd2_command_completion_multiple(cmd2_app):

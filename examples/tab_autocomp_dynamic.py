@@ -9,7 +9,7 @@ Released under MIT license, see LICENSE file
 from typing import List
 
 import cmd2
-from cmd2 import argparse_completer
+from cmd2 import argparse_completer, utils
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
@@ -175,11 +175,14 @@ class TabCompleteExample(cmd2.Cmd):
         """Demonstrates showing tabular hinting of tab completion information"""
         completions_with_desc = []
 
-        for movie_id in self.MOVIE_DATABASE_IDS:
+        # Sort the movie id strings with a natural sort since they contain numbers
+        for movie_id in utils.natural_sort(self.MOVIE_DATABASE_IDS):
             if movie_id in self.MOVIE_DATABASE:
                 movie_entry = self.MOVIE_DATABASE[movie_id]
                 completions_with_desc.append(argparse_completer.CompletionItem(movie_id, movie_entry['title']))
 
+        # Mark that we already sorted the matches
+        self.matches_sorted = True
         return completions_with_desc
 
     ###################################################################################

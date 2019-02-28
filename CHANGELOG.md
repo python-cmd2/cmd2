@@ -1,3 +1,16 @@
+## 0.9.11 (TBD, 2019)
+* Enhancements
+    * Added ``matches_sort_key`` to override the default way tab completion matches are sorted
+* Deprecations
+    * Deprecated support for bash completion since this feature had slow performance. Also it relied on
+    ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods. 
+* Potentially breaking changes
+    * Made ``cmd2_app`` a positional and required argument of ``AutoCompleter`` since certain functionality now
+    requires that it can't be ``None``.
+    * ``AutoCompleter`` no longer assumes ``CompletionItem`` results are sorted. Therefore you should follow the
+    ``cmd2`` convention of setting ``self.matches_sorted`` to True before returning the results if you have already
+    sorted the ``CompletionItem`` list. Otherwise it will be sorted using ``self.matches_sort_key``.
+
 ## 0.9.10 (February 22, 2019)
 * Bug Fixes
     * Fixed unit test that hangs on Windows
