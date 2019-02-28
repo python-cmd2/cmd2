@@ -1,6 +1,5 @@
 ## 0.9.11 (TBD, 2019)
 * Enhancements
-    * Simplified examples that illustrate ``argparse`` tab completion via ``AutoCompleter`` 
     * Added ``matches_sort_key`` to override the default way tab completion matches are sorted
 * Deprecations
     * Deprecated support for bash completion since this feature had slow performance. Also it relied on
