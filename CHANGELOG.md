@@ -4,6 +4,8 @@
 * Deprecations
     * Deprecated support for bash completion since this feature had slow performance. Also it relied on
     ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods. 
+    * Removed ability to call commands in ``pyscript`` as if they were functions (e.g ``app.help()``) in favor
+    of only supporting one ``pyscript`` interface. This simplifies future maintenance.
 * Potentially breaking changes
     * Made ``cmd2_app`` a positional and required argument of ``AutoCompleter`` since certain functionality now
     requires that it can't be ``None``.
