@@ -1900,6 +1900,17 @@ def test_alias_create_with_macro_name(base_app, capsys):
     out, err = capsys.readouterr()
     assert "Alias cannot have the same name as a macro" in err
 
+def test_alias_that_resolves_into_comment(base_app, capsys):
+    # Create the alias
+    out = run_cmd(base_app, 'alias create fake ' + constants.COMMENT_CHAR + ' blah blah')
+    assert out == normalize("Alias 'fake' created")
+
+    # Use the alias
+    run_cmd(base_app, 'fake')
+    out, err = capsys.readouterr()
+    assert not out
+    assert not err
+
 def test_alias_list_invalid_alias(base_app, capsys):
     # Look up invalid alias
     out = run_cmd(base_app, 'alias list invalid')
@@ -2055,6 +2066,17 @@ def test_macro_create_with_missing_unicode_arg_nums(base_app, capsys):
     run_cmd(base_app, 'macro create fake help {1} {\N{ARABIC-INDIC DIGIT THREE}}')
     out, err = capsys.readouterr()
     assert "Not all numbers between 1 and 3" in err
+
+def test_macro_that_resolves_into_comment(base_app, capsys):
+    # Create the macro
+    out = run_cmd(base_app, 'macro create fake {1} blah blah')
+    assert out == normalize("Macro 'fake' created")
+
+    # Use the macro
+    run_cmd(base_app, 'fake ' + constants.COMMENT_CHAR)
+    out, err = capsys.readouterr()
+    assert not out
+    assert not err
 
 def test_macro_list_invalid_macro(base_app, capsys):
     # Look up invalid macro
