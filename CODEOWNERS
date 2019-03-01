@@ -41,7 +41,6 @@ tests/conftest.py       @kotfu @tleonhardt
 tests/test_acar*.py     @anselor
 tests/test_argp*.py     @kotfu
 tests/test_auto*.py     @anselor
-tests/test_bash*.py     @anselor @tleonhardt
 tests/test_comp*.py     @kmvanbrunt
 tests/test_pars*.py     @kotfu
 tests/test_pysc*.py     @anselor

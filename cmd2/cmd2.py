@@ -130,6 +130,10 @@ COMMAND_FUNC_PREFIX = 'do_'
 # All help functions start with this
 HELP_FUNC_PREFIX = 'help_'
 
+# Sorting keys for strings
+ALPHABETICAL_SORT_KEY = utils.norm_fold
+NATURAL_SORT_KEY = utils.natural_keys
+
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """Categorize a function.
@@ -469,6 +473,12 @@ class Cmd(cmd.Cmd):
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
                 self.cmdqueue.append("load '{}'".format(startup_script))
 
+        # The default key for sorting tab completion matches. This only applies when the matches are not
+        # already marked as sorted by setting self.matches_sorted to True. Its default value performs a
+        # case-insensitive alphabetical sort. If natural sorting preferred, then set this to NATURAL_SORT_KEY.
+        # Otherwise it can be set to any custom key to meet your needs.
+        self.matches_sort_key = ALPHABETICAL_SORT_KEY
+
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
         # in reset_completion_defaults() and it is up to completer functions to set them before returning results.
@@ -497,7 +507,7 @@ class Cmd(cmd.Cmd):
         self.matches_delimited = False
 
         # Set to True before returning matches to complete() in cases where matches are sorted with custom ordering.
-        # If False, then complete() will sort the matches alphabetically before they are displayed.
+        # If False, then complete() will sort the matches using self.matches_sort_key before they are displayed.
         self.matches_sorted = False
 
         # Set the pager(s) for use with the ppaged() method for displaying output using a pager
@@ -1096,8 +1106,8 @@ class Cmd(cmd.Cmd):
             self.allow_appended_space = False
             self.allow_closing_quote = False
 
-        # Sort the matches alphabetically before any trailing slashes are added
-        matches.sort(key=utils.norm_fold)
+        # Sort the matches before any trailing slashes are added
+        matches.sort(key=self.matches_sort_key)
         self.matches_sorted = True
 
         # Build display_matches and add a slash to directories
@@ -1537,10 +1547,10 @@ class Cmd(cmd.Cmd):
 
                 self.completion_matches[0] += str_to_append
 
-            # Sort matches alphabetically if they haven't already been sorted
+            # Sort matches if they haven't already been sorted
             if not self.matches_sorted:
-                self.completion_matches.sort(key=utils.norm_fold)
-                self.display_matches.sort(key=utils.norm_fold)
+                self.completion_matches.sort(key=self.matches_sort_key)
+                self.display_matches.sort(key=self.matches_sort_key)
                 self.matches_sorted = True
 
         try:
@@ -1551,7 +1561,7 @@ class Cmd(cmd.Cmd):
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
                               argparser: argparse.ArgumentParser) -> List[str]:
         """Default completion function for argparse commands."""
-        completer = AutoCompleter(argparser, cmd2_app=self)
+        completer = AutoCompleter(argparser, self)
 
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         if not tokens:
@@ -2541,7 +2551,7 @@ class Cmd(cmd.Cmd):
         # Check if this is a command with an argparse function
         func = self.cmd_func(command)
         if func and hasattr(func, 'argparser'):
-            completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
+            completer = AutoCompleter(getattr(func, 'argparser'), self)
             matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
 
         return matches
@@ -2570,7 +2580,7 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             func = self.cmd_func(args.command)
             if func and hasattr(func, 'argparser'):
-                completer = AutoCompleter(getattr(func, 'argparser'), cmd2_app=self)
+                completer = AutoCompleter(getattr(func, 'argparser'), self)
                 tokens = [args.command] + args.subcommand
                 self.poutput(completer.format_help(tokens))
             else:
