@@ -24,8 +24,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-from cmd2 import clipboard
-from cmd2 import utils
+from cmd2 import clipboard, constants, utils
 from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
     HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
@@ -1828,6 +1827,7 @@ def test_poutput_color_never(base_app):
 # These are invalid names for aliases and macros
 invalid_command_name = [
     '""',  # Blank name
+    constants.COMMENT_CHAR,
     '!no_shortcut',
     '">"',
     '"no>pe"',
