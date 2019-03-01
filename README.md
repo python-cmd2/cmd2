@@ -117,7 +117,7 @@ Instructions for implementing each feature follow.
         - Syntax for calling `cmd2` commands in a `pyscript` is essentially identical to what they would enter on the command line
     - See the [Python](https://cmd2.readthedocs.io/en/latest/freefeatures.html#python) section of the `cmd2` docs for more info
     - Also see the [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) 
-    example in conjunciton with the [conditional.py](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py) script
+    example in conjunction with the [conditional.py](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py) script
 
 - Parsing commands with `argparse`
     - Two decorators provide built-in capability for using `argparse.ArgumentParser` to parse command arguments
