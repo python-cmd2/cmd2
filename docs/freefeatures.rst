@@ -29,21 +29,13 @@ Simply include one command per line, typed exactly as you would inside a ``cmd2`
 Comments
 ========
 
-Comments are omitted from the argument list
-before it is passed to a ``do_`` method.  By
-default, both Python-style and C-style comments
-are recognized. Comments can be useful in :ref:`scripts`, but would
-be pointless within an interactive session.
+Any command line input where the first non-whitespace character is a # will be treated as a comment.
+Comments can be useful in :ref:`scripts`, but would be pointless within an interactive session.
 
 ::
 
-    def do_speak(self, arg):
-        self.stdout.write(arg + '\n')
-
-::
-
-  (Cmd) speak it was /* not */ delicious! # Yuck!
-  it was  delicious!
+  (Cmd) # this is a comment
+  (Cmd) this # is not a comment
 
 .. _arg_print: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
 
