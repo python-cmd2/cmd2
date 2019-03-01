@@ -68,7 +68,7 @@ def strip_quotes(arg: str) -> str:
 
 
 def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
-                             default_values: collections.Iterable=()):
+                             default_values: collections.Iterable = ()):
     """
     Convenience function for defining a namedtuple with default values
 
@@ -268,7 +268,7 @@ class StdSim(object):
     class ByteBuf(object):
         """Inner class which stores an actual bytes buffer and does the actual output if echo is enabled."""
         def __init__(self, inner_stream, echo: bool = False,
-                     encoding: str='utf-8', errors: str='replace') -> None:
+                     encoding: str = 'utf-8', errors: str = 'replace') -> None:
             self.byte_buf = b''
             self.inner_stream = inner_stream
             self.echo = echo
@@ -284,7 +284,7 @@ class StdSim(object):
                 self.inner_stream.buffer.write(b)
 
     def __init__(self, inner_stream, echo: bool = False,
-                 encoding: str='utf-8', errors: str='replace') -> None:
+                 encoding: str = 'utf-8', errors: str = 'replace') -> None:
         """
         Initializer
         :param inner_stream: the emulated stream

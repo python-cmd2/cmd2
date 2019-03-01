@@ -56,7 +56,7 @@ class PyscriptBridge(object):
         attributes.insert(0, 'cmd_echo')
         return attributes
 
-    def __call__(self, command: str, echo: Optional[bool]=None) -> CommandResult:
+    def __call__(self, command: str, echo: Optional[bool] = None) -> CommandResult:
         """
         Provide functionality to call application commands by calling PyscriptBridge
         ex: app('help')

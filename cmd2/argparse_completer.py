@@ -988,7 +988,7 @@ class ACArgumentParser(argparse.ArgumentParser):
         self._custom_error_message = ''
 
     # Begin cmd2 customization
-    def set_custom_message(self, custom_message: str='') -> None:
+    def set_custom_message(self, custom_message: str = '') -> None:
         """
         Allows an error message override to the error() function, useful when forcing a
         re-parse of arguments with newly required parameters

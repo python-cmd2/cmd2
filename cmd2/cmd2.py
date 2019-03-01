@@ -176,7 +176,7 @@ def with_category(category: str) -> Callable:
 
 
 def with_argument_list(func: Callable[[Statement], Optional[bool]],
-                       preserve_quotes: bool=False) -> Callable[[List], Optional[bool]]:
+                       preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
     """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
     typed. With this decorator, the decorated method will receive a list of arguments parsed from user input using
     shlex.split().
@@ -196,7 +196,7 @@ def with_argument_list(func: Callable[[Statement], Optional[bool]],
     return cmd_wrapper
 
 
-def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool=False) -> \
+def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool = False) -> \
         Callable[[argparse.Namespace, List], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
@@ -239,7 +239,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
 
 
 def with_argparser(argparser: argparse.ArgumentParser,
-                   preserve_quotes: bool=False) -> Callable[[argparse.Namespace], Optional[bool]]:
+                   preserve_quotes: bool = False) -> Callable[[argparse.Namespace], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
@@ -365,9 +365,9 @@ class Cmd(cmd.Cmd):
                 'quiet': "Don't print nonessential feedback",
                 'timing': 'Report execution times'}
 
-    def __init__(self, completekey: str='tab', stdin=None, stdout=None, persistent_history_file: str='',
-                 persistent_history_length: int=1000, startup_script: Optional[str]=None, use_ipython: bool=False,
-                 transcript_files: Optional[List[str]]=None) -> None:
+    def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, persistent_history_file: str = '',
+                 persistent_history_length: int = 1000, startup_script: Optional[str] = None, use_ipython: bool = False,
+                 transcript_files: Optional[List[str]] = None) -> None:
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
         :param completekey: (optional) readline name of a completion key, default to Tab
@@ -585,7 +585,7 @@ class Cmd(cmd.Cmd):
             msg = utils.strip_ansi(msg)
         fileobj.write(msg)
 
-    def poutput(self, msg: Any, end: str='\n', color: str='') -> None:
+    def poutput(self, msg: Any, end: str = '\n', color: str = '') -> None:
         """Smarter self.stdout.write(); color aware and adds newline of not present.
 
         Also handles BrokenPipeError exceptions for when a commands's output has
@@ -613,8 +613,8 @@ class Cmd(cmd.Cmd):
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, err: Union[str, Exception], traceback_war: bool=True, err_color: str=Fore.LIGHTRED_EX,
-               war_color: str=Fore.LIGHTYELLOW_EX) -> None:
+    def perror(self, err: Union[str, Exception], traceback_war: bool = True, err_color: str = Fore.LIGHTRED_EX,
+               war_color: str = Fore.LIGHTYELLOW_EX) -> None:
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
 
         :param err: an Exception or error message to print out
@@ -647,7 +647,7 @@ class Cmd(cmd.Cmd):
             else:
                 self.decolorized_write(sys.stderr, "{}\n".format(msg))
 
-    def ppaged(self, msg: str, end: str='\n', chop: bool=False) -> None:
+    def ppaged(self, msg: str, end: str = '\n', chop: bool = False) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
@@ -929,7 +929,7 @@ class Cmd(cmd.Cmd):
 
     def flag_based_complete(self, text: str, line: str, begidx: int, endidx: int,
                             flag_dict: Dict[str, Union[Iterable, Callable]],
-                            all_else: Union[None, Iterable, Callable]=None) -> List[str]:
+                            all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """
         Tab completes based on a particular flag preceding the token being completed
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
@@ -1184,7 +1184,7 @@ class Cmd(cmd.Cmd):
         return list(exes_set)
 
     def shell_cmd_complete(self, text: str, line: str, begidx: int, endidx: int,
-                           complete_blank: bool=False) -> List[str]:
+                           complete_blank: bool = False) -> List[str]:
         """Performs completion of executables either in a user's path or a given path
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -2610,7 +2610,7 @@ class Cmd(cmd.Cmd):
                 # No special behavior needed, delegate to cmd base class do_help()
                 super().do_help(args.command)
 
-    def _help_menu(self, verbose: bool=False) -> None:
+    def _help_menu(self, verbose: bool = False) -> None:
         """Show a list of commands which help can be displayed for.
         """
         # Get a sorted list of help topics
@@ -2753,7 +2753,8 @@ class Cmd(cmd.Cmd):
         self._should_quit = True
         return self._STOP_AND_EXIT
 
-    def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]], prompt: str='Your choice? ') -> str:
+    def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]],
+               prompt: str = 'Your choice? ') -> str:
         """Presents a numbered menu to the user.  Modeled after
            the bash shell's SELECT.  Returns the item chosen.
 
@@ -2809,7 +2810,7 @@ class Cmd(cmd.Cmd):
         Output redirection and pipes allowed: {}"""
         return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
 
-    def show(self, args: argparse.Namespace, parameter: str='') -> None:
+    def show(self, args: argparse.Namespace, parameter: str = '') -> None:
         """Shows current settings of parameters.
 
         :param args: argparse parsed arguments from the set command
@@ -3608,7 +3609,7 @@ class Cmd(cmd.Cmd):
         else:
             raise RuntimeError("another thread holds terminal_lock")
 
-    def cmdloop(self, intro: Optional[str]=None) -> None:
+    def cmdloop(self, intro: Optional[str] = None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
 
         _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
@@ -3863,7 +3864,7 @@ class History(list):
         list.append(self, new)
         new.idx = len(self)
 
-    def get(self, getme: Optional[Union[int, str]]=None) -> List[HistoryItem]:
+    def get(self, getme: Optional[Union[int, str]] = None) -> List[HistoryItem]:
         """Get an item or items from the History list using 1-based indexing.
 
         :param getme: optional item(s) to get (either an integer index or string to search for)
