@@ -14,15 +14,15 @@
 #docs/*  docs@example.com
 
 # cmd2 code
-cmd2/__init__.py        @tleonhardt @kotfu
-cmd2/arg*.py            @anselor
-cmd2/cmd2.py            @tleonhardt @kmvanbrunt @kotfu
-cmd2/constants.py       @kotfu
-cmd2/parsing.py         @kotfu @kmvanbrunt
-cmd2/pyscript*.py       @anselor
-cmd2/rl_utils.py        @kmvanbrunt
-cmd2/transcript.py      @kotfu
-cmd2/utils.py           @tleonhardt @kotfu @kmvanbrunt
+cmd2/__init__.py           @tleonhardt @kotfu
+cmd2/argparse_completer.py @anselor @kmvanbrunt
+cmd2/cmd2.py               @tleonhardt @kmvanbrunt @kotfu
+cmd2/constants.py          @kotfu
+cmd2/parsing.py            @kotfu @kmvanbrunt
+cmd2/pyscript_bridge.py    @anselor @kmvanbrunt
+cmd2/rl_utils.py           @kmvanbrunt
+cmd2/transcript.py         @kotfu
+cmd2/utils.py              @tleonhardt @kotfu @kmvanbrunt
 
 # Sphinx documentation
 docs/*                  @tleonhardt @kotfu
