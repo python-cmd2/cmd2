@@ -37,8 +37,6 @@ Comments can be useful in :ref:`scripts`, but would be pointless within an inter
   (Cmd) # this is a comment
   (Cmd) this # is not a comment
 
-.. _arg_print: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
-
 Startup Initialization Script
 =============================
 You can load and execute commands from a startup initialization script by passing a file path to the ``startup_script``
@@ -201,9 +199,9 @@ is superior for doing this in two primary ways:
 - it has the ability to pass command-line arguments to the scripts invoked
 
 There are no disadvantages to using ``pyscript`` as opposed to ``py run()``.  A simple example
-of using ``pyscript`` is shown below  along with the **examples/arg_printer.py** script::
+of using ``pyscript`` is shown below  along with the arg_printer_ script::
 
-    (Cmd) pyscript examples/arg_printer.py foo bar baz
+    (Cmd) pyscript examples/scripts/arg_printer.py foo bar baz
     Running Python script 'arg_printer.py' which was called with 3 arguments
     arg 1: 'foo'
     arg 2: 'bar'
@@ -216,11 +214,12 @@ of using ``pyscript`` is shown below  along with the **examples/arg_printer.py**
 
     When using this decorator, you can then put arguments in quotes like so (NOTE: the ``do_pyscript`` method uses this decorator::
 
-        (Cmd) pyscript examples/arg_printer.py hello '23 fnord'
+        (Cmd) pyscript examples/scripts/arg_printer.py hello '23 fnord'
         Running Python script 'arg_printer.py' which was called with 2 arguments
         arg 1: 'hello'
         arg 2: '23 fnord'
 
+.. _arg_printer: https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/arg_printer.py
 
 IPython (optional)
 ==================

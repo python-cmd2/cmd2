@@ -16,6 +16,7 @@
 # cmd2 code
 cmd2/__init__.py           @tleonhardt @kotfu
 cmd2/argparse_completer.py @anselor @kmvanbrunt
+cmd2/clipboard.py          @tleonhardt
 cmd2/cmd2.py               @tleonhardt @kmvanbrunt @kotfu
 cmd2/constants.py          @kotfu
 cmd2/parsing.py            @kotfu @kmvanbrunt
