@@ -302,7 +302,7 @@ class Cmd(cmd.Cmd):
     # Attributes used to configure the StatementParser, best not to change these at runtime
     multiline_commands = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    terminators = [';']
+    terminators = [constants.MULTILINE_TERMINATOR]
 
     # Attributes which are NOT dynamically settable at runtime
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
@@ -3256,7 +3256,10 @@ class Cmd(cmd.Cmd):
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             with os.fdopen(fd, 'w') as fobj:
                 for command in history:
-                    fobj.write('{}\n'.format(command))
+                    if command.statement.multiline_command:
+                        fobj.write('{}\n'.format(command.expanded.rstrip()))
+                    else:
+                        fobj.write('{}\n'.format(command))
             try:
                 self.do_edit(fname)
                 self.do_load(fname)
@@ -3268,7 +3271,10 @@ class Cmd(cmd.Cmd):
             try:
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
                     for command in history:
-                        fobj.write('{}\n'.format(command))
+                        if command.statement.multiline_command:
+                            fobj.write('{}\n'.format(command.expanded.rstrip()))
+                        else:
+                            fobj.write('{}\n'.format(command))
                 plural = 's' if len(history) > 1 else ''
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:

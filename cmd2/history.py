@@ -46,13 +46,13 @@ class HistoryItem(str):
         else:
             if script:
                 # display without entry numbers
-                if expanded:
+                if expanded or self.statement.multiline_command:
                     ret_str = self.expanded.rstrip()
                 else:
                     ret_str = str(self)
             else:
                 # display a numbered list
-                if expanded:
+                if expanded or self.statement.multiline_command:
                     ret_str = self.listformat.format(self.idx, self.expanded.rstrip())
                 else:
                     ret_str = self.listformat.format(self.idx, str(self).rstrip())

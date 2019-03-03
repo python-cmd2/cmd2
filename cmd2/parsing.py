@@ -191,8 +191,8 @@ class Statement(str):
     def expanded_command_line(self) -> str:
         """Contains command_and_args plus any ending terminator, suffix, and redirection chars"""
         rtn = self.command_and_args
-        if self.terminator:
-            rtn += self.terminator
+        if self.multiline_command:
+            rtn += constants.MULTILINE_TERMINATOR
 
         if self.suffix:
             rtn += ' ' + self.suffix
@@ -240,7 +240,7 @@ class StatementParser:
     ):
         self.allow_redirection = allow_redirection
         if terminators is None:
-            self.terminators = [';']
+            self.terminators = [constants.MULTILINE_TERMINATOR]
         else:
             self.terminators = terminators
         if multiline_commands is None:
