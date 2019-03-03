@@ -193,12 +193,14 @@ class Statement(str):
         rtn = self.command_and_args
         if self.multiline_command:
             rtn += constants.MULTILINE_TERMINATOR
+        elif self.terminator:
+            rtn += self.terminator
 
         if self.suffix:
             rtn += ' ' + self.suffix
 
         if self.pipe_to:
-            rtn += ' | ' + self.pipe_to
+            rtn += ' | ' + ' '.join(self.pipe_to)
 
         if self.output:
             rtn += ' ' + self.output
