@@ -48,7 +48,7 @@ class CmdLineApp(cmd2.Cmd):
         self._set_prompt()
         return stop
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_cd(self, arglist):
         """Change directory.
     Usage:

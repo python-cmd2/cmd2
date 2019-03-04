@@ -11,6 +11,10 @@
     ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods. 
     * Removed ability to call commands in ``pyscript`` as if they were functions (e.g ``app.help()``) in favor
     of only supporting one ``pyscript`` interface. This simplifies future maintenance.
+    * To fix an exception caused by passing arguments to ``@with_argument_list``, the basic usage of this
+    decorator had to change. It must now always have parenthesis.
+        * @with_argument_list() instead of @with_argument_list
+        
 
 ## 0.9.10 (February 22, 2019)
 * Bug Fixes

@@ -56,7 +56,7 @@ class TabCompleteExample(cmd2.Cmd):
 
         return self.flag_based_complete(text, line, begidx, endidx, flag_dict=flag_dict)
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_list_item(self, args):
         """List item command help"""
         self.poutput("You listed {}".format(args))

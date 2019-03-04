@@ -24,7 +24,7 @@ class PagedOutput(cmd2.Cmd):
         except FileNotFoundError:
             self.perror('ERROR: file {!r} not found'.format(filename), traceback_war=False)
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_page_wrap(self, args: List[str]):
         """Read in a text file and display its output in a pager, wrapping long lines if they don't fit.
 
@@ -37,7 +37,7 @@ class PagedOutput(cmd2.Cmd):
 
     complete_page_wrap = cmd2.Cmd.path_complete
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_page_truncate(self, args: List[str]):
         """Read in a text file and display its output in a pager, truncating long lines if they don't fit.
 

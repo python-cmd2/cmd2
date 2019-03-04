@@ -13,7 +13,7 @@ class ReplWithExitCode(cmd2.Cmd):
     def __init__(self):
         super().__init__()
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_exit(self, arg_list: List[str]) -> bool:
         """Exit the application with an optional exit code.
 

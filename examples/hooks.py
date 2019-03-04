@@ -93,7 +93,7 @@ class CmdLineApp(cmd2.Cmd):
                 data.statement = self.statement_parser.parse(raw)
         return data
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_list(self, arglist: List[str]) -> None:
         """Generate a list of 10 numbers."""
         if arglist:

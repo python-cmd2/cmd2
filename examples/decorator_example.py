@@ -71,7 +71,7 @@ class CmdLineApp(cmd2.Cmd):
         """create a html tag"""
         self.poutput('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_tagg(self, arglist):
         """verion of creating an html tag using arglist instead of argparser"""
         if len(arglist) >= 2:

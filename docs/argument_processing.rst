@@ -371,7 +371,7 @@ argument list instead of a string::
             # cmdline contains a string
             pass
 
-        @with_argument_list
+        @with_argument_list()
         def do_speak(self, arglist):
             # arglist contains a list of arguments
             pass

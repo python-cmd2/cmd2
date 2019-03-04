@@ -61,15 +61,15 @@ class ArgparseApp(cmd2.Cmd):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
         self.stdout.write('\n')
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_arglist(self, arglist):
         if isinstance(arglist, list):
             self.stdout.write('True')
         else:
             self.stdout.write('False')
 
-    @cmd2.with_argument_list
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
+    @cmd2.with_argument_list()
     def do_arglisttwice(self, arglist):
         if isinstance(arglist, list):
             self.stdout.write(' '.join(arglist))

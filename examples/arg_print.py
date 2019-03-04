@@ -33,7 +33,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         self.poutput('statement.argv = {!r}'.format(statement.argv))
         self.poutput('statement.command = {!r}'.format(statement.command))
 
-    @cmd2.with_argument_list
+    @cmd2.with_argument_list()
     def do_lprint(self, arglist):
         """Print the argument list this basic command is called with."""
         self.poutput('lprint was called with the following list of arguments: {!r}'.format(arglist))
