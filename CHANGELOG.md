@@ -1,4 +1,6 @@
 ## 0.9.11 (TBD, 2019)
+* Bug Fixes
+    * Fixed a bug when the ``with_argument_list`` decorator is called with the optional ``preserve_quotes`` argument
 * Enhancements
     * Added ``matches_sort_key`` to override the default way tab completion matches are sorted
 * Potentially breaking changes

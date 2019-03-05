@@ -222,12 +222,11 @@ of using ``pyscript`` is shown below  along with the **examples/arg_printer.py**
     If you want to be able to pass arguments with spaces to scripts, then we strongly recommend using one of the decorators,
     such as ``with_argument_list``.  ``cmd2`` will pass your **do_*** methods a list of arguments in this case.
 
-    When using this decorator, you can then put arguments in quotes like so (NOTE: the ``do_pyscript`` method uses this decorator::
+    When using this decorator, you can then put arguments in quotes like so::
 
-        (Cmd) pyscript examples/arg_printer.py hello '23 fnord'
-        Running Python script 'arg_printer.py' which was called with 2 arguments
-        arg 1: 'hello'
-        arg 2: '23 fnord'
+        $ examples/arg_print.py
+        (Cmd) lprint foo "bar baz"
+        lprint was called with the following list of arguments: ['foo', 'bar baz']
 
 
 IPython (optional)
