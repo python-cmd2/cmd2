@@ -11,7 +11,7 @@ import pytest
 
 import cmd2
 from cmd2.parsing import StatementParser
-from cmd2 import utils
+from cmd2 import constants, utils
 
 @pytest.fixture
 def parser():
@@ -70,8 +70,8 @@ def test_parse_empty_string_default(default_parser):
 
 @pytest.mark.parametrize('line,tokens', [
     ('command', ['command']),
-    ('command /* with some comment */ arg', ['command', 'arg']),
-    ('command arg1 arg2 # comment at the end', ['command', 'arg1', 'arg2']),
+    (constants.COMMENT_CHAR + 'comment', []),
+    ('not ' + constants.COMMENT_CHAR + ' a comment', ['not', constants.COMMENT_CHAR, 'a', 'comment']),
     ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
     ('termbare; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
     ('termbare & > /tmp/output', ['termbare', '&', '>', '/tmp/output']),
@@ -84,8 +84,8 @@ def test_tokenize_default(default_parser, line, tokens):
 
 @pytest.mark.parametrize('line,tokens', [
     ('command', ['command']),
-    ('command /* with some comment */ arg', ['command', 'arg']),
-    ('command arg1 arg2 # comment at the end', ['command', 'arg1', 'arg2']),
+    ('# comment', []),
+    ('not ' + constants.COMMENT_CHAR + ' a comment', ['not', constants.COMMENT_CHAR, 'a', 'comment']),
     ('42 arg1 arg2', ['theanswer', 'arg1', 'arg2']),
     ('l', ['shell', 'ls', '-al']),
     ('termbare ; > /tmp/output', ['termbare', ';', '>', '/tmp/output']),
@@ -193,58 +193,22 @@ def test_parse_command_with_args_terminator_and_suffix(parser):
     assert statement.terminator == ';'
     assert statement.suffix == 'and suffix'
 
-def test_parse_hashcomment(parser):
-    statement = parser.parse('hi # this is all a comment')
-    assert statement.command == 'hi'
-    assert statement == ''
-    assert statement.args == statement
-    assert statement.argv == ['hi']
-    assert not statement.arg_list
-
-def test_parse_c_comment(parser):
-    statement = parser.parse('hi /* this is | all a comment */')
-    assert statement.command == 'hi'
-    assert statement == ''
-    assert statement.args == statement
-    assert statement.argv == ['hi']
-    assert not statement.arg_list
-    assert not statement.pipe_to
-
-def test_parse_c_comment_empty(parser):
-    statement = parser.parse('/* this is | all a comment */')
+def test_parse_comment(parser):
+    statement = parser.parse(constants.COMMENT_CHAR + ' this is all a comment')
     assert statement.command == ''
+    assert statement == ''
     assert statement.args == statement
-    assert not statement.pipe_to
     assert not statement.argv
     assert not statement.arg_list
-    assert statement == ''
 
-def test_parse_c_comment_no_closing(parser):
-    statement = parser.parse('cat /tmp/*.txt')
-    assert statement.command == 'cat'
-    assert statement == '/tmp/*.txt'
+def test_parse_embedded_comment_char(parser):
+    command_str = 'hi ' + constants.COMMENT_CHAR + ' not a comment'
+    statement = parser.parse(command_str)
+    assert statement.command == 'hi'
+    assert statement == constants.COMMENT_CHAR + ' not a comment'
     assert statement.args == statement
-    assert not statement.pipe_to
-    assert statement.argv == ['cat', '/tmp/*.txt']
+    assert statement.argv == command_str.split()
     assert statement.arg_list == statement.argv[1:]
-
-def test_parse_c_comment_multiple_opening(parser):
-    statement = parser.parse('cat /tmp/*.txt /tmp/*.cfg')
-    assert statement.command == 'cat'
-    assert statement == '/tmp/*.txt /tmp/*.cfg'
-    assert statement.args == statement
-    assert not statement.pipe_to
-    assert statement.argv == ['cat', '/tmp/*.txt', '/tmp/*.cfg']
-    assert statement.arg_list == statement.argv[1:]
-
-def test_parse_what_if_quoted_strings_seem_to_start_comments(parser):
-    statement = parser.parse('what if "quoted strings /* seem to " start comments?')
-    assert statement.command == 'what'
-    assert statement == 'if "quoted strings /* seem to " start comments?'
-    assert statement.args == statement
-    assert statement.argv == ['what', 'if', 'quoted strings /* seem to ', 'start', 'comments?']
-    assert statement.arg_list == ['if', '"quoted strings /* seem to "', 'start', 'comments?']
-    assert not statement.pipe_to
 
 @pytest.mark.parametrize('line',[
     'simple | piped',
@@ -411,30 +375,6 @@ def test_parse_multiline_command_ignores_redirectors_within_it(parser, line, ter
     assert statement.arg_list == statement.argv[1:]
     assert statement.terminator == terminator
 
-def test_parse_multiline_with_incomplete_comment(parser):
-    """A terminator within a comment will be ignored and won't terminate a multiline command.
-    Un-closed comments effectively comment out everything after the start."""
-    line = 'multiline command /* with unclosed comment;'
-    statement = parser.parse(line)
-    assert statement.multiline_command == 'multiline'
-    assert statement.command == 'multiline'
-    assert statement == 'command /* with unclosed comment'
-    assert statement.args == statement
-    assert statement.argv == ['multiline', 'command', '/*', 'with', 'unclosed', 'comment']
-    assert statement.arg_list == statement.argv[1:]
-    assert statement.terminator == ';'
-
-def test_parse_multiline_with_complete_comment(parser):
-    line = 'multiline command /* with comment complete */ is done;'
-    statement = parser.parse(line)
-    assert statement.multiline_command == 'multiline'
-    assert statement.command == 'multiline'
-    assert statement == 'command is done'
-    assert statement.args == statement
-    assert statement.argv == ['multiline', 'command', 'is', 'done']
-    assert statement.arg_list == statement.argv[1:]
-    assert statement.terminator == ';'
-
 def test_parse_multiline_terminated_by_empty_line(parser):
     line = 'multiline command ends\n\n'
     statement = parser.parse(line)
@@ -464,7 +404,7 @@ def test_parse_multiline_with_embedded_newline(parser, line, terminator):
     assert statement.arg_list == ['command', '"with\nembedded newline"']
     assert statement.terminator == terminator
 
-def test_parse_multiline_ignores_terminators_in_comments(parser):
+def test_parse_multiline_ignores_terminators_in_quotes(parser):
     line = 'multiline command "with term; ends" now\n\n'
     statement = parser.parse(line)
     assert statement.multiline_command == 'multiline'
@@ -761,6 +701,10 @@ def test_is_valid_command_invalid(parser):
     # Empty command
     valid, errmsg = parser.is_valid_command('')
     assert not valid and 'cannot be an empty string' in errmsg
+
+    # Start with the comment character
+    valid, errmsg = parser.is_valid_command(constants.COMMENT_CHAR)
+    assert not valid and 'cannot start with the comment character' in errmsg
 
     # Starts with shortcut
     valid, errmsg = parser.is_valid_command('!ls')
