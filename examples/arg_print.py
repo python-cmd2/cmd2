@@ -38,6 +38,11 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
         """Print the argument list this basic command is called with."""
         self.poutput('lprint was called with the following list of arguments: {!r}'.format(arglist))
 
+    @cmd2.with_argument_list(preserve_quotes=True)
+    def do_rprint(self, arglist):
+        """Print the argument list this basic command is called with (with quotes preserved)."""
+        self.poutput('rprint was called with the following list of arguments: {!r}'.format(arglist))
+
     oprint_parser = argparse.ArgumentParser()
     oprint_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     oprint_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')

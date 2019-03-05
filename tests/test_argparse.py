@@ -68,6 +68,10 @@ class ArgparseApp(cmd2.Cmd):
         else:
             self.stdout.write('False')
 
+    @cmd2.with_argument_list(preserve_quotes=True)
+    def do_preservelist(self, arglist):
+        self.stdout.write('{}'.format(arglist))
+
     @cmd2.with_argument_list
     @cmd2.with_argument_list
     def do_arglisttwice(self, arglist):
@@ -173,6 +177,10 @@ def test_argparse_prog(argparse_app):
 def test_arglist(argparse_app):
     out = run_cmd(argparse_app, 'arglist "we  should" get these')
     assert out[0] == 'True'
+
+def test_preservelist(argparse_app):
+    out = run_cmd(argparse_app, 'preservelist foo "bar baz"')
+    assert out[0] == "['foo', '\"bar baz\"']"
 
 def test_arglist_decorator_twice(argparse_app):
     out = run_cmd(argparse_app, 'arglisttwice "we  should" get these')
