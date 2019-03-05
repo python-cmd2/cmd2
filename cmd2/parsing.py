@@ -258,33 +258,6 @@ class StatementParser:
         else:
             self.shortcuts = shortcuts
 
-        # this regular expression matches C-style comments and quoted
-        # strings, i.e. stuff between single or double quote marks
-        # it's used with _comment_replacer() to strip out the C-style
-        # comments, while leaving C-style comments that are inside either
-        # double or single quotes.
-        #
-        # this big regular expression can be broken down into 3 regular
-        # expressions that are OR'ed together with a pipe character
-        #
-        # /\*.*\*/               Matches C-style comments (i.e. /* comment */)
-        #                        does not match unclosed comments.
-        # \'(?:\\.|[^\\\'])*\'   Matches a single quoted string, allowing
-        #                        for embedded backslash escaped single quote
-        #                        marks.
-        # "(?:\\.|[^\\"])*"      Matches a double quoted string, allowing
-        #                        for embedded backslash escaped double quote
-        #                        marks.
-        #
-        # by way of reminder the (?:...) regular expression syntax is just
-        # a non-capturing version of regular parenthesis. We need the non-
-        # capturing syntax because _comment_replacer() looks at match
-        # groups
-        self.comment_pattern = re.compile(
-            r'/\*.*\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
-            re.DOTALL | re.MULTILINE
-        )
-
         # commands have to be a word, so make a regular expression
         # that matches the first word in the line. This regex has three
         # parts:
@@ -337,6 +310,9 @@ class StatementParser:
         if not word:
             return False, 'cannot be an empty string'
 
+        if word.startswith(constants.COMMENT_CHAR):
+            return False, 'cannot start with the comment character'
+
         for (shortcut, _) in self.shortcuts:
             if word.startswith(shortcut):
                 # Build an error string with all shortcuts listed
@@ -360,24 +336,23 @@ class StatementParser:
     def tokenize(self, line: str) -> List[str]:
         """Lex a string into a list of tokens.
 
-        Comments are removed, and shortcuts and aliases are expanded.
+        shortcuts and aliases are expanded and comments are removed
 
         Raises ValueError if there are unclosed quotation marks.
         """
 
-        # strip C-style comments
-        # shlex will handle the python/shell style comments for us
-        line = re.sub(self.comment_pattern, self._comment_replacer, line)
-
         # expand shortcuts and aliases
         line = self._expand(line)
 
+        # check if this line is a comment
+        if line.strip().startswith(constants.COMMENT_CHAR):
+            return []
+
         # split on whitespace
-        lexer = shlex.shlex(line, posix=False)
-        lexer.whitespace_split = True
+        tokens = shlex.split(line, comments=False, posix=False)
 
         # custom lexing
-        tokens = self._split_on_punctuation(list(lexer))
+        tokens = self._split_on_punctuation(tokens)
         return tokens
 
     def parse(self, line: str) -> Statement:
@@ -631,15 +606,6 @@ class StatementParser:
             args = ' '.join(tokens[1:])
 
         return command, args
-
-    @staticmethod
-    def _comment_replacer(match):
-        matched_string = match.group(0)
-        if matched_string.startswith('/'):
-            # the matched string was a comment, so remove it
-            return ''
-        # the matched string was a quoted string, return the match
-        return matched_string
 
     def _split_on_punctuation(self, tokens: List[str]) -> List[str]:
         """Further splits tokens from a command line using punctuation characters

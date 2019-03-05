@@ -11,6 +11,13 @@
     ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods. 
     * Removed ability to call commands in ``pyscript`` as if they were functions (e.g ``app.help()``) in favor
     of only supporting one ``pyscript`` interface. This simplifies future maintenance.
+    * No longer supporting C-style comments. Hash (#) is the only valid comment marker.
+    * No longer supporting comments embedded in a command. Only command line input where the first
+    non-whitespace character is a # will be treated as a comment. This means any # character appearing
+    later in the command will be treated as a literal. The same applies to a # in the middle of a multiline
+    command, even if it is the first character on a line.
+        * \# this is a comment
+        * this # is not a comment
 
 ## 0.9.10 (February 22, 2019)
 * Bug Fixes

@@ -161,7 +161,7 @@ def parse_quoted_string(string: str, preserve_quotes: bool) -> List[str]:
         lexed_arglist = string
     else:
         # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(string, posix=False)
+        lexed_arglist = shlex.split(string, comments=False, posix=False)
 
         if not preserve_quotes:
             lexed_arglist = [utils.strip_quotes(arg) for arg in lexed_arglist]
@@ -738,7 +738,7 @@ class Cmd(cmd.Cmd):
         while True:
             try:
                 # Use non-POSIX parsing to keep the quotes around the tokens
-                initial_tokens = shlex.split(tmp_line[:tmp_endidx], posix=False)
+                initial_tokens = shlex.split(tmp_line[:tmp_endidx], comments=False, posix=False)
 
                 # If the cursor is at an empty token outside of a quoted string,
                 # then that is the token being completed. Add it to the list.

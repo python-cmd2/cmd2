@@ -29,23 +29,16 @@ Simply include one command per line, typed exactly as you would inside a ``cmd2`
 Comments
 ========
 
-Comments are omitted from the argument list
-before it is passed to a ``do_`` method.  By
-default, both Python-style and C-style comments
-are recognized. Comments can be useful in :ref:`scripts`, but would
-be pointless within an interactive session.
+Any command line input where the first non-whitespace character is a # will be treated as a comment.
+This means any # character appearing later in the command will be treated as a literal. The same
+applies to a # in the middle of a multiline command, even if it is the first character on a line.
+
+Comments can be useful in :ref:`scripts`, but would be pointless within an interactive session.
 
 ::
 
-    def do_speak(self, arg):
-        self.stdout.write(arg + '\n')
-
-::
-
-  (Cmd) speak it was /* not */ delicious! # Yuck!
-  it was  delicious!
-
-.. _arg_print: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
+  (Cmd) # this is a comment
+  (Cmd) this # is not a comment
 
 Startup Initialization Script
 =============================
@@ -209,9 +202,9 @@ is superior for doing this in two primary ways:
 - it has the ability to pass command-line arguments to the scripts invoked
 
 There are no disadvantages to using ``pyscript`` as opposed to ``py run()``.  A simple example
-of using ``pyscript`` is shown below  along with the **examples/arg_printer.py** script::
+of using ``pyscript`` is shown below  along with the arg_printer_ script::
 
-    (Cmd) pyscript examples/arg_printer.py foo bar baz
+    (Cmd) pyscript examples/scripts/arg_printer.py foo bar baz
     Running Python script 'arg_printer.py' which was called with 3 arguments
     arg 1: 'foo'
     arg 2: 'bar'
@@ -224,11 +217,12 @@ of using ``pyscript`` is shown below  along with the **examples/arg_printer.py**
 
     When using this decorator, you can then put arguments in quotes like so (NOTE: the ``do_pyscript`` method uses this decorator::
 
-        (Cmd) pyscript examples/arg_printer.py hello '23 fnord'
+        (Cmd) pyscript examples/scripts/arg_printer.py hello '23 fnord'
         Running Python script 'arg_printer.py' which was called with 2 arguments
         arg 1: 'hello'
         arg 2: '23 fnord'
 
+.. _arg_printer: https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/arg_printer.py
 
 IPython (optional)
 ==================
