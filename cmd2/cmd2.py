@@ -158,7 +158,7 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 
-def _get_command_arg_list(to_parse: Union[str, Statement], preserve_quotes: bool) -> List[str]:
+def _get_command_arg_list(to_parse: Union[Statement, str], preserve_quotes: bool) -> List[str]:
     """
     Called by the argument_list and argparse wrappers to retrieve just the arguments being
     passed to their do_* methods as a list.
@@ -198,7 +198,7 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[str, Statement]):
+        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
             parsed_arglist = _get_command_arg_list(statement, preserve_quotes)
             return func(cmd2_instance, parsed_arglist)
 
@@ -225,7 +225,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[str, Statement]):
+        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
             parsed_arglist = _get_command_arg_list(statement, preserve_quotes)
 
             try:
@@ -268,7 +268,7 @@ def with_argparser(argparser: argparse.ArgumentParser,
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[str, Statement]):
+        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
 
             parsed_arglist = _get_command_arg_list(statement, preserve_quotes)
 
