@@ -1,6 +1,7 @@
 ## 0.9.11 (TBD, 2019)
 * Bug Fixes
     * Fixed bug in how **history** command deals with multiline commands when output to a script
+    * Fixed a bug when the ``with_argument_list`` decorator is called with the optional ``preserve_quotes`` argument
 * Enhancements
     * Improvements to the **history** command
         * Simplified the display format and made it more similar to **bash**

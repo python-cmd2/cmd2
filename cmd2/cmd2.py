@@ -176,25 +176,30 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 
-def with_argument_list(func: Callable[[Statement], Optional[bool]],
-                       preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
+def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
     """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
     typed. With this decorator, the decorated method will receive a list of arguments parsed from user input using
     shlex.split().
 
-    :param func: do_* method this decorator is wrapping
+    :param args: Single-element positional argument list containing do_* method this decorator is wrapping
     :param preserve_quotes: if True, then argument quotes will not be stripped
     :return: function that gets passed a list of argument strings
     """
     import functools
 
-    @functools.wraps(func)
-    def cmd_wrapper(self, cmdline):
-        lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
-        return func(self, lexed_arglist)
+    def arg_decorator(func: Callable):
+        @functools.wraps(func)
+        def cmd_wrapper(self, cmdline):
+            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
+            return func(self, lexed_arglist)
 
-    cmd_wrapper.__doc__ = func.__doc__
-    return cmd_wrapper
+        cmd_wrapper.__doc__ = func.__doc__
+        return cmd_wrapper
+
+    if len(args) == 1 and callable(args[0]):
+        return arg_decorator(args[0])
+    else:
+        return arg_decorator
 
 
 def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool = False) -> \
