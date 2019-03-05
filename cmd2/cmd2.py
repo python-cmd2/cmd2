@@ -49,6 +49,7 @@ from . import utils
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .parsing import StatementParser, Statement, Macro, MacroArg
+from .history import History, HistoryItem
 
 # Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
@@ -290,30 +291,6 @@ class EmptyStatement(Exception):
     pass
 
 
-class HistoryItem(str):
-    """Class used to represent an item in the History list.
-
-    Thin wrapper around str class which adds a custom format for printing. It
-    also keeps track of its index in the list as well as a lowercase
-    representation of itself for convenience/efficiency.
-
-    """
-    listformat = '-------------------------[{}]\n{}\n'
-
-    # noinspection PyUnusedLocal
-    def __init__(self, instr: str) -> None:
-        str.__init__(self)
-        self.lowercase = self.lower()
-        self.idx = None
-
-    def pr(self) -> str:
-        """Represent a HistoryItem in a pretty fashion suitable for printing.
-
-        :return: pretty print string version of a HistoryItem
-        """
-        return self.listformat.format(self.idx, str(self).rstrip())
-
-
 class Cmd(cmd.Cmd):
     """An easy but powerful framework for writing line-oriented command interpreters.
 
@@ -325,7 +302,7 @@ class Cmd(cmd.Cmd):
     # Attributes used to configure the StatementParser, best not to change these at runtime
     multiline_commands = []
     shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    terminators = [';']
+    terminators = [constants.MULTILINE_TERMINATOR]
 
     # Attributes which are NOT dynamically settable at runtime
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
@@ -2007,7 +1984,7 @@ class Cmd(cmd.Cmd):
             if func:
                 # Since we have a valid command store it in the history
                 if statement.command not in self.exclude_from_history:
-                    self.history.append(statement.raw)
+                    self.history.append(statement)
 
                 stop = func(statement)
 
@@ -2070,7 +2047,7 @@ class Cmd(cmd.Cmd):
         """
         if self.default_to_shell:
             if 'shell' not in self.exclude_from_history:
-                self.history.append(statement.raw)
+                self.history.append(statement)
 
             return self.do_shell(statement.command_and_args)
         else:
@@ -3188,18 +3165,27 @@ class Cmd(cmd.Cmd):
                 load_ipy(bridge)
 
     history_parser = ACArgumentParser()
-    history_parser_group = history_parser.add_mutually_exclusive_group()
-    history_parser_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
-    history_parser_group.add_argument('-e', '--edit', action='store_true',
+    history_action_group = history_parser.add_mutually_exclusive_group()
+    history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
+    history_action_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
-    history_parser_group.add_argument('-s', '--script', action='store_true', help='output commands in script format')
-    setattr(history_parser_group.add_argument('-o', '--output-file', metavar='FILE',
-                                              help='output commands to a script file'),
+    setattr(history_action_group.add_argument('-o', '--output-file', metavar='FILE',
+                                              help='output commands to a script file, implies -s'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    setattr(history_parser_group.add_argument('-t', '--transcript',
-                                              help='output commands and results to a transcript file'),
+    setattr(history_action_group.add_argument('-t', '--transcript',
+                                              help='output commands and results to a transcript file, implies -s'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    history_parser_group.add_argument('-c', '--clear', action="store_true", help='clear all history')
+    history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
+
+    history_format_group = history_parser.add_argument_group(title='formatting')
+    history_script_help = 'output commands in script format, i.e. without command numbers'
+    history_format_group.add_argument('-s', '--script', action='store_true', help=history_script_help)
+    history_expand_help = 'output expanded commands instead of entered command'
+    history_format_group.add_argument('-x', '--expanded', action='store_true', help=history_expand_help)
+    history_format_group.add_argument('-v', '--verbose', action='store_true',
+                                      help='display history and include expanded commands if they'
+                                           ' differ from the typed command')
+
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"
                         "a..b, a:b, a:, ..b  items by indices (inclusive)\n"
@@ -3210,6 +3196,19 @@ class Cmd(cmd.Cmd):
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> None:
         """View, run, edit, save, or clear previously entered commands"""
+
+        # -v must be used alone with no other options
+        if args.verbose:
+            if args.clear or args.edit or args.output_file or args.run or args.transcript or args.expanded or args.script:
+                self.poutput("-v can not be used with any other options")
+                self.poutput(self.history_parser.format_usage())
+                return
+
+        # -s and -x can only be used if none of these options are present: [-c -r -e -o -t]
+        if (args.script or args.expanded) and (args.clear or args.edit or args.output_file or args.run or args.transcript):
+            self.poutput("-s and -x can not be used with -c, -r, -e, -o, or -t")
+            self.poutput(self.history_parser.format_usage())
+            return
 
         if args.clear:
             # Clear command and readline history
@@ -3257,7 +3256,10 @@ class Cmd(cmd.Cmd):
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
             with os.fdopen(fd, 'w') as fobj:
                 for command in history:
-                    fobj.write('{}\n'.format(command))
+                    if command.statement.multiline_command:
+                        fobj.write('{}\n'.format(command.expanded.rstrip()))
+                    else:
+                        fobj.write('{}\n'.format(command))
             try:
                 self.do_edit(fname)
                 self.do_load(fname)
@@ -3269,7 +3271,10 @@ class Cmd(cmd.Cmd):
             try:
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
                     for command in history:
-                        fobj.write('{}\n'.format(command))
+                        if command.statement.multiline_command:
+                            fobj.write('{}\n'.format(command.expanded.rstrip()))
+                        else:
+                            fobj.write('{}\n'.format(command))
                 plural = 's' if len(history) > 1 else ''
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:
@@ -3279,10 +3284,7 @@ class Cmd(cmd.Cmd):
         else:
             # Display the history items retrieved
             for hi in history:
-                if args.script:
-                    self.poutput(hi)
-                else:
-                    self.poutput(hi.pr())
+                self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
 
     def _generate_transcript(self, history: List[HistoryItem], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""
@@ -3805,113 +3807,6 @@ class Cmd(cmd.Cmd):
         """Register a hook to be called after a command is completed, whether it completes successfully or not."""
         self._validate_cmdfinalization_callable(func)
         self._cmdfinalization_hooks.append(func)
-
-
-class History(list):
-    """ A list of HistoryItems that knows how to respond to user requests. """
-
-    # noinspection PyMethodMayBeStatic
-    def _zero_based_index(self, onebased: int) -> int:
-        """Convert a one-based index to a zero-based index."""
-        result = onebased
-        if result > 0:
-            result -= 1
-        return result
-
-    def _to_index(self, raw: str) -> Optional[int]:
-        if raw:
-            result = self._zero_based_index(int(raw))
-        else:
-            result = None
-        return result
-
-    spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>-?\d+)?\s*$')
-
-    def span(self, raw: str) -> List[HistoryItem]:
-        """Parses the input string search for a span pattern and if if found, returns a slice from the History list.
-
-        :param raw: string potentially containing a span of the forms a..b, a:b, a:, ..b
-        :return: slice from the History list
-        """
-        if raw.lower() in ('*', '-', 'all'):
-            raw = ':'
-        results = self.spanpattern.search(raw)
-        if not results:
-            raise IndexError
-        if not results.group('separator'):
-            return [self[self._to_index(results.group('start'))]]
-        start = self._to_index(results.group('start')) or 0  # Ensure start is not None
-        end = self._to_index(results.group('end'))
-        reverse = False
-        if end is not None:
-            if end < start:
-                (start, end) = (end, start)
-                reverse = True
-            end += 1
-        result = self[start:end]
-        if reverse:
-            result.reverse()
-        return result
-
-    rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*-\s*(?P<end>[\d]+)?\s*$')
-
-    def append(self, new: str) -> None:
-        """Append a HistoryItem to end of the History list
-
-        :param new: command line to convert to HistoryItem and add to the end of the History list
-        """
-        new = HistoryItem(new)
-        list.append(self, new)
-        new.idx = len(self)
-
-    def get(self, getme: Optional[Union[int, str]] = None) -> List[HistoryItem]:
-        """Get an item or items from the History list using 1-based indexing.
-
-        :param getme: optional item(s) to get (either an integer index or string to search for)
-        :return: list of HistoryItems matching the retrieval criteria
-        """
-        if not getme:
-            return self
-        try:
-            getme = int(getme)
-            if getme < 0:
-                return self[:(-1 * getme)]
-            else:
-                return [self[getme - 1]]
-        except IndexError:
-            return []
-        except ValueError:
-            range_result = self.rangePattern.search(getme)
-            if range_result:
-                start = range_result.group('start') or None
-                end = range_result.group('start') or None
-                if start:
-                    start = int(start) - 1
-                if end:
-                    end = int(end)
-                return self[start:end]
-
-            getme = getme.strip()
-
-            if getme.startswith(r'/') and getme.endswith(r'/'):
-                finder = re.compile(getme[1:-1], re.DOTALL | re.MULTILINE | re.IGNORECASE)
-
-                def isin(hi):
-                    """Listcomp filter function for doing a regular expression search of History.
-
-                    :param hi: HistoryItem
-                    :return: bool - True if search matches
-                    """
-                    return finder.search(hi)
-            else:
-                def isin(hi):
-                    """Listcomp filter function for doing a case-insensitive string search of History.
-
-                    :param hi: HistoryItem
-                    :return: bool - True if search matches
-                    """
-                    return utils.norm_fold(getme) in utils.norm_fold(hi)
-            return [itm for itm in self if isin(itm)]
 
 
 class Statekeeper(object):
