@@ -28,7 +28,7 @@ except ImportError:
 # Help text for base cmd2.Cmd application
 BASE_HELP = """Documented commands (type help <topic>):
 ========================================
-alias  help     load   py        quit  shell    
+alias  help     load   py        quit  shell
 edit   history  macro  pyscript  set   shortcuts
 """  # noqa: W291
 
@@ -50,7 +50,8 @@ shortcuts           List available shortcuts
 """
 
 # Help text for the history command
-HELP_HISTORY = """Usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT | -c] [arg]
+HELP_HISTORY = """Usage: history [-h] [-r | -e | -o FILE | -t TRANSCRIPT | -c] [-s] [-x] [-v]
+               [arg]
 
 View, run, edit, save, or clear previously entered commands
 
@@ -65,12 +66,17 @@ optional arguments:
   -h, --help            show this help message and exit
   -r, --run             run selected history items
   -e, --edit            edit and then run selected history items
-  -s, --script          output commands in script format
   -o, --output-file FILE
-                        output commands to a script file
+                        output commands to a script file, implies -s
   -t, --transcript TRANSCRIPT
-                        output commands and results to a transcript file
+                        output commands and results to a transcript file, implies -s
   -c, --clear           clear all history
+
+formatting:
+  -s, --script          output commands in script format, i.e. without command numbers
+  -x, --expanded        output expanded commands instead of entered command
+  -v, --verbose         display history and include expanded commands if they differ from the typed command
+
 """
 
 # Output from the shortcuts command with default built-in shortcuts

@@ -10,8 +10,9 @@ import attr
 import pytest
 
 import cmd2
-from cmd2.parsing import StatementParser
 from cmd2 import constants, utils
+from cmd2.constants import MULTILINE_TERMINATOR
+from cmd2.parsing import StatementParser
 
 @pytest.fixture
 def parser():
@@ -147,6 +148,7 @@ def test_parse_word_plus_terminator(parser, line, terminator):
     assert statement.argv == ['termbare']
     assert not statement.arg_list
     assert statement.terminator == terminator
+    assert statement.expanded_command_line == statement.command + statement.terminator
 
 @pytest.mark.parametrize('line,terminator', [
     ('termbare;  suffx', ';'),
@@ -163,6 +165,7 @@ def test_parse_suffix_after_terminator(parser, line, terminator):
     assert not statement.arg_list
     assert statement.terminator == terminator
     assert statement.suffix == 'suffx'
+    assert statement.expanded_command_line == statement.command + statement.terminator + ' ' + statement.suffix
 
 def test_parse_command_with_args(parser):
     line = 'command with args'
@@ -222,6 +225,7 @@ def test_parse_simple_pipe(parser, line):
     assert statement.argv == ['simple']
     assert not statement.arg_list
     assert statement.pipe_to == ['piped']
+    assert statement.expanded_command_line == statement.command + ' | ' + ' '.join(statement.pipe_to)
 
 def test_parse_double_pipe_is_not_a_pipe(parser):
     line = 'double-pipe || is not a pipe'
@@ -258,6 +262,7 @@ def test_parse_redirect(parser,line, output):
     assert statement.args == statement
     assert statement.output == output
     assert statement.output_to == 'out.txt'
+    assert statement.expanded_command_line == statement.command + ' ' + statement.output + ' ' + statement.output_to
 
 def test_parse_redirect_with_args(parser):
     line = 'output into > afile.txt'
@@ -479,6 +484,7 @@ def test_parse_alias_on_multiline_command(parser):
     assert statement.args == statement
     assert statement == 'has > inside an unfinished command'
     assert statement.terminator == ''
+    assert statement.expanded_command_line == statement.multiline_command + ' ' + statement + MULTILINE_TERMINATOR
 
 @pytest.mark.parametrize('line,output', [
     ('helpalias > out.txt', '>'),

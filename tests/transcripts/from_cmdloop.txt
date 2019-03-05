@@ -35,18 +35,12 @@ OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 (Cmd) history
--------------------------[1]
-help
--------------------------[2]
-help say
--------------------------[3]
-say goodnight, Gracie
--------------------------[4]
-say -ps --repeat=5 goodnight, Gracie
--------------------------[5]
-set maxrepeats 5
--------------------------[6]
-say -ps --repeat=5 goodnight, Gracie
+    1  help
+    2  help say
+    3  say goodnight, Gracie
+    4  say -ps --repeat=5 goodnight, Gracie
+    5  set maxrepeats 5
+    6  say -ps --repeat=5 goodnight, Gracie
 (Cmd) history -r 4
 say -ps --repeat=5 goodnight, Gracie
 OODNIGHT, GRACIEGAY
