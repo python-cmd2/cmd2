@@ -150,24 +150,6 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
         setattr(func, HELP_CATEGORY, category)
 
 
-def parse_quoted_string(string: str, preserve_quotes: bool) -> List[str]:
-    """
-    Parse a quoted string into a list of arguments
-    :param string: the string being parsed
-    :param preserve_quotes: if True, then quotes will not be stripped
-    """
-    if isinstance(string, list):
-        # arguments are already a list, return the list we were passed
-        lexed_arglist = string
-    else:
-        # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(string, comments=False, posix=False)
-
-        if not preserve_quotes:
-            lexed_arglist = [utils.strip_quotes(arg) for arg in lexed_arglist]
-    return lexed_arglist
-
-
 def with_category(category: str) -> Callable:
     """A decorator to apply a category to a command function."""
     def cat_decorator(func):
@@ -176,10 +158,35 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 
+def _command_args_to_list(cmd2_instance, statement: Union[str, Statement],
+                          command_name: str, preserve_quotes: bool) -> List[str]:
+    """
+    Called by the argument_list and argparse decorators to parse the arguments
+    passed to the do_* method they wrap.
+
+    :param cmd2_instance: the cmd2 instance being passed to the do_* method
+    :param statement: the Statement passed to the do_* method
+                      this can also be the argument string in cases where a do_* method is explicitly called
+                      e.g.: Calling do_help('alias create') would cause statement to be 'alias create'
+
+    :param command_name: the name of the command (e.g. help)
+    :param preserve_quotes: if True, then quotes will not be stripped from the arguments
+    """
+
+    # Convert statement into a Statement if it isn't already one
+    if not isinstance(statement, Statement):
+        statement = command_name + ' ' + statement
+        statement = cmd2_instance.statement_parser.parse(statement)
+
+    if preserve_quotes:
+        return statement.arg_list
+    else:
+        return statement.argv[1:]
+
+
 def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
     """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
-    typed. With this decorator, the decorated method will receive a list of arguments parsed from user input using
-    shlex.split().
+    typed. With this decorator, the decorated method will receive a list of arguments parsed from user input.
 
     :param args: Single-element positional argument list containing do_* method this decorator is wrapping
     :param preserve_quotes: if True, then argument quotes will not be stripped
@@ -189,9 +196,10 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(self, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
-            return func(self, lexed_arglist)
+        def cmd_wrapper(cmd2_instance, statement: Union[str, Statement]):
+            command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
+            parsed_arglist = _command_args_to_list(cmd2_instance, statement, command_name, preserve_quotes)
+            return func(cmd2_instance, parsed_arglist)
 
         cmd_wrapper.__doc__ = func.__doc__
         return cmd_wrapper
@@ -214,20 +222,23 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     import functools
 
     # noinspection PyProtectedMember
-    def arg_decorator(func: Callable[[Statement], Optional[bool]]):
+    def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
+        def cmd_wrapper(cmd2_instance, statement: Union[str, Statement]):
+            parsed_arglist = _command_args_to_list(cmd2_instance, statement, command_name, preserve_quotes)
+
             try:
-                args, unknown = argparser.parse_known_args(lexed_arglist)
+                args, unknown = argparser.parse_known_args(parsed_arglist)
             except SystemExit:
                 return
             else:
-                return func(instance, args, unknown)
+                return func(cmd2_instance, args, unknown)
+
+        command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
-        argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
+        argparser.prog = command_name
 
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
@@ -256,20 +267,24 @@ def with_argparser(argparser: argparse.ArgumentParser,
     import functools
 
     # noinspection PyProtectedMember
-    def arg_decorator(func: Callable[[Statement], Optional[bool]]):
+    def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
+        def cmd_wrapper(cmd2_instance, statement: Union[str, Statement]):
+
+            parsed_arglist = _command_args_to_list(cmd2_instance, statement, command_name, preserve_quotes)
+
             try:
-                args = argparser.parse_args(lexed_arglist)
+                args = argparser.parse_args(parsed_arglist)
             except SystemExit:
                 return
             else:
-                return func(instance, args)
+                return func(cmd2_instance, args)
+
+        command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
-        argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
+        argparser.prog = command_name
 
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
