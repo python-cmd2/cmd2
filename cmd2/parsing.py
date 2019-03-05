@@ -349,7 +349,7 @@ class StatementParser:
             return []
 
         # split on whitespace
-        tokens = shlex.split(line, comments=False, posix=False)
+        tokens = StatementParser.shlex_split(line)
 
         # custom lexing
         tokens = self._split_on_punctuation(tokens)
@@ -606,6 +606,16 @@ class StatementParser:
             args = ' '.join(tokens[1:])
 
         return command, args
+
+    @staticmethod
+    def shlex_split(str_to_split: str) -> List[str]:
+        """
+        A wrapper around shlex.split() that uses cmd2's preferred arguments
+        This allows other classes to easily call split() the same way StatementParser does
+        :param str_to_split: the string being split
+        :return: A list of tokens
+        """
+        return shlex.split(str_to_split, comments=False, posix=False)
 
     def _split_on_punctuation(self, tokens: List[str]) -> List[str]:
         """Further splits tokens from a command line using punctuation characters
