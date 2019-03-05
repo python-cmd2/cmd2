@@ -1,5 +1,13 @@
 ## 0.9.11 (TBD, 2019)
+* Bug Fixes
+    * Fixed bug in how **history** command deals with multiline commands when output to a script
 * Enhancements
+    * Improvements to the **history** command
+        * Simplified the display format and made it more similar to **bash**
+        * Added **-x**, **--expanded** flag
+            * output expanded commands instead of entered command (expands aliases, macros, and shortcuts)
+        * Added **-v**, **--verbose** flag
+            * display history and include expanded commands if they differ from the typed command
     * Added ``matches_sort_key`` to override the default way tab completion matches are sorted
 * Potentially breaking changes
     * Made ``cmd2_app`` a positional and required argument of ``AutoCompleter`` since certain functionality now
