@@ -186,7 +186,7 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
     """
     import functools
 
-    def arg_decorator(func: Callable[[Statement], Optional[bool]]):
+    def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(self, cmdline):
             lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
