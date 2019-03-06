@@ -72,14 +72,6 @@ class ArgparseApp(cmd2.Cmd):
     def do_preservelist(self, arglist):
         self.stdout.write('{}'.format(arglist))
 
-    @cmd2.with_argument_list
-    @cmd2.with_argument_list
-    def do_arglisttwice(self, arglist):
-        if isinstance(arglist, list):
-            self.stdout.write(' '.join(arglist))
-        else:
-            self.stdout.write('False')
-
     known_parser = argparse.ArgumentParser()
     known_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
@@ -177,10 +169,6 @@ def test_arglist(argparse_app):
 def test_preservelist(argparse_app):
     out = run_cmd(argparse_app, 'preservelist foo "bar baz"')
     assert out[0] == "['foo', '\"bar baz\"']"
-
-def test_arglist_decorator_twice(argparse_app):
-    out = run_cmd(argparse_app, 'arglisttwice "we  should" get these')
-    assert out[0] == 'we  should get these'
 
 
 class SubcommandApp(cmd2.Cmd):

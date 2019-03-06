@@ -5,12 +5,22 @@
 import os
 import re
 import shlex
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple, Union
 
 import attr
 
 from . import constants
 from . import utils
+
+
+def shlex_split(str_to_split: str) -> List[str]:
+    """A wrapper around shlex.split() that uses cmd2's preferred arguments.
+
+    This allows other classes to easily call split() the same way StatementParser does
+    :param str_to_split: the string being split
+    :return: A list of tokens
+    """
+    return shlex.split(str_to_split, comments=False, posix=False)
 
 
 @attr.s(frozen=True)
@@ -226,6 +236,34 @@ class Statement(str):
         return rtn
 
 
+def get_command_arg_list(to_parse: Union[Statement, str], preserve_quotes: bool) -> List[str]:
+    """
+    Called by the argument_list and argparse wrappers to retrieve just the arguments being
+    passed to their do_* methods as a list.
+
+    :param to_parse: what is being passed to the do_* method. It can be one of two types:
+                     1. An already parsed Statement
+                     2. An argument string in cases where a do_* method is explicitly called
+                        e.g.: Calling do_help('alias create') would cause to_parse to be 'alias create'
+
+    :param preserve_quotes: if True, then quotes will not be stripped from the arguments
+    :return: the arguments in a list
+    """
+    if isinstance(to_parse, Statement):
+        # In the case of a Statement, we already have what we need
+        if preserve_quotes:
+            return to_parse.arg_list
+        else:
+            return to_parse.argv[1:]
+    else:
+        # We have the arguments in a string. Use shlex to split it.
+        parsed_arglist = shlex_split(to_parse)
+        if not preserve_quotes:
+            parsed_arglist = [utils.strip_quotes(arg) for arg in parsed_arglist]
+
+        return parsed_arglist
+
+
 class StatementParser:
     """Parse raw text into command components.
 
@@ -349,7 +387,7 @@ class StatementParser:
             return []
 
         # split on whitespace
-        tokens = shlex.split(line, comments=False, posix=False)
+        tokens = shlex_split(line)
 
         # custom lexing
         tokens = self._split_on_punctuation(tokens)

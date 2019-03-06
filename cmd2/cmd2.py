@@ -35,7 +35,6 @@ import glob
 import inspect
 import os
 import re
-import shlex
 import sys
 import threading
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
@@ -48,8 +47,8 @@ from . import plugin
 from . import utils
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .parsing import StatementParser, Statement, Macro, MacroArg
 from .history import History, HistoryItem
+from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split, get_command_arg_list
 
 # Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
@@ -150,24 +149,6 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
         setattr(func, HELP_CATEGORY, category)
 
 
-def parse_quoted_string(string: str, preserve_quotes: bool) -> List[str]:
-    """
-    Parse a quoted string into a list of arguments
-    :param string: the string being parsed
-    :param preserve_quotes: if True, then quotes will not be stripped
-    """
-    if isinstance(string, list):
-        # arguments are already a list, return the list we were passed
-        lexed_arglist = string
-    else:
-        # Use shlex to split the command line into a list of arguments based on shell rules
-        lexed_arglist = shlex.split(string, comments=False, posix=False)
-
-        if not preserve_quotes:
-            lexed_arglist = [utils.strip_quotes(arg) for arg in lexed_arglist]
-    return lexed_arglist
-
-
 def with_category(category: str) -> Callable:
     """A decorator to apply a category to a command function."""
     def cat_decorator(func):
@@ -178,8 +159,7 @@ def with_category(category: str) -> Callable:
 
 def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
     """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
-    typed. With this decorator, the decorated method will receive a list of arguments parsed from user input using
-    shlex.split().
+    typed. With this decorator, the decorated method will receive a list of arguments parsed from user input.
 
     :param args: Single-element positional argument list containing do_* method this decorator is wrapping
     :param preserve_quotes: if True, then argument quotes will not be stripped
@@ -189,9 +169,9 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(self, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
-            return func(self, lexed_arglist)
+        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
+            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
+            return func(cmd2_instance, parsed_arglist)
 
         cmd_wrapper.__doc__ = func.__doc__
         return cmd_wrapper
@@ -214,16 +194,17 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     import functools
 
     # noinspection PyProtectedMember
-    def arg_decorator(func: Callable[[Statement], Optional[bool]]):
+    def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
+        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
+            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
+
             try:
-                args, unknown = argparser.parse_known_args(lexed_arglist)
+                args, unknown = argparser.parse_known_args(parsed_arglist)
             except SystemExit:
                 return
             else:
-                return func(instance, args, unknown)
+                return func(cmd2_instance, args, unknown)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -256,16 +237,18 @@ def with_argparser(argparser: argparse.ArgumentParser,
     import functools
 
     # noinspection PyProtectedMember
-    def arg_decorator(func: Callable[[Statement], Optional[bool]]):
+    def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(instance, cmdline):
-            lexed_arglist = parse_quoted_string(cmdline, preserve_quotes)
+        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
+
+            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
+
             try:
-                args = argparser.parse_args(lexed_arglist)
+                args = argparser.parse_args(parsed_arglist)
             except SystemExit:
                 return
             else:
-                return func(instance, args)
+                return func(cmd2_instance, args)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -742,8 +725,7 @@ class Cmd(cmd.Cmd):
         # Parse the line into tokens
         while True:
             try:
-                # Use non-POSIX parsing to keep the quotes around the tokens
-                initial_tokens = shlex.split(tmp_line[:tmp_endidx], comments=False, posix=False)
+                initial_tokens = shlex_split(tmp_line[:tmp_endidx])
 
                 # If the cursor is at an empty token outside of a quoted string,
                 # then that is the token being completed. Add it to the list.
@@ -1735,7 +1717,7 @@ class Cmd(cmd.Cmd):
             # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
             if self.stdin.isatty():
                 import subprocess
-                proc = subprocess.Popen(shlex.split('stty sane'))
+                proc = subprocess.Popen(['stty', 'sane'])
                 proc.communicate()
 
         try:
