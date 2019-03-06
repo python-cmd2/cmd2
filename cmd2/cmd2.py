@@ -47,7 +47,7 @@ from . import plugin
 from . import utils
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .parsing import StatementParser, Statement, Macro, MacroArg
+from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split, get_command_arg_list
 from .history import History, HistoryItem
 
 # Set up readline
@@ -157,34 +157,6 @@ def with_category(category: str) -> Callable:
     return cat_decorator
 
 
-def _get_command_arg_list(to_parse: Union[Statement, str], preserve_quotes: bool) -> List[str]:
-    """
-    Called by the argument_list and argparse wrappers to retrieve just the arguments being
-    passed to their do_* methods as a list.
-
-    :param to_parse: what is being passed to the do_* method. It can be one of two types:
-                     1. An already parsed Statement
-                     2. An argument string in cases where a do_* method is explicitly called
-                        e.g.: Calling do_help('alias create') would cause to_parse to be 'alias create'
-
-    :param preserve_quotes: if True, then quotes will not be stripped from the arguments
-    :return: the arguments in a list
-    """
-    if isinstance(to_parse, Statement):
-        # In the case of a Statement, we already have what we need
-        if preserve_quotes:
-            return to_parse.arg_list
-        else:
-            return to_parse.argv[1:]
-    else:
-        # We only have the argument string. Use the parser to split this string.
-        parsed_arglist = StatementParser.shlex_split(to_parse)
-        if not preserve_quotes:
-            parsed_arglist = [utils.strip_quotes(arg) for arg in parsed_arglist]
-
-        return parsed_arglist
-
-
 def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
     """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
     typed. With this decorator, the decorated method will receive a list of arguments parsed from user input.
@@ -198,7 +170,7 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            parsed_arglist = _get_command_arg_list(statement, preserve_quotes)
+            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
             return func(cmd2_instance, parsed_arglist)
 
         cmd_wrapper.__doc__ = func.__doc__
@@ -225,7 +197,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            parsed_arglist = _get_command_arg_list(statement, preserve_quotes)
+            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
 
             try:
                 args, unknown = argparser.parse_known_args(parsed_arglist)
@@ -269,7 +241,7 @@ def with_argparser(argparser: argparse.ArgumentParser,
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
 
-            parsed_arglist = _get_command_arg_list(statement, preserve_quotes)
+            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
 
             try:
                 args = argparser.parse_args(parsed_arglist)
@@ -753,7 +725,7 @@ class Cmd(cmd.Cmd):
         # Parse the line into tokens
         while True:
             try:
-                initial_tokens = StatementParser.shlex_split(tmp_line[:tmp_endidx])
+                initial_tokens = shlex_split(tmp_line[:tmp_endidx])
 
                 # If the cursor is at an empty token outside of a quoted string,
                 # then that is the token being completed. Add it to the list.
