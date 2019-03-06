@@ -256,7 +256,7 @@ def get_command_arg_list(to_parse: Union[Statement, str], preserve_quotes: bool)
         else:
             return to_parse.argv[1:]
     else:
-        # We only have the argument string. Use the parser to split this string.
+        # We have the arguments in a string. Use shlex to split it.
         parsed_arglist = shlex_split(to_parse)
         if not preserve_quotes:
             parsed_arglist = [utils.strip_quotes(arg) for arg in parsed_arglist]
