@@ -261,28 +261,10 @@ def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
 
 
 class StdSim(object):
-    """Class to simulate behavior of sys.stdout or sys.stderr.
-
+    """
+    Class to simulate behavior of sys.stdout or sys.stderr.
     Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
     """
-    class ByteBuf(object):
-        """Inner class which stores an actual bytes buffer and does the actual output if echo is enabled."""
-        def __init__(self, inner_stream, echo: bool = False,
-                     encoding: str = 'utf-8', errors: str = 'replace') -> None:
-            self.byte_buf = b''
-            self.inner_stream = inner_stream
-            self.echo = echo
-            self.encoding = encoding
-            self.errors = errors
-
-        def write(self, b: bytes) -> None:
-            """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
-            if not isinstance(b, bytes):
-                raise TypeError('a bytes-like object is required, not {}'.format(type(b)))
-            self.byte_buf += b
-            if self.echo:
-                self.inner_stream.buffer.write(b)
-
     def __init__(self, inner_stream, echo: bool = False,
                  encoding: str = 'utf-8', errors: str = 'replace') -> None:
         """
@@ -292,17 +274,20 @@ class StdSim(object):
         :param encoding: codec for encoding/decoding strings (defaults to utf-8)
         :param errors: how to handle encoding/decoding errors (defaults to replace)
         """
-        self.buffer = self.ByteBuf(inner_stream, echo)
         self.inner_stream = inner_stream
         self.echo = echo
         self.encoding = encoding
         self.errors = errors
+        self.__store_output = True
+        self.buffer = ByteBuf(self)
 
     def write(self, s: str) -> None:
         """Add str to internal bytes buffer and if echo is True, echo contents to inner stream"""
         if not isinstance(s, str):
             raise TypeError('write() argument must be str, not {}'.format(type(s)))
-        self.buffer.byte_buf += s.encode(encoding=self.encoding, errors=self.errors)
+
+        if self.__store_output:
+            self.buffer.byte_buf += s.encode(encoding=self.encoding, errors=self.errors)
         if self.echo:
             self.inner_stream.write(s)
 
@@ -330,11 +315,40 @@ class StdSim(object):
         """Clear the internal contents"""
         self.buffer.byte_buf = b''
 
+    def get_store_output(self) -> bool:
+        return self.__store_output
+
+    def set_store_output(self, store_output: bool) -> None:
+        """
+        Set whether output should be saved in buffer.byte_buf
+        :param store_output: Store output if True, otherwise do not and clear the buffer
+        """
+        self.__store_output = self.buffer.store_output = store_output
+        self.clear()
+
     def __getattr__(self, item: str):
         if item in self.__dict__:
             return self.__dict__[item]
         else:
             return getattr(self.inner_stream, item)
+
+
+class ByteBuf(object):
+    """
+    Used by StdSim to write binary data and stores the actual bytes written
+    """
+    def __init__(self, std_sim_instance: StdSim) -> None:
+        self.byte_buf = b''
+        self.std_sim_instance = std_sim_instance
+
+    def write(self, b: bytes) -> None:
+        """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
+        if not isinstance(b, bytes):
+            raise TypeError('a bytes-like object is required, not {}'.format(type(b)))
+        if self.std_sim_instance.get_store_output():
+            self.byte_buf += b
+        if self.std_sim_instance.echo:
+            self.std_sim_instance.inner_stream.buffer.write(b)
 
 
 def unquote_redirection_tokens(args: List[str]) -> None:
