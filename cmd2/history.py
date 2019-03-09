@@ -60,7 +60,17 @@ class HistoryItem(str):
 
 
 class History(list):
-    """ A list of HistoryItems that knows how to respond to user requests. """
+    """A list of HistoryItems that knows how to respond to user requests.
+
+    Here are some key methods:
+
+    select() - parse user input and return a list of relevant history items
+    str_search() - return a list of history items which contain the given string
+    regex_search() - return a list of history items which match a given regex
+    get() - return a single element of the list, using 1 based indexing
+    span() - given a 1-based slice, return the appropriate list of history items
+
+    """
 
     # noinspection PyMethodMayBeStatic
     def _zero_based_index(self, onebased: int) -> int:
@@ -80,10 +90,30 @@ class History(list):
     spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>-?\d+)?\s*$')
 
     def span(self, raw: str) -> List[HistoryItem]:
-        """Parses the input string search for a span pattern and if if found, returns a slice from the History list.
+        """Parses the input string and return a slice from the History list.
 
-        :param raw: string potentially containing a span of the forms a..b, a:b, a:, ..b
-        :return: slice from the History list
+        :param raw: string potentially containing a span
+        :return: a list of HistoryItems
+
+        This method can accommodate input in any of these forms:
+
+            a
+            -a
+            a..b or a:b
+            a.. or a:
+            ..a or :a
+            -a.. or -a:
+            ..-a or :-a
+
+        Different from native python indexing and slicing of arrays, this method
+        uses 1-based array numbering. Users who are not programmers can't grok
+        0 based numbering. Programmers can grok either. Which reminds me, there
+        are only two hard problems in programming:
+
+        - naming
+        - cache invalidation
+        - off by one errors
+
         """
         if raw.lower() in ('*', '-', 'all'):
             raw = ':'
@@ -116,37 +146,30 @@ class History(list):
         list.append(self, new)
         new.idx = len(self)
 
-    def get(self, getme: Optional[Union[int, str]]=None) -> List[HistoryItem]:
-        """Get an item or items from the History list using 1-based indexing.
+    def get(self, index: Union[int, str]) -> HistoryItem:
+        """Get item from the History list using 1-based indexing.
 
-        :param getme: optional item(s) to get (either an integer index or string to search for)
-        :return: list of HistoryItems matching the retrieval criteria
+        :param index: optional item to get (index as either integer or string)
+        :return: a single HistoryItem
         """
-        if not getme:
-            return self
-        try:
-            getme = int(getme)
-            if getme < 0:
-                return self[:(-1 * getme)]
-            else:
-                return [self[getme - 1]]
-        except IndexError:
-            return []
-        except ValueError:
-            range_result = self.rangePattern.search(getme)
-            if range_result:
-                start = range_result.group('start') or None
-                end = range_result.group('start') or None
-                if start:
-                    start = int(start) - 1
-                if end:
-                    end = int(end)
-                return self[start:end]
+        index = int(index)
+        if index == 0:
+            raise IndexError
+        elif index < 0:
+            return self[index]
+        else:
+            return self[index - 1]
 
-            getme = getme.strip()
 
-            if getme.startswith(r'/') and getme.endswith(r'/'):
-                finder = re.compile(getme[1:-1], re.DOTALL | re.MULTILINE | re.IGNORECASE)
+
+    def str_search(self, search: str) -> List[HistoryItem]:
+        pass
+
+    def regex_search(self, regex: str) -> List[HistoryItem]:
+            regex = regex.strip()
+
+            if regex.startswith(r'/') and regex.endswith(r'/'):
+                finder = re.compile(regex[1:-1], re.DOTALL | re.MULTILINE | re.IGNORECASE)
 
                 def isin(hi):
                     """Listcomp filter function for doing a regular expression search of History.
@@ -162,6 +185,6 @@ class History(list):
                     :param hi: HistoryItem
                     :return: bool - True if search matches
                     """
-                    srch = utils.norm_fold(getme)
+                    srch = utils.norm_fold(regex)
                     return srch in utils.norm_fold(hi) or srch in utils.norm_fold(hi.expanded)
             return [itm for itm in self if isin(itm)]

@@ -75,14 +75,36 @@ def test_history_class_span(hist):
     assert h.span('*') == h
 
 def test_history_class_get(hist):
-    h = hist
-    assert h == ['first', 'second', 'third', 'fourth']
-    assert h.get('') == h
-    assert h.get('-2') == h[:-2]
-    assert h.get('5') == []
-    assert h.get('2-3') == ['second']           # Exclusive of end
-    assert h.get('ir') == ['first', 'third']    # Normal string search for all elements containing "ir"
-    assert h.get('/i.*d/') == ['third']         # Regex string search "i", then anything, then "d"
+    assert hist.get('1') == 'first'
+    assert hist.get(3) == 'third'
+    assert hist.get('-2') == hist[-2]
+    assert hist.get(-1) == 'fourth'
+
+    with pytest.raises(IndexError):
+        hist.get(0)
+    with pytest.raises(IndexError):
+        hist.get('0')
+
+    with pytest.raises(IndexError):
+        hist.get('5')
+    with pytest.raises(ValueError):
+        hist.get('2-3')
+    with pytest.raises(ValueError):
+        hist.get('1..2')
+    with pytest.raises(ValueError):
+        hist.get('3:4')
+    with pytest.raises(ValueError):
+        hist.get('fred')
+    with pytest.raises(ValueError):
+        hist.get('')
+    with pytest.raises(TypeError):
+        hist.get(None)
+
+def test_history_str_search(hist):
+    assert hist.get('ir') == ['first', 'third']
+
+def test_history_regex_search(hist):
+    assert hist.get('/i.*d/') == ['third']
 
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
