@@ -25,8 +25,26 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
     Named tuple attributes
     ----------------------
     stdout: str - Output captured from stdout while this command is executing
-    stderr: str - Output captured from stderr while this command is executing. None if no error captured
+    stderr: str - Output captured from stderr while this command is executing. None if no error captured.
     data - Data returned by the command.
+
+    Any combination of these fields can be used when developing a scripting API for a given command.
+    By default stdout and stderr will be captured for you. If there is additional command specific data,
+    then write that to cmd2's _last_result member. That becomes the data member of this tuple.
+
+    In some cases, the data member may contain everything needed for a command and storing stdout
+    and stderr might just be a duplication of data that wastes memory. In that case, the StdSim can
+    be told not to store output with its pause_storage member. While this member is True, any output
+    sent to StdSim won't be saved in its buffer.
+
+    The code would look like this:
+        if isinstance(self.stdout, StdSim):
+            self.stdout.pause_storage = True
+
+        if isinstance(sys.stderr, StdSim):
+            sys.stderr.pause_storage = True
+
+    See StdSim class in utils.py for more information
 
     NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
     """
@@ -67,25 +85,25 @@ class PyscriptBridge(object):
         if echo is None:
             echo = self.cmd_echo
 
-        copy_stdout = StdSim(sys.stdout, echo)
-        copy_stderr = StdSim(sys.stderr, echo)
-
+        # This will be used to capture _cmd2_app.stdout and sys.stdout
         copy_cmd_stdout = StdSim(self._cmd2_app.stdout, echo)
+
+        # This will be used to capture sys.stderr
+        copy_stderr = StdSim(sys.stderr, echo)
 
         self._cmd2_app._last_result = None
 
         try:
             self._cmd2_app.stdout = copy_cmd_stdout
-            with redirect_stdout(copy_stdout):
+            with redirect_stdout(copy_cmd_stdout):
                 with redirect_stderr(copy_stderr):
                     # Include a newline in case it's a multiline command
                     self._cmd2_app.onecmd_plus_hooks(command + '\n')
         finally:
             self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
 
-        # if stderr is empty, set it to None
-        stderr = copy_stderr.getvalue() if copy_stderr.getvalue() else None
-
-        outbuf = copy_cmd_stdout.getvalue() if copy_cmd_stdout.getvalue() else copy_stdout.getvalue()
-        result = CommandResult(stdout=outbuf, stderr=stderr, data=self._cmd2_app._last_result)
+        # Save the output. If stderr is empty, set it to None.
+        result = CommandResult(stdout=copy_cmd_stdout.getvalue(),
+                               stderr=copy_stderr.getvalue() if copy_stderr.getvalue() else None,
+                               data=self._cmd2_app._last_result)
         return result
