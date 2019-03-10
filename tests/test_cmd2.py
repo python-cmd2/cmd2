@@ -2267,3 +2267,11 @@ def test_disable_command_twice(disable_commands_app):
     disable_commands_app.disable_command('has_help_func', message_to_print)
     new_len = len(disable_commands_app.disabled_commands)
     assert saved_len == new_len
+
+def test_disabled_command_not_in_history(disable_commands_app):
+    message_to_print = 'These commands are currently disabled'
+    disable_commands_app.disable_command('has_help_func', message_to_print)
+
+    saved_len = len(disable_commands_app.history)
+    run_cmd(disable_commands_app, 'has_help_func')
+    assert saved_len == len(disable_commands_app.history)

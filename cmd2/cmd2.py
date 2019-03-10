@@ -1987,8 +1987,9 @@ class Cmd(cmd.Cmd):
         else:
             func = self.cmd_func(statement.command)
             if func:
-                # Since we have a valid command store it in the history
-                if statement.command not in self.exclude_from_history:
+                # Check to see if this command should be stored in history
+                if statement.command not in self.exclude_from_history \
+                        and statement.command not in self.disabled_commands:
                     self.history.append(statement)
 
                 stop = func(statement)
@@ -3676,8 +3677,9 @@ class Cmd(cmd.Cmd):
         self.disabled_commands[command] = dc
 
         # Overwrite the command and help functions to print the message
-        setattr(self, self.cmd_func_name(command), functools.partial(self.poutput, message_to_print + '\n'))
-        setattr(self, help_func_name, functools.partial(self.poutput, message_to_print + '\n'))
+        new_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
+        setattr(self, self.cmd_func_name(command), new_func)
+        setattr(self, help_func_name, new_func)
 
     def disable_category(self, category: str, message_to_print: str) -> None:
         """
@@ -3695,6 +3697,16 @@ class Cmd(cmd.Cmd):
             # If this command is in the category, then disable it
             if cmd_category is not None and cmd_category == category:
                 self.disable_command(cmd_name, message_to_print)
+
+    # noinspection PyUnusedLocal
+    def _report_disabled_command_usage(self, *args, message_to_print: str, **kwargs) -> None:
+        """
+        Report when a disabled command has been run or had help called on it
+        :param args: not used
+        :param message_to_print: the message reporting that the command is disabled
+        :param kwargs: not used
+        """
+        self.poutput(message_to_print)
 
     def cmdloop(self, intro: Optional[str] = None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
