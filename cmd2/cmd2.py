@@ -587,7 +587,7 @@ class Cmd(cmd.Cmd):
         :param err_color: (optional) color escape to output error with
         :param war_color: (optional) color escape to output warning with
         """
-        if self.debug:
+        if self.debug and sys.exc_info() != (None, None, None):
             import traceback
             traceback.print_exc()
 
