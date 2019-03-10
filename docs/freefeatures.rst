@@ -130,29 +130,13 @@ debugging your application.  To prevent users from enabling this ability
 manually you'll need to remove ``locals_in_py`` from the ``settable`` dictionary.
 
 The ``app`` object (or your custom name) provides access to application commands
-through either raw commands or through a python API wrapper.  For example, any
-application command call be called with ``app("<command>")``. All application
-commands are accessible as python objects and functions matching the command
-name.  For example, the following are equivalent:
+through raw commands.  For example, any application command call be called with
+``app("<command>")``.
 
 ::
 
     >>> app('say --piglatin Blah')
     lahBay
-    >>> app.say("Blah", piglatin=True)
-    lahBay
-
-
-Sub-commands are also supported. The following pairs are equivalent:
-
-::
-
-    >>> app('command subcmd1 subcmd2 param1 --myflag --otherflag 3')
-    >>> app.command.subcmd1.subcmd2('param1', myflag=True, otherflag=3)
-
-    >>> app('command subcmd1 param1 subcmd2 param2 --myflag --otherflag 3')
-    >>> app.command.subcmd1('param1').subcmd2('param2', myflag=True, otherflag=3)
-
 
 More Python examples:
 
