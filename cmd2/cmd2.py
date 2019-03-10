@@ -3646,7 +3646,7 @@ class Cmd(cmd.Cmd):
         Enable an entire category of commands
         :param category: the category to enable
         """
-        for cmd_name in self.disabled_commands:
+        for cmd_name in list(self.disabled_commands):
             dc = self.disabled_commands[cmd_name]
             cmd_category = getattr(dc.command_function, HELP_CATEGORY, None)
             if cmd_category is not None and cmd_category == category:
