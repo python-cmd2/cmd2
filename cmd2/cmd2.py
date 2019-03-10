@@ -3205,7 +3205,8 @@ class Cmd(cmd.Cmd):
 
         # -v must be used alone with no other options
         if args.verbose:
-            if args.clear or args.edit or args.output_file or args.run or args.transcript or args.expanded or args.script:
+            if args.clear or args.edit or args.output_file or args.run or args.transcript \
+                    or args.expanded or args.script:
                 self.poutput("-v can not be used with any other options")
                 self.poutput(self.history_parser.format_usage())
                 return
