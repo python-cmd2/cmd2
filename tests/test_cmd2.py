@@ -2217,6 +2217,10 @@ def test_disable_and_enable_category(disable_commands_app):
     out = run_cmd(disable_commands_app, 'help has_no_help_func')
     assert out == [message_to_print]
 
+    visible_commands = disable_commands_app.get_visible_commands()
+    assert 'has_help_func' not in visible_commands
+    assert 'has_no_help_func' not in visible_commands
+
     # Enable the category
     disable_commands_app.enable_category(disable_commands_app.category_name)
 
@@ -2232,6 +2236,10 @@ def test_disable_and_enable_category(disable_commands_app):
 
     out = run_cmd(disable_commands_app, 'help has_no_help_func')
     assert out == ["Help for has_no_help_func"]
+
+    visible_commands = disable_commands_app.get_visible_commands()
+    assert 'has_help_func' in visible_commands
+    assert 'has_no_help_func' in visible_commands
 
 def test_enable_enabled_command(disable_commands_app):
     # Test enabling a command that is not disabled
