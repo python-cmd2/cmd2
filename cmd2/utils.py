@@ -278,7 +278,7 @@ class StdSim(object):
         self.echo = echo
         self.encoding = encoding
         self.errors = errors
-        self.__store_output = True
+        self.pause_storage = False
         self.buffer = ByteBuf(self)
 
     def write(self, s: str) -> None:
@@ -286,7 +286,7 @@ class StdSim(object):
         if not isinstance(s, str):
             raise TypeError('write() argument must be str, not {}'.format(type(s)))
 
-        if self.__store_output:
+        if not self.pause_storage:
             self.buffer.byte_buf += s.encode(encoding=self.encoding, errors=self.errors)
         if self.echo:
             self.inner_stream.write(s)
@@ -315,17 +315,6 @@ class StdSim(object):
         """Clear the internal contents"""
         self.buffer.byte_buf = b''
 
-    def get_store_output(self) -> bool:
-        return self.__store_output
-
-    def set_store_output(self, store_output: bool) -> None:
-        """
-        Set whether output should be saved in buffer.byte_buf
-        :param store_output: Store output if True, otherwise do not and clear the buffer
-        """
-        self.__store_output = self.buffer.store_output = store_output
-        self.clear()
-
     def __getattr__(self, item: str):
         if item in self.__dict__:
             return self.__dict__[item]
@@ -345,7 +334,7 @@ class ByteBuf(object):
         """Add bytes to internal bytes buffer and if echo is True, echo contents to inner stream."""
         if not isinstance(b, bytes):
             raise TypeError('a bytes-like object is required, not {}'.format(type(b)))
-        if self.std_sim_instance.get_store_output():
+        if not self.std_sim_instance.pause_storage:
             self.byte_buf += b
         if self.std_sim_instance.echo:
             self.std_sim_instance.inner_stream.buffer.write(b)

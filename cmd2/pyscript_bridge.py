@@ -34,14 +34,15 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
 
     In some cases, the data member may contain everything needed for a command and storing stdout
     and stderr might just be a duplication of data that wastes memory. In that case, the StdSim can
-    be told not to store output with its set_store_output() method.
+    be told not to store output with its pause_storage member. While this member is True, any output
+    sent to StdSim won't be saved in its buffer.
 
     The code would look like this:
         if isinstance(self.stdout, StdSim):
-            self.stdout.set_store_output(False)
+            self.stdout.pause_storage = True
 
         if isinstance(sys.stderr, StdSim):
-            sys.stderr.set_store_output(False)
+            sys.stderr.pause_storage = True
 
     See StdSim class in utils.py for more information
 
