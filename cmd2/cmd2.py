@@ -3211,7 +3211,8 @@ class Cmd(cmd.Cmd):
                 return
 
         # -s and -x can only be used if none of these options are present: [-c -r -e -o -t]
-        if (args.script or args.expanded) and (args.clear or args.edit or args.output_file or args.run or args.transcript):
+        if (args.script or args.expanded) \
+                and (args.clear or args.edit or args.output_file or args.run or args.transcript):
             self.poutput("-s and -x can not be used with -c, -r, -e, -o, or -t")
             self.poutput(self.history_parser.format_usage())
             return
