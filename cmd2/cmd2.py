@@ -37,6 +37,7 @@ import os
 import re
 import sys
 import threading
+from collections import namedtuple
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
 import colorama
@@ -279,12 +280,8 @@ class EmptyStatement(Exception):
     pass
 
 
-class DisabledCommand:
-    """Contains data about a disabled command"""
-    def __init__(self):
-        # These are used to restore the original functions when the command is enabled
-        self.command_function = None
-        self.help_function = None
+# Contains data about a disabled command which is used to restore its original functions when the command is enabled
+DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function'])
 
 
 class Cmd(cmd.Cmd):
@@ -3673,10 +3670,8 @@ class Cmd(cmd.Cmd):
         help_func_name = HELP_FUNC_PREFIX + command
 
         # Add the disabled command record
-        dc = DisabledCommand()
-        dc.command_function = command_function
-        dc.help_function = getattr(self, help_func_name, None)
-        self.disabled_commands[command] = dc
+        self.disabled_commands[command] = DisabledCommand(command_function=command_function,
+                                                          help_function=getattr(self, help_func_name, None))
 
         # Overwrite the command and help functions to print the message
         new_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
