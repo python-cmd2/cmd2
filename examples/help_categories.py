@@ -140,6 +140,18 @@ class HelpCategories(cmd2.Cmd):
         """Version command"""
         self.poutput(cmd2.__version__)
 
+    @cmd2.with_category("Command Management")
+    def do_disable_commands(self, _):
+        """Disable the Application Management commands"""
+        self.disable_category(self.CMD_CAT_APP_MGMT, "Application Management is currently disabled")
+        self.poutput("The Application Management commands have been disabled")
+
+    @cmd2.with_category("Command Management")
+    def do_enable_commands(self, _):
+        """Enable the Application Management commands"""
+        self.enable_category(self.CMD_CAT_APP_MGMT)
+        self.poutput("The Application Management commands have been enabled")
+
 
 if __name__ == '__main__':
     c = HelpCategories()

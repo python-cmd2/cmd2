@@ -10,6 +10,14 @@
         * Added **-v**, **--verbose** flag
             * display history and include expanded commands if they differ from the typed command
     * Added ``matches_sort_key`` to override the default way tab completion matches are sorted
+    * Added ability to disable/enable individual commands and entire categories of commands. When a command
+      is disabled, it will not show up in the help menu or tab complete. If a user tries to run the command
+      or call help on it, a command-specific message supplied by the developer will be printed. The following
+      commands were added to support this feature.
+        * ``enable_command()``
+        * ``enable_category()``
+        * ``disable_command()``
+        * ``disable_category()``
 * Potentially breaking changes
     * Made ``cmd2_app`` a positional and required argument of ``AutoCompleter`` since certain functionality now
     requires that it can't be ``None``.
