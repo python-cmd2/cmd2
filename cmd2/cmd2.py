@@ -3213,15 +3213,22 @@ class Cmd(cmd.Cmd):
             # If a character indicating a slice is present, retrieve
             # a slice of the history
             arg = args.arg
+            arg_is_int = False
+            try:
+                _ = int(arg)
+                arg_is_int = True
+            except ValueError:
+                pass
+
             if '..' in arg or ':' in arg:
-                try:
-                    # Get a slice of history
-                    history = self.history.span(arg)
-                except IndexError:
-                    history = self.history.get(arg)
+                # Get a slice of history
+                history = self.history.span(arg)
+            elif arg_is_int:
+                history = [self.history.get(arg)]
+            elif arg.startswith(r'/') and arg.endswith(r'/'):
+                history = self.history.regex_search(arg)
             else:
-                # Get item(s) from history by index or string search
-                history = self.history.get(arg)
+                history = self.history.str_search(arg)
         else:
             # If no arg given, then retrieve the entire history
             cowardly_refuse_to_run = True

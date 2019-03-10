@@ -5,7 +5,7 @@ History management classes
 
 import re
 
-from typing import List, Optional, Union
+from typing import List, Union
 
 from . import utils
 from .parsing import Statement
@@ -73,69 +73,12 @@ class History(list):
     """
 
     # noinspection PyMethodMayBeStatic
-    def _zero_based_index(self, onebased: int) -> int:
+    def _zero_based_index(self, onebased: Union[int, str]) -> int:
         """Convert a one-based index to a zero-based index."""
-        result = onebased
+        result = int(onebased)
         if result > 0:
             result -= 1
         return result
-
-    def _to_index(self, raw: str) -> Optional[int]:
-        if raw:
-            result = self._zero_based_index(int(raw))
-        else:
-            result = None
-        return result
-
-    spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?\s*(?P<separator>:|(\.{2,}))?\s*(?P<end>-?\d+)?\s*$')
-
-    def span(self, raw: str) -> List[HistoryItem]:
-        """Parses the input string and return a slice from the History list.
-
-        :param raw: string potentially containing a span
-        :return: a list of HistoryItems
-
-        This method can accommodate input in any of these forms:
-
-            a
-            -a
-            a..b or a:b
-            a.. or a:
-            ..a or :a
-            -a.. or -a:
-            ..-a or :-a
-
-        Different from native python indexing and slicing of arrays, this method
-        uses 1-based array numbering. Users who are not programmers can't grok
-        0 based numbering. Programmers can grok either. Which reminds me, there
-        are only two hard problems in programming:
-
-        - naming
-        - cache invalidation
-        - off by one errors
-
-        """
-        if raw.lower() in ('*', '-', 'all'):
-            raw = ':'
-        results = self.spanpattern.search(raw)
-        if not results:
-            raise IndexError
-        if not results.group('separator'):
-            return [self[self._to_index(results.group('start'))]]
-        start = self._to_index(results.group('start')) or 0  # Ensure start is not None
-        end = self._to_index(results.group('end'))
-        reverse = False
-        if end is not None:
-            if end < start:
-                (start, end) = (end, start)
-                reverse = True
-            end += 1
-        result = self[start:end]
-        if reverse:
-            result.reverse()
-        return result
-
-    rangePattern = re.compile(r'^\s*(?P<start>[\d]+)?\s*-\s*(?P<end>[\d]+)?\s*$')
 
     def append(self, new: Statement) -> None:
         """Append a HistoryItem to end of the History list
@@ -160,31 +103,111 @@ class History(list):
         else:
             return self[index - 1]
 
+    # This regular expression parses input for the span() method. There are five parts:
+    #
+    #    ^\s*                          matches any whitespace at the beginning of the
+    #                                  input. This is here so you don't have to trim the input
+    #
+    #    (?P<start>-?\d+)?             create a capture group named 'start' which matches one
+    #                                  or more digits, optionally preceeded by a minus sign. This
+    #                                  group is optional so that we can match a string like '..2'
+    #
+    #    (?P<separator>:|(\.{2,}))?    create a capture group named 'separator' which matches either
+    #                                  a colon or two periods. This group is optional so we can
+    #                                  match a string like '3'
+    #
+    #    (?P<end>-?\d+)?               create a capture group named 'end' which matches one or more
+    #                                  digits, optionally preceeded by a minus sign. This group is
+    #                                  optional so that we can match a string like ':' or '5:'
+    #
+    #    \s*$                          match any whitespace at the end of the input. This is here so
+    #                                  you don't have to trim the input
+    #
+    spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?(?P<separator>:|(\.{2,}))?(?P<end>-?\d+)?\s*$')
 
+    def span(self, span: str) -> List[HistoryItem]:
+        """Return an index or slice of the History list,
+
+        :param raw: string containing an index or a slice
+        :return: a list of HistoryItems
+
+        This method can accommodate input in any of these forms:
+
+            a
+            -a
+            a..b or a:b
+            a.. or a:
+            ..a or :a
+            -a.. or -a:
+            ..-a or :-a
+
+        Different from native python indexing and slicing of arrays, this method
+        uses 1-based array numbering. Users who are not programmers can't grok
+        0 based numbering. Programmers can usually grok either. Which reminds me,
+        there are only two hard problems in programming:
+
+        - naming
+        - cache invalidation
+        - off by one errors
+
+        """
+        if span.lower() in ('*', '-', 'all'):
+            span = ':'
+        results = self.spanpattern.search(span)
+        if not results:
+            # our regex doesn't match the input, bail out
+            raise ValueError
+
+        sep = results.group('separator')
+        start = results.group('start')
+        if start:
+            start = self._zero_based_index(start)
+        end = results.group('end')
+        if end:
+            end = int(end)
+
+        if start is not None and end is not None:
+            # we have both start and end, return a slice of history, unless both are negative
+            if start < 0 and end < 0:
+                raise ValueError
+            result = self[start:end]
+        elif start is not None and sep is not None:
+            # take a slice of the array
+            result = self[start:]
+        elif end is not None and sep is not None:
+            result = self[:end]
+        elif start is not None:
+            # there was no separator so it's either a posative or negative integer
+            result = [self[start]]
+        else:
+            # we just have a separator, return the whole list
+            result = self[:]
+        return result
 
     def str_search(self, search: str) -> List[HistoryItem]:
-        pass
+        """Find history items which contain a given string
+
+        :param search: the string to search for
+        :return: a list of history items, or an empty list if the string was not found
+        """
+        def isin(history_item):
+            """filter function for string search of history"""
+            sloppy = utils.norm_fold(search)
+            return sloppy in utils.norm_fold(history_item) or sloppy in utils.norm_fold(history_item.expanded)
+        return [item for item in self if isin(item)]
 
     def regex_search(self, regex: str) -> List[HistoryItem]:
-            regex = regex.strip()
+        """Find history items which match a given regular expression
 
-            if regex.startswith(r'/') and regex.endswith(r'/'):
-                finder = re.compile(regex[1:-1], re.DOTALL | re.MULTILINE | re.IGNORECASE)
+        :param regex: the regular expression to search for.
+        :return: a list of history items, or an empty list if the string was not found
+        """
+        regex = regex.strip()
+        if regex.startswith(r'/') and regex.endswith(r'/'):
+            regex = regex[1:-1]
+        finder = re.compile(regex, re.DOTALL | re.MULTILINE)
 
-                def isin(hi):
-                    """Listcomp filter function for doing a regular expression search of History.
-
-                    :param hi: HistoryItem
-                    :return: bool - True if search matches
-                    """
-                    return finder.search(hi) or finder.search(hi.expanded)
-            else:
-                def isin(hi):
-                    """Listcomp filter function for doing a case-insensitive string search of History.
-
-                    :param hi: HistoryItem
-                    :return: bool - True if search matches
-                    """
-                    srch = utils.norm_fold(regex)
-                    return srch in utils.norm_fold(hi) or srch in utils.norm_fold(hi.expanded)
-            return [itm for itm in self if isin(itm)]
+        def isin(hi):
+            """filter function for doing a regular expression search of history"""
+            return finder.search(hi) or finder.search(hi.expanded)
+        return [itm for itm in self if isin(itm)]
