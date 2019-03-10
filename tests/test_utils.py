@@ -194,3 +194,25 @@ def test_stdsim_getattr_noexist(stdout_sim):
     # Here the StdSim getattr is allowing us to access methods defined by the inner stream
     assert not stdout_sim.isatty()
 
+def test_stdsim_pause_storage(stdout_sim):
+    # Test pausing storage for string data
+    my_str = 'Hello World'
+
+    stdout_sim.pause_storage = False
+    stdout_sim.write(my_str)
+    assert stdout_sim.read() == my_str
+
+    stdout_sim.pause_storage = True
+    stdout_sim.write(my_str)
+    assert stdout_sim.read() == ''
+
+    # Test pausing storage for binary data
+    b_str = b'Hello World'
+
+    stdout_sim.pause_storage = False
+    stdout_sim.buffer.write(b_str)
+    assert stdout_sim.readbytes() == b_str
+
+    stdout_sim.pause_storage = True
+    stdout_sim.buffer.write(b_str)
+    assert stdout_sim.getbytes() == b''

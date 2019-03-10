@@ -11,6 +11,8 @@
         * Added **-v**, **--verbose** flag
             * display history and include expanded commands if they differ from the typed command
     * Added ``matches_sort_key`` to override the default way tab completion matches are sorted
+    * Added ``StdSim.pause_storage`` member which when True will cause ``StdSim`` to not save the output sent to it.
+      See documentation for ``CommandResult`` in ``pyscript_bridge.py`` for reasons pausing the storage can be useful.
 * Potentially breaking changes
     * Made ``cmd2_app`` a positional and required argument of ``AutoCompleter`` since certain functionality now
     requires that it can't be ``None``.
