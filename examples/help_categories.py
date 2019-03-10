@@ -39,7 +39,7 @@ class HelpCategories(cmd2.Cmd):
 
     def do_deploy(self, _):
         """Deploy command"""
-        self.poutput('Which')
+        self.poutput('Deploy')
 
     def do_start(self, _):
         """Start command"""
