@@ -2170,3 +2170,108 @@ def test_colors_never_notty(mocker, capsys):
     app.onecmd_plus_hooks('echo oopsie')
     out, err = capsys.readouterr()
     assert out == err == 'oopsie\n'
+
+
+class DisableCommandsApp(cmd2.Cmd):
+    """Class for disabling commands"""
+    category_name = "Test Category"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    @cmd2.with_category(category_name)
+    def do_has_help_func(self, arg):
+        self.poutput("The real has_help_func")
+
+    def help_has_help_func(self):
+        self.poutput('Help for has_help_func')
+
+    @cmd2.with_category(category_name)
+    def do_has_no_help_func(self, arg):
+        """Help for has_no_help_func"""
+        self.poutput("The real has_no_help_func")
+
+
+@pytest.fixture
+def disable_commands_app():
+    app = DisableCommandsApp()
+    app.stdout = utils.StdSim(app.stdout)
+    return app
+
+
+def test_disable_and_enable_category(disable_commands_app):
+    # Disable the category
+    message_to_print = 'These commands are currently disabled'
+    disable_commands_app.disable_category(disable_commands_app.category_name, message_to_print)
+
+    # Make sure all the commands and help on those commands displays the message
+    out = run_cmd(disable_commands_app, 'has_help_func')
+    assert out == [message_to_print]
+
+    out = run_cmd(disable_commands_app, 'help has_help_func')
+    assert out == [message_to_print]
+
+    out = run_cmd(disable_commands_app, 'has_no_help_func')
+    assert out == [message_to_print]
+
+    out = run_cmd(disable_commands_app, 'help has_no_help_func')
+    assert out == [message_to_print]
+
+    visible_commands = disable_commands_app.get_visible_commands()
+    assert 'has_help_func' not in visible_commands
+    assert 'has_no_help_func' not in visible_commands
+
+    # Enable the category
+    disable_commands_app.enable_category(disable_commands_app.category_name)
+
+    # Make sure all the commands and help on those commands are restored
+    out = run_cmd(disable_commands_app, 'has_help_func')
+    assert out == ["The real has_help_func"]
+
+    out = run_cmd(disable_commands_app, 'help has_help_func')
+    assert out == ["Help for has_help_func"]
+
+    out = run_cmd(disable_commands_app, 'has_no_help_func')
+    assert out == ["The real has_no_help_func"]
+
+    out = run_cmd(disable_commands_app, 'help has_no_help_func')
+    assert out == ["Help for has_no_help_func"]
+
+    visible_commands = disable_commands_app.get_visible_commands()
+    assert 'has_help_func' in visible_commands
+    assert 'has_no_help_func' in visible_commands
+
+def test_enable_enabled_command(disable_commands_app):
+    # Test enabling a command that is not disabled
+    saved_len = len(disable_commands_app.disabled_commands)
+    disable_commands_app.enable_command('has_help_func')
+
+    # The number of disabled_commands should not have changed
+    assert saved_len == len(disable_commands_app.disabled_commands)
+
+def test_disable_fake_command(disable_commands_app):
+    with pytest.raises(AttributeError):
+        disable_commands_app.disable_command('fake', 'fake message')
+
+def test_disable_command_twice(disable_commands_app):
+    saved_len = len(disable_commands_app.disabled_commands)
+    message_to_print = 'These commands are currently disabled'
+    disable_commands_app.disable_command('has_help_func', message_to_print)
+
+    # The length of disabled_commands should have increased one
+    new_len = len(disable_commands_app.disabled_commands)
+    assert saved_len == new_len - 1
+    saved_len = new_len
+
+    # Disable again and the length should not change
+    disable_commands_app.disable_command('has_help_func', message_to_print)
+    new_len = len(disable_commands_app.disabled_commands)
+    assert saved_len == new_len
+
+def test_disabled_command_not_in_history(disable_commands_app):
+    message_to_print = 'These commands are currently disabled'
+    disable_commands_app.disable_command('has_help_func', message_to_print)
+
+    saved_len = len(disable_commands_app.history)
+    run_cmd(disable_commands_app, 'has_help_func')
+    assert saved_len == len(disable_commands_app.history)

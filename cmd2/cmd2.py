@@ -37,6 +37,7 @@ import os
 import re
 import sys
 import threading
+from collections import namedtuple
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
 import colorama
@@ -277,6 +278,10 @@ class EmbeddedConsoleExit(SystemExit):
 class EmptyStatement(Exception):
     """Custom exception class for handling behavior when the user just presses <Enter>."""
     pass
+
+
+# Contains data about a disabled command which is used to restore its original functions when the command is enabled
+DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function'])
 
 
 class Cmd(cmd.Cmd):
@@ -520,6 +525,11 @@ class Cmd(cmd.Cmd):
         # ensure the updates to the terminal don't interfere with the input being typed or output
         # being printed by a command.
         self.terminal_lock = threading.RLock()
+
+        # Commands that have been disabled from use. This is to support commands that are only available
+        # during specific states of the application. This dictionary's keys are the command names and its
+        # values are DisabledCommand objects.
+        self.disabled_commands = dict()
 
     # -----  Methods related to presenting output to the user -----
 
@@ -1562,11 +1572,16 @@ class Cmd(cmd.Cmd):
                 if name.startswith(COMMAND_FUNC_PREFIX) and callable(getattr(self, name))]
 
     def get_visible_commands(self) -> List[str]:
-        """Returns a list of commands that have not been hidden."""
+        """Returns a list of commands that have not been hidden or disabled."""
         commands = self.get_all_commands()
 
         # Remove the hidden commands
         for name in self.hidden_commands:
+            if name in commands:
+                commands.remove(name)
+
+        # Remove the disabled commands
+        for name in self.disabled_commands:
             if name in commands:
                 commands.remove(name)
 
@@ -1953,7 +1968,7 @@ class Cmd(cmd.Cmd):
     def onecmd(self, statement: Union[Statement, str]) -> bool:
         """ This executes the actual do_* method for a command.
 
-        If the command provided doesn't exist, then it executes _default() instead.
+        If the command provided doesn't exist, then it executes default() instead.
 
         :param statement: intended to be a Statement instance parsed command from the input stream, alternative
                           acceptance of a str is present only for backward compatibility with cmd
@@ -1969,8 +1984,9 @@ class Cmd(cmd.Cmd):
         else:
             func = self.cmd_func(statement.command)
             if func:
-                # Since we have a valid command store it in the history
-                if statement.command not in self.exclude_from_history:
+                # Check to see if this command should be stored in history
+                if statement.command not in self.exclude_from_history \
+                        and statement.command not in self.disabled_commands:
                     self.history.append(statement)
 
                 stop = func(statement)
@@ -3186,13 +3202,15 @@ class Cmd(cmd.Cmd):
 
         # -v must be used alone with no other options
         if args.verbose:
-            if args.clear or args.edit or args.output_file or args.run or args.transcript or args.expanded or args.script:
+            if args.clear or args.edit or args.output_file or args.run or args.transcript \
+                    or args.expanded or args.script:
                 self.poutput("-v can not be used with any other options")
                 self.poutput(self.history_parser.format_usage())
                 return
 
         # -s and -x can only be used if none of these options are present: [-c -r -e -o -t]
-        if (args.script or args.expanded) and (args.clear or args.edit or args.output_file or args.run or args.transcript):
+        if (args.script or args.expanded) \
+                and (args.clear or args.edit or args.output_file or args.run or args.transcript):
             self.poutput("-s and -x can not be used with -c, -r, -e, -o, or -t")
             self.poutput(self.history_parser.format_usage())
             return
@@ -3597,6 +3615,95 @@ class Cmd(cmd.Cmd):
 
         else:
             raise RuntimeError("another thread holds terminal_lock")
+
+    def enable_command(self, command: str) -> None:
+        """
+        Enable a command by restoring its functions
+        :param command: the command being enabled
+        """
+        # If the commands is already enabled, then return
+        if command not in self.disabled_commands:
+            return
+
+        help_func_name = HELP_FUNC_PREFIX + command
+
+        # Restore the command and help functions to their original values
+        dc = self.disabled_commands[command]
+        setattr(self, self.cmd_func_name(command), dc.command_function)
+
+        if dc.help_function is None:
+            delattr(self, help_func_name)
+        else:
+            setattr(self, help_func_name, dc.help_function)
+
+        # Remove the disabled command entry
+        del self.disabled_commands[command]
+
+    def enable_category(self, category: str) -> None:
+        """
+        Enable an entire category of commands
+        :param category: the category to enable
+        """
+        for cmd_name in list(self.disabled_commands):
+            dc = self.disabled_commands[cmd_name]
+            cmd_category = getattr(dc.command_function, HELP_CATEGORY, None)
+            if cmd_category is not None and cmd_category == category:
+                self.enable_command(cmd_name)
+
+    def disable_command(self, command: str, message_to_print: str) -> None:
+        """
+        Disable a command and overwrite its functions
+        :param command: the command being disabled
+        :param message_to_print: what to print when this command is run or help is called on it while disabled
+        """
+        import functools
+
+        # If the commands is already disabled, then return
+        if command in self.disabled_commands:
+            return
+
+        # Make sure this is an actual command
+        command_function = self.cmd_func(command)
+        if command_function is None:
+            raise AttributeError("{} does not refer to a command".format(command))
+
+        help_func_name = HELP_FUNC_PREFIX + command
+
+        # Add the disabled command record
+        self.disabled_commands[command] = DisabledCommand(command_function=command_function,
+                                                          help_function=getattr(self, help_func_name, None))
+
+        # Overwrite the command and help functions to print the message
+        new_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
+        setattr(self, self.cmd_func_name(command), new_func)
+        setattr(self, help_func_name, new_func)
+
+    def disable_category(self, category: str, message_to_print: str) -> None:
+        """
+        Disable an entire category of commands
+        :param category: the category to disable
+        :param message_to_print: what to print when anything in this category is run or help is called on it
+                                 while disabled
+        """
+        all_commands = self.get_all_commands()
+
+        for cmd_name in all_commands:
+            func = self.cmd_func(cmd_name)
+            cmd_category = getattr(func, HELP_CATEGORY, None)
+
+            # If this command is in the category, then disable it
+            if cmd_category is not None and cmd_category == category:
+                self.disable_command(cmd_name, message_to_print)
+
+    # noinspection PyUnusedLocal
+    def _report_disabled_command_usage(self, *args, message_to_print: str, **kwargs) -> None:
+        """
+        Report when a disabled command has been run or had help called on it
+        :param args: not used
+        :param message_to_print: the message reporting that the command is disabled
+        :param kwargs: not used
+        """
+        self.poutput(message_to_print)
 
     def cmdloop(self, intro: Optional[str] = None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
