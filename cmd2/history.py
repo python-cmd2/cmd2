@@ -167,9 +167,7 @@ class History(list):
             end = int(end)
 
         if start is not None and end is not None:
-            # we have both start and end, return a slice of history, unless both are negative
-            if start < 0 and end < 0:
-                raise ValueError
+            # we have both start and end, return a slice of history
             result = self[start:end]
         elif start is not None and sep is not None:
             # take a slice of the array

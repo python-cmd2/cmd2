@@ -310,8 +310,7 @@ last number, it will continue to the end::
         3  alias create three !echo three
         4  alias create four !echo four
 
-You can use negative numbers as either the first or second number of the range
-(but not both). If you want to display the last three commands entered::
+If you want to display the last three commands entered::
 
     (Cmd) history -- -3:
         2  alias create two !echo two
