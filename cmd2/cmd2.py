@@ -3233,7 +3233,7 @@ class Cmd(cmd.Cmd):
             arg = args.arg
             arg_is_int = False
             try:
-                _ = int(arg)
+                int(arg)
                 arg_is_int = True
             except ValueError:
                 pass

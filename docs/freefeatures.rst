@@ -319,9 +319,13 @@ You can use negative numbers as either the first or second number of the range
         4  alias create four !echo four
 
 Notice the double dashes. These are required because the history command uses
-``argparse`` to parse the command line arguments. For reasons I do not
-understand, ``argparse`` thinks ``-3:`` is an option, not an argument, but it
-thinks ``-3`` is an argument.
+``argparse`` to parse the command line arguments. As described in the `argparse
+documentation <https://docs.python.org/3/library/argparse.html>`_ , ``-3:`` is
+an option, not an argument:
+
+    If you have positional arguments that must begin with - and don’t look like
+    negative numbers, you can insert the pseudo-argument '--' which tells
+    parse_args() that everything after that is a positional argument:
 
 There is no zeroth command, so don't ask for it. If you are a python programmer,
 you've probably noticed this looks a lot like the slice syntax for lists and
