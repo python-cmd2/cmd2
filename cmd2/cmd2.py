@@ -3645,9 +3645,8 @@ class Cmd(cmd.Cmd):
         :param category: the category to enable
         """
         for cmd_name in list(self.disabled_commands):
-            dc = self.disabled_commands[cmd_name]
-            cmd_category = getattr(dc.command_function, HELP_CATEGORY, None)
-            if cmd_category is not None and cmd_category == category:
+            func = self.disabled_commands[cmd_name].command_function
+            if hasattr(func, HELP_CATEGORY) and getattr(func, HELP_CATEGORY) == category:
                 self.enable_command(cmd_name)
 
     def disable_command(self, command: str, message_to_print: str) -> None:
@@ -3689,10 +3688,7 @@ class Cmd(cmd.Cmd):
 
         for cmd_name in all_commands:
             func = self.cmd_func(cmd_name)
-            cmd_category = getattr(func, HELP_CATEGORY, None)
-
-            # If this command is in the category, then disable it
-            if cmd_category is not None and cmd_category == category:
+            if hasattr(func, HELP_CATEGORY) and getattr(func, HELP_CATEGORY) == category:
                 self.disable_command(cmd_name, message_to_print)
 
     # noinspection PyUnusedLocal
