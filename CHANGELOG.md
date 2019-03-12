@@ -10,6 +10,7 @@
             * output expanded commands instead of entered command (expands aliases, macros, and shortcuts)
         * Added **-v**, **--verbose** flag
             * display history and include expanded commands if they differ from the typed command
+        * Added support for negative indices
     * Added ``matches_sort_key`` to override the default way tab completion matches are sorted
     * Added ``StdSim.pause_storage`` member which when True will cause ``StdSim`` to not save the output sent to it.
       See documentation for ``CommandResult`` in ``pyscript_bridge.py`` for reasons pausing the storage can be useful.
