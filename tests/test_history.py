@@ -63,26 +63,65 @@ def hist():
     return h
 
 def test_history_class_span(hist):
-    h = hist
-    assert h == ['first', 'second', 'third', 'fourth']
-    assert h.span('-2..') == ['third', 'fourth']
-    assert h.span('2..3') == ['second', 'third']    # Inclusive of end
-    assert h.span('3') == ['third']
-    assert h.span(':') == h
-    assert h.span('2..') == ['second', 'third', 'fourth']
-    assert h.span('-1') == ['fourth']
-    assert h.span('-2..-3') == ['third', 'second']
-    assert h.span('*') == h
+    for tryit in ['*', ':', '-', 'all', 'ALL']:
+        assert hist.span(tryit) == hist
+
+    assert hist.span('3') == ['third']
+    assert hist.span('-1') == ['fourth']
+
+    assert hist.span('2..') == ['second', 'third', 'fourth']
+    assert hist.span('2:') == ['second', 'third', 'fourth']
+
+    assert hist.span('-2..') == ['third', 'fourth']
+    assert hist.span('-2:') == ['third', 'fourth']
+
+    assert hist.span('1..3') == ['first', 'second', 'third']
+    assert hist.span('1:3') == ['first', 'second', 'third']
+    assert hist.span('2:-1') == ['second', 'third', 'fourth']
+    assert hist.span('-3:4') == ['second', 'third','fourth']
+    assert hist.span('-4:-2') == ['first', 'second', 'third']
+
+    assert hist.span(':-2') == ['first', 'second', 'third']
+    assert hist.span('..-2') == ['first', 'second', 'third']
+
+    value_errors = ['fred', 'fred:joe', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    for tryit in value_errors:
+        with pytest.raises(ValueError):
+            hist.span(tryit)
 
 def test_history_class_get(hist):
-    h = hist
-    assert h == ['first', 'second', 'third', 'fourth']
-    assert h.get('') == h
-    assert h.get('-2') == h[:-2]
-    assert h.get('5') == []
-    assert h.get('2-3') == ['second']           # Exclusive of end
-    assert h.get('ir') == ['first', 'third']    # Normal string search for all elements containing "ir"
-    assert h.get('/i.*d/') == ['third']         # Regex string search "i", then anything, then "d"
+    assert hist.get('1') == 'first'
+    assert hist.get(3) == 'third'
+    assert hist.get('-2') == hist[-2]
+    assert hist.get(-1) == 'fourth'
+
+    with pytest.raises(IndexError):
+        hist.get(0)
+    with pytest.raises(IndexError):
+        hist.get('0')
+
+    with pytest.raises(IndexError):
+        hist.get('5')
+    with pytest.raises(ValueError):
+        hist.get('2-3')
+    with pytest.raises(ValueError):
+        hist.get('1..2')
+    with pytest.raises(ValueError):
+        hist.get('3:4')
+    with pytest.raises(ValueError):
+        hist.get('fred')
+    with pytest.raises(ValueError):
+        hist.get('')
+    with pytest.raises(TypeError):
+        hist.get(None)
+
+def test_history_str_search(hist):
+    assert hist.str_search('ir') == ['first', 'third']
+    assert hist.str_search('rth') == ['fourth']
+
+def test_history_regex_search(hist):
+    assert hist.regex_search('/i.*d/') == ['third']
+    assert hist.regex_search('s[a-z]+ond') == ['second']
 
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
@@ -200,11 +239,9 @@ def test_history_with_span_index_error(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help history')
     run_cmd(base_app, '!ls -hal :')
-    out = run_cmd(base_app, 'history "hal :"')
-    expected = normalize("""
-    3  !ls -hal :
-""")
-    assert out == expected
+    with pytest.raises(ValueError):
+        _, err = run_cmd(base_app, 'history "hal :"')
+        assert "ValueError" in err
 
 def test_history_output_file(base_app):
     run_cmd(base_app, 'help')
@@ -358,8 +395,8 @@ def test_existing_history_file(hist_file, capsys):
         pass
 
     # Create a new cmd2 app
-    app = cmd2.Cmd(persistent_history_file=hist_file)
-    out, err = capsys.readouterr()
+    cmd2.Cmd(persistent_history_file=hist_file)
+    _, err = capsys.readouterr()
 
     # Make sure there were no errors
     assert err == ''
@@ -381,8 +418,8 @@ def test_new_history_file(hist_file, capsys):
         pass
 
     # Create a new cmd2 app
-    app = cmd2.Cmd(persistent_history_file=hist_file)
-    out, err = capsys.readouterr()
+    cmd2.Cmd(persistent_history_file=hist_file)
+    _, err = capsys.readouterr()
 
     # Make sure there were no errors
     assert err == ''
@@ -398,8 +435,8 @@ def test_bad_history_file_path(capsys, request):
     test_dir = os.path.dirname(request.module.__file__)
 
     # Create a new cmd2 app
-    app = cmd2.Cmd(persistent_history_file=test_dir)
-    out, err = capsys.readouterr()
+    cmd2.Cmd(persistent_history_file=test_dir)
+    _, err = capsys.readouterr()
 
     if sys.platform == 'win32':
         # pyreadline masks the read exception. Therefore the bad path error occurs when trying to write the file.

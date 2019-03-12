@@ -53,7 +53,7 @@ class CmdLineApp(cmd2.Cmd):
         if opts.shout:
             arg = arg.upper()
         repetitions = opts.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             self.poutput(arg)
             # recommend using the poutput function instead of
             # self.stdout.write or "print", because Cmd allows the user
@@ -69,7 +69,7 @@ class CmdLineApp(cmd2.Cmd):
         """Mumbles what you tell me to."""
         repetitions = opts.repeat or 1
         #arg = arg.split()
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             output = []
             if random.random() < .33:
                 output.append(random.choice(self.MUMBLE_FIRST))
