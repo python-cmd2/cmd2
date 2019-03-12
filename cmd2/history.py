@@ -97,7 +97,7 @@ class History(list):
         """
         index = int(index)
         if index == 0:
-            raise IndexError
+            raise IndexError('The first command in history is command 1.')
         elif index < 0:
             return self[index]
         else:
@@ -108,22 +108,27 @@ class History(list):
     #    ^\s*                          matches any whitespace at the beginning of the
     #                                  input. This is here so you don't have to trim the input
     #
-    #    (?P<start>-?\d+)?             create a capture group named 'start' which matches one
-    #                                  or more digits, optionally preceeded by a minus sign. This
-    #                                  group is optional so that we can match a string like '..2'
+    #    (?P<start>-?[1-9]{1}\d*)?     create a capture group named 'start' which matches an
+    #                                  optional minus sign, followed by exactly one non-zero
+    #                                  digit, and as many other digits as you want. This group
+    #                                  is optional so that we can match an input string like '..2'.
+    #                                  This regex will match 1, -1, 10, -10, but not 0 or -0.
     #
     #    (?P<separator>:|(\.{2,}))?    create a capture group named 'separator' which matches either
     #                                  a colon or two periods. This group is optional so we can
     #                                  match a string like '3'
     #
-    #    (?P<end>-?\d+)?               create a capture group named 'end' which matches one or more
-    #                                  digits, optionally preceeded by a minus sign. This group is
-    #                                  optional so that we can match a string like ':' or '5:'
+    #    (?P<end>-?[1-9]{1}\d*)?       create a capture group named 'end' which matches an
+    #                                  optional minus sign, followed by exactly one non-zero
+    #                                  digit, and as many other digits as you want. This group is
+    #                                  optional so that we can match an input string like ':'
+    #                                  or '5:'. This regex will match 1, -1, 10, -10, but not
+    #                                  0 or -0.
     #
     #    \s*$                          match any whitespace at the end of the input. This is here so
     #                                  you don't have to trim the input
     #
-    spanpattern = re.compile(r'^\s*(?P<start>-?\d+)?(?P<separator>:|(\.{2,}))?(?P<end>-?\d+)?\s*$')
+    spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]{1}\d*)?(?P<separator>:|(\.{2,}))?(?P<end>-?[1-9]{1}\d*)?\s*$')
 
     def span(self, span: str) -> List[HistoryItem]:
         """Return an index or slice of the History list,
@@ -156,7 +161,7 @@ class History(list):
         results = self.spanpattern.search(span)
         if not results:
             # our regex doesn't match the input, bail out
-            raise ValueError
+            raise ValueError('History indices must be positive or negative integers, and may not be zero.')
 
         sep = results.group('separator')
         start = results.group('start')
@@ -165,6 +170,16 @@ class History(list):
         end = results.group('end')
         if end:
             end = int(end)
+            # modify end so it's inclusive of the last element
+            if end == -1:
+                # -1 as the end means include the last command in the array, which in pythonic
+                # terms means to not provide an ending index. If you put -1 as the ending index
+                # python excludes the last item in the list.
+                end = None
+            elif end < -1:
+                # if the ending is smaller than -1, make it one larger so it includes
+                # the element (python native indices exclude the last referenced element)
+                end += 1
 
         if start is not None and end is not None:
             # we have both start and end, return a slice of history

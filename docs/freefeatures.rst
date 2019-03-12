@@ -293,9 +293,10 @@ entered, and so forth::
 
 You can use a similar mechanism to display a range of commands. Simply give two
 command numbers separated by ``..`` or ``:``, and you will see all commands
-between those two numbers::
+between, and including, those two numbers::
 
-    (Cmd) history 2:3
+    (Cmd) history 1:3
+        1  alias create one !echo one
         2  alias create two !echo two
         3  alias create three !echo three
 

@@ -77,14 +77,14 @@ def test_history_class_span(hist):
 
     assert hist.span('1..3') == ['first', 'second', 'third']
     assert hist.span('1:3') == ['first', 'second', 'third']
-    assert hist.span('2:-1') == ['second', 'third']
+    assert hist.span('2:-1') == ['second', 'third', 'fourth']
     assert hist.span('-3:4') == ['second', 'third','fourth']
-    assert hist.span('-4:-2') == ['first', 'second']
+    assert hist.span('-4:-2') == ['first', 'second', 'third']
 
-    assert hist.span(':-2') == ['first', 'second']
-    assert hist.span('..-2') == ['first', 'second']
+    assert hist.span(':-2') == ['first', 'second', 'third']
+    assert hist.span('..-2') == ['first', 'second', 'third']
 
-    value_errors = ['fred', 'fred:joe', 'a..b', '2 ..', '1 : 3']
+    value_errors = ['fred', 'fred:joe', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
     for tryit in value_errors:
         with pytest.raises(ValueError):
             hist.span(tryit)
