@@ -2054,7 +2054,8 @@ class Cmd(cmd.Cmd):
 
             return self.do_shell(statement.command_and_args)
         else:
-            self.poutput('*** {} is not a recognized command, alias, or macro\n'.format(statement.command))
+            self.perror('*** {} is not a recognized command, alias, or macro'.format(statement.command),
+                        err_color=Fore.RESET, traceback_war=False)
 
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -3706,7 +3707,7 @@ class Cmd(cmd.Cmd):
         :param message_to_print: the message reporting that the command is disabled
         :param kwargs: not used
         """
-        self.poutput(message_to_print)
+        self.perror(message_to_print, err_color=Fore.RESET, traceback_war=False)
 
     def cmdloop(self, intro: Optional[str] = None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
