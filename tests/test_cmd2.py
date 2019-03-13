@@ -2280,3 +2280,11 @@ def test_disabled_command_not_in_history(disable_commands_app):
     saved_len = len(disable_commands_app.history)
     run_cmd(disable_commands_app, 'has_help_func')
     assert saved_len == len(disable_commands_app.history)
+
+def test_disabled_message_command_name(disable_commands_app, capsys):
+    message_to_print = '{} is currently disabled'.format(cmd2.cmd2.COMMAND_NAME)
+    disable_commands_app.disable_command('has_help_func', message_to_print)
+
+    run_cmd(disable_commands_app, 'has_help_func')
+    out, err = capsys.readouterr()
+    assert err.startswith('has_help_func is currently disabled')

@@ -134,6 +134,9 @@ HELP_FUNC_PREFIX = 'help_'
 ALPHABETICAL_SORT_KEY = utils.norm_fold
 NATURAL_SORT_KEY = utils.natural_keys
 
+# Used as the command name placeholder in disabled command messages.
+COMMAND_NAME = "<COMMAND_NAME>"
+
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """Categorize a function.
@@ -3681,7 +3684,8 @@ class Cmd(cmd.Cmd):
                                                           help_function=getattr(self, help_func_name, None))
 
         # Overwrite the command and help functions to print the message
-        new_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
+        new_func = functools.partial(self._report_disabled_command_usage,
+                                     message_to_print=message_to_print.replace(COMMAND_NAME, command))
         setattr(self, self.cmd_func_name(command), new_func)
         setattr(self, help_func_name, new_func)
 
