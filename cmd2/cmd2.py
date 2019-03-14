@@ -68,7 +68,7 @@ else:
     if rl_type == RlType.PYREADLINE:
 
         # Save the original pyreadline display completion function since we need to override it and restore it
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         orig_pyreadline_display = readline.rl.mode._display_completions
 
     elif rl_type == RlType.GNU:
@@ -104,6 +104,7 @@ except ImportError:
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
+    # noinspection PyUnresolvedReferences
     from contextlib2 import redirect_stdout
 else:
     from contextlib import redirect_stdout
@@ -704,6 +705,7 @@ class Cmd(cmd.Cmd):
         if rl_type == RlType.GNU:
             readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
         elif rl_type == RlType.PYREADLINE:
+            # noinspection PyUnresolvedReferences
             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[List[str], List[str]]:
@@ -1331,6 +1333,7 @@ class Cmd(cmd.Cmd):
 
             # Print the header if one exists
             if self.completion_header:
+                # noinspection PyUnresolvedReferences
                 readline.rl.mode.console.write('\n' + self.completion_header)
 
             # Display matches using actual display function. This also redraws the prompt and line.
@@ -2178,6 +2181,7 @@ class Cmd(cmd.Cmd):
                     readline.set_completion_display_matches_hook(None)
                     rl_basic_quote_characters.value = old_basic_quotes
                 elif rl_type == RlType.PYREADLINE:
+                    # noinspection PyUnresolvedReferences
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
             self.cmdqueue.clear()
@@ -3013,6 +3017,7 @@ class Cmd(cmd.Cmd):
                     # Save cmd2 history
                     saved_cmd2_history = []
                     for i in range(1, readline.get_current_history_length() + 1):
+                        # noinspection PyArgumentList
                         saved_cmd2_history.append(readline.get_history_item(i))
 
                     readline.clear_history()
@@ -3045,6 +3050,7 @@ class Cmd(cmd.Cmd):
                         if rl_type == RlType.GNU:
                             readline.set_completion_display_matches_hook(None)
                         elif rl_type == RlType.PYREADLINE:
+                            # noinspection PyUnresolvedReferences
                             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
                         # Save off the current completer and set a new one in the Python console
@@ -3082,6 +3088,7 @@ class Cmd(cmd.Cmd):
                         # Save py's history
                         self.py_history.clear()
                         for i in range(1, readline.get_current_history_length() + 1):
+                            # noinspection PyArgumentList
                             self.py_history.append(readline.get_history_item(i))
 
                         readline.clear_history()
@@ -3159,10 +3166,12 @@ class Cmd(cmd.Cmd):
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
             if self.locals_in_py:
-                def load_ipy(self, app):
+                # noinspection PyUnusedLocal
+                def load_ipy(cmd2_instance, app):
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(self, bridge)
             else:
+                # noinspection PyUnusedLocal
                 def load_ipy(app):
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(bridge)
@@ -3383,7 +3392,7 @@ class Cmd(cmd.Cmd):
 
         command = utils.quote_string_if_needed(os.path.expanduser(self.editor))
         if args.file_path:
-            command += " " + utils.quote_string_if_needed(os.path.expanduser(args.file_path))
+            command += " " + utils.quote_string_if_needed(os.path.expaclass nduser(args.file_path))
 
         self.do_shell(command)
 
@@ -3564,6 +3573,7 @@ class Cmd(cmd.Cmd):
                 if rl_type == RlType.GNU:
                     sys.stderr.write(terminal_str)
                 elif rl_type == RlType.PYREADLINE:
+                    # noinspection PyUnresolvedReferences
                     readline.rl.mode.console.write(terminal_str)
 
                 # Redraw the prompt and input lines

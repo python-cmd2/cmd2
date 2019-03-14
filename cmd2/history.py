@@ -128,12 +128,12 @@ class History(list):
     #    \s*$                          match any whitespace at the end of the input. This is here so
     #                                  you don't have to trim the input
     #
-    spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]{1}\d*)?(?P<separator>:|(\.{2,}))?(?P<end>-?[1-9]{1}\d*)?\s*$')
+    spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))?(?P<end>-?[1-9]\d*)?\s*$')
 
     def span(self, span: str) -> List[HistoryItem]:
         """Return an index or slice of the History list,
 
-        :param raw: string containing an index or a slice
+        :param span: string containing an index or a slice
         :return: a list of HistoryItems
 
         This method can accommodate input in any of these forms:

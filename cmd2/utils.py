@@ -88,6 +88,7 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
         Node(val=4, left=None, right=7)
     """
     T = collections.namedtuple(typename, field_names)
+    # noinspection PyProtectedMember,PyUnresolvedReferences
     T.__new__.__defaults__ = (None,) * len(T._fields)
     if isinstance(default_values, collections.Mapping):
         prototype = T(**default_values)

@@ -14,6 +14,7 @@ from .utils import namedtuple_with_defaults, StdSim
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
+    # noinspection PyUnresolvedReferences
     from contextlib2 import redirect_stdout, redirect_stderr
 else:
     from contextlib import redirect_stdout, redirect_stderr
