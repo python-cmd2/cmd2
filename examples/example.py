@@ -27,15 +27,13 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        self.maxrepeats = 3
-
-        # Add stuff to shortcuts before calling base class initializer
-        self.shortcuts.update({'&': 'speak'})
-
+        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts.update({'&': 'speak'})
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        super().__init__(use_ipython=False, multiline_commands=['orate'])
+        super().__init__(use_ipython=False, multiline_commands=['orate'], shortcuts=shortcuts)
 
         # Make maxrepeats settable at runtime
+        self.maxrepeats = 3
         self.settable['maxrepeats'] = 'max repetitions for speak command'
 
     speak_parser = argparse.ArgumentParser()
