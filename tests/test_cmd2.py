@@ -292,9 +292,10 @@ def test_pyscript_requires_an_argument(base_app, capsys):
     assert "the following arguments are required: script_path" in err
 
 
-def test_base_error(base_app):
-    out = run_cmd(base_app, 'meow')
-    assert "is not a recognized command" in out[0]
+def test_base_error(base_app, capsys):
+    run_cmd(base_app, 'meow')
+    out, err = capsys.readouterr()
+    assert "is not a recognized command" in err
 
 
 def test_base_load(base_app, request):
@@ -2198,23 +2199,27 @@ def disable_commands_app():
     return app
 
 
-def test_disable_and_enable_category(disable_commands_app):
+def test_disable_and_enable_category(disable_commands_app, capsys):
     # Disable the category
     message_to_print = 'These commands are currently disabled'
     disable_commands_app.disable_category(disable_commands_app.category_name, message_to_print)
 
     # Make sure all the commands and help on those commands displays the message
-    out = run_cmd(disable_commands_app, 'has_help_func')
-    assert out == [message_to_print]
+    run_cmd(disable_commands_app, 'has_help_func')
+    out, err = capsys.readouterr()
+    assert err.startswith(message_to_print)
 
-    out = run_cmd(disable_commands_app, 'help has_help_func')
-    assert out == [message_to_print]
+    run_cmd(disable_commands_app, 'help has_help_func')
+    out, err = capsys.readouterr()
+    assert err.startswith(message_to_print)
 
-    out = run_cmd(disable_commands_app, 'has_no_help_func')
-    assert out == [message_to_print]
+    run_cmd(disable_commands_app, 'has_no_help_func')
+    out, err = capsys.readouterr()
+    assert err.startswith(message_to_print)
 
-    out = run_cmd(disable_commands_app, 'help has_no_help_func')
-    assert out == [message_to_print]
+    run_cmd(disable_commands_app, 'help has_no_help_func')
+    out, err = capsys.readouterr()
+    assert err.startswith(message_to_print)
 
     visible_commands = disable_commands_app.get_visible_commands()
     assert 'has_help_func' not in visible_commands
@@ -2274,3 +2279,11 @@ def test_disabled_command_not_in_history(disable_commands_app):
     saved_len = len(disable_commands_app.history)
     run_cmd(disable_commands_app, 'has_help_func')
     assert saved_len == len(disable_commands_app.history)
+
+def test_disabled_message_command_name(disable_commands_app, capsys):
+    message_to_print = '{} is currently disabled'.format(cmd2.cmd2.COMMAND_NAME)
+    disable_commands_app.disable_command('has_help_func', message_to_print)
+
+    run_cmd(disable_commands_app, 'has_help_func')
+    out, err = capsys.readouterr()
+    assert err.startswith('has_help_func is currently disabled')

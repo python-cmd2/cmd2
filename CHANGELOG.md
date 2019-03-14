@@ -1,3 +1,8 @@
+## 0.9.12 (TBD, 2019)
+* Enhancements
+    * Added ability to include command name placeholders in the message printed when trying to run a disabled command.
+        * See docstring for ``disable_command()`` or ``disable_category()`` for more details.
+
 ## 0.9.11 (March 13, 2019)
 * Bug Fixes
     * Fixed bug in how **history** command deals with multiline commands when output to a script
