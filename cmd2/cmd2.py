@@ -3665,6 +3665,10 @@ class Cmd(cmd.Cmd):
         Disable a command and overwrite its functions
         :param command: the command being disabled
         :param message_to_print: what to print when this command is run or help is called on it while disabled
+
+                                 The variable COMMAND_NAME can be used as a placeholder for the name of the
+                                 command being disabled.
+                                 ex: message_to_print = "{} is currently disabled".format(COMMAND_NAME)
         """
         import functools
 
@@ -3695,6 +3699,10 @@ class Cmd(cmd.Cmd):
         :param category: the category to disable
         :param message_to_print: what to print when anything in this category is run or help is called on it
                                  while disabled
+
+                                 The variable COMMAND_NAME can be used as a placeholder for the name of the
+                                 command being disabled.
+                                 ex: message_to_print = "{} is currently disabled".format(COMMAND_NAME)
         """
         all_commands = self.get_all_commands()
 
