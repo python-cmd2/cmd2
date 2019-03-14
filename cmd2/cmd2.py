@@ -293,14 +293,10 @@ class Cmd(cmd.Cmd):
 
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
-    # Attributes used to configure the StatementParser, best not to change these at runtime
-    multiline_commands = []
-    shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    terminators = [constants.MULTILINE_TERMINATOR]
+    DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
 
     # Attributes which are NOT dynamically settable at runtime
     allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
-    allow_redirection = True    # Should output redirection and pipes be allowed
     default_to_shell = False    # Attempt to run unrecognized commands as shell commands
     quit_on_sigint = False      # Quit the loop on interrupt instead of just resetting prompt
     reserved_words = []
@@ -338,7 +334,9 @@ class Cmd(cmd.Cmd):
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, persistent_history_file: str = '',
                  persistent_history_length: int = 1000, startup_script: Optional[str] = None, use_ipython: bool = False,
-                 transcript_files: Optional[List[str]] = None) -> None:
+                 transcript_files: Optional[List[str]] = None, allow_redirection: bool = True,
+                 multiline_commands: Optional[List[str]] = None, terminators: Optional[List[str]] = None,
+                 shortcuts: Optional[Dict[str, str]] = None) -> None:
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
         :param completekey: (optional) readline name of a completion key, default to Tab
@@ -349,6 +347,9 @@ class Cmd(cmd.Cmd):
         :param startup_script: (optional) file path to a a script to load and execute at startup
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
         :param transcript_files: (optional) allows running transcript tests when allow_cli_args is False
+        :param allow_redirection: (optional) should output redirection and pipes be allowed
+        :param multiline_commands: (optional) list of commands allowed to accept multi-line input
+        :param shortcuts: (optional) dictionary containing shortcuts for commands
         """
         # If use_ipython is False, make sure the do_ipy() method doesn't exit
         if not use_ipython:
@@ -377,21 +378,21 @@ class Cmd(cmd.Cmd):
         self.aliases = dict()
         self.macros = dict()
 
-        self._finalize_app_parameters()
-
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
         self.py_history = []
         self.pyscript_name = 'app'
         self.keywords = self.reserved_words + self.get_all_commands()
-        self.statement_parser = StatementParser(
-            allow_redirection=self.allow_redirection,
-            terminators=self.terminators,
-            multiline_commands=self.multiline_commands,
-            aliases=self.aliases,
-            shortcuts=self.shortcuts,
-        )
+
+        if shortcuts is None:
+            shortcuts = self.DEFAULT_SHORTCUTS
+        shortcuts = sorted(shortcuts.items(), reverse=True)
+        self.statement_parser = StatementParser(allow_redirection=allow_redirection,
+                                                terminators=terminators,
+                                                multiline_commands=multiline_commands,
+                                                aliases=self.aliases,
+                                                shortcuts=shortcuts)
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -545,10 +546,15 @@ class Cmd(cmd.Cmd):
         """
         return utils.strip_ansi(self.prompt)
 
-    def _finalize_app_parameters(self) -> None:
-        """Finalize the shortcuts"""
-        # noinspection PyUnresolvedReferences
-        self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
+    @property
+    def allow_redirection(self) -> bool:
+        """Read-only property to get whether or not redirection of stdout is allowed."""
+        return self.statement_parser.allow_redirection
+
+    @property
+    def shortcuts(self) -> List[Tuple[str, str]]:
+        """Read-only property to access the shortcuts stored in the StatementParser."""
+        return self.statement_parser.shortcuts
 
     def decolorized_write(self, fileobj: IO, msg: str) -> None:
         """Write a string to a fileobject, stripping ANSI escape sequences if necessary
@@ -2792,7 +2798,8 @@ class Cmd(cmd.Cmd):
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}"""
-        return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
+        return read_only_settings.format(str(self.statement_parser.terminators), self.allow_cli_args,
+                                         self.allow_redirection)
 
     def show(self, args: argparse.Namespace, parameter: str = '') -> None:
         """Shows current settings of parameters.

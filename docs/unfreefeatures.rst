@@ -7,12 +7,11 @@ Multiline commands
 
 Command input may span multiple lines for the
 commands whose names are listed in the
-parameter ``app.multiline_commands``.  These
+``multiline_commands`` argument to ``cmd2.Cmd.__init__()``.  These
 commands will be executed only
 after the user has entered a *terminator*.
 By default, the command terminator is
-``;``; replacing or appending to the list
-``app.terminators`` allows different
+``;``; specifying the ``terminators`` optional argument to ``cmd2.Cmd.__init__()`` allows different
 terminators.  A blank line
 is *always* considered a command terminator
 (cannot be overridden).
