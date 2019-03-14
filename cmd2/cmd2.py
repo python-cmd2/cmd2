@@ -134,6 +134,9 @@ HELP_FUNC_PREFIX = 'help_'
 ALPHABETICAL_SORT_KEY = utils.norm_fold
 NATURAL_SORT_KEY = utils.natural_keys
 
+# Used as the command name placeholder in disabled command messages.
+COMMAND_NAME = "<COMMAND_NAME>"
+
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """Categorize a function.
@@ -2054,7 +2057,8 @@ class Cmd(cmd.Cmd):
 
             return self.do_shell(statement.command_and_args)
         else:
-            self.poutput('*** {} is not a recognized command, alias, or macro\n'.format(statement.command))
+            self.perror('*** {} is not a recognized command, alias, or macro'.format(statement.command),
+                        err_color=Fore.RESET, traceback_war=False)
 
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -3661,6 +3665,10 @@ class Cmd(cmd.Cmd):
         Disable a command and overwrite its functions
         :param command: the command being disabled
         :param message_to_print: what to print when this command is run or help is called on it while disabled
+
+                                 The variable COMMAND_NAME can be used as a placeholder for the name of the
+                                 command being disabled.
+                                 ex: message_to_print = "{} is currently disabled".format(COMMAND_NAME)
         """
         import functools
 
@@ -3680,7 +3688,8 @@ class Cmd(cmd.Cmd):
                                                           help_function=getattr(self, help_func_name, None))
 
         # Overwrite the command and help functions to print the message
-        new_func = functools.partial(self._report_disabled_command_usage, message_to_print=message_to_print)
+        new_func = functools.partial(self._report_disabled_command_usage,
+                                     message_to_print=message_to_print.replace(COMMAND_NAME, command))
         setattr(self, self.cmd_func_name(command), new_func)
         setattr(self, help_func_name, new_func)
 
@@ -3690,6 +3699,10 @@ class Cmd(cmd.Cmd):
         :param category: the category to disable
         :param message_to_print: what to print when anything in this category is run or help is called on it
                                  while disabled
+
+                                 The variable COMMAND_NAME can be used as a placeholder for the name of the
+                                 command being disabled.
+                                 ex: message_to_print = "{} is currently disabled".format(COMMAND_NAME)
         """
         all_commands = self.get_all_commands()
 
@@ -3706,7 +3719,7 @@ class Cmd(cmd.Cmd):
         :param message_to_print: the message reporting that the command is disabled
         :param kwargs: not used
         """
-        self.poutput(message_to_print)
+        self.perror(message_to_print, err_color=Fore.RESET, traceback_war=False)
 
     def cmdloop(self, intro: Optional[str] = None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.

@@ -7,6 +7,7 @@ A sample application for tagging categories on commands.
 import argparse
 
 import cmd2
+from cmd2.cmd2 import COMMAND_NAME
 
 
 class HelpCategories(cmd2.Cmd):
@@ -143,7 +144,9 @@ class HelpCategories(cmd2.Cmd):
     @cmd2.with_category("Command Management")
     def do_disable_commands(self, _):
         """Disable the Application Management commands"""
-        self.disable_category(self.CMD_CAT_APP_MGMT, "Application Management is currently disabled")
+        message_to_print = "{} is not available while {} commands are disabled".format(COMMAND_NAME,
+                                                                                       self.CMD_CAT_APP_MGMT)
+        self.disable_category(self.CMD_CAT_APP_MGMT, message_to_print)
         self.poutput("The Application Management commands have been disabled")
 
     @cmd2.with_category("Command Management")
