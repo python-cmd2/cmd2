@@ -3392,7 +3392,7 @@ class Cmd(cmd.Cmd):
 
         command = utils.quote_string_if_needed(os.path.expanduser(self.editor))
         if args.file_path:
-            command += " " + utils.quote_string_if_needed(os.path.expaclass nduser(args.file_path))
+            command += " " + utils.quote_string_if_needed(os.path.expanduser(args.file_path))
 
         self.do_shell(command)
 
