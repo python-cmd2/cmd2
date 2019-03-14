@@ -2,6 +2,12 @@
 * Enhancements
     * Added ability to include command name placeholders in the message printed when trying to run a disabled command.
         * See docstring for ``disable_command()`` or ``disable_category()`` for more details.
+* Potentially breaking changes
+    * The following commands now write to stderr instead of stdout when printing an error. This will making catching
+    errors easier in pyscript.
+        * ``do_help()`` - when no help information can be found
+        * ``default()`` - in all cases since this is called when an invalid command name is run
+        * ``_report_disabled_command_usage()`` - in all cases since this is called when a disabled command is run
 
 ## 0.9.11 (March 13, 2019)
 * Bug Fixes
