@@ -297,37 +297,7 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
     DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-
-    # Attributes which ARE dynamically settable at runtime
-    colors = constants.COLORS_TERMINAL
-    continuation_prompt = '> '
-    debug = False
-    echo = False
-    editor = os.environ.get('EDITOR')
-    if not editor:
-        if sys.platform[:3] == 'win':
-            editor = 'notepad'
-        else:
-            # Favor command-line editors first so we don't leave the terminal to edit
-            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
-                if utils.which(editor):
-                    break
-    feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
-    locals_in_py = False
-    quiet = False  # Do not suppress nonessential output
-    timing = False  # Prints elapsed time for each command
-
-    # To make an attribute settable with the "do_set" command, add it to this ...
-    settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
-                'continuation_prompt': 'On 2nd+ line of input',
-                'debug': 'Show full error stack on error',
-                'echo': 'Echo command issued into output',
-                'editor': 'Program used by ``edit``',
-                'feedback_to_output': 'Include nonessentials in `|`, `>` results',
-                'locals_in_py': 'Allow access to your application in py via self',
-                'prompt': 'The prompt issued to solicit input',
-                'quiet': "Don't print nonessential feedback",
-                'timing': 'Report execution times'}
+    DEFAULT_EDITOR = utils.find_editor()
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, persistent_history_file: str = '',
                  persistent_history_length: int = 1000, startup_script: Optional[str] = None, use_ipython: bool = False,
@@ -369,6 +339,29 @@ class Cmd(cmd.Cmd):
         self.allow_cli_args = True  # Should arguments passed on the command-line be processed as commands?
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
+
+        # Attributes which ARE dynamically settable at runtime
+        self.colors = constants.COLORS_TERMINAL
+        self.continuation_prompt = '> '
+        self.debug = False
+        self.echo = False
+        self.editor = self.DEFAULT_EDITOR
+        self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
+        self.locals_in_py = False
+        self.quiet = False  # Do not suppress nonessential output
+        self.timing = False  # Prints elapsed time for each command
+
+        # To make an attribute settable with the "do_set" command, add it to this ...
+        self.settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
+                         'continuation_prompt': 'On 2nd+ line of input',
+                         'debug': 'Show full error stack on error',
+                         'echo': 'Echo command issued into output',
+                         'editor': 'Program used by ``edit``',
+                         'feedback_to_output': 'Include nonessentials in `|`, `>` results',
+                         'locals_in_py': 'Allow access to your application in py via self',
+                         'prompt': 'The prompt issued to solicit input',
+                         'quiet': "Don't print nonessential feedback",
+                         'timing': 'Report execution times'}
 
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', 'eos', '_relative_load']
