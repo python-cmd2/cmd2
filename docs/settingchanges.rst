@@ -33,11 +33,9 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
 
   class App(Cmd2):
       def __init__(self):
-        # Make sure you update the shortcuts attribute before calling the super class __init__
-        self.shortcuts.update({'*': 'sneeze', '~': 'squirm'})
-
-        # Make sure to call this super class __init__ after updating shortcuts
-        cmd2.Cmd.__init__(self)
+        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts.update({'*': 'sneeze', '~': 'squirm'})
+        cmd2.Cmd.__init__(self, shortcuts=shortcuts)
 
 .. warning::
 
