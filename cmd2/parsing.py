@@ -280,21 +280,21 @@ class StatementParser:
     ):
         self.allow_redirection = allow_redirection
         if terminators is None:
-            self.terminators = [constants.MULTILINE_TERMINATOR]
+            self.terminators = (constants.MULTILINE_TERMINATOR,)
         else:
-            self.terminators = terminators
+            self.terminators = tuple(terminators)
         if multiline_commands is None:
-            self.multiline_commands = []
+            self.multiline_commands = ()
         else:
-            self.multiline_commands = multiline_commands
+            self.multiline_commands = tuple(multiline_commands)
         if aliases is None:
             self.aliases = {}
         else:
             self.aliases = aliases
         if shortcuts is None:
-            self.shortcuts = []
+            self.shortcuts = ()
         else:
-            self.shortcuts = shortcuts
+            self.shortcuts = tuple(shortcuts)
 
         # commands have to be a word, so make a regular expression
         # that matches the first word in the line. This regex has three

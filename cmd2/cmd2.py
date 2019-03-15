@@ -555,7 +555,7 @@ class Cmd(cmd.Cmd):
         return self.statement_parser.allow_redirection
 
     @property
-    def shortcuts(self) -> List[Tuple[str, str]]:
+    def shortcuts(self) -> Tuple[Tuple[str, str]]:
         """Read-only property to access the shortcuts stored in the StatementParser."""
         return self.statement_parser.shortcuts
 
