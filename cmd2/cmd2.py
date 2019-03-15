@@ -298,12 +298,6 @@ class Cmd(cmd.Cmd):
     """
     DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
 
-    # Attributes which are NOT dynamically settable at runtime
-    allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
-    default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    quit_on_sigint = False      # Quit the loop on interrupt instead of just resetting prompt
-    reserved_words = []
-
     # Attributes which ARE dynamically settable at runtime
     colors = constants.COLORS_TERMINAL
     continuation_prompt = '> '
@@ -371,6 +365,11 @@ class Cmd(cmd.Cmd):
         # Call super class constructor
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
+        # Attributes which should NOT be dynamically settable at runtime
+        self.allow_cli_args = True  # Should arguments passed on the command-line be processed as commands?
+        self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
+        self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
+
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', 'eos', '_relative_load']
 
@@ -386,7 +385,6 @@ class Cmd(cmd.Cmd):
         self.pystate = {}
         self.py_history = []
         self.pyscript_name = 'app'
-        self.keywords = self.reserved_words + self.get_all_commands()
 
         if shortcuts is None:
             shortcuts = self.DEFAULT_SHORTCUTS
