@@ -338,9 +338,6 @@ class Cmd(cmd.Cmd):
                 'quiet': "Don't print nonessential feedback",
                 'timing': 'Report execution times'}
 
-    # Override cmd's nohelp
-    nohelp = "No help on {}"
-
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, persistent_history_file: str = '',
                  persistent_history_length: int = 1000, startup_script: Optional[str] = None, use_ipython: bool = False,
                  transcript_files: Optional[List[str]] = None) -> None:
@@ -430,6 +427,12 @@ class Cmd(cmd.Cmd):
 
         # Used to keep track of whether a continuation prompt is being displayed
         self.at_continuation_prompt = False
+
+        # The error that prints when no help information can be found
+        self.help_error = "No help on {}"
+
+        # The error that prints when a non-existent command is run
+        self.default_error = "{} is not a recognized command, alias, or macro"
 
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
@@ -2060,7 +2063,8 @@ class Cmd(cmd.Cmd):
 
             return self.do_shell(statement.command_and_args)
         else:
-            sys.stderr.write('{} is not a recognized command, alias, or macro\n'.format(statement.command))
+            err_msg = self.default_error.format(statement.command)
+            self.decolorized_write(sys.stderr, "{}\n".format(err_msg))
 
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -2598,7 +2602,7 @@ class Cmd(cmd.Cmd):
 
             # If there is no help information then print an error
             elif help_func is None and (func is None or not func.__doc__):
-                err_msg = Cmd.nohelp.format(args.command)
+                err_msg = self.help_error.format(args.command)
                 self.decolorized_write(sys.stderr, "{}\n".format(err_msg))
 
             # Otherwise delegate to cmd base class do_help()

@@ -2,6 +2,10 @@
 * Enhancements
     * Added ability to include command name placeholders in the message printed when trying to run a disabled command.
         * See docstring for ``disable_command()`` or ``disable_category()`` for more details.
+    * Added instance attributes to customize error messages without having to override methods. Theses messages can
+    also be colored.
+        * `help_error` - the error that prints when no help information can be found
+        * `default_error` - the error that prints when a non-existent command is run
 * Potentially breaking changes
     * The following commands now write to stderr instead of stdout when printing an error. This will make catching
     errors easier in pyscript.
