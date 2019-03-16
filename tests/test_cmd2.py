@@ -952,10 +952,10 @@ undoc
 """)
     assert out == expected
 
-def test_help_undocumented(help_app):
-    out = run_cmd(help_app, 'help undoc')
-    expected = normalize('*** No help on undoc')
-    assert out == expected
+def test_help_undocumented(help_app, capsys):
+    run_cmd(help_app, 'help undoc')
+    out, err = capsys.readouterr()
+    assert err.startswith("No help on undoc")
 
 def test_help_overridden_method(help_app):
     out = run_cmd(help_app, 'help edit')
@@ -1787,8 +1787,9 @@ def test_macro_create_with_escaped_args(base_app, capsys):
     assert out == normalize("Macro 'fake' created")
 
     # Run the macro
-    out = run_cmd(base_app, 'fake')
-    assert 'No help on {1}' in out[0]
+    run_cmd(base_app, 'fake')
+    out, err = capsys.readouterr()
+    assert err.startswith('No help on {1}')
 
 def test_macro_usage_with_missing_args(base_app, capsys):
     # Create the macro
