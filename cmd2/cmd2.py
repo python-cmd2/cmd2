@@ -370,7 +370,6 @@ class Cmd(cmd.Cmd):
         self.exclude_from_history = '''history edit eof eos'''.split()
 
         # Command aliases and macros
-        self.aliases = dict()
         self.macros = dict()
 
         self.initial_stdout = sys.stdout
@@ -385,7 +384,6 @@ class Cmd(cmd.Cmd):
         self.statement_parser = StatementParser(allow_redirection=allow_redirection,
                                                 terminators=terminators,
                                                 multiline_commands=multiline_commands,
-                                                aliases=self.aliases,
                                                 shortcuts=shortcuts)
         self._transcript_files = transcript_files
 
@@ -541,14 +539,24 @@ class Cmd(cmd.Cmd):
         return utils.strip_ansi(self.prompt)
 
     @property
-    def allow_redirection(self) -> bool:
-        """Read-only property to get whether or not redirection of stdout is allowed."""
-        return self.statement_parser.allow_redirection
+    def aliases(self) -> bool:
+        """Read-only property to access the aliases stored in the StatementParser."""
+        return self.statement_parser.aliases
 
     @property
     def shortcuts(self) -> Tuple[Tuple[str, str]]:
         """Read-only property to access the shortcuts stored in the StatementParser."""
         return self.statement_parser.shortcuts
+
+    @property
+    def allow_redirection(self) -> bool:
+        """Getter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
+        return self.statement_parser.allow_redirection
+
+    @allow_redirection.setter
+    def allow_redirection(self, value: bool) -> None:
+        """Setter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
+        self.statement_parser.allow_redirection = value
 
     def decolorized_write(self, fileobj: IO, msg: str) -> None:
         """Write a string to a fileobject, stripping ANSI escape sequences if necessary

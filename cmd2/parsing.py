@@ -295,15 +295,15 @@ class StatementParser:
         else:
             self.terminators = tuple(terminators)
         if multiline_commands is None:
-            self.multiline_commands = ()
+            self.multiline_commands = tuple()
         else:
             self.multiline_commands = tuple(multiline_commands)
         if aliases is None:
-            self.aliases = {}
+            self.aliases = dict()
         else:
             self.aliases = aliases
         if shortcuts is None:
-            self.shortcuts = ()
+            self.shortcuts = tuple()
         else:
             self.shortcuts = tuple(shortcuts)
 

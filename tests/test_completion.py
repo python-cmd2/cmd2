@@ -635,7 +635,7 @@ def test_tokens_for_completion_redirect(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    cmd2_app.statement_parser.allow_redirection = True
+    cmd2_app.allow_redirection = True
     expected_tokens = ['command', '|', '<', '>>', 'file']
     expected_raw_tokens = ['command', '|', '<', '>>', 'file']
 
