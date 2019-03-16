@@ -1,4 +1,4 @@
-## 0.9.12 (TBD, 2019)
+## 0.9.12 (March TBD, 2019)
 * Enhancements
     * Added ability to include command name placeholders in the message printed when trying to run a disabled command.
         * See docstring for ``disable_command()`` or ``disable_category()`` for more details.
@@ -12,7 +12,11 @@
         * ``do_help()`` - when no help information can be found
         * ``default()`` - in all cases since this is called when an invalid command name is run
         * ``_report_disabled_command_usage()`` - in all cases since this is called when a disabled command is run
-    * Removed *** from beginning of error messages printed by `do_help()` and `default()`.
+    * Removed *** from beginning of error messages printed by `do_help()` and `default()`
+    * Significantly refactored ``cmd.Cmd`` class so that all class attributes got converted to instance attributes, also:
+        * Added ``allow_redirection``, ``terminators``, ``multiline_commands``, and ``shortcuts`` as optional arguments 
+        to ``cmd.Cmd.__init__()`
+        * A few instance attributes were moved inside ``StatementParser`` and properties were created for accessing them
 
 ## 0.9.11 (March 13, 2019)
 * Bug Fixes

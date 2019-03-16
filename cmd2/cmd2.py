@@ -545,7 +545,7 @@ class Cmd(cmd.Cmd):
         return utils.strip_ansi(self.prompt)
 
     @property
-    def aliases(self) -> bool:
+    def aliases(self) -> Dict[str, str]:
         """Read-only property to access the aliases stored in the StatementParser."""
         return self.statement_parser.aliases
 
