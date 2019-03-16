@@ -419,6 +419,12 @@ class Cmd(cmd.Cmd):
         # Used to keep track of whether a continuation prompt is being displayed
         self.at_continuation_prompt = False
 
+        # The error that prints when no help information can be found
+        self.help_error = "No help on {}"
+
+        # The error that prints when a non-existent command is run
+        self.default_error = "{} is not a recognized command, alias, or macro"
+
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
 
@@ -2065,8 +2071,8 @@ class Cmd(cmd.Cmd):
 
             return self.do_shell(statement.command_and_args)
         else:
-            self.perror('*** {} is not a recognized command, alias, or macro'.format(statement.command),
-                        err_color=Fore.RESET, traceback_war=False)
+            err_msg = self.default_error.format(statement.command)
+            self.decolorized_write(sys.stderr, "{}\n".format(err_msg))
 
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -2595,12 +2601,21 @@ class Cmd(cmd.Cmd):
         else:
             # Getting help for a specific command
             func = self.cmd_func(args.command)
+            help_func = getattr(self, HELP_FUNC_PREFIX + args.command, None)
+
+            # If the command function uses argparse, then use argparse's help
             if func and hasattr(func, 'argparser'):
                 completer = AutoCompleter(getattr(func, 'argparser'), self)
                 tokens = [args.command] + args.subcommand
                 self.poutput(completer.format_help(tokens))
+
+            # If there is no help information then print an error
+            elif help_func is None and (func is None or not func.__doc__):
+                err_msg = self.help_error.format(args.command)
+                self.decolorized_write(sys.stderr, "{}\n".format(err_msg))
+
+            # Otherwise delegate to cmd base class do_help()
             else:
-                # No special behavior needed, delegate to cmd base class do_help()
                 super().do_help(args.command)
 
     def _help_menu(self, verbose: bool = False) -> None:
@@ -3735,7 +3750,7 @@ class Cmd(cmd.Cmd):
         :param message_to_print: the message reporting that the command is disabled
         :param kwargs: not used
         """
-        self.perror(message_to_print, err_color=Fore.RESET, traceback_war=False)
+        self.decolorized_write(sys.stderr, "{}\n".format(message_to_print))
 
     def cmdloop(self, intro: Optional[str] = None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
