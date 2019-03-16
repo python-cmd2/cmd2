@@ -338,6 +338,9 @@ class Cmd(cmd.Cmd):
                 'quiet': "Don't print nonessential feedback",
                 'timing': 'Report execution times'}
 
+    # Override cmd's nohelp
+    nohelp = "No help on {}"
+
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, persistent_history_file: str = '',
                  persistent_history_length: int = 1000, startup_script: Optional[str] = None, use_ipython: bool = False,
                  transcript_files: Optional[List[str]] = None) -> None:
@@ -2057,8 +2060,7 @@ class Cmd(cmd.Cmd):
 
             return self.do_shell(statement.command_and_args)
         else:
-            self.perror('{} is not a recognized command, alias, or macro'.format(statement.command),
-                        traceback_war=False, err_color=Fore.RESET)
+            sys.stderr.write('{} is not a recognized command, alias, or macro\n'.format(statement.command))
 
     def pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -2596,7 +2598,8 @@ class Cmd(cmd.Cmd):
 
             # If there is no help information then print an error
             elif help_func is None and (func is None or not func.__doc__):
-                self.perror("No help on {}".format(args.command), traceback_war=False, err_color=Fore.RESET)
+                err_msg = Cmd.nohelp.format(args.command)
+                self.decolorized_write(sys.stderr, "{}\n".format(err_msg))
 
             # Otherwise delegate to cmd base class do_help()
             else:
@@ -3727,7 +3730,7 @@ class Cmd(cmd.Cmd):
         :param message_to_print: the message reporting that the command is disabled
         :param kwargs: not used
         """
-        self.perror(message_to_print, traceback_war=False, err_color=Fore.RESET)
+        self.decolorized_write(sys.stderr, "{}\n".format(message_to_print))
 
     def cmdloop(self, intro: Optional[str] = None) -> None:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
