@@ -6,6 +6,9 @@
     also be colored.
         * `help_error` - the error that prints when no help information can be found
         * `default_error` - the error that prints when a non-existent command is run
+    * The `with_argparser` decorators now add the Statement object created when parsing the command line to the
+    `argparse.Namespace` object they pass to the `do_*` methods. It is stored in an attribute called `__statement__`.
+    This can be useful if a command function needs to know the command line for things like logging.
 * Potentially breaking changes
     * The following commands now write to stderr instead of stdout when printing an error. This will make catching
     errors easier in pyscript.

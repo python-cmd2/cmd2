@@ -236,34 +236,6 @@ class Statement(str):
         return rtn
 
 
-def get_command_arg_list(to_parse: Union[Statement, str], preserve_quotes: bool) -> List[str]:
-    """
-    Called by the argument_list and argparse wrappers to retrieve just the arguments being
-    passed to their do_* methods as a list.
-
-    :param to_parse: what is being passed to the do_* method. It can be one of two types:
-                     1. An already parsed Statement
-                     2. An argument string in cases where a do_* method is explicitly called
-                        e.g.: Calling do_help('alias create') would cause to_parse to be 'alias create'
-
-    :param preserve_quotes: if True, then quotes will not be stripped from the arguments
-    :return: the arguments in a list
-    """
-    if isinstance(to_parse, Statement):
-        # In the case of a Statement, we already have what we need
-        if preserve_quotes:
-            return to_parse.arg_list
-        else:
-            return to_parse.argv[1:]
-    else:
-        # We have the arguments in a string. Use shlex to split it.
-        parsed_arglist = shlex_split(to_parse)
-        if not preserve_quotes:
-            parsed_arglist = [utils.strip_quotes(arg) for arg in parsed_arglist]
-
-        return parsed_arglist
-
-
 class StatementParser:
     """Parse raw text into command components.
 
@@ -382,16 +354,22 @@ class StatementParser:
                 errmsg = ''
         return valid, errmsg
 
-    def tokenize(self, line: str) -> List[str]:
-        """Lex a string into a list of tokens.
+    def tokenize(self, line: str, expand: bool = True) -> List[str]:
+        """
+        Lex a string into a list of tokens. Shortcuts and aliases are expanded and comments are removed
 
-        shortcuts and aliases are expanded and comments are removed
-
-        Raises ValueError if there are unclosed quotation marks.
+        :param line: the command line being lexed
+        :param expand: If True, then aliases and shortcuts will be expanded.
+                       Set this to False if no expansion should occur because the command name is already known.
+                       Otherwise the command could be expanded if it matched an alias name. This is for cases where
+                       a do_* method was called manually (e.g do_help('alias').
+        :return: A list of tokens
+        :raises ValueError if there are unclosed quotation marks.
         """
 
         # expand shortcuts and aliases
-        line = self._expand(line)
+        if expand:
+            line = self._expand(line)
 
         # check if this line is a comment
         if line.strip().startswith(constants.COMMENT_CHAR):
@@ -404,12 +382,19 @@ class StatementParser:
         tokens = self._split_on_punctuation(tokens)
         return tokens
 
-    def parse(self, line: str) -> Statement:
-        """Tokenize the input and parse it into a Statement object, stripping
+    def parse(self, line: str, expand: bool = True) -> Statement:
+        """
+        Tokenize the input and parse it into a Statement object, stripping
         comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
 
-        Raises ValueError if there are unclosed quotation marks.
+        :param line: the command line being parsed
+        :param expand: If True, then aliases and shortcuts will be expanded.
+                       Set this to False if no expansion should occur because the command name is already known.
+                       Otherwise the command could be expanded if it matched an alias name. This is for cases where
+                       a do_* method was called manually (e.g do_help('alias').
+        :return: A parsed Statement
+        :raises ValueError if there are unclosed quotation marks
         """
 
         # handle the special case/hardcoded terminator of a blank line
@@ -424,7 +409,7 @@ class StatementParser:
         arg_list = []
 
         # lex the input into a list of tokens
-        tokens = self.tokenize(line)
+        tokens = self.tokenize(line, expand)
 
         # of the valid terminators, find the first one to occur in the input
         terminator_pos = len(tokens) + 1
@@ -604,6 +589,35 @@ class StatementParser:
                               multiline_command=multiline_command,
                               )
         return statement
+
+    def get_command_arg_list(self, command_name: str, to_parse: Union[Statement, str],
+                             preserve_quotes: bool) -> Tuple[Statement, List[str]]:
+        """
+        Called by the argument_list and argparse wrappers to retrieve just the arguments being
+        passed to their do_* methods as a list.
+
+        :param command_name: name of the command being run
+        :param to_parse: what is being passed to the do_* method. It can be one of two types:
+                         1. An already parsed Statement
+                         2. An argument string in cases where a do_* method is explicitly called
+                            e.g.: Calling do_help('alias create') would cause to_parse to be 'alias create'
+
+                            In this case, the string will be converted to a Statement and returned along
+                            with the argument list.
+
+        :param preserve_quotes: if True, then quotes will not be stripped from the arguments
+        :return: A tuple containing:
+                    The Statement used to retrieve the arguments
+                    The argument list
+        """
+        # Check if to_parse needs to be converted to a Statement
+        if not isinstance(to_parse, Statement):
+            to_parse = self.parse(command_name + ' ' + to_parse, expand=False)
+
+        if preserve_quotes:
+            return to_parse, to_parse.arg_list
+        else:
+            return to_parse, to_parse.argv[1:]
 
     def _expand(self, line: str) -> str:
         """Expand shortcuts and aliases"""
