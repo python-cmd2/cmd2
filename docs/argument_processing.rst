@@ -9,7 +9,9 @@ Argument Processing
 
 1. Parsing input and quoted strings like the Unix shell
 2. Parse the resulting argument list using an instance of ``argparse.ArgumentParser`` that you provide
-3. Passes the resulting ``argparse.Namespace`` object to your command function
+3. Passes the resulting ``argparse.Namespace`` object to your command function. The ``Namespace`` includes the
+   ``Statement`` object that was parsed from the command line. It is stored in the ``__statement__`` attribute of
+   the ``Namespace``.
 4. Adds the usage message from the argument parser to your command.
 5. Checks if the ``-h/--help`` option is present, and if so, display the help message for the command
 
