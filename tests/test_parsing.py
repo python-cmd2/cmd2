@@ -12,7 +12,7 @@ import pytest
 import cmd2
 from cmd2 import constants, utils
 from cmd2.constants import MULTILINE_TERMINATOR
-from cmd2.parsing import StatementParser
+from cmd2.parsing import StatementParser, shlex_split
 
 @pytest.fixture
 def parser():
@@ -210,7 +210,7 @@ def test_parse_embedded_comment_char(parser):
     assert statement.command == 'hi'
     assert statement == constants.COMMENT_CHAR + ' not a comment'
     assert statement.args == statement
-    assert statement.argv == command_str.split()
+    assert statement.argv == shlex_split(command_str)
     assert statement.arg_list == statement.argv[1:]
 
 @pytest.mark.parametrize('line',[
@@ -478,9 +478,10 @@ def test_parse_alias_and_shortcut_expansion(parser, line, command, args):
     assert statement.args == statement
 
     # Now allow no expansion
+    tokens = shlex_split(line)
     statement = parser.parse(line, expand=False)
-    assert statement.command == line.split()[0]
-    assert statement.split() == line.split()[1:]
+    assert statement.command == tokens[0]
+    assert shlex_split(statement) == tokens[1:]
     assert statement.args == statement
 
 def test_parse_alias_on_multiline_command(parser):
