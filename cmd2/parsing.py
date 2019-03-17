@@ -351,7 +351,7 @@ class StatementParser:
         :param expand: If True, then aliases and shortcuts will be expanded.
                        Set this to False if no expansion should occur because the command name is already known.
                        Otherwise the command could be expanded if it matched an alias name. This is for cases where
-                       a do_* function was called manually (e.g do_help('alias').
+                       a do_* method was called manually (e.g do_help('alias').
         :return: A list of tokens
         :raises ValueError if there are unclosed quotation marks.
         """
@@ -381,7 +381,7 @@ class StatementParser:
         :param expand: If True, then aliases and shortcuts will be expanded.
                        Set this to False if no expansion should occur because the command name is already known.
                        Otherwise the command could be expanded if it matched an alias name. This is for cases where
-                       a do_* function was called manually (e.g do_help('alias').
+                       a do_* method was called manually (e.g do_help('alias').
         :return: A parsed Statement
         :raises ValueError if there are unclosed quotation marks
         """

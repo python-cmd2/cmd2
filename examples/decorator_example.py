@@ -12,6 +12,7 @@ verifying that the output produced matches the transcript.
 """
 import argparse
 import sys
+from typing import List
 
 import cmd2
 
@@ -46,7 +47,7 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
-    def do_speak(self, args):
+    def do_speak(self, args: argparse.Namespace):
         """Repeats what you tell me to."""
         words = []
         for word in args.words:
@@ -67,13 +68,18 @@ class CmdLineApp(cmd2.Cmd):
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
     @cmd2.with_argparser(tag_parser)
-    def do_tag(self, args):
-        """create a html tag"""
+    def do_tag(self, args: argparse.Namespace):
+        """create an html tag"""
+        # The Namespace always includes the Statement object created when parsing the command line
+        statement = args.__statement__
+
+        self.poutput("The command line you ran was: {}".format(statement.command_and_args))
+        self.poutput("It generated this tag:")
         self.poutput('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
 
     @cmd2.with_argument_list
-    def do_tagg(self, arglist):
-        """verion of creating an html tag using arglist instead of argparser"""
+    def do_tagg(self, arglist: List[str]):
+        """version of creating an html tag using arglist instead of argparser"""
         if len(arglist) >= 2:
             tag = arglist[0]
             content = arglist[1:]
