@@ -6,7 +6,7 @@ Setuptools setup file, used to install or test 'cmd2'
 import codecs
 from setuptools import setup
 
-DESCRIPTION = "cmd2 - a tool for building interactive command line applications in Python"
+DESCRIPTION = "cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python"
 
 with codecs.open('README.md', encoding='utf8') as f:
     LONG_DESCRIPTION = f.read()
