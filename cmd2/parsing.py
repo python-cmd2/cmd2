@@ -348,9 +348,10 @@ class StatementParser:
         Lex a string into a list of tokens. Shortcuts and aliases are expanded and comments are removed
 
         :param line: the command line being lexed
-        :param expand: if True, then aliases and shortcuts will be expanded
-                       set this to False if the first token does not need to be expanded
-                       because the command name is already known (Defaults to True)
+        :param expand: If True, then aliases and shortcuts will be expanded.
+                       Set this to False if no expansion should occur because the command name is already known.
+                       Otherwise the command could be expanded if it matched an alias name. This is for cases where
+                       a do_* function was called manually (e.g do_help('alias').
         :return: A list of tokens
         :raises ValueError if there are unclosed quotation marks.
         """
@@ -377,9 +378,10 @@ class StatementParser:
         redirection directives.
 
         :param line: the command line being parsed
-        :param expand: if True, then aliases and shortcuts will be expanded
-                       set this to False if the first token does not need to be expanded
-                       because the command name is already known (Defaults to True)
+        :param expand: If True, then aliases and shortcuts will be expanded.
+                       Set this to False if no expansion should occur because the command name is already known.
+                       Otherwise the command could be expanded if it matched an alias name. This is for cases where
+                       a do_* function was called manually (e.g do_help('alias').
         :return: A parsed Statement
         :raises ValueError if there are unclosed quotation marks
         """

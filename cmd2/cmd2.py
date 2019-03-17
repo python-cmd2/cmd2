@@ -199,7 +199,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
     :return: function that gets passed argparse-parsed args in a Namespace and a list of unknown argument strings
              A member called __statement__ is added to the Namespace to provide command functions access to the
-             Statement object. This can be useful when knowledge of the command line is needed.
+             Statement object. This can be useful if the command function needs to know the command line.
 
     """
     import functools
@@ -249,7 +249,7 @@ def with_argparser(argparser: argparse.ArgumentParser,
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
     :return: function that gets passed the argparse-parsed args in a Namespace
              A member called __statement__ is added to the Namespace to provide command functions access to the
-             Statement object. This can be useful when knowledge of the command line is needed.
+             Statement object. This can be useful if the command function needs to know the command line.
     """
     import functools
 
