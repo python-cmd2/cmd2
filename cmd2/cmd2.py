@@ -49,7 +49,7 @@ from . import utils
 from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .history import History, HistoryItem
-from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split, get_command_arg_list
+from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 
 # Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
@@ -174,9 +174,13 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
+            _, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
+                                                                                    statement,
+                                                                                    preserve_quotes)
+
             return func(cmd2_instance, parsed_arglist)
 
+        command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
         cmd_wrapper.__doc__ = func.__doc__
         return cmd_wrapper
 
@@ -193,7 +197,10 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
 
     :param argparser: unique instance of ArgumentParser
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
-    :return: function that gets passed argparse-parsed args and a list of unknown argument strings
+    :return: function that gets passed argparse-parsed args in a Namespace and a list of unknown argument strings
+             A member called __statement__ is added to the Namespace to provide command functions access to the
+             Statement object. This can be useful if the command function needs to know the command line.
+
     """
     import functools
 
@@ -201,18 +208,22 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
+            statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
+                                                                                            statement,
+                                                                                            preserve_quotes)
 
             try:
                 args, unknown = argparser.parse_known_args(parsed_arglist)
             except SystemExit:
                 return
             else:
+                setattr(args, '__statement__', statement)
                 return func(cmd2_instance, args, unknown)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
-        argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
+        command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
+        argparser.prog = command_name
 
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
@@ -236,7 +247,9 @@ def with_argparser(argparser: argparse.ArgumentParser,
 
     :param argparser: unique instance of ArgumentParser
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
-    :return: function that gets passed the argparse-parsed args
+    :return: function that gets passed the argparse-parsed args in a Namespace
+             A member called __statement__ is added to the Namespace to provide command functions access to the
+             Statement object. This can be useful if the command function needs to know the command line.
     """
     import functools
 
@@ -244,19 +257,21 @@ def with_argparser(argparser: argparse.ArgumentParser,
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-
-            parsed_arglist = get_command_arg_list(statement, preserve_quotes)
-
+            statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
+                                                                                            statement,
+                                                                                            preserve_quotes)
             try:
                 args = argparser.parse_args(parsed_arglist)
             except SystemExit:
                 return
             else:
+                setattr(args, '__statement__', statement)
                 return func(cmd2_instance, args)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
-        argparser.prog = func.__name__[len(COMMAND_FUNC_PREFIX):]
+        command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
+        argparser.prog = command_name
 
         # If the description has not been set, then use the method docstring if one exists
         if argparser.description is None and func.__doc__:
