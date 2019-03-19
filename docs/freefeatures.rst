@@ -19,6 +19,11 @@ Both ASCII and UTF-8 encoded unicode text files are supported.
 
 Simply include one command per line, typed exactly as you would inside a ``cmd2`` application.
 
+The ``load`` command loads commands from a script file into a queue and then the normal cmd2 REPL
+resumes control and executes the commands in the queue in FIFO order.  A side effect of this
+is that if you redirect/pipe the output of a load command, it will redirect the output of the ``load``
+command itself, but will NOT redirect the output of the command loaded from the script file.
+
 .. automethod:: cmd2.cmd2.Cmd.do_load
 
 .. automethod:: cmd2.cmd2.Cmd.do__relative_load
