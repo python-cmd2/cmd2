@@ -136,7 +136,7 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     assert err.startswith(expected_start)
     assert err.endswith(expected_end)
 
-def test_history_transcript(request, capsys):
+def test_history_transcript():
     app = CmdLineApp()
     app.stdout = StdSim(app.stdout)
     run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')
@@ -163,7 +163,7 @@ this is a \/multiline\/ command
 
     assert xscript == expected
 
-def test_history_transcript_bad_filename(request, capsys):
+def test_history_transcript_bad_filename():
     app = CmdLineApp()
     app.stdout = StdSim(app.stdout)
     run_cmd(app, 'orate this is\na /multiline/\ncommand;\n')

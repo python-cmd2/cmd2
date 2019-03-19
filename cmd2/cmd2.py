@@ -3341,9 +3341,6 @@ class Cmd(cmd.Cmd):
             except Exception as e:
                 self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
         elif args.transcript:
-            if self.redirecting:
-                self.perror("Redirection not supported while using history -t", traceback_war=False)
-                return
             self._generate_transcript(history, args.transcript)
         else:
             # Display the history items retrieved
@@ -3353,6 +3350,16 @@ class Cmd(cmd.Cmd):
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""
         import io
+        # Validate the transcript file path to make sure directory exists and write access is available
+        transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
+        transcript_dir = os.path.dirname(transcript_path)
+        if not os.path.isdir(transcript_dir):
+            self.perror("Transcript directory {!r} is not a directory".format(transcript_dir), traceback_war=False)
+            return
+        if not os.access(transcript_dir, os.W_OK):
+            self.perror("No write access for transcript directory {!r}".format(transcript_dir), traceback_war=False)
+            return
+
         # Disable echo while we manually redirect stdout to a StringIO buffer
         saved_echo = self.echo
         saved_stdout = self.stdout
@@ -3505,17 +3512,6 @@ class Cmd(cmd.Cmd):
             return
 
         if args.record_transcript:
-            if self.redirecting:
-                self.perror("Redirection not supported while using load -r", traceback_war=False)
-                return
-            transcript_path = os.path.abspath(os.path.expanduser(args.record_transcript))
-            transcript_dir = os.path.dirname(transcript_path)
-            if not os.path.isdir(transcript_dir):
-                self.perror("{!r} is not a directory".format(transcript_dir), traceback_war=False)
-                return
-            if not os.access(transcript_dir, os.W_OK):
-                self.perror("You do not have write access to directory '{!r}".format(transcript_dir), traceback_war=False)
-                return
             self._generate_transcript(script_commands, os.path.expanduser(args.record_transcript))
             return
 
