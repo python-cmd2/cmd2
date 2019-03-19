@@ -1902,21 +1902,21 @@ class Cmd(cmd.Cmd):
             read_fd, write_fd = os.pipe()
 
             # Open each side of the pipe and set stdout accordingly
-            subproc_stdin = io.open(read_fd, 'r')
-            new_stdout = io.open(write_fd, 'w')
+            pipe_read = io.open(read_fd, 'r')
+            pipe_write = io.open(write_fd, 'w')
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
-                pipe_proc = subprocess.Popen(statement.pipe_to, stdin=subproc_stdin)
+                pipe_proc = subprocess.Popen(statement.pipe_to, stdin=pipe_read, stdout=self.stdout)
                 ret_val = RedirectionSavedState(self_stdout=self.stdout,
                                                 sys_stdout=None,
                                                 pipe_proc=self.pipe_proc)
-                self.stdout = new_stdout
+                self.stdout = pipe_write
                 self.pipe_proc = pipe_proc
             except Exception as ex:
                 self.perror('Not piping because - {}'.format(ex), traceback_war=False)
-                subproc_stdin.close()
-                new_stdout.close()
+                pipe_read.close()
+                pipe_write.close()
 
         elif statement.output:
             import tempfile
