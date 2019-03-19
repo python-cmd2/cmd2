@@ -68,7 +68,7 @@ else:
     if rl_type == RlType.PYREADLINE:
 
         # Save the original pyreadline display completion function since we need to override it and restore it
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         orig_pyreadline_display = readline.rl.mode._display_completions
 
     elif rl_type == RlType.GNU:
@@ -104,6 +104,7 @@ except ImportError:
 
 # Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
 if sys.version_info < (3, 5):
+    # noinspection PyUnresolvedReferences
     from contextlib2 import redirect_stdout
 else:
     from contextlib import redirect_stdout
@@ -310,52 +311,14 @@ class Cmd(cmd.Cmd):
 
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
-    # Attributes used to configure the StatementParser, best not to change these at runtime
-    multiline_commands = []
-    shortcuts = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
-    terminators = [constants.MULTILINE_TERMINATOR]
-
-    # Attributes which are NOT dynamically settable at runtime
-    allow_cli_args = True       # Should arguments passed on the command-line be processed as commands?
-    allow_redirection = True    # Should output redirection and pipes be allowed
-    default_to_shell = False    # Attempt to run unrecognized commands as shell commands
-    quit_on_sigint = False      # Quit the loop on interrupt instead of just resetting prompt
-    reserved_words = []
-
-    # Attributes which ARE dynamically settable at runtime
-    colors = constants.COLORS_TERMINAL
-    continuation_prompt = '> '
-    debug = False
-    echo = False
-    editor = os.environ.get('EDITOR')
-    if not editor:
-        if sys.platform[:3] == 'win':
-            editor = 'notepad'
-        else:
-            # Favor command-line editors first so we don't leave the terminal to edit
-            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
-                if utils.which(editor):
-                    break
-    feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
-    locals_in_py = False
-    quiet = False  # Do not suppress nonessential output
-    timing = False  # Prints elapsed time for each command
-
-    # To make an attribute settable with the "do_set" command, add it to this ...
-    settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
-                'continuation_prompt': 'On 2nd+ line of input',
-                'debug': 'Show full error stack on error',
-                'echo': 'Echo command issued into output',
-                'editor': 'Program used by ``edit``',
-                'feedback_to_output': 'Include nonessentials in `|`, `>` results',
-                'locals_in_py': 'Allow access to your application in py via self',
-                'prompt': 'The prompt issued to solicit input',
-                'quiet': "Don't print nonessential feedback",
-                'timing': 'Report execution times'}
+    DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
+    DEFAULT_EDITOR = utils.find_editor()
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, persistent_history_file: str = '',
                  persistent_history_length: int = 1000, startup_script: Optional[str] = None, use_ipython: bool = False,
-                 transcript_files: Optional[List[str]] = None) -> None:
+                 transcript_files: Optional[List[str]] = None, allow_redirection: bool = True,
+                 multiline_commands: Optional[List[str]] = None, terminators: Optional[List[str]] = None,
+                 shortcuts: Optional[Dict[str, str]] = None) -> None:
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
         :param completekey: (optional) readline name of a completion key, default to Tab
@@ -366,6 +329,9 @@ class Cmd(cmd.Cmd):
         :param startup_script: (optional) file path to a a script to load and execute at startup
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
         :param transcript_files: (optional) allows running transcript tests when allow_cli_args is False
+        :param allow_redirection: (optional) should output redirection and pipes be allowed
+        :param multiline_commands: (optional) list of commands allowed to accept multi-line input
+        :param shortcuts: (optional) dictionary containing shortcuts for commands
         """
         # If use_ipython is False, make sure the do_ipy() method doesn't exit
         if not use_ipython:
@@ -384,6 +350,34 @@ class Cmd(cmd.Cmd):
         # Call super class constructor
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
+        # Attributes which should NOT be dynamically settable at runtime
+        self.allow_cli_args = True  # Should arguments passed on the command-line be processed as commands?
+        self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
+        self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
+
+        # Attributes which ARE dynamically settable at runtime
+        self.colors = constants.COLORS_TERMINAL
+        self.continuation_prompt = '> '
+        self.debug = False
+        self.echo = False
+        self.editor = self.DEFAULT_EDITOR
+        self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
+        self.locals_in_py = False
+        self.quiet = False  # Do not suppress nonessential output
+        self.timing = False  # Prints elapsed time for each command
+
+        # To make an attribute settable with the "do_set" command, add it to this ...
+        self.settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
+                         'continuation_prompt': 'On 2nd+ line of input',
+                         'debug': 'Show full error stack on error',
+                         'echo': 'Echo command issued into output',
+                         'editor': 'Program used by ``edit``',
+                         'feedback_to_output': 'Include nonessentials in `|`, `>` results',
+                         'locals_in_py': 'Allow access to your application in py via self',
+                         'prompt': 'The prompt issued to solicit input',
+                         'quiet': "Don't print nonessential feedback",
+                         'timing': 'Report execution times'}
+
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', 'eos', '_relative_load']
 
@@ -391,24 +385,21 @@ class Cmd(cmd.Cmd):
         self.exclude_from_history = '''history edit eof eos'''.split()
 
         # Command aliases and macros
-        self.aliases = dict()
         self.macros = dict()
-
-        self._finalize_app_parameters()
 
         self.initial_stdout = sys.stdout
         self.history = History()
         self.pystate = {}
         self.py_history = []
         self.pyscript_name = 'app'
-        self.keywords = self.reserved_words + self.get_all_commands()
-        self.statement_parser = StatementParser(
-            allow_redirection=self.allow_redirection,
-            terminators=self.terminators,
-            multiline_commands=self.multiline_commands,
-            aliases=self.aliases,
-            shortcuts=self.shortcuts,
-        )
+
+        if shortcuts is None:
+            shortcuts = self.DEFAULT_SHORTCUTS
+        shortcuts = sorted(shortcuts.items(), reverse=True)
+        self.statement_parser = StatementParser(allow_redirection=allow_redirection,
+                                                terminators=terminators,
+                                                multiline_commands=multiline_commands,
+                                                shortcuts=shortcuts)
         self._transcript_files = transcript_files
 
         # Used to enable the ability for a Python script to quit the application
@@ -568,10 +559,25 @@ class Cmd(cmd.Cmd):
         """
         return utils.strip_ansi(self.prompt)
 
-    def _finalize_app_parameters(self) -> None:
-        """Finalize the shortcuts"""
-        # noinspection PyUnresolvedReferences
-        self.shortcuts = sorted(self.shortcuts.items(), reverse=True)
+    @property
+    def aliases(self) -> Dict[str, str]:
+        """Read-only property to access the aliases stored in the StatementParser."""
+        return self.statement_parser.aliases
+
+    @property
+    def shortcuts(self) -> Tuple[Tuple[str, str]]:
+        """Read-only property to access the shortcuts stored in the StatementParser."""
+        return self.statement_parser.shortcuts
+
+    @property
+    def allow_redirection(self) -> bool:
+        """Getter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
+        return self.statement_parser.allow_redirection
+
+    @allow_redirection.setter
+    def allow_redirection(self, value: bool) -> None:
+        """Setter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
+        self.statement_parser.allow_redirection = value
 
     def decolorized_write(self, fileobj: IO, msg: str) -> None:
         """Write a string to a fileobject, stripping ANSI escape sequences if necessary
@@ -728,6 +734,7 @@ class Cmd(cmd.Cmd):
         if rl_type == RlType.GNU:
             readline.set_completion_display_matches_hook(self._display_matches_gnu_readline)
         elif rl_type == RlType.PYREADLINE:
+            # noinspection PyUnresolvedReferences
             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[List[str], List[str]]:
@@ -1355,6 +1362,7 @@ class Cmd(cmd.Cmd):
 
             # Print the header if one exists
             if self.completion_header:
+                # noinspection PyUnresolvedReferences
                 readline.rl.mode.console.write('\n' + self.completion_header)
 
             # Display matches using actual display function. This also redraws the prompt and line.
@@ -2203,6 +2211,7 @@ class Cmd(cmd.Cmd):
                     readline.set_completion_display_matches_hook(None)
                     rl_basic_quote_characters.value = old_basic_quotes
                 elif rl_type == RlType.PYREADLINE:
+                    # noinspection PyUnresolvedReferences
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
             self.cmdqueue.clear()
@@ -2822,7 +2831,8 @@ class Cmd(cmd.Cmd):
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}"""
-        return read_only_settings.format(str(self.terminators), self.allow_cli_args, self.allow_redirection)
+        return read_only_settings.format(str(self.statement_parser.terminators), self.allow_cli_args,
+                                         self.allow_redirection)
 
     def show(self, args: argparse.Namespace, parameter: str = '') -> None:
         """Shows current settings of parameters.
@@ -3047,6 +3057,7 @@ class Cmd(cmd.Cmd):
                     # Save cmd2 history
                     saved_cmd2_history = []
                     for i in range(1, readline.get_current_history_length() + 1):
+                        # noinspection PyArgumentList
                         saved_cmd2_history.append(readline.get_history_item(i))
 
                     readline.clear_history()
@@ -3079,6 +3090,7 @@ class Cmd(cmd.Cmd):
                         if rl_type == RlType.GNU:
                             readline.set_completion_display_matches_hook(None)
                         elif rl_type == RlType.PYREADLINE:
+                            # noinspection PyUnresolvedReferences
                             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
                         # Save off the current completer and set a new one in the Python console
@@ -3116,6 +3128,7 @@ class Cmd(cmd.Cmd):
                         # Save py's history
                         self.py_history.clear()
                         for i in range(1, readline.get_current_history_length() + 1):
+                            # noinspection PyArgumentList
                             self.py_history.append(readline.get_history_item(i))
 
                         readline.clear_history()
@@ -3193,10 +3206,12 @@ class Cmd(cmd.Cmd):
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
             if self.locals_in_py:
-                def load_ipy(self, app):
+                # noinspection PyUnusedLocal
+                def load_ipy(cmd2_instance, app):
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(self, bridge)
             else:
+                # noinspection PyUnusedLocal
                 def load_ipy(app):
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(bridge)
@@ -3614,6 +3629,7 @@ class Cmd(cmd.Cmd):
                 if rl_type == RlType.GNU:
                     sys.stderr.write(terminal_str)
                 elif rl_type == RlType.PYREADLINE:
+                    # noinspection PyUnresolvedReferences
                     readline.rl.mode.console.write(terminal_str)
 
                 # Redraw the prompt and input lines

@@ -32,7 +32,6 @@ class AlerterApp(cmd2.Cmd):
 
     def __init__(self, *args, **kwargs) -> None:
         """ Initializer """
-
         super().__init__(*args, **kwargs)
 
         self.prompt = "(APR)> "

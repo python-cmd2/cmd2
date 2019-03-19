@@ -10,7 +10,7 @@ import pyperclip
 try:
     from pyperclip.exceptions import PyperclipException
 except ImportError:  # pragma: no cover
-    # noinspection PyUnresolvedReferences
+    # noinspection PyUnresolvedReferences,PyProtectedMember
     from pyperclip import PyperclipException
 
 # Can we access the clipboard?  Should always be true on Windows and Mac, but only sometimes on Linux

@@ -185,9 +185,9 @@ Instructions for implementing each feature follow.
 
 - Multi-line commands
 
-    Any command accepts multi-line input when its name is listed in `Cmd.multiline_commands`.
-    The program will keep expecting input until a line ends with any of the characters
-    in `Cmd.terminators` .  The default terminators are `;` and `/n` (empty newline).
+    Any command accepts multi-line input when its name is listed the `multiline_commands` optional argument to 
+    `cmd2.Cmd.__init`. The program will keep expecting input until a line ends with any of the characters listed in the 
+    `terminators` optional argument to `cmd2.Cmd.__init__()`  .  The default terminators are `;` and `/n` (empty newline).
 
 - Special-character shortcut commands (beyond cmd's "@" and "!")
 
@@ -239,14 +239,12 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        self.multiline_commands = ['orate']
         self.maxrepeats = 3
-
-        # Add stuff to shortcuts before calling base class initializer
-        self.shortcuts.update({'&': 'speak'})
+        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts.update({'&': 'speak'})
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        super().__init__(use_ipython=False)
+        super().__init__(use_ipython=False, multiline_commands=['orate'], shortcuts=shortcuts)
         
         # Make maxrepeats settable at runtime
         self.settable['maxrepeats'] = 'max repetitions for speak command'

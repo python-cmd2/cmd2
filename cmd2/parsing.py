@@ -5,7 +5,7 @@
 import os
 import re
 import shlex
-from typing import Dict, List, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import attr
 
@@ -242,31 +242,42 @@ class StatementParser:
     Shortcuts is a list of tuples with each tuple containing the shortcut and
     the expansion.
     """
-    def __init__(
-            self,
-            allow_redirection: bool = True,
-            terminators: List[str] = None,
-            multiline_commands: List[str] = None,
-            aliases: Dict[str, str] = None,
-            shortcuts: List[Tuple[str, str]] = None,
-    ):
+    def __init__(self,
+                 allow_redirection: bool = True,
+                 terminators: Optional[Iterable[str]] = None,
+                 multiline_commands: Optional[Iterable[str]] = None,
+                 aliases: Optional[Dict[str, str]] = None,
+                 shortcuts: Optional[Iterable[Tuple[str, str]]] = None) -> None:
+        """Initialize an instance of StatementParser.
+
+        The following will get converted to an immutable tuple before storing internally:
+        * terminators
+        * multiline commands
+        * shortcuts
+
+        :param allow_redirection: (optional) should redirection and pipes be allowed?
+        :param terminators: (optional) iterable containing strings which should terminate multiline commands
+        :param multiline_commands: (optional) iterable containing the names of commands that accept multiline input
+        :param aliases: (optional) dictionary contaiing aliases
+        :param shortcuts (optional) an iterable of tuples with each tuple containing the shortcut and the expansion
+        """
         self.allow_redirection = allow_redirection
         if terminators is None:
-            self.terminators = [constants.MULTILINE_TERMINATOR]
+            self.terminators = (constants.MULTILINE_TERMINATOR,)
         else:
-            self.terminators = terminators
+            self.terminators = tuple(terminators)
         if multiline_commands is None:
-            self.multiline_commands = []
+            self.multiline_commands = tuple()
         else:
-            self.multiline_commands = multiline_commands
+            self.multiline_commands = tuple(multiline_commands)
         if aliases is None:
-            self.aliases = {}
+            self.aliases = dict()
         else:
             self.aliases = aliases
         if shortcuts is None:
-            self.shortcuts = []
+            self.shortcuts = tuple()
         else:
-            self.shortcuts = shortcuts
+            self.shortcuts = tuple(shortcuts)
 
         # commands have to be a word, so make a regular expression
         # that matches the first word in the line. This regex has three

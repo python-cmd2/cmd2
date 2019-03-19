@@ -19,12 +19,9 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
 
     def __init__(self):
         # Create command shortcuts which are typically 1 character abbreviations which can be used in place of a command
-        self.shortcuts.update({'$': 'aprint', '%': 'oprint'})
-
-        # Make sure to call this super class __init__ *after* setting and/or updating shortcuts
-        super().__init__()
-        # NOTE: It is critical that the super class __init__ method be called AFTER updating certain parameters which
-        # are not settable at runtime.  This includes the shortcuts, multiline_commands, etc.
+        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts.update({'$': 'aprint', '%': 'oprint'})
+        super().__init__(shortcuts=shortcuts)
 
     def do_aprint(self, statement):
         """Print the argument string this basic command is called with."""

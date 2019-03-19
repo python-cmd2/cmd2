@@ -29,10 +29,9 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self, *args, **kwargs):
-        self.multiline_commands = ['orate']
         self.maxrepeats = 3
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, multiline_commands=['orate'], **kwargs)
 
         # Make maxrepeats settable at runtime
         self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'

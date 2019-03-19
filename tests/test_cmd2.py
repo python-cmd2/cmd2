@@ -105,7 +105,7 @@ def test_base_show_readonly(base_app):
         Commands may be terminated with: {}
         Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-""".format(base_app.terminators, base_app.allow_cli_args, base_app.allow_redirection))
+""".format(base_app.statement_parser.terminators, base_app.allow_cli_args, base_app.allow_redirection))
     assert out == expected
 
 
@@ -558,9 +558,9 @@ def test_feedback_to_output_false(base_app, capsys):
         os.remove(filename)
 
 
-def test_allow_redirection(base_app):
+def test_disallow_redirection(base_app):
     # Set allow_redirection to False
-    base_app.allow_redirection = False
+    base_app.statement_parser.allow_redirection = False
 
     filename = 'test_allow_redirect.txt'
 
@@ -1265,8 +1265,7 @@ def test_which_editor_bad():
 
 class MultilineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
-        self.multiline_commands = ['orate']
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, multiline_commands=['orate'], **kwargs)
 
     orate_parser = argparse.ArgumentParser()
     orate_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
