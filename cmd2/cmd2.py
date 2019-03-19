@@ -1848,29 +1848,9 @@ class Cmd(cmd.Cmd):
             # if we get here we must have:
             #   - a multiline command with no terminator
             #   - a multiline command with unclosed quotation marks
-            if not self.quit_on_sigint:
-                try:
-                    self.at_continuation_prompt = True
-                    newline = self.pseudo_raw_input(self.continuation_prompt)
-                    if newline == 'eof':
-                        # they entered either a blank line, or we hit an EOF
-                        # for some other reason. Turn the literal 'eof'
-                        # into a blank line, which serves as a command
-                        # terminator
-                        newline = '\n'
-                        self.poutput(newline)
-                    line = '{}\n{}'.format(statement.raw, newline)
-                except KeyboardInterrupt:
-                    self.poutput('^C')
-                    statement = self.statement_parser.parse('')
-                    break
-                finally:
-                    self.at_continuation_prompt = False
-            else:
+            try:
                 self.at_continuation_prompt = True
                 newline = self.pseudo_raw_input(self.continuation_prompt)
-                self.at_continuation_prompt = False
-
                 if newline == 'eof':
                     # they entered either a blank line, or we hit an EOF
                     # for some other reason. Turn the literal 'eof'
@@ -1879,6 +1859,15 @@ class Cmd(cmd.Cmd):
                     newline = '\n'
                     self.poutput(newline)
                 line = '{}\n{}'.format(statement.raw, newline)
+            except KeyboardInterrupt as ex:
+                if self.quit_on_sigint:
+                    raise ex
+                else:
+                    self.poutput('^C')
+                    statement = self.statement_parser.parse('')
+                    break
+            finally:
+                self.at_continuation_prompt = False
 
         if not statement.command:
             raise EmptyStatement()
@@ -2189,14 +2178,14 @@ class Cmd(cmd.Cmd):
                         self.poutput('{}{}'.format(self.prompt, line))
                 else:
                     # Otherwise, read a command from stdin
-                    if not self.quit_on_sigint:
-                        try:
-                            line = self.pseudo_raw_input(self.prompt)
-                        except KeyboardInterrupt:
+                    try:
+                        line = self.pseudo_raw_input(self.prompt)
+                    except KeyboardInterrupt as ex:
+                        if self.quit_on_sigint:
+                            raise ex
+                        else:
                             self.poutput('^C')
                             line = ''
-                    else:
-                        line = self.pseudo_raw_input(self.prompt)
 
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
