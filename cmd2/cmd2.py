@@ -289,31 +289,6 @@ def with_argparser(argparser: argparse.ArgumentParser,
     return arg_decorator
 
 
-class Statekeeper(object):
-    """Class used to save and restore state during load and py commands as well as when redirecting output or pipes."""
-    def __init__(self, obj: Any, attribs: Iterable) -> None:
-        """Use the instance attributes as a generic key-value store to copy instance attributes from outer object.
-
-        :param obj: instance of cmd2.Cmd derived class (your application instance)
-        :param attribs: tuple of strings listing attributes of obj to save a copy of
-        """
-        self.obj = obj
-        self.attribs = attribs
-        if self.obj:
-            self._save()
-
-    def _save(self) -> None:
-        """Create copies of attributes from self.obj inside this Statekeeper instance."""
-        for attrib in self.attribs:
-            setattr(self, attrib, getattr(self.obj, attrib))
-
-    def restore(self) -> None:
-        """Overwrite attributes in self.obj with the saved values stored in this Statekeeper instance."""
-        if self.obj:
-            for attrib in self.attribs:
-                setattr(self.obj, attrib, getattr(self, attrib))
-
-
 class EmbeddedConsoleExit(SystemExit):
     """Custom exception class for use with the py command."""
     pass
@@ -2186,10 +2161,10 @@ class Cmd(cmd.Cmd):
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
                 # We don't need to worry about setting rl_completion_suppress_quote since we never declared
                 # rl_completer_quote_characters.
-                old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                saved_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
                 rl_basic_quote_characters.value = None
 
-            old_completer = readline.get_completer()
+            saved_completer = readline.get_completer()
             readline.set_completer(self.complete)
 
             # Break words on whitespace and quotes when tab completing
@@ -2199,7 +2174,7 @@ class Cmd(cmd.Cmd):
                 # If redirection is allowed, then break words on those characters too
                 completer_delims += ''.join(constants.REDIRECTION_CHARS)
 
-            old_delims = readline.get_completer_delims()
+            saved_delims = readline.get_completer_delims()
             readline.set_completer_delims(completer_delims)
 
             # Enable tab completion
@@ -2231,12 +2206,12 @@ class Cmd(cmd.Cmd):
             if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
 
                 # Restore what we changed in readline
-                readline.set_completer(old_completer)
-                readline.set_completer_delims(old_delims)
+                readline.set_completer(saved_completer)
+                readline.set_completer_delims(saved_delims)
 
                 if rl_type == RlType.GNU:
                     readline.set_completion_display_matches_hook(None)
-                    rl_basic_quote_characters.value = old_basic_quotes
+                    rl_basic_quote_characters.value = saved_basic_quotes
                 elif rl_type == RlType.PYREADLINE:
                     # noinspection PyUnresolvedReferences
                     readline.rl.mode._display_completions = orig_pyreadline_display
@@ -3097,7 +3072,7 @@ class Cmd(cmd.Cmd):
                         # Set up tab completion for the Python console
                         # rlcompleter relies on the default settings of the Python readline module
                         if rl_type == RlType.GNU:
-                            old_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                            saved_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
                             rl_basic_quote_characters.value = orig_rl_basic_quotes
 
                             if 'gnureadline' in sys.modules:
@@ -3109,7 +3084,7 @@ class Cmd(cmd.Cmd):
 
                                 sys.modules['readline'] = sys.modules['gnureadline']
 
-                        old_delims = readline.get_completer_delims()
+                        saved_delims = readline.get_completer_delims()
                         readline.set_completer_delims(orig_rl_delims)
 
                         # rlcompleter will not need cmd2's custom display function
@@ -3122,15 +3097,18 @@ class Cmd(cmd.Cmd):
 
                         # Save off the current completer and set a new one in the Python console
                         # Make sure it tab completes from its locals() dictionary
-                        old_completer = readline.get_completer()
+                        saved_completer = readline.get_completer()
                         interp.runcode("from rlcompleter import Completer")
                         interp.runcode("import readline")
                         interp.runcode("readline.set_completer(Completer(locals()).complete)")
 
                 # Set up sys module for the Python console
                 self._reset_py_display()
-                keepstate = Statekeeper(sys, ('stdin', 'stdout'))
+
+                saved_sys_stdout = sys.stdout
                 sys.stdout = self.stdout
+
+                saved_sys_stdin = sys.stdin
                 sys.stdin = self.stdin
 
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
@@ -3148,7 +3126,8 @@ class Cmd(cmd.Cmd):
                     pass
 
                 finally:
-                    keepstate.restore()
+                    sys.stdout = saved_sys_stdout
+                    sys.stdin = saved_sys_stdin
 
                     # Set up readline for cmd2
                     if rl_type != RlType.NONE:
@@ -3166,11 +3145,11 @@ class Cmd(cmd.Cmd):
 
                         if self.use_rawinput and self.completekey:
                             # Restore cmd2's tab completion settings
-                            readline.set_completer(old_completer)
-                            readline.set_completer_delims(old_delims)
+                            readline.set_completer(saved_completer)
+                            readline.set_completer_delims(saved_delims)
 
                             if rl_type == RlType.GNU:
-                                rl_basic_quote_characters.value = old_basic_quotes
+                                rl_basic_quote_characters.value = saved_basic_quotes
 
                                 if 'gnureadline' in sys.modules:
                                     # Restore what the readline module pointed to
