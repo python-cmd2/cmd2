@@ -98,8 +98,7 @@ class PyscriptBridge(object):
             self._cmd2_app.stdout = copy_cmd_stdout
             with redirect_stdout(copy_cmd_stdout):
                 with redirect_stderr(copy_stderr):
-                    # Include a newline in case it's a multiline command
-                    self._cmd2_app.onecmd_plus_hooks(command + '\n')
+                    self._cmd2_app.onecmd_plus_hooks(command)
         finally:
             self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
 
