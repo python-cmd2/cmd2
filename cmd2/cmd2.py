@@ -3353,11 +3353,9 @@ class Cmd(cmd.Cmd):
         # Validate the transcript file path to make sure directory exists and write access is available
         transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
         transcript_dir = os.path.dirname(transcript_path)
-        if not os.path.isdir(transcript_dir):
-            self.perror("Transcript directory {!r} is not a directory".format(transcript_dir), traceback_war=False)
-            return
-        if not os.access(transcript_dir, os.W_OK):
-            self.perror("No write access for transcript directory {!r}".format(transcript_dir), traceback_war=False)
+        if not os.path.isdir(transcript_dir) or not os.access(transcript_dir, os.W_OK):
+            self.perror("{!r} is not a directory or you don't have write access".format(transcript_dir),
+                        traceback_war=False)
             return
 
         # Disable echo while we manually redirect stdout to a StringIO buffer
