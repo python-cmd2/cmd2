@@ -17,7 +17,7 @@ from unittest import mock
 import pytest
 
 import cmd2
-from .conftest import run_cmd
+from .conftest import run_cmd, BASE_HELP_VERBOSE
 from cmd2 import transcript
 from cmd2.utils import StdSim
 
@@ -189,6 +189,35 @@ this is a \/multiline\/ command
         with open(history_fname) as f:
             transcript = f.read()
         assert transcript == expected
+
+
+def test_load_record_transcript(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'help.txt')
+
+    assert base_app.cmdqueue == []
+    assert base_app._script_dir == []
+    assert base_app._current_script_dir is None
+
+    # make a tmp file to use as a transcript
+    fd, transcript_fname = tempfile.mkstemp(prefix='', suffix='.trn')
+    os.close(fd)
+
+    # Run the load command with the -r option to generate a transcript
+    run_cmd(base_app, 'load {} -r {}'.format(filename, transcript_fname))
+
+    assert base_app.cmdqueue == []
+    assert base_app._script_dir == []
+    assert base_app._current_script_dir is None
+
+    # read in the transcript created by the history command
+    with open(transcript_fname) as f:
+        xscript = f.read()
+
+    expected = '(Cmd) help -v\n' + BASE_HELP_VERBOSE + '\n'
+
+    assert xscript == expected
+
 
 @pytest.mark.parametrize('expected, transformed', [
     # strings with zero or one slash or with escaped slashes means no regular
