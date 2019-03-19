@@ -22,7 +22,11 @@ Simply include one command per line, typed exactly as you would inside a ``cmd2`
 The ``load`` command loads commands from a script file into a queue and then the normal cmd2 REPL
 resumes control and executes the commands in the queue in FIFO order.  A side effect of this
 is that if you redirect/pipe the output of a load command, it will redirect the output of the ``load``
-command itself, but will NOT redirect the output of the command loaded from the script file.
+command itself, but will NOT redirect the output of the command loaded from the script file.  Of course,
+you can add redirection to the commands being run in the script file, e.g.::
+
+    # This is your script file
+    command arg1 arg2 > file.txt
 
 .. automethod:: cmd2.cmd2.Cmd.do_load
 

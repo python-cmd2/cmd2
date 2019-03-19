@@ -3341,6 +3341,9 @@ class Cmd(cmd.Cmd):
             except Exception as e:
                 self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
         elif args.transcript:
+            if self.redirecting:
+                self.perror("Redirection not supported while using history -t", traceback_war=False)
+                return
             self._generate_transcript(history, args.transcript)
         else:
             # Display the history items retrieved
@@ -3350,12 +3353,9 @@ class Cmd(cmd.Cmd):
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""
         import io
-
-        # Disable echo and redirection while we manually redirect stdout to a StringIO buffer
-        saved_allow_redirection = self.allow_redirection
+        # Disable echo while we manually redirect stdout to a StringIO buffer
         saved_echo = self.echo
         saved_stdout = self.stdout
-        self.allow_redirection = False
         self.echo = False
 
         # The problem with supporting regular expressions in transcripts
@@ -3394,7 +3394,6 @@ class Cmd(cmd.Cmd):
             transcript += output.replace('/', r'\/')
 
         # Restore altered attributes to their original state
-        self.allow_redirection = saved_allow_redirection
         self.echo = saved_echo
         self.stdout = saved_stdout
 
@@ -3506,7 +3505,18 @@ class Cmd(cmd.Cmd):
             return
 
         if args.record_transcript:
-            self._generate_transcript(script_commands, args.record_transcript)
+            if self.redirecting:
+                self.perror("Redirection not supported while using load -r", traceback_war=False)
+                return
+            transcript_path = os.path.abspath(os.path.expanduser(args.record_transcript))
+            transcript_dir = os.path.dirname(transcript_path)
+            if not os.path.isdir(transcript_dir):
+                self.perror("{!r} is not a directory".format(transcript_dir), traceback_war=False)
+                return
+            if not os.access(transcript_dir, os.W_OK):
+                self.perror("You do not have write access to directory '{!r}".format(transcript_dir), traceback_war=False)
+                return
+            self._generate_transcript(script_commands, os.path.expanduser(args.record_transcript))
             return
 
         self.cmdqueue = script_commands + ['eos'] + self.cmdqueue
@@ -3825,7 +3835,7 @@ class Cmd(cmd.Cmd):
 
         # If transcript-based regression testing was requested, then do that instead of the main loop
         if self._transcript_files is not None:
-            self.run_transcript_tests(self._transcript_files)
+            self.run_transcript_tests([os.path.expanduser(tf) for tf in self._transcript_files])
         else:
             # If an intro was supplied in the method call, allow it to override the default
             if intro is not None:
