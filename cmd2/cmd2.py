@@ -303,7 +303,10 @@ class EmptyStatement(Exception):
 DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function'])
 
 # Used to restore state after redirection ends
-RedirectionSavedState = namedtuple('RedirectionSavedState', ['self_stdout', 'sys_stdout', 'pipe_proc'])
+# redirecting and piping are used to know what needs to be restored
+RedirectionSavedState = utils.namedtuple_with_defaults('RedirectionSavedState',
+                                                       ['redirecting', 'self_stdout', 'sys_stdout',
+                                                        'piping', 'pipe_proc'])
 
 
 class Cmd(cmd.Cmd):
@@ -1724,7 +1727,7 @@ class Cmd(cmd.Cmd):
 
             # See if we need to update self.redirecting
             if not already_redirecting:
-                self.redirecting = all(val is not None for val in saved_state)
+                self.redirecting = saved_state.redirecting or saved_state.piping
 
             try:
                 timestart = datetime.datetime.now()
@@ -1886,13 +1889,12 @@ class Cmd(cmd.Cmd):
         """Handles output redirection for >, >>, and |.
 
         :param statement: a parsed statement from the user
-        :return: A RedirectionSavedState object. All elements will be None if no redirection was done.
+        :return: A RedirectionSavedState object
         """
         import io
         import subprocess
 
-        # Default to no redirection
-        ret_val = RedirectionSavedState(None, None, None)
+        ret_val = RedirectionSavedState(redirecting=False, piping=False)
 
         if not self.allow_redirection:
             return ret_val
@@ -1908,9 +1910,8 @@ class Cmd(cmd.Cmd):
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
                 pipe_proc = subprocess.Popen(statement.pipe_to, stdin=pipe_read, stdout=self.stdout)
-                ret_val = RedirectionSavedState(self_stdout=self.stdout,
-                                                sys_stdout=None,
-                                                pipe_proc=self.pipe_proc)
+                ret_val = RedirectionSavedState(redirecting=True, self_stdout=self.stdout,
+                                                piping=True, pipe_proc=self.pipe_proc)
                 self.stdout = pipe_write
                 self.pipe_proc = pipe_proc
             except Exception as ex:
@@ -1932,18 +1933,14 @@ class Cmd(cmd.Cmd):
                     mode = 'a'
                 try:
                     new_stdout = open(statement.output_to, mode)
-                    ret_val = RedirectionSavedState(self_stdout=self.stdout,
-                                                    sys_stdout=sys.stdout,
-                                                    pipe_proc=None)
+                    ret_val = RedirectionSavedState(redirecting=True, self_stdout=self.stdout, sys_stdout=sys.stdout)
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
                     self.perror('Not redirecting because - {}'.format(ex), traceback_war=False)
             else:
                 # going to a paste buffer
                 new_stdout = tempfile.TemporaryFile(mode="w+")
-                ret_val = RedirectionSavedState(self_stdout=self.stdout,
-                                                sys_stdout=sys.stdout,
-                                                pipe_proc=None)
+                ret_val = RedirectionSavedState(redirecting=True, self_stdout=self.stdout, sys_stdout=sys.stdout)
                 sys.stdout = self.stdout = new_stdout
                 if statement.output == constants.REDIRECTION_APPEND:
                     self.poutput(get_paste_buffer())
@@ -1958,7 +1955,7 @@ class Cmd(cmd.Cmd):
         :param saved_state: contains information needed to restore state data
         """
         # Check if self.stdout was redirected
-        if saved_state.self_stdout is not None:
+        if saved_state.redirecting:
             # If we redirected output to the clipboard
             if statement.output and not statement.output_to:
                 self.stdout.seek(0)
@@ -1972,14 +1969,14 @@ class Cmd(cmd.Cmd):
             finally:
                 self.stdout = saved_state.self_stdout
 
-            # Check if output was being piped to a process
-            if saved_state.pipe_proc is not None:
-                self.pipe_proc.communicate()
-                self.pipe_proc = saved_state.pipe_proc
+            # Check if sys.stdout was redirected
+            if saved_state.sys_stdout is not None:
+                sys.stdout = saved_state.sys_stdout
 
-        # Check if sys.stdout was redirected
-        if saved_state.sys_stdout is not None:
-            sys.stdout = saved_state.sys_stdout
+        # Check if output was being piped to a process
+        if saved_state.piping:
+            self.pipe_proc.communicate()
+            self.pipe_proc = saved_state.pipe_proc
 
     def cmd_func(self, command: str) -> Optional[Callable]:
         """
