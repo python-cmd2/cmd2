@@ -33,18 +33,16 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
 
   class App(Cmd2):
       def __init__(self):
-        # Make sure you update the shortcuts attribute before calling the super class __init__
-        self.shortcuts.update({'*': 'sneeze', '~': 'squirm'})
-
-        # Make sure to call this super class __init__ after updating shortcuts
-        cmd2.Cmd.__init__(self)
+        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts.update({'*': 'sneeze', '~': 'squirm'})
+        cmd2.Cmd.__init__(self, shortcuts=shortcuts)
 
 .. warning::
 
   Shortcuts need to be created by updating the ``shortcuts`` dictionary attribute prior to calling the
   ``cmd2.Cmd`` super class ``__init__()`` method.  Moreover, that super class init method needs to be called after
   updating the ``shortcuts`` attribute  This warning applies in general to many other attributes which are not
-  settable at runtime such as ``multiline_commands``, etc.
+  settable at runtime.
 
 
 Aliases

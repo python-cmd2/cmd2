@@ -87,7 +87,7 @@ class CmdLineApp(cmd2.Cmd):
         func = self.cmd_func(data.statement.command)
         if func is None:
             # check if the entered command might be an abbreviation
-            possible_cmds = [cmd for cmd in self.keywords if cmd.startswith(data.statement.command)]
+            possible_cmds = [cmd for cmd in self.get_all_commands() if cmd.startswith(data.statement.command)]
             if len(possible_cmds) == 1:
                 raw = data.statement.raw.replace(data.statement.command, possible_cmds[0], 1)
                 data.statement = self.statement_parser.parse(raw)

@@ -7,6 +7,7 @@ import sys
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
+    # noinspection PyPackageRequirements
     import gnureadline as readline
 except ImportError:
     # Try to import readline, but allow failure for convenience in Windows unit testing
@@ -41,7 +42,7 @@ if 'pyreadline' in sys.modules:
 
     # Check if we are running in a terminal
     if sys.stdout.isatty():  # pragma: no cover
-        # noinspection PyPep8Naming
+        # noinspection PyPep8Naming,PyUnresolvedReferences
         def enable_win_vt100(handle: HANDLE) -> bool:
             """
             Enables VT100 character sequences in a Windows console
@@ -71,7 +72,9 @@ if 'pyreadline' in sys.modules:
         # Enable VT100 sequences for stdout and stderr
         STD_OUT_HANDLE = -11
         STD_ERROR_HANDLE = -12
+        # noinspection PyUnresolvedReferences
         vt100_stdout_support = enable_win_vt100(readline.rl.console.GetStdHandle(STD_OUT_HANDLE))
+        # noinspection PyUnresolvedReferences
         vt100_stderr_support = enable_win_vt100(readline.rl.console.GetStdHandle(STD_ERROR_HANDLE))
         vt100_support = vt100_stdout_support and vt100_stderr_support
 
@@ -82,14 +85,14 @@ if 'pyreadline' in sys.modules:
     try:
         getattr(readline, 'redisplay')
     except AttributeError:
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         readline.redisplay = readline.rl.mode._update_line
 
     # readline.remove_history_item()
     try:
         getattr(readline, 'remove_history_item')
     except AttributeError:
-        # noinspection PyProtectedMember
+        # noinspection PyProtectedMember,PyUnresolvedReferences
         def pyreadline_remove_history_item(pos: int) -> None:
             """
             An implementation of remove_history_item() for pyreadline
@@ -121,7 +124,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
             vt100_support = True
 
 
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember,PyUnresolvedReferences
 def rl_force_redisplay() -> None:  # pragma: no cover
     """
     Causes readline to display the prompt and input text wherever the cursor is and start
@@ -144,7 +147,7 @@ def rl_force_redisplay() -> None:  # pragma: no cover
         readline.rl.mode._update_line()
 
 
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember, PyUnresolvedReferences
 def rl_get_point() -> int:  # pragma: no cover
     """
     Returns the offset of the current cursor position in rl_line_buffer
@@ -159,7 +162,7 @@ def rl_get_point() -> int:  # pragma: no cover
         return 0
 
 
-# noinspection PyProtectedMember
+# noinspection PyProtectedMember, PyUnresolvedReferences
 def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
     """
     Sets readline's prompt

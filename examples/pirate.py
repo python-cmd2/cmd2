@@ -11,6 +11,7 @@ import argparse
 from colorama import Fore
 
 import cmd2
+from cmd2.constants import MULTILINE_TERMINATOR
 
 COLORS = {
     'black': Fore.BLACK,
@@ -27,16 +28,13 @@ COLORS = {
 class Pirate(cmd2.Cmd):
     """A piratical example cmd2 application involving looting and drinking."""
     def __init__(self):
-        self.default_to_shell = True
-        self.multiline_commands = ['sing']
-        self.terminators = self.terminators + ['...']
-        self.songcolor = Fore.BLUE
-
-        # Add stuff to shortcuts before calling base class initializer
-        self.shortcuts.update({'~': 'sing'})
-
         """Initialize the base class as well as this one"""
-        super().__init__()
+        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts.update({'~': 'sing'})
+        super().__init__(multiline_commands=['sing'], terminators=[MULTILINE_TERMINATOR, '...'], shortcuts=shortcuts)
+
+        self.default_to_shell = True
+        self.songcolor = Fore.BLUE
 
         # Make songcolor settable at runtime
         self.settable['songcolor'] = 'Color to ``sing`` in (black/red/green/yellow/blue/magenta/cyan/white)'

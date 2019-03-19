@@ -5,6 +5,7 @@
 import collections
 import os
 import re
+import sys
 import unicodedata
 from typing import Any, Iterable, List, Optional, Union
 
@@ -88,6 +89,7 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
         Node(val=4, left=None, right=7)
     """
     T = collections.namedtuple(typename, field_names)
+    # noinspection PyProtectedMember,PyUnresolvedReferences
     T.__new__.__defaults__ = (None,) * len(T._fields)
     if isinstance(default_values, collections.Mapping):
         prototype = T(**default_values)
@@ -350,3 +352,17 @@ def unquote_redirection_tokens(args: List[str]) -> None:
         unquoted_arg = strip_quotes(arg)
         if unquoted_arg in constants.REDIRECTION_TOKENS:
             args[i] = unquoted_arg
+
+
+def find_editor() -> str:
+    """Find a reasonable editor to use by default for the system that the cmd2 application is running on."""
+    editor = os.environ.get('EDITOR')
+    if not editor:
+        if sys.platform[:3] == 'win':
+            editor = 'notepad'
+        else:
+            # Favor command-line editors first so we don't leave the terminal to edit
+            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
+                if which(editor):
+                    break
+    return editor
