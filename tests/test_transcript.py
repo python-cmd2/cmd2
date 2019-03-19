@@ -203,7 +203,7 @@ def test_load_record_transcript(base_app, request):
     os.close(fd)
 
     # Run the load command with the -r option to generate a transcript
-    run_cmd(base_app, 'load {} -r {}'.format(filename, transcript_fname))
+    run_cmd(base_app, 'load {} -t {}'.format(filename, transcript_fname))
 
     assert base_app.cmdqueue == []
     assert base_app._script_dir == []

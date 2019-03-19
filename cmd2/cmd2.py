@@ -3468,8 +3468,7 @@ class Cmd(cmd.Cmd):
                         )
 
     load_parser = ACArgumentParser(description=load_description)
-    setattr(load_parser.add_argument('-r', '--record_transcript',
-                                     help='record the output of the script as a transcript file'),
+    setattr(load_parser.add_argument('-t', '--transcript', help='record the output of the script as a transcript file'),
             ACTION_ARG_CHOICES, ('path_complete',))
     setattr(load_parser.add_argument('script_path', help="path to the script file"),
             ACTION_ARG_CHOICES, ('path_complete',))
@@ -3509,8 +3508,8 @@ class Cmd(cmd.Cmd):
             self.perror("Problem accessing script from '{}': {}".format(expanded_path, ex))
             return
 
-        if args.record_transcript:
-            self._generate_transcript(script_commands, os.path.expanduser(args.record_transcript))
+        if args.transcript:
+            self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
             return
 
         self.cmdqueue = script_commands + ['eos'] + self.cmdqueue

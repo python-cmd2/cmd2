@@ -34,9 +34,9 @@ This is by far the easiest way to generate a transcript.
 
 Automatically from a script file
 --------------------------------
-A transcript can also be automatically generated from a script file using ``load -r``::
+A transcript can also be automatically generated from a script file using ``load -t``::
 
-    (Cmd) load scripts/script.txt -r transcript.txt
+    (Cmd) load scripts/script.txt -t transcript.txt
     2 commands and their outputs saved to transcript file 'transcript.txt'
     (Cmd)
 
