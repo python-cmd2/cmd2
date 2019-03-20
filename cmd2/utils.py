@@ -371,9 +371,9 @@ class ByteBuf(object):
 
 
 class ProcReader(object):
-    """Used to read stdout and stderr from a process whose stdout and stderr are set to binary pipes"""
-    def __init__(self, proc: subprocess.Popen, stdout: Union[BinaryIO, TextIO],
-                 stderr: Union[BinaryIO, TextIO]) -> None:
+    """Used to read stdout and stderr from a Popen process whose stdout and stderr are set to binary pipes"""
+    def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, BinaryIO, TextIO],
+                 stderr: Union[StdSim, BinaryIO, TextIO]) -> None:
         """
         ProcReader initializer
         :param proc: the Popen process being read from
@@ -393,6 +393,10 @@ class ProcReader(object):
         # Start reading from the process
         self._out_thread.start()
         self._err_thread.start()
+
+    def terminate(self) -> None:
+        """Terminates the process being run"""
+        self._proc.terminate()
 
     def wait(self) -> None:
         """Wait for the process to finish"""
@@ -427,7 +431,7 @@ class ProcReader(object):
                 self._write_bytes(write_stream, available)
 
     @staticmethod
-    def _write_bytes(stream: Union[BinaryIO, TextIO], to_write: bytes) -> None:
+    def _write_bytes(stream: Union[StdSim, BinaryIO, TextIO], to_write: bytes) -> None:
         """
         Write bytes to a stream
         :param stream: the stream being written to

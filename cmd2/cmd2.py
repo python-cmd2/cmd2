@@ -2941,10 +2941,14 @@ class Cmd(cmd.Cmd):
 
         expanded_command = ' '.join(tokens)
 
-        # Use pipes for stdout and stderr so they can be captured by our process
-        proc = subprocess.Popen(expanded_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
-        proc_reader.wait()
+        # If stdout is a StdSim, then we will use pipes so we can save stdout and stderr output
+        if isinstance(self.stdout, utils.StdSim):
+            proc = subprocess.Popen(expanded_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+            proc_reader.wait()
+        else:
+            proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
+            proc.communicate()
 
     @staticmethod
     def _reset_py_display() -> None:

@@ -572,6 +572,7 @@ def test_disallow_redirection(base_app):
     # Verify that no file got created
     assert not os.path.exists(filename)
 
+@pytest.mark.skipif(True, reason="Waiting on StdSim updates")
 def test_pipe_to_shell(base_app, capsys):
     if sys.platform == "win32":
         # Windows
