@@ -2941,13 +2941,18 @@ class Cmd(cmd.Cmd):
 
         expanded_command = ' '.join(tokens)
 
-        # If stdout is a StdSim, then we will use pipes so we can save stdout and stderr output
-        if isinstance(self.stdout, utils.StdSim):
-            proc = subprocess.Popen(expanded_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        # For any output that is a StdSim, we will use a pipe so we can save the output
+        is_out_sim = isinstance(self.stdout, utils.StdSim)
+        is_err_sim = isinstance(sys.stderr, utils.StdSim)
+
+        proc_stdout = subprocess.PIPE if is_out_sim else self.stdout
+        proc_stderr = subprocess.PIPE if is_err_sim else sys.stderr
+
+        proc = subprocess.Popen(expanded_command, stdout=proc_stdout, stderr=proc_stderr, shell=True)
+        if is_out_sim or is_err_sim:
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
             proc_reader.wait()
         else:
-            proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
             proc.communicate()
 
     @staticmethod

@@ -371,7 +371,7 @@ class ByteBuf(object):
 
 
 class ProcReader(object):
-    """Used to read stdout and stderr from a Popen process whose stdout and stderr are set to binary pipes"""
+    """Used to read stdout and stderr from a Popen process if any of those were set to subprocess.PIPE"""
     def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, BinaryIO, TextIO],
                  stderr: Union[StdSim, BinaryIO, TextIO]) -> None:
         """
@@ -390,9 +390,11 @@ class ProcReader(object):
         self._err_thread = threading.Thread(name='out_thread', target=self._reader_thread_func,
                                             kwargs={'read_stdout': False})
 
-        # Start reading from the process
-        self._out_thread.start()
-        self._err_thread.start()
+        # Start the reader threads for pipes only
+        if self._proc.stdout is not None:
+            self._out_thread.start()
+        if self._proc.stderr is not None:
+            self._err_thread.start()
 
     def terminate(self) -> None:
         """Terminates the process being run"""
@@ -400,10 +402,13 @@ class ProcReader(object):
 
     def wait(self) -> None:
         """Wait for the process to finish"""
-        self._out_thread.join()
-        self._err_thread.join()
+        if self._out_thread.is_alive():
+            self._out_thread.join()
+        if self._err_thread.is_alive():
+            self._err_thread.join()
 
         # Handle case where the process ended before the last read could be done
+        # This will return None for the streams that weren't pipes so it is safe.
         out, err = self._proc.communicate()
         if out:
             self._write_bytes(self._stdout, out)
@@ -421,6 +426,9 @@ class ProcReader(object):
         else:
             read_stream = self._proc.stderr
             write_stream = self._stderr
+
+        # The thread should have been started only if this stream was a pipe
+        assert read_stream is not None
 
         # Run until process completes
         while self._proc.poll() is None:
