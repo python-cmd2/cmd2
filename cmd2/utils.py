@@ -345,7 +345,8 @@ class StdSim(object):
         """Clear the internal contents"""
         self.buffer.byte_buf = b''
 
-    def isatty(self) -> bool:
+    @staticmethod
+    def isatty() -> bool:
         """StdSim will never be considered an interactive stream"""
         return False
 
@@ -403,9 +404,10 @@ class ProcReader(object):
         if self._proc.stderr is not None:
             self._err_thread.start()
 
-    def terminate(self) -> None:
-        """Terminates the process being run"""
-        self._proc.terminate()
+    def send_sigint(self) -> None:
+        """Send a SIGINT to the process"""
+        import signal
+        self._proc.send_signal(signal.SIGINT)
 
     def wait(self) -> None:
         """Wait for the process to finish"""
@@ -452,7 +454,11 @@ class ProcReader(object):
         :param stream: the stream being written to
         :param to_write: the bytes being written
         """
-        if 'b' in stream.mode:
-            stream.write(to_write)
-        else:
-            stream.buffer.write(to_write)
+        try:
+            if 'b' in stream.mode:
+                stream.write(to_write)
+            else:
+                stream.buffer.write(to_write)
+        except BrokenPipeError:
+            # This occurs if output is being piped to a process that closed
+            pass

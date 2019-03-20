@@ -1653,12 +1653,12 @@ class Cmd(cmd.Cmd):
         :param signum: signal number
         :param frame
         """
-
-        # Save copy of pipe_proc_reader since it could theoretically change while this is running
-        pipe_proc_reader = self.pipe_proc_reader
-
-        if pipe_proc_reader is not None:
-            pipe_proc_reader.terminate()
+        try:
+            # Forward the sigint to the current pipe process
+            self.pipe_proc_reader.send_sigint()
+        except AttributeError:
+            # Ignore since self.pipe_proc_reader was None
+            pass
 
         # Re-raise a KeyboardInterrupt so other parts of the code can catch it
         raise KeyboardInterrupt("Got a keyboard interrupt")
@@ -1908,12 +1908,24 @@ class Cmd(cmd.Cmd):
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
+                # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
+                # our sigint handler will forward it to the most recent pipe process. This makes sure
+                # pipe processes close in the right order (most recent first).
+                if sys.platform == 'win32':
+                    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+                    start_new_session = False
+                else:
+                    creationflags = 0
+                    start_new_session = True
+
                 # For any stream that is a StdSim, we will use a pipe so we can capture its output
                 proc = \
                     subprocess.Popen(statement.pipe_to,
                                      stdin=pipe_read,
                                      stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
-                                     stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr)
+                                     stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                                     creationflags=creationflags,
+                                     start_new_session=start_new_session)
 
                 ret_val = RedirectionSavedState(redirecting=True, self_stdout=self.stdout,
                                                 piping=True, pipe_proc_reader=self.pipe_proc_reader)
