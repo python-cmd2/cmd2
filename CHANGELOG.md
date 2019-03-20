@@ -1,4 +1,6 @@
 ## 0.9.12 (March TBD, 2019)
+* Bug Fixes
+    * Fixed a bug in how redirection and piping worked inside ``py`` or ``pyscript`` commands
 * Enhancements
     * Added ability to include command name placeholders in the message printed when trying to run a disabled command.
         * See docstring for ``disable_command()`` or ``disable_category()`` for more details.
