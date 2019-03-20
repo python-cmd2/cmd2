@@ -1722,16 +1722,20 @@ class Cmd(cmd.Cmd):
             # Keep track of whether or not we were already redirecting before this command
             already_redirecting = self.redirecting
 
-            # Handle any redirection for this command
-            redir_error, saved_state = self._redirect_output(statement)
+            # When this isn't None, we know that _redirect_output completed. This prevents getting into
+            # a weird state if _redirect_output returns early because of a Ctrl-C event.
+            saved_state = None
 
-            # Do not continue if an error occurred while trying to redirect
-            if not redir_error:
-                # See if we need to update self.redirecting
-                if not already_redirecting:
-                    self.redirecting = saved_state.redirecting
+            try:
+                # Handle any redirection for this command
+                redir_error, saved_state = self._redirect_output(statement)
 
-                try:
+                # Do not continue if an error occurred while trying to redirect
+                if not redir_error:
+                    # See if we need to update self.redirecting
+                    if not already_redirecting:
+                        self.redirecting = saved_state.redirecting
+
                     timestart = datetime.datetime.now()
                     if self._in_py:
                         self._last_result = None
@@ -1758,10 +1762,13 @@ class Cmd(cmd.Cmd):
 
                     if self.timing:
                         self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
-                finally:
+            finally:
+                # Make sure _redirect_output completed
+                if saved_state is not None:
                     self._restore_output(statement, saved_state)
-                    if not already_redirecting:
-                        self.redirecting = False
+
+                if not already_redirecting:
+                    self.redirecting = False
 
         except EmptyStatement:
             # don't do anything, but do allow command finalization hooks to run
