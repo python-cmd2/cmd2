@@ -306,7 +306,7 @@ DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_funct
 # redirecting and piping are used to know what needs to be restored
 RedirectionSavedState = utils.namedtuple_with_defaults('RedirectionSavedState',
                                                        ['redirecting', 'self_stdout', 'sys_stdout',
-                                                        'piping', 'pipe_proc'])
+                                                        'piping', 'pipe_proc_reader'])
 
 
 class Cmd(cmd.Cmd):
@@ -425,7 +425,7 @@ class Cmd(cmd.Cmd):
         self._script_dir = []
 
         # Used when piping command output to a shell command
-        self.pipe_proc = None
+        self.pipe_proc_reader = None
 
         # Used by complete() for readline tab completion
         self.completion_matches = []
@@ -1656,10 +1656,10 @@ class Cmd(cmd.Cmd):
         """
 
         # Save copy of pipe_proc since it could theoretically change while this is running
-        pipe_proc = self.pipe_proc
+        pipe_proc_reader = self.pipe_proc_reader
 
-        if pipe_proc is not None:
-            pipe_proc.terminate()
+        if pipe_proc_reader is not None:
+            pipe_proc_reader.terminate()
 
         # Re-raise a KeyboardInterrupt so other parts of the code can catch it
         raise KeyboardInterrupt("Got a keyboard interrupt")
@@ -1727,7 +1727,7 @@ class Cmd(cmd.Cmd):
 
             # See if we need to update self.redirecting
             if not already_redirecting:
-                self.redirecting = saved_state.redirecting or saved_state.piping
+                self.redirecting = saved_state.redirecting
 
             try:
                 timestart = datetime.datetime.now()
@@ -1909,11 +1909,18 @@ class Cmd(cmd.Cmd):
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
-                pipe_proc = subprocess.Popen(statement.pipe_to, stdin=pipe_read, stdout=self.stdout)
+                # For any stream that is a StdSim, we will use a pipe so we can capture its output
+                proc = \
+                    subprocess.Popen(statement.pipe_to,
+                                     stdin=pipe_read,
+                                     stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
+                                     stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr)
+
                 ret_val = RedirectionSavedState(redirecting=True, self_stdout=self.stdout,
-                                                piping=True, pipe_proc=self.pipe_proc)
+                                                piping=True, pipe_proc_reader=self.pipe_proc_reader)
+
+                self.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
                 self.stdout = pipe_write
-                self.pipe_proc = pipe_proc
             except Exception as ex:
                 self.perror('Not piping because - {}'.format(ex), traceback_war=False)
                 pipe_read.close()
@@ -1975,8 +1982,8 @@ class Cmd(cmd.Cmd):
 
         # Check if output was being piped to a process
         if saved_state.piping:
-            self.pipe_proc.communicate()
-            self.pipe_proc = saved_state.pipe_proc
+            self.pipe_proc_reader.wait()
+            self.pipe_proc_reader = saved_state.pipe_proc_reader
 
     def cmd_func(self, command: str) -> Optional[Callable]:
         """
@@ -2947,7 +2954,6 @@ class Cmd(cmd.Cmd):
                                 stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                                 shell=True)
 
-        # Use a ProcReader in all cases since the process will run normally even if no output is being captured
         proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
         proc_reader.wait()
 
