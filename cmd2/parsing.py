@@ -372,7 +372,7 @@ class StatementParser:
             line = self._expand(line)
 
         # check if this line is a comment
-        if line.strip().startswith(constants.COMMENT_CHAR):
+        if line.lstrip().startswith(constants.COMMENT_CHAR):
             return []
 
         # split on whitespace
