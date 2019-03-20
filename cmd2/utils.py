@@ -345,6 +345,10 @@ class StdSim(object):
         """Clear the internal contents"""
         self.buffer.byte_buf = b''
 
+    def isatty(self) -> bool:
+        """StdSim will never be considered an interactive stream"""
+        return False
+
     def __getattr__(self, item: str):
         if item in self.__dict__:
             return self.__dict__[item]

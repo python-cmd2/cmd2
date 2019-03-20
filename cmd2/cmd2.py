@@ -694,22 +694,21 @@ class Cmd(cmd.Cmd):
                     pager = self.pager
                     if chop:
                         pager = self.pager_chop
-                    self.pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
+                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                     try:
-                        self.pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
-                        self.pipe_proc.stdin.close()
+                        pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
+                        pipe_proc.stdin.close()
                     except (OSError, KeyboardInterrupt):
                         pass
 
                     # Less doesn't respect ^C, but catches it for its own UI purposes (aborting search etc. inside less)
                     while True:
                         try:
-                            self.pipe_proc.wait()
+                            pipe_proc.wait()
                         except KeyboardInterrupt:
                             pass
                         else:
                             break
-                    self.pipe_proc = None
                 else:
                     self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
@@ -1655,7 +1654,7 @@ class Cmd(cmd.Cmd):
         :param frame
         """
 
-        # Save copy of pipe_proc since it could theoretically change while this is running
+        # Save copy of pipe_proc_reader since it could theoretically change while this is running
         pipe_proc_reader = self.pipe_proc_reader
 
         if pipe_proc_reader is not None:
