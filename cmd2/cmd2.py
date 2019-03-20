@@ -701,7 +701,8 @@ class Cmd(cmd.Cmd):
                     except (OSError, KeyboardInterrupt):
                         pass
 
-                    # Less doesn't respect ^C, but catches it for its own UI purposes (aborting search etc. inside less)
+                    # Wait in a loop until the process exits. Ignore Ctrl-C events because that doesn't
+                    # mean the process is closed. For instance, less does not exit on Ctrl-C.
                     while True:
                         try:
                             pipe_proc.wait()
