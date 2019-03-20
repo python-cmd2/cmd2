@@ -2941,19 +2941,15 @@ class Cmd(cmd.Cmd):
 
         expanded_command = ' '.join(tokens)
 
-        # For any output that is a StdSim, we will use a pipe so we can save the output
-        is_out_sim = isinstance(self.stdout, utils.StdSim)
-        is_err_sim = isinstance(sys.stderr, utils.StdSim)
+        # For any stream that is a StdSim, we will use a pipe so we can capture its output
+        proc = subprocess.Popen(expanded_command,
+                                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
+                                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                                shell=True)
 
-        proc_stdout = subprocess.PIPE if is_out_sim else self.stdout
-        proc_stderr = subprocess.PIPE if is_err_sim else sys.stderr
-
-        proc = subprocess.Popen(expanded_command, stdout=proc_stdout, stderr=proc_stderr, shell=True)
-        if is_out_sim or is_err_sim:
-            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
-            proc_reader.wait()
-        else:
-            proc.communicate()
+        # Use a ProcReader in all cases since the process will run normally even if no output is being captured
+        proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+        proc_reader.wait()
 
     @staticmethod
     def _reset_py_display() -> None:

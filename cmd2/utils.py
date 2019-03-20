@@ -371,14 +371,17 @@ class ByteBuf(object):
 
 
 class ProcReader(object):
-    """Used to read stdout and stderr from a Popen process if any of those were set to subprocess.PIPE"""
+    """
+    Used to captured stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
+    If neither are pipes, then the process will run normally and no output will be captured.
+    """
     def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, BinaryIO, TextIO],
                  stderr: Union[StdSim, BinaryIO, TextIO]) -> None:
         """
         ProcReader initializer
         :param proc: the Popen process being read from
-        :param stdout: the stdout stream being written to
-        :param stderr: the stderr stream being written to
+        :param stdout: the stream to write captured stdout
+        :param stderr: the stream to write captured stderr
         """
         self._proc = proc
         self._stdout = stdout
@@ -407,8 +410,8 @@ class ProcReader(object):
         if self._err_thread.is_alive():
             self._err_thread.join()
 
-        # Handle case where the process ended before the last read could be done
-        # This will return None for the streams that weren't pipes so it is safe.
+        # Handle case where the process ended before the last read could be done.
+        # This will return None for the streams that weren't pipes.
         out, err = self._proc.communicate()
         if out:
             self._write_bytes(self._stdout, out)
