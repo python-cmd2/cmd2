@@ -455,10 +455,10 @@ class ProcReader(object):
         :param to_write: the bytes being written
         """
         try:
-            if 'b' in stream.mode:
-                stream.write(to_write)
-            else:
+            if hasattr(stream, 'buffer'):
                 stream.buffer.write(to_write)
+            else:
+                stream.write(to_write)
         except BrokenPipeError:
             # This occurs if output is being piped to a process that closed
             pass

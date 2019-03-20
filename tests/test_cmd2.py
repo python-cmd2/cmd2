@@ -572,8 +572,7 @@ def test_disallow_redirection(base_app):
     # Verify that no file got created
     assert not os.path.exists(filename)
 
-@pytest.mark.skipif(True, reason="Waiting on StdSim updates")
-def test_pipe_to_shell(base_app, capsys):
+def test_pipe_to_shell(base_app):
     if sys.platform == "win32":
         # Windows
         command = 'help | sort'
@@ -581,27 +580,17 @@ def test_pipe_to_shell(base_app, capsys):
         # Mac and Linux
         # Get help on help and pipe it's output to the input of the word count shell command
         command = 'help help | wc'
-        # # Mac and Linux wc behave the same when piped from shell, but differently when piped stdin from file directly
-        # if sys.platform == 'darwin':
-        #     expected = "1      11      70"
-        # else:
-        #     expected = "1 11 70"
-        # assert out.strip() == expected.strip()
 
-    run_cmd(base_app, command)
-    out, err = capsys.readouterr()
+    sys.stderr = utils.StdSim(sys.stderr)
+    out = run_cmd(base_app, command)
+    assert out and not sys.stderr.getvalue()
 
-    # Unfortunately with the improved way of piping output to a subprocess, there isn't any good way of getting
-    # access to the output produced by that subprocess within a unit test, but we can verify that no error occurred
-    assert not err
-
-def test_pipe_to_shell_error(base_app, capsys):
+def test_pipe_to_shell_error(base_app):
     # Try to pipe command output to a shell command that doesn't exist in order to produce an error
-    run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
-    out, err = capsys.readouterr()
+    sys.stderr = utils.StdSim(sys.stderr)
+    out = run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
     assert not out
-    assert err.startswith("Not piping because")
-
+    assert "No such file or directory" in sys.stderr.getvalue()
 
 @pytest.mark.skipif(not clipboard.can_clip,
                     reason="Pyperclip could not find a copy/paste mechanism for your system")
