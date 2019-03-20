@@ -3350,17 +3350,21 @@ class Cmd(cmd.Cmd):
             for hi in history:
                 self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
 
-    def _generate_transcript(self, history: List[HistoryItem], transcript_file: str) -> None:
+    def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""
-        # Save the current echo state, and turn it off. We inject commands into the
-        # output using a different mechanism
         import io
+        # Validate the transcript file path to make sure directory exists and write access is available
+        transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
+        transcript_dir = os.path.dirname(transcript_path)
+        if not os.path.isdir(transcript_dir) or not os.access(transcript_dir, os.W_OK):
+            self.perror("{!r} is not a directory or you don't have write access".format(transcript_dir),
+                        traceback_war=False)
+            return
 
+        # Disable echo while we manually redirect stdout to a StringIO buffer
         saved_echo = self.echo
+        saved_stdout = self.stdout
         self.echo = False
-
-        # Redirect stdout to the transcript file
-        saved_self_stdout = self.stdout
 
         # The problem with supporting regular expressions in transcripts
         # is that they shouldn't be processed in the command, just the output.
@@ -3397,10 +3401,9 @@ class Cmd(cmd.Cmd):
             # and add the regex-escaped output to the transcript
             transcript += output.replace('/', r'\/')
 
-        # Restore stdout to its original state
-        self.stdout = saved_self_stdout
-        # Set echo back to its original state
+        # Restore altered attributes to their original state
         self.echo = saved_echo
+        self.stdout = saved_stdout
 
         # finally, we can write the transcript out to the file
         try:
@@ -3456,9 +3459,20 @@ class Cmd(cmd.Cmd):
     load_description = ("Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
                         "\n"
                         "Script should contain one command per line, just like the command would be\n"
-                        "typed in the console.")
+                        "typed in the console.\n"
+                        "\n"
+                        "It loads commands from a script file into a queue and then the normal cmd2\n"
+                        "REPL resumes control and executes the commands in the queue in FIFO order.\n"
+                        "If you attempt to redirect/pipe a load command, it will capture the output\n"
+                        "of the load command itself, not what it adds to the queue.\n"
+                        "\n"
+                        "If the -r/--record_transcript flag is used, this command instead records\n"
+                        "the output of the script commands to a transcript for testing purposes.\n"
+                        )
 
     load_parser = ACArgumentParser(description=load_description)
+    setattr(load_parser.add_argument('-t', '--transcript', help='record the output of the script as a transcript file'),
+            ACTION_ARG_CHOICES, ('path_complete',))
     setattr(load_parser.add_argument('script_path', help="path to the script file"),
             ACTION_ARG_CHOICES, ('path_complete',))
 
@@ -3492,11 +3506,16 @@ class Cmd(cmd.Cmd):
             # command queue. Add an "end of script (eos)" command to cleanup the
             # self._script_dir list when done.
             with open(expanded_path, encoding='utf-8') as target:
-                self.cmdqueue = target.read().splitlines() + ['eos'] + self.cmdqueue
+                script_commands = target.read().splitlines()
         except OSError as ex:  # pragma: no cover
             self.perror("Problem accessing script from '{}': {}".format(expanded_path, ex))
             return
 
+        if args.transcript:
+            self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
+            return
+
+        self.cmdqueue = script_commands + ['eos'] + self.cmdqueue
         self._script_dir.append(os.path.dirname(expanded_path))
 
     relative_load_description = load_description
@@ -3812,7 +3831,7 @@ class Cmd(cmd.Cmd):
 
         # If transcript-based regression testing was requested, then do that instead of the main loop
         if self._transcript_files is not None:
-            self.run_transcript_tests(self._transcript_files)
+            self.run_transcript_tests([os.path.expanduser(tf) for tf in self._transcript_files])
         else:
             # If an intro was supplied in the method call, allow it to override the default
             if intro is not None:
