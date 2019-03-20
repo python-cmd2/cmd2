@@ -399,6 +399,13 @@ class ProcReader(object):
         self._out_thread.join()
         self._err_thread.join()
 
+        # Handle case where the process ended before the last read could be done
+        out, err = self._proc.communicate()
+        if out:
+            self._write_bytes(self._stdout, out)
+        if err:
+            self._write_bytes(self._stderr, err)
+
     def _reader_thread_func(self, read_stdout: bool) -> None:
         """
         Thread function that reads a stream from the process
@@ -416,15 +423,8 @@ class ProcReader(object):
             # noinspection PyUnresolvedReferences
             available = read_stream.peek()
             if available:
-                out = read_stream.read(len(available))
-                self._write_bytes(write_stream, out)
-
-        # Handle case where the process ended before the last could be done
-        # noinspection PyUnresolvedReferences
-        available = read_stream.peek()
-        if available:
-            out = read_stream.read(len(available))
-            self._write_bytes(write_stream, out)
+                read_stream.read(len(available))
+                self._write_bytes(write_stream, available)
 
     @staticmethod
     def _write_bytes(stream: Union[BinaryIO, TextIO], to_write: bytes) -> None:
