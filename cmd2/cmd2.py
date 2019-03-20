@@ -2886,7 +2886,8 @@ class Cmd(cmd.Cmd):
             if args.all:
                 self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
         else:
-            raise LookupError("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
+            self.perror("Parameter '{}' not supported (type 'set' for list of parameters).".format(param),
+                        traceback_war=False)
 
     set_description = ("Set a settable parameter or show current settings of parameters\n"
                        "\n"

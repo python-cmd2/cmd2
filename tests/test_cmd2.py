@@ -163,8 +163,7 @@ def test_set_not_supported(base_app, capsys):
     run_cmd(base_app, 'set qqq True')
     out, err = capsys.readouterr()
     expected = normalize("""
-EXCEPTION of type 'LookupError' occurred with message: 'Parameter 'qqq' not supported (type 'set' for list of parameters).'
-To enable full traceback, run the following command:  'set debug true'
+Parameter 'qqq' not supported (type 'set' for list of parameters).
 """)
     assert normalize(str(err)) == expected
 
@@ -620,26 +619,6 @@ now: True
         assert err.startswith('Elapsed: 0:00:00.0')
 
 
-def test_base_debug(base_app, capsys):
-    # Try to set a non-existent parameter with debug set to False by default
-    run_cmd(base_app, 'set does_not_exist 5')
-    out, err = capsys.readouterr()
-    assert err.startswith('EXCEPTION')
-
-    # Set debug true
-    out = run_cmd(base_app, 'set debug True')
-    expected = normalize("""
-debug - was: False
-now: True
-""")
-    assert out == expected
-
-    # Verify that we now see the exception traceback
-    run_cmd(base_app, 'set does_not_exist 5')
-    out, err = capsys.readouterr()
-    assert str(err).startswith('Traceback (most recent call last):')
-
-
 def _expected_no_editor_error():
     expected_exception = 'OSError'
     # If PyPy, expect a different exception than with Python 3
@@ -653,7 +632,7 @@ To enable full traceback, run the following command:  'set debug true'
 
     return expected_text
 
-def test_edit_no_editor(base_app, capsys):
+def test_base_debug(base_app, capsys):
     # Purposely set the editor to None
     base_app.editor = None
 
@@ -663,6 +642,19 @@ def test_edit_no_editor(base_app, capsys):
 
     expected = _expected_no_editor_error()
     assert normalize(str(err)) == expected
+
+    # Set debug true
+    out = run_cmd(base_app, 'set debug True')
+    expected = normalize("""
+debug - was: False
+now: True
+""")
+    assert out == expected
+
+    # Verify that we now see the exception traceback
+    run_cmd(base_app, 'edit')
+    out, err = capsys.readouterr()
+    assert str(err).startswith('Traceback (most recent call last):')
 
 def test_edit_file(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
