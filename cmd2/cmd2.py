@@ -2940,8 +2940,11 @@ class Cmd(cmd.Cmd):
                     tokens[index] = first_char + tokens[index] + first_char
 
         expanded_command = ' '.join(tokens)
-        proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
-        proc.communicate()
+
+        # Use pipes for stdout and stderr so they can be captured by our process
+        proc = subprocess.Popen(expanded_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+        proc_reader.wait()
 
     @staticmethod
     def _reset_py_display() -> None:

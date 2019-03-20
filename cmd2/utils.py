@@ -5,9 +5,11 @@
 import collections
 import os
 import re
+import subprocess
 import sys
+import threading
 import unicodedata
-from typing import Any, Iterable, List, Optional, Union
+from typing import Any, BinaryIO, Iterable, List, Optional, TextIO, Union
 
 from wcwidth import wcswidth
 
@@ -262,6 +264,32 @@ def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
     return sorted(list_to_sort, key=natural_keys)
 
 
+def unquote_redirection_tokens(args: List[str]) -> None:
+    """
+    Unquote redirection tokens in a list of command-line arguments
+    This is used when redirection tokens have to be passed to another command
+    :param args: the command line args
+    """
+    for i, arg in enumerate(args):
+        unquoted_arg = strip_quotes(arg)
+        if unquoted_arg in constants.REDIRECTION_TOKENS:
+            args[i] = unquoted_arg
+
+
+def find_editor() -> str:
+    """Find a reasonable editor to use by default for the system that the cmd2 application is running on."""
+    editor = os.environ.get('EDITOR')
+    if not editor:
+        if sys.platform[:3] == 'win':
+            editor = 'notepad'
+        else:
+            # Favor command-line editors first so we don't leave the terminal to edit
+            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
+                if which(editor):
+                    break
+    return editor
+
+
 class StdSim(object):
     """
     Class to simulate behavior of sys.stdout or sys.stderr.
@@ -342,27 +370,70 @@ class ByteBuf(object):
             self.std_sim_instance.inner_stream.buffer.write(b)
 
 
-def unquote_redirection_tokens(args: List[str]) -> None:
-    """
-    Unquote redirection tokens in a list of command-line arguments
-    This is used when redirection tokens have to be passed to another command
-    :param args: the command line args
-    """
-    for i, arg in enumerate(args):
-        unquoted_arg = strip_quotes(arg)
-        if unquoted_arg in constants.REDIRECTION_TOKENS:
-            args[i] = unquoted_arg
+class ProcReader(object):
+    """Used to read stdout and stderr from a process whose stdout and stderr are set to binary pipes"""
+    def __init__(self, proc: subprocess.Popen, stdout: Union[BinaryIO, TextIO],
+                 stderr: Union[BinaryIO, TextIO]) -> None:
+        """
+        ProcReader initializer
+        :param proc: the Popen process being read from
+        :param stdout: the stdout stream being written to
+        :param stderr: the stderr stream being written to
+        """
+        self._proc = proc
+        self._stdout = stdout
+        self._stderr = stderr
 
+        self._out_thread = threading.Thread(name='out_thread', target=self._reader_thread_func,
+                                            kwargs={'read_stdout': True})
 
-def find_editor() -> str:
-    """Find a reasonable editor to use by default for the system that the cmd2 application is running on."""
-    editor = os.environ.get('EDITOR')
-    if not editor:
-        if sys.platform[:3] == 'win':
-            editor = 'notepad'
+        self._err_thread = threading.Thread(name='out_thread', target=self._reader_thread_func,
+                                            kwargs={'read_stdout': False})
+
+        # Start reading from the process
+        self._out_thread.start()
+        self._err_thread.start()
+
+    def wait(self) -> None:
+        """Wait for the process to finish"""
+        self._out_thread.join()
+        self._err_thread.join()
+
+    def _reader_thread_func(self, read_stdout: bool) -> None:
+        """
+        Thread function that reads a stream from the process
+        :param read_stdout: if True, then this thread deals with stdout. Otherwise it deals with stderr.
+        """
+        if read_stdout:
+            read_stream = self._proc.stdout
+            write_stream = self._stdout
         else:
-            # Favor command-line editors first so we don't leave the terminal to edit
-            for editor in ['vim', 'vi', 'emacs', 'nano', 'pico', 'gedit', 'kate', 'subl', 'geany', 'atom']:
-                if which(editor):
-                    break
-    return editor
+            read_stream = self._proc.stderr
+            write_stream = self._stderr
+
+        # Run until process completes
+        while self._proc.poll() is None:
+            # noinspection PyUnresolvedReferences
+            available = read_stream.peek()
+            if available:
+                out = read_stream.read(len(available))
+                self._write_bytes(write_stream, out)
+
+        # Handle case where the process ended before the last could be done
+        # noinspection PyUnresolvedReferences
+        available = read_stream.peek()
+        if available:
+            out = read_stream.read(len(available))
+            self._write_bytes(write_stream, out)
+
+    @staticmethod
+    def _write_bytes(stream: Union[BinaryIO, TextIO], to_write: bytes) -> None:
+        """
+        Write bytes to a stream
+        :param stream: the stream being written to
+        :param to_write: the bytes being written
+        """
+        if 'b' in stream.mode:
+            stream.write(to_write)
+        else:
+            stream.buffer.write(to_write)
