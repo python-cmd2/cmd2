@@ -12,6 +12,8 @@
     `argparse.Namespace` object they pass to the `do_*` methods. It is stored in an attribute called `__statement__`.
     This can be useful if a command function needs to know the command line for things like logging.
     * Added a `-t` option to the `load` command for automatically generating a transcript based on a script file
+    * When in a *pyscript*, the stdout and stderr streams of shell commands and processes being piped to are now
+    captured and included in the ``CommandResult`` structure.
 * Potentially breaking changes
     * The following commands now write to stderr instead of stdout when printing an error. This will make catching
     errors easier in pyscript.
@@ -23,6 +25,9 @@
         * Added ``allow_redirection``, ``terminators``, ``multiline_commands``, and ``shortcuts`` as optional arguments 
         to ``cmd.Cmd.__init__()`
         * A few instance attributes were moved inside ``StatementParser`` and properties were created for accessing them
+    * ``self.pipe_proc`` is now called ``self.pipe_proc_reader`` and is a ``ProcReader`` class.
+    * Shell commands and commands being piped to while in a *pyscript* will function as if their output is going
+    to a pipe and not a tty. This was necessary to be able to capture their output.
 
 ## 0.9.11 (March 13, 2019)
 * Bug Fixes
