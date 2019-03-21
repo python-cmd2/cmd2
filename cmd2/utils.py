@@ -362,7 +362,7 @@ class ByteBuf(object):
     Used by StdSim to write binary data and stores the actual bytes written
     """
     def __init__(self, std_sim_instance: StdSim) -> None:
-        self.byte_buf = b''
+        self.byte_buf = bytearray()
         self.std_sim_instance = std_sim_instance
 
     def write(self, b: bytes) -> None:
