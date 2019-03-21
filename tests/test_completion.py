@@ -122,7 +122,7 @@ def test_complete_bogus_command(cmd2_app):
 
 def test_complete_macro(base_app, request):
     # Create the macro
-    out = run_cmd(base_app, 'macro create fake pyscript {1}')
+    out, err = run_cmd(base_app, 'macro create fake pyscript {1}')
     assert out == normalize("Macro 'fake' created")
 
     # Macros do path completion
