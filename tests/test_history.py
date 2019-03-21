@@ -237,9 +237,8 @@ def test_history_with_span_index_error(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'help history')
     run_cmd(base_app, '!ls -hal :')
-
-    out, err = run_cmd(base_app, 'history "hal :"')
-    assert "ValueError" in err[0]
+    with pytest.raises(ValueError):
+        base_app.onecmd('history "hal :"')
 
 def test_history_output_file(base_app):
     run_cmd(base_app, 'help')
