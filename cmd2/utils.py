@@ -406,7 +406,6 @@ class ProcReader(object):
 
     def terminate(self) -> None:
         """Terminate the process"""
-        import signal
         self._proc.terminate()
 
     def wait(self) -> None:
