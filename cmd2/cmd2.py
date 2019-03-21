@@ -1938,11 +1938,11 @@ class Cmd(cmd.Cmd):
                                      creationflags=creationflags,
                                      start_new_session=start_new_session)
 
-                saved_state = RedirectionSavedState(redirecting=True, self_stdout=self.stdout,
+                saved_state = RedirectionSavedState(redirecting=True, self_stdout=self.stdout, sys_stdout=sys.stdout,
                                                     piping=True, pipe_proc_reader=self.pipe_proc_reader)
 
                 self.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
-                self.stdout = pipe_write
+                sys.stdout = self.stdout = pipe_write
             except Exception as ex:
                 self.perror('Failed to open pipe because - {}'.format(ex), traceback_war=False)
                 pipe_read.close()
@@ -1965,8 +1965,8 @@ class Cmd(cmd.Cmd):
                     mode = 'a'
                 try:
                     new_stdout = open(statement.output_to, mode)
-                    saved_state = RedirectionSavedState(redirecting=True,
-                                                        self_stdout=self.stdout, sys_stdout=sys.stdout)
+                    saved_state = RedirectionSavedState(redirecting=True, self_stdout=self.stdout,
+                                                        sys_stdout=sys.stdout)
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
                     self.perror('Failed to redirect because - {}'.format(ex), traceback_war=False)
