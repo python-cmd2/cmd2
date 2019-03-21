@@ -25,7 +25,7 @@
         * Added ``allow_redirection``, ``terminators``, ``multiline_commands``, and ``shortcuts`` as optional arguments 
         to ``cmd.Cmd.__init__()`
         * A few instance attributes were moved inside ``StatementParser`` and properties were created for accessing them
-    * ``self.pipe_proc`` is now called ``self.pipe_proc_reader`` and is a ``ProcReader`` class.
+    * ``self.pipe_proc`` is now called ``self.cur_pipe_proc_reader`` and is a ``ProcReader`` class.
     * Shell commands and commands being piped to while in a *pyscript* will function as if their output is going
     to a pipe and not a tty. This was necessary to be able to capture their output.
 
