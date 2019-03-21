@@ -1655,8 +1655,8 @@ class Cmd(cmd.Cmd):
         :param frame
         """
         try:
-            # Forward the sigint to the current pipe process
-            self.pipe_proc_reader.send_sigint()
+            # Terminate the current pipe process
+            self.pipe_proc_reader.terminate()
         except AttributeError:
             # Ignore since self.pipe_proc_reader was None
             pass
@@ -1920,7 +1920,7 @@ class Cmd(cmd.Cmd):
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
                 # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
-                # our sigint handler will forward it to the most recent pipe process. This makes sure
+                # our sigint handler terminate the most recent pipe process. This makes sure
                 # pipe processes close in the right order (most recent first).
                 if sys.platform == 'win32':
                     creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
