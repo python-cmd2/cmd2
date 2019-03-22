@@ -2111,7 +2111,7 @@ class Cmd(cmd.Cmd):
                 else:
                     line = input()
                     if self.echo:
-                        sys.stdout.write('{}{}\n'.format(self.prompt, line))
+                        sys.stdout.write('{}{}\n'.format(prompt, line))
             except EOFError:
                 line = 'eof'
             finally:
@@ -2121,7 +2121,7 @@ class Cmd(cmd.Cmd):
         else:
             if self.stdin.isatty():
                 # on a tty, print the prompt first, then read the line
-                self.poutput(self.prompt, end='')
+                self.poutput(prompt, end='')
                 self.stdout.flush()
                 line = self.stdin.readline()
                 if len(line) == 0:
@@ -2134,7 +2134,7 @@ class Cmd(cmd.Cmd):
                 if len(line):
                     # we read something, output the prompt and the something
                     if self.echo:
-                        self.poutput('{}{}'.format(self.prompt, line))
+                        self.poutput('{}{}'.format(prompt, line))
                 else:
                     line = 'eof'
 
