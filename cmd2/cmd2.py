@@ -3615,12 +3615,11 @@ class Cmd(cmd.Cmd):
                     line_width = utils.ansi_safe_wcswidth(line)
                     num_prompt_terminal_lines += int(line_width / terminal_size.columns) + 1
 
-                # Now calculate how many terminal lines are take up by the input lines
+                # Now calculate how many terminal lines are take up by the input
                 last_prompt_line = prompt_lines[-1]
                 last_prompt_line_width = utils.ansi_safe_wcswidth(last_prompt_line)
 
-                input_width = (utils.ansi_safe_wcswidth(last_prompt_line) +
-                               utils.ansi_safe_wcswidth(readline.get_line_buffer()))
+                input_width = last_prompt_line_width + utils.ansi_safe_wcswidth(readline.get_line_buffer())
 
                 num_input_terminal_lines = int(input_width / terminal_size.columns) + 1
 
