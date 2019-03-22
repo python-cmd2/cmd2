@@ -3596,24 +3596,36 @@ class Cmd(cmd.Cmd):
             if new_prompt is not None and new_prompt != self.prompt:
                 self.prompt = new_prompt
 
-                # If we aren't at a continuation prompt, then redraw the prompt now
+                # If we aren't at a continuation prompt, then it's OK to update it
                 if not self.at_continuation_prompt:
                     rl_set_prompt(self.prompt)
                     update_terminal = True
 
             if update_terminal:
-                # Get the display width of the prompt
-                prompt_width = utils.ansi_safe_wcswidth(current_prompt)
-
                 # Get the size of the terminal
                 terminal_size = shutil.get_terminal_size()
 
-                # Figure out how many lines the prompt and user input take up
-                total_str_size = prompt_width + utils.ansi_safe_wcswidth(readline.get_line_buffer())
-                num_input_lines = int(total_str_size / terminal_size.columns) + 1
+                # Split the prompt lines since it can contain newline characters.
+                prompt_lines = current_prompt.splitlines()
+
+                # Calculate how many terminal lines are taken up by all prompt lines except for the last one.
+                # That will be included in the input lines calculations since that is where the cursor is.
+                num_prompt_terminal_lines = 0
+                for line in prompt_lines[:-1]:
+                    line_width = utils.ansi_safe_wcswidth(line)
+                    num_prompt_terminal_lines += int(line_width / terminal_size.columns) + 1
+
+                # Now calculate how many terminal lines are take up by the input lines
+                last_prompt_line = prompt_lines[-1]
+                last_prompt_line_width = utils.ansi_safe_wcswidth(last_prompt_line)
+
+                input_width = (utils.ansi_safe_wcswidth(last_prompt_line) +
+                               utils.ansi_safe_wcswidth(readline.get_line_buffer()))
+
+                num_input_terminal_lines = int(input_width / terminal_size.columns) + 1
 
                 # Get the cursor's offset from the beginning of the first input line
-                cursor_input_offset = prompt_width + rl_get_point()
+                cursor_input_offset = last_prompt_line_width + rl_get_point()
 
                 # Calculate what input line the cursor is on
                 cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
@@ -3622,14 +3634,17 @@ class Cmd(cmd.Cmd):
                 terminal_str = ''
 
                 # Move the cursor down to the last input line
-                if cursor_input_line != num_input_lines:
-                    terminal_str += Cursor.DOWN(num_input_lines - cursor_input_line)
+                if cursor_input_line != num_input_terminal_lines:
+                    terminal_str += Cursor.DOWN(num_input_terminal_lines - cursor_input_line)
 
-                # Clear each input line from the bottom up so that the cursor ends up on the original first input line
-                terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (num_input_lines - 1)
+                # Clear each line from the bottom up so that the cursor ends up on the first prompt line
+                total_lines = num_prompt_terminal_lines + num_input_terminal_lines
+                terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (total_lines - 1)
+
+                # Clear the first prompt line
                 terminal_str += ansi.clear_line()
 
-                # Move the cursor to the beginning of the first input line and print the alert
+                # Move the cursor to the beginning of the first prompt line and print the alert
                 terminal_str += '\r' + alert_msg
 
                 if rl_type == RlType.GNU:
