@@ -410,14 +410,20 @@ class ProcReader(object):
 
     def wait(self) -> None:
         """Wait for the process to finish"""
-        if self._out_thread.is_alive():
-            self._out_thread.join()
-        if self._err_thread.is_alive():
-            self._err_thread.join()
+        while True:
+            try:
+                if self._out_thread.is_alive():
+                    self._out_thread.join()
+                if self._err_thread.is_alive():
+                    self._err_thread.join()
 
-        # Handle case where the process ended before the last read could be done.
-        # This will return None for the streams that weren't pipes.
-        out, err = self._proc.communicate()
+                # Handle case where the process ended before the last read could be done.
+                # This will return None for the streams that weren't pipes.
+                out, err = self._proc.communicate()
+                break
+            except KeyboardInterrupt:
+                pass
+
         if out:
             self._write_bytes(self._stdout, out)
         if err:
@@ -461,3 +467,23 @@ class ProcReader(object):
         except BrokenPipeError:
             # This occurs if output is being piped to a process that closed
             pass
+
+
+class ContextFlag(object):
+    """
+    A flag value that can be used in a with statement.
+    Its main use is as a flag to prevent the SIGINT handler in cmd2 from raising a KeyboardInterrupt
+    while another code section has set the flag to True. Because signal handling is always done on the
+    main thread, this class is not thread since there is no need.
+    """
+    def __init__(self, value):
+        self.value = value
+
+    def __bool__(self):
+        return self.value
+
+    def __enter__(self):
+        self.value = True
+
+    def __exit__(self, *args):
+        self.value = False

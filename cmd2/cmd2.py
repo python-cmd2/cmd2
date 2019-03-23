@@ -433,8 +433,8 @@ class Cmd(cmd.Cmd):
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
 
-        # A flag used to protect the setting up of redirection from a KeyboardInterrupt
-        self.setting_up_redirection = False
+        # A flag used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
+        self.sigint_protection = utils.ContextFlag(False)
 
         # When this is not None, then it holds a ProcReader for the pipe process created by the current command
         self.cur_pipe_proc_reader = None
@@ -706,22 +706,14 @@ class Cmd(cmd.Cmd):
                     pager = self.pager
                     if chop:
                         pager = self.pager_chop
-                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
-                    try:
+
+                    # Prevent KeyboardInterrupts while in the pager. The pager application will
+                    # still receive the SIGINT since it is in the same process group as us.
+                    with self.sigint_protection:
+                        pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                         pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
                         pipe_proc.stdin.close()
-                    except (OSError, KeyboardInterrupt):
-                        pass
-
-                    # Wait in a loop until the process exits. Ignore Ctrl-C events because that doesn't
-                    # mean the process is closed. For instance, less does not exit on Ctrl-C.
-                    while True:
-                        try:
-                            pipe_proc.wait()
-                        except KeyboardInterrupt:
-                            pass
-                        else:
-                            break
+                        pipe_proc.communicate()
                 else:
                     self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
@@ -1666,16 +1658,13 @@ class Cmd(cmd.Cmd):
         :param signum: signal number
         :param frame
         """
-        # Don't do anything if we are setting up redirection
-        if self.setting_up_redirection:
-            return
-
         if self.cur_pipe_proc_reader is not None:
             # Terminate the current pipe process
             self.cur_pipe_proc_reader.terminate()
 
-        # Re-raise a KeyboardInterrupt so other parts of the code can catch it
-        raise KeyboardInterrupt("Got a keyboard interrupt")
+        # Check if we are allowed to re-raise the KeyboardInterrupt
+        if not self.sigint_protection:
+            raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def precmd(self, statement: Statement) -> Statement:
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
@@ -1739,14 +1728,13 @@ class Cmd(cmd.Cmd):
             saved_state = None
 
             try:
-                # Prevent a Ctrl-C from messing up our state while we set up redirection
-                self.setting_up_redirection = True
+                with self.sigint_protection:
+                    # Set up our redirection state variables
+                    redir_error, saved_state = self._redirect_output(statement)
+                    self.cur_pipe_proc_reader = saved_state.pipe_proc_reader
 
-                redir_error, saved_state = self._redirect_output(statement)
-                self.cur_pipe_proc_reader = saved_state.pipe_proc_reader
-
-                # End Ctrl-C protection
-                self.setting_up_redirection = False
+                    if self._in_py:
+                        self._last_result = None
 
                 # Do not continue if an error occurred while trying to redirect
                 if not redir_error:
@@ -1755,14 +1743,13 @@ class Cmd(cmd.Cmd):
                         self.redirecting = saved_state.redirecting
 
                     timestart = datetime.datetime.now()
-                    if self._in_py:
-                        self._last_result = None
 
                     # precommand hooks
                     data = plugin.PrecommandData(statement)
                     for func in self._precmd_hooks:
                         data = func(data)
                     statement = data.statement
+
                     # call precmd() for compatibility with cmd.Cmd
                     statement = self.precmd(statement)
 
@@ -1773,20 +1760,23 @@ class Cmd(cmd.Cmd):
                     data = plugin.PostcommandData(stop, statement)
                     for func in self._postcmd_hooks:
                         data = func(data)
+
                     # retrieve the final value of stop, ignoring any statement modification from the hooks
                     stop = data.stop
+
                     # call postcmd() for compatibility with cmd.Cmd
                     stop = self.postcmd(stop, statement)
 
                     if self.timing:
                         self.pfeedback('Elapsed: {}'.format(datetime.datetime.now() - timestart))
             finally:
-                # Make sure _redirect_output completed
-                if saved_state is not None:
-                    self._restore_output(statement, saved_state)
+                # Get sigint protection while we restore stuff
+                with self.sigint_protection:
+                    if saved_state is not None:
+                        self._restore_output(statement, saved_state)
 
-                if not already_redirecting:
-                    self.redirecting = False
+                    if not already_redirecting:
+                        self.redirecting = False
 
         except EmptyStatement:
             # don't do anything, but do allow command finalization hooks to run
@@ -2996,14 +2986,17 @@ class Cmd(cmd.Cmd):
 
         expanded_command = ' '.join(tokens)
 
-        # For any stream that is a StdSim, we will use a pipe so we can capture its output
-        proc = subprocess.Popen(expanded_command,
-                                stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
-                                stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                                shell=True)
+        # Prevent KeyboardInterrupts while in the shell process. The shell process will
+        # still receive the SIGINT since it is in the same process group as us.
+        with self.sigint_protection:
+            # For any stream that is a StdSim, we will use a pipe so we can capture its output
+            proc = subprocess.Popen(expanded_command,
+                                    stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
+                                    stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                                    shell=True)
 
-        proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
-        proc_reader.wait()
+            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+            proc_reader.wait()
 
     @staticmethod
     def _reset_py_display() -> None:
