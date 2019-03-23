@@ -3855,6 +3855,16 @@ class Cmd(cmd.Cmd):
 
         :param intro: if provided this overrides self.intro and serves as the intro banner printed once at start
         """
+        # cmdloop() expects to be run in the main thread to support extensive use of KeyboardInterrupts throughout the
+        # other built-in functions. You are free to override cmdloop, but much of cmd2's features will be limited.
+        if not threading.current_thread() is threading.main_thread():
+            raise RuntimeError("cmdloop must be run in the main thread")
+
+        # Register a SIGINT signal handler for Ctrl+C
+        import signal
+        original_sigint_handler = signal.getsignal(signal.SIGINT)
+        signal.signal(signal.SIGINT, self.sigint_handler)
+
         if self.allow_cli_args:
             parser = argparse.ArgumentParser()
             parser.add_argument('-t', '--test', action="store_true",
@@ -3908,9 +3918,8 @@ class Cmd(cmd.Cmd):
         # This will also zero the lock count in case cmdloop() is called again
         self.terminal_lock.release()
 
-        if threading.current_thread() is threading.main_thread():
-            # Restore the original signal handler
-            signal.signal(signal.SIGINT, original_sigint_handler)
+        # Restore the original signal handler
+        signal.signal(signal.SIGINT, original_sigint_handler)
 
         if self.exit_code is not None:
             sys.exit(self.exit_code)
