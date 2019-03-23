@@ -404,6 +404,11 @@ class ProcReader(object):
         if self._proc.stderr is not None:
             self._err_thread.start()
 
+    def send_sigint(self) -> None:
+        """Send a SIGINT to the process"""
+        import signal
+        self._proc.send_signal(signal.SIGINT)
+
     def terminate(self) -> None:
         """Terminate the process"""
         self._proc.terminate()

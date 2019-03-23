@@ -1659,8 +1659,8 @@ class Cmd(cmd.Cmd):
         :param frame
         """
         if self.cur_pipe_proc_reader is not None:
-            # Terminate the current pipe process
-            self.cur_pipe_proc_reader.terminate()
+            # Pass the SIGINT to the current pipe process
+            self.cur_pipe_proc_reader.send_sigint()
 
         # Check if we are allowed to re-raise the KeyboardInterrupt
         if not self.sigint_protection:
@@ -1933,8 +1933,8 @@ class Cmd(cmd.Cmd):
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
                 # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
-                # our sigint handler terminate the most recent pipe process. This makes sure
-                # pipe processes close in the right order (most recent first).
+                # our sigint handler will forward it only to the most recent pipe process. This makes
+                # sure pipe processes close in the right order (most recent first).
                 if sys.platform == 'win32':
                     creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
                     start_new_session = False
