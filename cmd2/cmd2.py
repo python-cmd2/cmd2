@@ -436,7 +436,9 @@ class Cmd(cmd.Cmd):
         # A flag used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
         self.sigint_protection = utils.ContextFlag()
 
-        # When this is not None, then it holds a ProcReader for the pipe process created by the current command
+        # If the current command created a process to pipe to, then this will be a ProcReader object.
+        # Otherwise the value will be None. This member is used to know when a pipe process can be killed
+        # and also waited upon.
         self.cur_pipe_proc_reader = None
 
         # Used by complete() for readline tab completion
@@ -2014,8 +2016,8 @@ class Cmd(cmd.Cmd):
             if self.cur_pipe_proc_reader is not None:
                 self.cur_pipe_proc_reader.wait()
 
-            # Restore cur_pipe_proc_reader
-            self.cur_pipe_proc_reader = saved_state.saved_pipe_proc_reader
+        # Restore cur_pipe_proc_reader. This always is done, regardless of whether this command redirected.
+        self.cur_pipe_proc_reader = saved_state.saved_pipe_proc_reader
 
     def cmd_func(self, command: str) -> Optional[Callable]:
         """
