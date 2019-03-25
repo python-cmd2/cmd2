@@ -434,7 +434,7 @@ class Cmd(cmd.Cmd):
         self._script_dir = []
 
         # A flag used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
-        self.sigint_protection = utils.ContextFlag(False)
+        self.sigint_protection = utils.ContextFlag()
 
         # When this is not None, then it holds a ProcReader for the pipe process created by the current command
         self.cur_pipe_proc_reader = None
@@ -711,9 +711,7 @@ class Cmd(cmd.Cmd):
                     # still receive the SIGINT since it is in the same process group as us.
                     with self.sigint_protection:
                         pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
-                        pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
-                        pipe_proc.stdin.close()
-                        pipe_proc.communicate()
+                        pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
                 else:
                     self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
@@ -1728,13 +1726,10 @@ class Cmd(cmd.Cmd):
             saved_state = None
 
             try:
+                # Get sigint protection while we set up redirection
                 with self.sigint_protection:
-                    # Set up our redirection state variables
                     redir_error, saved_state = self._redirect_output(statement)
                     self.cur_pipe_proc_reader = saved_state.pipe_proc_reader
-
-                    if self._in_py:
-                        self._last_result = None
 
                 # Do not continue if an error occurred while trying to redirect
                 if not redir_error:
@@ -1789,9 +1784,9 @@ class Cmd(cmd.Cmd):
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
 
-        if not sys.platform.startswith('win'):
-            # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
-            if self.stdin.isatty():
+        with self.sigint_protection:
+            if not sys.platform.startswith('win') and self.stdin.isatty():
+                # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
                 import subprocess
                 proc = subprocess.Popen(['stty', 'sane'])
                 proc.communicate()
@@ -2015,12 +2010,12 @@ class Cmd(cmd.Cmd):
             self.stdout = saved_state.saved_self_stdout
             sys.stdout = saved_state.saved_sys_stdout
 
-        # Check if we need to wait for the process being piped to
-        if self.cur_pipe_proc_reader is not None:
-            self.cur_pipe_proc_reader.wait()
+            # Check if we need to wait for the process being piped to
+            if self.cur_pipe_proc_reader is not None:
+                self.cur_pipe_proc_reader.wait()
 
-        # Restore cur_pipe_proc_reader
-        self.cur_pipe_proc_reader = saved_state.saved_pipe_proc_reader
+            # Restore cur_pipe_proc_reader
+            self.cur_pipe_proc_reader = saved_state.saved_pipe_proc_reader
 
     def cmd_func(self, command: str) -> Optional[Callable]:
         """
