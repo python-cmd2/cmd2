@@ -142,7 +142,6 @@ def which(editor: str) -> Optional[str]:
     :param editor: filename of the editor to check, ie 'notepad.exe' or 'vi'
     :return: a full path or None
     """
-    import subprocess
     try:
         editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
         editor_path = editor_path.decode()
@@ -476,19 +475,23 @@ class ProcReader(object):
 
 class ContextFlag(object):
     """
-    A flag value that can be used in a with statement.
+    A flag value that is used in a with statement.
     Its main use is as a flag to prevent the SIGINT handler in cmd2 from raising a KeyboardInterrupt
-    while another code section has set the flag to True. Because signal handling is always done on the
-    main thread, this class is not thread since there is no need.
+    while a critical code section has set the flag to True. Because signal handling is always done on the
+    main thread, this class is not thread-safe since there is no need.
     """
-    def __init__(self, value):
-        self.value = value
+    def __init__(self):
+        # When this flag has a positive value, it is considered set.
+        # When it is 0, it is not set. It should never go below 0.
+        self.__count = 0
 
     def __bool__(self):
-        return self.value
+        return self.__count > 0
 
     def __enter__(self):
-        self.value = True
+        self.__count += 1
 
     def __exit__(self, *args):
-        self.value = False
+        self.__count -= 1
+        if self.__count < 0:
+            raise ValueError("count has gone below 0")
