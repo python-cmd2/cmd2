@@ -3414,49 +3414,52 @@ class Cmd(cmd.Cmd):
                         traceback_war=False)
             return
 
-        # Disable echo while we manually redirect stdout to a StringIO buffer
-        saved_echo = self.echo
-        saved_stdout = self.stdout
-        self.echo = False
+        try:
+            with self.sigint_protection:
+                # Disable echo while we manually redirect stdout to a StringIO buffer
+                saved_echo = self.echo
+                saved_stdout = self.stdout
+                self.echo = False
 
-        # The problem with supporting regular expressions in transcripts
-        # is that they shouldn't be processed in the command, just the output.
-        # In addition, when we generate a transcript, any slashes in the output
-        # are not really intended to indicate regular expressions, so they should
-        # be escaped.
-        #
-        # We have to jump through some hoops here in order to catch the commands
-        # separately from the output and escape the slashes in the output.
-        transcript = ''
-        for history_item in history:
-            # build the command, complete with prompts. When we replay
-            # the transcript, we look for the prompts to separate
-            # the command from the output
-            first = True
-            command = ''
-            for line in history_item.splitlines():
-                if first:
-                    command += '{}{}\n'.format(self.prompt, line)
-                    first = False
-                else:
-                    command += '{}{}\n'.format(self.continuation_prompt, line)
-            transcript += command
-            # create a new string buffer and set it to stdout to catch the output
-            # of the command
-            membuf = io.StringIO()
-            self.stdout = membuf
-            # then run the command and let the output go into our buffer
-            self.onecmd_plus_hooks(history_item)
-            # rewind the buffer to the beginning
-            membuf.seek(0)
-            # get the output out of the buffer
-            output = membuf.read()
-            # and add the regex-escaped output to the transcript
-            transcript += output.replace('/', r'\/')
-
-        # Restore altered attributes to their original state
-        self.echo = saved_echo
-        self.stdout = saved_stdout
+            # The problem with supporting regular expressions in transcripts
+            # is that they shouldn't be processed in the command, just the output.
+            # In addition, when we generate a transcript, any slashes in the output
+            # are not really intended to indicate regular expressions, so they should
+            # be escaped.
+            #
+            # We have to jump through some hoops here in order to catch the commands
+            # separately from the output and escape the slashes in the output.
+            transcript = ''
+            for history_item in history:
+                # build the command, complete with prompts. When we replay
+                # the transcript, we look for the prompts to separate
+                # the command from the output
+                first = True
+                command = ''
+                for line in history_item.splitlines():
+                    if first:
+                        command += '{}{}\n'.format(self.prompt, line)
+                        first = False
+                    else:
+                        command += '{}{}\n'.format(self.continuation_prompt, line)
+                transcript += command
+                # create a new string buffer and set it to stdout to catch the output
+                # of the command
+                membuf = io.StringIO()
+                self.stdout = membuf
+                # then run the command and let the output go into our buffer
+                self.onecmd_plus_hooks(history_item)
+                # rewind the buffer to the beginning
+                membuf.seek(0)
+                # get the output out of the buffer
+                output = membuf.read()
+                # and add the regex-escaped output to the transcript
+                transcript += output.replace('/', r'\/')
+        finally:
+            with self.sigint_protection:
+                # Restore altered attributes to their original state
+                self.echo = saved_echo
+                self.stdout = saved_stdout
 
         # finally, we can write the transcript out to the file
         try:
