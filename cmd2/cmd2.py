@@ -1787,8 +1787,9 @@ class Cmd(cmd.Cmd):
         """Run the command finalization hooks"""
 
         with self.sigint_protection:
-            if not sys.platform.startswith('win') and self.stdin.isatty():
-                # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
+            if not sys.platform.startswith('win') and self.stdout.isatty():
+                # Before the next command runs, fix any terminal problems like those
+                # caused by certain binary characters having been printed to it.
                 import subprocess
                 proc = subprocess.Popen(['stty', 'sane'])
                 proc.communicate()
