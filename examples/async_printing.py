@@ -126,17 +126,17 @@ class AlerterApp(cmd2.Cmd):
         alerts = self._get_alerts()
 
         longest_alert = max(ALERTS, key=len)
-        num_astericks = len(longest_alert) + 8
+        num_asterisks = len(longest_alert) + 8
 
         for i, cur_alert in enumerate(alerts):
             # Use padding to center the alert
-            padding = ' ' * int((num_astericks - len(cur_alert)) / 2)
+            padding = ' ' * int((num_asterisks - len(cur_alert)) / 2)
 
             if i > 0:
                 alert_str += '\n'
-            alert_str += '*' * num_astericks + '\n'
+            alert_str += '*' * num_asterisks + '\n'
             alert_str += padding + cur_alert + padding + '\n'
-            alert_str += '*' * num_astericks + '\n'
+            alert_str += '*' * num_asterisks + '\n'
 
         return alert_str
 
