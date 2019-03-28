@@ -414,19 +414,14 @@ class ProcReader(object):
 
     def wait(self) -> None:
         """Wait for the process to finish"""
-        while True:
-            try:
-                if self._out_thread.is_alive():
-                    self._out_thread.join()
-                if self._err_thread.is_alive():
-                    self._err_thread.join()
+        if self._out_thread.is_alive():
+            self._out_thread.join()
+        if self._err_thread.is_alive():
+            self._err_thread.join()
 
-                # Handle case where the process ended before the last read could be done.
-                # This will return None for the streams that weren't pipes.
-                out, err = self._proc.communicate()
-                break
-            except KeyboardInterrupt:
-                pass
+        # Handle case where the process ended before the last read could be done.
+        # This will return None for the streams that weren't pipes.
+        out, err = self._proc.communicate()
 
         if out:
             self._write_bytes(self._stdout, out)

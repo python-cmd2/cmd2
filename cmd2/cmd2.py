@@ -1924,9 +1924,9 @@ class Cmd(cmd.Cmd):
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
-            # Open each side of the pipe and set stdout accordingly
-            pipe_read = io.open(read_fd, 'r')
-            pipe_write = io.open(write_fd, 'w')
+            # Open each side of the pipe
+            subproc_stdin = io.open(read_fd, 'r')
+            new_stdout = io.open(write_fd, 'w')
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
@@ -1943,7 +1943,7 @@ class Cmd(cmd.Cmd):
                 # For any stream that is a StdSim, we will use a pipe so we can capture its output
                 proc = \
                     subprocess.Popen(statement.pipe_to,
-                                     stdin=pipe_read,
+                                     stdin=subproc_stdin,
                                      stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
                                      stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
                                      creationflags=creationflags,
@@ -1951,11 +1951,11 @@ class Cmd(cmd.Cmd):
 
                 saved_state.redirecting = True
                 saved_state.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
-                sys.stdout = self.stdout = pipe_write
+                sys.stdout = self.stdout = new_stdout
             except Exception as ex:
                 self.perror('Failed to open pipe because - {}'.format(ex), traceback_war=False)
-                pipe_read.close()
-                pipe_write.close()
+                subproc_stdin.close()
+                new_stdout.close()
                 redir_error = True
 
         elif statement.output:
