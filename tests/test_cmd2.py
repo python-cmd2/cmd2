@@ -38,6 +38,15 @@ def outsim_app():
 def test_version(base_app):
     assert cmd2.__version__
 
+def test_not_in_main_thread(base_app, capsys):
+    import threading
+    cli_thread = threading.Thread(name='cli_thread', target=base_app.cmdloop)
+
+    cli_thread.start()
+    cli_thread.join()
+    out, err = capsys.readouterr()
+    assert "cmdloop must be run in the main thread" in err
+
 def test_empty_statement(base_app):
     out, err = run_cmd(base_app, '')
     expected = normalize('')
