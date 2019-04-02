@@ -342,12 +342,14 @@ class StdSim(object):
 
     def clear(self) -> None:
         """Clear the internal contents"""
-        self.buffer.byte_buf = b''
+        self.buffer.byte_buf = bytearray()
 
-    @staticmethod
-    def isatty() -> bool:
-        """StdSim will never be considered an interactive stream"""
-        return False
+    def isatty(self) -> bool:
+        """StdSim only be considered an interactive stream if `echo` is True and `inner_stream` is a tty."""
+        if self.echo:
+            return self.inner_stream.isatty()
+        else:
+            return False
 
     def __getattr__(self, item: str):
         if item in self.__dict__:
@@ -469,24 +471,43 @@ class ProcReader(object):
 
 
 class ContextFlag(object):
-    """
-    A flag value that is used in a with statement.
+    """A context manager which is also used as a boolean flag value within the default sigint handler.
+
     Its main use is as a flag to prevent the SIGINT handler in cmd2 from raising a KeyboardInterrupt
     while a critical code section has set the flag to True. Because signal handling is always done on the
     main thread, this class is not thread-safe since there is no need.
     """
-    def __init__(self):
+    def __init__(self) -> None:
         # When this flag has a positive value, it is considered set.
         # When it is 0, it is not set. It should never go below 0.
         self.__count = 0
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.__count > 0
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         self.__count += 1
 
-    def __exit__(self, *args):
+    def __exit__(self, *args) -> None:
         self.__count -= 1
         if self.__count < 0:
             raise ValueError("count has gone below 0")
+
+
+class RedirectionSavedState(object):
+    """Created by each command to store information about their redirection."""
+
+    def __init__(self, self_stdout: Union[StdSim, BinaryIO, TextIO], sys_stdout: Union[StdSim, BinaryIO, TextIO],
+                 pipe_proc_reader: Optional[ProcReader]) -> None:
+        # Used to restore values after the command ends
+        self.saved_self_stdout = self_stdout
+        self.saved_sys_stdout = sys_stdout
+        self.saved_pipe_proc_reader = pipe_proc_reader
+
+        # Tells if the command is redirecting
+        self.redirecting = False
+
+        # If the command created a process to pipe to, then then is its reader
+        self.pipe_proc_reader = None
+
+

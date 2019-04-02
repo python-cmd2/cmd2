@@ -303,21 +303,6 @@ class EmptyStatement(Exception):
 DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function'])
 
 
-class RedirectionSavedState(object):
-    # Created by each command to store information about their redirection
-    def __init__(self):
-        # Tells if the command is redirecting
-        self.redirecting = False
-
-        # If the command created a process to pipe to, then then is its reader
-        self.pipe_proc_reader = None
-
-        # Used to restore values after the command ends
-        self.saved_self_stdout = None
-        self.saved_sys_stdout = None
-        self.saved_pipe_proc_reader = None
-
-
 class Cmd(cmd.Cmd):
     """An easy but powerful framework for writing line-oriented command interpreters.
 
@@ -433,12 +418,11 @@ class Cmd(cmd.Cmd):
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
 
-        # A flag used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
+        # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
         self.sigint_protection = utils.ContextFlag()
 
         # If the current command created a process to pipe to, then this will be a ProcReader object.
-        # Otherwise the value will be None. This member is used to know when a pipe process can be killed
-        # and also waited upon.
+        # Otherwise it will be None. Its used to know when a pipe process can be killed and/or waited upon.
         self.cur_pipe_proc_reader = None
 
         # Used by complete() for readline tab completion
@@ -1724,7 +1708,7 @@ class Cmd(cmd.Cmd):
             # Keep track of whether or not we were already redirecting before this command
             already_redirecting = self.redirecting
 
-            # This will be a RedirectionSavedState object for the command
+            # This will be a utils.RedirectionSavedState object for the command
             saved_state = None
 
             try:
@@ -1900,11 +1884,11 @@ class Cmd(cmd.Cmd):
             raise EmptyStatement()
         return statement
 
-    def _redirect_output(self, statement: Statement) -> Tuple[bool, RedirectionSavedState]:
+    def _redirect_output(self, statement: Statement) -> Tuple[bool, utils.RedirectionSavedState]:
         """Handles output redirection for >, >>, and |.
 
         :param statement: a parsed statement from the user
-        :return: A bool telling if an error occurred and a RedirectionSavedState object
+        :return: A bool telling if an error occurred and a utils.RedirectionSavedState object
         """
         import io
         import subprocess
@@ -1912,10 +1896,7 @@ class Cmd(cmd.Cmd):
         redir_error = False
 
         # Initialize the saved state
-        saved_state = RedirectionSavedState()
-        saved_state.saved_self_stdout = self.stdout
-        saved_state.saved_sys_stdout = sys.stdout
-        saved_state.saved_pipe_proc_reader = self.cur_pipe_proc_reader
+        saved_state = utils.RedirectionSavedState(self.stdout, sys.stdout, self.cur_pipe_proc_reader)
 
         if not self.allow_redirection:
             return redir_error, saved_state
@@ -1990,7 +1971,7 @@ class Cmd(cmd.Cmd):
 
         return redir_error, saved_state
 
-    def _restore_output(self, statement: Statement, saved_state: RedirectionSavedState) -> None:
+    def _restore_output(self, statement: Statement, saved_state: utils.RedirectionSavedState) -> None:
         """Handles restoring state after output redirection as well as
         the actual pipe operation if present.
 
