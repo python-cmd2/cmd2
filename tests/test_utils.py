@@ -6,6 +6,7 @@ Unit testing for cmd2/utils.py module.
 Copyright 2018 Todd Leonhardt <todd.leonhardt@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import signal
 import sys
 
 import pytest
@@ -216,3 +217,53 @@ def test_stdsim_pause_storage(stdout_sim):
     stdout_sim.pause_storage = True
     stdout_sim.buffer.write(b_str)
     assert stdout_sim.getbytes() == b''
+
+
+@pytest.fixture
+def pr_none():
+    import subprocess
+    command = 'ls'
+    if sys.platform.startswith('win'):
+        command = 'dir'
+    proc = subprocess.Popen([command], shell=True)
+    pr = cu.ProcReader(proc, None, None)
+    return pr
+
+def test_proc_reader_send_sigint(pr_none):
+    assert pr_none._proc.poll() is None
+    pr_none.send_sigint()
+    pr_none.wait()
+    ret_code = pr_none._proc.poll()
+    if sys.platform.startswith('win'):
+        assert ret_code is not None
+    else:
+        assert ret_code == -signal.SIGINT
+
+def test_proc_reader_terminate(pr_none):
+    assert pr_none._proc.poll() is None
+    pr_none.terminate()
+    pr_none.wait()
+    ret_code = pr_none._proc.poll()
+    if sys.platform.startswith('win'):
+        assert ret_code is not None
+    else:
+        assert ret_code == -signal.SIGTERM
+
+def test_proc_reader_wait(pr_none):
+    assert pr_none._proc.poll() is None
+    pr_none.wait()
+    assert pr_none._proc.poll() == 0
+
+
+@pytest.fixture
+def context_flag():
+    return cu.ContextFlag()
+
+def test_context_flag_bool(context_flag):
+    assert not context_flag
+    with context_flag:
+        assert context_flag
+
+def test_context_flag_exit_err(context_flag):
+    with pytest.raises(ValueError):
+        context_flag.__exit__()
