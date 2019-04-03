@@ -509,5 +509,3 @@ class RedirectionSavedState(object):
 
         # If the command created a process to pipe to, then then is its reader
         self.pipe_proc_reader = None
-
-
