@@ -405,9 +405,13 @@ class ProcReader(object):
             self._err_thread.start()
 
     def send_sigint(self) -> None:
-        """Send a SIGINT to the process"""
+        """Send a SIGINT to the process similar to if <Ctrl>+C were pressed."""
         import signal
-        self._proc.send_signal(signal.SIGINT)
+        if sys.platform.startswith('win'):
+            signal_to_send = signal.CTRL_C_EVENT
+        else:
+            signal_to_send = signal.SIGINT
+        self._proc.send_signal(signal_to_send)
 
     def terminate(self) -> None:
         """Terminate the process"""
