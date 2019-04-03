@@ -5,6 +5,7 @@ Cmd2 unit/functional testing
 Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
 Released under MIT license, see LICENSE file
 """
+import sys
 from typing import Optional
 from unittest import mock
 
@@ -12,6 +13,13 @@ from pytest import fixture
 
 import cmd2
 from cmd2.utils import StdSim
+
+# Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
+if sys.version_info < (3, 5):
+    # noinspection PyUnresolvedReferences
+    from contextlib2 import redirect_stdout, redirect_stderr
+else:
+    from contextlib import redirect_stdout, redirect_stderr
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
@@ -126,19 +134,33 @@ def normalize(block):
 
 
 def run_cmd(app, cmd):
-    """ Clear StdSim buffer, run the command, extract the buffer contents, """
-    app.stdout.clear()
-    app.onecmd_plus_hooks(cmd)
-    out = app.stdout.getvalue()
-    app.stdout.clear()
-    return normalize(out)
+    """ Clear out and err StdSim buffers, run the command, and return out and err """
+    saved_sysout = sys.stdout
+    sys.stdout = app.stdout
+
+    # This will be used to capture app.stdout and sys.stdout
+    copy_cmd_stdout = StdSim(app.stdout)
+
+    # This will be used to capture sys.stderr
+    copy_stderr = StdSim(sys.stderr)
+
+    try:
+        app.stdout = copy_cmd_stdout
+        with redirect_stdout(copy_cmd_stdout):
+            with redirect_stderr(copy_stderr):
+                app.onecmd_plus_hooks(cmd)
+    finally:
+        app.stdout = copy_cmd_stdout.inner_stream
+        sys.stdout = saved_sysout
+
+    out = copy_cmd_stdout.getvalue()
+    err = copy_stderr.getvalue()
+    return normalize(out), normalize(err)
 
 
 @fixture
 def base_app():
-    c = cmd2.Cmd()
-    c.stdout = StdSim(c.stdout)
-    return c
+    return cmd2.Cmd()
 
 
 def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Optional[str]:

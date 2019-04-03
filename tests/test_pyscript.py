@@ -11,21 +11,15 @@ from .conftest import run_cmd
 def test_pyscript_help(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'help.py')
-    expected = run_cmd(base_app, 'help')
-
-    assert len(expected) > 0
-    assert len(expected[0]) > 0
-    out = run_cmd(base_app, 'pyscript {}'.format(python_script))
-    assert len(out) > 0
-    assert out == expected
+    out1, err1 = run_cmd(base_app, 'help')
+    out2, err2 = run_cmd(base_app, 'pyscript {}'.format(python_script))
+    assert out1 and out1 == out2
 
 
-def test_pyscript_dir(base_app, capsys, request):
+def test_pyscript_dir(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'pyscript_dir.py')
 
-    run_cmd(base_app, 'pyscript {}'.format(python_script))
-    out, _ = capsys.readouterr()
-    out = out.strip()
-    assert len(out) > 0
-    assert out == "['cmd_echo']"
+    out, err = run_cmd(base_app, 'pyscript {}'.format(python_script))
+    assert out
+    assert out[0] == "['cmd_echo']"

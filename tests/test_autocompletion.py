@@ -52,12 +52,9 @@ required arguments:
 optional arguments:
   -h, --help            show this help message and exit'''
 
-def test_help_required_group(cmd2_app, capsys):
-    run_cmd(cmd2_app, 'suggest -h')
-    out, err = capsys.readouterr()
-    out1 = normalize(str(out))
-
-    out2 = run_cmd(cmd2_app, 'help suggest')
+def test_help_required_group(cmd2_app):
+    out1, err1 = run_cmd(cmd2_app, 'suggest -h')
+    out2, err2 = run_cmd(cmd2_app, 'help suggest')
 
     assert out1 == out2
     assert out1[0].startswith('Usage: suggest')
@@ -66,12 +63,9 @@ def test_help_required_group(cmd2_app, capsys):
     assert out1 == normalize(SUGGEST_HELP)
 
 
-def test_help_required_group_long(cmd2_app, capsys):
-    run_cmd(cmd2_app, 'media movies add -h')
-    out, err = capsys.readouterr()
-    out1 = normalize(str(out))
-
-    out2 = run_cmd(cmd2_app, 'help media movies add')
+def test_help_required_group_long(cmd2_app):
+    out1, err1 = run_cmd(cmd2_app, 'media movies add -h')
+    out2, err2 = run_cmd(cmd2_app, 'help media movies add')
 
     assert out1 == out2
     assert out1[0].startswith('Usage: media movies add')
@@ -156,11 +150,9 @@ def test_autocomp_flags_narg_max(cmd2_app):
     assert first_match is None
 
 
-def test_autcomp_narg_beyond_max(cmd2_app, capsys):
-    run_cmd(cmd2_app, 'suggest -t movie -d 3 4 5')
-    out, err = capsys.readouterr()
-
-    assert 'Error: unrecognized arguments: 5' in err
+def test_autcomp_narg_beyond_max(cmd2_app):
+    out, err = run_cmd(cmd2_app, 'suggest -t movie -d 3 4 5')
+    assert 'Error: unrecognized arguments: 5' in err[0]
 
 
 def test_autocomp_subcmd_nested(cmd2_app):

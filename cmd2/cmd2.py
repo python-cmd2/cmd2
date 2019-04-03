@@ -302,12 +302,6 @@ class EmptyStatement(Exception):
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
 DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function'])
 
-# Used to restore state after redirection ends
-# redirecting and piping are used to know what needs to be restored
-RedirectionSavedState = utils.namedtuple_with_defaults('RedirectionSavedState',
-                                                       ['redirecting', 'self_stdout', 'sys_stdout',
-                                                        'piping', 'pipe_proc'])
-
 
 class Cmd(cmd.Cmd):
     """An easy but powerful framework for writing line-oriented command interpreters.
@@ -424,8 +418,12 @@ class Cmd(cmd.Cmd):
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
 
-        # Used when piping command output to a shell command
-        self.pipe_proc = None
+        # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
+        self.sigint_protection = utils.ContextFlag()
+
+        # If the current command created a process to pipe to, then this will be a ProcReader object.
+        # Otherwise it will be None. Its used to know when a pipe process can be killed and/or waited upon.
+        self.cur_pipe_proc_reader = None
 
         # Used by complete() for readline tab completion
         self.completion_matches = []
@@ -694,22 +692,12 @@ class Cmd(cmd.Cmd):
                     pager = self.pager
                     if chop:
                         pager = self.pager_chop
-                    self.pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
-                    try:
-                        self.pipe_proc.stdin.write(msg_str.encode('utf-8', 'replace'))
-                        self.pipe_proc.stdin.close()
-                    except (OSError, KeyboardInterrupt):
-                        pass
 
-                    # Less doesn't respect ^C, but catches it for its own UI purposes (aborting search etc. inside less)
-                    while True:
-                        try:
-                            self.pipe_proc.wait()
-                        except KeyboardInterrupt:
-                            pass
-                        else:
-                            break
-                    self.pipe_proc = None
+                    # Prevent KeyboardInterrupts while in the pager. The pager application will
+                    # still receive the SIGINT since it is in the same process group as us.
+                    with self.sigint_protection:
+                        pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
+                        pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
                 else:
                     self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
@@ -1654,15 +1642,13 @@ class Cmd(cmd.Cmd):
         :param signum: signal number
         :param frame
         """
+        if self.cur_pipe_proc_reader is not None:
+            # Pass the SIGINT to the current pipe process
+            self.cur_pipe_proc_reader.send_sigint()
 
-        # Save copy of pipe_proc since it could theoretically change while this is running
-        pipe_proc = self.pipe_proc
-
-        if pipe_proc is not None:
-            pipe_proc.terminate()
-
-        # Re-raise a KeyboardInterrupt so other parts of the code can catch it
-        raise KeyboardInterrupt("Got a keyboard interrupt")
+        # Check if we are allowed to re-raise the KeyboardInterrupt
+        if not self.sigint_protection:
+            raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def precmd(self, statement: Statement) -> Statement:
         """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
@@ -1722,44 +1708,56 @@ class Cmd(cmd.Cmd):
             # Keep track of whether or not we were already redirecting before this command
             already_redirecting = self.redirecting
 
-            # Handle any redirection for this command
-            saved_state = self._redirect_output(statement)
-
-            # See if we need to update self.redirecting
-            if not already_redirecting:
-                self.redirecting = saved_state.redirecting or saved_state.piping
+            # This will be a utils.RedirectionSavedState object for the command
+            saved_state = None
 
             try:
-                timestart = datetime.datetime.now()
-                if self._in_py:
-                    self._last_result = None
+                # Get sigint protection while we set up redirection
+                with self.sigint_protection:
+                    redir_error, saved_state = self._redirect_output(statement)
+                    self.cur_pipe_proc_reader = saved_state.pipe_proc_reader
 
-                # precommand hooks
-                data = plugin.PrecommandData(statement)
-                for func in self._precmd_hooks:
-                    data = func(data)
-                statement = data.statement
-                # call precmd() for compatibility with cmd.Cmd
-                statement = self.precmd(statement)
+                # Do not continue if an error occurred while trying to redirect
+                if not redir_error:
+                    # See if we need to update self.redirecting
+                    if not already_redirecting:
+                        self.redirecting = saved_state.redirecting
 
-                # go run the command function
-                stop = self.onecmd(statement)
+                    timestart = datetime.datetime.now()
 
-                # postcommand hooks
-                data = plugin.PostcommandData(stop, statement)
-                for func in self._postcmd_hooks:
-                    data = func(data)
-                # retrieve the final value of stop, ignoring any statement modification from the hooks
-                stop = data.stop
-                # call postcmd() for compatibility with cmd.Cmd
-                stop = self.postcmd(stop, statement)
+                    # precommand hooks
+                    data = plugin.PrecommandData(statement)
+                    for func in self._precmd_hooks:
+                        data = func(data)
+                    statement = data.statement
 
-                if self.timing:
-                    self.pfeedback('Elapsed: %s' % str(datetime.datetime.now() - timestart))
+                    # call precmd() for compatibility with cmd.Cmd
+                    statement = self.precmd(statement)
+
+                    # go run the command function
+                    stop = self.onecmd(statement)
+
+                    # postcommand hooks
+                    data = plugin.PostcommandData(stop, statement)
+                    for func in self._postcmd_hooks:
+                        data = func(data)
+
+                    # retrieve the final value of stop, ignoring any statement modification from the hooks
+                    stop = data.stop
+
+                    # call postcmd() for compatibility with cmd.Cmd
+                    stop = self.postcmd(stop, statement)
+
+                    if self.timing:
+                        self.pfeedback('Elapsed: {}'.format(datetime.datetime.now() - timestart))
             finally:
-                self._restore_output(statement, saved_state)
-                if not already_redirecting:
-                    self.redirecting = False
+                # Get sigint protection while we restore stuff
+                with self.sigint_protection:
+                    if saved_state is not None:
+                        self._restore_output(statement, saved_state)
+
+                    if not already_redirecting:
+                        self.redirecting = False
 
         except EmptyStatement:
             # don't do anything, but do allow command finalization hooks to run
@@ -1772,9 +1770,10 @@ class Cmd(cmd.Cmd):
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
 
-        if not sys.platform.startswith('win'):
-            # Fix those annoying problems that occur with terminal programs like "less" when you pipe to them
-            if self.stdin.isatty():
+        with self.sigint_protection:
+            if not sys.platform.startswith('win') and self.stdout.isatty():
+                # Before the next command runs, fix any terminal problems like those
+                # caused by certain binary characters having been printed to it.
                 import subprocess
                 proc = subprocess.Popen(['stty', 'sane'])
                 proc.communicate()
@@ -1885,46 +1884,69 @@ class Cmd(cmd.Cmd):
             raise EmptyStatement()
         return statement
 
-    def _redirect_output(self, statement: Statement) -> RedirectionSavedState:
+    def _redirect_output(self, statement: Statement) -> Tuple[bool, utils.RedirectionSavedState]:
         """Handles output redirection for >, >>, and |.
 
         :param statement: a parsed statement from the user
-        :return: A RedirectionSavedState object
+        :return: A bool telling if an error occurred and a utils.RedirectionSavedState object
         """
         import io
         import subprocess
 
-        ret_val = RedirectionSavedState(redirecting=False, piping=False)
+        redir_error = False
+
+        # Initialize the saved state
+        saved_state = utils.RedirectionSavedState(self.stdout, sys.stdout, self.cur_pipe_proc_reader)
 
         if not self.allow_redirection:
-            return ret_val
+            return redir_error, saved_state
 
         if statement.pipe_to:
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
-            # Open each side of the pipe and set stdout accordingly
-            pipe_read = io.open(read_fd, 'r')
-            pipe_write = io.open(write_fd, 'w')
+            # Open each side of the pipe
+            subproc_stdin = io.open(read_fd, 'r')
+            new_stdout = io.open(write_fd, 'w')
 
             # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
             try:
-                pipe_proc = subprocess.Popen(statement.pipe_to, stdin=pipe_read, stdout=self.stdout)
-                ret_val = RedirectionSavedState(redirecting=True, self_stdout=self.stdout,
-                                                piping=True, pipe_proc=self.pipe_proc)
-                self.stdout = pipe_write
-                self.pipe_proc = pipe_proc
+                # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
+                # our sigint handler will forward it only to the most recent pipe process. This makes
+                # sure pipe processes close in the right order (most recent first).
+                if sys.platform == 'win32':
+                    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+                    start_new_session = False
+                else:
+                    creationflags = 0
+                    start_new_session = True
+
+                # For any stream that is a StdSim, we will use a pipe so we can capture its output
+                proc = \
+                    subprocess.Popen(statement.pipe_to,
+                                     stdin=subproc_stdin,
+                                     stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
+                                     stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                                     creationflags=creationflags,
+                                     start_new_session=start_new_session)
+
+                saved_state.redirecting = True
+                saved_state.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+                sys.stdout = self.stdout = new_stdout
             except Exception as ex:
-                self.perror('Not piping because - {}'.format(ex), traceback_war=False)
-                pipe_read.close()
-                pipe_write.close()
+                self.perror('Failed to open pipe because - {}'.format(ex), traceback_war=False)
+                subproc_stdin.close()
+                new_stdout.close()
+                redir_error = True
 
         elif statement.output:
             import tempfile
             if (not statement.output_to) and (not self.can_clip):
-                raise EnvironmentError("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable")
+                self.perror("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable",
+                            traceback_war=False)
+                redir_error = True
 
-            if statement.output_to:
+            elif statement.output_to:
                 # going to a file
                 mode = 'w'
                 # statement.output can only contain
@@ -1933,28 +1955,29 @@ class Cmd(cmd.Cmd):
                     mode = 'a'
                 try:
                     new_stdout = open(statement.output_to, mode)
-                    ret_val = RedirectionSavedState(redirecting=True, self_stdout=self.stdout, sys_stdout=sys.stdout)
+                    saved_state.redirecting = True
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
-                    self.perror('Not redirecting because - {}'.format(ex), traceback_war=False)
+                    self.perror('Failed to redirect because - {}'.format(ex), traceback_war=False)
+                    redir_error = True
             else:
                 # going to a paste buffer
                 new_stdout = tempfile.TemporaryFile(mode="w+")
-                ret_val = RedirectionSavedState(redirecting=True, self_stdout=self.stdout, sys_stdout=sys.stdout)
+                saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
+
                 if statement.output == constants.REDIRECTION_APPEND:
                     self.poutput(get_paste_buffer())
 
-        return ret_val
+        return redir_error, saved_state
 
-    def _restore_output(self, statement: Statement, saved_state: RedirectionSavedState) -> None:
+    def _restore_output(self, statement: Statement, saved_state: utils.RedirectionSavedState) -> None:
         """Handles restoring state after output redirection as well as
         the actual pipe operation if present.
 
         :param statement: Statement object which contains the parsed input from the user
         :param saved_state: contains information needed to restore state data
         """
-        # Check if self.stdout was redirected
         if saved_state.redirecting:
             # If we redirected output to the clipboard
             if statement.output and not statement.output_to:
@@ -1966,17 +1989,17 @@ class Cmd(cmd.Cmd):
                 self.stdout.close()
             except BrokenPipeError:
                 pass
-            finally:
-                self.stdout = saved_state.self_stdout
 
-            # Check if sys.stdout was redirected
-            if saved_state.sys_stdout is not None:
-                sys.stdout = saved_state.sys_stdout
+            # Restore the stdout values
+            self.stdout = saved_state.saved_self_stdout
+            sys.stdout = saved_state.saved_sys_stdout
 
-        # Check if output was being piped to a process
-        if saved_state.piping:
-            self.pipe_proc.communicate()
-            self.pipe_proc = saved_state.pipe_proc
+            # Check if we need to wait for the process being piped to
+            if self.cur_pipe_proc_reader is not None:
+                self.cur_pipe_proc_reader.wait()
+
+        # Restore cur_pipe_proc_reader. This always is done, regardless of whether this command redirected.
+        self.cur_pipe_proc_reader = saved_state.saved_pipe_proc_reader
 
     def cmd_func(self, command: str) -> Optional[Callable]:
         """
@@ -2859,7 +2882,8 @@ class Cmd(cmd.Cmd):
             if args.all:
                 self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
         else:
-            raise LookupError("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
+            self.perror("Parameter '{}' not supported (type 'set' for list of parameters).".format(param),
+                        traceback_war=False)
 
     set_description = ("Set a settable parameter or show current settings of parameters\n"
                        "\n"
@@ -2940,8 +2964,18 @@ class Cmd(cmd.Cmd):
                     tokens[index] = first_char + tokens[index] + first_char
 
         expanded_command = ' '.join(tokens)
-        proc = subprocess.Popen(expanded_command, stdout=self.stdout, shell=True)
-        proc.communicate()
+
+        # Prevent KeyboardInterrupts while in the shell process. The shell process will
+        # still receive the SIGINT since it is in the same process group as us.
+        with self.sigint_protection:
+            # For any stream that is a StdSim, we will use a pipe so we can capture its output
+            proc = subprocess.Popen(expanded_command,
+                                    stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
+                                    stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                                    shell=True)
+
+            proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+            proc_reader.wait()
 
     @staticmethod
     def _reset_py_display() -> None:
@@ -3361,49 +3395,52 @@ class Cmd(cmd.Cmd):
                         traceback_war=False)
             return
 
-        # Disable echo while we manually redirect stdout to a StringIO buffer
-        saved_echo = self.echo
-        saved_stdout = self.stdout
-        self.echo = False
+        try:
+            with self.sigint_protection:
+                # Disable echo while we manually redirect stdout to a StringIO buffer
+                saved_echo = self.echo
+                saved_stdout = self.stdout
+                self.echo = False
 
-        # The problem with supporting regular expressions in transcripts
-        # is that they shouldn't be processed in the command, just the output.
-        # In addition, when we generate a transcript, any slashes in the output
-        # are not really intended to indicate regular expressions, so they should
-        # be escaped.
-        #
-        # We have to jump through some hoops here in order to catch the commands
-        # separately from the output and escape the slashes in the output.
-        transcript = ''
-        for history_item in history:
-            # build the command, complete with prompts. When we replay
-            # the transcript, we look for the prompts to separate
-            # the command from the output
-            first = True
-            command = ''
-            for line in history_item.splitlines():
-                if first:
-                    command += '{}{}\n'.format(self.prompt, line)
-                    first = False
-                else:
-                    command += '{}{}\n'.format(self.continuation_prompt, line)
-            transcript += command
-            # create a new string buffer and set it to stdout to catch the output
-            # of the command
-            membuf = io.StringIO()
-            self.stdout = membuf
-            # then run the command and let the output go into our buffer
-            self.onecmd_plus_hooks(history_item)
-            # rewind the buffer to the beginning
-            membuf.seek(0)
-            # get the output out of the buffer
-            output = membuf.read()
-            # and add the regex-escaped output to the transcript
-            transcript += output.replace('/', r'\/')
-
-        # Restore altered attributes to their original state
-        self.echo = saved_echo
-        self.stdout = saved_stdout
+            # The problem with supporting regular expressions in transcripts
+            # is that they shouldn't be processed in the command, just the output.
+            # In addition, when we generate a transcript, any slashes in the output
+            # are not really intended to indicate regular expressions, so they should
+            # be escaped.
+            #
+            # We have to jump through some hoops here in order to catch the commands
+            # separately from the output and escape the slashes in the output.
+            transcript = ''
+            for history_item in history:
+                # build the command, complete with prompts. When we replay
+                # the transcript, we look for the prompts to separate
+                # the command from the output
+                first = True
+                command = ''
+                for line in history_item.splitlines():
+                    if first:
+                        command += '{}{}\n'.format(self.prompt, line)
+                        first = False
+                    else:
+                        command += '{}{}\n'.format(self.continuation_prompt, line)
+                transcript += command
+                # create a new string buffer and set it to stdout to catch the output
+                # of the command
+                membuf = io.StringIO()
+                self.stdout = membuf
+                # then run the command and let the output go into our buffer
+                self.onecmd_plus_hooks(history_item)
+                # rewind the buffer to the beginning
+                membuf.seek(0)
+                # get the output out of the buffer
+                output = membuf.read()
+                # and add the regex-escaped output to the transcript
+                transcript += output.replace('/', r'\/')
+        finally:
+            with self.sigint_protection:
+                # Restore altered attributes to their original state
+                self.echo = saved_echo
+                self.stdout = saved_stdout
 
         # finally, we can write the transcript out to the file
         try:
@@ -3814,6 +3851,16 @@ class Cmd(cmd.Cmd):
 
         :param intro: if provided this overrides self.intro and serves as the intro banner printed once at start
         """
+        # cmdloop() expects to be run in the main thread to support extensive use of KeyboardInterrupts throughout the
+        # other built-in functions. You are free to override cmdloop, but much of cmd2's features will be limited.
+        if not threading.current_thread() is threading.main_thread():
+            raise RuntimeError("cmdloop must be run in the main thread")
+
+        # Register a SIGINT signal handler for Ctrl+C
+        import signal
+        original_sigint_handler = signal.getsignal(signal.SIGINT)
+        signal.signal(signal.SIGINT, self.sigint_handler)
+
         if self.allow_cli_args:
             parser = argparse.ArgumentParser()
             parser.add_argument('-t', '--test', action="store_true",
@@ -3827,13 +3874,6 @@ class Cmd(cmd.Cmd):
             # If commands were supplied at invocation, then add them to the command queue
             if callargs:
                 self.cmdqueue.extend(callargs)
-
-        # Only the main thread is allowed to set a new signal handler in Python, so only attempt if that is the case
-        if threading.current_thread() is threading.main_thread():
-            # Register a SIGINT signal handler for Ctrl+C
-            import signal
-            original_sigint_handler = signal.getsignal(signal.SIGINT)
-            signal.signal(signal.SIGINT, self.sigint_handler)
 
         # Grab terminal lock before the prompt has been drawn by readline
         self.terminal_lock.acquire()
@@ -3867,9 +3907,8 @@ class Cmd(cmd.Cmd):
         # This will also zero the lock count in case cmdloop() is called again
         self.terminal_lock.release()
 
-        if threading.current_thread() is threading.main_thread():
-            # Restore the original signal handler
-            signal.signal(signal.SIGINT, original_sigint_handler)
+        # Restore the original signal handler
+        signal.signal(signal.SIGINT, original_sigint_handler)
 
         if self.exit_code is not None:
             sys.exit(self.exit_code)
