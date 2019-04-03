@@ -344,7 +344,7 @@ class StdSim(object):
         self.buffer.byte_buf = bytearray()
 
     def isatty(self) -> bool:
-        """StdSim only be considered an interactive stream if `echo` is True and `inner_stream` is a tty."""
+        """StdSim only considered an interactive stream if `echo` is True and `inner_stream` is a tty."""
         if self.echo:
             return self.inner_stream.isatty()
         else:
