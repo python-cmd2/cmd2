@@ -1141,7 +1141,11 @@ class Cmd(cmd.Cmd):
 
         # Remove cwd if it was added to match the text readline expects
         if cwd_added:
-            matches = [cur_path.replace(cwd + os.path.sep, '', 1) for cur_path in matches]
+            if cwd == os.path.sep:
+                to_replace = cwd
+            else:
+                to_replace = cwd + os.path.sep
+            matches = [cur_path.replace(to_replace, '', 1) for cur_path in matches]
 
         # Restore the tilde string if we expanded one to match the text readline expects
         if expanded_tilde_path:
