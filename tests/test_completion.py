@@ -400,6 +400,25 @@ def test_path_completion_no_path(cmd2_app):
     assert completions_no_text == completions_cwd
     assert completions_cwd
 
+
+@pytest.mark.skipif(sys.platform == 'win32', reason="this only applies on systems where the root directory is a slash")
+def test_path_completion_cwd_is_root_dir(cmd2_app):
+    # Change our CWD to root dir
+    cwd = os.getcwd()
+    os.chdir(os.path.sep)
+
+    text = ''
+    line = 'shell ls {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+    completions = cmd2_app.path_complete(text, line, begidx, endidx)
+
+    # No match should start with a slash
+    assert not any(match.startswith(os.path.sep) for match in completions)
+
+    # Restore CWD
+    os.chdir(cwd)
+
 def test_path_completion_doesnt_match_wildcards(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
 
