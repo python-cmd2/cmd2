@@ -62,11 +62,9 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
 
 
 class PyscriptBridge(object):
-    """Preserves the legacy 'cmd' interface for pyscript while also providing a new python API wrapper for
-    application commands."""
+    """Provides a Python API wrapper for application commands."""
     def __init__(self, cmd2_app):
         self._cmd2_app = cmd2_app
-        self._last_result = None
         self.cmd_echo = False
 
     def __dir__(self):
