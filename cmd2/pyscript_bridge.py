@@ -92,6 +92,10 @@ class PyscriptBridge(object):
         # This will be used to capture sys.stderr
         copy_stderr = StdSim(sys.stderr, echo)
 
+        # Pause the storing of any output until onecmd_plus_hooks enables it
+        copy_cmd_stdout.pause_storage = True
+        copy_stderr.pause_storage = True
+
         self._cmd2_app._last_result = None
 
         try:

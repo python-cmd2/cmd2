@@ -1718,6 +1718,11 @@ class Cmd(cmd.Cmd):
             try:
                 # Get sigint protection while we set up redirection
                 with self.sigint_protection:
+                    if self._in_py:
+                        # Start saving the command's output at this point to match what redirection captures
+                        self.stdout.pause_storage = False
+                        sys.stderr.pause_storage = False
+
                     redir_error, saved_state = self._redirect_output(statement)
                     self.cur_pipe_proc_reader = saved_state.pipe_proc_reader
 
@@ -1762,6 +1767,11 @@ class Cmd(cmd.Cmd):
 
                     if not already_redirecting:
                         self.redirecting = False
+
+                    if self._in_py:
+                        # Stop saving command's output before command finalization hooks run
+                        self.stdout.pause_storage = True
+                        sys.stderr.pause_storage = True
 
         except EmptyStatement:
             # don't do anything, but do allow command finalization hooks to run
@@ -3026,7 +3036,6 @@ class Cmd(cmd.Cmd):
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err, traceback_war=False)
-            self._last_result = CommandResult('', err)
             return False
 
         try:
