@@ -1719,7 +1719,7 @@ class Cmd(cmd.Cmd):
                 # Get sigint protection while we set up redirection
                 with self.sigint_protection:
                     if self._in_py:
-                        # Start saving the command's output at this point to match what redirection captures
+                        # Start saving output at this point to match the same period output is redirected
                         self.stdout.pause_storage = False
                         sys.stderr.pause_storage = False
 
