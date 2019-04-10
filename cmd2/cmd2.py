@@ -1801,6 +1801,12 @@ class Cmd(cmd.Cmd):
             return data.stop
         except Exception as ex:
             self.perror(ex)
+        finally:
+            with self.sigint_protection:
+                if self._in_py:
+                    # Restore ability to save output now that the command finalization hooks are done
+                    self.stdout.pause_storage = False
+                    sys.stderr.pause_storage = False
 
     def runcmds_plus_hooks(self, cmds: List[str]) -> bool:
         """Convenience method to run multiple commands by onecmd_plus_hooks.
