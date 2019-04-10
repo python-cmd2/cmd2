@@ -3032,7 +3032,7 @@ class Cmd(cmd.Cmd):
     @with_argparser(py_parser, preserve_quotes=True)
     def do_py(self, args: argparse.Namespace) -> bool:
         """Invoke Python command or shell"""
-        from .pyscript_bridge import PyscriptBridge, CommandResult
+        from .pyscript_bridge import PyscriptBridge
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err, traceback_war=False)
