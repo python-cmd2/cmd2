@@ -341,7 +341,7 @@ class StdSim(object):
 
     def clear(self) -> None:
         """Clear the internal contents"""
-        self.buffer.byte_buf = bytearray()
+        self.buffer.byte_buf.clear()
 
     def isatty(self) -> bool:
         """StdSim only considered an interactive stream if `echo` is True and `inner_stream` is a tty."""
