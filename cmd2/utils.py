@@ -325,7 +325,7 @@ class StdSim(object):
 
     def getbytes(self) -> bytes:
         """Get the internal contents as bytes"""
-        return self.buffer.byte_buf
+        return bytes(self.buffer.byte_buf)
 
     def read(self) -> str:
         """Read from the internal contents as a str and then clear them out"""
