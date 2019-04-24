@@ -1675,10 +1675,13 @@ class Cmd(cmd.Cmd):
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line: str) -> bool:
+    def onecmd_plus_hooks(self, line: str, pyscript_bridge_call: bool = False) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
         :param line: line of text read from input
+        :param pyscript_bridge_call: This should only ever be set to True by PyscriptBridge to signify the beginning
+                                     of an app() call in a pyscript. It is used to enable/disable the storage of the
+                                     command's stdout.
         :return: True if cmdloop() should exit, False otherwise
         """
         import datetime
@@ -1718,10 +1721,9 @@ class Cmd(cmd.Cmd):
             try:
                 # Get sigint protection while we set up redirection
                 with self.sigint_protection:
-                    if self._in_py:
-                        # Start saving output at this point to match the same period output is redirected
+                    if pyscript_bridge_call:
+                        # Start saving command's stdout at this point
                         self.stdout.pause_storage = False
-                        sys.stderr.pause_storage = False
 
                     redir_error, saved_state = self._redirect_output(statement)
                     self.cur_pipe_proc_reader = saved_state.pipe_proc_reader
@@ -1768,10 +1770,9 @@ class Cmd(cmd.Cmd):
                     if not already_redirecting:
                         self.redirecting = False
 
-                    if self._in_py:
-                        # Stop saving command's output before command finalization hooks run
+                    if pyscript_bridge_call:
+                        # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
-                        sys.stderr.pause_storage = True
 
         except EmptyStatement:
             # don't do anything, but do allow command finalization hooks to run
@@ -1801,12 +1802,6 @@ class Cmd(cmd.Cmd):
             return data.stop
         except Exception as ex:
             self.perror(ex)
-        finally:
-            with self.sigint_protection:
-                if self._in_py:
-                    # Restore ability to save output now that the command finalization hooks are done
-                    self.stdout.pause_storage = False
-                    sys.stderr.pause_storage = False
 
     def runcmds_plus_hooks(self, cmds: List[str]) -> bool:
         """Convenience method to run multiple commands by onecmd_plus_hooks.

@@ -87,12 +87,11 @@ class PyscriptBridge(object):
         # This will be used to capture _cmd2_app.stdout and sys.stdout
         copy_cmd_stdout = StdSim(self._cmd2_app.stdout, echo)
 
+        # Pause the storing of stdout until onecmd_plus_hooks enables it
+        copy_cmd_stdout.pause_storage = True
+
         # This will be used to capture sys.stderr
         copy_stderr = StdSim(sys.stderr, echo)
-
-        # Pause the storing of any output until onecmd_plus_hooks enables it
-        copy_cmd_stdout.pause_storage = True
-        copy_stderr.pause_storage = True
 
         self._cmd2_app._last_result = None
 
@@ -100,7 +99,7 @@ class PyscriptBridge(object):
             self._cmd2_app.stdout = copy_cmd_stdout
             with redirect_stdout(copy_cmd_stdout):
                 with redirect_stderr(copy_stderr):
-                    self._cmd2_app.onecmd_plus_hooks(command)
+                    self._cmd2_app.onecmd_plus_hooks(command, pyscript_bridge_call=True)
         finally:
             self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
 
