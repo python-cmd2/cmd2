@@ -205,13 +205,13 @@ class Plugin:
         return data
 
     def cmdfinalization_hook_stop(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
-        """A postparsing hook which requests application exit"""
+        """A command finalization hook which requests application exit"""
         self.called_cmdfinalization += 1
         data.stop = True
         return data
 
     def cmdfinalization_hook_exception(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
-        """A postparsing hook which raises an exception"""
+        """A command finalization hook which raises an exception"""
         self.called_cmdfinalization += 1
         raise ValueError
 
