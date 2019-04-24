@@ -62,11 +62,9 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
 
 
 class PyscriptBridge(object):
-    """Preserves the legacy 'cmd' interface for pyscript while also providing a new python API wrapper for
-    application commands."""
+    """Provides a Python API wrapper for application commands."""
     def __init__(self, cmd2_app):
         self._cmd2_app = cmd2_app
-        self._last_result = None
         self.cmd_echo = False
 
     def __dir__(self):
@@ -89,6 +87,9 @@ class PyscriptBridge(object):
         # This will be used to capture _cmd2_app.stdout and sys.stdout
         copy_cmd_stdout = StdSim(self._cmd2_app.stdout, echo)
 
+        # Pause the storing of stdout until onecmd_plus_hooks enables it
+        copy_cmd_stdout.pause_storage = True
+
         # This will be used to capture sys.stderr
         copy_stderr = StdSim(sys.stderr, echo)
 
@@ -98,7 +99,7 @@ class PyscriptBridge(object):
             self._cmd2_app.stdout = copy_cmd_stdout
             with redirect_stdout(copy_cmd_stdout):
                 with redirect_stderr(copy_stderr):
-                    self._cmd2_app.onecmd_plus_hooks(command)
+                    self._cmd2_app.onecmd_plus_hooks(command, pyscript_bridge_call=True)
         finally:
             self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
 

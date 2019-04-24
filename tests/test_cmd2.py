@@ -268,9 +268,8 @@ def test_recursive_pyscript_not_allowed(base_app, request):
     python_script = os.path.join(test_dir, 'scripts', 'recursive.py')
     expected = 'Recursively entering interactive Python consoles is not allowed.'
 
-    run_cmd(base_app, "pyscript {}".format(python_script))
-    err = base_app._last_result.stderr
-    assert err == expected
+    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
+    assert err[0] == expected
 
 def test_pyscript_with_nonexist_file(base_app):
     python_script = 'does_not_exist.py'

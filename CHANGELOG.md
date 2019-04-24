@@ -1,3 +1,8 @@
+## 0.9.13 (TBD, 2019)
+* Enhancements
+    * `pyscript` limits a command's stdout capture to the same period that redirection does.
+      Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
+    
 ## 0.9.12 (April 22, 2019)
 * Bug Fixes
     * Fixed a bug in how redirection and piping worked inside ``py`` or ``pyscript`` commands
