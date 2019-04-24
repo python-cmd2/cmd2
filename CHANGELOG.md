@@ -1,4 +1,4 @@
-## 0.9.12 (March TBD, 2019)
+## 0.9.12 (April 22, 2019)
 * Bug Fixes
     * Fixed a bug in how redirection and piping worked inside ``py`` or ``pyscript`` commands
     * Fixed bug in `async_alert` where it didn't account for prompts that contained newline characters
