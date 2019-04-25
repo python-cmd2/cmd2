@@ -2,6 +2,9 @@
 * Enhancements
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
       Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
+    * `StdSim.buffer.write()` now flushes when the wrapped stream uses line buffering and the bytes being written
+      contain a newline or carriage return. This helps when `pyscript` is echoing the output of a shell command
+      since the output will print at the same frequency as when the command is run in a terminal.
     
 ## 0.9.12 (April 22, 2019)
 * Bug Fixes
