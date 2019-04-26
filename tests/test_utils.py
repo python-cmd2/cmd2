@@ -126,22 +126,11 @@ def stdout_sim():
     stdsim = cu.StdSim(sys.stdout, echo=True)
     return stdsim
 
-@pytest.fixture
-def stringio_sim():
-    import io
-    stdsim = cu.StdSim(io.StringIO(), echo=True)
-    return stdsim
-
 
 def test_stdsim_write_str(stdout_sim):
     my_str = 'Hello World'
     stdout_sim.write(my_str)
     assert stdout_sim.getvalue() == my_str
-
-def test_stdsim_write_str_inner_no_buffer(stringio_sim):
-    my_str = 'Hello World'
-    stringio_sim.write(my_str)
-    assert stringio_sim.getvalue() == my_str
 
 def test_stdsim_write_bytes(stdout_sim):
     b_str = b'Hello World'
@@ -217,6 +206,26 @@ def test_stdsim_pause_storage(stdout_sim):
     stdout_sim.pause_storage = True
     stdout_sim.buffer.write(b_str)
     assert stdout_sim.getbytes() == b''
+
+def test_stdsim_line_buffering(base_app):
+    # This exercises the case of writing binary data that contains new lines/carriage returns to a StdSim
+    # when line buffering is on. The output should immediately be flushed to the underlying stream.
+    import os
+    import tempfile
+    file = tempfile.NamedTemporaryFile(mode='wt')
+    file.line_buffering = True
+
+    stdsim = cu.StdSim(file, echo=True)
+    saved_size = os.path.getsize(file.name)
+
+    bytes_to_write = b'hello\n'
+    stdsim.buffer.write(bytes_to_write)
+    assert os.path.getsize(file.name) == saved_size + len(bytes_to_write)
+    saved_size = os.path.getsize(file.name)
+
+    bytes_to_write = b'hello\r'
+    stdsim.buffer.write(bytes_to_write)
+    assert os.path.getsize(file.name) == saved_size + len(bytes_to_write)
 
 
 @pytest.fixture
