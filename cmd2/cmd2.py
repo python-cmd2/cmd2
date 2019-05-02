@@ -2410,10 +2410,6 @@ class Cmd(cmd.Cmd):
             self.perror("Invalid macro name: {}".format(errmsg), traceback_war=False)
             return
 
-        if args.name in self.get_all_commands():
-            self.perror("Macro cannot have the same name as a command", traceback_war=False)
-            return
-
         if args.name in self.aliases:
             self.perror("Macro cannot have the same name as an alias", traceback_war=False)
             return
@@ -2546,16 +2542,13 @@ class Cmd(cmd.Cmd):
                            "\n"
                            "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
                            "\n"
-                           "  Be careful! Since macros can resolve into commands, aliases, and macros,\n"
-                           "  it is possible to create a macro that results in infinite recursion.\n"
-                           "\n"
                            "  If you want to use redirection or pipes in the macro, then quote them as in\n"
                            "  this example to prevent the 'macro create' command from being redirected.\n"
                            "\n"
                            "    macro create show_results print_results -type {1} \"|\" less\n"
                            "\n"
-                           "  Because macros do not resolve until after parsing (hitting Enter), tab\n"
-                           "  completion will only complete paths.")
+                           "  Because macros do not resolve until after hitting Enter, tab completion\n"
+                           "  will only complete paths while entering a macro.")
 
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
