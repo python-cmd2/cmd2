@@ -198,9 +198,9 @@ class Statement(str):
         return rtn
 
     @property
-    def expanded_command_line(self) -> str:
-        """Contains command_and_args plus any ending terminator, suffix, and redirection chars"""
-        rtn = self.command_and_args
+    def post_command(self) -> str:
+        """A string containing any ending terminator, suffix, and redirection chars"""
+        rtn = ''
         if self.multiline_command:
             rtn += constants.MULTILINE_TERMINATOR
         elif self.terminator:
@@ -218,6 +218,11 @@ class Statement(str):
                 rtn += ' ' + self.output_to
 
         return rtn
+
+    @property
+    def expanded_command_line(self) -> str:
+        """Combines command_and_args and post_command"""
+        return self.command_and_args + self.post_command
 
     @property
     def argv(self) -> List[str]:
@@ -621,25 +626,24 @@ class StatementParser:
 
     def _expand(self, line: str) -> str:
         """Expand shortcuts and aliases"""
-
         # expand aliases
-        # make a copy of aliases so we can edit it
-        tmp_aliases = list(self.aliases.keys())
-        keep_expanding = bool(tmp_aliases)
-        while keep_expanding:
-            for cur_alias in tmp_aliases:
-                keep_expanding = False
-                # apply our regex to line
-                match = self._command_pattern.search(line)
-                if match:
-                    # we got a match, extract the command
-                    command = match.group(1)
-                    if command and command == cur_alias:
-                        # rebuild line with the expanded alias
-                        line = self.aliases[cur_alias] + match.group(2) + line[match.end(2):]
-                        tmp_aliases.remove(cur_alias)
-                        keep_expanding = bool(tmp_aliases)
-                        break
+        used_aliases = []
+        while True:
+            # apply our regex to line
+            match = self._command_pattern.search(line)
+            if match:
+                # we got a match, extract the command
+                command = match.group(1)
+
+                # Check if this command matches an alias and wasn't already processed to avoid an infinite loop
+                if command in self.aliases and command not in used_aliases:
+                    # rebuild line with the expanded alias
+                    line = self.aliases[command] + match.group(2) + line[match.end(2):]
+                    used_aliases.append(command)
+                else:
+                    break
+            else:
+                break
 
         # expand shortcuts
         for (shortcut, expansion) in self.shortcuts:

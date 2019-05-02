@@ -1845,14 +1845,22 @@ class Cmd(cmd.Cmd):
             # necessary/desired here.
             return stop
 
-    def _complete_statement(self, line: str) -> Statement:
+    def _complete_statement(self, line: str, used_macros: Optional[List[str]] = None) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
         self.pseudo_raw_input(). It returns a literal 'eof' if the input
         pipe runs out. We can't refactor it because we need to retain
         backwards compatibility with the standard library version of cmd.
+
+        :param line: the line being parsed
+        :param used_macros: a list of macros that have already been resolved during parsing.
+                            this should be None for the first call.
+        :return: the completed Statement
         """
+        if used_macros is None:
+            used_macros = []
+
         while True:
             try:
                 statement = self.statement_parser.parse(line)
@@ -1897,7 +1905,62 @@ class Cmd(cmd.Cmd):
 
         if not statement.command:
             raise EmptyStatement()
+
+        # Check if this command is a macro and wasn't already processed to avoid an infinite loop
+        if statement.command in self.macros.keys() and statement.command not in used_macros:
+            line = self._resolve_macro(statement)
+            if line is None:
+                raise EmptyStatement()
+            used_macros.append(statement.command)
+
+            # Parse the resolved macro
+            statement = self._complete_statement(line, used_macros)
+
         return statement
+
+    def _resolve_macro(self, statement: Statement) -> Optional[str]:
+        """
+        Resolve a macro and return the resulting string
+
+        :param statement: the parsed statement from the command line
+        :return: the resolved macro or None on error
+        """
+        from itertools import islice
+
+        if statement.command not in self.macros.keys():
+            raise KeyError('{} is not a macro'.format(statement.command))
+
+        macro = self.macros[statement.command]
+
+        # Make sure enough arguments were passed in
+        if len(statement.arg_list) < macro.minimum_arg_count:
+            self.perror("The macro '{}' expects at least {} argument(s)".format(statement.command,
+                                                                                macro.minimum_arg_count),
+                        traceback_war=False)
+            return None
+
+        # Resolve the arguments in reverse and read their values from statement.argv since those
+        # are unquoted. Macro args should have been quoted when the macro was created.
+        resolved = macro.value
+        reverse_arg_list = sorted(macro.arg_list, key=lambda ma: ma.start_index, reverse=True)
+
+        for arg in reverse_arg_list:
+            if arg.is_escaped:
+                to_replace = '{{' + arg.number_str + '}}'
+                replacement = '{' + arg.number_str + '}'
+            else:
+                to_replace = '{' + arg.number_str + '}'
+                replacement = statement.argv[int(arg.number_str)]
+
+            parts = resolved.rsplit(to_replace, maxsplit=1)
+            resolved = parts[0] + replacement + parts[1]
+
+        # Append extra arguments and use statement.arg_list since these arguments need their quotes preserved
+        for arg in islice(statement.arg_list, macro.minimum_arg_count, None):
+            resolved += ' ' + arg
+
+        # Restore any terminator, suffix, redirection, etc.
+        return resolved + statement.post_command
 
     def _redirect_output(self, statement: Statement) -> Tuple[bool, utils.RedirectionSavedState]:
         """Handles output redirection for >, >>, and |.
@@ -2047,70 +2110,22 @@ class Cmd(cmd.Cmd):
         if not isinstance(statement, Statement):
             statement = self._complete_statement(statement)
 
-        # Check if this is a macro
-        if statement.command in self.macros:
-            stop = self._run_macro(statement)
+        func = self.cmd_func(statement.command)
+        if func:
+            # Check to see if this command should be stored in history
+            if statement.command not in self.exclude_from_history \
+                    and statement.command not in self.disabled_commands:
+                self.history.append(statement)
+
+            stop = func(statement)
+
         else:
-            func = self.cmd_func(statement.command)
-            if func:
-                # Check to see if this command should be stored in history
-                if statement.command not in self.exclude_from_history \
-                        and statement.command not in self.disabled_commands:
-                    self.history.append(statement)
-
-                stop = func(statement)
-
-            else:
-                stop = self.default(statement)
+            stop = self.default(statement)
 
         if stop is None:
             stop = False
 
         return stop
-
-    def _run_macro(self, statement: Statement) -> bool:
-        """
-        Resolve a macro and run the resulting string
-
-        :param statement: the parsed statement from the command line
-        :return: a flag indicating whether the interpretation of commands should stop
-        """
-        from itertools import islice
-
-        if statement.command not in self.macros.keys():
-            raise KeyError('{} is not a macro'.format(statement.command))
-
-        macro = self.macros[statement.command]
-
-        # Make sure enough arguments were passed in
-        if len(statement.arg_list) < macro.minimum_arg_count:
-            self.perror("The macro '{}' expects at least {} argument(s)".format(statement.command,
-                                                                                macro.minimum_arg_count),
-                        traceback_war=False)
-            return False
-
-        # Resolve the arguments in reverse and read their values from statement.argv since those
-        # are unquoted. Macro args should have been quoted when the macro was created.
-        resolved = macro.value
-        reverse_arg_list = sorted(macro.arg_list, key=lambda ma: ma.start_index, reverse=True)
-
-        for arg in reverse_arg_list:
-            if arg.is_escaped:
-                to_replace = '{{' + arg.number_str + '}}'
-                replacement = '{' + arg.number_str + '}'
-            else:
-                to_replace = '{' + arg.number_str + '}'
-                replacement = statement.argv[int(arg.number_str)]
-
-            parts = resolved.rsplit(to_replace, maxsplit=1)
-            resolved = parts[0] + replacement + parts[1]
-
-        # Append extra arguments and use statement.arg_list since these arguments need their quotes preserved
-        for arg in islice(statement.arg_list, macro.minimum_arg_count, None):
-            resolved += ' ' + arg
-
-        # Run the resolved command
-        return self.onecmd_plus_hooks(resolved)
 
     def default(self, statement: Statement) -> Optional[bool]:
         """Executed when the command given isn't a recognized command implemented by a do_* method.

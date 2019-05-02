@@ -1830,7 +1830,7 @@ def test_nonexistent_macro(base_app):
     exception = None
 
     try:
-        base_app._run_macro(StatementParser().parse('fake'))
+        base_app._resolve_macro(StatementParser().parse('fake'))
     except KeyError as e:
         exception = e
 
