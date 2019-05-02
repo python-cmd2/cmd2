@@ -1854,12 +1854,17 @@ class Cmd(cmd.Cmd):
         backwards compatibility with the standard library version of cmd.
 
         :param line: the line being parsed
-        :param used_macros: a list of macros that have already been resolved during parsing.
-                            this should be None for the first call.
+        :param used_macros: a list of macros that have already been resolved during parsing of this line.
+                            this should only be set by _complete_statement when it recursively calls itself to
+                            resolve macros
         :return: the completed Statement
         """
+        # Check if this is the top-level call
         if used_macros is None:
             used_macros = []
+            orig_line = line
+        else:
+            orig_line = None
 
         while True:
             try:
@@ -1911,10 +1916,25 @@ class Cmd(cmd.Cmd):
             line = self._resolve_macro(statement)
             if line is None:
                 raise EmptyStatement()
-            used_macros.append(statement.command)
 
-            # Parse the resolved macro
+            # Parse the resolved macro line
+            used_macros.append(statement.command)
             statement = self._complete_statement(line, used_macros)
+
+            if orig_line is not None:
+                # All macro resolution is finished. Build a Statement that contains the resolved
+                # strings but the originally typed line for its raw member.
+                statement = Statement(statement.args,
+                                      raw=orig_line,
+                                      command=statement.command,
+                                      arg_list=statement.arg_list,
+                                      multiline_command=statement.multiline_command,
+                                      terminator=statement.terminator,
+                                      suffix=statement.suffix,
+                                      pipe_to=statement.pipe_to,
+                                      output=statement.output,
+                                      output_to=statement.output_to,
+                                      )
 
         return statement
 
