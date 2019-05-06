@@ -625,25 +625,27 @@ class StatementParser:
             return to_parse, to_parse.argv[1:]
 
     def _expand(self, line: str) -> str:
-        """Expand shortcuts and aliases"""
-        # expand aliases
-        used_aliases = []
-        while True:
+        """Expand aliases and shortcuts"""
+
+        # Make a copy of aliases so we can keep track of what aliases have been resolved to avoid an infinite loop
+        remaining_aliases = list(self.aliases.keys())
+        keep_expanding = bool(remaining_aliases)
+
+        while keep_expanding:
+            keep_expanding = False
+
             # apply our regex to line
             match = self._command_pattern.search(line)
             if match:
                 # we got a match, extract the command
                 command = match.group(1)
 
-                # Check if this command matches an alias and wasn't already processed to avoid an infinite loop
-                if command in self.aliases and command not in used_aliases:
+                # Check if this command matches an alias that wasn't already processed
+                if command in remaining_aliases:
                     # rebuild line with the expanded alias
                     line = self.aliases[command] + match.group(2) + line[match.end(2):]
-                    used_aliases.append(command)
-                else:
-                    break
-            else:
-                break
+                    remaining_aliases.remove(command)
+                    keep_expanding = bool(remaining_aliases)
 
         # expand shortcuts
         for (shortcut, expansion) in self.shortcuts:
