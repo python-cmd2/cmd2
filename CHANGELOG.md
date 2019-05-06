@@ -1,5 +1,6 @@
 ## 0.9.13 (TBD, 2019)
 * Bug Fixes
+    * Fixed issue where the wrong terminator was being appended by `Statement.expanded_command_line()`
     * Fixed issue where aliases and macros could not contain terminator characters in their values
     * History now shows what was typed for macros and not the resolved value by default. This is consistent with
     the behavior of aliases. Use the `expanded` or `verbose` arguments to `history` to see the resolved value for

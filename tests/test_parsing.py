@@ -492,7 +492,6 @@ def test_parse_alias_on_multiline_command(parser):
     assert statement.args == statement
     assert statement == 'has > inside an unfinished command'
     assert statement.terminator == ''
-    assert statement.expanded_command_line == statement.multiline_command + ' ' + statement + MULTILINE_TERMINATOR
 
 @pytest.mark.parametrize('line,output', [
     ('helpalias > out.txt', '>'),

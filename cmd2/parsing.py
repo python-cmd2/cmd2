@@ -201,9 +201,7 @@ class Statement(str):
     def post_command(self) -> str:
         """A string containing any ending terminator, suffix, and redirection chars"""
         rtn = ''
-        if self.multiline_command:
-            rtn += constants.MULTILINE_TERMINATOR
-        elif self.terminator:
+        if self.terminator:
             rtn += self.terminator
 
         if self.suffix:
