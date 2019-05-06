@@ -1,4 +1,6 @@
 ## 0.9.13 (TBD, 2019)
+* Bug Fixes
+    * Fixed issue where the wrong terminator was being appended by `Statement.expanded_command_line()`
 * Enhancements
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
       Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
