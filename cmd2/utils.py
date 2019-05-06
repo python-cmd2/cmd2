@@ -262,15 +262,16 @@ def natural_sort(list_to_sort: Iterable[str]) -> List[str]:
     return sorted(list_to_sort, key=natural_keys)
 
 
-def unquote_redirection_tokens(args: List[str]) -> None:
+def unquote_specific_tokens(args: List[str], tokens_to_unquote: List[str]) -> None:
     """
-    Unquote redirection tokens in a list of command-line arguments
-    This is used when redirection tokens have to be passed to another command
+    Unquote a specific tokens in a list of command-line arguments
+    This is used when certain tokens have to be passed to another command
     :param args: the command line args
+    :param tokens_to_unquote: the tokens, which if present in args, to unquote
     """
     for i, arg in enumerate(args):
         unquoted_arg = strip_quotes(arg)
-        if unquoted_arg in constants.REDIRECTION_TOKENS:
+        if unquoted_arg in tokens_to_unquote:
             args[i] = unquoted_arg
 
 

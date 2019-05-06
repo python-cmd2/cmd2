@@ -1688,7 +1688,7 @@ class Cmd(cmd.Cmd):
 
         stop = False
         try:
-            statement = self._complete_statement(line)
+            statement = self._input_line_to_statement(line)
         except EmptyStatement:
             return self._run_cmdfinalization_hooks(stop, None)
         except ValueError as ex:
@@ -1845,7 +1845,7 @@ class Cmd(cmd.Cmd):
             # necessary/desired here.
             return stop
 
-    def _complete_statement(self, line: str, used_macros: Optional[List[str]] = None) -> Statement:
+    def _complete_statement(self, line: str) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
@@ -1854,18 +1854,8 @@ class Cmd(cmd.Cmd):
         backwards compatibility with the standard library version of cmd.
 
         :param line: the line being parsed
-        :param used_macros: a list of macros that have already been resolved during parsing of this line.
-                            this should only be set by _complete_statement when it recursively calls itself to
-                            resolve macros
         :return: the completed Statement
         """
-        # Check if this is the top-level call
-        if used_macros is None:
-            used_macros = []
-            orig_line = line
-        else:
-            orig_line = None
-
         while True:
             try:
                 statement = self.statement_parser.parse(line)
@@ -1910,32 +1900,47 @@ class Cmd(cmd.Cmd):
 
         if not statement.command:
             raise EmptyStatement()
+        return statement
 
-        # Check if this command is a macro and wasn't already processed to avoid an infinite loop
-        if statement.command in self.macros.keys() and statement.command not in used_macros:
-            line = self._resolve_macro(statement)
-            if line is None:
-                raise EmptyStatement()
+    def _input_line_to_statement(self, line: str) -> Statement:
+        """
+        Parse the user's input line and convert it to a Statement, ensuring that all macros are also resolved
 
-            # Parse the resolved macro line
-            used_macros.append(statement.command)
-            statement = self._complete_statement(line, used_macros)
+        :param line: the line being parsed
+        :return: parsed command line as a Statement
+        """
+        used_macros = []
+        orig_line = line
 
-            if orig_line is not None:
-                # All macro resolution is finished. Build a Statement that contains the resolved
-                # strings but the originally typed line for its raw member.
-                statement = Statement(statement.args,
-                                      raw=orig_line,
-                                      command=statement.command,
-                                      arg_list=statement.arg_list,
-                                      multiline_command=statement.multiline_command,
-                                      terminator=statement.terminator,
-                                      suffix=statement.suffix,
-                                      pipe_to=statement.pipe_to,
-                                      output=statement.output,
-                                      output_to=statement.output_to,
-                                      )
+        # Continue until all macros are resolved
+        while True:
+            # Make sure all input has been read and convert it to a Statement
+            statement = self._complete_statement(line)
 
+            # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
+            if statement.command in self.macros.keys() and statement.command not in used_macros:
+                used_macros.append(statement.command)
+                line = self._resolve_macro(statement)
+                if line is None:
+                    raise EmptyStatement()
+            else:
+                break
+
+        # This will be true when a macro was used
+        if orig_line != statement.raw:
+            # Build a Statement that contains the resolved macro line
+            # but the originally typed line for its raw member.
+            statement = Statement(statement.args,
+                                  raw=orig_line,
+                                  command=statement.command,
+                                  arg_list=statement.arg_list,
+                                  multiline_command=statement.multiline_command,
+                                  terminator=statement.terminator,
+                                  suffix=statement.suffix,
+                                  pipe_to=statement.pipe_to,
+                                  output=statement.output,
+                                  output_to=statement.output_to,
+                                  )
         return statement
 
     def _resolve_macro(self, statement: Statement) -> Optional[str]:
@@ -2128,7 +2133,7 @@ class Cmd(cmd.Cmd):
         """
         # For backwards compatibility with cmd, allow a str to be passed in
         if not isinstance(statement, Statement):
-            statement = self._complete_statement(statement)
+            statement = self._input_line_to_statement(statement)
 
         func = self.cmd_func(statement.command)
         if func:
@@ -2306,7 +2311,10 @@ class Cmd(cmd.Cmd):
             self.perror("Alias cannot have the same name as a macro", traceback_war=False)
             return
 
-        utils.unquote_redirection_tokens(args.command_args)
+        # Unquote redirection and terminator tokens
+        tokens_to_unquote = constants.REDIRECTION_TOKENS
+        tokens_to_unquote.extend(self.statement_parser.terminators)
+        utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
 
         # Build the alias value string
         value = args.command
@@ -2362,8 +2370,8 @@ class Cmd(cmd.Cmd):
     alias_create_description = "Create or overwrite an alias"
 
     alias_create_epilog = ("Notes:\n"
-                           "  If you want to use redirection or pipes in the alias, then quote them to\n"
-                           "  prevent the 'alias create' command from being redirected.\n"
+                           "  If you want to use redirection, pipes, or terminators like ';' in the value\n"
+                           "  of the alias, then quote them.\n"
                            "\n"
                            "  Since aliases are resolved during parsing, tab completion will function as it\n"
                            "  would for the actual command the alias resolves to.\n"
@@ -2430,11 +2438,18 @@ class Cmd(cmd.Cmd):
             self.perror("Invalid macro name: {}".format(errmsg), traceback_war=False)
             return
 
+        if args.name in self.get_all_commands():
+            self.perror("Macro cannot have the same name as a command", traceback_war=False)
+            return
+
         if args.name in self.aliases:
             self.perror("Macro cannot have the same name as an alias", traceback_war=False)
             return
 
-        utils.unquote_redirection_tokens(args.command_args)
+        # Unquote redirection and terminator tokens
+        tokens_to_unquote = constants.REDIRECTION_TOKENS
+        tokens_to_unquote.extend(self.statement_parser.terminators)
+        utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
 
         # Build the macro value string
         value = args.command
@@ -2562,8 +2577,8 @@ class Cmd(cmd.Cmd):
                            "\n"
                            "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
                            "\n"
-                           "  If you want to use redirection or pipes in the macro, then quote them as in\n"
-                           "  this example to prevent the 'macro create' command from being redirected.\n"
+                           "  If you want to use redirection, pipes, or terminators like ';' in the value\n"
+                           "  of the macro, then quote them.\n"
                            "\n"
                            "    macro create show_results print_results -type {1} \"|\" less\n"
                            "\n"
