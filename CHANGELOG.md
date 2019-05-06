@@ -1,14 +1,22 @@
 ## 0.9.13 (TBD, 2019)
+* Bug Fixes
+    * Fixed issue where aliases and macros could not contain terminator characters in their values
+    * History now shows what was typed for macros and not the resolved value by default. This is consistent with
+    the behavior of aliases. Use the `expanded` or `verbose` arguments to `history` to see the resolved value for
+    the macro.
 * Enhancements
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
       Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
     * `StdSim.buffer.write()` now flushes when the wrapped stream uses line buffering and the bytes being written
       contain a newline or carriage return. This helps when `pyscript` is echoing the output of a shell command
       since the output will print at the same frequency as when the command is run in a terminal.
+* Potentially breaking changes
+    * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
+      that allows terminators in alias and macro values.
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4
-    
+
 ## 0.9.12 (April 22, 2019)
 * Bug Fixes
     * Fixed a bug in how redirection and piping worked inside ``py`` or ``pyscript`` commands
