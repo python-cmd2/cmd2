@@ -152,7 +152,7 @@ def test_autocomp_flags_narg_max(cmd2_app):
 
 def test_autcomp_narg_beyond_max(cmd2_app):
     out, err = run_cmd(cmd2_app, 'suggest -t movie -d 3 4 5')
-    assert 'Error: unrecognized arguments: 5' in err[0]
+    assert 'Error: unrecognized arguments: 5' in err[1]
 
 
 def test_autocomp_subcmd_nested(cmd2_app):
