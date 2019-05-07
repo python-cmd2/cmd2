@@ -82,8 +82,8 @@ def test_base_argparse_help(base_app):
 
 def test_base_invalid_option(base_app):
     out, err = run_cmd(base_app, 'set -z')
-    assert 'Error: unrecognized arguments: -z' in err[0]
-    assert out[0] == 'Usage: set [-h] [-a] [-l] [param] [value]'
+    assert err[0] == 'Usage: set [-h] [-a] [-l] [param] [value]'
+    assert 'Error: unrecognized arguments: -z' in err[1]
 
 def test_base_shortcuts(base_app):
     out, err = run_cmd(base_app, 'shortcuts')
@@ -285,7 +285,7 @@ def test_pyscript_with_exception(base_app, request):
 
 def test_pyscript_requires_an_argument(base_app):
     out, err = run_cmd(base_app, "pyscript")
-    assert "the following arguments are required: script_path" in err[0]
+    assert "the following arguments are required: script_path" in err[1]
 
 
 def test_base_error(base_app):
@@ -314,7 +314,7 @@ def test_load_with_empty_args(base_app):
     out, err = run_cmd(base_app, 'load')
 
     # The load command requires a file path argument, so we should get an error message
-    assert "the following arguments are required" in err[0]
+    assert "the following arguments are required" in err[1]
     assert base_app.cmdqueue == []
 
 
@@ -448,7 +448,7 @@ def test_base_relative_load(base_app, request):
 
 def test_relative_load_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_load')
-    assert 'Error: the following arguments' in err[0]
+    assert 'Error: the following arguments' in err[1]
     assert base_app.cmdqueue == []
 
 
@@ -1590,7 +1590,7 @@ def test_alias_create(base_app):
 
     # Use the alias
     out, err = run_cmd(base_app, 'fake')
-    assert "the following arguments are required: script_path" in err[0]
+    assert "the following arguments are required: script_path" in err[1]
 
     # See a list of aliases
     out, err = run_cmd(base_app, 'alias list')
@@ -1681,7 +1681,7 @@ def test_macro_create(base_app):
 
     # Use the macro
     out, err = run_cmd(base_app, 'fake')
-    assert "the following arguments are required: script_path" in err[0]
+    assert "the following arguments are required: script_path" in err[1]
 
     # See a list of macros
     out, err = run_cmd(base_app, 'macro list')

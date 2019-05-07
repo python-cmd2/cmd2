@@ -11,6 +11,8 @@
     * `StdSim.buffer.write()` now flushes when the wrapped stream uses line buffering and the bytes being written
       contain a newline or carriage return. This helps when `pyscript` is echoing the output of a shell command
       since the output will print at the same frequency as when the command is run in a terminal.
+    * **ACArgumentParser** no longer prints complete help text when a parsing error occurs since long help messages
+     scroll the actual error message off the screen.
 * Potentially breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
       that allows terminators in alias and macro values.
@@ -34,7 +36,7 @@
     `argparse.Namespace` object they pass to the `do_*` methods. It is stored in an attribute called `__statement__`.
     This can be useful if a command function needs to know the command line for things like logging.
     * Added a `-t` option to the `load` command for automatically generating a transcript based on a script file
-    * When in a *pyscript*, the stdout and stderr streams of shell commands and processes being piped to are now
+    * When in a **pyscript**, the stdout and stderr streams of shell commands and processes being piped to are now
     captured and included in the ``CommandResult`` structure.
 * Potentially breaking changes
     * The following commands now write to stderr instead of stdout when printing an error. This will make catching

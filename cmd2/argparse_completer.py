@@ -908,7 +908,7 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
                 # join lines into usage
                 usage = '\n'.join(lines)
 
-        # prefix with 'usage:'
+        # prefix with 'Usage:'
         return '%s%s\n\n' % (prefix, usage)
 
     def _format_action_invocation(self, action) -> str:
@@ -970,9 +970,6 @@ class ACHelpFormatter(argparse.RawTextHelpFormatter):
             result = super()._format_args(action, default_metavar)
         return result
 
-    def format_help(self):
-        return super().format_help() + '\n'
-
 
 # noinspection PyCompatibility
 class ACArgumentParser(argparse.ArgumentParser):
@@ -1005,7 +1002,7 @@ class ACArgumentParser(argparse.ArgumentParser):
 
     def error(self, message: str) -> None:
         """Custom error override. Allows application to control the error being displayed by argparse"""
-        if len(self._custom_error_message) > 0:
+        if self._custom_error_message:
             message = self._custom_error_message
             self._custom_error_message = ''
 
@@ -1019,9 +1016,9 @@ class ACArgumentParser(argparse.ArgumentParser):
                 formatted_message += '\n       ' + line
             linum += 1
 
-        sys.stderr.write(Fore.LIGHTRED_EX + '{}\n\n'.format(formatted_message) + Fore.RESET)
-        # sys.stderr.write('{}\n\n'.format(formatted_message))
-        self.print_help()
+        self.print_usage(sys.stderr)
+        sys.stderr.write(Fore.LIGHTRED_EX + '{}\n'.format(formatted_message) + Fore.RESET)
+
         sys.exit(1)
 
     def format_help(self) -> str:
