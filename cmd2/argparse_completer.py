@@ -678,19 +678,16 @@ class AutoCompleter(object):
                         list_args = arg_choices[index]
                     elif isinstance(arg_choices[index], dict):
                         kw_args = arg_choices[index]
-                try:
-                    # call the provided function differently depending on the provided positional and keyword arguments
-                    if list_args is not None and kw_args is not None:
-                        return completer(text, line, begidx, endidx, *list_args, **kw_args)
-                    elif list_args is not None:
-                        return completer(text, line, begidx, endidx, *list_args)
-                    elif kw_args is not None:
-                        return completer(text, line, begidx, endidx, **kw_args)
-                    else:
-                        return completer(text, line, begidx, endidx)
-                except TypeError:
-                    # assume this is due to an incorrect function signature, return nothing.
-                    return []
+
+                # call the provided function differently depending on the provided positional and keyword arguments
+                if list_args is not None and kw_args is not None:
+                    return completer(text, line, begidx, endidx, *list_args, **kw_args)
+                elif list_args is not None:
+                    return completer(text, line, begidx, endidx, *list_args)
+                elif kw_args is not None:
+                    return completer(text, line, begidx, endidx, **kw_args)
+                else:
+                    return completer(text, line, begidx, endidx)
             else:
                 return self._cmd2_app.basic_complete(text, line, begidx, endidx,
                                                      self._resolve_choices_for_arg(action, used_values))
