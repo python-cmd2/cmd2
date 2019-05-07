@@ -667,7 +667,7 @@ class AutoCompleter(object):
 
                 if callable(arg_choices[0]):
                     completer = arg_choices[0]
-                elif isinstance(arg_choices[0], str) and callable(getattr(self._cmd2_app, arg_choices[0])):
+                else:
                     completer = getattr(self._cmd2_app, arg_choices[0])
 
                 # extract the positional and keyword arguments from the tuple
@@ -701,32 +701,17 @@ class AutoCompleter(object):
             # is the argument a string? If so, see if we can find an attribute in the
             # application matching the string.
             if isinstance(args, str):
-                try:
-                    args = getattr(self._cmd2_app, args)
-                except AttributeError:
-                    # Couldn't find anything matching the name
-                    return []
+                args = getattr(self._cmd2_app, args)
 
             # is the provided argument a callable. If so, call it
             if callable(args):
                 try:
-                    try:
-                        args = args(self._cmd2_app)
-                    except TypeError:
-                        args = args()
+                    args = args(self._cmd2_app)
                 except TypeError:
-                    return []
+                    args = args()
 
-            try:
-                iter(args)
-            except TypeError:
-                pass
-            else:
-                # filter out arguments we already used
-                args = [arg for arg in args if arg not in used_values]
-
-                if len(args) > 0:
-                    return args
+            # filter out arguments we already used
+            return [arg for arg in args if arg not in used_values]
 
         return []
 
