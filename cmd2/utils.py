@@ -291,7 +291,7 @@ def expand_user_in_tokens(tokens: List[str]) -> None:
 
             tokens[index] = os.path.expanduser(tokens[index])
 
-            # Restore the quotes
+            # Restore the quotes even if not needed to preserve what the user typed
             if first_char in constants.QUOTES:
                 tokens[index] = first_char + tokens[index] + first_char
 
