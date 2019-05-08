@@ -2046,8 +2046,8 @@ class Cmd(cmd.Cmd):
                                     start_new_session=start_new_session,
                                     shell=True)
 
-            # Popen was called with shell=True so the user can do stuff like redirect the output of the pipe
-            # process (ex: !ls | grep foo > out.txt). But this makes it difficult to know if the pipe process
+            # Popen was called with shell=True so the user can chain pipe commands and redirect their output
+            # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
             # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
             # if the pipe process is still running.
             try:

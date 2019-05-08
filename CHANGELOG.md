@@ -15,9 +15,11 @@
      scroll the actual error message off the screen.
     * Exceptions occurring in tab completion functions are now printed to stderr before returning control back to
     readline. This makes debugging a lot easier since readline suppresses these exceptions.
+    * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
 * Potentially breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
       that allows terminators in alias and macro values.
+    * Changed `Statement.pipe_to` to a string instead of a list 
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4
@@ -87,7 +89,7 @@
     sorted the ``CompletionItem`` list. Otherwise it will be sorted using ``self.matches_sort_key``.
     * Removed support for bash completion since this feature had slow performance. Also it relied on
     ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods. 
-    * Removed ability to call commands in ``pyscript`` as if they were functions (e.g ``app.help()``) in favor
+    * Removed ability to call commands in ``pyscript`` as if they were functions (e.g. ``app.help()``) in favor
     of only supporting one ``pyscript`` interface. This simplifies future maintenance.
     * No longer supporting C-style comments. Hash (#) is the only valid comment marker.
     * No longer supporting comments embedded in a command. Only command line input where the first
