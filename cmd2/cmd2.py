@@ -1519,18 +1519,19 @@ class Cmd(cmd.Cmd):
                             # Check if any portion of the display matches appears in the tab completion
                             display_prefix = os.path.commonprefix(self.display_matches)
 
-                            # For delimited matches, we check what appears before the display
-                            # matches (common_prefix) as well as the display matches themselves.
-                            if (' ' in common_prefix) or (display_prefix and ' ' in ''.join(self.display_matches)):
+                            # For delimited matches, we check for a space in what appears before the display
+                            # matches (common_prefix) as well as in the display matches themselves.
+                            if (' ' in common_prefix) or (display_prefix and
+                                                          any(' ' in match for match in self.display_matches)):
                                 add_quote = True
 
                         # If there is a tab completion and any match has a space, then add an opening quote
-                        elif common_prefix and ' ' in ''.join(self.completion_matches):
+                        elif common_prefix and any(' ' in match for match in self.completion_matches):
                             add_quote = True
 
                         if add_quote:
                             # Figure out what kind of quote to add and save it as the unclosed_quote
-                            if '"' in ''.join(self.completion_matches):
+                            if any('"' in match for match in self.completion_matches):
                                 unclosed_quote = "'"
                             else:
                                 unclosed_quote = '"'
@@ -1540,7 +1541,7 @@ class Cmd(cmd.Cmd):
                     # Check if we need to remove text from the beginning of tab completions
                     elif text_to_remove:
                         self.completion_matches = \
-                            [m.replace(text_to_remove, '', 1) for m in self.completion_matches]
+                            [match.replace(text_to_remove, '', 1) for match in self.completion_matches]
 
                     # Check if we need to restore a shortcut in the tab completions
                     # so it doesn't get erased from the command line
