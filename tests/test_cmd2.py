@@ -1601,15 +1601,15 @@ def test_alias_create(base_app):
     assert out == normalize('alias create fake pyscript')
 
 def test_alias_create_with_quoted_value(base_app):
-    """Demonstrate that quotes in alias value will be preserved (except for redirectors)"""
+    """Demonstrate that quotes in alias value will be preserved (except for redirectors and terminators)"""
 
     # Create the alias
-    out, err = run_cmd(base_app, 'alias create fake help ">" "out file.txt"')
+    out, err = run_cmd(base_app, 'alias create fake help ">" "out file.txt" ";"')
     assert out == normalize("Alias 'fake' created")
 
     # Look up the new alias (Only the redirector should be unquoted)
     out, err = run_cmd(base_app, 'alias list fake')
-    assert out == normalize('alias create fake help > "out file.txt"')
+    assert out == normalize('alias create fake help > "out file.txt" ;')
 
 @pytest.mark.parametrize('alias_name', invalid_command_name)
 def test_alias_create_invalid_name(base_app, alias_name, capsys):
@@ -1692,14 +1692,14 @@ def test_macro_create(base_app):
     assert out == normalize('macro create fake pyscript')
 
 def test_macro_create_with_quoted_value(base_app):
-    """Demonstrate that quotes in macro value will be preserved (except for redirectors)"""
+    """Demonstrate that quotes in macro value will be preserved (except for redirectors and terminators)"""
     # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake help ">" "out file.txt"')
+    out, err = run_cmd(base_app, 'macro create fake help ">" "out file.txt" ";"')
     assert out == normalize("Macro 'fake' created")
 
     # Look up the new macro (Only the redirector should be unquoted)
     out, err = run_cmd(base_app, 'macro list fake')
-    assert out == normalize('macro create fake help > "out file.txt"')
+    assert out == normalize('macro create fake help > "out file.txt" ;')
 
 @pytest.mark.parametrize('macro_name', invalid_command_name)
 def test_macro_create_invalid_name(base_app, macro_name):
@@ -1830,7 +1830,7 @@ def test_nonexistent_macro(base_app):
     exception = None
 
     try:
-        base_app._run_macro(StatementParser().parse('fake'))
+        base_app._resolve_macro(StatementParser().parse('fake'))
     except KeyError as e:
         exception = e
 

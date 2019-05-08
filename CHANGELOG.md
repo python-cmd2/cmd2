@@ -1,6 +1,10 @@
 ## 0.9.13 (TBD, 2019)
 * Bug Fixes
     * Fixed issue where the wrong terminator was being appended by `Statement.expanded_command_line()`
+    * Fixed issue where aliases and macros could not contain terminator characters in their values
+    * History now shows what was typed for macros and not the resolved value by default. This is consistent with
+    the behavior of aliases. Use the `expanded` or `verbose` arguments to `history` to see the resolved value for
+    the macro.
 * Enhancements
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
       Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
@@ -11,10 +15,13 @@
      scroll the actual error message off the screen.
     * Exceptions occurring in tab completion functions are now printed to stderr before returning control back to
     readline. This makes debugging a lot easier since readline suppresses these exceptions.
+* Potentially breaking changes
+    * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
+      that allows terminators in alias and macro values.
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4
-    
+
 ## 0.9.12 (April 22, 2019)
 * Bug Fixes
     * Fixed a bug in how redirection and piping worked inside ``py`` or ``pyscript`` commands
