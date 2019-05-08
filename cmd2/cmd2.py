@@ -1521,8 +1521,8 @@ class Cmd(cmd.Cmd):
 
                             # For delimited matches, we check for a space in what appears before the display
                             # matches (common_prefix) as well as in the display matches themselves.
-                            if (' ' in common_prefix) or (display_prefix and
-                                                          any(' ' in match for match in self.display_matches)):
+                            if ' ' in common_prefix or (display_prefix
+                                                        and any(' ' in match for match in self.display_matches)):
                                 add_quote = True
 
                         # If there is a tab completion and any match has a space, then add an opening quote
