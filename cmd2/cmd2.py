@@ -1362,15 +1362,12 @@ class Cmd(cmd.Cmd):
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
 
-    # -----  Methods which override stuff in cmd -----
-
-    def complete(self, text: str, state: int) -> Optional[str]:
-        """Override of command method which returns the next possible completion for 'text'.
+    def _complete_worker(self, text: str, state: int) -> Optional[str]:
+        """The actual worker function for tab completion which is called by complete() and returns
+        the next possible completion for 'text'.
 
         If a command has not been entered, then complete against command list.
         Otherwise try to call complete_<command> to get list of completions.
-
-        This method gets called directly by readline because it is set as the tab-completion function.
 
         This completer function is called as complete(text, state), for state in 0, 1, 2, …, until it returns a
         non-string value. It should return the next possible completion starting with text.
@@ -1579,6 +1576,24 @@ class Cmd(cmd.Cmd):
         try:
             return self.completion_matches[state]
         except IndexError:
+            return None
+
+    def complete(self, text: str, state: int) -> Optional[str]:
+        """Override of cmd2's complete method which returns the next possible completion for 'text'
+
+        This method gets called directly by readline. Since readline suppresses any exception raised
+        in completer functions, they can be difficult to debug. Therefore this function wraps the
+        actual tab completion logic and prints to stderr any exception that occurs before returning
+        control to readline.
+
+        :param text: the current word that user is typing
+        :param state: non-negative integer
+        """
+        # noinspection PyBroadException
+        try:
+            return self._complete_worker(text, state)
+        except Exception as e:
+            self.perror(e)
             return None
 
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,

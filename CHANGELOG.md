@@ -13,6 +13,8 @@
       since the output will print at the same frequency as when the command is run in a terminal.
     * **ACArgumentParser** no longer prints complete help text when a parsing error occurs since long help messages
      scroll the actual error message off the screen.
+     * Exceptions occurring in tab completion functions are now printed to stderr before returning control back to
+    readline. This makes debugging a lot easier since readline suppresses these exceptions.
 * Potentially breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
       that allows terminators in alias and macro values.
