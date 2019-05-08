@@ -69,7 +69,7 @@ class TabCompleteExample(cmd2.Cmd):
         setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, TabCompleteExample.static_list_directors)
         setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, 'instance_query_actors')
 
-        # tag the file property with a custom completion function 'delimeter_complete' provided by cmd2.
+        # tag the file property with a custom completion function 'delimiter_complete' provided by cmd2.
         setattr(vid_movie_file_action, argparse_completer.ACTION_ARG_CHOICES,
                 ('delimiter_complete',
                  {'delimiter': '/',

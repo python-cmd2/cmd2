@@ -9,6 +9,8 @@
       since the output will print at the same frequency as when the command is run in a terminal.
     * **ACArgumentParser** no longer prints complete help text when a parsing error occurs since long help messages
      scroll the actual error message off the screen.
+    * Exceptions occurring in tab completion functions are now printed to stderr before returning control back to
+    readline. This makes debugging a lot easier since readline suppresses these exceptions.
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4

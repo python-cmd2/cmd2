@@ -77,6 +77,12 @@ class CompletionsExample(cmd2.Cmd):
         num_strs = ['2', '11', '1']
         return self.basic_complete(text, line, begidx, endidx, num_strs)
 
+    def do_test_raise_exception(self, args):
+        pass
+
+    def complete_test_raise_exception(self, text, line, begidx, endidx):
+        raise IndexError("You are out of bounds!!")
+
 
 @pytest.fixture
 def cmd2_app():
@@ -119,6 +125,18 @@ def test_complete_bogus_command(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is None
+
+def test_complete_exception(cmd2_app, capsys):
+    text = ''
+    line = 'test_raise_exception {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    out, err = capsys.readouterr()
+
+    assert first_match is None
+    assert "IndexError" in err
 
 def test_complete_macro(base_app, request):
     # Create the macro
