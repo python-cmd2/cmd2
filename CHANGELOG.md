@@ -6,6 +6,7 @@
     the behavior of aliases. Use the `expanded` or `verbose` arguments to `history` to see the resolved value for
     the macro.
 * Enhancements
+    * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
       Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
     * `StdSim.buffer.write()` now flushes when the wrapped stream uses line buffering and the bytes being written
@@ -15,7 +16,6 @@
      scroll the actual error message off the screen.
     * Exceptions occurring in tab completion functions are now printed to stderr before returning control back to
     readline. This makes debugging a lot easier since readline suppresses these exceptions.
-    * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
 * Potentially breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
       that allows terminators in alias and macro values.
