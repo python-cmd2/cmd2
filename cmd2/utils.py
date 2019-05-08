@@ -275,6 +275,27 @@ def unquote_specific_tokens(args: List[str], tokens_to_unquote: List[str]) -> No
             args[i] = unquoted_arg
 
 
+def expand_user_in_tokens(tokens: List[str]) -> None:
+    """
+    Call os.path.expanduser() on all tokens in an already parsed list of command-line arguments.
+    This also supports expanding user in quoted tokens.
+    :param tokens: tokens to expand
+    """
+    for index, _ in enumerate(tokens):
+        if tokens[index]:
+            # Check if the token is quoted. Since parsing already passed, there isn't
+            # an unclosed quote. So we only need to check the first character.
+            first_char = tokens[index][0]
+            if first_char in constants.QUOTES:
+                tokens[index] = strip_quotes(tokens[index])
+
+            tokens[index] = os.path.expanduser(tokens[index])
+
+            # Restore the quotes
+            if first_char in constants.QUOTES:
+                tokens[index] = first_char + tokens[index] + first_char
+
+
 def find_editor() -> str:
     """Find a reasonable editor to use by default for the system that the cmd2 application is running on."""
     editor = os.environ.get('EDITOR')

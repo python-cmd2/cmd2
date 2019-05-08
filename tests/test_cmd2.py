@@ -580,7 +580,7 @@ def test_pipe_to_shell_error(base_app):
     # Try to pipe command output to a shell command that doesn't exist in order to produce an error
     out, err = run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
     assert not out
-    assert "Failed to open pipe because" in err[0]
+    assert "Pipe process exited with code" in err[0]
 
 @pytest.mark.skipif(not clipboard.can_clip,
                     reason="Pyperclip could not find a copy/paste mechanism for your system")

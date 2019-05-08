@@ -2027,35 +2027,44 @@ class Cmd(cmd.Cmd):
             subproc_stdin = io.open(read_fd, 'r')
             new_stdout = io.open(write_fd, 'w')
 
-            # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
+            # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
+            # our sigint handler will forward it only to the most recent pipe process. This makes
+            # sure pipe processes close in the right order (most recent first).
+            if sys.platform == 'win32':
+                creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+                start_new_session = False
+            else:
+                creationflags = 0
+                start_new_session = True
+
+            # For any stream that is a StdSim, we will use a pipe so we can capture its output
+            proc = subprocess.Popen(statement.pipe_to,
+                                    stdin=subproc_stdin,
+                                    stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
+                                    stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                                    creationflags=creationflags,
+                                    start_new_session=start_new_session,
+                                    shell=True)
+
+            # Popen was called with shell=True so the user can do stuff like redirect the output of the pipe
+            # process (ex: !ls | grep foo > out.txt). But this makes it difficult to know if the pipe process
+            # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
+            # if the pipe process is still running.
             try:
-                # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
-                # our sigint handler will forward it only to the most recent pipe process. This makes
-                # sure pipe processes close in the right order (most recent first).
-                if sys.platform == 'win32':
-                    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
-                    start_new_session = False
-                else:
-                    creationflags = 0
-                    start_new_session = True
+                proc.wait(0.2)
+            except subprocess.TimeoutExpired:
+                pass
 
-                # For any stream that is a StdSim, we will use a pipe so we can capture its output
-                proc = \
-                    subprocess.Popen(statement.pipe_to,
-                                     stdin=subproc_stdin,
-                                     stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
-                                     stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                                     creationflags=creationflags,
-                                     start_new_session=start_new_session)
-
-                saved_state.redirecting = True
-                saved_state.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
-                sys.stdout = self.stdout = new_stdout
-            except Exception as ex:
-                self.perror('Failed to open pipe because - {}'.format(ex), traceback_war=False)
+            # Check if the pipe process already exited
+            if proc.returncode is not None:
+                self.perror('Pipe process exited with code {} before command could run'.format(proc.returncode))
                 subproc_stdin.close()
                 new_stdout.close()
                 redir_error = True
+            else:
+                saved_state.redirecting = True
+                saved_state.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+                sys.stdout = self.stdout = new_stdout
 
         elif statement.output:
             import tempfile
@@ -3021,21 +3030,8 @@ class Cmd(cmd.Cmd):
         # Create a list of arguments to shell
         tokens = [args.command] + args.command_args
 
-        # Support expanding ~ in quoted paths
-        for index, _ in enumerate(tokens):
-            if tokens[index]:
-                # Check if the token is quoted. Since parsing already passed, there isn't
-                # an unclosed quote. So we only need to check the first character.
-                first_char = tokens[index][0]
-                if first_char in constants.QUOTES:
-                    tokens[index] = utils.strip_quotes(tokens[index])
-
-                tokens[index] = os.path.expanduser(tokens[index])
-
-                # Restore the quotes
-                if first_char in constants.QUOTES:
-                    tokens[index] = first_char + tokens[index] + first_char
-
+        # Expand ~ where needed
+        utils.expand_user_in_tokens(tokens)
         expanded_command = ' '.join(tokens)
 
         # Prevent KeyboardInterrupts while in the shell process. The shell process will

@@ -160,8 +160,8 @@ class Statement(str):
     # characters appearing after the terminator but before output redirection, if any
     suffix = attr.ib(default='', validator=attr.validators.instance_of(str))
 
-    # if output was piped to a shell command, the shell command as a list of tokens
-    pipe_to = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
+    # if output was piped to a shell command, the shell command as a string
+    pipe_to = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # if output was redirected, the redirection token, i.e. '>>'
     output = attr.ib(default='', validator=attr.validators.instance_of(str))
@@ -208,12 +208,12 @@ class Statement(str):
             rtn += ' ' + self.suffix
 
         if self.pipe_to:
-            rtn += ' | ' + ' '.join(self.pipe_to)
+            rtn += ' | ' + self.pipe_to
 
         if self.output:
             rtn += ' ' + self.output
             if self.output_to:
-                rtn += ' ' + self.output_to
+                rtn += ' ' + utils.quote_string_if_needed(self.output_to)
 
         return rtn
 
@@ -460,18 +460,18 @@ class StatementParser:
         try:
             # find the first pipe if it exists
             pipe_pos = tokens.index(constants.REDIRECTION_PIPE)
-            # save everything after the first pipe as tokens
-            pipe_to = tokens[pipe_pos + 1:]
 
-            for pos, cur_token in enumerate(pipe_to):
-                unquoted_token = utils.strip_quotes(cur_token)
-                pipe_to[pos] = os.path.expanduser(unquoted_token)
+            # Get the tokens for the pipe command and expand ~ where needed
+            pipe_to_tokens = tokens[pipe_pos + 1:]
+            utils.expand_user_in_tokens(pipe_to_tokens)
+
+            # Build the pipe command line string
+            pipe_to = ' '.join(pipe_to_tokens)
 
             # remove all the tokens after the pipe
             tokens = tokens[:pipe_pos]
         except ValueError:
-            # no pipe in the tokens
-            pipe_to = []
+            pipe_to = ''
 
         # check for output redirect
         output = ''
