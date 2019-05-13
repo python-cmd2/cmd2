@@ -3331,18 +3331,21 @@ class Cmd(cmd.Cmd):
                                               help='output commands to a script file, implies -s'),
             ACTION_ARG_CHOICES, ('path_complete',))
     setattr(history_action_group.add_argument('-t', '--transcript',
-                                              help='output commands and results to a transcript file, implies -s'),
+                                              help='output commands and results to a transcript file,\n'
+                                                   'implies -s'),
             ACTION_ARG_CHOICES, ('path_complete',))
     history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
 
     history_format_group = history_parser.add_argument_group(title='formatting')
-    history_script_help = 'output commands in script format, i.e. without command numbers'
-    history_format_group.add_argument('-s', '--script', action='store_true', help=history_script_help)
-    history_expand_help = 'output expanded commands instead of entered command'
-    history_format_group.add_argument('-x', '--expanded', action='store_true', help=history_expand_help)
+    history_format_group.add_argument('-s', '--script', action='store_true',
+                                      help='output commands in script format, i.e. without command\n'
+                                           'numbers')
+    history_format_group.add_argument('-x', '--expanded', action='store_true',
+                                      help='output fully parsed commands with any aliases and\n'
+                                           'macros expanded, instead of typed commands')
     history_format_group.add_argument('-v', '--verbose', action='store_true',
-                                      help='display history and include expanded commands if they'
-                                           ' differ from the typed command')
+                                      help='display history and include expanded commands if they\n'
+                                           'differ from the typed command')
 
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"

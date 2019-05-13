@@ -453,56 +453,54 @@ class StatementParser:
                 arg_list = tokens[1:]
                 tokens = []
 
-        # check for a pipe to a shell process
-        # if there is a pipe, everything after the pipe needs to be passed
-        # to the shell, even redirected output
-        # this allows '(Cmd) say hello | wc > countit.txt'
+        pipe_to = ''
+        output = ''
+        output_to = ''
+
+        # Find which redirector character appears first in the command
         try:
-            # find the first pipe if it exists
-            pipe_pos = tokens.index(constants.REDIRECTION_PIPE)
+            pipe_index = tokens.index(constants.REDIRECTION_PIPE)
+        except ValueError:
+            pipe_index = len(tokens)
+
+        try:
+            redir_index = tokens.index(constants.REDIRECTION_OUTPUT)
+        except ValueError:
+            redir_index = len(tokens)
+
+        try:
+            append_index = tokens.index(constants.REDIRECTION_APPEND)
+        except ValueError:
+            append_index = len(tokens)
+
+        # Check if output should be piped to a shell command
+        if pipe_index < redir_index and pipe_index < append_index:
 
             # Get the tokens for the pipe command and expand ~ where needed
-            pipe_to_tokens = tokens[pipe_pos + 1:]
+            pipe_to_tokens = tokens[pipe_index + 1:]
             utils.expand_user_in_tokens(pipe_to_tokens)
 
             # Build the pipe command line string
             pipe_to = ' '.join(pipe_to_tokens)
 
             # remove all the tokens after the pipe
-            tokens = tokens[:pipe_pos]
-        except ValueError:
-            pipe_to = ''
+            tokens = tokens[:pipe_index]
 
-        # check for output redirect
-        output = ''
-        output_to = ''
-        try:
-            output_pos = tokens.index(constants.REDIRECTION_OUTPUT)
-            output = constants.REDIRECTION_OUTPUT
+        # Check for output redirect/append
+        elif redir_index != append_index:
+            if redir_index < append_index:
+                output = constants.REDIRECTION_OUTPUT
+                output_index = redir_index
+            else:
+                output = constants.REDIRECTION_APPEND
+                output_index = append_index
 
-            # Check if we are redirecting to a file
-            if len(tokens) > output_pos + 1:
-                unquoted_path = utils.strip_quotes(tokens[output_pos + 1])
+            if len(tokens) > output_index + 1:
+                unquoted_path = utils.strip_quotes(tokens[output_index + 1])
                 output_to = os.path.expanduser(unquoted_path)
 
             # remove all the tokens after the output redirect
-            tokens = tokens[:output_pos]
-        except ValueError:
-            pass
-
-        try:
-            output_pos = tokens.index(constants.REDIRECTION_APPEND)
-            output = constants.REDIRECTION_APPEND
-
-            # Check if we are redirecting to a file
-            if len(tokens) > output_pos + 1:
-                unquoted_path = utils.strip_quotes(tokens[output_pos + 1])
-                output_to = os.path.expanduser(unquoted_path)
-
-            # remove all tokens after the output redirect
-            tokens = tokens[:output_pos]
-        except ValueError:
-            pass
+            tokens = tokens[:output_index]
 
         if terminator:
             # whatever is left is the suffix
