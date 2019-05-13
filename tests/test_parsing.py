@@ -394,8 +394,36 @@ def test_redirect_to_quoted_string(parser):
     assert statement.output == '>'
     assert statement.output_to == '"file.txt"'
 
+def test_redirect_to_single_quoted_string(parser):
+    line = "help alias > 'file.txt'"
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == "'file.txt'"
+
 def test_redirect_to_empty_quoted_string(parser):
     line = 'help alias > ""'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == ''
+
+def test_redirect_to_empty_single_quoted_string(parser):
+    line = "help alias > ''"
     statement = parser.parse(line)
     assert statement.command == 'help'
     assert statement == 'alias'
