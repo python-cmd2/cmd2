@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Statement parsing classes for cmd2"""
 
-import os
 import re
 import shlex
 from typing import Dict, Iterable, List, Optional, Tuple, Union
@@ -166,7 +165,7 @@ class Statement(str):
     # if output was redirected, the redirection token, i.e. '>>'
     output = attr.ib(default='', validator=attr.validators.instance_of(str))
 
-    # if output was redirected, the destination file
+    # if output was redirected, the destination file token (quotes preserved)
     output_to = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     def __new__(cls, value: object, *pos_args, **kw_args):
@@ -213,7 +212,7 @@ class Statement(str):
         if self.output:
             rtn += ' ' + self.output
             if self.output_to:
-                rtn += ' ' + utils.quote_string_if_needed(self.output_to)
+                rtn += ' ' + self.output_to
 
         return rtn
 
@@ -495,9 +494,11 @@ class StatementParser:
                 output = constants.REDIRECTION_APPEND
                 output_index = append_index
 
+            # Check if we are redirecting to a file
             if len(tokens) > output_index + 1:
                 unquoted_path = utils.strip_quotes(tokens[output_index + 1])
-                output_to = os.path.expanduser(unquoted_path)
+                if unquoted_path:
+                    output_to = utils.expand_user(tokens[output_index + 1])
 
             # remove all the tokens after the output redirect
             tokens = tokens[:output_index]

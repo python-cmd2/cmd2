@@ -275,25 +275,34 @@ def unquote_specific_tokens(args: List[str], tokens_to_unquote: List[str]) -> No
             args[i] = unquoted_arg
 
 
+def expand_user(token: str) -> str:
+    """
+    Wrap os.expanduser() to support expanding ~ in quoted strings
+    :param token: the string to expand
+    """
+    if token:
+        if is_quoted(token):
+            quote_char = token[0]
+            token = strip_quotes(token)
+        else:
+            quote_char = ''
+
+        token = os.path.expanduser(token)
+
+        # Restore the quotes even if not needed to preserve what the user typed
+        if quote_char:
+            token = quote_char + token + quote_char
+
+    return token
+
+
 def expand_user_in_tokens(tokens: List[str]) -> None:
     """
-    Call os.path.expanduser() on all tokens in an already parsed list of command-line arguments.
-    This also supports expanding user in quoted tokens.
+    Call expand_user() on all tokens in a list of strings
     :param tokens: tokens to expand
     """
     for index, _ in enumerate(tokens):
-        if tokens[index]:
-            # Check if the token is quoted. Since parsing already passed, there isn't
-            # an unclosed quote. So we only need to check the first character.
-            first_char = tokens[index][0]
-            if first_char in constants.QUOTES:
-                tokens[index] = strip_quotes(tokens[index])
-
-            tokens[index] = os.path.expanduser(tokens[index])
-
-            # Restore the quotes even if not needed to preserve what the user typed
-            if first_char in constants.QUOTES:
-                tokens[index] = first_char + tokens[index] + first_char
+        tokens[index] = expand_user(tokens[index])
 
 
 def find_editor() -> str:

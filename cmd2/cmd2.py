@@ -2082,7 +2082,7 @@ class Cmd(cmd.Cmd):
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
                 try:
-                    new_stdout = open(statement.output_to, mode)
+                    new_stdout = open(utils.strip_quotes(statement.output_to), mode)
                     saved_state.redirecting = True
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
