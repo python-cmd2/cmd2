@@ -1713,7 +1713,6 @@ def test_macro_create_with_alias_name(base_app):
     assert "Macro cannot have the same name as an alias" in err[0]
 
 def test_macro_create_with_command_name(base_app):
-    macro = "my_macro"
     out, err = run_cmd(base_app, 'macro create help stuff')
     assert "Macro cannot have the same name as a command" in err[0]
 
