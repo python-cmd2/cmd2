@@ -5,6 +5,9 @@
     * History now shows what was typed for macros and not the resolved value by default. This is consistent with
     the behavior of aliases. Use the `expanded` or `verbose` arguments to `history` to see the resolved value for
     the macro.
+    * Fixed parsing issue in case where output redirection appears before a pipe. In that case, the pipe was given
+    precedence even though it appeared later in the command.
+    * Fixed issue where quotes around redirection file paths were being lost in `Statement.expanded_command_line()`
 * Enhancements
     * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
