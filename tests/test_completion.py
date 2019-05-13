@@ -20,7 +20,7 @@ from .conftest import base_app, complete_tester, normalize, run_cmd
 from examples.subcommands import SubcommandsExample
 
 # List of strings used with completion functions
-food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
+food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato', 'Cheese "Pizza"']
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 delimited_strs = \
     [
@@ -83,6 +83,17 @@ class CompletionsExample(cmd2.Cmd):
     def complete_test_raise_exception(self, text, line, begidx, endidx):
         raise IndexError("You are out of bounds!!")
 
+    def do_test_no_completer(self, args):
+        """Completing this should result in completedefault() being called"""
+        pass
+
+    def completedefault(self, *ignored):
+        """Method called to complete an input line when no command-specific
+        complete_*() method is available.
+
+        """
+        return ['default']
+
 
 @pytest.fixture
 def cmd2_app():
@@ -123,8 +134,9 @@ def test_complete_bogus_command(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
+    expected = ['default ']
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is None
+    assert first_match is not None and cmd2_app.completion_matches == expected
 
 def test_complete_exception(cmd2_app, capsys):
     text = ''
@@ -737,6 +749,16 @@ def test_add_opening_quote_basic_quote_added(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
 
+def test_add_opening_quote_basic_single_quote_added(cmd2_app):
+    text = 'Ch'
+    line = 'test_basic {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = ["'Cheese \"Pizza\"' "]
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
+
 def test_add_opening_quote_basic_text_is_common_prefix(cmd2_app):
     # This tests when the text entered is the same as the common prefix of the matches
     text = 'Ham'
@@ -815,6 +837,25 @@ def test_add_opening_quote_delimited_space_in_prefix(cmd2_app):
     assert first_match is not None and \
            os.path.commonprefix(cmd2_app.completion_matches) == expected_common_prefix and \
            cmd2_app.display_matches == expected_display
+
+def test_no_completer(cmd2_app):
+    text = ''
+    line = 'test_no_completer {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = ['default ']
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is not None and cmd2_app.completion_matches == expected
+
+def test_quote_as_command(cmd2_app):
+    text = ''
+    line = '" {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is None and not cmd2_app.completion_matches
 
 @pytest.fixture
 def sc_app():
