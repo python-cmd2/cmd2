@@ -296,7 +296,7 @@ def test_parse_redirect_append(parser):
     assert statement.output == '>>'
     assert statement.output_to == '/tmp/afile.txt'
 
-def test_parse_pipe_and_redirect(parser):
+def test_parse_pipe_then_redirect(parser):
     line = 'output into;sufx | pipethrume plz > afile.txt'
     statement = parser.parse(line)
     assert statement.command == 'output'
@@ -308,6 +308,104 @@ def test_parse_pipe_and_redirect(parser):
     assert statement.suffix == 'sufx'
     assert statement.pipe_to == 'pipethrume plz > afile.txt'
     assert statement.output == ''
+    assert statement.output_to == ''
+
+def test_parse_multiple_pipes(parser):
+    line = 'output into;sufx | pipethrume plz | grep blah'
+    statement = parser.parse(line)
+    assert statement.command == 'output'
+    assert statement == 'into'
+    assert statement.args == statement
+    assert statement.argv == ['output', 'into']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ';'
+    assert statement.suffix == 'sufx'
+    assert statement.pipe_to == 'pipethrume plz | grep blah'
+    assert statement.output == ''
+    assert statement.output_to == ''
+
+def test_redirect_then_pipe(parser):
+    line = 'help alias > file.txt | grep blah'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == 'file.txt'
+
+def test_append_then_pipe(parser):
+    line = 'help alias >> file.txt | grep blah'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>>'
+    assert statement.output_to == 'file.txt'
+
+def test_append_then_redirect(parser):
+    line = 'help alias >> file.txt > file2.txt'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>>'
+    assert statement.output_to == 'file.txt'
+
+def test_redirect_then_append(parser):
+    line = 'help alias > file.txt >> file2.txt'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == 'file.txt'
+
+def test_redirect_to_quoted_string(parser):
+    line = 'help alias > "file.txt"'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == '"file.txt"'
+
+def test_redirect_to_empty_quoted_string(parser):
+    line = 'help alias > ""'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
     assert statement.output_to == ''
 
 def test_parse_output_to_paste_buffer(parser):
