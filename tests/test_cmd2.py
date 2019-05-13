@@ -576,6 +576,21 @@ def test_pipe_to_shell(base_app):
     out, err = run_cmd(base_app, command)
     assert out and not err
 
+def test_pipe_to_shell_and_redirect(base_app):
+    filename = 'out.txt'
+    if sys.platform == "win32":
+        # Windows
+        command = 'help | sort > {}'.format(filename)
+    else:
+        # Mac and Linux
+        # Get help on help and pipe it's output to the input of the word count shell command
+        command = 'help help | wc > {}'.format(filename)
+
+    out, err = run_cmd(base_app, command)
+    assert not out and not err
+    assert os.path.exists(filename)
+    os.remove(filename)
+
 def test_pipe_to_shell_error(base_app):
     # Try to pipe command output to a shell command that doesn't exist in order to produce an error
     out, err = run_cmd(base_app, 'help | foobarbaz.this_does_not_exist')
