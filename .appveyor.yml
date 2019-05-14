@@ -1,25 +1,26 @@
 build: off
 
 environment:
+  PYTHONUNBUFFERED: 1
+  MINICONDA: C:\\Miniconda3-x64
   matrix:
-    - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x"
-      PYTHON_ARCH: "64"
-      TOXENV: "py35"
+  - PYTHON: "C:\\Python35"
+    TOX_ENV: "py35"
 
-#    - PYTHON: "C:\\Python36-x64"
-#      PYTHON_VERSION: "3.6.x"
-#      PYTHON_ARCH: "64"
-#      TOXENV: "py36"
+  - PYTHON: "C:\\Python36"
+    TOX_ENV: "py36"
 
-    - PYTHON: "C:\\Python37-x64"
-      PYTHON_VERSION: "3.7.x"
-      PYTHON_ARCH: "64"
-      TOXENV: "py37"
+  - PYTHON: "C:\\Python37"
+    TOX_ENV: "py37"
+
+init:
+- "%PYTHON%/python -V"
+- mkdir C:\Users\appveyor\.conda
+- call %MINICONDA%\Scripts\activate.bat
 
 install:
 - "%PYTHON%/Scripts/pip install -U --user pip"
 - "%PYTHON%/Scripts/pip install -U --user setuptools tox wheel"
 
 test_script:
-- "%PYTHON%/python -m tox -e %TOXENV%"
+- "%PYTHON%/python -m tox -e %TOX_ENV%"
