@@ -191,12 +191,16 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
         return arg_decorator
 
 
-def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve_quotes: bool = False) -> \
+def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser,
+                                    ns_provider: Optional[Callable[[None], argparse.Namespace]] = None,
+                                    preserve_quotes: bool = False) -> \
         Callable[[argparse.Namespace, List], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: unique instance of ArgumentParser
+    :param ns_provider: an optional function that provides the namespace used in parsing. this is useful
+                        if state data affects how the command line is parsed
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
     :return: function that gets passed argparse-parsed args in a Namespace and a list of unknown argument strings
              A member called __statement__ is added to the Namespace to provide command functions access to the
@@ -213,8 +217,13 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
                                                                                             statement,
                                                                                             preserve_quotes)
 
+            if ns_provider is None:
+                namespace = None
+            else:
+                namespace = ns_provider(cmd2_instance)
+
             try:
-                args, unknown = argparser.parse_known_args(parsed_arglist)
+                args, unknown = argparser.parse_known_args(parsed_arglist, namespace)
             except SystemExit:
                 return
             else:
@@ -242,11 +251,14 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, preserve
 
 
 def with_argparser(argparser: argparse.ArgumentParser,
+                   ns_provider: Optional[Callable[[None], argparse.Namespace]] = None,
                    preserve_quotes: bool = False) -> Callable[[argparse.Namespace], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: unique instance of ArgumentParser
+    :param ns_provider: an optional function that provides the namespace used in parsing. this is useful
+                        if state data affects how the command line is parsed
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
     :return: function that gets passed the argparse-parsed args in a Namespace
              A member called __statement__ is added to the Namespace to provide command functions access to the
@@ -261,8 +273,14 @@ def with_argparser(argparser: argparse.ArgumentParser,
             statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
                                                                                             statement,
                                                                                             preserve_quotes)
+
+            if ns_provider is None:
+                namespace = None
+            else:
+                namespace = ns_provider(cmd2_instance)
+
             try:
-                args = argparser.parse_args(parsed_arglist)
+                args = argparser.parse_args(parsed_arglist, namespace)
             except SystemExit:
                 return
             else:
