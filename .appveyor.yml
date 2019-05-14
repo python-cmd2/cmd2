@@ -1,7 +1,27 @@
-install:
-  - python -m pip install tox
-
 build: off
 
+environment:
+  PYTHONUNBUFFERED: 1
+  MINICONDA: C:\\Miniconda3-x64
+  matrix:
+# Disable Python 3.5 testing on AppVeyor for now until we fix issue with mock module install for python < 3.6
+#  - PYTHON: "C:\\Python35"
+#    TOX_ENV: "py35"
+
+  - PYTHON: "C:\\Python36"
+    TOX_ENV: "py36"
+
+  - PYTHON: "C:\\Python37"
+    TOX_ENV: "py37"
+
+init:
+- "%PYTHON%/python -V"
+- mkdir C:\Users\appveyor\.conda
+- call %MINICONDA%\Scripts\activate.bat
+
+install:
+- "%PYTHON%/Scripts/pip install -U --user pip"
+- "%PYTHON%/Scripts/pip install -U --user setuptools tox wheel"
+
 test_script:
-  - python -m tox -e py35,py36,py37
+- "%PYTHON%/python -m tox -e %TOX_ENV%"
