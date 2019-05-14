@@ -1,8 +1,25 @@
 build: off
 
+environment:
+  matrix:
+    - PYTHON: "C:\\Python35-x64"
+      PYTHON_VERSION: "3.5.x"
+      PYTHON_ARCH: "64"
+      TOXENV: "py35"
+
+    - PYTHON: "C:\\Python36-x64"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "64"
+      TOXENV: "py36"
+
+    - PYTHON: "C:\\Python37-x64"
+      PYTHON_VERSION: "3.7.x"
+      PYTHON_ARCH: "64"
+      TOXENV: "py37"
+
 install:
   - python -m pip install -U pip
   - python -m pip install -U wheel setuptools tox
 
 test_script:
-  - python -m tox -e py35,py36,py37
+  - python -m tox -e %TOX_ENV%
