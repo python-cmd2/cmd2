@@ -1,7 +1,8 @@
-install:
-  - python -m pip install tox
-
 build: off
+
+install:
+  - python -m pip install -U pip
+  - python -m pip install -U wheel setuptools tox
 
 test_script:
   - python -m tox -e py35,py36,py37
