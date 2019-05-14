@@ -77,13 +77,17 @@ optional arguments:
   -o, --output-file FILE
                         output commands to a script file, implies -s
   -t, --transcript TRANSCRIPT
-                        output commands and results to a transcript file, implies -s
+                        output commands and results to a transcript file,
+                        implies -s
   -c, --clear           clear all history
 
 formatting:
-  -s, --script          output commands in script format, i.e. without command numbers
-  -x, --expanded        output expanded commands instead of entered command
-  -v, --verbose         display history and include expanded commands if they differ from the typed command
+  -s, --script          output commands in script format, i.e. without command
+                        numbers
+  -x, --expanded        output fully parsed commands with any aliases and
+                        macros expanded, instead of typed commands
+  -v, --verbose         display history and include expanded commands if they
+                        differ from the typed command
 
 """
 

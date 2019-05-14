@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Statement parsing classes for cmd2"""
 
-import os
 import re
 import shlex
 from typing import Dict, Iterable, List, Optional, Tuple, Union
@@ -160,13 +159,13 @@ class Statement(str):
     # characters appearing after the terminator but before output redirection, if any
     suffix = attr.ib(default='', validator=attr.validators.instance_of(str))
 
-    # if output was piped to a shell command, the shell command as a list of tokens
-    pipe_to = attr.ib(default=attr.Factory(list), validator=attr.validators.instance_of(list))
+    # if output was piped to a shell command, the shell command as a string
+    pipe_to = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     # if output was redirected, the redirection token, i.e. '>>'
     output = attr.ib(default='', validator=attr.validators.instance_of(str))
 
-    # if output was redirected, the destination file
+    # if output was redirected, the destination file token (quotes preserved)
     output_to = attr.ib(default='', validator=attr.validators.instance_of(str))
 
     def __new__(cls, value: object, *pos_args, **kw_args):
@@ -208,7 +207,7 @@ class Statement(str):
             rtn += ' ' + self.suffix
 
         if self.pipe_to:
-            rtn += ' | ' + ' '.join(self.pipe_to)
+            rtn += ' | ' + self.pipe_to
 
         if self.output:
             rtn += ' ' + self.output
@@ -453,56 +452,56 @@ class StatementParser:
                 arg_list = tokens[1:]
                 tokens = []
 
-        # check for a pipe to a shell process
-        # if there is a pipe, everything after the pipe needs to be passed
-        # to the shell, even redirected output
-        # this allows '(Cmd) say hello | wc > countit.txt'
-        try:
-            # find the first pipe if it exists
-            pipe_pos = tokens.index(constants.REDIRECTION_PIPE)
-            # save everything after the first pipe as tokens
-            pipe_to = tokens[pipe_pos + 1:]
-
-            for pos, cur_token in enumerate(pipe_to):
-                unquoted_token = utils.strip_quotes(cur_token)
-                pipe_to[pos] = os.path.expanduser(unquoted_token)
-
-            # remove all the tokens after the pipe
-            tokens = tokens[:pipe_pos]
-        except ValueError:
-            # no pipe in the tokens
-            pipe_to = []
-
-        # check for output redirect
+        pipe_to = ''
         output = ''
         output_to = ''
+
+        # Find which redirector character appears first in the command
         try:
-            output_pos = tokens.index(constants.REDIRECTION_OUTPUT)
-            output = constants.REDIRECTION_OUTPUT
+            pipe_index = tokens.index(constants.REDIRECTION_PIPE)
+        except ValueError:
+            pipe_index = len(tokens)
+
+        try:
+            redir_index = tokens.index(constants.REDIRECTION_OUTPUT)
+        except ValueError:
+            redir_index = len(tokens)
+
+        try:
+            append_index = tokens.index(constants.REDIRECTION_APPEND)
+        except ValueError:
+            append_index = len(tokens)
+
+        # Check if output should be piped to a shell command
+        if pipe_index < redir_index and pipe_index < append_index:
+
+            # Get the tokens for the pipe command and expand ~ where needed
+            pipe_to_tokens = tokens[pipe_index + 1:]
+            utils.expand_user_in_tokens(pipe_to_tokens)
+
+            # Build the pipe command line string
+            pipe_to = ' '.join(pipe_to_tokens)
+
+            # remove all the tokens after the pipe
+            tokens = tokens[:pipe_index]
+
+        # Check for output redirect/append
+        elif redir_index != append_index:
+            if redir_index < append_index:
+                output = constants.REDIRECTION_OUTPUT
+                output_index = redir_index
+            else:
+                output = constants.REDIRECTION_APPEND
+                output_index = append_index
 
             # Check if we are redirecting to a file
-            if len(tokens) > output_pos + 1:
-                unquoted_path = utils.strip_quotes(tokens[output_pos + 1])
-                output_to = os.path.expanduser(unquoted_path)
+            if len(tokens) > output_index + 1:
+                unquoted_path = utils.strip_quotes(tokens[output_index + 1])
+                if unquoted_path:
+                    output_to = utils.expand_user(tokens[output_index + 1])
 
             # remove all the tokens after the output redirect
-            tokens = tokens[:output_pos]
-        except ValueError:
-            pass
-
-        try:
-            output_pos = tokens.index(constants.REDIRECTION_APPEND)
-            output = constants.REDIRECTION_APPEND
-
-            # Check if we are redirecting to a file
-            if len(tokens) > output_pos + 1:
-                unquoted_path = utils.strip_quotes(tokens[output_pos + 1])
-                output_to = os.path.expanduser(unquoted_path)
-
-            # remove all tokens after the output redirect
-            tokens = tokens[:output_pos]
-        except ValueError:
-            pass
+            tokens = tokens[:output_index]
 
         if terminator:
             # whatever is left is the suffix

@@ -11,7 +11,6 @@ import pytest
 
 import cmd2
 from cmd2 import constants, utils
-from cmd2.constants import MULTILINE_TERMINATOR
 from cmd2.parsing import StatementParser, shlex_split
 
 @pytest.fixture
@@ -46,7 +45,7 @@ def test_parse_empty_string(parser):
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
     assert statement.command_and_args == line
@@ -63,7 +62,7 @@ def test_parse_empty_string_default(default_parser):
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
     assert statement.command_and_args == line
@@ -130,7 +129,7 @@ def test_parse_single_word(parser, line):
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
     assert statement.command_and_args == line
@@ -224,8 +223,8 @@ def test_parse_simple_pipe(parser, line):
     assert statement.args == statement
     assert statement.argv == ['simple']
     assert not statement.arg_list
-    assert statement.pipe_to == ['piped']
-    assert statement.expanded_command_line == statement.command + ' | ' + ' '.join(statement.pipe_to)
+    assert statement.pipe_to == 'piped'
+    assert statement.expanded_command_line == statement.command + ' | ' + statement.pipe_to
 
 def test_parse_double_pipe_is_not_a_pipe(parser):
     line = 'double-pipe || is not a pipe'
@@ -247,7 +246,7 @@ def test_parse_complex_pipe(parser):
     assert statement.arg_list == statement.argv[1:]
     assert statement.terminator == '&'
     assert statement.suffix == 'sufx'
-    assert statement.pipe_to == ['piped']
+    assert statement.pipe_to == 'piped'
 
 @pytest.mark.parametrize('line,output', [
     ('help > out.txt', '>'),
@@ -297,7 +296,7 @@ def test_parse_redirect_append(parser):
     assert statement.output == '>>'
     assert statement.output_to == '/tmp/afile.txt'
 
-def test_parse_pipe_and_redirect(parser):
+def test_parse_pipe_then_redirect(parser):
     line = 'output into;sufx | pipethrume plz > afile.txt'
     statement = parser.parse(line)
     assert statement.command == 'output'
@@ -307,8 +306,134 @@ def test_parse_pipe_and_redirect(parser):
     assert statement.arg_list == statement.argv[1:]
     assert statement.terminator == ';'
     assert statement.suffix == 'sufx'
-    assert statement.pipe_to == ['pipethrume', 'plz', '>', 'afile.txt']
+    assert statement.pipe_to == 'pipethrume plz > afile.txt'
     assert statement.output == ''
+    assert statement.output_to == ''
+
+def test_parse_multiple_pipes(parser):
+    line = 'output into;sufx | pipethrume plz | grep blah'
+    statement = parser.parse(line)
+    assert statement.command == 'output'
+    assert statement == 'into'
+    assert statement.args == statement
+    assert statement.argv == ['output', 'into']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ';'
+    assert statement.suffix == 'sufx'
+    assert statement.pipe_to == 'pipethrume plz | grep blah'
+    assert statement.output == ''
+    assert statement.output_to == ''
+
+def test_redirect_then_pipe(parser):
+    line = 'help alias > file.txt | grep blah'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == 'file.txt'
+
+def test_append_then_pipe(parser):
+    line = 'help alias >> file.txt | grep blah'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>>'
+    assert statement.output_to == 'file.txt'
+
+def test_append_then_redirect(parser):
+    line = 'help alias >> file.txt > file2.txt'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>>'
+    assert statement.output_to == 'file.txt'
+
+def test_redirect_then_append(parser):
+    line = 'help alias > file.txt >> file2.txt'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == 'file.txt'
+
+def test_redirect_to_quoted_string(parser):
+    line = 'help alias > "file.txt"'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == '"file.txt"'
+
+def test_redirect_to_single_quoted_string(parser):
+    line = "help alias > 'file.txt'"
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == "'file.txt'"
+
+def test_redirect_to_empty_quoted_string(parser):
+    line = 'help alias > ""'
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
+    assert statement.output_to == ''
+
+def test_redirect_to_empty_single_quoted_string(parser):
+    line = "help alias > ''"
+    statement = parser.parse(line)
+    assert statement.command == 'help'
+    assert statement == 'alias'
+    assert statement.args == statement
+    assert statement.argv == ['help', 'alias']
+    assert statement.arg_list == statement.argv[1:]
+    assert statement.terminator == ''
+    assert statement.suffix == ''
+    assert statement.pipe_to == ''
+    assert statement.output == '>'
     assert statement.output_to == ''
 
 def test_parse_output_to_paste_buffer(parser):
@@ -516,7 +641,7 @@ def test_parse_alias_pipe(parser, line):
     assert statement.command == 'help'
     assert statement == ''
     assert statement.args == statement
-    assert statement.pipe_to == ['less']
+    assert statement.pipe_to == 'less'
 
 @pytest.mark.parametrize('line', [
     'helpalias;',
@@ -545,7 +670,7 @@ def test_parse_command_only_command_and_args(parser):
     assert statement.raw == line
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
 
@@ -561,7 +686,7 @@ def test_parse_command_only_strips_line(parser):
     assert statement.raw == line
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
 
@@ -577,7 +702,7 @@ def test_parse_command_only_expands_alias(parser):
     assert statement.raw == line
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
 
@@ -594,7 +719,7 @@ def test_parse_command_only_expands_shortcuts(parser):
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
 
@@ -611,7 +736,7 @@ def test_parse_command_only_quoted_args(parser):
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
 
@@ -635,7 +760,7 @@ def test_parse_command_only_specialchars(parser, line, args):
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
 
@@ -664,7 +789,7 @@ def test_parse_command_only_empty(parser, line):
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert statement.pipe_to == []
+    assert statement.pipe_to == ''
     assert statement.output == ''
     assert statement.output_to == ''
 
@@ -692,7 +817,7 @@ def test_statement_initialization():
     assert statement.multiline_command == ''
     assert statement.terminator == ''
     assert statement.suffix == ''
-    assert isinstance(statement.pipe_to, list)
+    assert isinstance(statement.pipe_to, str)
     assert not statement.pipe_to
     assert statement.output == ''
     assert statement.output_to == ''

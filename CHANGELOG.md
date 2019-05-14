@@ -5,7 +5,11 @@
     * History now shows what was typed for macros and not the resolved value by default. This is consistent with
     the behavior of aliases. Use the `expanded` or `verbose` arguments to `history` to see the resolved value for
     the macro.
+    * Fixed parsing issue in case where output redirection appears before a pipe. In that case, the pipe was given
+    precedence even though it appeared later in the command.
+    * Fixed issue where quotes around redirection file paths were being lost in `Statement.expanded_command_line()`
 * Enhancements
+    * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
       Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
     * `StdSim.buffer.write()` now flushes when the wrapped stream uses line buffering and the bytes being written
@@ -18,6 +22,7 @@
 * Potentially breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
       that allows terminators in alias and macro values.
+    * Changed `Statement.pipe_to` to a string instead of a list 
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4
@@ -87,7 +92,7 @@
     sorted the ``CompletionItem`` list. Otherwise it will be sorted using ``self.matches_sort_key``.
     * Removed support for bash completion since this feature had slow performance. Also it relied on
     ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods. 
-    * Removed ability to call commands in ``pyscript`` as if they were functions (e.g ``app.help()``) in favor
+    * Removed ability to call commands in ``pyscript`` as if they were functions (e.g. ``app.help()``) in favor
     of only supporting one ``pyscript`` interface. This simplifies future maintenance.
     * No longer supporting C-style comments. Hash (#) is the only valid comment marker.
     * No longer supporting comments embedded in a command. Only command line input where the first

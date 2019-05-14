@@ -999,9 +999,7 @@ class ACArgumentParser(argparse.ArgumentParser):
             linum += 1
 
         self.print_usage(sys.stderr)
-        sys.stderr.write(Fore.LIGHTRED_EX + '{}\n'.format(formatted_message) + Fore.RESET)
-
-        sys.exit(1)
+        self.exit(2, Fore.LIGHTRED_EX + '{}\n\n'.format(formatted_message) + Fore.RESET)
 
     def format_help(self) -> str:
         """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
@@ -1051,7 +1049,7 @@ class ACArgumentParser(argparse.ArgumentParser):
         formatter.add_text(self.epilog)
 
         # determine help from format above
-        return formatter.format_help()
+        return formatter.format_help() + '\n'
 
     def _get_nargs_pattern(self, action) -> str:
         # Override _get_nargs_pattern behavior to use the nargs ranges provided by AutoCompleter

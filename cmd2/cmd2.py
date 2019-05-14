@@ -1519,18 +1519,19 @@ class Cmd(cmd.Cmd):
                             # Check if any portion of the display matches appears in the tab completion
                             display_prefix = os.path.commonprefix(self.display_matches)
 
-                            # For delimited matches, we check what appears before the display
-                            # matches (common_prefix) as well as the display matches themselves.
-                            if (' ' in common_prefix) or (display_prefix and ' ' in ''.join(self.display_matches)):
+                            # For delimited matches, we check for a space in what appears before the display
+                            # matches (common_prefix) as well as in the display matches themselves.
+                            if ' ' in common_prefix or (display_prefix
+                                                        and any(' ' in match for match in self.display_matches)):
                                 add_quote = True
 
                         # If there is a tab completion and any match has a space, then add an opening quote
-                        elif common_prefix and ' ' in ''.join(self.completion_matches):
+                        elif common_prefix and any(' ' in match for match in self.completion_matches):
                             add_quote = True
 
                         if add_quote:
                             # Figure out what kind of quote to add and save it as the unclosed_quote
-                            if '"' in ''.join(self.completion_matches):
+                            if any('"' in match for match in self.completion_matches):
                                 unclosed_quote = "'"
                             else:
                                 unclosed_quote = '"'
@@ -1540,7 +1541,7 @@ class Cmd(cmd.Cmd):
                     # Check if we need to remove text from the beginning of tab completions
                     elif text_to_remove:
                         self.completion_matches = \
-                            [m.replace(text_to_remove, '', 1) for m in self.completion_matches]
+                            [match.replace(text_to_remove, '', 1) for match in self.completion_matches]
 
                     # Check if we need to restore a shortcut in the tab completions
                     # so it doesn't get erased from the command line
@@ -2027,35 +2028,44 @@ class Cmd(cmd.Cmd):
             subproc_stdin = io.open(read_fd, 'r')
             new_stdout = io.open(write_fd, 'w')
 
-            # We want Popen to raise an exception if it fails to open the process.  Thus we don't set shell to True.
+            # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
+            # our sigint handler will forward it only to the most recent pipe process. This makes
+            # sure pipe processes close in the right order (most recent first).
+            if sys.platform == 'win32':
+                creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+                start_new_session = False
+            else:
+                creationflags = 0
+                start_new_session = True
+
+            # For any stream that is a StdSim, we will use a pipe so we can capture its output
+            proc = subprocess.Popen(statement.pipe_to,
+                                    stdin=subproc_stdin,
+                                    stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
+                                    stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
+                                    creationflags=creationflags,
+                                    start_new_session=start_new_session,
+                                    shell=True)
+
+            # Popen was called with shell=True so the user can chain pipe commands and redirect their output
+            # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
+            # started OK, since the shell itself always starts. Therefore, we will wait a short time and check
+            # if the pipe process is still running.
             try:
-                # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
-                # our sigint handler will forward it only to the most recent pipe process. This makes
-                # sure pipe processes close in the right order (most recent first).
-                if sys.platform == 'win32':
-                    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
-                    start_new_session = False
-                else:
-                    creationflags = 0
-                    start_new_session = True
+                proc.wait(0.2)
+            except subprocess.TimeoutExpired:
+                pass
 
-                # For any stream that is a StdSim, we will use a pipe so we can capture its output
-                proc = \
-                    subprocess.Popen(statement.pipe_to,
-                                     stdin=subproc_stdin,
-                                     stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
-                                     stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                                     creationflags=creationflags,
-                                     start_new_session=start_new_session)
-
-                saved_state.redirecting = True
-                saved_state.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
-                sys.stdout = self.stdout = new_stdout
-            except Exception as ex:
-                self.perror('Failed to open pipe because - {}'.format(ex), traceback_war=False)
+            # Check if the pipe process already exited
+            if proc.returncode is not None:
+                self.perror('Pipe process exited with code {} before command could run'.format(proc.returncode))
                 subproc_stdin.close()
                 new_stdout.close()
                 redir_error = True
+            else:
+                saved_state.redirecting = True
+                saved_state.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+                sys.stdout = self.stdout = new_stdout
 
         elif statement.output:
             import tempfile
@@ -2072,7 +2082,7 @@ class Cmd(cmd.Cmd):
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
                 try:
-                    new_stdout = open(statement.output_to, mode)
+                    new_stdout = open(utils.strip_quotes(statement.output_to), mode)
                     saved_state.redirecting = True
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
@@ -3021,21 +3031,8 @@ class Cmd(cmd.Cmd):
         # Create a list of arguments to shell
         tokens = [args.command] + args.command_args
 
-        # Support expanding ~ in quoted paths
-        for index, _ in enumerate(tokens):
-            if tokens[index]:
-                # Check if the token is quoted. Since parsing already passed, there isn't
-                # an unclosed quote. So we only need to check the first character.
-                first_char = tokens[index][0]
-                if first_char in constants.QUOTES:
-                    tokens[index] = utils.strip_quotes(tokens[index])
-
-                tokens[index] = os.path.expanduser(tokens[index])
-
-                # Restore the quotes
-                if first_char in constants.QUOTES:
-                    tokens[index] = first_char + tokens[index] + first_char
-
+        # Expand ~ where needed
+        utils.expand_user_in_tokens(tokens)
         expanded_command = ' '.join(tokens)
 
         # Prevent KeyboardInterrupts while in the shell process. The shell process will
@@ -3334,18 +3331,21 @@ class Cmd(cmd.Cmd):
                                               help='output commands to a script file, implies -s'),
             ACTION_ARG_CHOICES, ('path_complete',))
     setattr(history_action_group.add_argument('-t', '--transcript',
-                                              help='output commands and results to a transcript file, implies -s'),
+                                              help='output commands and results to a transcript file,\n'
+                                                   'implies -s'),
             ACTION_ARG_CHOICES, ('path_complete',))
     history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
 
     history_format_group = history_parser.add_argument_group(title='formatting')
-    history_script_help = 'output commands in script format, i.e. without command numbers'
-    history_format_group.add_argument('-s', '--script', action='store_true', help=history_script_help)
-    history_expand_help = 'output expanded commands instead of entered command'
-    history_format_group.add_argument('-x', '--expanded', action='store_true', help=history_expand_help)
+    history_format_group.add_argument('-s', '--script', action='store_true',
+                                      help='output commands in script format, i.e. without command\n'
+                                           'numbers')
+    history_format_group.add_argument('-x', '--expanded', action='store_true',
+                                      help='output fully parsed commands with any aliases and\n'
+                                           'macros expanded, instead of typed commands')
     history_format_group.add_argument('-v', '--verbose', action='store_true',
-                                      help='display history and include expanded commands if they'
-                                           ' differ from the typed command')
+                                      help='display history and include expanded commands if they\n'
+                                           'differ from the typed command')
 
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"

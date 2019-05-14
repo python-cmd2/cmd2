@@ -275,6 +275,36 @@ def unquote_specific_tokens(args: List[str], tokens_to_unquote: List[str]) -> No
             args[i] = unquoted_arg
 
 
+def expand_user(token: str) -> str:
+    """
+    Wrap os.expanduser() to support expanding ~ in quoted strings
+    :param token: the string to expand
+    """
+    if token:
+        if is_quoted(token):
+            quote_char = token[0]
+            token = strip_quotes(token)
+        else:
+            quote_char = ''
+
+        token = os.path.expanduser(token)
+
+        # Restore the quotes even if not needed to preserve what the user typed
+        if quote_char:
+            token = quote_char + token + quote_char
+
+    return token
+
+
+def expand_user_in_tokens(tokens: List[str]) -> None:
+    """
+    Call expand_user() on all tokens in a list of strings
+    :param tokens: tokens to expand
+    """
+    for index, _ in enumerate(tokens):
+        tokens[index] = expand_user(tokens[index])
+
+
 def find_editor() -> str:
     """Find a reasonable editor to use by default for the system that the cmd2 application is running on."""
     editor = os.environ.get('EDITOR')
