@@ -18,8 +18,8 @@ environment:
       TOXENV: "py37"
 
 install:
-  - %PYTHON% -m pip install -U pip
-  - %PYTHON% -m pip install -U wheel setuptools tox
+- "%PYTHON%/Scripts/pip install -U --user pip"
+- "%PYTHON%/Scripts/pip install -U --user setuptools tox wheel"
 
 test_script:
-  - %PYTHON% -m tox -e %TOXENV%
+- "%PYTHON%/python -m tox -e %TOX_ENV%"
