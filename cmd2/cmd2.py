@@ -199,8 +199,8 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser,
     instance of argparse.ArgumentParser, but also returning unknown args as a list.
 
     :param argparser: unique instance of ArgumentParser
-    :param ns_provider: an optional function that provides the namespace used in parsing. this is useful
-                        if state data affects how the command line is parsed
+    :param ns_provider: an optional function that provides the Namespace for parse_known_args().
+                        this is useful if the Namespace needs to be prepopulated based on instance data.
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
     :return: function that gets passed argparse-parsed args in a Namespace and a list of unknown argument strings
              A member called __statement__ is added to the Namespace to provide command functions access to the
@@ -257,8 +257,8 @@ def with_argparser(argparser: argparse.ArgumentParser,
     with the given instance of argparse.ArgumentParser.
 
     :param argparser: unique instance of ArgumentParser
-    :param ns_provider: an optional function that provides the namespace used in parsing. this is useful
-                        if state data affects how the command line is parsed
+    :param ns_provider: an optional function that provides the Namespace for parse_args().
+                        this is useful if the Namespace needs to be prepopulated based on instance data.
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
     :return: function that gets passed the argparse-parsed args in a Namespace
              A member called __statement__ is added to the Namespace to provide command functions access to the
