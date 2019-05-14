@@ -41,7 +41,7 @@ Main Features
 - Support for Python 3.4+ on Windows, macOS, and Linux
 - Trivial to provide built-in help for all commands
 - Built-in regression testing framework for your applications (transcript-based testing)
-- Transcripts for use with built-in regression can be automatically generated from `history -t`
+- Transcripts for use with built-in regression can be automatically generated from `history -t` or `load -t`
 - Alerts that seamlessly print while user enters text at prompt
 
 Python 2.7 support is EOL
