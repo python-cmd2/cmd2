@@ -22,4 +22,4 @@ install:
   - python -m pip install -U wheel setuptools tox
 
 test_script:
-  - python -m tox -e %TOX_ENV%
+  - python -m tox -e %TOXENV%
