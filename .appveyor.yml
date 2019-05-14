@@ -22,4 +22,4 @@ install:
 - "%PYTHON%/Scripts/pip install -U --user setuptools tox wheel"
 
 test_script:
-- "%PYTHON%/python -m tox -e %TOX_ENV%"
+- "%PYTHON%/python -m tox -e %TOXENV%"
