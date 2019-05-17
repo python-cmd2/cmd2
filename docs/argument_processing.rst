@@ -275,7 +275,7 @@ Here's what it looks like::
 
         ...
 
-Using custom namespace with argument parser decorators
+Using custom argparse.Namespace with argument parser decorators
 ===============================================================================================
 In some cases, it may be necessary to write custom ``argparse`` code that is dependent on state data of your
 application.  To support this ability while still allowing use of the decorators, both ``@with_argparser`` and
@@ -296,6 +296,9 @@ For example::
 To use this function with the argparse decorators, do the following::
 
     @with_argparser(my_parser, ns_provider=settings_ns_provider)
+
+The Namespace is passed by the decorators to the ``argparse`` parsing functions which gives your custom code access
+to the state data it needs for its parsing logic.
 
 Sub-commands
 ============
