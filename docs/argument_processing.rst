@@ -247,7 +247,7 @@ argument list instead of a string::
             pass
 
 
-Using the argument parser decorator and also receiving a a list of unknown positional arguments
+Using the argument parser decorator and also receiving a list of unknown positional arguments
 ===============================================================================================
 If you want all unknown arguments to be passed to your command as a list of strings, then
 decorate the command method with the ``@with_argparser_and_unknown_args`` decorator.
@@ -274,6 +274,28 @@ Here's what it looks like::
         contents = os.listdir(self.cwd)
 
         ...
+
+Using custom namespace with argument parser decorators
+===============================================================================================
+In some cases, it may be necessary to write custom ``argparse`` code that is dependent on state data of your
+application.  To support this ability while still allowing use of the decorators, both ``@with_argparser`` and
+``@with_argparser_and_unknown_args`` have an optional argument called ``ns_provider``.
+
+``ns_provider`` is a Callable that accepts a ``cmd2.Cmd`` object as an argument and returns an ``argparse.Namespace``::
+
+    Callable[[cmd2.Cmd], argparse.Namespace]
+
+For example::
+
+    def settings_ns_provider(self) -> argparse.Namespace:
+        """Populate an argparse Namespace with current settings"""
+        ns = argparse.Namespace()
+        ns.app_settings = self.settings
+        return ns
+
+To use this function with the argparse decorators, do the following::
+
+    @with_argparser(my_parser, ns_provider=settings_ns_provider)
 
 Sub-commands
 ============
