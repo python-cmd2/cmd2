@@ -29,6 +29,11 @@ class ArgparseApp(cmd2.Cmd):
         self.maxrepeats = 3
         cmd2.Cmd.__init__(self)
 
+    def namespace_provider(self) -> argparse.Namespace:
+        ns = argparse.Namespace()
+        ns.custom_stuff = "custom"
+        return ns
+
     say_parser = argparse.ArgumentParser()
     say_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     say_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
@@ -56,10 +61,14 @@ class ArgparseApp(cmd2.Cmd):
     tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
 
-    @cmd2.with_argparser(tag_parser)
+    @cmd2.with_argparser(tag_parser, preserve_quotes=True)
     def do_tag(self, args):
         self.stdout.write('<{0}>{1}</{0}>'.format(args.tag, ' '.join(args.content)))
         self.stdout.write('\n')
+
+    @cmd2.with_argparser(argparse.ArgumentParser(), ns_provider=namespace_provider)
+    def do_test_argparse_ns(self, args):
+        self.stdout.write('{}'.format(args.custom_stuff))
 
     @cmd2.with_argument_list
     def do_arglist(self, arglist):
@@ -93,21 +102,14 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
 
-    @cmd2.with_argparser_and_unknown_args(known_parser)
-    def do_talk(self, args, extra):
-        words = []
-        for word in extra:
-            if word is None:
-                word = ''
-            if args.piglatin:
-                word = '%s%say' % (word[1:], word[0])
-            if args.shout:
-                word = word.upper()
-            words.append(word)
-        repetitions = args.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
-            self.stdout.write(' '.join(words))
-            self.stdout.write('\n')
+    @cmd2.with_argparser_and_unknown_args(argparse.ArgumentParser(), preserve_quotes=True)
+    def do_test_argparse_with_list_quotes(self, args, extra):
+        self.stdout.write('{}'.format(' '.join(extra)))
+
+    @cmd2.with_argparser_and_unknown_args(argparse.ArgumentParser(), ns_provider=namespace_provider)
+    def do_test_argparse_with_list_ns(self, args, extra):
+        self.stdout.write('{}'.format(args.custom_stuff))
+
 
 @pytest.fixture
 def argparse_app():
@@ -123,13 +125,33 @@ def test_argparse_basic_command(argparse_app):
     out, err = run_cmd(argparse_app, 'say hello')
     assert out == ['hello']
 
-def test_argparse_quoted_arguments(argparse_app):
+def test_argparse_remove_quotes(argparse_app):
     out, err = run_cmd(argparse_app, 'say "hello there"')
     assert out == ['hello there']
+
+def test_argparse_preserve_quotes(argparse_app):
+    out, err = run_cmd(argparse_app, 'tag mytag "hello"')
+    assert out[0] == '<mytag>"hello"</mytag>'
+
+def test_argparse_custom_namespace(argparse_app):
+    out, err = run_cmd(argparse_app, 'test_argparse_ns')
+    assert out[0] == 'custom'
 
 def test_argparse_with_list(argparse_app):
     out, err = run_cmd(argparse_app, 'speak -s hello world!')
     assert out == ['HELLO WORLD!']
+
+def test_argparse_with_list_remove_quotes(argparse_app):
+    out, err = run_cmd(argparse_app, 'speak -s hello "world!"')
+    assert out == ['HELLO WORLD!']
+
+def test_argparse_with_list_preserve_quotes(argparse_app):
+    out, err = run_cmd(argparse_app, 'test_argparse_with_list_quotes "hello" person')
+    assert out[0] == '"hello" person'
+
+def test_argparse_with_list_custom_namespace(argparse_app):
+    out, err = run_cmd(argparse_app, 'test_argparse_with_list_ns')
+    assert out[0] == 'custom'
 
 def test_argparse_with_list_and_empty_doc(argparse_app):
     out, err = run_cmd(argparse_app, 'speak -s hello world!')
