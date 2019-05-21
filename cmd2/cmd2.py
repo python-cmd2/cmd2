@@ -3683,12 +3683,23 @@ class Cmd(cmd.Cmd):
         self.__class__.testfiles = callargs
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
-        runner = unittest.TextTestRunner()
+        stream = utils.StdSim(sys.stderr)
+        runner = unittest.TextTestRunner(stream=stream)
         test_results = runner.run(testcase)
         if test_results.wasSuccessful():
+            self.decolorized_write(sys.stderr, stream.read())
             self.poutput('Tests passed', color=Fore.LIGHTGREEN_EX)
         else:
-            self.perror('Tests failed', traceback_war=False)
+            # Strip off the initial trackeback which isn't particularly useful for end users
+            error_str = stream.read()
+            end_of_trace = error_str.find('AssertionError:')
+            file_offset = error_str[end_of_trace:].find('File ')
+            start = end_of_trace + file_offset
+
+            # But print the transcript file name and line number followed by what was expected and what was observed
+            self.perror(error_str[start:], traceback_war=False)
+
+            # Return a failure error code to support automated transcript-based testing
             self.exit_code = -1
 
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover

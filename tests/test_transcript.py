@@ -269,8 +269,8 @@ def test_transcript_failure(request, capsys):
         assert sys_exit_code != 0
 
     # Check for the unittest "OK" condition for the 1 test which ran
-    expected_start = "F\n======================================================================\nFAIL: runTest"
-    expected_end = "s\n\nFAILED (failures=1)\nTests failed\n"
+    expected_start = "File "
+    expected_end = "s\n\nFAILED (failures=1)\n\n"
     _, err = capsys.readouterr()
     assert err.startswith(expected_start)
     assert err.endswith(expected_end)
