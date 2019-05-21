@@ -14,7 +14,6 @@ $ python cmd_as_argument.py speak -p hello there
 
 import argparse
 import random
-import sys
 
 import cmd2
 
@@ -101,13 +100,17 @@ def main(argv=None):
 
     c = CmdLineApp()
 
+    sys_exit_code = 0
     if args.command:
         # we have a command, run it and then exit
         c.onecmd_plus_hooks('{} {}'.format(args.command, ' '.join(args.command_args)))
     else:
         # we have no command, drop into interactive mode
-        c.cmdloop()
+        sys_exit_code = c.cmdloop()
+
+    return sys_exit_code
 
 
 if __name__ == '__main__':
+    import sys
     sys.exit(main())

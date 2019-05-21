@@ -197,6 +197,7 @@ class AlerterApp(cmd2.Cmd):
 
 
 if __name__ == '__main__':
+    import sys
     app = AlerterApp()
     app.set_window_title("Asynchronous Printer Test")
-    app.cmdloop()
+    sys.exit(app.cmdloop())

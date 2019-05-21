@@ -3,7 +3,6 @@
 """A simple example demonstrating the following how to emit a non-zero exit code in your cmd2 application.
 """
 import cmd2
-import sys
 from typing import List
 
 
@@ -29,15 +28,12 @@ Usage:  exit [exit_code]
                 self.perror("{} isn't a valid integer exit code".format(arg_list[0]))
                 self.exit_code = -1
 
-        self._should_quit = True
-        return self._STOP_AND_EXIT
-
-    def postloop(self) -> None:
-        """Hook method executed once when the cmdloop() method is about to return."""
-        code = self.exit_code if self.exit_code is not None else 0
-        self.poutput('{!r} exiting with code: {}'.format(sys.argv[0], code))
+        return True
 
 
 if __name__ == '__main__':
+    import sys
     app = ReplWithExitCode()
-    app.cmdloop()
+    sys_exit_code = app.cmdloop()
+    app.poutput('{!r} exiting with code: {}'.format(sys.argv[0], sys_exit_code))
+    sys.exit(sys_exit_code)

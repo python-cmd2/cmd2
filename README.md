@@ -227,6 +227,7 @@ A sample application for cmd2.
 """
 import argparse
 import random
+import sys
 import cmd2
 
 class CmdLineApp(cmd2.Cmd):
@@ -294,8 +295,8 @@ class CmdLineApp(cmd2.Cmd):
             self.poutput(' '.join(output))
 
 if __name__ == '__main__':
-    c = CmdLineApp()
-    c.cmdloop()
+    app = CmdLineApp()
+    sys.exit(app.cmdloop())
 ```
 
 The following is a sample session running example.py.

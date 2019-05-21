@@ -127,7 +127,8 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     testargs = ['prog', '-t', transcript_file]
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop
-        app.cmdloop()
+        sys_exit_code = app.cmdloop()
+        assert sys_exit_code == 0
 
     # Check for the unittest "OK" condition for the 1 test which ran
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
@@ -247,3 +248,29 @@ def test_parse_transcript_expected(expected, transformed):
 
     testcase = TestMyAppCase()
     assert testcase._transform_transcript_expected(expected) == transformed
+
+
+def test_transcript_failure(request, capsys):
+    # Create a cmd2.Cmd() instance and make sure basic settings are
+    # like we want for test
+    app = CmdLineApp()
+    app.feedback_to_output = False
+
+    # Get location of the transcript
+    test_dir = os.path.dirname(request.module.__file__)
+    transcript_file = os.path.join(test_dir, 'transcripts', 'failure.txt')
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with
+    # arguments equal to the py.test args
+    testargs = ['prog', '-t', transcript_file]
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        sys_exit_code = app.cmdloop()
+        assert sys_exit_code != 0
+
+    # Check for the unittest "OK" condition for the 1 test which ran
+    expected_start = "F\n======================================================================\nFAIL: runTest"
+    expected_end = "s\n\nFAILED (failures=1)\nTests failed\n"
+    _, err = capsys.readouterr()
+    assert err.startswith(expected_start)
+    assert err.endswith(expected_end)

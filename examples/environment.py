@@ -3,7 +3,6 @@
 """
 A sample application for cmd2 demonstrating customized environment parameters
 """
-
 import cmd2
 
 
@@ -34,5 +33,6 @@ class EnvironmentApp(cmd2.Cmd):
 
 
 if __name__ == '__main__':
+    import sys
     c = EnvironmentApp()
-    c.cmdloop()
+    sys.exit(c.cmdloop())

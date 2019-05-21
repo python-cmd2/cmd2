@@ -204,8 +204,8 @@ Presents numbered options to user, as bash ``select``.
 Exit code to shell
 ==================
 The ``self.exit_code`` attribute of your ``cmd2`` application controls
-what exit code is sent to the shell when your application exits from
-``cmdloop()``.
+what exit code is returned from ``cmdloop()`` when it completes.  It is your job to make sure that
+this exit code gets sent to the shell when your application exits by calling ``sys.exit(app.cmdloop())``.
 
 
 Asynchronous Feedback

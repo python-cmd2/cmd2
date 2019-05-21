@@ -11,7 +11,6 @@ all the commands in the transcript against decorator_example.py,
 verifying that the output produced matches the transcript.
 """
 import argparse
-import sys
 from typing import List
 
 import cmd2
@@ -89,6 +88,8 @@ class CmdLineApp(cmd2.Cmd):
 
 
 if __name__ == '__main__':
+    import sys
+
     # You can do your custom Argparse parsing here to meet your application's needs
     parser = argparse.ArgumentParser(description='Process the arguments however you like.')
 
@@ -114,4 +115,4 @@ if __name__ == '__main__':
     c = CmdLineApp()
 
     # And run your cmd2 application
-    c.cmdloop()
+    sys.exit(c.cmdloop())

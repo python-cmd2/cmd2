@@ -55,6 +55,7 @@ class Pirate(cmd2.Cmd):
             self.poutput('Now we gots {0} doubloons'.format(self.gold))
         if self.gold < 0:
             self.poutput("Off to debtorrr's prison.")
+            self.exit_code = -1
             stop = True
         return stop
 
@@ -99,6 +100,9 @@ class Pirate(cmd2.Cmd):
 
 
 if __name__ == '__main__':
+    import sys
     # Create an instance of the Pirate derived class and enter the REPL with cmdlooop().
     pirate = Pirate()
-    pirate.cmdloop()
+    sys_exit_code = pirate.cmdloop()
+    print('Exiting with code: {!r}'.format(sys_exit_code))
+    sys.exit(sys_exit_code)

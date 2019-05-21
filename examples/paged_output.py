@@ -54,5 +54,6 @@ class PagedOutput(cmd2.Cmd):
 
 
 if __name__ == '__main__':
+    import sys
     app = PagedOutput()
-    app.cmdloop()
+    sys.exit(app.cmdloop())

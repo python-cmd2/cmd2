@@ -71,6 +71,7 @@ class Cmd2TestCase(unittest.TestCase):
                 line = next(transcript)
             except StopIteration:
                 line = ''
+            line_num += 1
             # Read the entirety of a multi-line command
             while line.startswith(self.cmdapp.continuation_prompt):
                 command.append(line[len(self.cmdapp.continuation_prompt):])
