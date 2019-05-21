@@ -553,8 +553,8 @@ class Cmd(cmd.Cmd):
         # This boolean flag determines whether or not the cmd2 application can interact with the clipboard
         self.can_clip = can_clip
 
-        # This determines if a non-zero exit code should be used when exiting the application
-        self.exit_code = None
+        # This determines the value returned by cmdloop() when exiting the application
+        self.exit_code = 0
 
         # This lock should be acquired before doing any asynchronous changes to the terminal to
         # ensure the updates to the terminal don't interfere with the input being typed or output
@@ -3683,8 +3683,24 @@ class Cmd(cmd.Cmd):
         self.__class__.testfiles = callargs
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
-        runner = unittest.TextTestRunner()
-        runner.run(testcase)
+        stream = utils.StdSim(sys.stderr)
+        runner = unittest.TextTestRunner(stream=stream)
+        test_results = runner.run(testcase)
+        if test_results.wasSuccessful():
+            self.decolorized_write(sys.stderr, stream.read())
+            self.poutput('Tests passed', color=Fore.LIGHTGREEN_EX)
+        else:
+            # Strip off the initial trackeback which isn't particularly useful for end users
+            error_str = stream.read()
+            end_of_trace = error_str.find('AssertionError:')
+            file_offset = error_str[end_of_trace:].find('File ')
+            start = end_of_trace + file_offset
+
+            # But print the transcript file name and line number followed by what was expected and what was observed
+            self.perror(error_str[start:], traceback_war=False)
+
+            # Return a failure error code to support automated transcript-based testing
+            self.exit_code = -1
 
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
@@ -3932,7 +3948,7 @@ class Cmd(cmd.Cmd):
         """
         self.decolorized_write(sys.stderr, "{}\n".format(message_to_print))
 
-    def cmdloop(self, intro: Optional[str] = None) -> None:
+    def cmdloop(self, intro: Optional[str] = None) -> int:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
 
         _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
@@ -3940,6 +3956,7 @@ class Cmd(cmd.Cmd):
         - commands at invocation
         - transcript testing
         - intro banner
+        - exit code
 
         :param intro: if provided this overrides self.intro and serves as the intro banner printed once at start
         """
@@ -4002,8 +4019,7 @@ class Cmd(cmd.Cmd):
         # Restore the original signal handler
         signal.signal(signal.SIGINT, original_sigint_handler)
 
-        if self.exit_code is not None:
-            sys.exit(self.exit_code)
+        return self.exit_code
 
     ###
     #

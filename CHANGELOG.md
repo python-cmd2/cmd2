@@ -8,6 +8,7 @@
     * Fixed parsing issue in case where output redirection appears before a pipe. In that case, the pipe was given
     precedence even though it appeared later in the command.
     * Fixed issue where quotes around redirection file paths were being lost in `Statement.expanded_command_line()`
+    * Fixed a bug in how line numbers were calculated for transcript testing
 * Enhancements
     * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
@@ -21,11 +22,14 @@
     readline. This makes debugging a lot easier since readline suppresses these exceptions.
     * Added support for custom Namespaces in the argparse decorators. See description of `ns_provider` argument
     for more information.
+    * Transcript testing now sets the `exit_code` returned from `cmdloop` based on Success/Failure
 * Potentially breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
       that allows terminators in alias and macro values.
     * Changed `Statement.pipe_to` to a string instead of a list
     * `preserve_quotes` is now a keyword-only argument in the argparse decorators
+    * Refactored so that `cmd2.Cmd.cmdloop()` returns the `exit_code` instead of a call to `sys.exit()`
+        * It is now applicaiton developer's responsibility to treat the return value from `cmdloop()` accordingly
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4

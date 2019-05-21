@@ -10,9 +10,8 @@ Running `python example.py -t transcript_regex.txt` will run all the commands in
 the transcript against example.py, verifying that the output produced matches
 the transcript.
 """
-
-import random
 import argparse
+import random
 
 import cmd2
 
@@ -82,5 +81,6 @@ class CmdLineApp(cmd2.Cmd):
 
 
 if __name__ == '__main__':
+    import sys
     c = CmdLineApp()
-    c.cmdloop()
+    sys.exit(c.cmdloop())

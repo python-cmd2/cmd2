@@ -157,5 +157,6 @@ class HelpCategories(cmd2.Cmd):
 
 
 if __name__ == '__main__':
+    import sys
     c = HelpCategories()
-    c.cmdloop()
+    sys.exit(c.cmdloop())

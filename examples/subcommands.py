@@ -114,5 +114,6 @@ class SubcommandsExample(cmd2.Cmd):
 
 
 if __name__ == '__main__':
+    import sys
     app = SubcommandsExample()
-    app.cmdloop()
+    sys.exit(app.cmdloop())

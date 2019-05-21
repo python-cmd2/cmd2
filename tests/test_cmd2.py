@@ -1950,8 +1950,7 @@ Usage:  exit [exit_code]
 
     def postloop(self) -> None:
         """Hook method executed once when the cmdloop() method is about to return."""
-        code = self.exit_code if self.exit_code is not None else 0
-        self.poutput('exiting with code: {}'.format(code))
+        self.poutput('exiting with code: {}'.format(self.exit_code))
 
 @pytest.fixture
 def exit_code_repl():
@@ -1991,8 +1990,7 @@ def test_exit_code_nonzero(exit_code_repl):
     expected = 'exiting with code: 23\n'
     with mock.patch.object(sys, 'argv', testargs):
         # Run the command loop
-        with pytest.raises(SystemExit):
-            app.cmdloop()
+        app.cmdloop()
     out = app.stdout.getvalue()
     assert out == expected
 

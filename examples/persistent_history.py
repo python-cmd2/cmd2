@@ -30,4 +30,4 @@ if __name__ == '__main__':
         history_file = sys.argv[1]
 
     app = Cmd2PersistentHistory(hist_file=history_file)
-    app.cmdloop()
+    sys.exit(app.cmdloop())
