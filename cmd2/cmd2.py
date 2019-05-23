@@ -3349,7 +3349,7 @@ class Cmd(cmd.Cmd):
     history_parser.add_argument('arg', nargs='?', help=history_arg_help)
 
     @with_argparser(history_parser)
-    def do_history(self, args: argparse.Namespace) -> None:
+    def do_history(self, args: argparse.Namespace) -> Optional[bool]:
         """View, run, edit, save, or clear previously entered commands"""
 
         # -v must be used alone with no other options
@@ -3411,7 +3411,7 @@ class Cmd(cmd.Cmd):
                 self.perror("If this is what you want to do, specify '1:' as the range of history.",
                             traceback_war=False)
             else:
-                # TODO: Call runcmds_plus_hoodks and return its stop value
+                # TODO: Call runcmds_plus_hooks and return its stop value
                 for runme in history:
                     self.pfeedback(runme)
                     if runme:
@@ -3425,14 +3425,15 @@ class Cmd(cmd.Cmd):
                         fobj.write('{}\n'.format(command.expanded.rstrip()))
                     else:
                         fobj.write('{}\n'.format(command))
+            stop = False
             try:
                 self.do_edit(fname)
-                # TODO: Return stop
                 stop = self.do_load(fname)
             except Exception:
                 raise
             finally:
                 os.remove(fname)
+                return stop
         elif args.output_file:
             try:
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
@@ -3620,7 +3621,7 @@ class Cmd(cmd.Cmd):
         finally:
             with self.sigint_protection:
                 # Check if a script dir was added before an exception occurred
-                if  orig_script_dir_count != len(self._script_dir):
+                if orig_script_dir_count != len(self._script_dir):
                     self._script_dir.pop()
             return stop
 
