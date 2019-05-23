@@ -399,10 +399,10 @@ class Cmd(cmd.Cmd):
                          'timing': 'Report execution times'}
 
         # Commands to exclude from the help menu and tab completion
-        self.hidden_commands = ['eof', 'eos', '_relative_load']
+        self.hidden_commands = ['eof', '_relative_load']
 
         # Commands to exclude from the history command
-        self.exclude_from_history = '''history edit eof eos'''.split()
+        self.exclude_from_history = '''history edit eof'''.split()
 
         # Command aliases and macros
         self.macros = dict()
@@ -1842,43 +1842,20 @@ class Cmd(cmd.Cmd):
     def runcmds_plus_hooks(self, cmds: List[str]) -> bool:
         """Convenience method to run multiple commands by onecmd_plus_hooks.
 
-        This method adds the given cmds to the command queue and processes the
-        queue until completion or an error causes it to abort. Scripts that are
-        loaded will have their commands added to the queue. Scripts may even
-        load other scripts recursively. This means, however, that you should not
-        use this method if there is a running cmdloop or some other event-loop.
-        This method is only intended to be used in "one-off" scenarios.
-
-        NOTE: You may need this method even if you only have one command. If
-        that command is a load, then you will need this command to fully process
-        all the subsequent commands that are loaded from the script file. This
-        is an improvement over onecmd_plus_hooks, which expects to be used
-        inside of a command loop which does the processing of loaded commands.
-
-        Example: cmd_obj.runcmds_plus_hooks(['load myscript.txt'])
-
         :param cmds: command strings suitable for onecmd_plus_hooks.
         :return: True implies the entire application should exit.
 
         """
         stop = False
-        self.cmdqueue = list(cmds) + self.cmdqueue
         try:
-            while self.cmdqueue and not stop:
-                line = self.cmdqueue.pop(0)
-                if self.echo and line != 'eos':
+            for line in cmds:
+                if self.echo:
                     self.poutput('{}{}'.format(self.prompt, line))
 
                 stop = self.onecmd_plus_hooks(line)
+                if stop:
+                    break
         finally:
-            # Clear out the command queue and script directory stack, just in
-            # case we hit an error and they were not completed.
-            self.cmdqueue = []
-            self._script_dir = []
-            # NOTE: placing this return here inside the finally block will
-            # swallow exceptions. This is consistent with what is done in
-            # onecmd_plus_hooks and _cmdloop, although it may not be
-            # necessary/desired here.
             return stop
 
     def _complete_statement(self, line: str) -> Statement:
@@ -2306,8 +2283,7 @@ class Cmd(cmd.Cmd):
                 if self.cmdqueue:
                     # Run command out of cmdqueue if nonempty (populated by load command or commands at invocation)
                     line = self.cmdqueue.pop(0)
-
-                    if self.echo and line != 'eos':
+                    if self.echo:
                         self.poutput('{}{}'.format(self.prompt, line))
                 else:
                     # Otherwise, read a command from stdin
@@ -2337,8 +2313,6 @@ class Cmd(cmd.Cmd):
                     readline.rl.mode._display_completions = orig_pyreadline_display
 
             self.cmdqueue.clear()
-            self._script_dir.clear()
-
             return stop
 
     # -----  Alias sub-command functions -----
@@ -3437,6 +3411,7 @@ class Cmd(cmd.Cmd):
                 self.perror("If this is what you want to do, specify '1:' as the range of history.",
                             traceback_war=False)
             else:
+                # TODO: Call runcmds_plus_hoodks and return its stop value
                 for runme in history:
                     self.pfeedback(runme)
                     if runme:
@@ -3452,7 +3427,8 @@ class Cmd(cmd.Cmd):
                         fobj.write('{}\n'.format(command))
             try:
                 self.do_edit(fname)
-                self.do_load(fname)
+                # TODO: Return stop
+                stop = self.do_load(fname)
             except Exception:
                 raise
             finally:
@@ -3579,21 +3555,10 @@ class Cmd(cmd.Cmd):
         else:
             return None
 
-    @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
-    def do_eos(self, _: argparse.Namespace) -> None:
-        """Handle cleanup when a script has finished executing"""
-        if self._script_dir:
-            self._script_dir.pop()
-
     load_description = ("Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
                         "\n"
                         "Script should contain one command per line, just like the command would be\n"
                         "typed in the console.\n"
-                        "\n"
-                        "It loads commands from a script file into a queue and then the normal cmd2\n"
-                        "REPL resumes control and executes the commands in the queue in FIFO order.\n"
-                        "If you attempt to redirect/pipe a load command, it will capture the output\n"
-                        "of the load command itself, not what it adds to the queue.\n"
                         "\n"
                         "If the -r/--record_transcript flag is used, this command instead records\n"
                         "the output of the script commands to a transcript for testing purposes.\n"
@@ -3606,46 +3571,58 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, ('path_complete',))
 
     @with_argparser(load_parser)
-    def do_load(self, args: argparse.Namespace) -> None:
-        """Run commands in script file that is encoded as either ASCII or UTF-8 text"""
+    def do_load(self, args: argparse.Namespace) -> bool:
+        """
+        Run commands in script file that is encoded as either ASCII or UTF-8 text
+        :return: True if cmdloop() should exit, False otherwise
+        """
         expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
 
         # Make sure the path exists and we can access it
         if not os.path.exists(expanded_path):
             self.perror("'{}' does not exist or cannot be accessed".format(expanded_path), traceback_war=False)
-            return
+            return False
 
         # Make sure expanded_path points to a file
         if not os.path.isfile(expanded_path):
             self.perror("'{}' is not a file".format(expanded_path), traceback_war=False)
-            return
+            return False
 
         # Make sure the file is not empty
         if os.path.getsize(expanded_path) == 0:
             self.perror("'{}' is empty".format(expanded_path), traceback_war=False)
-            return
+            return False
 
         # Make sure the file is ASCII or UTF-8 encoded text
         if not utils.is_text_file(expanded_path):
             self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path), traceback_war=False)
-            return
+            return False
 
         try:
-            # Read all lines of the script and insert into the head of the
-            # command queue. Add an "end of script (eos)" command to cleanup the
-            # self._script_dir list when done.
+            # Read all lines of the script
             with open(expanded_path, encoding='utf-8') as target:
                 script_commands = target.read().splitlines()
         except OSError as ex:  # pragma: no cover
             self.perror("Problem accessing script from '{}': {}".format(expanded_path, ex))
-            return
+            return False
 
-        if args.transcript:
-            self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
-            return
+        stop = False
+        orig_script_dir_count = len(self._script_dir)
 
-        self.cmdqueue = script_commands + ['eos'] + self.cmdqueue
-        self._script_dir.append(os.path.dirname(expanded_path))
+        try:
+            self._script_dir.append(os.path.dirname(expanded_path))
+
+            if args.transcript:
+                self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
+            else:
+                stop = self.runcmds_plus_hooks(script_commands)
+
+        finally:
+            with self.sigint_protection:
+                # Check if a script dir was added before an exception occurred
+                if  orig_script_dir_count != len(self._script_dir):
+                    self._script_dir.pop()
+            return stop
 
     relative_load_description = load_description
     relative_load_description += ("\n\n"
@@ -3659,12 +3636,14 @@ class Cmd(cmd.Cmd):
     relative_load_parser.add_argument('file_path', help='a file path pointing to a script')
 
     @with_argparser(relative_load_parser)
-    def do__relative_load(self, args: argparse.Namespace) -> None:
-        """Run commands in script file that is encoded as either ASCII or UTF-8 text"""
+    def do__relative_load(self, args: argparse.Namespace) -> bool:
+        """
+        Run commands in script file that is encoded as either ASCII or UTF-8 text
+        """
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
-        self.do_load(relative_path)
+        return self.do_load(relative_path)
 
     def run_transcript_tests(self, callargs: List[str]) -> None:
         """Runs transcript tests for provided file(s).

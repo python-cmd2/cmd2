@@ -297,17 +297,28 @@ def test_base_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
-    assert base_app.cmdqueue == []
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
 
-    # Run the load command, which populates the command queue and sets the script directory
-    run_cmd(base_app, 'load {}'.format(filename))
+    # Get output out the script
+    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
 
-    assert base_app.cmdqueue == ['help history', 'eos']
-    sdir = os.path.dirname(filename)
-    assert base_app._script_dir == [sdir]
-    assert base_app._current_script_dir == sdir
+    assert base_app._script_dir == []
+    assert base_app._current_script_dir is None
+
+    # Now run the commands manually and compare their output to script's
+    with open(filename, encoding='utf-8') as file:
+        script_commands = file.read().splitlines()
+
+    manual_out = []
+    manual_err = []
+    for cmdline in script_commands:
+        out, err = run_cmd(base_app, cmdline)
+        manual_out.extend(out)
+        manual_err.extend(err)
+
+    assert script_out == manual_out
+    assert script_err == manual_err
 
 def test_load_with_empty_args(base_app):
     # The way the load command works, we can't directly capture its stdout or stderr
@@ -315,7 +326,6 @@ def test_load_with_empty_args(base_app):
 
     # The load command requires a file path argument, so we should get an error message
     assert "the following arguments are required" in err[1]
-    assert base_app.cmdqueue == []
 
 
 def test_load_with_nonexistent_file(base_app, capsys):
@@ -324,7 +334,6 @@ def test_load_with_nonexistent_file(base_app, capsys):
 
     # The load command requires a path to an existing file
     assert "does not exist" in err[0]
-    assert base_app.cmdqueue == []
 
 def test_load_with_directory(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -333,7 +342,6 @@ def test_load_with_directory(base_app, request):
     out, err = run_cmd(base_app, 'load {}'.format(test_dir))
 
     assert "is not a file" in err[0]
-    assert base_app.cmdqueue == []
 
 def test_load_with_empty_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -344,7 +352,6 @@ def test_load_with_empty_file(base_app, request):
 
     # The load command requires non-empty script files
     assert "is empty" in err[0]
-    assert base_app.cmdqueue == []
 
 
 def test_load_with_binary_file(base_app, request):
@@ -356,42 +363,45 @@ def test_load_with_binary_file(base_app, request):
 
     # The load command requires non-empty scripts files
     assert "is not an ASCII or UTF-8 encoded text file" in err[0]
-    assert base_app.cmdqueue == []
 
 
 def test_load_with_utf8_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'utf8.txt')
 
-    assert base_app.cmdqueue == []
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
 
-    # Run the load command, which populates the command queue and sets the script directory
-    run_cmd(base_app, 'load {}'.format(filename))
+    # Get output out the script
+    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
 
-    assert base_app.cmdqueue == ['!echo γνωρίζω', 'eos']
-    sdir = os.path.dirname(filename)
-    assert base_app._script_dir == [sdir]
-    assert base_app._current_script_dir == sdir
+    assert base_app._script_dir == []
+    assert base_app._current_script_dir is None
+
+    # Now run the commands manually and compare their output to script's
+    with open(filename, encoding='utf-8') as file:
+        script_commands = file.read().splitlines()
+
+    manual_out = []
+    manual_err = []
+    for cmdline in script_commands:
+        out, err = run_cmd(base_app, cmdline)
+        manual_out.extend(out)
+        manual_err.extend(err)
+
+    assert script_out == manual_out
+    assert script_err == manual_err
 
 
 def test_load_nested_loads(base_app, request):
     # Verify that loading a script with nested load commands works correctly,
-    # and loads the nested script commands in the correct order. The recursive
-    # loads don't happen all at once, but as the commands are interpreted. So,
-    # we will need to drain the cmdqueue and inspect the stdout to see if all
-    # steps were executed in the expected order.
+    # and loads the nested script commands in the correct order.
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'nested.txt')
-    assert base_app.cmdqueue == []
 
-    # Load the top level script and then run the command queue until all
-    # commands have been exhausted.
+    # Load the top level script
     initial_load = 'load ' + filename
     run_cmd(base_app, initial_load)
-    while base_app.cmdqueue:
-        base_app.onecmd_plus_hooks(base_app.cmdqueue.pop(0))
 
     # Check that the right commands were executed.
     expected = """
@@ -407,12 +417,9 @@ set colors Never""" % initial_load
 
 
 def test_base_runcmds_plus_hooks(base_app, request):
-    # Make sure that runcmds_plus_hooks works as intended. I.E. to run multiple
-    # commands and process any commands added, by them, to the command queue.
     test_dir = os.path.dirname(request.module.__file__)
     prefilepath = os.path.join(test_dir, 'scripts', 'precmds.txt')
     postfilepath = os.path.join(test_dir, 'scripts', 'postcmds.txt')
-    assert base_app.cmdqueue == []
 
     base_app.runcmds_plus_hooks(['load ' + prefilepath,
                                  'help',
@@ -429,27 +436,36 @@ set colors Never""" % (prefilepath, postfilepath)
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
-
 def test_base_relative_load(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
-    assert base_app.cmdqueue == []
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
 
-    # Run the load command, which populates the command queue and sets the script directory
-    run_cmd(base_app, '_relative_load {}'.format(filename))
+    # Get output out the script
+    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
 
-    assert base_app.cmdqueue == ['help history', 'eos']
-    sdir = os.path.dirname(filename)
-    assert base_app._script_dir == [sdir]
-    assert base_app._current_script_dir == sdir
+    assert base_app._script_dir == []
+    assert base_app._current_script_dir is None
+
+    # Now run the commands manually and compare their output to script's
+    with open(filename, encoding='utf-8') as file:
+        script_commands = file.read().splitlines()
+
+    manual_out = []
+    manual_err = []
+    for cmdline in script_commands:
+        out, err = run_cmd(base_app, cmdline)
+        manual_out.extend(out)
+        manual_err.extend(err)
+
+    assert script_out == manual_out
+    assert script_err == manual_err
 
 def test_relative_load_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_load')
     assert 'Error: the following arguments' in err[1]
-    assert base_app.cmdqueue == []
 
 
 def test_output_redirection(base_app):
@@ -495,7 +511,11 @@ def test_output_redirection_to_nonexistent_directory(base_app):
         assert content == expected
 
 def test_output_redirection_to_too_long_filename(base_app):
-    filename = '~/sdkfhksdjfhkjdshfkjsdhfkjsdhfkjdshfkjdshfkjshdfkhdsfkjhewfuihewiufhweiufhiweufhiuewhiuewhfiuwehfiuewhfiuewhfiuewhfiuewhiuewhfiuewhfiuewfhiuwehewiufhewiuhfiweuhfiuwehfiuewfhiuwehiuewfhiuewhiewuhfiuewhfiuwefhewiuhewiufhewiufhewiufhewiufhewiufhewiufhewiufhewiuhewiufhewiufhewiuheiufhiuewheiwufhewiufheiufheiufhieuwhfewiuhfeiufhiuewfhiuewheiwuhfiuewhfiuewhfeiuwfhewiufhiuewhiuewhfeiuwhfiuwehfuiwehfiuehiuewhfieuwfhieufhiuewhfeiuwfhiuefhueiwhfw'
+    filename = '~/sdkfhksdjfhkjdshfkjsdhfkjsdhfkjdshfkjdshfkjshdfkhdsfkjhewfuihewiufhweiufhiweufhiuewhiuewhfiuwehfia' \
+               'ewhfiuewhfiuewhfiuewhiuewhfiuewhfiuewfhiuwehewiufhewiuhfiweuhfiuwehfiuewfhiuwehiuewfhiuewhiewuhfiueh' \
+               'fiuwefhewiuhewiufhewiufhewiufhewiufhewiufhewiufhewiufhewiuhewiufhewiufhewiuheiufhiuewheiwufhewiufheu' \
+               'fheiufhieuwhfewiuhfeiufhiuewfhiuewheiwuhfiuewhfiuewhfeiuwfhewiufhiuewhiuewhfeiuwhfiuwehfuiwehfiuehie' \
+               'whfieuwfhieufhiuewhfeiuwfhiuefhueiwhfw'
 
     # Verify that writing to a file in a non-existent directory doesn't work
     run_cmd(base_app, 'help > {}'.format(filename))
@@ -1358,36 +1378,15 @@ def test_eof(base_app):
     # Only thing to verify is that it returns True
     assert base_app.do_eof('')
 
-def test_eos(base_app):
-    sdir = 'dummy_dir'
-    base_app._script_dir.append(sdir)
-    assert len(base_app._script_dir) == 1
-
-    # Assert that it does NOT return true
-    assert not base_app.do_eos('')
-
-    # And make sure it reduced the length of the script dir list
-    assert len(base_app._script_dir) == 0
-
 def test_echo(capsys):
     app = cmd2.Cmd()
-    # Turn echo on and pre-stage some commands in the queue, simulating like we are in the middle of a script
     app.echo = True
-    command = 'help history'
-    app.cmdqueue = [command, 'quit', 'eos']
-    app._script_dir.append('some_dir')
+    commands = ['help history']
 
-    assert app._current_script_dir is not None
-
-    # Run the inner _cmdloop
-    app._cmdloop()
+    app.runcmds_plus_hooks(commands)
 
     out, err = capsys.readouterr()
-
-    # Check the output
-    assert app.cmdqueue == []
-    assert app._current_script_dir is None
-    assert out.startswith('{}{}\n'.format(app.prompt, command) + HELP_HISTORY.split()[0])
+    assert out.startswith('{}{}\n'.format(app.prompt, commands[0]) + HELP_HISTORY.split()[0])
 
 def test_pseudo_raw_input_tty_rawinput_true():
     # use context managers so original functions get put back when we are done
@@ -1913,7 +1912,7 @@ def test_onecmd_raw_str_quit(outsim_app):
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
-    expected_commands = ['_relative_load', 'alias', 'edit', 'eof', 'eos', 'help', 'history', 'load', 'macro',
+    expected_commands = ['_relative_load', 'alias', 'edit', 'eof', 'help', 'history', 'load', 'macro',
                          'py', 'pyscript', 'quit', 'set', 'shell', 'shortcuts']
     assert commands == expected_commands
 

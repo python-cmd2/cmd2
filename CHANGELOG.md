@@ -23,6 +23,8 @@
     * Added support for custom Namespaces in the argparse decorators. See description of `ns_provider` argument
     for more information.
     * Transcript testing now sets the `exit_code` returned from `cmdloop` based on Success/Failure
+    * Text scripts now run immediately instead of adding their commands to `cmdqueue`. This allows easy capture of
+    the entire script's output.
 * Potentially breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
       that allows terminators in alias and macro values.
@@ -30,6 +32,7 @@
     * `preserve_quotes` is now a keyword-only argument in the argparse decorators
     * Refactored so that `cmd2.Cmd.cmdloop()` returns the `exit_code` instead of a call to `sys.exit()`
         * It is now applicaiton developer's responsibility to treat the return value from `cmdloop()` accordingly
+    * Removed internally used `eos` command that was used to keep track of when a text script's commands ended 
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4
