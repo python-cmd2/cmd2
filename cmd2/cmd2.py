@@ -3440,14 +3440,17 @@ class Cmd(cmd.Cmd):
             except Exception as e:
                 self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
         elif args.transcript:
-            self._generate_transcript(history, args.transcript)
+            return self._generate_transcript(history, args.transcript)
         else:
             # Display the history items retrieved
             for hi in history:
                 self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
 
-    def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
-        """Generate a transcript file from a given history of commands."""
+    def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> Optional[bool]:
+        """
+        Generate a transcript file from a given history of commands
+        :return: True if running of commands should stop
+        """
         import io
         # Validate the transcript file path to make sure directory exists and write access is available
         transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
@@ -3458,6 +3461,7 @@ class Cmd(cmd.Cmd):
             return
 
         commands_run = 0
+        stop = False
         try:
             with self.sigint_protection:
                 # Disable echo while we manually redirect stdout to a StringIO buffer
@@ -3526,6 +3530,8 @@ class Cmd(cmd.Cmd):
                 plural = 'command and its output'
             msg = '{} {} saved to transcript file {!r}'
             self.pfeedback(msg.format(commands_run, plural, transcript_file))
+
+        return stop
 
     edit_description = ("Edit a file in a text editor\n"
                         "\n"
@@ -3614,7 +3620,7 @@ class Cmd(cmd.Cmd):
             self._script_dir.append(os.path.dirname(expanded_path))
 
             if args.transcript:
-                self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
+                return self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
             else:
                 return self.runcmds_plus_hooks(script_commands)
 
