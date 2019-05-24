@@ -403,6 +403,10 @@ class Cmd(cmd.Cmd):
         self.hidden_commands = ['eof', 'eos', '_relative_load']
 
         # Commands to exclude from the history command
+        # initialize history
+        self.persistent_history_file = persistent_history_file
+        self.persistent_history_length = persistent_history_length
+        self._initialize_history()
         self.exclude_from_history = '''history edit eof eos'''.split()
 
         # Command aliases and macros
@@ -462,9 +466,6 @@ class Cmd(cmd.Cmd):
 
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
-
-        # initialize history
-        self._initialize_history(persistent_history_file, persistent_history_length)
 
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
@@ -3447,8 +3448,8 @@ class Cmd(cmd.Cmd):
             for hi in history:
                 self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
 
-    def _initialize_history(self, histfile, maxlen):
-        """Initialize history with optional persistence and maximum length
+    def _initialize_history(self):
+        """Initialize history using history related attributes
 
         This function can determine whether history is saved in the prior text-based
         format (one line of input is stored as one line in the file), or the new-as-
@@ -3461,38 +3462,57 @@ class Cmd(cmd.Cmd):
         """
         self.history = History()
         # with no persistent history, nothing else in this method is relevant
-        if not histfile:
+        if not self.persistent_history_file:
             return
 
-        histfile = os.path.expanduser(histfile)
+        self.persistent_history_file = os.path.expanduser(self.persistent_history_file)
 
         # first we try and unpickle the history file
         history = History()
         try:
-            with open(histfile, 'rb') as fobj:
+            with open(self.persistent_history_file, 'rb') as fobj:
                 history = pickle.load(fobj)
         except (FileNotFoundError, KeyError, EOFError):
             pass
+        except IsADirectoryError:
+            msg = "persistent history file '{}' is a directory"
+            self.perror(msg.format(self.persistent_history_file))
         except OSError as ex:
             msg = "can not read persistent history file '{}': {}"
-            self.perror(msg.format(histfile, ex), traceback_war=False)
+            self.perror(msg.format(self.persistent_history_file, ex), traceback_war=False)
+
+        self.history = history
 
         # trim history to length and ensure it's writable
-        history.truncate(maxlen)
-        try:
-            # open with append so it doesn't truncate the file
-            with open(histfile, 'ab') as fobj:
-                self.persistent_history_file = histfile
-        except OSError as ex:
-            msg = "can not write persistent history file '{}': {}"
-            self.perror(msg.format(histfile, ex), traceback_war=False)
+        # history.truncate(maxlen)
+        # try:
+        #     # open with append so it doesn't truncate the file
+        #     with open(histfile, 'ab') as fobj:
+        #         self.persistent_history_file = histfile
+        # except OSError as ex:
+        #     msg = "can not write persistent history file '{}': {}"
+        #     self.perror(msg.format(histfile, ex), traceback_war=False)
 
         # register a function to write history at save
         # if the history file is in plain text format from 0.9.12 or lower
         # this will fail, and the history in the plain text file will be lost
 
         #import atexit
-        #atexit.register(readline.write_history_file, self.persistent_history_file)
+        #atexit.register(self._persist_history_on_exit)
+
+    def _persist_history_on_exit(self):
+        """write history out to the history file"""
+        if not self.persistent_history_file:
+            return
+
+        self.history.truncate(self.persistent_history_length)
+        try:
+            with open(self.persistent_history_file, 'wb') as fobj:
+                pickle.dump(self.history, fobj)
+
+        except OSError as ex:
+            msg = "can not write persistent history file '{}': {}"
+            self.perror(msg.format(self.persistent_history_file, ex), traceback_war=False)
 
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""

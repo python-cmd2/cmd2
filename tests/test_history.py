@@ -398,8 +398,6 @@ def hist_file():
         pass
 
 def test_existing_history_file(hist_file, capsys):
-    import atexit
-    import readline
 
     # Create the history file before making cmd2 app
     with open(hist_file, 'w'):
@@ -416,11 +414,9 @@ def test_existing_history_file(hist_file, capsys):
     ## TODO atexit.unregister(readline.write_history_file)
 
     # Remove created history file
-    os.remove(hist_file)
+    #os.remove(hist_file)
 
 def test_new_history_file(hist_file, capsys):
-    import atexit
-    import readline
 
     # Remove any existing history file
     try:
@@ -439,7 +435,7 @@ def test_new_history_file(hist_file, capsys):
     ### TODO atexit.unregister(readline.write_history_file)
 
     # Remove created history file
-    os.remove(hist_file)
+    #os.remove(hist_file)
 
 def test_bad_history_file_path(capsys, request):
     # Use a directory path as the history file
@@ -449,7 +445,7 @@ def test_bad_history_file_path(capsys, request):
     cmd2.Cmd(persistent_history_file=test_dir)
     _, err = capsys.readouterr()
 
-    assert 'can not write' in err
+    assert 'is a directory' in err
 
 def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
     # test the code that converts a plain text history file to a pickle binary
