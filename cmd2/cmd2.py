@@ -3491,13 +3491,16 @@ class Cmd(cmd.Cmd):
                 membuf = io.StringIO()
                 self.stdout = membuf
                 # then run the command and let the output go into our buffer
-                self.onecmd_plus_hooks(history_item)
+                stop = self.onecmd_plus_hooks(history_item)
                 # rewind the buffer to the beginning
                 membuf.seek(0)
                 # get the output out of the buffer
                 output = membuf.read()
                 # and add the regex-escaped output to the transcript
                 transcript += output.replace('/', r'\/')
+                # check if we are supposed to stop
+                if stop:
+                    break
         finally:
             with self.sigint_protection:
                 # Restore altered attributes to their original state
