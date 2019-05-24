@@ -786,11 +786,10 @@ def test_cmdloop_without_rawinput(outsim_app):
     testargs = ["prog"]
     expected = outsim_app.intro + '\n'
     with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        outsim_app.cmdloop()
+        with pytest.raises(OSError):
+            outsim_app.cmdloop()
     out = outsim_app.stdout.getvalue()
     assert out == expected
-
 
 class HookFailureApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
@@ -840,7 +839,10 @@ def test_interrupt_quit(say_app):
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
     builtins.input = m
 
-    say_app.cmdloop()
+    try:
+        say_app.cmdloop()
+    except KeyboardInterrupt:
+        pass
 
     # And verify the expected output to stdout
     out = say_app.stdout.getvalue()
@@ -854,7 +856,10 @@ def test_interrupt_noquit(say_app):
     m.side_effect = ['say hello', KeyboardInterrupt(), 'say goodbye', 'eof']
     builtins.input = m
 
-    say_app.cmdloop()
+    try:
+        say_app.cmdloop()
+    except KeyboardInterrupt:
+        pass
 
     # And verify the expected output to stdout
     out = say_app.stdout.getvalue()

@@ -1718,7 +1718,7 @@ class Cmd(cmd.Cmd):
         :param pyscript_bridge_call: This should only ever be set to True by PyscriptBridge to signify the beginning
                                      of an app() call in a pyscript. It is used to enable/disable the storage of the
                                      command's stdout.
-        :return: True if cmdloop() should exit, False otherwise
+        :return: True if running of commands should stop
         """
         import datetime
 
@@ -1843,20 +1843,16 @@ class Cmd(cmd.Cmd):
         """Convenience method to run multiple commands by onecmd_plus_hooks.
 
         :param cmds: command strings suitable for onecmd_plus_hooks.
-        :return: True implies the entire application should exit.
-
+        :return: True if running of commands should stop
         """
-        stop = False
-        try:
-            for line in cmds:
-                if self.echo:
-                    self.poutput('{}{}'.format(self.prompt, line))
+        for line in cmds:
+            if self.echo:
+                self.poutput('{}{}'.format(self.prompt, line))
 
-                stop = self.onecmd_plus_hooks(line)
-                if stop:
-                    break
-        finally:
-            return stop
+            if self.onecmd_plus_hooks(line):
+                return True
+
+        return False
 
     def _complete_statement(self, line: str) -> Statement:
         """Keep accepting lines of input until the command is complete.
@@ -2240,14 +2236,12 @@ class Cmd(cmd.Cmd):
 
         return line.strip()
 
-    def _cmdloop(self) -> bool:
+    def _cmdloop(self) -> None:
         """Repeatedly issue a prompt, accept input, parse an initial prefix
         off the received input, and dispatch to action methods, passing them
         the remainder of the line as argument.
 
         This serves the same role as cmd.cmdloop().
-
-        :return: True implies the entire application should exit.
         """
         # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
         # has been split out so that it can be called separately
@@ -2277,9 +2271,8 @@ class Cmd(cmd.Cmd):
             # Enable tab completion
             readline.parse_and_bind(self.completekey + ": complete")
 
-        stop = False
         try:
-            while not stop:
+            while True:
                 if self.cmdqueue:
                     # Run command out of cmdqueue if nonempty (populated by load command or commands at invocation)
                     line = self.cmdqueue.pop(0)
@@ -2297,7 +2290,8 @@ class Cmd(cmd.Cmd):
                             line = ''
 
                 # Run the command along with all associated pre and post hooks
-                stop = self.onecmd_plus_hooks(line)
+                if self.onecmd_plus_hooks(line):
+                    break
         finally:
             if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
 
@@ -2311,9 +2305,7 @@ class Cmd(cmd.Cmd):
                 elif rl_type == RlType.PYREADLINE:
                     # noinspection PyUnresolvedReferences
                     readline.rl.mode._display_completions = orig_pyreadline_display
-
             self.cmdqueue.clear()
-            return stop
 
     # -----  Alias sub-command functions -----
 
@@ -3316,7 +3308,9 @@ class Cmd(cmd.Cmd):
                     embed(banner1=banner, exit_msg=exit_msg)
                 load_ipy(bridge)
 
-    history_parser = ACArgumentParser()
+    history_description = "View, run, edit, save, or clear previously entered commands"
+
+    history_parser = ACArgumentParser(description=history_description)
     history_action_group = history_parser.add_mutually_exclusive_group()
     history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_action_group.add_argument('-e', '--edit', action='store_true',
@@ -3350,7 +3344,10 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> Optional[bool]:
-        """View, run, edit, save, or clear previously entered commands"""
+        """
+        View, run, edit, save, or clear previously entered commands
+        :return: True if running of commands should stop
+        """
 
         # -v must be used alone with no other options
         if args.verbose:
@@ -3425,15 +3422,11 @@ class Cmd(cmd.Cmd):
                         fobj.write('{}\n'.format(command.expanded.rstrip()))
                     else:
                         fobj.write('{}\n'.format(command))
-            stop = False
             try:
                 self.do_edit(fname)
-                stop = self.do_load(fname)
-            except Exception:
-                raise
+                return self.do_load(fname)
             finally:
                 os.remove(fname)
-                return stop
         elif args.output_file:
             try:
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
@@ -3572,32 +3565,32 @@ class Cmd(cmd.Cmd):
             ACTION_ARG_CHOICES, ('path_complete',))
 
     @with_argparser(load_parser)
-    def do_load(self, args: argparse.Namespace) -> bool:
+    def do_load(self, args: argparse.Namespace) -> Optional[bool]:
         """
         Run commands in script file that is encoded as either ASCII or UTF-8 text
-        :return: True if cmdloop() should exit, False otherwise
+        :return: True if running of commands should stop
         """
         expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
 
         # Make sure the path exists and we can access it
         if not os.path.exists(expanded_path):
             self.perror("'{}' does not exist or cannot be accessed".format(expanded_path), traceback_war=False)
-            return False
+            return
 
         # Make sure expanded_path points to a file
         if not os.path.isfile(expanded_path):
             self.perror("'{}' is not a file".format(expanded_path), traceback_war=False)
-            return False
+            return
 
         # Make sure the file is not empty
         if os.path.getsize(expanded_path) == 0:
             self.perror("'{}' is empty".format(expanded_path), traceback_war=False)
-            return False
+            return
 
         # Make sure the file is ASCII or UTF-8 encoded text
         if not utils.is_text_file(expanded_path):
             self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path), traceback_war=False)
-            return False
+            return
 
         try:
             # Read all lines of the script
@@ -3605,9 +3598,8 @@ class Cmd(cmd.Cmd):
                 script_commands = target.read().splitlines()
         except OSError as ex:  # pragma: no cover
             self.perror("Problem accessing script from '{}': {}".format(expanded_path, ex))
-            return False
+            return
 
-        stop = False
         orig_script_dir_count = len(self._script_dir)
 
         try:
@@ -3616,14 +3608,13 @@ class Cmd(cmd.Cmd):
             if args.transcript:
                 self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
             else:
-                stop = self.runcmds_plus_hooks(script_commands)
+                return self.runcmds_plus_hooks(script_commands)
 
         finally:
             with self.sigint_protection:
                 # Check if a script dir was added before an exception occurred
                 if orig_script_dir_count != len(self._script_dir):
                     self._script_dir.pop()
-            return stop
 
     relative_load_description = load_description
     relative_load_description += ("\n\n"
@@ -3637,9 +3628,10 @@ class Cmd(cmd.Cmd):
     relative_load_parser.add_argument('file_path', help='a file path pointing to a script')
 
     @with_argparser(relative_load_parser)
-    def do__relative_load(self, args: argparse.Namespace) -> bool:
+    def do__relative_load(self, args: argparse.Namespace) -> Optional[bool]:
         """
         Run commands in script file that is encoded as either ASCII or UTF-8 text
+        :return: True if running of commands should stop
         """
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
