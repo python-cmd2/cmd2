@@ -1840,9 +1840,11 @@ class Cmd(cmd.Cmd):
             self.perror(ex)
 
     def runcmds_plus_hooks(self, cmds: List[str]) -> bool:
-        """Convenience method to run multiple commands by onecmd_plus_hooks.
+        """
+        Used when commands are being run in an automated fashion like text scripts or history replays.
+        The prompt and command line for each command will be printed if echo is True.
 
-        :param cmds: command strings suitable for onecmd_plus_hooks.
+        :param cmds: command strings suitable for onecmd_plus_hooks
         :return: True if running of commands should stop
         """
         for line in cmds:
@@ -2272,12 +2274,12 @@ class Cmd(cmd.Cmd):
             readline.parse_and_bind(self.completekey + ": complete")
 
         try:
-            while True:
+            stop = False
+            while not stop:
                 if self.cmdqueue:
-                    # Run command out of cmdqueue if nonempty (populated by load command or commands at invocation)
-                    line = self.cmdqueue.pop(0)
-                    if self.echo:
-                        self.poutput('{}{}'.format(self.prompt, line))
+                    # Run commands out of cmdqueue if nonempty (populated by commands at invocation)
+                    stop = self.runcmds_plus_hooks(self.cmdqueue)
+                    self.cmdqueue.clear()
                 else:
                     # Otherwise, read a command from stdin
                     try:
@@ -2289,9 +2291,8 @@ class Cmd(cmd.Cmd):
                             self.poutput('^C')
                             line = ''
 
-                # Run the command along with all associated pre and post hooks
-                if self.onecmd_plus_hooks(line):
-                    break
+                    # Run the command along with all associated pre and post hooks
+                    stop = self.onecmd_plus_hooks(line)
         finally:
             if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
 
