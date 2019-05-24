@@ -3457,6 +3457,7 @@ class Cmd(cmd.Cmd):
                         traceback_war=False)
             return
 
+        commands_run = 0
         try:
             with self.sigint_protection:
                 # Disable echo while we manually redirect stdout to a StringIO buffer
@@ -3490,14 +3491,18 @@ class Cmd(cmd.Cmd):
                 # of the command
                 membuf = io.StringIO()
                 self.stdout = membuf
+
                 # then run the command and let the output go into our buffer
                 stop = self.onecmd_plus_hooks(history_item)
+                commands_run += 1
+
                 # rewind the buffer to the beginning
                 membuf.seek(0)
                 # get the output out of the buffer
                 output = membuf.read()
                 # and add the regex-escaped output to the transcript
                 transcript += output.replace('/', r'\/')
+
                 # check if we are supposed to stop
                 if stop:
                     break
@@ -3515,12 +3520,12 @@ class Cmd(cmd.Cmd):
             self.perror('Failed to save transcript: {}'.format(ex), traceback_war=False)
         else:
             # and let the user know what we did
-            if len(history) > 1:
+            if commands_run > 1:
                 plural = 'commands and their outputs'
             else:
                 plural = 'command and its output'
             msg = '{} {} saved to transcript file {!r}'
-            self.pfeedback(msg.format(len(history), plural, transcript_file))
+            self.pfeedback(msg.format(commands_run, plural, transcript_file))
 
     edit_description = ("Edit a file in a text editor\n"
                         "\n"
