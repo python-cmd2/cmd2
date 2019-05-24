@@ -3408,11 +3408,7 @@ class Cmd(cmd.Cmd):
                 self.perror("If this is what you want to do, specify '1:' as the range of history.",
                             traceback_war=False)
             else:
-                # TODO: Call runcmds_plus_hooks and return its stop value
-                for runme in history:
-                    self.pfeedback(runme)
-                    if runme:
-                        self.onecmd_plus_hooks(runme)
+                return self.runcmds_plus_hooks(history)
         elif args.edit:
             import tempfile
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
