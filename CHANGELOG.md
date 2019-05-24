@@ -23,13 +23,25 @@
     * Added support for custom Namespaces in the argparse decorators. See description of `ns_provider` argument
     for more information.
     * Transcript testing now sets the `exit_code` returned from `cmdloop` based on Success/Failure
-* Potentially breaking changes
+    * The history of entered commands previously was saved using the readline persistence mechanism,
+      and only persisted if you had readline installed. Now history is persisted independent of readline; user
+      input from previous invocations of `cmd2` based apps now shows in the `history` command.
+
+* Breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
       that allows terminators in alias and macro values.
     * Changed `Statement.pipe_to` to a string instead of a list
     * `preserve_quotes` is now a keyword-only argument in the argparse decorators
     * Refactored so that `cmd2.Cmd.cmdloop()` returns the `exit_code` instead of a call to `sys.exit()`
         * It is now applicaiton developer's responsibility to treat the return value from `cmdloop()` accordingly
+      , and is in a binary format,
+      not a text format.
+    * Only valid commands are persistent in history between invocations of `cmd2` based apps. Previously
+      all user input was persistent in history. If readline is installed, the history available with the up and
+      down arrow keys (readline history) may not match that shown in the `history` command, because `history`
+      only tracks valid input, while readline history captures all input.
+    * History is now persisted in a binary format, not plain text format. Previous history files are destroyed
+      on first launch of a `cmd2` based app of version 0.9.13 or higher.
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4
@@ -38,7 +50,7 @@
 * Bug Fixes
     * Fixed a bug in how redirection and piping worked inside ``py`` or ``pyscript`` commands
     * Fixed bug in `async_alert` where it didn't account for prompts that contained newline characters
-    * Fixed path completion case when CWD is just a slash. Relative path matches were incorrectly prepended with a slash. 
+    * Fixed path completion case when CWD is just a slash. Relative path matches were incorrectly prepended with a slash.
 * Enhancements
     * Added ability to include command name placeholders in the message printed when trying to run a disabled command.
         * See docstring for ``disable_command()`` or ``disable_category()`` for more details.
@@ -60,7 +72,7 @@
         * ``_report_disabled_command_usage()`` - in all cases since this is called when a disabled command is run
     * Removed *** from beginning of error messages printed by `do_help()` and `default()`
     * Significantly refactored ``cmd.Cmd`` class so that all class attributes got converted to instance attributes, also:
-        * Added ``allow_redirection``, ``terminators``, ``multiline_commands``, and ``shortcuts`` as optional arguments 
+        * Added ``allow_redirection``, ``terminators``, ``multiline_commands``, and ``shortcuts`` as optional arguments
         to ``cmd.Cmd.__init__()`
         * A few instance attributes were moved inside ``StatementParser`` and properties were created for accessing them
     * ``self.pipe_proc`` is now called ``self.cur_pipe_proc_reader`` and is a ``ProcReader`` class.
@@ -98,7 +110,7 @@
     ``cmd2`` convention of setting ``self.matches_sorted`` to True before returning the results if you have already
     sorted the ``CompletionItem`` list. Otherwise it will be sorted using ``self.matches_sort_key``.
     * Removed support for bash completion since this feature had slow performance. Also it relied on
-    ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods. 
+    ``AutoCompleter`` which has since developed a dependency on ``cmd2`` methods.
     * Removed ability to call commands in ``pyscript`` as if they were functions (e.g. ``app.help()``) in favor
     of only supporting one ``pyscript`` interface. This simplifies future maintenance.
     * No longer supporting C-style comments. Hash (#) is the only valid comment marker.
@@ -118,7 +130,7 @@
     * Fixed bug where the ``set`` command was not tab completing from the current ``settable`` dictionary.
 * Enhancements
     * Changed edit command to use do_shell() instead of calling os.system()
-    
+
 ## 0.9.8 (February 06, 2019)
 * Bug Fixes
     * Fixed issue with echoing strings in StdSim. Because they were being sent to a binary buffer, line buffering
@@ -139,9 +151,9 @@
 * Deletions (potentially breaking changes)
     * Deleted ``Cmd.colorize()`` and ``Cmd._colorcodes`` which were deprecated in 0.9.5
     * Replaced ``dir_exe_only`` and  ``dir_only`` flags in ``path_complete`` with optional ``path_filter`` function
-    that is used to filter paths out of completion results. 
+    that is used to filter paths out of completion results.
     * ``perror()`` no longer prepends "ERROR: " to the error message being printed
-    
+
 ## 0.9.6 (October 13, 2018)
 * Bug Fixes
     * Fixed bug introduced in 0.9.5 caused by backing up and restoring `self.prompt` in `pseudo_raw_input`.
@@ -167,8 +179,8 @@
     the argparse object. Also, single-character tokens that happen to be a
     prefix char are not treated as flags by argparse and AutoCompleter now
     matches that behavior.
-    * Fixed bug where AutoCompleter was not distinguishing between a negative number and a flag 
-    * Fixed bug where AutoCompleter did not handle -- the same way argparse does (all args after -- are non-options)  
+    * Fixed bug where AutoCompleter was not distinguishing between a negative number and a flag
+    * Fixed bug where AutoCompleter did not handle -- the same way argparse does (all args after -- are non-options)
 * Enhancements
     * Added ``exit_code`` attribute of ``cmd2.Cmd`` class
         * Enables applications to return a non-zero exit code when exiting from ``cmdloop``
@@ -180,10 +192,10 @@
         * These allow you to provide feedback to the user in an asychronous fashion, meaning alerts can
         display when the user is still entering text at the prompt. See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
         for an example.
-    * Cross-platform colored output support 
+    * Cross-platform colored output support
         * ``colorama`` gets initialized properly in ``Cmd.__init()``
         * The ``Cmd.colors`` setting is no longer platform dependent and now has three values:
-            * Terminal (default) - output methods do not strip any ANSI escape sequences when output is a terminal, but 
+            * Terminal (default) - output methods do not strip any ANSI escape sequences when output is a terminal, but
             if the output is a pipe or a file the escape sequences are stripped
             * Always - output methods **never** strip ANSI escape sequences, regardless of the output destination
             * Never - output methods strip all ANSI escape sequences
@@ -193,18 +205,18 @@
 * Deprecations
     * Deprecated the built-in ``cmd2`` support for colors including ``Cmd.colorize()`` and ``Cmd._colorcodes``
 * Deletions (potentially breaking changes)
-    * The ``preparse``, ``postparsing_precmd``, and ``postparsing_postcmd`` methods *deprecated* in the previous release 
+    * The ``preparse``, ``postparsing_precmd``, and ``postparsing_postcmd`` methods *deprecated* in the previous release
     have been deleted
         * The new application lifecycle hook system allows for registration of callbacks to be called at various points
         in the lifecycle and is more powerful and flexible than the previous system
     * ``alias`` is now a command with sub-commands to create, list, and delete aliases. Therefore its syntax
       has changed. All current alias commands in startup scripts or transcripts will break with this release.
     * `unalias` was deleted since ``alias delete`` replaced it
-    
+
 ## 0.9.4 (August 21, 2018)
 * Bug Fixes
     * Fixed bug where ``preparse`` was not getting called
-    * Fixed bug in parsing of multiline commands where matching quote is on another line 
+    * Fixed bug in parsing of multiline commands where matching quote is on another line
 * Enhancements
     * Improved implementation of lifecycle hooks to support a plugin
       framework, see ``docs/hooks.rst`` for details.

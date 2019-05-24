@@ -5,6 +5,7 @@ Test history functions of cmd2
 """
 import tempfile
 import os
+import pickle
 import sys
 
 import pytest
@@ -120,6 +121,19 @@ def test_history_str_search(hist):
 def test_history_regex_search(hist):
     assert hist.regex_search('/i.*d/') == ['third']
     assert hist.regex_search('s[a-z]+ond') == ['second']
+
+def test_history_max_length_zero(hist):
+    hist.truncate(0)
+    assert len(hist) == 0
+
+def test_history_max_length_negative(hist):
+    hist.truncate(-1)
+    assert len(hist) == 0
+
+def test_history_max_length(hist):
+    hist.truncate(2)
+    assert hist.get(1) == 'third'
+    assert hist.get(2) == 'fourth'
 
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
@@ -399,7 +413,7 @@ def test_existing_history_file(hist_file, capsys):
     assert err == ''
 
     # Unregister the call to write_history_file that cmd2 did
-    atexit.unregister(readline.write_history_file)
+    ## TODO atexit.unregister(readline.write_history_file)
 
     # Remove created history file
     os.remove(hist_file)
@@ -422,7 +436,7 @@ def test_new_history_file(hist_file, capsys):
     assert err == ''
 
     # Unregister the call to write_history_file that cmd2 did
-    atexit.unregister(readline.write_history_file)
+    ### TODO atexit.unregister(readline.write_history_file)
 
     # Remove created history file
     os.remove(hist_file)
@@ -435,10 +449,28 @@ def test_bad_history_file_path(capsys, request):
     cmd2.Cmd(persistent_history_file=test_dir)
     _, err = capsys.readouterr()
 
-    if sys.platform == 'win32':
-        # pyreadline masks the read exception. Therefore the bad path error occurs when trying to write the file.
-        assert 'readline cannot write' in err
-    else:
-        # GNU readline raises an exception upon trying to read the directory as a file
-        assert 'readline cannot read' in err
+    assert 'can not write' in err
 
+def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
+    # test the code that converts a plain text history file to a pickle binary
+    # history file
+
+    # first we need some plain text commands in the history file
+    with open(hist_file, 'w') as hfobj:
+        hfobj.write('help\n')
+        hfobj.write('alias\n')
+        hfobj.write('alias create s shortcuts\n')
+
+    # Create a new cmd2 app
+    cmd2.Cmd(persistent_history_file=hist_file)
+
+    # history should be initialized, but the file on disk should
+    # still be plain text
+    with open(hist_file, 'r') as hfobj:
+        histlist= hfobj.readlines()
+
+    assert len(histlist) == 3
+    # history.get() is overridden to be one based, not zero based
+    assert histlist[0]== 'help\n'
+    assert histlist[1] == 'alias\n'
+    assert histlist[2] == 'alias create s shortcuts\n'

@@ -34,6 +34,7 @@ import cmd
 import glob
 import inspect
 import os
+import pickle
 import re
 import sys
 import threading
@@ -408,7 +409,6 @@ class Cmd(cmd.Cmd):
         self.macros = dict()
 
         self.initial_stdout = sys.stdout
-        self.history = History()
         self.pystate = {}
         self.py_history = []
         self.pyscript_name = 'app'
@@ -463,37 +463,8 @@ class Cmd(cmd.Cmd):
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
 
-        # Check if history should persist
-        self.persistent_history_file = ''
-        if persistent_history_file and rl_type != RlType.NONE:
-            persistent_history_file = os.path.expanduser(persistent_history_file)
-            read_err = False
-
-            try:
-                # First try to read any existing history file
-                readline.read_history_file(persistent_history_file)
-            except FileNotFoundError:
-                pass
-            except OSError as ex:
-                self.perror("readline cannot read persistent history file '{}': {}".format(persistent_history_file, ex),
-                            traceback_war=False)
-                read_err = True
-
-            if not read_err:
-                try:
-                    # Make sure readline is able to write the history file. Doing it this way is a more thorough check
-                    # than trying to open the file with write access since readline's underlying function needs to
-                    # create a temporary file in the same directory and may not have permission.
-                    readline.set_history_length(persistent_history_length)
-                    readline.write_history_file(persistent_history_file)
-                except OSError as ex:
-                    self.perror("readline cannot write persistent history file '{}': {}".
-                                format(persistent_history_file, ex), traceback_war=False)
-                else:
-                    # Set history file and register to save our history at exit
-                    import atexit
-                    self.persistent_history_file = persistent_history_file
-                    atexit.register(readline.write_history_file, self.persistent_history_file)
+        # initialize history
+        self._initialize_history(persistent_history_file, persistent_history_length)
 
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
@@ -3475,6 +3446,53 @@ class Cmd(cmd.Cmd):
             # Display the history items retrieved
             for hi in history:
                 self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
+
+    def _initialize_history(self, histfile, maxlen):
+        """Initialize history with optional persistence and maximum length
+
+        This function can determine whether history is saved in the prior text-based
+        format (one line of input is stored as one line in the file), or the new-as-
+        of-version 0.9.13 pickle based format.
+
+        History created by versions <= 0.9.12 is in readline format, i.e. plain text files.
+
+        Initializing history does not effect history files on disk, versions >= 0.9.13 always
+        write history in the pickle format.
+        """
+        self.history = History()
+        # with no persistent history, nothing else in this method is relevant
+        if not histfile:
+            return
+
+        histfile = os.path.expanduser(histfile)
+
+        # first we try and unpickle the history file
+        history = History()
+        try:
+            with open(histfile, 'rb') as fobj:
+                history = pickle.load(fobj)
+        except (FileNotFoundError, KeyError, EOFError):
+            pass
+        except OSError as ex:
+            msg = "can not read persistent history file '{}': {}"
+            self.perror(msg.format(histfile, ex), traceback_war=False)
+
+        # trim history to length and ensure it's writable
+        history.truncate(maxlen)
+        try:
+            # open with append so it doesn't truncate the file
+            with open(histfile, 'ab') as fobj:
+                self.persistent_history_file = histfile
+        except OSError as ex:
+            msg = "can not write persistent history file '{}': {}"
+            self.perror(msg.format(histfile, ex), traceback_war=False)
+
+        # register a function to write history at save
+        # if the history file is in plain text format from 0.9.12 or lower
+        # this will fail, and the history in the plain text file will be lost
+
+        #import atexit
+        #atexit.register(readline.write_history_file, self.persistent_history_file)
 
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
         """Generate a transcript file from a given history of commands."""

@@ -224,3 +224,17 @@ class History(list):
             """filter function for doing a regular expression search of history"""
             return finder.search(hi) or finder.search(hi.expanded)
         return [itm for itm in self if isin(itm)]
+
+    def truncate(self, max_length:int) -> None:
+        """Truncate the length of the history, dropping the oldest items if necessary
+
+        :param max_length: the maximum length of the history, if negative, all history
+                           items will be deleted
+        :return: nothing
+        """
+        if max_length <= 0:
+            # remove all history
+            del self[:]
+        elif len(self) > max_length:
+            last_element = len(self) - max_length
+            del self[0:last_element]
