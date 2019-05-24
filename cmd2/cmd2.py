@@ -3670,7 +3670,7 @@ class Cmd(cmd.Cmd):
             self.decolorized_write(sys.stderr, stream.read())
             self.poutput('Tests passed', color=Fore.LIGHTGREEN_EX)
         else:
-            # Strip off the initial trackeback which isn't particularly useful for end users
+            # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()
             end_of_trace = error_str.find('AssertionError:')
             file_offset = error_str[end_of_trace:].find('File ')
