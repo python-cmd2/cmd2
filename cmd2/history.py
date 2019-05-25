@@ -12,6 +12,7 @@ import attr
 from . import utils
 from .parsing import Statement
 
+
 @attr.s(frozen=True)
 class HistoryItem():
     """Class used to represent one command in the History list"""
