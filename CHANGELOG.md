@@ -33,9 +33,7 @@
     * Changed `Statement.pipe_to` to a string instead of a list
     * `preserve_quotes` is now a keyword-only argument in the argparse decorators
     * Refactored so that `cmd2.Cmd.cmdloop()` returns the `exit_code` instead of a call to `sys.exit()`
-        * It is now applicaiton developer's responsibility to treat the return value from `cmdloop()` accordingly
-      , and is in a binary format,
-      not a text format.
+      It is now application developer's responsibility to treat the return value from `cmdloop()` accordingly
     * Only valid commands are persistent in history between invocations of `cmd2` based apps. Previously
       all user input was persistent in history. If readline is installed, the history available with the up and
       down arrow keys (readline history) may not match that shown in the `history` command, because `history`

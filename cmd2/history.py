@@ -7,29 +7,31 @@ import re
 
 from typing import List, Union
 
+import attr
+
 from . import utils
 from .parsing import Statement
 
-
+@attr.s(frozen=True)
 class HistoryItem():
     """Class used to represent one command in the History list"""
     _listformat = ' {:>4}  {}\n'
     _ex_listformat = ' {:>4}x {}\n'
 
-    # def __new__(cls, statement: Statement):
-    #     """Create a new instance of HistoryItem
+    statement = attr.ib(default=None, validator=attr.validators.instance_of(Statement))
+    idx = attr.ib(default=None, validator=attr.validators.instance_of(int))
 
-    #     We must override __new__ because we are subclassing `str` which is
-    #     immutable and takes a different number of arguments as Statement.
-    #     """
-    #     hi = super().__new__(cls, statement.raw)
-    #     hi.statement = statement
-    #     hi.idx = None
-    #     return hi
+    def __str__(self):
+        """A convenient human readable representation of the history item"""
+        if self.statement:
+            return self.statement.raw
+        else:
+            return ''
 
-    def __init__(self, statement: Statement, idx: int):
-        self.statement = statement
-        self.idx = idx
+    @property
+    def raw(self) -> str:
+        """Return the raw input from the user for this item"""
+        return self.statement.raw
 
     @property
     def expanded(self) -> str:
@@ -43,24 +45,23 @@ class HistoryItem():
 
         :return: pretty print string version of a HistoryItem
         """
-        expanded_command = self.statement.expanded_command_line
         if verbose:
-            ret_str = self._listformat.format(self.idx, self.statement.raw)
-            if self.statement.raw != expanded_command.rstrip():
-                ret_str += self._ex_listformat.format(self.idx, expanded_command)
+            ret_str = self._listformat.format(self.idx, self.raw)
+            if self.raw != self.expanded.rstrip():
+                ret_str += self._ex_listformat.format(self.idx, self.expanded)
         else:
             if script:
                 # display without entry numbers
                 if expanded or self.statement.multiline_command:
-                    ret_str = expanded_command.rstrip()
+                    ret_str = self.expanded.rstrip()
                 else:
-                    ret_str = self.statement.raw
+                    ret_str = self.raw.rstrip()
             else:
                 # display a numbered list
                 if expanded or self.statement.multiline_command:
-                    ret_str = self._listformat.format(self.idx, expanded_command.rstrip())
+                    ret_str = self._listformat.format(self.idx, self.expanded.rstrip())
                 else:
-                    ret_str = self._listformat.format(self.idx, self.statement.raw.rstrip())
+                    ret_str = self._listformat.format(self.idx, self.raw.rstrip())
         return ret_str
 
 
@@ -210,8 +211,8 @@ class History(list):
         def isin(history_item):
             """filter function for string search of history"""
             sloppy = utils.norm_fold(search)
-            inraw = sloppy in utils.norm_fold(history_item.statement.raw)
-            inexpanded = sloppy in utils.norm_fold(history_item.statement.expanded_command_line)
+            inraw = sloppy in utils.norm_fold(history_item.raw)
+            inexpanded = sloppy in utils.norm_fold(history_item.expanded)
             return inraw or inexpanded
         return [item for item in self if isin(item)]
 
@@ -228,7 +229,7 @@ class History(list):
 
         def isin(hi):
             """filter function for doing a regular expression search of history"""
-            return finder.search(hi.statement.raw) or finder.search(hi.statement.expanded_command_line)
+            return finder.search(hi.raw) or finder.search(hi.expanded)
         return [itm for itm in self if isin(itm)]
 
     def truncate(self, max_length: int) -> None:

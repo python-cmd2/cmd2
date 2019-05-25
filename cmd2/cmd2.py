@@ -3409,9 +3409,9 @@ class Cmd(cmd.Cmd):
                             traceback_war=False)
             else:
                 for runme in history:
-                    self.pfeedback(runme.statement.raw)
+                    self.pfeedback(runme.raw)
                     if runme:
-                        self.onecmd_plus_hooks(runme.statement.raw)
+                        self.onecmd_plus_hooks(runme.raw)
         elif args.edit:
             import tempfile
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
@@ -3420,7 +3420,7 @@ class Cmd(cmd.Cmd):
                     if command.statement.multiline_command:
                         fobj.write('{}\n'.format(command.expanded.rstrip()))
                     else:
-                        fobj.write('{}\n'.format(command))
+                        fobj.write('{}\n'.format(command.raw))
             try:
                 self.do_edit(fname)
                 self.do_load(fname)
@@ -3433,9 +3433,9 @@ class Cmd(cmd.Cmd):
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
                     for item in history:
                         if item.statement.multiline_command:
-                            fobj.write('{}\n'.format(item.statement.expanded_command_line.rstrip()))
+                            fobj.write('{}\n'.format(item.expanded.rstrip()))
                         else:
-                            fobj.write('{}\n'.format(item.statement.raw))
+                            fobj.write('{}\n'.format(item.raw))
                 plural = 's' if len(history) > 1 else ''
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:
@@ -3492,9 +3492,9 @@ class Cmd(cmd.Cmd):
             for item in history:
                 # readline only adds a single entry for multiple sequential identical commands
                 # so we emulate that behavior here
-                if item.statement.raw != last:
-                    readline.add_history(item.statement.raw)
-                    last = item.statement.raw
+                if item.raw != last:
+                    readline.add_history(item.raw)
+                    last = item.raw
 
         # register a function to write history at save
         # if the history file is in plain text format from 0.9.12 or lower
@@ -3549,7 +3549,7 @@ class Cmd(cmd.Cmd):
                 first = True
                 command = ''
                 if isinstance(history_item, HistoryItem):
-                    history_item = history_item.statement.raw
+                    history_item = history_item.raw
                 for line in history_item.splitlines():
                     if first:
                         command += '{}{}\n'.format(self.prompt, line)
