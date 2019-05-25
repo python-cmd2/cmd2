@@ -3469,15 +3469,18 @@ class Cmd(cmd.Cmd):
 
         # first we try and unpickle the history file
         history = History()
+        # on Windows, trying to open a directory throws a permission
+        # error, not a `IsADirectoryError`. So we'll check it ourselves.
+        if os.path.isdir(hist_file):
+            msg = "persistent history file '{}' is a directory"
+            self.perror(msg.format(hist_file))
+            return
+
         try:
             with open(hist_file, 'rb') as fobj:
                 history = pickle.load(fobj)
         except (FileNotFoundError, KeyError, EOFError):
             pass
-        except IsADirectoryError:
-            msg = "persistent history file '{}' is a directory"
-            self.perror(msg.format(hist_file))
-            return
         except OSError as ex:
             msg = "can not read persistent history file '{}': {}"
             self.perror(msg.format(hist_file, ex), traceback_war=False)

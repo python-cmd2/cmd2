@@ -459,18 +459,11 @@ def hist_file():
         pass
 
 def test_bad_history_file_path(capsys, request):
-    # can't use tempfile.TemporaryDirectory() as a context on Appveyor
-    # on windows. it causes a file locking issue which is reflected as
-    # a permission exception
-    test_dir = tempfile.mkdtemp()
-    # Create a new cmd2 app
-    cmd2.Cmd(persistent_history_file=test_dir)
-    _, err = capsys.readouterr()
-    assert 'is a directory' in err
-    try:
-        os.rmdir(test_dir)
-    except OSError:
-        pass
+    with tempfile.TemporaryDirectory() as test_dir:
+        # Create a new cmd2 app
+        cmd2.Cmd(persistent_history_file=test_dir)
+        _, err = capsys.readouterr()
+        assert 'is a directory' in err
 
 def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
     # test the code that converts a plain text history file to a pickle binary
