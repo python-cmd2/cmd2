@@ -3410,9 +3410,9 @@ class Cmd(cmd.Cmd):
                             traceback_war=False)
             else:
                 for runme in history:
-                    self.pfeedback(runme)
+                    self.pfeedback(runme.statement.raw)
                     if runme:
-                        self.onecmd_plus_hooks(runme)
+                        self.onecmd_plus_hooks(runme.statement.raw)
         elif args.edit:
             import tempfile
             fd, fname = tempfile.mkstemp(suffix='.txt', text=True)
@@ -3432,11 +3432,11 @@ class Cmd(cmd.Cmd):
         elif args.output_file:
             try:
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
-                    for command in history:
-                        if command.statement.multiline_command:
-                            fobj.write('{}\n'.format(command.expanded.rstrip()))
+                    for item in history:
+                        if item.statement.multiline_command:
+                            fobj.write('{}\n'.format(item.statement.expanded_command_line.rstrip()))
                         else:
-                            fobj.write('{}\n'.format(command))
+                            fobj.write('{}\n'.format(item.statement.raw))
                 plural = 's' if len(history) > 1 else ''
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:
@@ -3547,6 +3547,8 @@ class Cmd(cmd.Cmd):
                 # the command from the output
                 first = True
                 command = ''
+                if isinstance(history_item, HistoryItem):
+                    history_item = history_item.statement.raw
                 for line in history_item.splitlines():
                     if first:
                         command += '{}{}\n'.format(self.prompt, line)

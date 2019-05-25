@@ -11,21 +11,25 @@ from . import utils
 from .parsing import Statement
 
 
-class HistoryItem(str):
+class HistoryItem():
     """Class used to represent one command in the History list"""
-    listformat = ' {:>4}  {}\n'
-    ex_listformat = ' {:>4}x {}\n'
+    _listformat = ' {:>4}  {}\n'
+    _ex_listformat = ' {:>4}x {}\n'
 
-    def __new__(cls, statement: Statement):
-        """Create a new instance of HistoryItem
+    # def __new__(cls, statement: Statement):
+    #     """Create a new instance of HistoryItem
 
-        We must override __new__ because we are subclassing `str` which is
-        immutable and takes a different number of arguments as Statement.
-        """
-        hi = super().__new__(cls, statement.raw)
-        hi.statement = statement
-        hi.idx = None
-        return hi
+    #     We must override __new__ because we are subclassing `str` which is
+    #     immutable and takes a different number of arguments as Statement.
+    #     """
+    #     hi = super().__new__(cls, statement.raw)
+    #     hi.statement = statement
+    #     hi.idx = None
+    #     return hi
+
+    def __init__(self, statement: Statement, idx: int):
+        self.statement = statement
+        self.idx = idx
 
     @property
     def expanded(self) -> str:
@@ -39,23 +43,24 @@ class HistoryItem(str):
 
         :return: pretty print string version of a HistoryItem
         """
+        expanded_command = self.statement.expanded_command_line
         if verbose:
-            ret_str = self.listformat.format(self.idx, str(self).rstrip())
-            if self != self.expanded:
-                ret_str += self.ex_listformat.format(self.idx, self.expanded.rstrip())
+            ret_str = self._listformat.format(self.idx, self.statement.raw)
+            if self.statement.raw != expanded_command.rstrip():
+                ret_str += self._ex_listformat.format(self.idx, expanded_command)
         else:
             if script:
                 # display without entry numbers
                 if expanded or self.statement.multiline_command:
-                    ret_str = self.expanded.rstrip()
+                    ret_str = expanded_command.rstrip()
                 else:
-                    ret_str = str(self)
+                    ret_str = self.statement.raw
             else:
                 # display a numbered list
                 if expanded or self.statement.multiline_command:
-                    ret_str = self.listformat.format(self.idx, self.expanded.rstrip())
+                    ret_str = self._listformat.format(self.idx, expanded_command.rstrip())
                 else:
-                    ret_str = self.listformat.format(self.idx, str(self).rstrip())
+                    ret_str = self._listformat.format(self.idx, self.statement.raw.rstrip())
         return ret_str
 
 
@@ -85,9 +90,8 @@ class History(list):
 
         :param new: command line to convert to HistoryItem and add to the end of the History list
         """
-        new = HistoryItem(new)
-        list.append(self, new)
-        new.idx = len(self)
+        history_item = HistoryItem(new, len(self)+1)
+        list.append(self, history_item)
 
     def get(self, index: Union[int, str]) -> HistoryItem:
         """Get item from the History list using 1-based indexing.
@@ -206,7 +210,7 @@ class History(list):
         def isin(history_item):
             """filter function for string search of history"""
             sloppy = utils.norm_fold(search)
-            return sloppy in utils.norm_fold(history_item) or sloppy in utils.norm_fold(history_item.expanded)
+            return sloppy in utils.norm_fold(history_item.statement.raw) or sloppy in utils.norm_fold(history_item.statement.expanded_command_line)
         return [item for item in self if isin(item)]
 
     def regex_search(self, regex: str) -> List[HistoryItem]:
@@ -222,7 +226,7 @@ class History(list):
 
         def isin(hi):
             """filter function for doing a regular expression search of history"""
-            return finder.search(hi) or finder.search(hi.expanded)
+            return finder.search(hi.statement.raw) or finder.search(hi.statement.expanded_command_line)
         return [itm for itm in self if isin(itm)]
 
     def truncate(self, max_length:int) -> None:
