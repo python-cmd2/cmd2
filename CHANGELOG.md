@@ -42,6 +42,8 @@
       only tracks valid input, while readline history captures all input.
     * History is now persisted in a binary format, not plain text format. Previous history files are destroyed
       on first launch of a `cmd2` based app of version 0.9.13 or higher.
+    * HistoryItem class is no longer a subclass of `str`. If you are directly accessing the `.history` attribute
+      of a `cmd2` based app, you will need to update your code to use `.history.get(1).statement.raw` instead.
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4

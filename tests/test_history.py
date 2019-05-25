@@ -458,46 +458,6 @@ def hist_file():
     except FileNotFoundError:
         pass
 
-def test_existing_history_file(hist_file, capsys):
-
-    # Create the history file before making cmd2 app
-    with open(hist_file, 'w'):
-        pass
-
-    # Create a new cmd2 app
-    cmd2.Cmd(persistent_history_file=hist_file)
-    _, err = capsys.readouterr()
-
-    # Make sure there were no errors
-    assert err == ''
-
-    # Unregister the call to write_history_file that cmd2 did
-    ## TODO atexit.unregister(readline.write_history_file)
-
-    # Remove created history file
-    #os.remove(hist_file)
-
-def test_new_history_file(hist_file, capsys):
-
-    # Remove any existing history file
-    try:
-        os.remove(hist_file)
-    except OSError:
-        pass
-
-    # Create a new cmd2 app
-    cmd2.Cmd(persistent_history_file=hist_file)
-    _, err = capsys.readouterr()
-
-    # Make sure there were no errors
-    assert err == ''
-
-    # Unregister the call to write_history_file that cmd2 did
-    ### TODO atexit.unregister(readline.write_history_file)
-
-    # Remove created history file
-    #os.remove(hist_file)
-
 def test_bad_history_file_path(capsys, request):
     # Use a directory path as the history file
     test_dir = os.path.dirname(request.module.__file__)
@@ -531,3 +491,31 @@ def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
     assert histlist[0]== 'help\n'
     assert histlist[1] == 'alias\n'
     assert histlist[2] == 'alias create s shortcuts\n'
+
+def test_history_populates_readline(hist_file):
+    # - create a cmd2 with persistent history
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+    run_cmd(app, 'help')
+    run_cmd(app, 'shortcuts')
+    run_cmd(app, 'shortcuts')
+    run_cmd(app, 'alias')
+
+    # call the private method which is registered to write history at exit
+    app._persist_history_on_exit()
+    # - create a new cmd2 with persistent history
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+
+    assert len(app.history) == 4
+    assert app.history.get(1).statement.raw == 'help'
+    assert app.history.get(2).statement.raw == 'shortcuts'
+    assert app.history.get(3).statement.raw == 'shortcuts'
+    assert app.history.get(4).statement.raw == 'alias'
+
+    # readline only adds a single entry for multiple sequential identical commands
+    # so we check to make sure that cmd2 populated the readline history
+    # using the same rules
+    from cmd2.rl_utils import readline
+    assert readline.get_current_history_length() == 3
+    assert readline.get_history_item(1) == 'help'
+    assert readline.get_history_item(2) == 'shortcuts'
+    assert readline.get_history_item(3) == 'alias'
