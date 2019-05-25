@@ -5,8 +5,6 @@ Test history functions of cmd2
 """
 import tempfile
 import os
-import pickle
-import sys
 
 import pytest
 
@@ -18,6 +16,8 @@ except ImportError:
 
 import cmd2
 from .conftest import run_cmd, normalize, HELP_HISTORY
+from cmd2.parsing import Statement
+from cmd2.history import HistoryItem
 
 
 def test_base_help_history(base_app):
@@ -50,16 +50,25 @@ def test_exclude_from_history(base_app, monkeypatch):
     expected = normalize("""    1  help""")
     assert out == expected
 
-
 @pytest.fixture
 def hist():
-    from cmd2.parsing import Statement
-    from cmd2.cmd2 import History, HistoryItem
+    from cmd2.history import History
     h = History([HistoryItem(Statement('', raw='first'), 1),
                  HistoryItem(Statement('', raw='second'), 2),
                  HistoryItem(Statement('', raw='third'), 3),
-                 HistoryItem(Statement('', raw='fourth'),4)])
+                 HistoryItem(Statement('', raw='fourth'), 4)])
     return h
+
+def test_history_item():
+    raw = 'help'
+    stmt = Statement('', raw=raw)
+    index = 1
+    hi = HistoryItem(stmt, index)
+    assert hi.statement == stmt
+    assert hi.idx == index
+    assert hi.statement.raw == raw
+    assert str(hi) == raw
+
 
 def test_history_class_span(hist):
     for tryit in ['*', ':', '-', 'all', 'ALL']:

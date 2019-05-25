@@ -24,10 +24,7 @@ class HistoryItem():
 
     def __str__(self):
         """A convenient human readable representation of the history item"""
-        if self.statement:
-            return self.statement.raw
-        else:
-            return ''
+        return self.statement.raw
 
     @property
     def raw(self) -> str:
