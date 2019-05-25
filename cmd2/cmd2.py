@@ -3503,9 +3503,9 @@ class Cmd(cmd.Cmd):
         # if the history file is in plain text format from 0.9.12 or lower
         # this will fail, and the history in the plain text file will be lost
         import atexit
-        atexit.register(self._persist_history_on_exit)
+        atexit.register(self._persist_history)
 
-    def _persist_history_on_exit(self):
+    def _persist_history(self):
         """write history out to the history file"""
         if not self.persistent_history_file:
             return

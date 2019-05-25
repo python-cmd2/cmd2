@@ -8,7 +8,8 @@ import os
 
 import pytest
 
-# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
+# Python 3.5 had some regressions in the unitest.mock module, so use
+# 3rd party mock if available
 try:
     import mock
 except ImportError:
@@ -16,59 +17,31 @@ except ImportError:
 
 import cmd2
 from .conftest import run_cmd, normalize, HELP_HISTORY
-from cmd2.parsing import Statement
-from cmd2.history import HistoryItem
 
 
-def test_base_help_history(base_app):
-    out, err = run_cmd(base_app, 'help history')
-    assert out == normalize(HELP_HISTORY)
+#
+# readline tests
+#
+def test_readline_remove_history_item(base_app):
+    from cmd2.rl_utils import readline
+    assert readline.get_current_history_length() == 0
+    readline.add_history('this is a test')
+    assert readline.get_current_history_length() == 1
+    readline.remove_history_item(0)
+    assert readline.get_current_history_length() == 0
 
-def test_exclude_from_history(base_app, monkeypatch):
-    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
-    base_app.editor = 'fooedit'
-
-    # Mock out the subprocess.Popen call so we don't actually open an editor
-    m = mock.MagicMock(name='Popen')
-    monkeypatch.setattr("subprocess.Popen", m)
-
-    # Run edit command
-    run_cmd(base_app, 'edit')
-
-    # Run history command
-    run_cmd(base_app, 'history')
-
-    # Verify that the history is empty
-    out, err = run_cmd(base_app, 'history')
-    assert out == []
-
-    # Now run a command which isn't excluded from the history
-    run_cmd(base_app, 'help')
-
-    # And verify we have a history now ...
-    out, err = run_cmd(base_app, 'history')
-    expected = normalize("""    1  help""")
-    assert out == expected
-
+#
+# test History() class
+#
 @pytest.fixture
 def hist():
-    from cmd2.history import History
+    from cmd2.parsing import Statement
+    from cmd2.cmd2 import History, HistoryItem
     h = History([HistoryItem(Statement('', raw='first'), 1),
                  HistoryItem(Statement('', raw='second'), 2),
                  HistoryItem(Statement('', raw='third'), 3),
-                 HistoryItem(Statement('', raw='fourth'), 4)])
+                 HistoryItem(Statement('', raw='fourth'),4)])
     return h
-
-def test_history_item():
-    raw = 'help'
-    stmt = Statement('', raw=raw)
-    index = 1
-    hi = HistoryItem(stmt, index)
-    assert hi.statement == stmt
-    assert hi.idx == index
-    assert hi.statement.raw == raw
-    assert str(hi) == raw
-
 
 def test_history_class_span(hist):
     for tryit in ['*', ':', '-', 'all', 'ALL']:
@@ -205,6 +178,46 @@ def test_history_max_length(hist):
     assert hist.get(1).statement.raw == 'third'
     assert hist.get(2).statement.raw == 'fourth'
 
+#
+# test HistoryItem()
+#
+@pytest.fixture
+def histitem():
+    from cmd2.parsing import Statement
+    from cmd2.history import HistoryItem
+    statement = Statement('history',
+                            raw='help history',
+                            command='help',
+                            arg_list=['history'],
+                            )
+    histitem = HistoryItem(statement, 1)
+    return histitem
+
+def test_history_item_instantiate():
+    from cmd2.parsing import Statement
+    from cmd2.history import HistoryItem
+    statement = Statement('history',
+                            raw='help history',
+                            command='help',
+                            arg_list=['history'],
+                            )
+    with pytest.raises(TypeError):
+        _ = HistoryItem()
+    with pytest.raises(TypeError):
+        _ = HistoryItem(idx=1)
+    with pytest.raises(TypeError):
+        _ = HistoryItem(statement=statement)
+    with pytest.raises(TypeError):
+        _ = HistoryItem(statement=statement, idx='hi')
+
+def test_history_item_properties(histitem):
+    assert histitem.raw == 'help history'
+    assert histitem.expanded == 'help history'
+    assert str(histitem) == 'help history'
+
+#
+# test history command
+#
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
@@ -282,7 +295,6 @@ def test_history_with_integer_argument(base_app):
     1  help
 """)
     assert out == expected
-
 
 def test_history_with_integer_span(base_app):
     run_cmd(base_app, 'help')
@@ -441,21 +453,40 @@ def test_history_script_expanded(base_app):
     expected = ['alias create s shortcuts', 'shortcuts']
     assert out == expected
 
+def test_base_help_history(base_app):
+    out, err = run_cmd(base_app, 'help history')
+    assert out == normalize(HELP_HISTORY)
 
-#####
+def test_exclude_from_history(base_app, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't
+    # really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the subprocess.Popen call so we don't actually open an editor
+    m = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", m)
+
+    # Run edit command
+    run_cmd(base_app, 'edit')
+
+    # Run history command
+    run_cmd(base_app, 'history')
+
+    # Verify that the history is empty
+    out, err = run_cmd(base_app, 'history')
+    assert out == []
+
+    # Now run a command which isn't excluded from the history
+    run_cmd(base_app, 'help')
+
+    # And verify we have a history now ...
+    out, err = run_cmd(base_app, 'history')
+    expected = normalize("""    1  help""")
+    assert out == expected
+
 #
-# readline tests
+# test history initialization
 #
-#####
-def test_readline_remove_history_item(base_app):
-    from cmd2.rl_utils import readline
-    assert readline.get_current_history_length() == 0
-    readline.add_history('this is a test')
-    assert readline.get_current_history_length() == 1
-    readline.remove_history_item(0)
-    assert readline.get_current_history_length() == 0
-
-
 @pytest.fixture(scope="session")
 def hist_file():
     fd, filename = tempfile.mkstemp(prefix='hist_file', suffix='.txt')
@@ -467,16 +498,25 @@ def hist_file():
     except FileNotFoundError:
         pass
 
-def test_bad_history_file_path(capsys, request):
+def test_history_file_is_directory(capsys):
     with tempfile.TemporaryDirectory() as test_dir:
         # Create a new cmd2 app
         cmd2.Cmd(persistent_history_file=test_dir)
         _, err = capsys.readouterr()
         assert 'is a directory' in err
 
+def test_history_file_permission_error(mocker, capsys):
+    mock_open = mocker.patch('builtins.open')
+    mock_open.side_effect = PermissionError
+
+    cmd2.Cmd(persistent_history_file='/tmp/doesntmatter')
+    out, err = capsys.readouterr()
+    assert not out
+    assert 'can not read' in err
+
 def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
-    # test the code that converts a plain text history file to a pickle binary
-    # history file
+    # make sure we don't truncate the plain text history file on init
+    # it shouldn't get converted to pickle format until we save history
 
     # first we need some plain text commands in the history file
     with open(hist_file, 'w') as hfobj:
@@ -505,12 +545,11 @@ def test_history_populates_readline(hist_file):
     run_cmd(app, 'shortcuts')
     run_cmd(app, 'shortcuts')
     run_cmd(app, 'alias')
-
     # call the private method which is registered to write history at exit
-    app._persist_history_on_exit()
-    # - create a new cmd2 with persistent history
-    app = cmd2.Cmd(persistent_history_file=hist_file)
+    app._persist_history()
 
+    # see if history came back
+    app = cmd2.Cmd(persistent_history_file=hist_file)
     assert len(app.history) == 4
     assert app.history.get(1).statement.raw == 'help'
     assert app.history.get(2).statement.raw == 'shortcuts'
@@ -525,3 +564,27 @@ def test_history_populates_readline(hist_file):
     assert readline.get_history_item(1) == 'help'
     assert readline.get_history_item(2) == 'shortcuts'
     assert readline.get_history_item(3) == 'alias'
+
+#
+# test cmd2's ability to write out history on exit
+# we are testing the _persist_history_on_exit() method, and
+# we assume that the atexit module will call this method
+# properly
+#
+def test_persist_history_ensure_no_error_if_no_histfile(base_app, capsys):
+    # make sure if there is no persistent history file and someone
+    # calls the private method call that we don't get an error
+    base_app._persist_history()
+    out, err = capsys.readouterr()
+    assert not out
+    assert not err
+
+def test_persist_history_permission_error(hist_file, mocker, capsys):
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+    run_cmd(app, 'help')
+    mock_open = mocker.patch('builtins.open')
+    mock_open.side_effect = PermissionError
+    app._persist_history()
+    out, err = capsys.readouterr()
+    assert not out
+    assert 'can not write' in err
