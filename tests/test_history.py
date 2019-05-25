@@ -460,8 +460,13 @@ def hist_file():
 
 def test_bad_history_file_path(capsys, request):
     with tempfile.TemporaryDirectory() as test_dir:
+        # For appveyor, create a directory in our temp dir
+        # for some reason it seems that appveyor won't let us read
+        # the directory we created
+        safe_dir = os.path.join(test_dir, 'somedir')
+        os.mkdir(safe_dir)
         # Create a new cmd2 app
-        cmd2.Cmd(persistent_history_file=test_dir)
+        cmd2.Cmd(persistent_history_file=safe_dir)
         _, err = capsys.readouterr()
         assert 'is a directory' in err
 
