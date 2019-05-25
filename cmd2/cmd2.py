@@ -34,7 +34,6 @@ import cmd
 import glob
 import inspect
 import os
-import pathlib
 import pickle
 import re
 import sys
@@ -3466,29 +3465,29 @@ class Cmd(cmd.Cmd):
             self.persistent_history_file = hist_file
             return
 
-        histpath = pathlib.Path(hist_file).expanduser().resolve()
+        hist_file = os.path.expanduser(hist_file)
 
         # first we try and unpickle the history file
         history = History()
         # on Windows, trying to open a directory throws a permission
         # error, not a `IsADirectoryError`. So we'll check it ourselves.
-        if histpath.is_dir():
+        if os.path.isdir(hist_file):
             msg = "persistent history file '{}' is a directory"
-            self.perror(msg.format(histpath))
+            self.perror(msg.format(hist_file))
             return
 
         try:
-            with open(str(histpath), 'rb') as fobj:
+            with open(hist_file, 'rb') as fobj:
                 history = pickle.load(fobj)
         except (FileNotFoundError, KeyError, EOFError):
             pass
         except OSError as ex:
             msg = "can not read persistent history file '{}': {}"
-            self.perror(msg.format(histpath, ex), traceback_war=False)
+            self.perror(msg.format(hist_file, ex), traceback_war=False)
             return
 
         self.history = history
-        self.persistent_history_file = str(histpath)
+        self.persistent_history_file = hist_file
 
         # populate readline history
         if rl_type != RlType.NONE:
