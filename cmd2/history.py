@@ -90,7 +90,7 @@ class History(list):
 
         :param new: command line to convert to HistoryItem and add to the end of the History list
         """
-        history_item = HistoryItem(new, len(self)+1)
+        history_item = HistoryItem(new, len(self) + 1)
         list.append(self, history_item)
 
     def get(self, index: Union[int, str]) -> HistoryItem:
@@ -210,7 +210,9 @@ class History(list):
         def isin(history_item):
             """filter function for string search of history"""
             sloppy = utils.norm_fold(search)
-            return sloppy in utils.norm_fold(history_item.statement.raw) or sloppy in utils.norm_fold(history_item.statement.expanded_command_line)
+            inraw = sloppy in utils.norm_fold(history_item.statement.raw)
+            inexpanded = sloppy in utils.norm_fold(history_item.statement.expanded_command_line)
+            return inraw or inexpanded
         return [item for item in self if isin(item)]
 
     def regex_search(self, regex: str) -> List[HistoryItem]:
@@ -229,7 +231,7 @@ class History(list):
             return finder.search(hi.statement.raw) or finder.search(hi.statement.expanded_command_line)
         return [itm for itm in self if isin(itm)]
 
-    def truncate(self, max_length:int) -> None:
+    def truncate(self, max_length: int) -> None:
         """Truncate the length of the history, dropping the oldest items if necessary
 
         :param max_length: the maximum length of the history, if negative, all history
