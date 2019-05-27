@@ -222,7 +222,7 @@ class History(list):
         """Find history items which contain a given string
 
         :param search: the string to search for
-        :param include_persisted: (optional) if True, then search full history including from persisted history
+        :param include_persisted: (optional) if True, then search full history including persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
         def isin(history_item):
@@ -239,7 +239,7 @@ class History(list):
         """Find history items which match a given regular expression
 
         :param regex: the regular expression to search for.
-        :param include_persisted: (optional) if True, then search full history including from persisted history
+        :param include_persisted: (optional) if True, then search full history including persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
         regex = regex.strip()
