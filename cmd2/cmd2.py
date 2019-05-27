@@ -345,8 +345,8 @@ class Cmd(cmd.Cmd):
         :param completekey: (optional) readline name of a completion key, default to Tab
         :param stdin: (optional) alternate input file object, if not specified, sys.stdin is used
         :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
-        :param persistent_history_file: (optional) file path to load a persistent readline history from
-        :param persistent_history_length: (optional) max number of lines which will be written to the history file
+        :param persistent_history_file: (optional) file path to load a persistent cmd2 command history from
+        :param persistent_history_length: (optional) max number of history items to write to the persistent history file
         :param startup_script: (optional) file path to a a script to load and execute at startup
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
         :param transcript_files: (optional) allows running transcript tests when allow_cli_args is False
@@ -3337,6 +3337,8 @@ class Cmd(cmd.Cmd):
     history_format_group.add_argument('-v', '--verbose', action='store_true',
                                       help='display history and include expanded commands if they\n'
                                            'differ from the typed command')
+    history_format_group.add_argument('-a', '--all', action='store_true',
+                                      help='display all commands, including ones persisted from previous sessions')
 
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"
@@ -3389,18 +3391,18 @@ class Cmd(cmd.Cmd):
 
             if '..' in arg or ':' in arg:
                 # Get a slice of history
-                history = self.history.span(arg)
+                history = self.history.span(arg, args.all)
             elif arg_is_int:
                 history = [self.history.get(arg)]
             elif arg.startswith(r'/') and arg.endswith(r'/'):
-                history = self.history.regex_search(arg)
+                history = self.history.regex_search(arg, args.all)
             else:
-                history = self.history.str_search(arg)
+                history = self.history.str_search(arg, args.all)
         else:
             # If no arg given, then retrieve the entire history
             cowardly_refuse_to_run = True
             # Get a copy of the history so it doesn't get mutated while we are using it
-            history = self.history[:]
+            history = self.history.span(':', args.all)
 
         if args.run:
             if cowardly_refuse_to_run:
@@ -3488,6 +3490,7 @@ class Cmd(cmd.Cmd):
             return
 
         self.history = history
+        self.history.start_session()
         self.persistent_history_file = hist_file
 
         # populate readline history

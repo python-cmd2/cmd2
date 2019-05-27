@@ -73,8 +73,14 @@ class History(list):
     regex_search() - return a list of history items which match a given regex
     get() - return a single element of the list, using 1 based indexing
     span() - given a 1-based slice, return the appropriate list of history items
-
     """
+    def __init__(self, seq=()) -> None:
+        super().__init__(seq)
+        self.session_start_index = 0
+
+    def start_session(self) -> None:
+        """Start a new session, thereby setting the next index as the first index in the new session."""
+        self.session_start_index = len(self)
 
     # noinspection PyMethodMayBeStatic
     def _zero_based_index(self, onebased: Union[int, str]) -> int:
@@ -85,12 +91,17 @@ class History(list):
         return result
 
     def append(self, new: Statement) -> None:
-        """Append a HistoryItem to end of the History list
+        """Append a HistoryItem to end of the History list.
 
         :param new: command line to convert to HistoryItem and add to the end of the History list
         """
         history_item = HistoryItem(new, len(self) + 1)
-        list.append(self, history_item)
+        super().append(history_item)
+
+    def clear(self) -> None:
+        """Remove all items from the History list."""
+        super().clear()
+        self.start_session()
 
     def get(self, index: Union[int, str]) -> HistoryItem:
         """Get item from the History list using 1-based indexing.
@@ -133,10 +144,11 @@ class History(list):
     #
     spanpattern = re.compile(r'^\s*(?P<start>-?[1-9]\d*)?(?P<separator>:|(\.{2,}))?(?P<end>-?[1-9]\d*)?\s*$')
 
-    def span(self, span: str) -> List[HistoryItem]:
+    def span(self, span: str, include_persisted: bool = False) -> List[HistoryItem]:
         """Return an index or slice of the History list,
 
         :param span: string containing an index or a slice
+        :param include_persisted: (optional) if True, then retrieve full results including from persisted history
         :return: a list of HistoryItems
 
         This method can accommodate input in any of these forms:
@@ -191,19 +203,26 @@ class History(list):
             # take a slice of the array
             result = self[start:]
         elif end is not None and sep is not None:
-            result = self[:end]
+            if include_persisted:
+                result = self[:end]
+            else:
+                result = self[self.session_start_index:end]
         elif start is not None:
-            # there was no separator so it's either a posative or negative integer
+            # there was no separator so it's either a positive or negative integer
             result = [self[start]]
         else:
             # we just have a separator, return the whole list
-            result = self[:]
+            if include_persisted:
+                result = self[:]
+            else:
+                result = self[self.session_start_index:]
         return result
 
-    def str_search(self, search: str) -> List[HistoryItem]:
+    def str_search(self, search: str, include_persisted: bool = False) -> List[HistoryItem]:
         """Find history items which contain a given string
 
         :param search: the string to search for
+        :param include_persisted: (optional) if True, then search full history including from persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
         def isin(history_item):
@@ -212,12 +231,15 @@ class History(list):
             inraw = sloppy in utils.norm_fold(history_item.raw)
             inexpanded = sloppy in utils.norm_fold(history_item.expanded)
             return inraw or inexpanded
-        return [item for item in self if isin(item)]
 
-    def regex_search(self, regex: str) -> List[HistoryItem]:
+        search_list = self if include_persisted else self[self.session_start_index:]
+        return [item for item in search_list if isin(item)]
+
+    def regex_search(self, regex: str, include_persisted: bool = False) -> List[HistoryItem]:
         """Find history items which match a given regular expression
 
         :param regex: the regular expression to search for.
+        :param include_persisted: (optional) if True, then search full history including from persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
         regex = regex.strip()
@@ -228,7 +250,9 @@ class History(list):
         def isin(hi):
             """filter function for doing a regular expression search of history"""
             return finder.search(hi.raw) or finder.search(hi.expanded)
-        return [itm for itm in self if isin(itm)]
+
+        search_list = self if include_persisted else self[self.session_start_index:]
+        return [itm for itm in search_list if isin(itm)]
 
     def truncate(self, max_length: int) -> None:
         """Truncate the length of the history, dropping the oldest items if necessary

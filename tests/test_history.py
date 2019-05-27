@@ -43,6 +43,19 @@ def hist():
                  HistoryItem(Statement('', raw='fourth'),4)])
     return h
 
+@pytest.fixture
+def persisted_hist():
+    from cmd2.parsing import Statement
+    from cmd2.cmd2 import History, HistoryItem
+    h = History([HistoryItem(Statement('', raw='first'), 1),
+                 HistoryItem(Statement('', raw='second'), 2),
+                 HistoryItem(Statement('', raw='third'), 3),
+                 HistoryItem(Statement('', raw='fourth'),4)])
+    h.start_session()
+    h.append(Statement('', raw='fifth'))
+    h.append(Statement('', raw='sixth'))
+    return h
+
 def test_history_class_span(hist):
     for tryit in ['*', ':', '-', 'all', 'ALL']:
         assert hist.span(tryit) == hist
@@ -118,6 +131,62 @@ def test_history_class_span(hist):
     for tryit in value_errors:
         with pytest.raises(ValueError):
             hist.span(tryit)
+
+def test_persisted_history_span(persisted_hist):
+    for tryit in ['*', ':', '-', 'all', 'ALL']:
+        assert persisted_hist.span(tryit, include_persisted=True) == persisted_hist
+        assert persisted_hist.span(tryit, include_persisted=False) != persisted_hist
+
+    assert persisted_hist.span('3')[0].statement.raw == 'third'
+    assert persisted_hist.span('-1')[0].statement.raw == 'sixth'
+
+    span = persisted_hist.span('2..')
+    assert len(span) == 5
+    assert span[0].statement.raw == 'second'
+    assert span[1].statement.raw == 'third'
+    assert span[2].statement.raw == 'fourth'
+    assert span[3].statement.raw == 'fifth'
+    assert span[4].statement.raw == 'sixth'
+
+    span = persisted_hist.span('-2..')
+    assert len(span) == 2
+    assert span[0].statement.raw == 'fifth'
+    assert span[1].statement.raw == 'sixth'
+
+    span = persisted_hist.span('1..3')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
+
+    span = persisted_hist.span('2:-1')
+    assert len(span) == 5
+    assert span[0].statement.raw == 'second'
+    assert span[1].statement.raw == 'third'
+    assert span[2].statement.raw == 'fourth'
+    assert span[3].statement.raw == 'fifth'
+    assert span[4].statement.raw == 'sixth'
+
+    span = persisted_hist.span('-3:4')
+    assert len(span) == 1
+    assert span[0].statement.raw == 'fourth'
+
+    span = persisted_hist.span(':-2', include_persisted=True)
+    assert len(span) == 5
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
+    assert span[3].statement.raw == 'fourth'
+    assert span[4].statement.raw == 'fifth'
+
+    span = persisted_hist.span(':-2', include_persisted=False)
+    assert len(span) == 1
+    assert span[0].statement.raw == 'fifth'
+
+    value_errors = ['fred', 'fred:joe', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    for tryit in value_errors:
+        with pytest.raises(ValueError):
+            persisted_hist.span(tryit)
 
 def test_history_class_get(hist):
     assert hist.get('1').statement.raw == 'first'
@@ -401,7 +470,8 @@ def test_history_verbose_with_other_options(base_app):
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c', '-x']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -v ' + opt)
-        assert len(out) == 3
+        assert len(out) == 4
+        assert out[0] == '-v can not be used with any other options'
         assert out[1].startswith('Usage:')
 
 def test_history_verbose(base_app):
@@ -417,7 +487,8 @@ def test_history_script_with_invalid_options(base_app):
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -s ' + opt)
-        assert len(out) == 3
+        assert len(out) == 4
+        assert out[0] == '-s and -x can not be used with -c, -r, -e, -o, or -t'
         assert out[1].startswith('Usage:')
 
 def test_history_script(base_app):
@@ -432,7 +503,8 @@ def test_history_expanded_with_invalid_options(base_app):
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -x ' + opt)
-        assert len(out) == 3
+        assert len(out) == 4
+        assert out[0] == '-s and -x can not be used with -c, -r, -e, -o, or -t'
         assert out[1].startswith('Usage:')
 
 def test_history_expanded(base_app):
