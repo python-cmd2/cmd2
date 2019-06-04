@@ -32,7 +32,8 @@
     * `preserve_quotes` is now a keyword-only argument in the argparse decorators
     * Refactored so that `cmd2.Cmd.cmdloop()` returns the `exit_code` instead of a call to `sys.exit()`
         * It is now applicaiton developer's responsibility to treat the return value from `cmdloop()` accordingly
-    * Removed internally used `eos` command that was used to keep track of when a text script's commands ended 
+    * Removed internally used `eos` command that was used to keep track of when a text script's commands ended
+    * Removed cmd2 member called _STOP_AND_EXIT since it was just a boolean value that should always be True 
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4

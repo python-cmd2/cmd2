@@ -432,9 +432,6 @@ class Cmd(cmd.Cmd):
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
         self._last_result = None
 
-        # Codes used for exit conditions
-        self._STOP_AND_EXIT = True  # cmd convention
-
         # Used load command to store the current script dir as a LIFO queue to support _relative_load command
         self._script_dir = []
 
@@ -2859,14 +2856,15 @@ class Cmd(cmd.Cmd):
     @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
     def do_eof(self, _: argparse.Namespace) -> bool:
         """Called when <Ctrl>-D is pressed"""
-        # End of script should not exit app, but <Ctrl>-D should.
-        return self._STOP_AND_EXIT
+        # Return True to stop the command loop
+        return True
 
     @with_argparser(ACArgumentParser())
     def do_quit(self, _: argparse.Namespace) -> bool:
         """Exit this application"""
         self._should_quit = True
-        return self._STOP_AND_EXIT
+        # Return True to stop the command loop
+        return True
 
     def select(self, opts: Union[str, List[str], List[Tuple[Any, Optional[str]]]],
                prompt: str = 'Your choice? ') -> str:

@@ -1950,7 +1950,8 @@ Usage:  exit [exit_code]
                 self.exit_code = -1
 
         self._should_quit = True
-        return self._STOP_AND_EXIT
+        # Return True to stop the command loop
+        return True
 
     def postloop(self) -> None:
         """Hook method executed once when the cmdloop() method is about to return."""
