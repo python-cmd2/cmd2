@@ -3338,7 +3338,8 @@ class Cmd(cmd.Cmd):
                                       help='display history and include expanded commands if they\n'
                                            'differ from the typed command')
     history_format_group.add_argument('-a', '--all', action='store_true',
-                                      help='display all commands, including ones persisted from previous sessions')
+                                      help='display all commands, including ones persisted from\n'
+                                           'previous sessions')
 
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"

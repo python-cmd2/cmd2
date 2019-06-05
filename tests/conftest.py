@@ -89,7 +89,8 @@ formatting:
                         macros expanded, instead of typed commands
   -v, --verbose         display history and include expanded commands if they
                         differ from the typed command
-  -a, --all             display all commands, including ones persisted from previous sessions
+  -a, --all             display all commands, including ones persisted from
+                        previous sessions
 """
 
 # Output from the shortcuts command with default built-in shortcuts
