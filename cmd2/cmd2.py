@@ -1807,15 +1807,18 @@ class Cmd(cmd.Cmd):
         except Exception as ex:
             self.perror(ex)
 
-    def runcmds_plus_hooks(self, cmds: List[str]) -> bool:
+    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]]) -> bool:
         """
         Used when commands are being run in an automated fashion like text scripts or history replays.
         The prompt and command line for each command will be printed if echo is True.
 
-        :param cmds: command strings suitable for onecmd_plus_hooks
+        :param cmds: commands to run
         :return: True if running of commands should stop
         """
         for line in cmds:
+            if isinstance(line, HistoryItem):
+                line = line.raw
+
             if self.echo:
                 self.poutput('{}{}'.format(self.prompt, line))
 
