@@ -59,6 +59,7 @@ shortcuts           List available shortcuts
 
 # Help text for the history command
 HELP_HISTORY = """Usage: history [-h] [-r | -e | -o FILE | -t TRANSCRIPT | -c] [-s] [-x] [-v]
+               [-a]
                [arg]
 
 View, run, edit, save, or clear previously entered commands
@@ -88,7 +89,8 @@ formatting:
                         macros expanded, instead of typed commands
   -v, --verbose         display history and include expanded commands if they
                         differ from the typed command
-
+  -a, --all             display all commands, including ones persisted from
+                        previous sessions
 """
 
 # Output from the shortcuts command with default built-in shortcuts

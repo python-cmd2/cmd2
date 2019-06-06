@@ -28,4 +28,4 @@ dmypy.json
 dmypy.sock
 
 # cmd2 history file used in hello_cmd2.py
-cmd2_history.txt
+cmd2_history.dat
