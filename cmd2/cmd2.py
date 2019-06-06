@@ -2389,8 +2389,8 @@ class Cmd(cmd.Cmd):
                            "  If you want to use redirection, pipes, or terminators like ';' in the value\n"
                            "  of the alias, then quote them.\n"
                            "\n"
-                           "  Since aliases are resolved during parsing, tab completion will function as it\n"
-                           "  would for the actual command the alias resolves to.\n"
+                           "  Since aliases are resolved during parsing, tab completion will function as\n"
+                           "  it would for the actual command the alias resolves to.\n"
                            "\n"
                            "Examples:\n"
                            "  alias create ls !ls -lF\n"
@@ -2420,8 +2420,8 @@ class Cmd(cmd.Cmd):
 
     # alias -> list
     alias_list_help = "list aliases"
-    alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup script\n"
-                              "to preserve aliases across sessions\n"
+    alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup\n"
+                              "script to preserve aliases across sessions\n"
                               "\n"
                               "Without arguments, all aliases will be listed.")
 
@@ -2572,17 +2572,17 @@ class Cmd(cmd.Cmd):
                            "\n"
                            "The following creates a macro called my_macro that expects two arguments:\n"
                            "\n"
-                           "  macro create my_macro make_dinner -meat {1} -veggie {2}\n"
+                           "  macro create my_macro make_dinner --meat {1} --veggie {2}\n"
                            "\n"
-                           "When the macro is called, the provided arguments are resolved and the assembled\n"
-                           "command is run. For example:\n"
+                           "When the macro is called, the provided arguments are resolved and the\n"
+                           "assembled command is run. For example:\n"
                            "\n"
-                           "  my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli\n"
+                           "  my_macro beef broccoli ---> make_dinner --meat beef --veggie broccoli\n"
                            "\n"
                            "Notes:\n"
                            "  To use the literal string {1} in your command, escape it this way: {{1}}.\n"
                            "\n"
-                           "  Extra arguments passed when calling a macro are tacked onto resolved command.\n"
+                           "  Extra arguments passed to a macro are appended to resolved command.\n"
                            "\n"
                            "  An argument number can be repeated in a macro. In the following example the\n"
                            "  first argument will populate both {1} instances.\n"
@@ -3068,8 +3068,8 @@ class Cmd(cmd.Cmd):
                       "has limited ability to parse Python statements into tokens. In particular,\n"
                       "there may be problems with whitespace and quotes depending on their placement.\n"
                       "\n"
-                      "If you see strange parsing behavior, it's best to just open the Python shell by\n"
-                      "providing no arguments to py and run more complex statements there.")
+                      "If you see strange parsing behavior, it's best to just open the Python shell\n"
+                      "by providing no arguments to py and run more complex statements there.")
 
     py_parser = ACArgumentParser(description=py_description)
     py_parser.add_argument('command', help="command to run", nargs='?')
