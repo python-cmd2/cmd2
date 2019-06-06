@@ -5,11 +5,11 @@ Test history functions of cmd2
 """
 import tempfile
 import os
-import sys
 
 import pytest
 
-# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
+# Python 3.5 had some regressions in the unitest.mock module, so use
+# 3rd party mock if available
 try:
     import mock
 except ImportError:
@@ -19,79 +19,180 @@ import cmd2
 from .conftest import run_cmd, normalize, HELP_HISTORY
 
 
-def test_base_help_history(base_app):
-    out, err = run_cmd(base_app, 'help history')
-    assert out == normalize(HELP_HISTORY)
+#
+# readline tests
+#
+def test_readline_remove_history_item(base_app):
+    from cmd2.rl_utils import readline
+    assert readline.get_current_history_length() == 0
+    readline.add_history('this is a test')
+    assert readline.get_current_history_length() == 1
+    readline.remove_history_item(0)
+    assert readline.get_current_history_length() == 0
 
-def test_exclude_from_history(base_app, monkeypatch):
-    # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
-    base_app.editor = 'fooedit'
-
-    # Mock out the subprocess.Popen call so we don't actually open an editor
-    m = mock.MagicMock(name='Popen')
-    monkeypatch.setattr("subprocess.Popen", m)
-
-    # Run edit command
-    run_cmd(base_app, 'edit')
-
-    # Run history command
-    run_cmd(base_app, 'history')
-
-    # Verify that the history is empty
-    out, err = run_cmd(base_app, 'history')
-    assert out == []
-
-    # Now run a command which isn't excluded from the history
-    run_cmd(base_app, 'help')
-
-    # And verify we have a history now ...
-    out, err = run_cmd(base_app, 'history')
-    expected = normalize("""    1  help""")
-    assert out == expected
-
-
+#
+# test History() class
+#
 @pytest.fixture
 def hist():
     from cmd2.parsing import Statement
     from cmd2.cmd2 import History, HistoryItem
-    h = History([HistoryItem(Statement('', raw='first')),
-                 HistoryItem(Statement('', raw='second')),
-                 HistoryItem(Statement('', raw='third')),
-                 HistoryItem(Statement('', raw='fourth'))])
+    h = History([HistoryItem(Statement('', raw='first'), 1),
+                 HistoryItem(Statement('', raw='second'), 2),
+                 HistoryItem(Statement('', raw='third'), 3),
+                 HistoryItem(Statement('', raw='fourth'),4)])
+    return h
+
+@pytest.fixture
+def persisted_hist():
+    from cmd2.parsing import Statement
+    from cmd2.cmd2 import History, HistoryItem
+    h = History([HistoryItem(Statement('', raw='first'), 1),
+                 HistoryItem(Statement('', raw='second'), 2),
+                 HistoryItem(Statement('', raw='third'), 3),
+                 HistoryItem(Statement('', raw='fourth'),4)])
+    h.start_session()
+    h.append(Statement('', raw='fifth'))
+    h.append(Statement('', raw='sixth'))
     return h
 
 def test_history_class_span(hist):
     for tryit in ['*', ':', '-', 'all', 'ALL']:
         assert hist.span(tryit) == hist
 
-    assert hist.span('3') == ['third']
-    assert hist.span('-1') == ['fourth']
+    assert hist.span('3')[0].statement.raw == 'third'
+    assert hist.span('-1')[0].statement.raw == 'fourth'
 
-    assert hist.span('2..') == ['second', 'third', 'fourth']
-    assert hist.span('2:') == ['second', 'third', 'fourth']
+    span = hist.span('2..')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'second'
+    assert span[1].statement.raw == 'third'
+    assert span[2].statement.raw == 'fourth'
 
-    assert hist.span('-2..') == ['third', 'fourth']
-    assert hist.span('-2:') == ['third', 'fourth']
+    span = hist.span('2:')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'second'
+    assert span[1].statement.raw == 'third'
+    assert span[2].statement.raw == 'fourth'
 
-    assert hist.span('1..3') == ['first', 'second', 'third']
-    assert hist.span('1:3') == ['first', 'second', 'third']
-    assert hist.span('2:-1') == ['second', 'third', 'fourth']
-    assert hist.span('-3:4') == ['second', 'third','fourth']
-    assert hist.span('-4:-2') == ['first', 'second', 'third']
+    span = hist.span('-2..')
+    assert len(span) == 2
+    assert span[0].statement.raw == 'third'
+    assert span[1].statement.raw == 'fourth'
 
-    assert hist.span(':-2') == ['first', 'second', 'third']
-    assert hist.span('..-2') == ['first', 'second', 'third']
+    span = hist.span('-2:')
+    assert len(span) == 2
+    assert span[0].statement.raw == 'third'
+    assert span[1].statement.raw == 'fourth'
+
+    span = hist.span('1..3')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
+
+    span = hist.span('1:3')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
+
+    span = hist.span('2:-1')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'second'
+    assert span[1].statement.raw == 'third'
+    assert span[2].statement.raw == 'fourth'
+
+    span = hist.span('-3:4')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'second'
+    assert span[1].statement.raw == 'third'
+    assert span[2].statement.raw == 'fourth'
+
+    span = hist.span('-4:-2')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
+
+    span = hist.span(':-2')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
+
+    span = hist.span('..-2')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
 
     value_errors = ['fred', 'fred:joe', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
     for tryit in value_errors:
         with pytest.raises(ValueError):
             hist.span(tryit)
 
+def test_persisted_history_span(persisted_hist):
+    for tryit in ['*', ':', '-', 'all', 'ALL']:
+        assert persisted_hist.span(tryit, include_persisted=True) == persisted_hist
+        assert persisted_hist.span(tryit, include_persisted=False) != persisted_hist
+
+    assert persisted_hist.span('3')[0].statement.raw == 'third'
+    assert persisted_hist.span('-1')[0].statement.raw == 'sixth'
+
+    span = persisted_hist.span('2..')
+    assert len(span) == 5
+    assert span[0].statement.raw == 'second'
+    assert span[1].statement.raw == 'third'
+    assert span[2].statement.raw == 'fourth'
+    assert span[3].statement.raw == 'fifth'
+    assert span[4].statement.raw == 'sixth'
+
+    span = persisted_hist.span('-2..')
+    assert len(span) == 2
+    assert span[0].statement.raw == 'fifth'
+    assert span[1].statement.raw == 'sixth'
+
+    span = persisted_hist.span('1..3')
+    assert len(span) == 3
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
+
+    span = persisted_hist.span('2:-1')
+    assert len(span) == 5
+    assert span[0].statement.raw == 'second'
+    assert span[1].statement.raw == 'third'
+    assert span[2].statement.raw == 'fourth'
+    assert span[3].statement.raw == 'fifth'
+    assert span[4].statement.raw == 'sixth'
+
+    span = persisted_hist.span('-3:4')
+    assert len(span) == 1
+    assert span[0].statement.raw == 'fourth'
+
+    span = persisted_hist.span(':-2', include_persisted=True)
+    assert len(span) == 5
+    assert span[0].statement.raw == 'first'
+    assert span[1].statement.raw == 'second'
+    assert span[2].statement.raw == 'third'
+    assert span[3].statement.raw == 'fourth'
+    assert span[4].statement.raw == 'fifth'
+
+    span = persisted_hist.span(':-2', include_persisted=False)
+    assert len(span) == 1
+    assert span[0].statement.raw == 'fifth'
+
+    value_errors = ['fred', 'fred:joe', 'a..b', '2 ..', '1 : 3', '1:0', '0:3']
+    for tryit in value_errors:
+        with pytest.raises(ValueError):
+            persisted_hist.span(tryit)
+
 def test_history_class_get(hist):
-    assert hist.get('1') == 'first'
-    assert hist.get(3) == 'third'
+    assert hist.get('1').statement.raw == 'first'
+    assert hist.get(3).statement.raw == 'third'
     assert hist.get('-2') == hist[-2]
-    assert hist.get(-1) == 'fourth'
+    assert hist.get(-1).statement.raw == 'fourth'
 
     with pytest.raises(IndexError):
         hist.get(0)
@@ -114,13 +215,78 @@ def test_history_class_get(hist):
         hist.get(None)
 
 def test_history_str_search(hist):
-    assert hist.str_search('ir') == ['first', 'third']
-    assert hist.str_search('rth') == ['fourth']
+    items = hist.str_search('ir')
+    assert len(items) == 2
+    assert items[0].statement.raw == 'first'
+    assert items[1].statement.raw == 'third'
+
+    items = hist.str_search('rth')
+    assert len(items) == 1
+    assert items[0].statement.raw == 'fourth'
 
 def test_history_regex_search(hist):
-    assert hist.regex_search('/i.*d/') == ['third']
-    assert hist.regex_search('s[a-z]+ond') == ['second']
+    items = hist.regex_search('/i.*d/')
+    assert len(items) == 1
+    assert items[0].statement.raw == 'third'
 
+    items = hist.regex_search('s[a-z]+ond')
+    assert len(items) == 1
+    assert items[0].statement.raw == 'second'
+
+def test_history_max_length_zero(hist):
+    hist.truncate(0)
+    assert len(hist) == 0
+
+def test_history_max_length_negative(hist):
+    hist.truncate(-1)
+    assert len(hist) == 0
+
+def test_history_max_length(hist):
+    hist.truncate(2)
+    assert len(hist) == 2
+    assert hist.get(1).statement.raw == 'third'
+    assert hist.get(2).statement.raw == 'fourth'
+
+#
+# test HistoryItem()
+#
+@pytest.fixture
+def histitem():
+    from cmd2.parsing import Statement
+    from cmd2.history import HistoryItem
+    statement = Statement('history',
+                            raw='help history',
+                            command='help',
+                            arg_list=['history'],
+                            )
+    histitem = HistoryItem(statement, 1)
+    return histitem
+
+def test_history_item_instantiate():
+    from cmd2.parsing import Statement
+    from cmd2.history import HistoryItem
+    statement = Statement('history',
+                            raw='help history',
+                            command='help',
+                            arg_list=['history'],
+                            )
+    with pytest.raises(TypeError):
+        _ = HistoryItem()
+    with pytest.raises(TypeError):
+        _ = HistoryItem(idx=1)
+    with pytest.raises(TypeError):
+        _ = HistoryItem(statement=statement)
+    with pytest.raises(TypeError):
+        _ = HistoryItem(statement=statement, idx='hi')
+
+def test_history_item_properties(histitem):
+    assert histitem.raw == 'help history'
+    assert histitem.expanded == 'help history'
+    assert str(histitem) == 'help history'
+
+#
+# test history command
+#
 def test_base_history(base_app):
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'shortcuts')
@@ -198,7 +364,6 @@ def test_history_with_integer_argument(base_app):
     1  help
 """)
     assert out == expected
-
 
 def test_history_with_integer_span(base_app):
     run_cmd(base_app, 'help')
@@ -305,7 +470,8 @@ def test_history_verbose_with_other_options(base_app):
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c', '-x']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -v ' + opt)
-        assert len(out) == 3
+        assert len(out) == 4
+        assert out[0] == '-v can not be used with any other options'
         assert out[1].startswith('Usage:')
 
 def test_history_verbose(base_app):
@@ -321,7 +487,8 @@ def test_history_script_with_invalid_options(base_app):
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -s ' + opt)
-        assert len(out) == 3
+        assert len(out) == 4
+        assert out[0] == '-s and -x can not be used with -c, -r, -e, -o, or -t'
         assert out[1].startswith('Usage:')
 
 def test_history_script(base_app):
@@ -336,7 +503,8 @@ def test_history_expanded_with_invalid_options(base_app):
     options_to_test = ['-r', '-e', '-o file', '-t file', '-c']
     for opt in options_to_test:
         out, err = run_cmd(base_app, 'history -x ' + opt)
-        assert len(out) == 3
+        assert len(out) == 4
+        assert out[0] == '-s and -x can not be used with -c, -r, -e, -o, or -t'
         assert out[1].startswith('Usage:')
 
 def test_history_expanded(base_app):
@@ -357,21 +525,40 @@ def test_history_script_expanded(base_app):
     expected = ['alias create s shortcuts', 'shortcuts']
     assert out == expected
 
+def test_base_help_history(base_app):
+    out, err = run_cmd(base_app, 'help history')
+    assert out == normalize(HELP_HISTORY)
 
-#####
+def test_exclude_from_history(base_app, monkeypatch):
+    # Set a fake editor just to make sure we have one.  We aren't
+    # really going to call it due to the mock
+    base_app.editor = 'fooedit'
+
+    # Mock out the subprocess.Popen call so we don't actually open an editor
+    m = mock.MagicMock(name='Popen')
+    monkeypatch.setattr("subprocess.Popen", m)
+
+    # Run edit command
+    run_cmd(base_app, 'edit')
+
+    # Run history command
+    run_cmd(base_app, 'history')
+
+    # Verify that the history is empty
+    out, err = run_cmd(base_app, 'history')
+    assert out == []
+
+    # Now run a command which isn't excluded from the history
+    run_cmd(base_app, 'help')
+
+    # And verify we have a history now ...
+    out, err = run_cmd(base_app, 'history')
+    expected = normalize("""    1  help""")
+    assert out == expected
+
 #
-# readline tests
+# test history initialization
 #
-#####
-def test_readline_remove_history_item(base_app):
-    from cmd2.rl_utils import readline
-    assert readline.get_current_history_length() == 0
-    readline.add_history('this is a test')
-    assert readline.get_current_history_length() == 1
-    readline.remove_history_item(0)
-    assert readline.get_current_history_length() == 0
-
-
 @pytest.fixture(scope="session")
 def hist_file():
     fd, filename = tempfile.mkstemp(prefix='hist_file', suffix='.txt')
@@ -383,62 +570,93 @@ def hist_file():
     except FileNotFoundError:
         pass
 
-def test_existing_history_file(hist_file, capsys):
-    import atexit
-    import readline
+def test_history_file_is_directory(capsys):
+    with tempfile.TemporaryDirectory() as test_dir:
+        # Create a new cmd2 app
+        cmd2.Cmd(persistent_history_file=test_dir)
+        _, err = capsys.readouterr()
+        assert 'is a directory' in err
 
-    # Create the history file before making cmd2 app
-    with open(hist_file, 'w'):
-        pass
+def test_history_file_permission_error(mocker, capsys):
+    mock_open = mocker.patch('builtins.open')
+    mock_open.side_effect = PermissionError
 
-    # Create a new cmd2 app
-    cmd2.Cmd(persistent_history_file=hist_file)
-    _, err = capsys.readouterr()
+    cmd2.Cmd(persistent_history_file='/tmp/doesntmatter')
+    out, err = capsys.readouterr()
+    assert not out
+    assert 'can not read' in err
 
-    # Make sure there were no errors
-    assert err == ''
+def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
+    # make sure we don't truncate the plain text history file on init
+    # it shouldn't get converted to pickle format until we save history
 
-    # Unregister the call to write_history_file that cmd2 did
-    atexit.unregister(readline.write_history_file)
-
-    # Remove created history file
-    os.remove(hist_file)
-
-def test_new_history_file(hist_file, capsys):
-    import atexit
-    import readline
-
-    # Remove any existing history file
-    try:
-        os.remove(hist_file)
-    except OSError:
-        pass
+    # first we need some plain text commands in the history file
+    with open(hist_file, 'w') as hfobj:
+        hfobj.write('help\n')
+        hfobj.write('alias\n')
+        hfobj.write('alias create s shortcuts\n')
 
     # Create a new cmd2 app
     cmd2.Cmd(persistent_history_file=hist_file)
-    _, err = capsys.readouterr()
 
-    # Make sure there were no errors
-    assert err == ''
+    # history should be initialized, but the file on disk should
+    # still be plain text
+    with open(hist_file, 'r') as hfobj:
+        histlist= hfobj.readlines()
 
-    # Unregister the call to write_history_file that cmd2 did
-    atexit.unregister(readline.write_history_file)
+    assert len(histlist) == 3
+    # history.get() is overridden to be one based, not zero based
+    assert histlist[0]== 'help\n'
+    assert histlist[1] == 'alias\n'
+    assert histlist[2] == 'alias create s shortcuts\n'
 
-    # Remove created history file
-    os.remove(hist_file)
+def test_history_populates_readline(hist_file):
+    # - create a cmd2 with persistent history
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+    run_cmd(app, 'help')
+    run_cmd(app, 'shortcuts')
+    run_cmd(app, 'shortcuts')
+    run_cmd(app, 'alias')
+    # call the private method which is registered to write history at exit
+    app._persist_history()
 
-def test_bad_history_file_path(capsys, request):
-    # Use a directory path as the history file
-    test_dir = os.path.dirname(request.module.__file__)
+    # see if history came back
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+    assert len(app.history) == 4
+    assert app.history.get(1).statement.raw == 'help'
+    assert app.history.get(2).statement.raw == 'shortcuts'
+    assert app.history.get(3).statement.raw == 'shortcuts'
+    assert app.history.get(4).statement.raw == 'alias'
 
-    # Create a new cmd2 app
-    cmd2.Cmd(persistent_history_file=test_dir)
-    _, err = capsys.readouterr()
+    # readline only adds a single entry for multiple sequential identical commands
+    # so we check to make sure that cmd2 populated the readline history
+    # using the same rules
+    from cmd2.rl_utils import readline
+    assert readline.get_current_history_length() == 3
+    assert readline.get_history_item(1) == 'help'
+    assert readline.get_history_item(2) == 'shortcuts'
+    assert readline.get_history_item(3) == 'alias'
 
-    if sys.platform == 'win32':
-        # pyreadline masks the read exception. Therefore the bad path error occurs when trying to write the file.
-        assert 'readline cannot write' in err
-    else:
-        # GNU readline raises an exception upon trying to read the directory as a file
-        assert 'readline cannot read' in err
+#
+# test cmd2's ability to write out history on exit
+# we are testing the _persist_history_on_exit() method, and
+# we assume that the atexit module will call this method
+# properly
+#
+def test_persist_history_ensure_no_error_if_no_histfile(base_app, capsys):
+    # make sure if there is no persistent history file and someone
+    # calls the private method call that we don't get an error
+    base_app._persist_history()
+    out, err = capsys.readouterr()
+    assert not out
+    assert not err
 
+def test_persist_history_permission_error(hist_file, mocker, capsys):
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+    run_cmd(app, 'help')
+    mock_open = mocker.patch('builtins.open')
+    mock_open.side_effect = PermissionError
+    app._persist_history()
+    out, err = capsys.readouterr()
+    assert not out
+    assert 'can not write' in err

@@ -258,7 +258,7 @@ All cmd_-based applications on systems with the ``readline`` module
 also provide `Readline Emacs editing mode`_.  With this you can, for example, use **Ctrl-r** to search backward through
 the readline history.
 
-``cmd2`` adds the option of making this readline history persistent via optional arguments to ``cmd2.Cmd.__init__()``:
+``cmd2`` adds the option of making this history persistent via optional arguments to ``cmd2.Cmd.__init__()``:
 
 .. automethod:: cmd2.cmd2.Cmd.__init__
 

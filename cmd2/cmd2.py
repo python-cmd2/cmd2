@@ -34,6 +34,7 @@ import cmd
 import glob
 import inspect
 import os
+import pickle
 import re
 import sys
 import threading
@@ -344,8 +345,8 @@ class Cmd(cmd.Cmd):
         :param completekey: (optional) readline name of a completion key, default to Tab
         :param stdin: (optional) alternate input file object, if not specified, sys.stdin is used
         :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
-        :param persistent_history_file: (optional) file path to load a persistent readline history from
-        :param persistent_history_length: (optional) max number of lines which will be written to the history file
+        :param persistent_history_file: (optional) file path to load a persistent cmd2 command history from
+        :param persistent_history_length: (optional) max number of history items to write to the persistent history file
         :param startup_script: (optional) file path to a a script to load and execute at startup
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
         :param transcript_files: (optional) allows running transcript tests when allow_cli_args is False
@@ -402,13 +403,15 @@ class Cmd(cmd.Cmd):
         self.hidden_commands = ['eof', '_relative_load']
 
         # Commands to exclude from the history command
+        # initialize history
+        self.persistent_history_length = persistent_history_length
+        self._initialize_history(persistent_history_file)
         self.exclude_from_history = '''history edit eof'''.split()
 
         # Command aliases and macros
         self.macros = dict()
 
         self.initial_stdout = sys.stdout
-        self.history = History()
         self.pystate = {}
         self.py_history = []
         self.pyscript_name = 'app'
@@ -460,41 +463,9 @@ class Cmd(cmd.Cmd):
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
 
-        # Check if history should persist
-        self.persistent_history_file = ''
-        if persistent_history_file and rl_type != RlType.NONE:
-            persistent_history_file = os.path.expanduser(persistent_history_file)
-            read_err = False
-
-            try:
-                # First try to read any existing history file
-                readline.read_history_file(persistent_history_file)
-            except FileNotFoundError:
-                pass
-            except OSError as ex:
-                self.perror("readline cannot read persistent history file '{}': {}".format(persistent_history_file, ex),
-                            traceback_war=False)
-                read_err = True
-
-            if not read_err:
-                try:
-                    # Make sure readline is able to write the history file. Doing it this way is a more thorough check
-                    # than trying to open the file with write access since readline's underlying function needs to
-                    # create a temporary file in the same directory and may not have permission.
-                    readline.set_history_length(persistent_history_length)
-                    readline.write_history_file(persistent_history_file)
-                except OSError as ex:
-                    self.perror("readline cannot write persistent history file '{}': {}".
-                                format(persistent_history_file, ex), traceback_war=False)
-                else:
-                    # Set history file and register to save our history at exit
-                    import atexit
-                    self.persistent_history_file = persistent_history_file
-                    atexit.register(readline.write_history_file, self.persistent_history_file)
-
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
-            startup_script = os.path.expanduser(startup_script)
+            startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
                 self.cmdqueue.append("load '{}'".format(startup_script))
 
@@ -2382,8 +2353,8 @@ class Cmd(cmd.Cmd):
                            "  If you want to use redirection, pipes, or terminators like ';' in the value\n"
                            "  of the alias, then quote them.\n"
                            "\n"
-                           "  Since aliases are resolved during parsing, tab completion will function as it\n"
-                           "  would for the actual command the alias resolves to.\n"
+                           "  Since aliases are resolved during parsing, tab completion will function as\n"
+                           "  it would for the actual command the alias resolves to.\n"
                            "\n"
                            "Examples:\n"
                            "  alias create ls !ls -lF\n"
@@ -2413,8 +2384,8 @@ class Cmd(cmd.Cmd):
 
     # alias -> list
     alias_list_help = "list aliases"
-    alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup script\n"
-                              "to preserve aliases across sessions\n"
+    alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup\n"
+                              "script to preserve aliases across sessions\n"
                               "\n"
                               "Without arguments, all aliases will be listed.")
 
@@ -2565,17 +2536,17 @@ class Cmd(cmd.Cmd):
                            "\n"
                            "The following creates a macro called my_macro that expects two arguments:\n"
                            "\n"
-                           "  macro create my_macro make_dinner -meat {1} -veggie {2}\n"
+                           "  macro create my_macro make_dinner --meat {1} --veggie {2}\n"
                            "\n"
-                           "When the macro is called, the provided arguments are resolved and the assembled\n"
-                           "command is run. For example:\n"
+                           "When the macro is called, the provided arguments are resolved and the\n"
+                           "assembled command is run. For example:\n"
                            "\n"
-                           "  my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli\n"
+                           "  my_macro beef broccoli ---> make_dinner --meat beef --veggie broccoli\n"
                            "\n"
                            "Notes:\n"
                            "  To use the literal string {1} in your command, escape it this way: {{1}}.\n"
                            "\n"
-                           "  Extra arguments passed when calling a macro are tacked onto resolved command.\n"
+                           "  Extra arguments passed to a macro are appended to resolved command.\n"
                            "\n"
                            "  An argument number can be repeated in a macro. In the following example the\n"
                            "  first argument will populate both {1} instances.\n"
@@ -3062,8 +3033,8 @@ class Cmd(cmd.Cmd):
                       "has limited ability to parse Python statements into tokens. In particular,\n"
                       "there may be problems with whitespace and quotes depending on their placement.\n"
                       "\n"
-                      "If you see strange parsing behavior, it's best to just open the Python shell by\n"
-                      "providing no arguments to py and run more complex statements there.")
+                      "If you see strange parsing behavior, it's best to just open the Python shell\n"
+                      "by providing no arguments to py and run more complex statements there.")
 
     py_parser = ACArgumentParser(description=py_description)
     py_parser.add_argument('command', help="command to run", nargs='?')
@@ -3333,6 +3304,9 @@ class Cmd(cmd.Cmd):
     history_format_group.add_argument('-v', '--verbose', action='store_true',
                                       help='display history and include expanded commands if they\n'
                                            'differ from the typed command')
+    history_format_group.add_argument('-a', '--all', action='store_true',
+                                      help='display all commands, including ones persisted from\n'
+                                           'previous sessions')
 
     history_arg_help = ("empty               all history items\n"
                         "a                   one history item by number\n"
@@ -3367,10 +3341,11 @@ class Cmd(cmd.Cmd):
             # Clear command and readline history
             self.history.clear()
 
+            if self.persistent_history_file:
+                os.remove(self.persistent_history_file)
+
             if rl_type != RlType.NONE:
                 readline.clear_history()
-                if self.persistent_history_file:
-                    os.remove(self.persistent_history_file)
             return
 
         # If an argument was supplied, then retrieve partial contents of the history
@@ -3388,18 +3363,18 @@ class Cmd(cmd.Cmd):
 
             if '..' in arg or ':' in arg:
                 # Get a slice of history
-                history = self.history.span(arg)
+                history = self.history.span(arg, args.all)
             elif arg_is_int:
                 history = [self.history.get(arg)]
             elif arg.startswith(r'/') and arg.endswith(r'/'):
-                history = self.history.regex_search(arg)
+                history = self.history.regex_search(arg, args.all)
             else:
-                history = self.history.str_search(arg)
+                history = self.history.str_search(arg, args.all)
         else:
             # If no arg given, then retrieve the entire history
             cowardly_refuse_to_run = True
             # Get a copy of the history so it doesn't get mutated while we are using it
-            history = self.history[:]
+            history = self.history.span(':', args.all)
 
         if args.run:
             if cowardly_refuse_to_run:
@@ -3416,7 +3391,7 @@ class Cmd(cmd.Cmd):
                     if command.statement.multiline_command:
                         fobj.write('{}\n'.format(command.expanded.rstrip()))
                     else:
-                        fobj.write('{}\n'.format(command))
+                        fobj.write('{}\n'.format(command.raw))
             try:
                 self.do_edit(fname)
                 return self.do_load(fname)
@@ -3425,11 +3400,11 @@ class Cmd(cmd.Cmd):
         elif args.output_file:
             try:
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
-                    for command in history:
-                        if command.statement.multiline_command:
-                            fobj.write('{}\n'.format(command.expanded.rstrip()))
+                    for item in history:
+                        if item.statement.multiline_command:
+                            fobj.write('{}\n'.format(item.expanded.rstrip()))
                         else:
-                            fobj.write('{}\n'.format(command))
+                            fobj.write('{}\n'.format(item.raw))
                 plural = 's' if len(history) > 1 else ''
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:
@@ -3440,6 +3415,79 @@ class Cmd(cmd.Cmd):
             # Display the history items retrieved
             for hi in history:
                 self.poutput(hi.pr(script=args.script, expanded=args.expanded, verbose=args.verbose))
+
+    def _initialize_history(self, hist_file):
+        """Initialize history using history related attributes
+
+        This function can determine whether history is saved in the prior text-based
+        format (one line of input is stored as one line in the file), or the new-as-
+        of-version 0.9.13 pickle based format.
+
+        History created by versions <= 0.9.12 is in readline format, i.e. plain text files.
+
+        Initializing history does not effect history files on disk, versions >= 0.9.13 always
+        write history in the pickle format.
+        """
+        self.history = History()
+        # with no persistent history, nothing else in this method is relevant
+        if not hist_file:
+            self.persistent_history_file = hist_file
+            return
+
+        hist_file = os.path.abspath(os.path.expanduser(hist_file))
+
+        # first we try and unpickle the history file
+        history = History()
+        # on Windows, trying to open a directory throws a permission
+        # error, not a `IsADirectoryError`. So we'll check it ourselves.
+        if os.path.isdir(hist_file):
+            msg = "persistent history file '{}' is a directory"
+            self.perror(msg.format(hist_file))
+            return
+
+        try:
+            with open(hist_file, 'rb') as fobj:
+                history = pickle.load(fobj)
+        except (AttributeError, EOFError, FileNotFoundError, ImportError, IndexError, KeyError, pickle.UnpicklingError):
+            # If any non-operating system error occurs when attempting to unpickle, just use an empty history
+            pass
+        except OSError as ex:
+            msg = "can not read persistent history file '{}': {}"
+            self.perror(msg.format(hist_file, ex), traceback_war=False)
+            return
+
+        self.history = history
+        self.history.start_session()
+        self.persistent_history_file = hist_file
+
+        # populate readline history
+        if rl_type != RlType.NONE:
+            last = None
+            for item in history:
+                # readline only adds a single entry for multiple sequential identical commands
+                # so we emulate that behavior here
+                if item.raw != last:
+                    readline.add_history(item.raw)
+                    last = item.raw
+
+        # register a function to write history at save
+        # if the history file is in plain text format from 0.9.12 or lower
+        # this will fail, and the history in the plain text file will be lost
+        import atexit
+        atexit.register(self._persist_history)
+
+    def _persist_history(self):
+        """write history out to the history file"""
+        if not self.persistent_history_file:
+            return
+
+        self.history.truncate(self.persistent_history_length)
+        try:
+            with open(self.persistent_history_file, 'wb') as fobj:
+                pickle.dump(self.history, fobj)
+        except OSError as ex:
+            msg = "can not write persistent history file '{}': {}"
+            self.perror(msg.format(self.persistent_history_file, ex), traceback_war=False)
 
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> Optional[bool]:
         """
@@ -3479,6 +3527,8 @@ class Cmd(cmd.Cmd):
                 # the command from the output
                 first = True
                 command = ''
+                if isinstance(history_item, HistoryItem):
+                    history_item = history_item.raw
                 for line in history_item.splitlines():
                     if first:
                         command += '{}{}\n'.format(self.prompt, line)
