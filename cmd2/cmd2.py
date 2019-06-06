@@ -468,7 +468,7 @@ class Cmd(cmd.Cmd):
 
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
-            startup_script = os.path.expanduser(startup_script)
+            startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
                 self.cmdqueue.append("load '{}'".format(startup_script))
 
@@ -3371,10 +3371,11 @@ class Cmd(cmd.Cmd):
             # Clear command and readline history
             self.history.clear()
 
+            if self.persistent_history_file:
+                os.remove(self.persistent_history_file)
+
             if rl_type != RlType.NONE:
                 readline.clear_history()
-                if self.persistent_history_file:
-                    os.remove(self.persistent_history_file)
             return
 
         # If an argument was supplied, then retrieve partial contents of the history
@@ -3468,7 +3469,7 @@ class Cmd(cmd.Cmd):
             self.persistent_history_file = hist_file
             return
 
-        hist_file = os.path.expanduser(hist_file)
+        hist_file = os.path.abspath(os.path.expanduser(hist_file))
 
         # first we try and unpickle the history file
         history = History()
@@ -3690,7 +3691,7 @@ class Cmd(cmd.Cmd):
             return
 
         if args.transcript:
-            self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
+            self._generate_transcript(script_commands, args.transcript)
             return
 
         self.cmdqueue = script_commands + ['eos'] + self.cmdqueue
