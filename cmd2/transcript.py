@@ -102,7 +102,7 @@ class Cmd2TestCase(unittest.TestCase):
                 line_num += 1
 
             if stop:
-                # This should only be hit if cmd2.Cmd.do_quit is overridden to have output text
+                # This should only be hit if the command that set stop to True had output text
                 self.assertTrue(finished, stop_msg)
 
             # transform the expected text into a valid regular expression
