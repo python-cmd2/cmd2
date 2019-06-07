@@ -3700,13 +3700,25 @@ class Cmd(cmd.Cmd):
         relative_path = os.path.join(self._current_script_dir or '', file_path)
         return self.do_load(relative_path)
 
-    def run_transcript_tests(self, callargs: List[str]) -> None:
+    def _expand_transcripts(self, transcript_paths: List[str]) -> List[str]:
+        """Expand glob patterns to match transcript files.
+
+        :param transcript_paths: list of transcript file paths (expanded for user), possibly including glob patterns
+        :return: list of  transcript file paths with glob patterns expanded
+        """
+        expanded_transcripts = []
+        for fileset in transcript_paths:
+            for fname in glob.glob(fileset):
+                expanded_transcripts.append(fname)
+        return expanded_transcripts
+
+    def run_transcript_tests(self, transcript_paths: List[str]) -> None:
         """Runs transcript tests for provided file(s).
 
         This is called when either -t is provided on the command line or the transcript_files argument is provided
         during construction of the cmd2.Cmd instance.
 
-        :param callargs: list of transcript test file names
+        :param transcript_paths: list of transcript test file paths
         """
         import unittest
         from .transcript import Cmd2TestCase
@@ -3714,7 +3726,16 @@ class Cmd(cmd.Cmd):
         class TestMyAppCase(Cmd2TestCase):
             cmdapp = self
 
-        self.__class__.testfiles = callargs
+        # Expand glob patterns
+        transcripts_expanded = self._expand_transcripts(transcript_paths)
+
+        # Validate that there is at least one transcript file
+        if not transcripts_expanded:
+            self.perror('No test files found - nothing to test', traceback_war=False)
+            self.exit_code = -1
+            return
+
+        self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
         stream = utils.StdSim(sys.stderr)
@@ -4013,9 +4034,8 @@ class Cmd(cmd.Cmd):
             # If transcript testing was called for, use other arguments as transcript files
             if callopts.test:
                 self._transcript_files = callargs
-
             # If commands were supplied at invocation, then add them to the command queue
-            if callargs:
+            elif callargs:
                 self.cmdqueue.extend(callargs)
 
         # Grab terminal lock before the prompt has been drawn by readline

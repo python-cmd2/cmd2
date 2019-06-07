@@ -268,9 +268,28 @@ def test_transcript_failure(request, capsys):
         sys_exit_code = app.cmdloop()
         assert sys_exit_code != 0
 
-    # Check for the unittest "OK" condition for the 1 test which ran
     expected_start = "File "
     expected_end = "s\n\nFAILED (failures=1)\n\n"
     _, err = capsys.readouterr()
     assert err.startswith(expected_start)
     assert err.endswith(expected_end)
+
+
+def test_transcript_no_file(request, capsys):
+    # Create a cmd2.Cmd() instance and make sure basic settings are
+    # like we want for test
+    app = CmdLineApp()
+    app.feedback_to_output = False
+
+    # Need to patch sys.argv so cmd2 doesn't think it was called with
+    # arguments equal to the py.test args
+    testargs = ['prog', '-t']
+    with mock.patch.object(sys, 'argv', testargs):
+        # Run the command loop
+        sys_exit_code = app.cmdloop()
+        assert sys_exit_code != 0
+
+    # Check for the unittest "OK" condition for the 1 test which ran
+    expected = 'No test files found - nothing to test\n'
+    _, err = capsys.readouterr()
+    assert err == expected

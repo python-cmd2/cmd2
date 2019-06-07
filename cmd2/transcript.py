@@ -10,7 +10,6 @@ This file contains the classess necessary to make that work. These
 classes are used in cmd2.py::run_transcript_tests()
 """
 import re
-import glob
 import unittest
 from typing import Tuple
 
@@ -30,13 +29,10 @@ class Cmd2TestCase(unittest.TestCase):
 
     def fetchTranscripts(self):
         self.transcripts = {}
-        for fileset in self.cmdapp.testfiles:
-            for fname in glob.glob(fileset):
-                tfile = open(fname)
-                self.transcripts[fname] = iter(tfile.readlines())
-                tfile.close()
-        if not len(self.transcripts):
-            raise Exception("No test files found - nothing to test.")
+        for fname in self.cmdapp.testfiles:
+            tfile = open(fname)
+            self.transcripts[fname] = iter(tfile.readlines())
+            tfile.close()
 
     def setUp(self):
         if self.cmdapp:
