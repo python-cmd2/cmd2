@@ -24,7 +24,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
     ----------------------
     stdout: str - output captured from stdout while this command is executing
     stderr: str - output captured from stderr while this command is executing. None if no error captured.
-    stop: bool - return value of the command's corresponding do_* function
+    stop: bool - return value of onecmd_plus_hooks after it runs the given command line.
     data - possible data populated by the command.
 
     Any combination of these fields can be used when developing a scripting API for a given command.
