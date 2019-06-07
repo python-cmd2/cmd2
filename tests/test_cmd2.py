@@ -1949,7 +1949,6 @@ Usage:  exit [exit_code]
                 self.perror("{} isn't a valid integer exit code".format(arg_list[0]))
                 self.exit_code = -1
 
-        self._should_quit = True
         # Return True to stop the command loop
         return True
 

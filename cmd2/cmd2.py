@@ -425,9 +425,6 @@ class Cmd(cmd.Cmd):
                                                 shortcuts=shortcuts)
         self._transcript_files = transcript_files
 
-        # Used to enable the ability for a Python script to quit the application
-        self._should_quit = False
-
         # True if running inside a Python script or interactive console, False otherwise
         self._in_py = False
 
@@ -2836,7 +2833,6 @@ class Cmd(cmd.Cmd):
     @with_argparser(ACArgumentParser())
     def do_quit(self, _: argparse.Namespace) -> bool:
         """Exit this application"""
-        self._should_quit = True
         # Return True to stop the command loop
         return True
 
@@ -3053,6 +3049,8 @@ class Cmd(cmd.Cmd):
             self.perror(err, traceback_war=False)
             return False
 
+        bridge = PyscriptBridge(self)
+
         try:
             self._in_py = True
 
@@ -3078,7 +3076,6 @@ class Cmd(cmd.Cmd):
                 raise EmbeddedConsoleExit
 
             # Set up Python environment
-            bridge = PyscriptBridge(self)
             self.pystate[self.pyscript_name] = bridge
             self.pystate['run'] = py_run
             self.pystate['quit'] = py_quit
@@ -3223,7 +3220,7 @@ class Cmd(cmd.Cmd):
         finally:
             self._in_py = False
 
-        return self._should_quit
+        return bridge.stop
 
     pyscript_parser = ACArgumentParser()
     setattr(pyscript_parser.add_argument('script_path', help='path to the script file'),

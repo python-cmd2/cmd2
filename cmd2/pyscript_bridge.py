@@ -20,17 +20,18 @@ else:
     from contextlib import redirect_stdout, redirect_stderr
 
 
-class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr', 'data'])):
-    """Encapsulates the results from a command.
+class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr', 'stop', 'data'])):
+    """Encapsulates the results from a cmd2 app command
 
     Named tuple attributes
     ----------------------
-    stdout: str - Output captured from stdout while this command is executing
-    stderr: str - Output captured from stderr while this command is executing. None if no error captured.
-    data - Data returned by the command.
+    stdout: str - output captured from stdout while this command is executing
+    stderr: str - output captured from stderr while this command is executing. None if no error captured.
+    stop: bool - return value of the command's corresponding do_* function
+    data - possible data populated by the command.
 
     Any combination of these fields can be used when developing a scripting API for a given command.
-    By default stdout and stderr will be captured for you. If there is additional command specific data,
+    By default stdout, stderr, and stop will be captured for you. If there is additional command specific data,
     then write that to cmd2's _last_result member. That becomes the data member of this tuple.
 
     In some cases, the data member may contain everything needed for a command and storing stdout
@@ -67,6 +68,9 @@ class PyscriptBridge(object):
         self._cmd2_app = cmd2_app
         self.cmd_echo = False
 
+        # Tells if any of the commands run via __call__ returned True for stop
+        self.stop = False
+
     def __dir__(self):
         """Return a custom set of attribute names"""
         attributes = []
@@ -95,16 +99,20 @@ class PyscriptBridge(object):
 
         self._cmd2_app._last_result = None
 
+        stop = False
         try:
             self._cmd2_app.stdout = copy_cmd_stdout
             with redirect_stdout(copy_cmd_stdout):
                 with redirect_stderr(copy_stderr):
-                    self._cmd2_app.onecmd_plus_hooks(command, pyscript_bridge_call=True)
+                    stop = self._cmd2_app.onecmd_plus_hooks(command, pyscript_bridge_call=True)
         finally:
-            self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
+            with self._cmd2_app.sigint_protection:
+                self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
+                self.stop = stop or self.stop
 
         # Save the output. If stderr is empty, set it to None.
         result = CommandResult(stdout=copy_cmd_stdout.getvalue(),
                                stderr=copy_stderr.getvalue() if copy_stderr.getvalue() else None,
+                               stop=stop,
                                data=self._cmd2_app._last_result)
         return result
