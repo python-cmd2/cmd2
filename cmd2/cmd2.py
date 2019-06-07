@@ -3700,18 +3700,6 @@ class Cmd(cmd.Cmd):
         relative_path = os.path.join(self._current_script_dir or '', file_path)
         return self.do_load(relative_path)
 
-    def _expand_transcripts(self, transcript_paths: List[str]) -> List[str]:
-        """Expand glob patterns to match transcript files.
-
-        :param transcript_paths: list of transcript file paths (expanded for user), possibly including glob patterns
-        :return: list of  transcript file paths with glob patterns expanded
-        """
-        expanded_transcripts = []
-        for pattern in transcript_paths:
-            files = utils.files_from_glob_pattern(pattern, access=os.R_OK)
-            expanded_transcripts.extend(files)
-        return expanded_transcripts
-
     def run_transcript_tests(self, transcript_paths: List[str]) -> None:
         """Runs transcript tests for provided file(s).
 
@@ -3726,10 +3714,8 @@ class Cmd(cmd.Cmd):
         class TestMyAppCase(Cmd2TestCase):
             cmdapp = self
 
-        # Expand glob patterns
-        transcripts_expanded = self._expand_transcripts(transcript_paths)
-
         # Validate that there is at least one transcript file
+        transcripts_expanded = utils.files_from_glob_patterns(transcript_paths, access=os.R_OK)
         if not transcripts_expanded:
             self.perror('No test files found - nothing to test', traceback_war=False)
             self.exit_code = -1
