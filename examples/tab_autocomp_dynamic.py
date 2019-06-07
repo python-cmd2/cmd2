@@ -2,9 +2,6 @@
 # coding=utf-8
 """
 A example usage of AutoCompleter with delayed initialization of the argparse object
-
-Copyright 2018 Eric Lin <anselor@gmail.com>
-Released under MIT license, see LICENSE file
 """
 from typing import List
 

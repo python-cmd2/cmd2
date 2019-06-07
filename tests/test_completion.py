@@ -5,9 +5,6 @@ Unit/functional testing for readline tab-completion functions in the cmd2.py mod
 
 These are primarily tests related to readline completer functions which handle tab-completion of cmd2/cmd commands,
 file system paths, and shell commands.
-
-Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
-Released under MIT license, see LICENSE file
 """
 import argparse
 import os

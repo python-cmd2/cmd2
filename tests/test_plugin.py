@@ -2,9 +2,6 @@
 # flake8: noqa E302
 """
 Test plugin infrastructure and hooks.
-
-Copyright 2018 Jared Crapo <jared@kotfu.net>
-Released under MIT license, see LICENSE file
 """
 import pytest
 

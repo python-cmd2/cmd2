@@ -55,9 +55,6 @@ How to supply completion choice lists or functions for sub-commands:
     The subcommand group dictionary maps subcommand names to tuple(arg_choices, subcmd_args_lookup)
 
     For more details of this more complex approach see tab_autocompletion.py in the examples
-
-Copyright 2018 Eric Lin <anselor@gmail.com>
-Released under MIT license, see LICENSE file
 """
 
 import argparse

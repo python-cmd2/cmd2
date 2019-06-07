@@ -2,9 +2,6 @@
 """
 Bridges calls made inside of pyscript with the Cmd2 host app while maintaining a reasonable
 degree of isolation between the two
-
-Copyright 2018 Eric Lin <anselor@gmail.com>
-Released under MIT license, see LICENSE file
 """
 
 import sys
