@@ -1163,7 +1163,7 @@ class Cmd(cmd.Cmd):
         # Find every executable file in the user's path that matches the pattern
         for path in paths:
             full_path = os.path.join(path, starts_with)
-            matches = [f for f in glob.glob(full_path + '*') if os.path.isfile(f) and os.access(f, os.X_OK)]
+            matches = utils.files_from_glob_pattern(full_path + '*', access=os.X_OK)
 
             for match in matches:
                 exes_set.add(os.path.basename(match))
@@ -3707,9 +3707,9 @@ class Cmd(cmd.Cmd):
         :return: list of  transcript file paths with glob patterns expanded
         """
         expanded_transcripts = []
-        for fileset in transcript_paths:
-            for fname in glob.glob(fileset):
-                expanded_transcripts.append(fname)
+        for pattern in transcript_paths:
+            files = utils.files_from_glob_pattern(pattern, access=os.R_OK)
+            expanded_transcripts.extend(files)
         return expanded_transcripts
 
     def run_transcript_tests(self, transcript_paths: List[str]) -> None:
