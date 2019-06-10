@@ -28,7 +28,7 @@
     input from previous invocations of `cmd2` based apps now shows in the `history` command.
     * Text scripts now run immediately instead of adding their commands to `cmdqueue`. This allows easy capture of
     the entire script's output.
-    * Added member to `CommandResult` called `stop` which is the return value of onecmd_plus_hooks after it runs
+    * Added member to `CommandResult` called `stop` which is the return value of `onecmd_plus_hooks` after it runs
     the given command line. 
 * Breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
