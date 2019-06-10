@@ -216,6 +216,29 @@ def test_load_record_transcript(base_app, request):
     assert xscript == expected
 
 
+def test_generate_transcript_stop(capsys):
+    # Verify transcript generation stops when a command returns True for stop
+    app = CmdLineApp()
+
+    # Make a tmp file to use as a transcript
+    fd, transcript_fname = tempfile.mkstemp(prefix='', suffix='.trn')
+    os.close(fd)
+
+    # This should run all commands return False for stop
+    commands = ['help', 'alias']
+    stop = app._generate_transcript(commands, transcript_fname)
+    _, err = capsys.readouterr()
+    assert not stop
+    assert err.startswith("2 commands")
+
+    # Since quit returns True for stop, only the first 2 commands will run and stop should be True
+    commands = ['help', 'quit', 'alias']
+    stop = app._generate_transcript(commands, transcript_fname)
+    _, err = capsys.readouterr()
+    assert stop
+    assert err.startswith("2 commands")
+
+
 @pytest.mark.parametrize('expected, transformed', [
     # strings with zero or one slash or with escaped slashes means no regular
     # expression present, so the result should just be what re.escape returns.
