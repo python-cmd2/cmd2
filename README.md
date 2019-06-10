@@ -353,11 +353,19 @@ Open source projects using cmd2
 
 Here are a few examples of open-source projects which use `cmd2`:
 
-* [cliff](https://github.com/openstack/cliff)
-    * OpenStack Command Line Interface Formulation Framework
+* [CephFS Shell](http://docs.ceph.com/docs/master/cephfs/cephfs-shell/)
+    * [Ceph](https://ceph.com/) is a distributed object, block, and file storage platform
+* [JSShell](https://github.com/Den1al/JSShell)
+    * An interactive multi-user web JavaScript shell
+* [Jok3r](http://www.jok3r-framework.com)
+    * Network & Web Pentest Automation Framework
+* [Poseidon](https://github.com/CyberReboot/poseidon)
+    * Leverages software-defined networks (SDNs) to acquire and then feed network traffic to a number of machine learning techniques
+* [Unipacker](https://github.com/unipacker/unipacker)
+    * Automatic and platform-independent unpacker for Windows binaries based on emulation
 * [tomcatmanager](https://github.com/tomcatmanager/tomcatmanager)
     * A command line tool and python library for managing a tomcat server
-* [clanvas](https://github.com/marklalor/clanvas)
-    * Command-line client for Canvas by Instructure
 * [mptcpanalyzer](https://github.com/teto/mptcpanalyzer)
     * Tool to help analyze mptcp pcaps
+* [clanvas](https://github.com/marklalor/clanvas)
+    * Command-line client for Canvas by Instructure
