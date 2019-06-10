@@ -28,8 +28,8 @@
     input from previous invocations of `cmd2` based apps now shows in the `history` command.
     * Text scripts now run immediately instead of adding their commands to `cmdqueue`. This allows easy capture of
     the entire script's output.
-    * Added member to CommandResult called stop which is the return value of onecmd_plus_hooks after it runs the given
-    command line. 
+    * Added member to `CommandResult` called `stop` which is the return value of onecmd_plus_hooks after it runs
+    the given command line. 
 * Breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
     that allows terminators in alias and macro values.
@@ -46,8 +46,8 @@
     * HistoryItem class is no longer a subclass of `str`. If you are directly accessing the `.history` attribute
     of a `cmd2` based app, you will need to update your code to use `.history.get(1).statement.raw` instead.
     * Removed internally used `eos` command that was used to keep track of when a text script's commands ended
-    * Removed cmd2 member called _STOP_AND_EXIT since it was just a boolean value that should always be True
-    * Removed cmd2 member called _should_quit since PyscriptBridge now handles this logic
+    * Removed `cmd2` member called `_STOP_AND_EXIT` since it was just a boolean value that should always be True
+    * Removed `cmd2` member called `_should_quit` since `PyscriptBridge` now handles this logic
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4
