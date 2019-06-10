@@ -9,6 +9,7 @@
     precedence even though it appeared later in the command.
     * Fixed issue where quotes around redirection file paths were being lost in `Statement.expanded_command_line()`
     * Fixed a bug in how line numbers were calculated for transcript testing
+    * Fixed issue where `_cmdloop()` suppressed exceptions by returning from within its `finally` code
 * Enhancements
     * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
