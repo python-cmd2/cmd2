@@ -25,12 +25,14 @@ from cmd2 import clipboard, constants, utils
 from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
     HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
-
-@pytest.fixture
-def outsim_app():
+def CreateOutsimApp():
     c = cmd2.Cmd()
     c.stdout = utils.StdSim(c.stdout)
     return c
+
+@pytest.fixture
+def outsim_app():
+    return CreateOutsimApp()
 
 def test_version(base_app):
     assert cmd2.__version__
@@ -109,9 +111,8 @@ def test_base_show_readonly(base_app):
     out, err = run_cmd(base_app, 'set -a')
     expected = normalize(SHOW_TXT + '\nRead only settings:' + """
         Commands may be terminated with: {}
-        Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}
-""".format(base_app.statement_parser.terminators, base_app.allow_cli_args, base_app.allow_redirection))
+""".format(base_app.statement_parser.terminators, base_app.allow_redirection))
     assert out == expected
 
 
@@ -734,23 +735,26 @@ def test_base_py_interactive(base_app):
     m.assert_called_once()
 
 
-def test_base_cmdloop_with_queue(outsim_app):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
-    outsim_app.use_rawinput = True
+def test_base_cmdloop_with_startup_commands():
     intro = 'Hello World, this is an intro ...'
-    outsim_app.cmdqueue.append('quit\n')
 
     # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog"]
+    testargs = ["prog", 'quit']
     expected = intro + '\n'
+
     with mock.patch.object(sys, 'argv', testargs):
+        # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
+        app = CreateOutsimApp()
+        app.use_rawinput = True
+
         # Run the command loop with custom intro
-        outsim_app.cmdloop(intro=intro)
-    out = outsim_app.stdout.getvalue()
+        app.cmdloop(intro=intro)
+
+    out = app.stdout.getvalue()
     assert out == expected
 
 
-def test_base_cmdloop_without_queue(outsim_app):
+def test_base_cmdloop_without_startup_commands(outsim_app):
     # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     outsim_app.use_rawinput = True
     outsim_app.intro = 'Hello World, this is an intro ...'
@@ -823,8 +827,7 @@ class SayApp(cmd2.Cmd):
 
 @pytest.fixture
 def say_app():
-    app = SayApp()
-    app.allow_cli_args = False
+    app = SayApp(allow_cli_args=False)
     app.stdout = utils.StdSim(app.stdout)
     return app
 

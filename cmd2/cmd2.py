@@ -335,11 +335,12 @@ class Cmd(cmd.Cmd):
     DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
     DEFAULT_EDITOR = utils.find_editor()
 
-    def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, persistent_history_file: str = '',
-                 persistent_history_length: int = 1000, startup_script: Optional[str] = None, use_ipython: bool = False,
-                 transcript_files: Optional[List[str]] = None, allow_redirection: bool = True,
-                 multiline_commands: Optional[List[str]] = None, terminators: Optional[List[str]] = None,
-                 shortcuts: Optional[Dict[str, str]] = None) -> None:
+    def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, *,
+                 persistent_history_file: str = '', persistent_history_length: int = 1000,
+                 startup_script: Optional[str] = None, use_ipython: bool = False,
+                 allow_cli_args: bool = True, transcript_files: Optional[List[str]] = None,
+                 allow_redirection: bool = True, multiline_commands: Optional[List[str]] = None,
+                 terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None) -> None:
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
         :param completekey: (optional) readline name of a completion key, default to Tab
@@ -349,6 +350,9 @@ class Cmd(cmd.Cmd):
         :param persistent_history_length: (optional) max number of history items to write to the persistent history file
         :param startup_script: (optional) file path to a a script to load and execute at startup
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
+        :param allow_cli_args: (optional) if True, then cmd2 will process command line arguments as either
+                                          commands to be run or, if -t is specified, transcript files to run.
+                                          This should be set to False if your application parses its own arguments.
         :param transcript_files: (optional) allows running transcript tests when allow_cli_args is False
         :param allow_redirection: (optional) should output redirection and pipes be allowed
         :param multiline_commands: (optional) list of commands allowed to accept multi-line input
@@ -372,7 +376,6 @@ class Cmd(cmd.Cmd):
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
         # Attributes which should NOT be dynamically settable at runtime
-        self.allow_cli_args = True  # Should arguments passed on the command-line be processed as commands?
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
 
@@ -423,7 +426,6 @@ class Cmd(cmd.Cmd):
                                                 terminators=terminators,
                                                 multiline_commands=multiline_commands,
                                                 shortcuts=shortcuts)
-        self._transcript_files = transcript_files
 
         # True if running inside a Python script or interactive console, False otherwise
         self._in_py = False
@@ -460,11 +462,33 @@ class Cmd(cmd.Cmd):
         # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
         self.broken_pipe_warning = ''
 
+        # Commands that will run at the beginning of the command loop
+        self._startup_commands = []
+
         # If a startup script is provided, then add it in the queue to load
         if startup_script is not None:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
-                self.cmdqueue.append("load '{}'".format(startup_script))
+                self._startup_commands.append("load '{}'".format(startup_script))
+
+        # Transcript files to run instead of interactive command loop
+        self._transcript_files = None
+
+        # Check for command line args
+        if allow_cli_args:
+            parser = argparse.ArgumentParser()
+            parser.add_argument('-t', '--test', action="store_true",
+                                help='Test against transcript(s) in FILE (wildcards OK)')
+            callopts, callargs = parser.parse_known_args()
+
+            # If transcript testing was called for, use other arguments as transcript files
+            if callopts.test:
+                self._transcript_files = callargs
+            # If commands were supplied at invocation, then add them to the command queue
+            elif callargs:
+                self._startup_commands.extend(callargs)
+        elif transcript_files:
+            self._transcript_files = transcript_files
 
         # The default key for sorting tab completion matches. This only applies when the matches are not
         # already marked as sorted by setting self.matches_sorted to True. Its default value performs a
@@ -2242,25 +2266,23 @@ class Cmd(cmd.Cmd):
             readline.parse_and_bind(self.completekey + ": complete")
 
         try:
-            stop = False
-            while not stop:
-                if self.cmdqueue:
-                    # Run commands out of cmdqueue if nonempty (populated by commands at invocation)
-                    stop = self.runcmds_plus_hooks(self.cmdqueue)
-                    self.cmdqueue.clear()
-                else:
-                    # Otherwise, read a command from stdin
-                    try:
-                        line = self.pseudo_raw_input(self.prompt)
-                    except KeyboardInterrupt as ex:
-                        if self.quit_on_sigint:
-                            raise ex
-                        else:
-                            self.poutput('^C')
-                            line = ''
+            # Run startup commands
+            stop = self.runcmds_plus_hooks(self._startup_commands)
+            self._startup_commands.clear()
 
-                    # Run the command along with all associated pre and post hooks
-                    stop = self.onecmd_plus_hooks(line)
+            while not stop:
+                # Get commands from user
+                try:
+                    line = self.pseudo_raw_input(self.prompt)
+                except KeyboardInterrupt as ex:
+                    if self.quit_on_sigint:
+                        raise ex
+                    else:
+                        self.poutput('^C')
+                        line = ''
+
+                # Run the command along with all associated pre and post hooks
+                stop = self.onecmd_plus_hooks(line)
         finally:
             if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
 
@@ -2274,7 +2296,6 @@ class Cmd(cmd.Cmd):
                 elif rl_type == RlType.PYREADLINE:
                     # noinspection PyUnresolvedReferences
                     readline.rl.mode._display_completions = orig_pyreadline_display
-            self.cmdqueue.clear()
 
     # -----  Alias sub-command functions -----
 
@@ -2889,10 +2910,8 @@ class Cmd(cmd.Cmd):
         """
         read_only_settings = """
         Commands may be terminated with: {}
-        Arguments at invocation allowed: {}
         Output redirection and pipes allowed: {}"""
-        return read_only_settings.format(str(self.statement_parser.terminators), self.allow_cli_args,
-                                         self.allow_redirection)
+        return read_only_settings.format(str(self.statement_parser.terminators), self.allow_redirection)
 
     def show(self, args: argparse.Namespace, parameter: str = '') -> None:
         """Shows current settings of parameters.
@@ -3991,7 +4010,6 @@ class Cmd(cmd.Cmd):
 
         _cmdloop() provides the main loop equivalent to cmd.cmdloop().  This is a wrapper around that which deals with
         the following extra features provided by cmd2:
-        - commands at invocation
         - transcript testing
         - intro banner
         - exit code
@@ -4007,19 +4025,6 @@ class Cmd(cmd.Cmd):
         import signal
         original_sigint_handler = signal.getsignal(signal.SIGINT)
         signal.signal(signal.SIGINT, self.sigint_handler)
-
-        if self.allow_cli_args:
-            parser = argparse.ArgumentParser()
-            parser.add_argument('-t', '--test', action="store_true",
-                                help='Test against transcript(s) in FILE (wildcards OK)')
-            callopts, callargs = parser.parse_known_args()
-
-            # If transcript testing was called for, use other arguments as transcript files
-            if callopts.test:
-                self._transcript_files = callargs
-            # If commands were supplied at invocation, then add them to the command queue
-            elif callargs:
-                self.cmdqueue.extend(callargs)
 
         # Grab terminal lock before the prompt has been drawn by readline
         self.terminal_lock.acquire()

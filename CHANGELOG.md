@@ -49,6 +49,8 @@
     * Removed internally used `eos` command that was used to keep track of when a text script's commands ended
     * Removed `cmd2` member called `_STOP_AND_EXIT` since it was just a boolean value that should always be True
     * Removed `cmd2` member called `_should_quit` since `PyscriptBridge` now handles this logic
+    * Removed support for `cmd.cmdqueue`
+    * `allow_cli_args` is now an argument to __init__ instead of a `cmd2` class member
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4

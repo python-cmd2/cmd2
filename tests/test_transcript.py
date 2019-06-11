@@ -110,11 +110,6 @@ def test_commands_at_invocation():
     ('word_boundaries.txt', False),
     ])
 def test_transcript(request, capsys, filename, feedback_to_output):
-    # Create a cmd2.Cmd() instance and make sure basic settings are
-    # like we want for test
-    app = CmdLineApp()
-    app.feedback_to_output = feedback_to_output
-
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
     transcript_file = os.path.join(test_dir, 'transcripts', filename)
@@ -123,6 +118,11 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     # arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
     with mock.patch.object(sys, 'argv', testargs):
+        # Create a cmd2.Cmd() instance and make sure basic settings are
+        # like we want for test
+        app = CmdLineApp()
+        app.feedback_to_output = feedback_to_output
+
         # Run the command loop
         sys_exit_code = app.cmdloop()
         assert sys_exit_code == 0
@@ -192,7 +192,6 @@ def test_load_record_transcript(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
 
-    assert base_app.cmdqueue == []
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
 
@@ -203,7 +202,6 @@ def test_load_record_transcript(base_app, request):
     # Run the load command with the -r option to generate a transcript
     run_cmd(base_app, 'load {} -t {}'.format(filename, transcript_fname))
 
-    assert base_app.cmdqueue == []
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
 
@@ -271,11 +269,6 @@ def test_parse_transcript_expected(expected, transformed):
 
 
 def test_transcript_failure(request, capsys):
-    # Create a cmd2.Cmd() instance and make sure basic settings are
-    # like we want for test
-    app = CmdLineApp()
-    app.feedback_to_output = False
-
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
     transcript_file = os.path.join(test_dir, 'transcripts', 'failure.txt')
@@ -284,6 +277,11 @@ def test_transcript_failure(request, capsys):
     # arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
     with mock.patch.object(sys, 'argv', testargs):
+        # Create a cmd2.Cmd() instance and make sure basic settings are
+        # like we want for test
+        app = CmdLineApp()
+        app.feedback_to_output = False
+
         # Run the command loop
         sys_exit_code = app.cmdloop()
         assert sys_exit_code != 0
@@ -296,15 +294,15 @@ def test_transcript_failure(request, capsys):
 
 
 def test_transcript_no_file(request, capsys):
-    # Create a cmd2.Cmd() instance and make sure basic settings are
-    # like we want for test
-    app = CmdLineApp()
-    app.feedback_to_output = False
-
     # Need to patch sys.argv so cmd2 doesn't think it was called with
     # arguments equal to the py.test args
     testargs = ['prog', '-t']
     with mock.patch.object(sys, 'argv', testargs):
+        # Create a cmd2.Cmd() instance and make sure basic settings are
+        # like we want for test
+        app = CmdLineApp()
+        app.feedback_to_output = False
+
         # Run the command loop
         sys_exit_code = app.cmdloop()
         assert sys_exit_code != 0

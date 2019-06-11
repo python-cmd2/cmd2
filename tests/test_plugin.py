@@ -264,8 +264,8 @@ def test_register_preloop_hook_with_return_annotation():
 def test_preloop_hook(capsys):
     app = PluggedApp()
     app.register_preloop_hook(app.prepost_hook_one)
-    app.cmdqueue.append('say hello')
-    app.cmdqueue.append('quit')
+    app._startup_commands.append('say hello')
+    app._startup_commands.append('quit')
     app.cmdloop()
     out, err = capsys.readouterr()
     assert out == 'one\nhello\n'
@@ -275,8 +275,8 @@ def test_preloop_hooks(capsys):
     app = PluggedApp()
     app.register_preloop_hook(app.prepost_hook_one)
     app.register_preloop_hook(app.prepost_hook_two)
-    app.cmdqueue.append('say hello')
-    app.cmdqueue.append('quit')
+    app._startup_commands.append('say hello')
+    app._startup_commands.append('quit')
     app.cmdloop()
     out, err = capsys.readouterr()
     assert out == 'one\ntwo\nhello\n'
@@ -295,8 +295,8 @@ def test_register_postloop_hook_with_wrong_return_annotation():
 def test_postloop_hook(capsys):
     app = PluggedApp()
     app.register_postloop_hook(app.prepost_hook_one)
-    app.cmdqueue.append('say hello')
-    app.cmdqueue.append('quit')
+    app._startup_commands.append('say hello')
+    app._startup_commands.append('quit')
     app.cmdloop()
     out, err = capsys.readouterr()
     assert out == 'hello\none\n'
@@ -306,8 +306,8 @@ def test_postloop_hooks(capsys):
     app = PluggedApp()
     app.register_postloop_hook(app.prepost_hook_one)
     app.register_postloop_hook(app.prepost_hook_two)
-    app.cmdqueue.append('say hello')
-    app.cmdqueue.append('quit')
+    app._startup_commands.append('say hello')
+    app._startup_commands.append('quit')
     app.cmdloop()
     out, err = capsys.readouterr()
     assert out == 'hello\none\ntwo\n'
