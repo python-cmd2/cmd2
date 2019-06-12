@@ -743,53 +743,57 @@ def test_base_cmdloop_with_startup_commands():
     expected = intro + '\n'
 
     with mock.patch.object(sys, 'argv', testargs):
-        # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
         app = CreateOutsimApp()
-        app.use_rawinput = True
 
-        # Run the command loop with custom intro
-        app.cmdloop(intro=intro)
+    app.use_rawinput = True
+
+    # Run the command loop with custom intro
+    app.cmdloop(intro=intro)
 
     out = app.stdout.getvalue()
     assert out == expected
 
 
-def test_base_cmdloop_without_startup_commands(outsim_app):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
-    outsim_app.use_rawinput = True
-    outsim_app.intro = 'Hello World, this is an intro ...'
+def test_base_cmdloop_without_startup_commands():
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog"]
+    with mock.patch.object(sys, 'argv', testargs):
+        app = CreateOutsimApp()
+
+    app.use_rawinput = True
+    app.intro = 'Hello World, this is an intro ...'
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
     builtins.input = m
 
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog"]
-    expected = outsim_app.intro + '\n'
-    with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        outsim_app.cmdloop()
-    out = outsim_app.stdout.getvalue()
+    expected = app.intro + '\n'
+
+    # Run the command loop
+    app.cmdloop()
+    out = app.stdout.getvalue()
     assert out == expected
 
 
-def test_cmdloop_without_rawinput(outsim_app):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
-    outsim_app.use_rawinput = False
-    outsim_app.echo = False
-    outsim_app.intro = 'Hello World, this is an intro ...'
+def test_cmdloop_without_rawinput():
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog"]
+    with mock.patch.object(sys, 'argv', testargs):
+        app = CreateOutsimApp()
+
+    app.use_rawinput = False
+    app.echo = False
+    app.intro = 'Hello World, this is an intro ...'
 
     # Mock out the input call so we don't actually wait for a user's response on stdin
     m = mock.MagicMock(name='input', return_value='quit')
     builtins.input = m
 
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog"]
-    expected = outsim_app.intro + '\n'
-    with mock.patch.object(sys, 'argv', testargs):
-        with pytest.raises(OSError):
-            outsim_app.cmdloop()
-    out = outsim_app.stdout.getvalue()
+    expected = app.intro + '\n'
+
+    with pytest.raises(OSError):
+        app.cmdloop()
+    out = app.stdout.getvalue()
     assert out == expected
 
 class HookFailureApp(cmd2.Cmd):
@@ -1399,7 +1403,7 @@ def test_pseudo_raw_input_tty_rawinput_true():
     with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
         with mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
             # run the cmdloop, which should pull input from our mocks
-            app = cmd2.Cmd()
+            app = cmd2.Cmd(allow_cli_args=False)
             app.use_rawinput = True
             app._cmdloop()
             # because we mocked the input() call, we won't get the prompt
@@ -1418,7 +1422,7 @@ def test_pseudo_raw_input_tty_rawinput_false():
     fakein.readline = mreadline
 
     # run the cmdloop, telling it where to get input from
-    app = cmd2.Cmd(stdin=fakein)
+    app = cmd2.Cmd(stdin=fakein, allow_cli_args=False)
     app.use_rawinput = False
     app._cmdloop()
 
@@ -1432,7 +1436,7 @@ def test_pseudo_raw_input_tty_rawinput_false():
 # the next helper function and two tests check for piped
 # input when use_rawinput is True.
 def piped_rawinput_true(capsys, echo, command):
-    app = cmd2.Cmd()
+    app = cmd2.Cmd(allow_cli_args=False)
     app.use_rawinput = True
     app.echo = echo
     # run the cmdloop, which should pull input from our mock
@@ -1462,8 +1466,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
 # input when use_rawinput=False
 def piped_rawinput_false(capsys, echo, command):
     fakein = io.StringIO(u'{}'.format(command))
-    # run the cmdloop, telling it where to get input from
-    app = cmd2.Cmd(stdin=fakein)
+    app = cmd2.Cmd(stdin=fakein, allow_cli_args=False)
     app.use_rawinput = False
     app.echo = echo
     app._cmdloop()
@@ -1931,7 +1934,7 @@ class ReplWithExitCode(cmd2.Cmd):
     """ Example cmd2 application where we can specify an exit code when existing."""
 
     def __init__(self):
-        super().__init__()
+        super().__init__(allow_cli_args=False)
 
     @cmd2.with_argument_list
     def do_exit(self, arg_list) -> bool:
@@ -1963,7 +1966,6 @@ def exit_code_repl():
     return app
 
 def test_exit_code_default(exit_code_repl):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = exit_code_repl
     app.use_rawinput = True
 
@@ -1971,17 +1973,14 @@ def test_exit_code_default(exit_code_repl):
     m = mock.MagicMock(name='input', return_value='exit')
     builtins.input = m
 
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog"]
     expected = 'exiting with code: 0\n'
-    with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        app.cmdloop()
+
+    # Run the command loop
+    app.cmdloop()
     out = app.stdout.getvalue()
     assert out == expected
 
 def test_exit_code_nonzero(exit_code_repl):
-    # Create a cmd2.Cmd() instance and make sure basic settings are like we want for test
     app = exit_code_repl
     app.use_rawinput = True
 
@@ -1989,12 +1988,10 @@ def test_exit_code_nonzero(exit_code_repl):
     m = mock.MagicMock(name='input', return_value='exit 23')
     builtins.input = m
 
-    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
-    testargs = ["prog"]
     expected = 'exiting with code: 23\n'
-    with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        app.cmdloop()
+
+    # Run the command loop
+    app.cmdloop()
     out = app.stdout.getvalue()
     assert out == expected
 

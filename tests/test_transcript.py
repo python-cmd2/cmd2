@@ -87,10 +87,11 @@ def test_commands_at_invocation():
     expected = "This is an intro banner ...\nhello\nGracie\n"
     with mock.patch.object(sys, 'argv', testargs):
         app = CmdLineApp()
-        app.stdout = StdSim(app.stdout)
-        app.cmdloop()
-        out = app.stdout.getvalue()
-        assert out == expected
+
+    app.stdout = StdSim(app.stdout)
+    app.cmdloop()
+    out = app.stdout.getvalue()
+    assert out == expected
 
 @pytest.mark.parametrize('filename,feedback_to_output', [
     ('bol_eol.txt', False),
@@ -121,11 +122,12 @@ def test_transcript(request, capsys, filename, feedback_to_output):
         # Create a cmd2.Cmd() instance and make sure basic settings are
         # like we want for test
         app = CmdLineApp()
-        app.feedback_to_output = feedback_to_output
 
-        # Run the command loop
-        sys_exit_code = app.cmdloop()
-        assert sys_exit_code == 0
+    app.feedback_to_output = feedback_to_output
+
+    # Run the command loop
+    sys_exit_code = app.cmdloop()
+    assert sys_exit_code == 0
 
     # Check for the unittest "OK" condition for the 1 test which ran
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
@@ -280,11 +282,12 @@ def test_transcript_failure(request, capsys):
         # Create a cmd2.Cmd() instance and make sure basic settings are
         # like we want for test
         app = CmdLineApp()
-        app.feedback_to_output = False
 
-        # Run the command loop
-        sys_exit_code = app.cmdloop()
-        assert sys_exit_code != 0
+    app.feedback_to_output = False
+
+    # Run the command loop
+    sys_exit_code = app.cmdloop()
+    assert sys_exit_code != 0
 
     expected_start = "File "
     expected_end = "s\n\nFAILED (failures=1)\n\n"
@@ -298,14 +301,13 @@ def test_transcript_no_file(request, capsys):
     # arguments equal to the py.test args
     testargs = ['prog', '-t']
     with mock.patch.object(sys, 'argv', testargs):
-        # Create a cmd2.Cmd() instance and make sure basic settings are
-        # like we want for test
         app = CmdLineApp()
-        app.feedback_to_output = False
 
-        # Run the command loop
-        sys_exit_code = app.cmdloop()
-        assert sys_exit_code != 0
+    app.feedback_to_output = False
+
+    # Run the command loop
+    sys_exit_code = app.cmdloop()
+    assert sys_exit_code != 0
 
     # Check for the unittest "OK" condition for the 1 test which ran
     expected = 'No test files found - nothing to test\n'
