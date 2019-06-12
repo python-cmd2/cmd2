@@ -3512,7 +3512,6 @@ class Cmd(cmd.Cmd):
         Generate a transcript file from a given history of commands
         :return: True if running of commands should stop
         """
-        import io
         # Validate the transcript file path to make sure directory exists and write access is available
         transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
         transcript_dir = os.path.dirname(transcript_path)
@@ -3554,21 +3553,16 @@ class Cmd(cmd.Cmd):
                     else:
                         command += '{}{}\n'.format(self.continuation_prompt, line)
                 transcript += command
-                # create a new string buffer and set it to stdout to catch the output
-                # of the command
-                membuf = io.StringIO()
-                self.stdout = membuf
+
+                # Use a StdSim object to capture output
+                self.stdout = utils.StdSim(self.stdout)
 
                 # then run the command and let the output go into our buffer
                 stop = self.onecmd_plus_hooks(history_item)
                 commands_run += 1
 
-                # rewind the buffer to the beginning
-                membuf.seek(0)
-                # get the output out of the buffer
-                output = membuf.read()
-                # and add the regex-escaped output to the transcript
-                transcript += output.replace('/', r'\/')
+                # add the regex-escaped output to the transcript
+                transcript += self.stdout.getvalue().replace('/', r'\/')
 
                 # check if we are supposed to stop
                 if stop:
