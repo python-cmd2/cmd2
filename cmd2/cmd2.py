@@ -42,7 +42,6 @@ from collections import namedtuple
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
 import colorama
-from colorama import Fore
 
 from . import constants
 from . import plugin
@@ -59,7 +58,7 @@ if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
-    sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_warning + Fore.RESET)
+    sys.stderr.write(constants.WARNING_COLOR + rl_warning + constants.RESET_COLOR)
 else:
     from .rl_utils import rl_force_redisplay, readline
 
@@ -616,7 +615,7 @@ class Cmd(cmd.Cmd):
                 if not msg_str.endswith(end):
                     msg_str += end
                 if color:
-                    msg_str = color + msg_str + Fore.RESET
+                    msg_str = color + msg_str + constants.RESET_COLOR
                 self.decolorized_write(self.stdout, msg_str)
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another
@@ -627,8 +626,8 @@ class Cmd(cmd.Cmd):
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, err: Union[str, Exception], traceback_war: bool = True, err_color: str = Fore.LIGHTRED_EX,
-               war_color: str = Fore.LIGHTYELLOW_EX) -> None:
+    def perror(self, err: Union[str, Exception], traceback_war: bool = True, err_color: str = constants.ERROR_COLOR,
+               war_color: str = constants.WARNING_COLOR) -> None:
         """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
 
         :param err: an Exception or error message to print out
@@ -644,12 +643,12 @@ class Cmd(cmd.Cmd):
             err_msg = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(type(err).__name__, err)
         else:
             err_msg = "{}\n".format(err)
-        err_msg = err_color + err_msg + Fore.RESET
+        err_msg = err_color + err_msg + constants.RESET_COLOR
         self.decolorized_write(sys.stderr, err_msg)
 
         if traceback_war and not self.debug:
             war = "To enable full traceback, run the following command:  'set debug true'\n"
-            war = war_color + war + Fore.RESET
+            war = war_color + war + constants.RESET_COLOR
             self.decolorized_write(sys.stderr, war)
 
     def pfeedback(self, msg: str) -> None:
@@ -3745,7 +3744,7 @@ class Cmd(cmd.Cmd):
         test_results = runner.run(testcase)
         if test_results.wasSuccessful():
             self.decolorized_write(sys.stderr, stream.read())
-            self.poutput('Tests passed', color=Fore.LIGHTGREEN_EX)
+            self.poutput('Tests passed', color=constants.SUCCESS_COLOR)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()

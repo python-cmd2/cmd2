@@ -66,7 +66,7 @@ import sys
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
 from typing import List, Dict, Tuple, Callable, Union
 
-from colorama import Fore
+from . import constants
 
 from .rl_utils import rl_force_redisplay
 from .utils import ansi_safe_wcswidth
@@ -996,7 +996,7 @@ class ACArgumentParser(argparse.ArgumentParser):
             linum += 1
 
         self.print_usage(sys.stderr)
-        self.exit(2, Fore.LIGHTRED_EX + '{}\n\n'.format(formatted_message) + Fore.RESET)
+        self.exit(2, constants.ERROR_COLOR + '{}\n\n'.format(formatted_message) + constants.RESET_COLOR)
 
     def format_help(self) -> str:
         """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
