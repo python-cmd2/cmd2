@@ -224,18 +224,17 @@ def test_generate_transcript_stop(capsys):
     fd, transcript_fname = tempfile.mkstemp(prefix='', suffix='.trn')
     os.close(fd)
 
-    # This should run all commands return False for stop
+    # This should run all commands
     commands = ['help', 'alias']
-    stop = app._generate_transcript(commands, transcript_fname)
+    app._generate_transcript(commands, transcript_fname)
     _, err = capsys.readouterr()
-    assert not stop
     assert err.startswith("2 commands")
 
     # Since quit returns True for stop, only the first 2 commands will run
     commands = ['help', 'quit', 'alias']
     app._generate_transcript(commands, transcript_fname)
     _, err = capsys.readouterr()
-    assert "triggered a stop" in err
+    assert err.startswith("Command 2 triggered a stop")
 
 
 @pytest.mark.parametrize('expected, transformed', [
