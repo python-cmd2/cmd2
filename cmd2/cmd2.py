@@ -472,23 +472,10 @@ class Cmd(cmd.Cmd):
                 self._startup_commands.append("load '{}'".format(startup_script))
 
         # Transcript files to run instead of interactive command loop
-        self._transcript_files = None
+        self._transcript_files = transcript_files
 
-        # Check for command line args
-        if allow_cli_args:
-            parser = argparse.ArgumentParser()
-            parser.add_argument('-t', '--test', action="store_true",
-                                help='Test against transcript(s) in FILE (wildcards OK)')
-            callopts, callargs = parser.parse_known_args()
-
-            # If transcript testing was called for, use other arguments as transcript files
-            if callopts.test:
-                self._transcript_files = callargs
-            # If commands were supplied at invocation, then add them to the command queue
-            elif callargs:
-                self._startup_commands.extend(callargs)
-        elif transcript_files:
-            self._transcript_files = transcript_files
+        # Should commands at invocation and -t/--test transcript test running be allowed
+        self._allow_cli_args = allow_cli_args
 
         # The default key for sorting tab completion matches. This only applies when the matches are not
         # already marked as sorted by setting self.matches_sorted to True. Its default value performs a
@@ -4025,6 +4012,20 @@ class Cmd(cmd.Cmd):
         import signal
         original_sigint_handler = signal.getsignal(signal.SIGINT)
         signal.signal(signal.SIGINT, self.sigint_handler)
+
+        # Check for command line args
+        if self._allow_cli_args:
+            parser = argparse.ArgumentParser()
+            parser.add_argument('-t', '--test', action="store_true",
+                                help='Test against transcript(s) in FILE (wildcards OK)')
+            callopts, callargs = parser.parse_known_args()
+
+            # If transcript testing was called for, use other arguments as transcript files
+            if callopts.test:
+                self._transcript_files = callargs
+            # If commands were supplied at invocation, then add them to the command queue
+            elif callargs:
+                self._startup_commands.extend(callargs)
 
         # Grab terminal lock before the prompt has been drawn by readline
         self.terminal_lock.acquire()
