@@ -231,12 +231,11 @@ def test_generate_transcript_stop(capsys):
     assert not stop
     assert err.startswith("2 commands")
 
-    # Since quit returns True for stop, only the first 2 commands will run and stop should be True
+    # Since quit returns True for stop, only the first 2 commands will run
     commands = ['help', 'quit', 'alias']
-    stop = app._generate_transcript(commands, transcript_fname)
+    app._generate_transcript(commands, transcript_fname)
     _, err = capsys.readouterr()
-    assert stop
-    assert err.startswith("2 commands")
+    assert "triggered a stop" in err
 
 
 @pytest.mark.parametrize('expected, transformed', [
