@@ -3,7 +3,6 @@
 """Constants and definitions"""
 
 import re
-from colorama import Fore
 
 # Used for command parsing, output redirection, tab completion and word
 # breaks. Do not change.
