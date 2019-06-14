@@ -1917,12 +1917,16 @@ class Cmd(cmd.Cmd):
         :return: parsed command line as a Statement
         """
         used_macros = []
-        orig_line = line
+        orig_line = None
 
         # Continue until all macros are resolved
         while True:
             # Make sure all input has been read and convert it to a Statement
             statement = self._complete_statement(line)
+
+            # Save the fully entered line if this is the first loop iteration
+            if orig_line is None:
+                orig_line = statement.raw
 
             # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
             if statement.command in self.macros.keys() and statement.command not in used_macros:
@@ -1934,7 +1938,7 @@ class Cmd(cmd.Cmd):
                 break
 
         # This will be true when a macro was used
-        if not statement.multiline_command and orig_line != statement.raw:
+        if orig_line != statement.raw:
             # Build a Statement that contains the resolved macro line
             # but the originally typed line for its raw member.
             statement = Statement(statement.args,
