@@ -1934,7 +1934,7 @@ class Cmd(cmd.Cmd):
                 break
 
         # This will be true when a macro was used
-        if orig_line != statement.raw:
+        if not statement.multiline_command and orig_line != statement.raw:
             # Build a Statement that contains the resolved macro line
             # but the originally typed line for its raw member.
             statement = Statement(statement.args,

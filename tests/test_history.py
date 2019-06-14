@@ -10,6 +10,8 @@ import pytest
 
 # Python 3.5 had some regressions in the unitest.mock module, so use
 # 3rd party mock if available
+from cmd2.parsing import StatementParser
+
 try:
     import mock
 except ImportError:
@@ -261,6 +263,35 @@ def histitem():
                             )
     histitem = HistoryItem(statement, 1)
     return histitem
+
+@pytest.fixture
+def parser():
+    from cmd2.parsing import StatementParser
+    parser = StatementParser(
+        allow_redirection=True,
+        terminators=[';', '&'],
+        multiline_commands=['multiline'],
+        aliases={'helpalias': 'help',
+                 '42': 'theanswer',
+                 'l': '!ls -al',
+                 'anothermultiline': 'multiline',
+                 'fake': 'pyscript'},
+        shortcuts=[('?', 'help'), ('!', 'shell')]
+    )
+    return parser
+
+def test_multiline_histitem(parser):
+    from cmd2.history import History
+    line = 'multiline foo\nbar\n\n'
+    statement = parser.parse(line)
+    history = History()
+    history.append(statement)
+    assert len(history) == 1
+    hist_item = history[0]
+    assert hist_item.raw == line
+    pr_lines = hist_item.pr(verbose=True).splitlines()
+    assert pr_lines[0].endswith('multiline foo')
+    assert pr_lines[1] == 'bar'
 
 def test_history_item_instantiate():
     from cmd2.parsing import Statement

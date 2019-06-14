@@ -44,9 +44,9 @@ class HistoryItem():
         :return: pretty print string version of a HistoryItem
         """
         if verbose:
-            ret_str = self._listformat.format(self.idx, self.raw)
+            ret_str = self._listformat.format(self.idx, self.raw.rstrip())
             if self.raw != self.expanded.rstrip():
-                ret_str += self._ex_listformat.format(self.idx, self.expanded)
+                ret_str += self._ex_listformat.format(self.idx, self.expanded.rstrip())
         else:
             if script:
                 # display without entry numbers
