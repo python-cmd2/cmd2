@@ -2,9 +2,6 @@
 # flake8: noqa E302
 """
 Unit testing for cmd2/utils.py module.
-
-Copyright 2018 Todd Leonhardt <todd.leonhardt@gmail.com>
-Released under MIT license, see LICENSE file
 """
 import signal
 import sys

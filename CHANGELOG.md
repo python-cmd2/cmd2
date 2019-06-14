@@ -9,39 +9,50 @@
     precedence even though it appeared later in the command.
     * Fixed issue where quotes around redirection file paths were being lost in `Statement.expanded_command_line()`
     * Fixed a bug in how line numbers were calculated for transcript testing
+    * Fixed issue where `_cmdloop()` suppressed exceptions by returning from within its `finally` code
+    * Fixed UnsupportedOperation on fileno error when a shell command was one of the commands run while generating
+    a transcript 
 * Enhancements
     * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
-      Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
+    Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
     * `StdSim.buffer.write()` now flushes when the wrapped stream uses line buffering and the bytes being written
-      contain a newline or carriage return. This helps when `pyscript` is echoing the output of a shell command
-      since the output will print at the same frequency as when the command is run in a terminal.
+    contain a newline or carriage return. This helps when `pyscript` is echoing the output of a shell command
+    since the output will print at the same frequency as when the command is run in a terminal.
     * **ACArgumentParser** no longer prints complete help text when a parsing error occurs since long help messages
-     scroll the actual error message off the screen.
+    scroll the actual error message off the screen.
     * Exceptions occurring in tab completion functions are now printed to stderr before returning control back to
     readline. This makes debugging a lot easier since readline suppresses these exceptions.
     * Added support for custom Namespaces in the argparse decorators. See description of `ns_provider` argument
     for more information.
     * Transcript testing now sets the `exit_code` returned from `cmdloop` based on Success/Failure
     * The history of entered commands previously was saved using the readline persistence mechanism,
-      and only persisted if you had readline installed. Now history is persisted independent of readline; user
-      input from previous invocations of `cmd2` based apps now shows in the `history` command.
-
+    and only persisted if you had readline installed. Now history is persisted independent of readline; user
+    input from previous invocations of `cmd2` based apps now shows in the `history` command.
+    * Text scripts now run immediately instead of adding their commands to `cmdqueue`. This allows easy capture of
+    the entire script's output.
+    * Added member to `CommandResult` called `stop` which is the return value of `onecmd_plus_hooks` after it runs
+    the given command line. 
 * Breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
-      that allows terminators in alias and macro values.
+    that allows terminators in alias and macro values.
     * Changed `Statement.pipe_to` to a string instead of a list
     * `preserve_quotes` is now a keyword-only argument in the argparse decorators
     * Refactored so that `cmd2.Cmd.cmdloop()` returns the `exit_code` instead of a call to `sys.exit()`
-      It is now application developer's responsibility to treat the return value from `cmdloop()` accordingly
+    It is now application developer's responsibility to treat the return value from `cmdloop()` accordingly
     * Only valid commands are persistent in history between invocations of `cmd2` based apps. Previously
-      all user input was persistent in history. If readline is installed, the history available with the up and
-      down arrow keys (readline history) may not match that shown in the `history` command, because `history`
-      only tracks valid input, while readline history captures all input.
+    all user input was persistent in history. If readline is installed, the history available with the up and
+    down arrow keys (readline history) may not match that shown in the `history` command, because `history`
+    only tracks valid input, while readline history captures all input.
     * History is now persisted in a binary format, not plain text format. Previous history files are destroyed
-      on first launch of a `cmd2` based app of version 0.9.13 or higher.
+    on first launch of a `cmd2` based app of version 0.9.13 or higher.
     * HistoryItem class is no longer a subclass of `str`. If you are directly accessing the `.history` attribute
-      of a `cmd2` based app, you will need to update your code to use `.history.get(1).statement.raw` instead.
+    of a `cmd2` based app, you will need to update your code to use `.history.get(1).statement.raw` instead.
+    * Removed internally used `eos` command that was used to keep track of when a text script's commands ended
+    * Removed `cmd2` member called `_STOP_AND_EXIT` since it was just a boolean value that should always be True
+    * Removed `cmd2` member called `_should_quit` since `PyscriptBridge` now handles this logic
+    * Removed support for `cmd.cmdqueue`
+    * `allow_cli_args` is now an argument to __init__ instead of a `cmd2` class member
 * **Python 3.4 EOL notice**
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019
     * This is the last release of `cmd2` which will support Python 3.4

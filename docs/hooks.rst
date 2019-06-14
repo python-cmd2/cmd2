@@ -54,7 +54,7 @@ value is ignored.
 Application Lifecycle Attributes
 --------------------------------
 
-There are numerous attributes (member variables of the ``cmd2.Cmd``) which have
+There are numerous attributes of and arguments to ``cmd2.Cmd`` which have
 a significant effect on the application behavior upon entering or during the
 main loop.  A partial list of some of the more important ones is presented here:
 

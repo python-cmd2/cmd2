@@ -2,9 +2,6 @@
 # flake8: noqa E302
 """
 Cmd2 functional testing based on transcript
-
-Copyright 2016 Federico Ceratto <federico.ceratto@gmail.com>
-Released under MIT license, see LICENSE file
 """
 import argparse
 import os
@@ -90,10 +87,11 @@ def test_commands_at_invocation():
     expected = "This is an intro banner ...\nhello\nGracie\n"
     with mock.patch.object(sys, 'argv', testargs):
         app = CmdLineApp()
-        app.stdout = StdSim(app.stdout)
-        app.cmdloop()
-        out = app.stdout.getvalue()
-        assert out == expected
+
+    app.stdout = StdSim(app.stdout)
+    app.cmdloop()
+    out = app.stdout.getvalue()
+    assert out == expected
 
 @pytest.mark.parametrize('filename,feedback_to_output', [
     ('bol_eol.txt', False),
@@ -113,11 +111,6 @@ def test_commands_at_invocation():
     ('word_boundaries.txt', False),
     ])
 def test_transcript(request, capsys, filename, feedback_to_output):
-    # Create a cmd2.Cmd() instance and make sure basic settings are
-    # like we want for test
-    app = CmdLineApp()
-    app.feedback_to_output = feedback_to_output
-
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
     transcript_file = os.path.join(test_dir, 'transcripts', filename)
@@ -126,9 +119,15 @@ def test_transcript(request, capsys, filename, feedback_to_output):
     # arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
     with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        sys_exit_code = app.cmdloop()
-        assert sys_exit_code == 0
+        # Create a cmd2.Cmd() instance and make sure basic settings are
+        # like we want for test
+        app = CmdLineApp()
+
+    app.feedback_to_output = feedback_to_output
+
+    # Run the command loop
+    sys_exit_code = app.cmdloop()
+    assert sys_exit_code == 0
 
     # Check for the unittest "OK" condition for the 1 test which ran
     expected_start = ".\n----------------------------------------------------------------------\nRan 1 test in"
@@ -195,7 +194,6 @@ def test_load_record_transcript(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
 
-    assert base_app.cmdqueue == []
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
 
@@ -206,7 +204,6 @@ def test_load_record_transcript(base_app, request):
     # Run the load command with the -r option to generate a transcript
     run_cmd(base_app, 'load {} -t {}'.format(filename, transcript_fname))
 
-    assert base_app.cmdqueue == []
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
 
@@ -217,6 +214,27 @@ def test_load_record_transcript(base_app, request):
     expected = '(Cmd) help -v\n' + BASE_HELP_VERBOSE + '\n'
 
     assert xscript == expected
+
+
+def test_generate_transcript_stop(capsys):
+    # Verify transcript generation stops when a command returns True for stop
+    app = CmdLineApp()
+
+    # Make a tmp file to use as a transcript
+    fd, transcript_fname = tempfile.mkstemp(prefix='', suffix='.trn')
+    os.close(fd)
+
+    # This should run all commands
+    commands = ['help', 'alias']
+    app._generate_transcript(commands, transcript_fname)
+    _, err = capsys.readouterr()
+    assert err.startswith("2 commands")
+
+    # Since quit returns True for stop, only the first 2 commands will run
+    commands = ['help', 'quit', 'alias']
+    app._generate_transcript(commands, transcript_fname)
+    _, err = capsys.readouterr()
+    assert err.startswith("Command 2 triggered a stop")
 
 
 @pytest.mark.parametrize('expected, transformed', [
@@ -251,11 +269,6 @@ def test_parse_transcript_expected(expected, transformed):
 
 
 def test_transcript_failure(request, capsys):
-    # Create a cmd2.Cmd() instance and make sure basic settings are
-    # like we want for test
-    app = CmdLineApp()
-    app.feedback_to_output = False
-
     # Get location of the transcript
     test_dir = os.path.dirname(request.module.__file__)
     transcript_file = os.path.join(test_dir, 'transcripts', 'failure.txt')
@@ -264,13 +277,37 @@ def test_transcript_failure(request, capsys):
     # arguments equal to the py.test args
     testargs = ['prog', '-t', transcript_file]
     with mock.patch.object(sys, 'argv', testargs):
-        # Run the command loop
-        sys_exit_code = app.cmdloop()
-        assert sys_exit_code != 0
+        # Create a cmd2.Cmd() instance and make sure basic settings are
+        # like we want for test
+        app = CmdLineApp()
 
-    # Check for the unittest "OK" condition for the 1 test which ran
+    app.feedback_to_output = False
+
+    # Run the command loop
+    sys_exit_code = app.cmdloop()
+    assert sys_exit_code != 0
+
     expected_start = "File "
     expected_end = "s\n\nFAILED (failures=1)\n\n"
     _, err = capsys.readouterr()
     assert err.startswith(expected_start)
     assert err.endswith(expected_end)
+
+
+def test_transcript_no_file(request, capsys):
+    # Need to patch sys.argv so cmd2 doesn't think it was called with
+    # arguments equal to the py.test args
+    testargs = ['prog', '-t']
+    with mock.patch.object(sys, 'argv', testargs):
+        app = CmdLineApp()
+
+    app.feedback_to_output = False
+
+    # Run the command loop
+    sys_exit_code = app.cmdloop()
+    assert sys_exit_code != 0
+
+    # Check for the unittest "OK" condition for the 1 test which ran
+    expected = 'No test files found - nothing to test\n'
+    _, err = capsys.readouterr()
+    assert err == expected

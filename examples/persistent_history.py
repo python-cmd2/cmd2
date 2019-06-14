@@ -15,8 +15,7 @@ class Cmd2PersistentHistory(cmd2.Cmd):
 
         :param hist_file: file to load readline history from at start and write it to at end
         """
-        super().__init__(persistent_history_file=hist_file, persistent_history_length=500)
-        self.allow_cli_args = False
+        super().__init__(persistent_history_file=hist_file, persistent_history_length=500, allow_cli_args=False)
         self.prompt = 'ph> '
 
     # ... your class code here ...

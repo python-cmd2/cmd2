@@ -2,9 +2,6 @@
 # coding=utf-8
 """
 A example usage of the AutoCompleter
-
-Copyright 2018 Eric Lin <anselor@gmail.com>
-Released under MIT license, see LICENSE file
 """
 import argparse
 import itertools

@@ -81,13 +81,13 @@ quotation marks if it is more than a one-word command.
 .. note::
 
    If you wish to disable cmd2's consumption of command-line arguments, you can do so by setting the  ``allow_cli_args``
-   attribute of your ``cmd2.Cmd`` class instance to ``False``.  This would be useful, for example, if you wish to use
+   argument of your ``cmd2.Cmd`` class instance to ``False``.  This would be useful, for example, if you wish to use
    something like Argparse_ to parse the overall command line arguments for your application::
 
        from cmd2 import Cmd
        class App(Cmd):
            def __init__(self):
-               self.allow_cli_args = False
+               super().__init__(allow_cli_args=False)
 
 .. _Argparse: https://docs.python.org/3/library/argparse.html
 
