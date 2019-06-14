@@ -3503,11 +3503,13 @@ class Cmd(cmd.Cmd):
         if rl_type != RlType.NONE:
             last = None
             for item in history:
-                # readline only adds a single entry for multiple sequential identical commands
-                # so we emulate that behavior here
-                if item.raw != last:
-                    readline.add_history(item.raw)
-                    last = item.raw
+                # Break the command into its individual lines
+                for line in item.raw.splitlines():
+                    # readline only adds a single entry for multiple sequential identical lines
+                    # so we emulate that behavior here
+                    if line != last:
+                        readline.add_history(line)
+                        last = line
 
         # register a function to write history at save
         # if the history file is in plain text format from 0.9.12 or lower
