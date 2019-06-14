@@ -1,4 +1,4 @@
-## 0.9.13 (TBD, 2019)
+## 0.9.13 (June TBD, 2019)
 * Bug Fixes
     * Fixed issue where the wrong terminator was being appended by `Statement.expanded_command_line()`
     * Fixed issue where aliases and macros could not contain terminator characters in their values

@@ -289,6 +289,18 @@ def test_multiline_histitem(parser):
     assert len(history) == 1
     hist_item = history[0]
     assert hist_item.raw == line
+    pr_lines = hist_item.pr().splitlines()
+    assert pr_lines[0].endswith('multiline foo bar')
+
+def test_multiline_histitem_verbose(parser):
+    from cmd2.history import History
+    line = 'multiline foo\nbar\n\n'
+    statement = parser.parse(line)
+    history = History()
+    history.append(statement)
+    assert len(history) == 1
+    hist_item = history[0]
+    assert hist_item.raw == line
     pr_lines = hist_item.pr(verbose=True).splitlines()
     assert pr_lines[0].endswith('multiline foo')
     assert pr_lines[1] == 'bar'
