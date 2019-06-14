@@ -11,7 +11,8 @@
     * Fixed a bug in how line numbers were calculated for transcript testing
     * Fixed issue where `_cmdloop()` suppressed exceptions by returning from within its `finally` code
     * Fixed UnsupportedOperation on fileno error when a shell command was one of the commands run while generating
-    a transcript 
+    a transcript
+    * Fixed bug where history was displaying expanded multiline commands when -x was not specified 
 * Enhancements
     * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
