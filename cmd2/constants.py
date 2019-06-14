@@ -20,7 +20,7 @@ ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
 
 LINE_FEED = '\n'
 
-# values for colors setting
+# Values for colors setting
 COLORS_NEVER = 'Never'
 COLORS_TERMINAL = 'Terminal'
 COLORS_ALWAYS = 'Always'

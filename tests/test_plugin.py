@@ -2,11 +2,16 @@
 # flake8: noqa E302
 """
 Test plugin infrastructure and hooks.
-
-Copyright 2018 Jared Crapo <jared@kotfu.net>
-Released under MIT license, see LICENSE file
 """
+import sys
+
 import pytest
+
+# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
+try:
+    import mock
+except ImportError:
+    from unittest import mock
 
 import cmd2
 from cmd2 import plugin
@@ -265,21 +270,27 @@ def test_register_preloop_hook_with_return_annotation():
         app.register_preloop_hook(app.prepost_hook_with_wrong_return_annotation)
 
 def test_preloop_hook(capsys):
-    app = PluggedApp()
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog", "say hello", 'quit']
+
+    with mock.patch.object(sys, 'argv', testargs):
+        app = PluggedApp()
+
     app.register_preloop_hook(app.prepost_hook_one)
-    app.cmdqueue.append('say hello')
-    app.cmdqueue.append('quit')
     app.cmdloop()
     out, err = capsys.readouterr()
     assert out == 'one\nhello\n'
     assert not err
 
 def test_preloop_hooks(capsys):
-    app = PluggedApp()
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog", "say hello", 'quit']
+
+    with mock.patch.object(sys, 'argv', testargs):
+        app = PluggedApp()
+
     app.register_preloop_hook(app.prepost_hook_one)
     app.register_preloop_hook(app.prepost_hook_two)
-    app.cmdqueue.append('say hello')
-    app.cmdqueue.append('quit')
     app.cmdloop()
     out, err = capsys.readouterr()
     assert out == 'one\ntwo\nhello\n'
@@ -296,21 +307,27 @@ def test_register_postloop_hook_with_wrong_return_annotation():
         app.register_postloop_hook(app.prepost_hook_with_wrong_return_annotation)
 
 def test_postloop_hook(capsys):
-    app = PluggedApp()
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog", "say hello", 'quit']
+
+    with mock.patch.object(sys, 'argv', testargs):
+        app = PluggedApp()
+
     app.register_postloop_hook(app.prepost_hook_one)
-    app.cmdqueue.append('say hello')
-    app.cmdqueue.append('quit')
     app.cmdloop()
     out, err = capsys.readouterr()
     assert out == 'hello\none\n'
     assert not err
 
 def test_postloop_hooks(capsys):
-    app = PluggedApp()
+    # Need to patch sys.argv so cmd2 doesn't think it was called with arguments equal to the py.test args
+    testargs = ["prog", "say hello", 'quit']
+
+    with mock.patch.object(sys, 'argv', testargs):
+        app = PluggedApp()
+
     app.register_postloop_hook(app.prepost_hook_one)
     app.register_postloop_hook(app.prepost_hook_two)
-    app.cmdqueue.append('say hello')
-    app.cmdqueue.append('quit')
     app.cmdloop()
     out, err = capsys.readouterr()
     assert out == 'hello\none\ntwo\n'

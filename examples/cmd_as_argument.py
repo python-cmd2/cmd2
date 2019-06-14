@@ -31,9 +31,8 @@ class CmdLineApp(cmd2.Cmd):
         shortcuts = dict(self.DEFAULT_SHORTCUTS)
         shortcuts.update({'&': 'speak'})
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        super().__init__(use_ipython=True, multiline_commands=['orate'], shortcuts=shortcuts)
+        super().__init__(allow_cli_args=False, use_ipython=True, multiline_commands=['orate'], shortcuts=shortcuts)
 
-        self.allow_cli_args = False
         self.locals_in_py = True
         self.maxrepeats = 3
         # Make maxrepeats settable at runtime

@@ -2,9 +2,6 @@
 # flake8: noqa E302
 """
 Unit/functional testing for argparse completer in cmd2
-
-Copyright 2018 Eric Lin <anselor@gmail.com>
-Released under MIT license, see LICENSE file
 """
 import pytest
 

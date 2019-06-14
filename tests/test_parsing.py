@@ -2,9 +2,6 @@
 # flake8: noqa E302
 """
 Test the parsing logic in parsing.py
-
-Copyright 2017 Todd Leonhardt <todd.leonhardt@gmail.com>
-Released under MIT license, see LICENSE file
 """
 import attr
 import pytest
