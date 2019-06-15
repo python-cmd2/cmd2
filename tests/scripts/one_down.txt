@@ -1,1 +1,1 @@
-_relative_load ../script.txt
+_relative_run_script ../script.txt

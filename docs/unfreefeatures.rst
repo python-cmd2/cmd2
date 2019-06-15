@@ -359,10 +359,10 @@ the help categories with per-command Help Messages::
     edit                Edit a file in a text editor
     help                List available commands with "help" or detailed help with "help cmd"
     history             usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT] [arg]
-    load                Runs commands in script file that is encoded as either ASCII or UTF-8 text
     py                  Invoke python command, shell, or script
-    pyscript            Runs a python script file inside the console
     quit                Exits this application
+    run_pyscript        Runs a python script file inside the console
+    run_script          Runs commands in script file that is encoded as either ASCII or UTF-8 text
     set                 usage: set [-h] [-a] [-l] [settable [settable ...]]
     shell               Execute a command as if at the OS prompt
     shortcuts           Lists shortcuts available

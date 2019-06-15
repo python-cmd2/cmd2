@@ -28,8 +28,8 @@ except ImportError:
 # Help text for base cmd2.Cmd application
 BASE_HELP = """Documented commands (type help <topic>):
 ========================================
-alias  help     load   py        quit  shell
-edit   history  macro  pyscript  set   shortcuts
+alias  help     load   py        quit          run_script  shell    
+edit   history  macro  pyscript  run_pyscript  set         shortcuts
 """  # noqa: W291
 
 BASE_HELP_VERBOSE = """
@@ -44,6 +44,8 @@ macro               Manage macros
 py                  Invoke Python command or shell
 pyscript            Run a Python script file inside the console
 quit                Exit this application
+run_pyscript        Run a Python script file inside the console
+run_script          Run commands in script file that is encoded as either ASCII or UTF-8 text
 set                 Set a settable parameter or show current settings of parameters
 shell               Execute a command as if at the OS prompt
 shortcuts           List available shortcuts
@@ -89,8 +91,8 @@ formatting:
 SHORTCUTS_TXT = """Shortcuts for other commands:
 !: shell
 ?: help
-@: load
-@@: _relative_load
+@: run_script
+@@: _relative_run_script
 """
 
 # Output from the show command with default settings

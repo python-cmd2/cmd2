@@ -1,4 +1,4 @@
-_relative_load precmds.txt
+_relative_run_script precmds.txt
 help
 shortcuts
-_relative_load postcmds.txt
+_relative_run_script postcmds.txt

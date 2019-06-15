@@ -244,7 +244,7 @@ def test_base_py(base_app):
 
 @pytest.mark.skipif(sys.platform == 'win32',
                     reason="Unit test doesn't work on win32, but feature does")
-def test_base_run_python_script(base_app, request):
+def test_py_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'script.py')
     expected = 'This is a python script running ...'
@@ -253,45 +253,12 @@ def test_base_run_python_script(base_app, request):
     assert expected in out
 
 
-def test_base_run_pyscript(base_app, capsys, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'script.py')
-    expected = 'This is a python script running ...'
-
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
-    assert expected in out
-
-def test_recursive_pyscript_not_allowed(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'scripts', 'recursive.py')
-    expected = 'Recursively entering interactive Python consoles is not allowed.'
-
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
-    assert err[0] == expected
-
-def test_pyscript_with_nonexist_file(base_app):
-    python_script = 'does_not_exist.py'
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
-    assert "Error opening script file" in err[0]
-
-def test_pyscript_with_exception(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'scripts', 'raises_exception.py')
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
-    assert err[0].startswith('Traceback')
-    assert "TypeError: unsupported operand type(s) for +: 'int' and 'str'" in err[-1]
-
-def test_pyscript_requires_an_argument(base_app):
-    out, err = run_cmd(base_app, "pyscript")
-    assert "the following arguments are required: script_path" in err[1]
-
-
 def test_base_error(base_app):
     out, err = run_cmd(base_app, 'meow')
     assert "is not a recognized command" in err[0]
 
 
-def test_base_load(base_app, request):
+def test_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
@@ -299,7 +266,7 @@ def test_base_load(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -318,52 +285,37 @@ def test_base_load(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-def test_load_with_empty_args(base_app):
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load')
+def test_load_deprecated(base_app):
+    """Delete this when load alias is removed"""
+    _, err = run_cmd(base_app, "load fake")
+    assert "load has been renamed and will be removed" in err[-1]
 
-    # The load command requires a file path argument, so we should get an error message
+def test_run_script_with_empty_args(base_app):
+    out, err = run_cmd(base_app, 'run_script')
     assert "the following arguments are required" in err[1]
 
-
-def test_load_with_nonexistent_file(base_app, capsys):
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load does_not_exist.txt')
-
-    # The load command requires a path to an existing file
+def test_run_script_with_nonexistent_file(base_app, capsys):
+    out, err = run_cmd(base_app, 'run_script does_not_exist.txt')
     assert "does not exist" in err[0]
 
-def test_load_with_directory(base_app, request):
+def test_run_script_with_directory(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
-
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load {}'.format(test_dir))
-
+    out, err = run_cmd(base_app, 'run_script {}'.format(test_dir))
     assert "is not a file" in err[0]
 
-def test_load_with_empty_file(base_app, request):
+def test_run_script_with_empty_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'empty.txt')
-
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load {}'.format(filename))
-
-    # The load command requires non-empty script files
+    out, err = run_cmd(base_app, 'run_script {}'.format(filename))
     assert "is empty" in err[0]
 
-
-def test_load_with_binary_file(base_app, request):
+def test_run_script_with_binary_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'binary.bin')
-
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load {}'.format(filename))
-
-    # The load command requires non-empty scripts files
+    out, err = run_cmd(base_app, 'run_script {}'.format(filename))
     assert "is not an ASCII or UTF-8 encoded text file" in err[0]
 
-
-def test_load_with_utf8_file(base_app, request):
+def test_run_script_with_utf8_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'utf8.txt')
 
@@ -371,7 +323,7 @@ def test_load_with_utf8_file(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -390,51 +342,49 @@ def test_load_with_utf8_file(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-
-def test_load_nested_loads(base_app, request):
-    # Verify that loading a script with nested load commands works correctly,
-    # and loads the nested script commands in the correct order.
+def test_run_script_nested_run_scripts(base_app, request):
+    # Verify that running a script with nested run_script commands works correctly,
+    # and runs the nested script commands in the correct order.
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'nested.txt')
 
-    # Load the top level script
-    initial_load = 'load ' + filename
-    run_cmd(base_app, initial_load)
+    # Run the top level script
+    initial_run = 'run_script ' + filename
+    run_cmd(base_app, initial_run)
 
     # Check that the right commands were executed.
     expected = """
 %s
-_relative_load precmds.txt
+_relative_run_script precmds.txt
 set colors Always
 help
 shortcuts
-_relative_load postcmds.txt
-set colors Never""" % initial_load
+_relative_run_script postcmds.txt
+set colors Never""" % initial_run
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
-
-def test_base_runcmds_plus_hooks(base_app, request):
+def test_runcmds_plus_hooks(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     prefilepath = os.path.join(test_dir, 'scripts', 'precmds.txt')
     postfilepath = os.path.join(test_dir, 'scripts', 'postcmds.txt')
 
-    base_app.runcmds_plus_hooks(['load ' + prefilepath,
+    base_app.runcmds_plus_hooks(['run_script ' + prefilepath,
                                  'help',
                                  'shortcuts',
-                                 'load ' + postfilepath])
+                                 'run_script ' + postfilepath])
     expected = """
-load %s
+run_script %s
 set colors Always
 help
 shortcuts
-load %s
+run_script %s
 set colors Never""" % (prefilepath, postfilepath)
 
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
-def test_base_relative_load(base_app, request):
+def test_relative_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
@@ -442,7 +392,7 @@ def test_base_relative_load(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -461,10 +411,14 @@ def test_base_relative_load(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-def test_relative_load_requires_an_argument(base_app):
-    out, err = run_cmd(base_app, '_relative_load')
+def test_relative_run_script_requires_an_argument(base_app):
+    out, err = run_cmd(base_app, '_relative_run_script')
     assert 'Error: the following arguments' in err[1]
 
+def test_relative_load_deprecated(base_app):
+    """Delete this when _relative_load alias is removed"""
+    _, err = run_cmd(base_app, "_relative_load fake")
+    assert "_relative_load has been renamed and will be removed" in err[0]
 
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
@@ -950,8 +904,8 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-alias  help     load   py        quit  shell      squat
-edit   history  macro  pyscript  set   shortcuts
+alias  help     load   py        quit          run_script  shell      squat
+edit   history  macro  pyscript  run_pyscript  set         shortcuts
 
 Undocumented commands:
 ======================
@@ -1020,7 +974,8 @@ cat_nodoc  diddly
 
 Other
 =====
-alias  help  history  load  macro  py  pyscript  quit  set  shell  shortcuts
+alias  history  macro  pyscript  run_pyscript  set    shortcuts
+help   load     py     quit      run_script    shell
 
 Undocumented commands:
 ======================
@@ -1052,6 +1007,8 @@ macro               Manage macros
 py                  Invoke Python command or shell
 pyscript            Run a Python script file inside the console
 quit                Exit this application
+run_pyscript        Run a Python script file inside the console
+run_script          Run commands in script file that is encoded as either ASCII or UTF-8 text
 set                 Set a settable parameter or show current settings of parameters
 shell               Execute a command as if at the OS prompt
 shortcuts           List available shortcuts
@@ -1600,7 +1557,7 @@ invalid_command_name = [
 
 def test_get_alias_names(base_app):
     assert len(base_app.aliases) == 0
-    run_cmd(base_app, 'alias create fake pyscript')
+    run_cmd(base_app, 'alias create fake run_pyscript')
     run_cmd(base_app, 'alias create ls !ls -hal')
     assert len(base_app.aliases) == 2
     assert sorted(base_app.get_alias_names()) == ['fake', 'ls']
@@ -1621,7 +1578,7 @@ def test_alias_no_subcommand(base_app):
 
 def test_alias_create(base_app):
     # Create the alias
-    out, err = run_cmd(base_app, 'alias create fake pyscript')
+    out, err = run_cmd(base_app, 'alias create fake run_pyscript')
     assert out == normalize("Alias 'fake' created")
 
     # Use the alias
@@ -1630,11 +1587,11 @@ def test_alias_create(base_app):
 
     # See a list of aliases
     out, err = run_cmd(base_app, 'alias list')
-    assert out == normalize('alias create fake pyscript')
+    assert out == normalize('alias create fake run_pyscript')
 
     # Look up the new alias
     out, err = run_cmd(base_app, 'alias list fake')
-    assert out == normalize('alias create fake pyscript')
+    assert out == normalize('alias create fake run_pyscript')
 
 def test_alias_create_with_quoted_value(base_app):
     """Demonstrate that quotes in alias value will be preserved (except for redirectors and terminators)"""
@@ -1675,7 +1632,7 @@ def test_alias_list_invalid_alias(base_app):
 
 def test_alias_delete(base_app):
     # Create an alias
-    run_cmd(base_app, 'alias create fake pyscript')
+    run_cmd(base_app, 'alias create fake run_pyscript')
 
     # Delete the alias
     out, err = run_cmd(base_app, 'alias delete fake')
@@ -1712,7 +1669,7 @@ def test_macro_no_subcommand(base_app):
 
 def test_macro_create(base_app):
     # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake pyscript')
+    out, err = run_cmd(base_app, 'macro create fake run_pyscript')
     assert out == normalize("Macro 'fake' created")
 
     # Use the macro
@@ -1721,11 +1678,11 @@ def test_macro_create(base_app):
 
     # See a list of macros
     out, err = run_cmd(base_app, 'macro list')
-    assert out == normalize('macro create fake pyscript')
+    assert out == normalize('macro create fake run_pyscript')
 
     # Look up the new macro
     out, err = run_cmd(base_app, 'macro list fake')
-    assert out == normalize('macro create fake pyscript')
+    assert out == normalize('macro create fake run_pyscript')
 
 def test_macro_create_with_quoted_value(base_app):
     """Demonstrate that quotes in macro value will be preserved (except for redirectors and terminators)"""
@@ -1829,7 +1786,7 @@ def test_macro_list_invalid_macro(base_app):
 
 def test_macro_delete(base_app):
     # Create an macro
-    run_cmd(base_app, 'macro create fake pyscript')
+    run_cmd(base_app, 'macro create fake run_pyscript')
 
     # Delete the macro
     out, err = run_cmd(base_app, 'macro delete fake')
@@ -1934,8 +1891,8 @@ def test_onecmd_raw_str_quit(outsim_app):
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
-    expected_commands = ['_relative_load', 'alias', 'edit', 'eof', 'help', 'history', 'load', 'macro',
-                         'py', 'pyscript', 'quit', 'set', 'shell', 'shortcuts']
+    expected_commands = ['_relative_load', '_relative_run_script', 'alias', 'edit', 'eof', 'help', 'history', 'load',
+                         'macro', 'py', 'pyscript', 'quit', 'run_pyscript', 'run_script', 'set', 'shell', 'shortcuts']
     assert commands == expected_commands
 
 def test_get_help_topics(base_app):

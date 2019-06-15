@@ -20,8 +20,8 @@ Click on image below to watch a short video demonstrating the capabilities of cm
 Main Features
 -------------
 - Searchable command history (`history` command and `<Ctrl>+r`) - optionally persistent
-- Text file scripting of your application with `load` (`@`) and `_relative_load` (`@@`)
-- Python scripting of your application with ``pyscript``
+- Text file scripting of your application with `run_script` (`@`) and `_relative_run_script` (`@@`)
+- Python scripting of your application with ``run_pyscript``
 - Run shell commands with ``!``
 - Pipe command output to shell commands with `|`
 - Redirect command output to file with `>`, `>>`
@@ -32,7 +32,7 @@ Main Features
 - Special-character command shortcuts (beyond cmd's `?` and `!`)
 - Command aliasing similar to bash `alias` command
 - Macros, which are similar to aliases, but they can contain argument placeholders
-- Ability to load commands at startup from an initialization script
+- Ability to run commands at startup from an initialization script
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
 - Unicode character support
@@ -41,7 +41,7 @@ Main Features
 - Support for Python 3.5+ on Windows, macOS, and Linux
 - Trivial to provide built-in help for all commands
 - Built-in regression testing framework for your applications (transcript-based testing)
-- Transcripts for use with built-in regression can be automatically generated from `history -t` or `load -t`
+- Transcripts for use with built-in regression can be automatically generated from `history -t` or `run_script -t`
 - Alerts that seamlessly print while user enters text at prompt
 
 Python 2.7 support is EOL
@@ -109,12 +109,12 @@ Instructions for implementing each feature follow.
 - Simple scripting using ASCII text files with one command + arguments per line
     - See the [Script files](https://cmd2.readthedocs.io/en/latest/freefeatures.html#script-files) section of the `cmd2` docs for more info
     - See [script.txt](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/script.txt) for a trivial example script that can be
-    used in any `cmd2` application with the `load` command (or `@` shortcut)
+    used in any `cmd2` application with the `run_script` command (or `@` shortcut)
 
-- Powerful and flexible built-in Python scripting of your application using the `pyscript` command
+- Powerful and flexible built-in Python scripting of your application using the `run_pyscript` command
     - Run arbitrary Python scripts within your `cmd2` application with the ability to also call custom `cmd2` commands
     - No separate API for your end users to learn
-        - Syntax for calling `cmd2` commands in a `pyscript` is essentially identical to what they would enter on the command line
+        - Syntax for calling `cmd2` commands in a `run_pyscript` is essentially identical to what they would enter on the command line
     - See the [Python](https://cmd2.readthedocs.io/en/latest/freefeatures.html#python) section of the `cmd2` docs for more info
     - Also see the [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) 
     example in conjunction with the [conditional.py](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py) script

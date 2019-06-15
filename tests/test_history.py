@@ -275,7 +275,7 @@ def parser():
                  '42': 'theanswer',
                  'l': '!ls -al',
                  'anothermultiline': 'multiline',
-                 'fake': 'pyscript'},
+                 'fake': 'run_pyscript'},
         shortcuts=[('?', 'help'), ('!', 'shell')]
     )
     return parser

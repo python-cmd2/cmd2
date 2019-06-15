@@ -149,7 +149,7 @@ def test_complete_exception(cmd2_app, capsys):
 
 def test_complete_macro(base_app, request):
     # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake pyscript {1}')
+    out, err = run_cmd(base_app, 'macro create fake run_pyscript {1}')
     assert out == normalize("Macro 'fake' created")
 
     # Macros do path completion
@@ -537,7 +537,7 @@ def test_basic_completion_nomatch(cmd2_app):
 
 def test_delimiter_completion(cmd2_app):
     text = '/home/'
-    line = 'load {}'.format(text)
+    line = 'run_script {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 

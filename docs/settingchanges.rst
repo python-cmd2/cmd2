@@ -23,10 +23,10 @@ following shortcuts are defined:
     shell: run as OS-level command
 
   ``@``
-    load script file
+    run script file
 
   ``@@``
-    load script file; filename is relative to current script location
+    run script file; filename is relative to current script location
 
 To define more shortcuts, update the dict ``App.shortcuts`` with the
 {'shortcut': 'command_name'} (omit ``do_``)::

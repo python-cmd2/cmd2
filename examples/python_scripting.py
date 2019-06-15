@@ -2,15 +2,15 @@
 # coding=utf-8
 """A sample application for how Python scripting can provide conditional control flow of a cmd2 application.
 
-cmd2's built-in scripting capability which can be invoked via the "@" shortcut or "load" command and uses basic ASCII
-text scripts is very easy to use.  Moreover, the trivial syntax of the script files where there is one command per line
-and the line is exactly what the user would type inside the application makes it so non-technical end users can quickly
-learn to create scripts.
+cmd2's built-in scripting capability, which can be invoked via the "@" shortcut or "run_script" command, uses basic
+ASCII/UTF-8 text scripts and is very easy to use.  Moreover, the trivial syntax of the script files, where there is one
+command per line and the line is exactly what the user would type inside the application, makes it so non-technical
+that end users can quickly learn to create scripts.
 
 However, there comes a time when technical end users want more capability and power.  In particular it is common that
 users will want to create a script with conditional control flow - where the next command run will depend on the results
-from the previous command.  This is where the ability to run Python scripts inside a cmd2 application via the pyscript
-command and the "pyscript <script> [arguments]" syntax comes into play.
+from the previous command.  This is where the ability to run Python scripts inside a cmd2 application via the
+run_pyscript command and the "run_pyscript <script> [arguments]" syntax comes into play.
 
 This application and the "scripts/conditional.py" script serve as an example for one way in which this can be done.
 """
