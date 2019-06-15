@@ -1,3 +1,9 @@
+## 0.9.14 (TBD, 2019
+* Enhancements
+    * Added support for and testing with Python 3.8, starting with 3.8 beta
+* Breaking Changes
+    * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019 and is no longer supported by `cmd2`
+
 ## 0.9.13 (June 14, 2019)
 * Bug Fixes
     * Fixed issue where the wrong terminator was being appended by `Statement.expanded_command_line()`
