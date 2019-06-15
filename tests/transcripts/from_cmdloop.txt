@@ -5,8 +5,9 @@
 
 Documented commands (type help <topic>):
 ========================================
-alias  help     load   mumble   orate  pyscript  say  shell      speak/ */
-edit   history  macro  nothing  py     quit      set  shortcuts/ */
+alias  history  mumble   py        run_pyscript  set        speak/ */
+edit   load     nothing  pyscript  run_script    shell/ */
+help   macro    orate    quit      say           shortcuts/ */
 
 (Cmd) help say
 usage: speak [-h] [-p] [-s] [-r REPEAT]/ */
