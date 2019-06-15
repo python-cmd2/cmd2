@@ -6,9 +6,9 @@ To use, simply import cmd2.Cmd instead of cmd.Cmd; use precisely as though you
 were using the standard library's cmd, while enjoying the extra features.
 
 Searchable command history (commands: "history")
-Load commands from file, save to file, edit commands in file
+Run commands from file, save to file, edit commands in file
 Multi-line commands
-Special-character shortcut commands (beyond cmd's "@" and "!")
+Special-character shortcut commands (beyond cmd's "?" and "!")
 Settable environment parameters
 Parsing commands with `argparse` argument parsers (flags)
 Redirection to file or paste buffer (clipboard) with > or >>
@@ -327,7 +327,7 @@ class Cmd(cmd.Cmd):
 
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
-    DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'load', '@@': '_relative_load'}
+    DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'run_script', '@@': '_relative_run_script'}
     DEFAULT_EDITOR = utils.find_editor()
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, *,
@@ -343,7 +343,7 @@ class Cmd(cmd.Cmd):
         :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
         :param persistent_history_file: (optional) file path to load a persistent cmd2 command history from
         :param persistent_history_length: (optional) max number of history items to write to the persistent history file
-        :param startup_script: (optional) file path to a a script to load and execute at startup
+        :param startup_script: (optional) file path to a script to execute at startup
         :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
         :param allow_cli_args: (optional) if True, then cmd2 will process command line arguments as either
                                           commands to be run or, if -t is specified, transcript files to run.
@@ -398,7 +398,7 @@ class Cmd(cmd.Cmd):
                          'timing': 'Report execution times'}
 
         # Commands to exclude from the help menu and tab completion
-        self.hidden_commands = ['eof', '_relative_load']
+        self.hidden_commands = ['eof', '_relative_run_script']
 
         # Commands to exclude from the history command
         # initialize history
@@ -429,7 +429,8 @@ class Cmd(cmd.Cmd):
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
         self._last_result = None
 
-        # Used load command to store the current script dir as a LIFO queue to support _relative_load command
+        # Used by run_script command to store the current script dir as
+        # a LIFO queue to support _relative_run_script command
         self._script_dir = []
 
         # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
@@ -460,11 +461,11 @@ class Cmd(cmd.Cmd):
         # Commands that will run at the beginning of the command loop
         self._startup_commands = []
 
-        # If a startup script is provided, then add it in the queue to load
+        # If a startup script is provided, then execute it in the startup commands
         if startup_script is not None:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
-                self._startup_commands.append("load '{}'".format(startup_script))
+                self._startup_commands.append("run_script '{}'".format(startup_script))
 
         # Transcript files to run instead of interactive command loop
         self._transcript_files = None
@@ -3412,7 +3413,7 @@ class Cmd(cmd.Cmd):
                         fobj.write('{}\n'.format(command.raw))
             try:
                 self.do_edit(fname)
-                return self.do_load(fname)
+                return self.do_run_script(fname)
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -3623,27 +3624,33 @@ class Cmd(cmd.Cmd):
         else:
             return None
 
-    load_description = ("Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
-                        "\n"
-                        "Script should contain one command per line, just like the command would be\n"
-                        "typed in the console.\n"
-                        "\n"
-                        "If the -r/--record_transcript flag is used, this command instead records\n"
-                        "the output of the script commands to a transcript for testing purposes.\n"
-                        )
+    run_script_description = ("Run commands in script file that is encoded as either ASCII or UTF-8 text\n"
+                              "\n"
+                              "Script should contain one command per line, just like the command would be\n"
+                              "typed in the console.\n"
+                              "\n"
+                              "If the -r/--record_transcript flag is used, this command instead records\n"
+                              "the output of the script commands to a transcript for testing purposes.\n"
+                              )
 
-    load_parser = ACArgumentParser(description=load_description)
-    setattr(load_parser.add_argument('-t', '--transcript', help='record the output of the script as a transcript file'),
+    run_script_parser = ACArgumentParser(description=run_script_description)
+    setattr(run_script_parser.add_argument('-t', '--transcript',
+                                           help='record the output of the script as a transcript file'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    setattr(load_parser.add_argument('script_path', help="path to the script file"),
+    setattr(run_script_parser.add_argument('script_path', help="path to the script file"),
             ACTION_ARG_CHOICES, ('path_complete',))
 
-    @with_argparser(load_parser)
-    def do_load(self, args: argparse.Namespace) -> Optional[bool]:
+    @with_argparser(run_script_parser)
+    def do_run_script(self, args: argparse.Namespace) -> Optional[bool]:
         """
         Run commands in script file that is encoded as either ASCII or UTF-8 text
         :return: True if running of commands should stop
         """
+        if args.__statement__.command == "load":
+            self.perror("load has been renamed and will be removed in the next release,"
+                        "please use run_script instead\n",
+                        traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
+
         expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
 
         # Make sure the path exists and we can access it
@@ -3690,19 +3697,24 @@ class Cmd(cmd.Cmd):
                 if orig_script_dir_count != len(self._script_dir):
                     self._script_dir.pop()
 
-    relative_load_description = load_description
-    relative_load_description += ("\n\n"
-                                  "If this is called from within an already-running script, the filename will be\n"
-                                  "interpreted relative to the already-running script's directory.")
+    # load has been deprecated
+    do_load = do_run_script
 
-    relative_load_epilog = ("Notes:\n"
-                            "  This command is intended to only be used within text file scripts.")
+    relative_run_script_description = run_script_description
+    relative_run_script_description += (
+        "\n\n"
+        "If this is called from within an already-running script, the filename will be\n"
+        "interpreted relative to the already-running script's directory.")
 
-    relative_load_parser = ACArgumentParser(description=relative_load_description, epilog=relative_load_epilog)
-    relative_load_parser.add_argument('file_path', help='a file path pointing to a script')
+    relative_run_script_epilog = ("Notes:\n"
+                                  "  This command is intended to only be used within text file scripts.")
 
-    @with_argparser(relative_load_parser)
-    def do__relative_load(self, args: argparse.Namespace) -> Optional[bool]:
+    relative_run_script_parser = ACArgumentParser(description=relative_run_script_description,
+                                                  epilog=relative_run_script_epilog)
+    relative_run_script_parser.add_argument('file_path', help='a file path pointing to a script')
+
+    @with_argparser(relative_run_script_parser)
+    def do__relative_run_script(self, args: argparse.Namespace) -> Optional[bool]:
         """
         Run commands in script file that is encoded as either ASCII or UTF-8 text
         :return: True if running of commands should stop
@@ -3710,7 +3722,10 @@ class Cmd(cmd.Cmd):
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
-        return self.do_load(relative_path)
+        return self.do_run_script(relative_path)
+
+    # _relative_load has been deprecated
+    do__relative_load = do__relative_run_script
 
     def run_transcript_tests(self, transcript_paths: List[str]) -> None:
         """Runs transcript tests for provided file(s).
