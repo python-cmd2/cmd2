@@ -20,7 +20,7 @@ def parser():
                  '42': 'theanswer',
                  'l': '!ls -al',
                  'anothermultiline': 'multiline',
-                 'fake': 'pyscript'},
+                 'fake': 'run_pyscript'},
         shortcuts=[('?', 'help'), ('!', 'shell')]
     )
     return parser
@@ -705,8 +705,8 @@ def test_parse_command_only_expands_alias(parser):
     assert statement == 'foobar.py "somebody.py'
     assert statement.args == statement
     assert statement.arg_list == []
-    assert statement.command == 'pyscript'
-    assert statement.command_and_args == 'pyscript foobar.py "somebody.py'
+    assert statement.command == 'run_pyscript'
+    assert statement.command_and_args == 'run_pyscript foobar.py "somebody.py'
     assert statement.multiline_command == ''
     assert statement.raw == line
     assert statement.terminator == ''
