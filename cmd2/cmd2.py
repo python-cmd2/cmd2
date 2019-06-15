@@ -3241,16 +3241,21 @@ class Cmd(cmd.Cmd):
 
         return bridge.stop
 
-    pyscript_parser = ACArgumentParser()
-    setattr(pyscript_parser.add_argument('script_path', help='path to the script file'),
+    run_pyscript_parser = ACArgumentParser()
+    setattr(run_pyscript_parser.add_argument('script_path', help='path to the script file'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    setattr(pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
-                                         help='arguments to pass to script'),
+    setattr(run_pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
+                                             help='arguments to pass to script'),
             ACTION_ARG_CHOICES, ('path_complete',))
 
-    @with_argparser(pyscript_parser)
-    def do_pyscript(self, args: argparse.Namespace) -> bool:
+    @with_argparser(run_pyscript_parser)
+    def do_run_pyscript(self, args: argparse.Namespace) -> bool:
         """Run a Python script file inside the console"""
+        if args.__statement__.command == "pyscript":
+            self.perror("pyscript has been renamed and will be removed in the next release, "
+                        "please use run_pyscript instead\n",
+                        traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
+
         script_path = os.path.expanduser(args.script_path)
         py_return = False
 
@@ -3273,6 +3278,9 @@ class Cmd(cmd.Cmd):
             sys.argv = orig_args
 
         return py_return
+
+    # pyscript is deprecated
+    do_pyscript = do_run_pyscript
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
@@ -3647,7 +3655,7 @@ class Cmd(cmd.Cmd):
         :return: True if running of commands should stop
         """
         if args.__statement__.command == "load":
-            self.perror("load has been renamed and will be removed in the next release,"
+            self.perror("load has been renamed and will be removed in the next release, "
                         "please use run_script instead\n",
                         traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
 
