@@ -190,7 +190,7 @@ this is a \/multiline\/ command
         assert transcript == expected
 
 
-def test_load_record_transcript(base_app, request):
+def test_run_script_record_transcript(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
 
@@ -201,8 +201,8 @@ def test_load_record_transcript(base_app, request):
     fd, transcript_fname = tempfile.mkstemp(prefix='', suffix='.trn')
     os.close(fd)
 
-    # Run the load command with the -r option to generate a transcript
-    run_cmd(base_app, 'load {} -t {}'.format(filename, transcript_fname))
+    # Execute the run_script command with the -t option to generate a transcript
+    run_cmd(base_app, 'run_script {} -t {}'.format(filename, transcript_fname))
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None

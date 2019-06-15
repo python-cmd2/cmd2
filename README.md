@@ -32,7 +32,7 @@ Main Features
 - Special-character command shortcuts (beyond cmd's `?` and `!`)
 - Command aliasing similar to bash `alias` command
 - Macros, which are similar to aliases, but they can contain argument placeholders
-- Ability to load commands at startup from an initialization script
+- Ability to run commands at startup from an initialization script
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for sub-commands
 - Unicode character support
@@ -109,12 +109,12 @@ Instructions for implementing each feature follow.
 - Simple scripting using ASCII text files with one command + arguments per line
     - See the [Script files](https://cmd2.readthedocs.io/en/latest/freefeatures.html#script-files) section of the `cmd2` docs for more info
     - See [script.txt](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/script.txt) for a trivial example script that can be
-    used in any `cmd2` application with the `load` command (or `@` shortcut)
+    used in any `cmd2` application with the `run_script` command (or `@` shortcut)
 
 - Powerful and flexible built-in Python scripting of your application using the `run_pyscript` command
     - Run arbitrary Python scripts within your `cmd2` application with the ability to also call custom `cmd2` commands
     - No separate API for your end users to learn
-        - Syntax for calling `cmd2` commands in a `pyscript` is essentially identical to what they would enter on the command line
+        - Syntax for calling `cmd2` commands in a `run_pyscript` is essentially identical to what they would enter on the command line
     - See the [Python](https://cmd2.readthedocs.io/en/latest/freefeatures.html#python) section of the `cmd2` docs for more info
     - Also see the [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) 
     example in conjunction with the [conditional.py](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py) script

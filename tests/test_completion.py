@@ -537,7 +537,7 @@ def test_basic_completion_nomatch(cmd2_app):
 
 def test_delimiter_completion(cmd2_app):
     text = '/home/'
-    line = 'load {}'.format(text)
+    line = 'run_script {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 

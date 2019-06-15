@@ -45,8 +45,9 @@ loop::
 
     Documented commands (type help <topic>):
     ========================================
-    alias  help     load    orate  pyscript  say  shell      speak
-    edit   history  mumble  py     quit      set  shortcuts  unalias
+    alias  history  mumble  pyscript      run_script  shell
+    edit   load     orate   quit          say         shortcuts
+    help   macro    py      run_pyscript  set         speak
 
     (Cmd)
 
