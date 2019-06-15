@@ -486,6 +486,18 @@ def test_parse_unfinished_multiliine_command(parser):
     assert statement.arg_list == statement.argv[1:]
     assert statement.terminator == ''
 
+def test_parse_basic_multiline_command(parser):
+    line = 'multiline foo\nbar\n\n'
+    statement = parser.parse(line)
+    assert statement.multiline_command == 'multiline'
+    assert statement.command == 'multiline'
+    assert statement == 'foo bar'
+    assert statement.args == statement
+    assert statement.argv == ['multiline', 'foo', 'bar']
+    assert statement.arg_list == ['foo', 'bar']
+    assert statement.raw == line
+    assert statement.terminator == '\n'
+
 @pytest.mark.parametrize('line,terminator',[
     ('multiline has > inside;', ';'),
     ('multiline has > inside;;;', ';'),

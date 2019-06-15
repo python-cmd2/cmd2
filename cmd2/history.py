@@ -44,22 +44,27 @@ class HistoryItem():
         :return: pretty print string version of a HistoryItem
         """
         if verbose:
-            ret_str = self._listformat.format(self.idx, self.raw)
+            ret_str = self._listformat.format(self.idx, self.raw.rstrip())
             if self.raw != self.expanded.rstrip():
-                ret_str += self._ex_listformat.format(self.idx, self.expanded)
+                ret_str += self._ex_listformat.format(self.idx, self.expanded.rstrip())
         else:
-            if script:
-                # display without entry numbers
-                if expanded or self.statement.multiline_command:
-                    ret_str = self.expanded.rstrip()
-                else:
-                    ret_str = self.raw.rstrip()
+            if expanded:
+                ret_str = self.expanded.rstrip()
             else:
-                # display a numbered list
-                if expanded or self.statement.multiline_command:
-                    ret_str = self._listformat.format(self.idx, self.expanded.rstrip())
-                else:
-                    ret_str = self._listformat.format(self.idx, self.raw.rstrip())
+                ret_str = self.raw.rstrip()
+
+                # In non-verbose mode, display raw multiline commands on 1 line
+                if self.statement.multiline_command:
+                    # This is an approximation and not meant to be a perfect piecing together of lines.
+                    # All newlines will be converted to spaces, including the ones in quoted strings that
+                    # are considered literals. Also if the final line starts with a terminator, then the
+                    # terminator will have an extra space before it in the 1 line version.
+                    ret_str = ret_str.replace('\n', ' ')
+
+            # Display a numbered list if not writing to a script
+            if not script:
+                ret_str = self._listformat.format(self.idx, ret_str)
+
         return ret_str
 
 
