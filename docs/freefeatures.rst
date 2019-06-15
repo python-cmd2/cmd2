@@ -13,24 +13,15 @@ Script files
 ============
 
 Text files can serve as scripts for your ``cmd2``-based
-application, with the ``load``, ``_relative_load``, and ``edit`` commands.
+application, with the ``run_script``, ``_relative_run_script``, and ``edit`` commands.
 
 Both ASCII and UTF-8 encoded unicode text files are supported.
 
 Simply include one command per line, typed exactly as you would inside a ``cmd2`` application.
 
-The ``load`` command loads commands from a script file into a queue and then the normal cmd2 REPL
-resumes control and executes the commands in the queue in FIFO order.  A side effect of this
-is that if you redirect/pipe the output of a load command, it will redirect the output of the ``load``
-command itself, but will NOT redirect the output of the command loaded from the script file.  Of course,
-you can add redirection to the commands being run in the script file, e.g.::
+.. automethod:: cmd2.cmd2.Cmd.do_run_script
 
-    # This is your script file
-    command arg1 arg2 > file.txt
-
-.. automethod:: cmd2.cmd2.Cmd.do_load
-
-.. automethod:: cmd2.cmd2.Cmd.do__relative_load
+.. automethod:: cmd2.cmd2.Cmd.do__relative_run_script
 
 .. automethod:: cmd2.cmd2.Cmd.do_edit
 
@@ -51,7 +42,7 @@ Comments can be useful in :ref:`scripts`, but would be pointless within an inter
 
 Startup Initialization Script
 =============================
-You can load and execute commands from a startup initialization script by passing a file path to the ``startup_script``
+You can execute commands from a startup initialization script by passing a file path to the ``startup_script``
 argument to the ``cmd2.Cmd.__init__()`` method like so::
 
     class StartupApp(cmd2.Cmd):
@@ -188,16 +179,16 @@ conditional control flow logic.  See the **python_scripting.py** ``cmd2`` applic
 the **script_conditional.py** script in the ``examples`` source code directory for an
 example of how to achieve this in your own applications.
 
-Using ``py`` to run scripts directly is considered deprecated.  The newer ``pyscript`` command
+Using ``py`` to run scripts directly is considered deprecated.  The newer ``run_pyscript`` command
 is superior for doing this in two primary ways:
 
 - it supports tab-completion of file system paths
 - it has the ability to pass command-line arguments to the scripts invoked
 
-There are no disadvantages to using ``pyscript`` as opposed to ``py run()``.  A simple example
-of using ``pyscript`` is shown below  along with the arg_printer_ script::
+There are no disadvantages to using ``run_pyscript`` as opposed to ``py run()``.  A simple example
+of using ``run_pyscript`` is shown below  along with the arg_printer_ script::
 
-    (Cmd) pyscript examples/scripts/arg_printer.py foo bar baz
+    (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar baz
     Running Python script 'arg_printer.py' which was called with 3 arguments
     arg 1: 'foo'
     arg 2: 'bar'
@@ -390,7 +381,7 @@ would::
 
 If you want to save the commands to a text file, but not edit and re-run them,
 use the ``-o`` or ``--output-file`` option. This is a great way to create
-:ref:`scripts`, which can be loaded and executed using the ``load`` command. To
+:ref:`scripts`, which can be executed using the ``run_script`` command. To
 save the first 5 commands entered in this session to a text file::
 
     (Cmd) history :5 -o history.txt
@@ -512,8 +503,8 @@ Tab-Completion
 ``cmd2`` adds tab-completion of file system paths for all built-in commands where it makes sense, including:
 
 - ``edit``
-- ``load``
-- ``pyscript``
+- ``run_pyscript``
+- ``run_script``
 - ``shell``
 
 ``cmd2`` also adds tab-completion of shell commands to the ``shell`` command.

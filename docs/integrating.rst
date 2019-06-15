@@ -128,9 +128,7 @@ the main loop for the program by using code like the following::
         app.postloop()
 
 The **runcmds_plus_hooks()** method is a convenience method to run multiple
-commands via **onecmd_plus_hooks()**.  It properly deals with ``load`` commands
-which under the hood put commands in a FIFO queue as it reads them in from a
-script file.
+commands via **onecmd_plus_hooks()**.
 
 The **onecmd_plus_hooks()** method will do the following to execute a single
 ``cmd2`` command in a normal fashion:

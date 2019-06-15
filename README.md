@@ -20,8 +20,8 @@ Click on image below to watch a short video demonstrating the capabilities of cm
 Main Features
 -------------
 - Searchable command history (`history` command and `<Ctrl>+r`) - optionally persistent
-- Text file scripting of your application with `load` (`@`) and `_relative_load` (`@@`)
-- Python scripting of your application with ``pyscript``
+- Text file scripting of your application with `run_script` (`@`) and `_relative_run_script` (`@@`)
+- Python scripting of your application with ``run_pyscript``
 - Run shell commands with ``!``
 - Pipe command output to shell commands with `|`
 - Redirect command output to file with `>`, `>>`
@@ -111,7 +111,7 @@ Instructions for implementing each feature follow.
     - See [script.txt](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/script.txt) for a trivial example script that can be
     used in any `cmd2` application with the `load` command (or `@` shortcut)
 
-- Powerful and flexible built-in Python scripting of your application using the `pyscript` command
+- Powerful and flexible built-in Python scripting of your application using the `run_pyscript` command
     - Run arbitrary Python scripts within your `cmd2` application with the ability to also call custom `cmd2` commands
     - No separate API for your end users to learn
         - Syntax for calling `cmd2` commands in a `pyscript` is essentially identical to what they would enter on the command line
