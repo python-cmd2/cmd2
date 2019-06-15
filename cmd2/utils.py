@@ -615,7 +615,7 @@ class RedirectionSavedState(object):
         self.saved_sys_stdout = sys_stdout
         self.saved_pipe_proc_reader = pipe_proc_reader
 
-        # Tells if the command is _redirecting
+        # Tells if the command is redirecting
         self.redirecting = False
 
         # If the command created a process to pipe to, then then is its reader

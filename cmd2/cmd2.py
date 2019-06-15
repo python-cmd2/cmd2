@@ -436,7 +436,7 @@ class Cmd(cmd.Cmd):
         # Used by complete() for readline tab completion
         self._completion_matches = []
 
-        # Used to keep track of whether we are _redirecting or piping output
+        # Used to keep track of whether we are redirecting or piping output
         self._redirecting = False
 
         # Used to keep track of whether a continuation prompt is being displayed
@@ -676,7 +676,7 @@ class Cmd(cmd.Cmd):
                     if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
                         functional_terminal = True
 
-                # Don't attempt to use a pager that can block if _redirecting or running a script (either text or Python)
+                # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self._redirecting and not self._in_py and not self._script_dir:
                     if self.colors.lower() == constants.COLORS_NEVER.lower():

@@ -494,7 +494,7 @@ class StatementParser:
                 output = constants.REDIRECTION_APPEND
                 output_index = append_index
 
-            # Check if we are _redirecting to a file
+            # Check if we are redirecting to a file
             if len(tokens) > output_index + 1:
                 unquoted_path = utils.strip_quotes(tokens[output_index + 1])
                 if unquoted_path:
