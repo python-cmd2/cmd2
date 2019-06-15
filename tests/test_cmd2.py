@@ -1934,8 +1934,8 @@ def test_onecmd_raw_str_quit(outsim_app):
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
-    expected_commands = ['_relative_load', 'alias', 'edit', 'eof', 'help', 'history', 'load', 'macro',
-                         'py', 'pyscript', 'quit', 'set', 'shell', 'shortcuts']
+    expected_commands = ['_relative_load', '_relative_run_script', 'alias', 'edit', 'eof', 'help', 'history', 'load',
+                         'macro', 'py', 'pyscript', 'quit', 'run_pyscript', 'run_script', 'set', 'shell', 'shortcuts']
     assert commands == expected_commands
 
 def test_get_help_topics(base_app):
