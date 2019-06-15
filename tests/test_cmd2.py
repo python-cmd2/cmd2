@@ -112,7 +112,7 @@ def test_base_show_readonly(base_app):
     expected = normalize(SHOW_TXT + '\nRead only settings:' + """
         Commands may be terminated with: {}
         Output redirection and pipes allowed: {}
-""".format(base_app.statement_parser.terminators, base_app.allow_redirection))
+""".format(base_app._statement_parser.terminators, base_app.allow_redirection))
     assert out == expected
 
 
@@ -524,7 +524,7 @@ def test_feedback_to_output_false(base_app):
 
 def test_disallow_redirection(base_app):
     # Set allow_redirection to False
-    base_app.statement_parser.allow_redirection = False
+    base_app._statement_parser.allow_redirection = False
 
     filename = 'test_allow_redirect.txt'
 
@@ -1291,7 +1291,7 @@ def test_multiline_input_line_to_statement(multiline_app):
 
 def test_clipboard_failure(base_app, capsys):
     # Force cmd2 clipboard to be disabled
-    base_app.can_clip = False
+    base_app._can_clip = False
 
     # Redirect command output to the clipboard when a clipboard isn't present
     base_app.onecmd_plus_hooks('help > ')
@@ -1840,7 +1840,7 @@ def test_ppaged_strips_color_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
     outsim_app.colors = cmd2.constants.COLORS_TERMINAL
-    outsim_app.redirecting = True
+    outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
@@ -1849,7 +1849,7 @@ def test_ppaged_strips_color_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
     outsim_app.colors = cmd2.constants.COLORS_ALWAYS
-    outsim_app.redirecting = True
+    outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
     assert out == Fore.RED + msg + end

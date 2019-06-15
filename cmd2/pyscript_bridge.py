@@ -97,7 +97,7 @@ class PyscriptBridge(object):
                 with redirect_stderr(copy_stderr):
                     stop = self._cmd2_app.onecmd_plus_hooks(command, pyscript_bridge_call=True)
         finally:
-            with self._cmd2_app.sigint_protection:
+            with self._cmd2_app._sigint_protection:
                 self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
                 self.stop = stop or self.stop
 

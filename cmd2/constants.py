@@ -24,3 +24,5 @@ LINE_FEED = '\n'
 COLORS_NEVER = 'Never'
 COLORS_TERMINAL = 'Terminal'
 COLORS_ALWAYS = 'Always'
+
+DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'run_script', '@@': '_relative_run_script'}

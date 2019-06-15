@@ -324,7 +324,7 @@ class StatementParser:
         This string is suitable for inclusion in an error message of your
         choice:
 
-        valid, errmsg = statement_parser.is_valid_command('>')
+        valid, errmsg = _statement_parser.is_valid_command('>')
         if not valid:
             errmsg = "Alias {}".format(errmsg)
         """
@@ -494,7 +494,7 @@ class StatementParser:
                 output = constants.REDIRECTION_APPEND
                 output_index = append_index
 
-            # Check if we are redirecting to a file
+            # Check if we are _redirecting to a file
             if len(tokens) > output_index + 1:
                 unquoted_path = utils.strip_quotes(tokens[output_index + 1])
                 if unquoted_path:

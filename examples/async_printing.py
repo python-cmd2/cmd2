@@ -48,7 +48,7 @@ class AlerterApp(cmd2.Cmd):
 
     def _preloop_hook(self) -> None:
         """ Start the alerter thread """
-        # This runs after cmdloop() acquires self.terminal_lock, which will be locked until the prompt appears.
+        # This runs after cmdloop() acquires self._terminal_lock, which will be locked until the prompt appears.
         # Therefore this is the best place to start the alerter thread since there is no risk of it alerting
         # before the prompt is displayed. You can also start it via a command if its not something that should
         # be running during the entire application. See do_start_alerts().
@@ -60,7 +60,7 @@ class AlerterApp(cmd2.Cmd):
     def _postloop_hook(self) -> None:
         """ Stops the alerter thread """
 
-        # After this function returns, cmdloop() releases self.terminal_lock which could make the alerter
+        # After this function returns, cmdloop() releases self._terminal_lock which could make the alerter
         # thread think the prompt is on screen. Therefore this is the best place to stop the alerter thread.
         # You can also stop it via a command. See do_stop_alerts().
         self._stop_thread = True
@@ -169,9 +169,9 @@ class AlerterApp(cmd2.Cmd):
         self._next_alert_time = 0
 
         while not self._stop_thread:
-            # Always acquire terminal_lock before printing alerts or updating the prompt
+            # Always acquire _terminal_lock before printing alerts or updating the prompt
             # To keep the app responsive, do not block on this call
-            if self.terminal_lock.acquire(blocking=False):
+            if self._terminal_lock.acquire(blocking=False):
 
                 # Get any alerts that need to be printed
                 alert_str = self._generate_alert_str()
@@ -191,7 +191,7 @@ class AlerterApp(cmd2.Cmd):
                     self.async_update_prompt(new_prompt)
 
                 # Don't forget to release the lock
-                self.terminal_lock.release()
+                self._terminal_lock.release()
 
             time.sleep(0.5)
 

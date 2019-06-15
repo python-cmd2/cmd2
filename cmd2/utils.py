@@ -348,6 +348,35 @@ def files_from_glob_patterns(patterns: List[str], access=os.F_OK) -> List[str]:
     return files
 
 
+def get_exes_in_path(starts_with: str) -> List[str]:
+    """Returns names of executables in a user's path
+
+    :param starts_with: what the exes should start with. leave blank for all exes in path.
+    :return: a list of matching exe names
+    """
+    # Purposely don't match any executable containing wildcards
+    wildcards = ['*', '?']
+    for wildcard in wildcards:
+        if wildcard in starts_with:
+            return []
+
+    # Get a list of every directory in the PATH environment variable and ignore symbolic links
+    paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
+
+    # Use a set to store exe names since there can be duplicates
+    exes_set = set()
+
+    # Find every executable file in the user's path that matches the pattern
+    for path in paths:
+        full_path = os.path.join(path, starts_with)
+        matches = files_from_glob_pattern(full_path + '*', access=os.X_OK)
+
+        for match in matches:
+            exes_set.add(os.path.basename(match))
+
+    return list(exes_set)
+
+
 class StdSim(object):
     """
     Class to simulate behavior of sys.stdout or sys.stderr.
@@ -586,7 +615,7 @@ class RedirectionSavedState(object):
         self.saved_sys_stdout = sys_stdout
         self.saved_pipe_proc_reader = pipe_proc_reader
 
-        # Tells if the command is redirecting
+        # Tells if the command is _redirecting
         self.redirecting = False
 
         # If the command created a process to pipe to, then then is its reader

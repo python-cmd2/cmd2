@@ -176,7 +176,7 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Opti
     :param endidx: the ending index of the prefix text
     :param app: the cmd2 app that will run completions
     :return: The first matched string or None if there are no matches
-             Matches are stored in app.completion_matches
+             Matches are stored in app._completion_matches
              These matches also have been sorted by complete()
     """
     def get_line():

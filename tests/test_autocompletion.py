@@ -77,7 +77,7 @@ def test_autocomp_flags(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['--duration', '--help', '--type', '-d', '-h', '-t']
+           cmd2_app._completion_matches == ['--duration', '--help', '--type', '-d', '-h', '-t']
 
 def test_autcomp_hint(cmd2_app, capsys):
     text = ''
@@ -106,7 +106,7 @@ def test_autcomp_flag_comp(cmd2_app, capsys):
     out, err = capsys.readouterr()
 
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['--duration ']
+           cmd2_app._completion_matches == ['--duration ']
 
 
 def test_autocomp_flags_choices(cmd2_app):
@@ -117,7 +117,7 @@ def test_autocomp_flags_choices(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['movie', 'show']
+           cmd2_app._completion_matches == ['movie', 'show']
 
 
 def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
@@ -160,7 +160,7 @@ def test_autocomp_subcmd_nested(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['add', 'delete', 'list', 'load']
+           cmd2_app._completion_matches == ['add', 'delete', 'list', 'load']
 
 
 def test_autocomp_subcmd_flag_choices_append(cmd2_app):
@@ -171,7 +171,7 @@ def test_autocomp_subcmd_flag_choices_append(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['G', 'NC-17', 'PG', 'PG-13', 'R']
+           cmd2_app._completion_matches == ['G', 'NC-17', 'PG', 'PG-13', 'R']
 
 def test_autocomp_subcmd_flag_choices_append_exclude(cmd2_app):
     text = ''
@@ -181,7 +181,7 @@ def test_autocomp_subcmd_flag_choices_append_exclude(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['G', 'NC-17', 'R']
+           cmd2_app._completion_matches == ['G', 'NC-17', 'R']
 
 
 def test_autocomp_subcmd_flag_comp_func(cmd2_app):
@@ -192,7 +192,7 @@ def test_autocomp_subcmd_flag_comp_func(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
+           cmd2_app._completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
 
 
 def test_autocomp_subcmd_flag_comp_list(cmd2_app):
@@ -213,7 +213,7 @@ def test_autocomp_subcmd_flag_comp_func_attr(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
+           cmd2_app._completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
 
 
 def test_autocomp_subcmd_flag_comp_list_attr(cmd2_app):
@@ -244,7 +244,7 @@ def test_autocomp_pos_after_flag(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['John Boyega" ']
+           cmd2_app._completion_matches == ['John Boyega" ']
 
 
 def test_autocomp_custom_func_list_arg(cmd2_app):
@@ -255,7 +255,7 @@ def test_autocomp_custom_func_list_arg(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['SW_CW', 'SW_REB', 'SW_TCW']
+           cmd2_app._completion_matches == ['SW_CW', 'SW_REB', 'SW_TCW']
 
 
 def test_autocomp_custom_func_list_and_dict_arg(cmd2_app):
@@ -266,7 +266,7 @@ def test_autocomp_custom_func_list_and_dict_arg(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['S01E02', 'S01E03', 'S02E01', 'S02E03']
+           cmd2_app._completion_matches == ['S01E02', 'S01E03', 'S02E01', 'S02E03']
 
 
 def test_autocomp_custom_func_dict_arg(cmd2_app):
@@ -277,7 +277,7 @@ def test_autocomp_custom_func_dict_arg(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['/home/user/another.db', '/home/user/file space.db', '/home/user/file.db']
+           cmd2_app._completion_matches == ['/home/user/another.db', '/home/user/file space.db', '/home/user/file.db']
 
 
 def test_argparse_remainder_flag_completion(cmd2_app):
@@ -333,7 +333,7 @@ def test_completion_after_double_dash(cmd2_app):
 
     # Since -- is the last token, then it should show flag choices
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and '--help' in cmd2_app.completion_matches
+    assert first_match is not None and '--help' in cmd2_app._completion_matches
 
     # Test -- to end all flag completion
     text = '--'
