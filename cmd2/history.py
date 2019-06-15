@@ -55,6 +55,10 @@ class HistoryItem():
 
                 # In non-verbose mode, display raw multiline commands on 1 line
                 if self.statement.multiline_command:
+                    # This is an approximation and not meant to be a perfect piecing together of lines.
+                    # All newlines will be converted to spaces, including the ones in quoted strings that
+                    # are considered literals. Also if the final line starts with a terminator, then the
+                    # terminator will have an extra space before it in the 1 line version.
                     ret_str = ret_str.replace('\n', ' ')
 
             # Display a numbered list if not writing to a script
