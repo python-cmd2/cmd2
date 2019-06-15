@@ -15,7 +15,7 @@ def cmdfinalization_hook(data: plugin.CommandFinalizationData) -> plugin.Command
     print(HOOK_OUTPUT)
     return data
 
-def test_run_pyscript_base(base_app, request):
+def test_run_pyscript(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'script.py')
     expected = 'This is a python script running ...'
@@ -85,12 +85,7 @@ def test_run_pyscript_stop(base_app, request):
     stop = base_app.onecmd_plus_hooks('run_pyscript {}'.format(python_script))
     assert stop
 
-def test_pyscript_deprecated_but_works(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'script.py')
-    expected = 'This is a python script running ...'
-
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
-    assert expected in out
+def test_pyscript_deprecated(base_app):
+    """Delete this when pyscript alias is removed"""
+    _, err = run_cmd(base_app, "pyscript fake")
     assert "pyscript has been renamed and will be removed" in err[0]
-

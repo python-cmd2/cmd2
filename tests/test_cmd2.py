@@ -258,7 +258,7 @@ def test_base_error(base_app):
     assert "is not a recognized command" in err[0]
 
 
-def test_base_run_script(base_app, request):
+def test_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
@@ -284,6 +284,11 @@ def test_base_run_script(base_app, request):
 
     assert script_out == manual_out
     assert script_err == manual_err
+
+def test_load_deprecated(base_app):
+    """Delete this when load alias is removed"""
+    _, err = run_cmd(base_app, "load fake")
+    assert "load has been renamed and will be removed" in err[0]
 
 def test_run_script_with_empty_args(base_app):
     out, err = run_cmd(base_app, 'run_script')
@@ -359,7 +364,7 @@ set colors Never""" % initial_run
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
-def test_base_runcmds_plus_hooks(base_app, request):
+def test_runcmds_plus_hooks(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     prefilepath = os.path.join(test_dir, 'scripts', 'precmds.txt')
     postfilepath = os.path.join(test_dir, 'scripts', 'postcmds.txt')
@@ -379,7 +384,7 @@ set colors Never""" % (prefilepath, postfilepath)
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
-def test_base_relative_run_script(base_app, request):
+def test_relative_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
@@ -410,6 +415,10 @@ def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
     assert 'Error: the following arguments' in err[1]
 
+def test_relative_load_deprecated(base_app):
+    """Delete this when _relative_load alias is removed"""
+    _, err = run_cmd(base_app, "_relative_load fake")
+    assert "_relative_load has been renamed and will be removed" in err[0]
 
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
