@@ -3727,6 +3727,11 @@ class Cmd(cmd.Cmd):
         Run commands in script file that is encoded as either ASCII or UTF-8 text
         :return: True if running of commands should stop
         """
+        if args.__statement__.command == "_relative_load":
+            self.perror("_relative_load has been renamed and will be removed in the next release, "
+                        "please use _relative_run_script instead\n",
+                        traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
+
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)

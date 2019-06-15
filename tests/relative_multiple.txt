@@ -1,1 +1,1 @@
-_relative_load scripts/one_down.txt 
+_relative_run_script scripts/one_down.txt

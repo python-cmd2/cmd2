@@ -291,7 +291,7 @@ def test_base_error(base_app):
     assert "is not a recognized command" in err[0]
 
 
-def test_base_load(base_app, request):
+def test_base_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
@@ -299,7 +299,7 @@ def test_base_load(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -318,52 +318,32 @@ def test_base_load(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-def test_load_with_empty_args(base_app):
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load')
-
-    # The load command requires a file path argument, so we should get an error message
+def test_run_script_with_empty_args(base_app):
+    out, err = run_cmd(base_app, 'run_script')
     assert "the following arguments are required" in err[1]
 
-
-def test_load_with_nonexistent_file(base_app, capsys):
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load does_not_exist.txt')
-
-    # The load command requires a path to an existing file
+def test_run_script_with_nonexistent_file(base_app, capsys):
+    out, err = run_cmd(base_app, 'run_script does_not_exist.txt')
     assert "does not exist" in err[0]
 
-def test_load_with_directory(base_app, request):
+def test_run_script_with_directory(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
-
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load {}'.format(test_dir))
-
+    out, err = run_cmd(base_app, 'run_script {}'.format(test_dir))
     assert "is not a file" in err[0]
 
-def test_load_with_empty_file(base_app, request):
+def test_run_script_with_empty_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'empty.txt')
-
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load {}'.format(filename))
-
-    # The load command requires non-empty script files
+    out, err = run_cmd(base_app, 'run_script {}'.format(filename))
     assert "is empty" in err[0]
 
-
-def test_load_with_binary_file(base_app, request):
+def test_run_script_with_binary_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'binary.bin')
-
-    # The way the load command works, we can't directly capture its stdout or stderr
-    out, err = run_cmd(base_app, 'load {}'.format(filename))
-
-    # The load command requires non-empty scripts files
+    out, err = run_cmd(base_app, 'run_script {}'.format(filename))
     assert "is not an ASCII or UTF-8 encoded text file" in err[0]
 
-
-def test_load_with_utf8_file(base_app, request):
+def test_run_script_with_utf8_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'utf8.txt')
 
@@ -371,7 +351,7 @@ def test_load_with_utf8_file(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -390,51 +370,49 @@ def test_load_with_utf8_file(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-
-def test_load_nested_loads(base_app, request):
-    # Verify that loading a script with nested load commands works correctly,
-    # and loads the nested script commands in the correct order.
+def test_run_script_nested_run_scripts(base_app, request):
+    # Verify that running a script with nested run_script commands works correctly,
+    # and runs the nested script commands in the correct order.
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'nested.txt')
 
-    # Load the top level script
-    initial_load = 'load ' + filename
-    run_cmd(base_app, initial_load)
+    # Run the top level script
+    initial_run = 'run_script ' + filename
+    run_cmd(base_app, initial_run)
 
     # Check that the right commands were executed.
     expected = """
 %s
-_relative_load precmds.txt
+_relative_run_script precmds.txt
 set colors Always
 help
 shortcuts
-_relative_load postcmds.txt
-set colors Never""" % initial_load
+_relative_run_script postcmds.txt
+set colors Never""" % initial_run
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
-
 
 def test_base_runcmds_plus_hooks(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     prefilepath = os.path.join(test_dir, 'scripts', 'precmds.txt')
     postfilepath = os.path.join(test_dir, 'scripts', 'postcmds.txt')
 
-    base_app.runcmds_plus_hooks(['load ' + prefilepath,
+    base_app.runcmds_plus_hooks(['run_script ' + prefilepath,
                                  'help',
                                  'shortcuts',
-                                 'load ' + postfilepath])
+                                 'run_script ' + postfilepath])
     expected = """
-load %s
+run_script %s
 set colors Always
 help
 shortcuts
-load %s
+run_script %s
 set colors Never""" % (prefilepath, postfilepath)
 
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
-def test_base_relative_load(base_app, request):
+def test_base_relative_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
 
@@ -442,7 +420,7 @@ def test_base_relative_load(base_app, request):
     assert base_app._current_script_dir is None
 
     # Get output out the script
-    script_out, script_err = run_cmd(base_app, 'load {}'.format(filename))
+    script_out, script_err = run_cmd(base_app, 'run_script {}'.format(filename))
 
     assert base_app._script_dir == []
     assert base_app._current_script_dir is None
@@ -461,8 +439,8 @@ def test_base_relative_load(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-def test_relative_load_requires_an_argument(base_app):
-    out, err = run_cmd(base_app, '_relative_load')
+def test_relative_run_script_requires_an_argument(base_app):
+    out, err = run_cmd(base_app, '_relative_run_script')
     assert 'Error: the following arguments' in err[1]
 
 
