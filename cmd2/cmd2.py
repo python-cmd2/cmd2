@@ -1837,7 +1837,7 @@ class Cmd(cmd.Cmd):
             #   - a multiline command with unclosed quotation marks
             try:
                 self._at_continuation_prompt = True
-                newline = self.pseudo_raw_input(self.continuation_prompt)
+                newline = self._pseudo_raw_input(self.continuation_prompt)
                 if newline == 'eof':
                     # they entered either a blank line, or we hit an EOF
                     # for some other reason. Turn the literal 'eof'
@@ -2137,7 +2137,7 @@ class Cmd(cmd.Cmd):
             err_msg = self.default_error.format(statement.command)
             self._decolorized_write(sys.stderr, "{}\n".format(err_msg))
 
-    def pseudo_raw_input(self, prompt: str) -> str:
+    def _pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
 
         - accounts for changed stdin, stdout
@@ -2232,7 +2232,7 @@ class Cmd(cmd.Cmd):
             while not stop:
                 # Get commands from user
                 try:
-                    line = self.pseudo_raw_input(self.prompt)
+                    line = self._pseudo_raw_input(self.prompt)
                 except KeyboardInterrupt as ex:
                     if self.quit_on_sigint:
                         raise ex
@@ -2258,7 +2258,7 @@ class Cmd(cmd.Cmd):
 
     # -----  Alias sub-command functions -----
 
-    def alias_create(self, args: argparse.Namespace) -> None:
+    def _alias_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite an alias"""
 
         # Validate the alias name
@@ -2286,7 +2286,7 @@ class Cmd(cmd.Cmd):
         self.aliases[args.name] = value
         self.poutput("Alias '{}' {}".format(args.name, result))
 
-    def alias_delete(self, args: argparse.Namespace) -> None:
+    def _alias_delete(self, args: argparse.Namespace) -> None:
         """Delete aliases"""
         if args.all:
             self.aliases.clear()
@@ -2301,7 +2301,7 @@ class Cmd(cmd.Cmd):
                 else:
                     self.perror("Alias '{}' does not exist".format(cur_name), traceback_war=False)
 
-    def alias_list(self, args: argparse.Namespace) -> None:
+    def _alias_list(self, args: argparse.Namespace) -> None:
         """List some or all aliases"""
         if args.name:
             for cur_name in utils.remove_duplicates(args.name):
@@ -2350,7 +2350,7 @@ class Cmd(cmd.Cmd):
     setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
                                              help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    alias_create_parser.set_defaults(func=alias_create)
+    alias_create_parser.set_defaults(func=_alias_create)
 
     # alias -> delete
     alias_delete_help = "delete aliases"
@@ -2360,7 +2360,7 @@ class Cmd(cmd.Cmd):
     setattr(alias_delete_parser.add_argument('name', nargs='*', help='alias to delete'),
             ACTION_ARG_CHOICES, get_alias_names)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
-    alias_delete_parser.set_defaults(func=alias_delete)
+    alias_delete_parser.set_defaults(func=_alias_delete)
 
     # alias -> list
     alias_list_help = "list aliases"
@@ -2373,7 +2373,7 @@ class Cmd(cmd.Cmd):
                                                     description=alias_list_description)
     setattr(alias_list_parser.add_argument('name', nargs="*", help='alias to list'),
             ACTION_ARG_CHOICES, get_alias_names)
-    alias_list_parser.set_defaults(func=alias_list)
+    alias_list_parser.set_defaults(func=_alias_list)
 
     # Preserve quotes since we are passing strings to other commands
     @with_argparser(alias_parser, preserve_quotes=True)
@@ -2389,7 +2389,7 @@ class Cmd(cmd.Cmd):
 
     # -----  Macro sub-command functions -----
 
-    def macro_create(self, args: argparse.Namespace) -> None:
+    def _macro_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite a macro"""
 
         # Validate the macro name
@@ -2467,7 +2467,7 @@ class Cmd(cmd.Cmd):
         self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
         self.poutput("Macro '{}' {}".format(args.name, result))
 
-    def macro_delete(self, args: argparse.Namespace) -> None:
+    def _macro_delete(self, args: argparse.Namespace) -> None:
         """Delete macros"""
         if args.all:
             self.macros.clear()
@@ -2482,7 +2482,7 @@ class Cmd(cmd.Cmd):
                 else:
                     self.perror("Macro '{}' does not exist".format(cur_name), traceback_war=False)
 
-    def macro_list(self, args: argparse.Namespace) -> None:
+    def _macro_list(self, args: argparse.Namespace) -> None:
         """List some or all macros"""
         if args.name:
             for cur_name in utils.remove_duplicates(args.name):
@@ -2554,7 +2554,7 @@ class Cmd(cmd.Cmd):
     setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
                                              help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
-    macro_create_parser.set_defaults(func=macro_create)
+    macro_create_parser.set_defaults(func=_macro_create)
 
     # macro -> delete
     macro_delete_help = "delete macros"
@@ -2564,7 +2564,7 @@ class Cmd(cmd.Cmd):
     setattr(macro_delete_parser.add_argument('name', nargs='*', help='macro to delete'),
             ACTION_ARG_CHOICES, get_macro_names)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
-    macro_delete_parser.set_defaults(func=macro_delete)
+    macro_delete_parser.set_defaults(func=_macro_delete)
 
     # macro -> list
     macro_list_help = "list macros"
@@ -2576,7 +2576,7 @@ class Cmd(cmd.Cmd):
     macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
     setattr(macro_list_parser.add_argument('name', nargs="*", help='macro to list'),
             ACTION_ARG_CHOICES, get_macro_names)
-    macro_list_parser.set_defaults(func=macro_list)
+    macro_list_parser.set_defaults(func=_macro_list)
 
     # Preserve quotes since we are passing strings to other commands
     @with_argparser(macro_parser, preserve_quotes=True)
@@ -2862,7 +2862,7 @@ class Cmd(cmd.Cmd):
                                                                                                    len(fulloptions)))
         return result
 
-    def cmdenvironment(self) -> str:
+    def _cmdenvironment(self) -> str:
         """Get a summary report of read-only settings which the user cannot modify at runtime.
 
         :return: summary report of read-only settings which the user cannot modify at runtime
@@ -2872,7 +2872,7 @@ class Cmd(cmd.Cmd):
         Output redirection and pipes allowed: {}"""
         return read_only_settings.format(str(self._statement_parser.terminators), self.allow_redirection)
 
-    def show(self, args: argparse.Namespace, parameter: str = '') -> None:
+    def _show(self, args: argparse.Namespace, parameter: str = '') -> None:
         """Shows current settings of parameters.
 
         :param args: argparse parsed arguments from the set command
@@ -2896,7 +2896,7 @@ class Cmd(cmd.Cmd):
 
             # If user has requested to see all settings, also show read-only settings
             if args.all:
-                self.poutput('\nRead only settings:{}'.format(self.cmdenvironment()))
+                self.poutput('\nRead only settings:{}'.format(self._cmdenvironment()))
         else:
             self.perror("Parameter '{}' not supported (type 'set' for list of parameters).".format(param),
                         traceback_war=False)
@@ -2919,12 +2919,12 @@ class Cmd(cmd.Cmd):
 
         # Check if param was passed in
         if not args.param:
-            return self.show(args)
+            return self._show(args)
         param = utils.norm_fold(args.param.strip())
 
         # Check if value was passed in
         if not args.value:
-            return self.show(args, param)
+            return self._show(args, param)
         value = args.value
 
         # Check if param points to just one settable
@@ -2933,7 +2933,7 @@ class Cmd(cmd.Cmd):
             if len(hits) == 1:
                 param = hits[0]
             else:
-                return self.show(args, param)
+                return self._show(args, param)
 
         # Update the settable's value
         current_value = getattr(self, param)
@@ -3700,7 +3700,7 @@ class Cmd(cmd.Cmd):
     # _relative_load has been deprecated
     do__relative_load = do__relative_run_script
 
-    def run_transcript_tests(self, transcript_paths: List[str]) -> None:
+    def _run_transcript_tests(self, transcript_paths: List[str]) -> None:
         """Runs transcript tests for provided file(s).
 
         This is called when either -t is provided on the command line or the transcript_files argument is provided
@@ -4020,7 +4020,7 @@ class Cmd(cmd.Cmd):
 
         # If transcript-based regression testing was requested, then do that instead of the main loop
         if self._transcript_files is not None:
-            self.run_transcript_tests([os.path.expanduser(tf) for tf in self._transcript_files])
+            self._run_transcript_tests([os.path.expanduser(tf) for tf in self._transcript_files])
         else:
             # If an intro was supplied in the method call, allow it to override the default
             if intro is not None:

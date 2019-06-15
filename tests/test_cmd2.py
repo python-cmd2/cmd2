@@ -1468,7 +1468,7 @@ def test_raw_input(base_app):
     m = mock.Mock(name='input', return_value=fake_input)
     builtins.input = m
 
-    line = base_app.pseudo_raw_input('(cmd2)')
+    line = base_app._pseudo_raw_input('(cmd2)')
     assert line == fake_input
 
 def test_stdin_input():
@@ -1480,7 +1480,7 @@ def test_stdin_input():
     m = mock.Mock(name='readline', return_value=fake_input)
     app.stdin.readline = m
 
-    line = app.pseudo_raw_input('(cmd2)')
+    line = app._pseudo_raw_input('(cmd2)')
     assert line == fake_input
 
 def test_empty_stdin_input():
@@ -1492,7 +1492,7 @@ def test_empty_stdin_input():
     m = mock.Mock(name='readline', return_value=fake_input)
     app.stdin.readline = m
 
-    line = app.pseudo_raw_input('(cmd2)')
+    line = app._pseudo_raw_input('(cmd2)')
     assert line == 'eof'
 
 def test_poutput_string(outsim_app):
