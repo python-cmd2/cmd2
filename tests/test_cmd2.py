@@ -258,31 +258,31 @@ def test_base_run_pyscript(base_app, capsys, request):
     python_script = os.path.join(test_dir, 'script.py')
     expected = 'This is a python script running ...'
 
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert expected in out
 
-def test_recursive_pyscript_not_allowed(base_app, request):
+def test_recursive_run_pyscript_not_allowed(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'scripts', 'recursive.py')
     expected = 'Recursively entering interactive Python consoles is not allowed.'
 
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert err[0] == expected
 
-def test_pyscript_with_nonexist_file(base_app):
+def test_run_pyscript_with_nonexist_file(base_app):
     python_script = 'does_not_exist.py'
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert "Error opening script file" in err[0]
 
-def test_pyscript_with_exception(base_app, request):
+def test_run_pyscript_with_exception(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'scripts', 'raises_exception.py')
-    out, err = run_cmd(base_app, "pyscript {}".format(python_script))
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert err[0].startswith('Traceback')
     assert "TypeError: unsupported operand type(s) for +: 'int' and 'str'" in err[-1]
 
-def test_pyscript_requires_an_argument(base_app):
-    out, err = run_cmd(base_app, "pyscript")
+def test_run_pyscript_requires_an_argument(base_app):
+    out, err = run_cmd(base_app, "run_pyscript")
     assert "the following arguments are required: script_path" in err[1]
 
 
@@ -950,8 +950,8 @@ def test_custom_help_menu(help_app):
     expected = normalize("""
 Documented commands (type help <topic>):
 ========================================
-alias  help     load   py        quit  shell      squat
-edit   history  macro  pyscript  set   shortcuts
+alias  help     load   py        quit          run_script  shell      squat
+edit   history  macro  pyscript  run_pyscript  set         shortcuts
 
 Undocumented commands:
 ======================
@@ -1020,7 +1020,8 @@ cat_nodoc  diddly
 
 Other
 =====
-alias  help  history  load  macro  py  pyscript  quit  set  shell  shortcuts
+alias  history  macro  pyscript  run_pyscript  set    shortcuts
+help   load     py     quit      run_script    shell
 
 Undocumented commands:
 ======================
@@ -1052,6 +1053,8 @@ macro               Manage macros
 py                  Invoke Python command or shell
 pyscript            Run a Python script file inside the console
 quit                Exit this application
+run_pyscript        Run a Python script file inside the console
+run_script          Run commands in script file that is encoded as either ASCII or UTF-8 text
 set                 Set a settable parameter or show current settings of parameters
 shell               Execute a command as if at the OS prompt
 shortcuts           List available shortcuts
@@ -1600,7 +1603,7 @@ invalid_command_name = [
 
 def test_get_alias_names(base_app):
     assert len(base_app.aliases) == 0
-    run_cmd(base_app, 'alias create fake pyscript')
+    run_cmd(base_app, 'alias create fake run_pyscript')
     run_cmd(base_app, 'alias create ls !ls -hal')
     assert len(base_app.aliases) == 2
     assert sorted(base_app.get_alias_names()) == ['fake', 'ls']
@@ -1621,7 +1624,7 @@ def test_alias_no_subcommand(base_app):
 
 def test_alias_create(base_app):
     # Create the alias
-    out, err = run_cmd(base_app, 'alias create fake pyscript')
+    out, err = run_cmd(base_app, 'alias create fake run_pyscript')
     assert out == normalize("Alias 'fake' created")
 
     # Use the alias
@@ -1630,11 +1633,11 @@ def test_alias_create(base_app):
 
     # See a list of aliases
     out, err = run_cmd(base_app, 'alias list')
-    assert out == normalize('alias create fake pyscript')
+    assert out == normalize('alias create fake run_pyscript')
 
     # Look up the new alias
     out, err = run_cmd(base_app, 'alias list fake')
-    assert out == normalize('alias create fake pyscript')
+    assert out == normalize('alias create fake run_pyscript')
 
 def test_alias_create_with_quoted_value(base_app):
     """Demonstrate that quotes in alias value will be preserved (except for redirectors and terminators)"""
@@ -1675,7 +1678,7 @@ def test_alias_list_invalid_alias(base_app):
 
 def test_alias_delete(base_app):
     # Create an alias
-    run_cmd(base_app, 'alias create fake pyscript')
+    run_cmd(base_app, 'alias create fake run_pyscript')
 
     # Delete the alias
     out, err = run_cmd(base_app, 'alias delete fake')
@@ -1712,7 +1715,7 @@ def test_macro_no_subcommand(base_app):
 
 def test_macro_create(base_app):
     # Create the macro
-    out, err = run_cmd(base_app, 'macro create fake pyscript')
+    out, err = run_cmd(base_app, 'macro create fake run_pyscript')
     assert out == normalize("Macro 'fake' created")
 
     # Use the macro
@@ -1721,11 +1724,11 @@ def test_macro_create(base_app):
 
     # See a list of macros
     out, err = run_cmd(base_app, 'macro list')
-    assert out == normalize('macro create fake pyscript')
+    assert out == normalize('macro create fake run_pyscript')
 
     # Look up the new macro
     out, err = run_cmd(base_app, 'macro list fake')
-    assert out == normalize('macro create fake pyscript')
+    assert out == normalize('macro create fake run_pyscript')
 
 def test_macro_create_with_quoted_value(base_app):
     """Demonstrate that quotes in macro value will be preserved (except for redirectors and terminators)"""
@@ -1829,7 +1832,7 @@ def test_macro_list_invalid_macro(base_app):
 
 def test_macro_delete(base_app):
     # Create an macro
-    run_cmd(base_app, 'macro create fake pyscript')
+    run_cmd(base_app, 'macro create fake run_pyscript')
 
     # Delete the macro
     out, err = run_cmd(base_app, 'macro delete fake')
