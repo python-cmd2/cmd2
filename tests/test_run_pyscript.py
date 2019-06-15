@@ -88,4 +88,4 @@ def test_run_pyscript_stop(base_app, request):
 def test_pyscript_deprecated(base_app):
     """Delete this when pyscript alias is removed"""
     _, err = run_cmd(base_app, "pyscript fake")
-    assert "pyscript has been renamed and will be removed" in err[0]
+    assert "pyscript has been renamed and will be removed" in err[-1]

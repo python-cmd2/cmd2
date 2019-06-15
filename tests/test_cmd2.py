@@ -288,7 +288,7 @@ def test_run_script(base_app, request):
 def test_load_deprecated(base_app):
     """Delete this when load alias is removed"""
     _, err = run_cmd(base_app, "load fake")
-    assert "load has been renamed and will be removed" in err[0]
+    assert "load has been renamed and will be removed" in err[-1]
 
 def test_run_script_with_empty_args(base_app):
     out, err = run_cmd(base_app, 'run_script')
