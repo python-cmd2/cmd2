@@ -1317,6 +1317,20 @@ def test_multiline_complete_statement_with_unclosed_quotes(multiline_app):
     assert statement.multiline_command == 'orate'
     assert statement.terminator == ';'
 
+def test_multiline_input_line_to_statement(multiline_app):
+    # Verify _input_line_to_statement saves the fully entered input line for multiline commands
+
+    # Mock out the input call so we don't actually wait for a user's response
+    # on stdin when it looks for more input
+    m = mock.MagicMock(name='input', side_effect=['person', '\n'])
+    builtins.input = m
+
+    line = 'orate hi'
+    statement = multiline_app._input_line_to_statement(line)
+    assert statement.raw == 'orate hi\nperson\n'
+    assert statement == 'hi person'
+    assert statement.command == 'orate'
+    assert statement.multiline_command == 'orate'
 
 def test_clipboard_failure(base_app, capsys):
     # Force cmd2 clipboard to be disabled

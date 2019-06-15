@@ -1908,12 +1908,16 @@ class Cmd(cmd.Cmd):
         :return: parsed command line as a Statement
         """
         used_macros = []
-        orig_line = line
+        orig_line = None
 
         # Continue until all macros are resolved
         while True:
             # Make sure all input has been read and convert it to a Statement
             statement = self._complete_statement(line)
+
+            # Save the fully entered line if this is the first loop iteration
+            if orig_line is None:
+                orig_line = statement.raw
 
             # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
             if statement.command in self.macros.keys() and statement.command not in used_macros:
@@ -3478,11 +3482,13 @@ class Cmd(cmd.Cmd):
         if rl_type != RlType.NONE:
             last = None
             for item in history:
-                # readline only adds a single entry for multiple sequential identical commands
-                # so we emulate that behavior here
-                if item.raw != last:
-                    readline.add_history(item.raw)
-                    last = item.raw
+                # Break the command into its individual lines
+                for line in item.raw.splitlines():
+                    # readline only adds a single entry for multiple sequential identical lines
+                    # so we emulate that behavior here
+                    if line != last:
+                        readline.add_history(line)
+                        last = line
 
         # register a function to write history at save
         # if the history file is in plain text format from 0.9.12 or lower
