@@ -14,9 +14,6 @@ jobs:
   # Run the pipeline with multiple Python versions
   strategy:
     matrix:
-      Python34:
-        python.version: '3.4'
-        TOXENV: 'py34'
       Python35:
         python.version: '3.5'
         TOXENV: 'py35'

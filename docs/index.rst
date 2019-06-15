@@ -73,7 +73,7 @@ Contents:
 Compatibility
 =============
 
-Tested and working with Python 3.4+ on Windows, macOS, and Linux.
+Tested and working with Python 3.5+ on Windows, macOS, and Linux.
 
 Index
 =====

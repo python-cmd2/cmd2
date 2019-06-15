@@ -3,6 +3,7 @@
 Cmd2 unit/functional testing
 """
 import sys
+from contextlib import redirect_stdout, redirect_stderr
 from typing import Optional
 from unittest import mock
 
@@ -11,12 +12,6 @@ from pytest import fixture
 import cmd2
 from cmd2.utils import StdSim
 
-# Python 3.4 require contextlib2 for temporarily redirecting stderr and stdout
-if sys.version_info < (3, 5):
-    # noinspection PyUnresolvedReferences
-    from contextlib2 import redirect_stdout, redirect_stderr
-else:
-    from contextlib import redirect_stdout, redirect_stderr
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
