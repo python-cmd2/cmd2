@@ -1560,17 +1560,17 @@ def test_get_alias_names(base_app):
     run_cmd(base_app, 'alias create fake run_pyscript')
     run_cmd(base_app, 'alias create ls !ls -hal')
     assert len(base_app.aliases) == 2
-    assert sorted(base_app.get_alias_names()) == ['fake', 'ls']
+    assert sorted(base_app._get_alias_names()) == ['fake', 'ls']
 
 def test_get_macro_names(base_app):
     assert len(base_app.macros) == 0
     run_cmd(base_app, 'macro create foo !echo foo')
     run_cmd(base_app, 'macro create bar !echo bar')
     assert len(base_app.macros) == 2
-    assert sorted(base_app.get_macro_names()) == ['bar', 'foo']
+    assert sorted(base_app._get_macro_names()) == ['bar', 'foo']
 
 def test_get_settable_names(base_app):
-    assert sorted(base_app.get_settable_names()) == sorted(base_app.settable.keys())
+    assert sorted(base_app._get_settable_names()) == sorted(base_app.settable.keys())
 
 def test_alias_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'alias')

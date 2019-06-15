@@ -1516,7 +1516,7 @@ class Cmd(cmd.Cmd):
             else:
                 # Complete token against anything a user can run
                 self._completion_matches = self.basic_complete(text, line, begidx, endidx,
-                                                               self.get_commands_aliases_and_macros_for_completion())
+                                                               self._get_commands_aliases_and_macros_for_completion())
 
             # Handle single result
             if len(self._completion_matches) == 1:
@@ -1593,23 +1593,23 @@ class Cmd(cmd.Cmd):
 
         return commands
 
-    def get_alias_names(self) -> List[str]:
+    def _get_alias_names(self) -> List[str]:
         """Return list of current alias names"""
         return list(self.aliases)
 
-    def get_macro_names(self) -> List[str]:
+    def _get_macro_names(self) -> List[str]:
         """Return list of current macro names"""
         return list(self.macros)
 
-    def get_settable_names(self) -> List[str]:
+    def _get_settable_names(self) -> List[str]:
         """Return list of current settable names"""
         return list(self.settable)
 
-    def get_commands_aliases_and_macros_for_completion(self) -> List[str]:
+    def _get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
         visible_commands = set(self.get_visible_commands())
-        alias_names = set(self.get_alias_names())
-        macro_names = set(self.get_macro_names())
+        alias_names = set(self._get_alias_names())
+        macro_names = set(self._get_macro_names())
         return list(visible_commands | alias_names | macro_names)
 
     def get_help_topics(self) -> List[str]:
@@ -2080,11 +2080,11 @@ class Cmd(cmd.Cmd):
         Get the function for a command
         :param command: the name of the command
         """
-        func_name = self.cmd_func_name(command)
+        func_name = self._cmd_func_name(command)
         if func_name:
             return getattr(self, func_name)
 
-    def cmd_func_name(self, command: str) -> str:
+    def _cmd_func_name(self, command: str) -> str:
         """Get the method name associated with a given command.
 
         :param command: command to look up method name which implements it
@@ -2346,7 +2346,7 @@ class Cmd(cmd.Cmd):
                                                       epilog=alias_create_epilog)
     alias_create_parser.add_argument('name', help='name of this alias')
     setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
-            ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
+            ACTION_ARG_CHOICES, _get_commands_aliases_and_macros_for_completion)
     setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
                                              help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
@@ -2358,7 +2358,7 @@ class Cmd(cmd.Cmd):
     alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
                                                       description=alias_delete_description)
     setattr(alias_delete_parser.add_argument('name', nargs='*', help='alias to delete'),
-            ACTION_ARG_CHOICES, get_alias_names)
+            ACTION_ARG_CHOICES, _get_alias_names)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
     alias_delete_parser.set_defaults(func=_alias_delete)
 
@@ -2372,7 +2372,7 @@ class Cmd(cmd.Cmd):
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
     setattr(alias_list_parser.add_argument('name', nargs="*", help='alias to list'),
-            ACTION_ARG_CHOICES, get_alias_names)
+            ACTION_ARG_CHOICES, _get_alias_names)
     alias_list_parser.set_defaults(func=_alias_list)
 
     # Preserve quotes since we are passing strings to other commands
@@ -2550,7 +2550,7 @@ class Cmd(cmd.Cmd):
                                                       epilog=macro_create_epilog)
     macro_create_parser.add_argument('name', help='name of this macro')
     setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
-            ACTION_ARG_CHOICES, get_commands_aliases_and_macros_for_completion)
+            ACTION_ARG_CHOICES, _get_commands_aliases_and_macros_for_completion)
     setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
                                              help='arguments to pass to command'),
             ACTION_ARG_CHOICES, ('path_complete',))
@@ -2562,7 +2562,7 @@ class Cmd(cmd.Cmd):
     macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
                                                       description=macro_delete_description)
     setattr(macro_delete_parser.add_argument('name', nargs='*', help='macro to delete'),
-            ACTION_ARG_CHOICES, get_macro_names)
+            ACTION_ARG_CHOICES, _get_macro_names)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
     macro_delete_parser.set_defaults(func=_macro_delete)
 
@@ -2575,7 +2575,7 @@ class Cmd(cmd.Cmd):
 
     macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
     setattr(macro_list_parser.add_argument('name', nargs="*", help='macro to list'),
-            ACTION_ARG_CHOICES, get_macro_names)
+            ACTION_ARG_CHOICES, _get_macro_names)
     macro_list_parser.set_defaults(func=_macro_list)
 
     # Preserve quotes since we are passing strings to other commands
@@ -2910,7 +2910,7 @@ class Cmd(cmd.Cmd):
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     setattr(set_parser.add_argument('param', nargs='?', help='parameter to set or view'),
-            ACTION_ARG_CHOICES, get_settable_names)
+            ACTION_ARG_CHOICES, _get_settable_names)
     set_parser.add_argument('value', nargs='?', help='the new value for settable')
 
     @with_argparser(set_parser)
@@ -3908,7 +3908,7 @@ class Cmd(cmd.Cmd):
 
         # Restore the command and help functions to their original values
         dc = self.disabled_commands[command]
-        setattr(self, self.cmd_func_name(command), dc.command_function)
+        setattr(self, self._cmd_func_name(command), dc.command_function)
 
         if dc.help_function is None:
             delattr(self, help_func_name)
@@ -3958,7 +3958,7 @@ class Cmd(cmd.Cmd):
         # Overwrite the command and help functions to print the message
         new_func = functools.partial(self._report_disabled_command_usage,
                                      message_to_print=message_to_print.replace(COMMAND_NAME, command))
-        setattr(self, self.cmd_func_name(command), new_func)
+        setattr(self, self._cmd_func_name(command), new_func)
         setattr(self, help_func_name, new_func)
 
     def disable_category(self, category: str, message_to_print: str) -> None:
