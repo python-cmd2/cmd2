@@ -1,4 +1,4 @@
-## 0.9.13 (June TBD, 2019)
+## 0.9.13 (June 14, 2019)
 * Bug Fixes
     * Fixed issue where the wrong terminator was being appended by `Statement.expanded_command_line()`
     * Fixed issue where aliases and macros could not contain terminator characters in their values
@@ -14,7 +14,7 @@
     a transcript
     * Fixed bug where history was displaying expanded multiline commands when -x was not specified 
 * Enhancements
-    * Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)
+    * **Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)**
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
     Therefore output from a command's postparsing and finalization hooks isn't saved in the StdSim object.
     * `StdSim.buffer.write()` now flushes when the wrapped stream uses line buffering and the bytes being written
