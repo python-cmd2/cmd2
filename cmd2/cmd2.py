@@ -172,8 +172,8 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
             _, parsed_arglist = cmd2_instance._statement_parser.get_command_arg_list(command_name,
-                                                                                    statement,
-                                                                                    preserve_quotes)
+                                                                                     statement,
+                                                                                     preserve_quotes)
 
             return func(cmd2_instance, parsed_arglist)
 
@@ -211,8 +211,8 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
             statement, parsed_arglist = cmd2_instance._statement_parser.get_command_arg_list(command_name,
-                                                                                            statement,
-                                                                                            preserve_quotes)
+                                                                                             statement,
+                                                                                             preserve_quotes)
 
             if ns_provider is None:
                 namespace = None
@@ -269,8 +269,8 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
             statement, parsed_arglist = cmd2_instance._statement_parser.get_command_arg_list(command_name,
-                                                                                            statement,
-                                                                                            preserve_quotes)
+                                                                                             statement,
+                                                                                             preserve_quotes)
 
             if ns_provider is None:
                 namespace = None
