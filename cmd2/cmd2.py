@@ -429,8 +429,7 @@ class Cmd(cmd.Cmd):
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
         self._last_result = None
 
-        # Used by run_script command to store the current script dir as
-        # a LIFO queue to support _relative_run_script command
+        # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
         self._script_dir = []
 
         # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
@@ -3251,11 +3250,6 @@ class Cmd(cmd.Cmd):
     @with_argparser(run_pyscript_parser)
     def do_run_pyscript(self, args: argparse.Namespace) -> bool:
         """Run a Python script file inside the console"""
-        if args.__statement__.command == "pyscript":
-            self.perror("pyscript has been renamed and will be removed in the next release, "
-                        "please use run_pyscript instead\n",
-                        traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
-
         script_path = os.path.expanduser(args.script_path)
         py_return = False
 
@@ -3276,6 +3270,11 @@ class Cmd(cmd.Cmd):
         finally:
             # Restore command line arguments to original state
             sys.argv = orig_args
+
+        if args.__statement__.command == "pyscript":
+            self.perror("pyscript has been renamed and will be removed in the next release, "
+                        "please use run_pyscript instead\n",
+                        traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
 
         return py_return
 
@@ -3654,11 +3653,6 @@ class Cmd(cmd.Cmd):
         Run commands in script file that is encoded as either ASCII or UTF-8 text
         :return: True if running of commands should stop
         """
-        if args.__statement__.command == "load":
-            self.perror("load has been renamed and will be removed in the next release, "
-                        "please use run_script instead\n",
-                        traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
-
         expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
 
         # Make sure the path exists and we can access it
@@ -3704,6 +3698,10 @@ class Cmd(cmd.Cmd):
                 # Check if a script dir was added before an exception occurred
                 if orig_script_dir_count != len(self._script_dir):
                     self._script_dir.pop()
+            if args.__statement__.command == "load":
+                self.perror("load has been renamed and will be removed in the next release, "
+                            "please use run_script instead\n",
+                            traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
 
     # load has been deprecated
     do_load = do_run_script
