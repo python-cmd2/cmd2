@@ -244,46 +244,13 @@ def test_base_py(base_app):
 
 @pytest.mark.skipif(sys.platform == 'win32',
                     reason="Unit test doesn't work on win32, but feature does")
-def test_base_run_python_script(base_app, request):
+def test_py_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'script.py')
     expected = 'This is a python script running ...'
 
     out, err = run_cmd(base_app, "py run('{}')".format(python_script))
     assert expected in out
-
-
-def test_base_run_pyscript(base_app, capsys, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'script.py')
-    expected = 'This is a python script running ...'
-
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert expected in out
-
-def test_recursive_run_pyscript_not_allowed(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'scripts', 'recursive.py')
-    expected = 'Recursively entering interactive Python consoles is not allowed.'
-
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert err[0] == expected
-
-def test_run_pyscript_with_nonexist_file(base_app):
-    python_script = 'does_not_exist.py'
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "Error opening script file" in err[0]
-
-def test_run_pyscript_with_exception(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'scripts', 'raises_exception.py')
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert err[0].startswith('Traceback')
-    assert "TypeError: unsupported operand type(s) for +: 'int' and 'str'" in err[-1]
-
-def test_run_pyscript_requires_an_argument(base_app):
-    out, err = run_cmd(base_app, "run_pyscript")
-    assert "the following arguments are required: script_path" in err[1]
 
 
 def test_base_error(base_app):
