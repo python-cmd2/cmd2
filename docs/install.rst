@@ -6,7 +6,7 @@ This section covers the basics of how to install, upgrade, and uninstall ``cmd2`
 
 Installing
 ----------
-First you need to make sure you have Python 3.4+, pip_, and setuptools_.  Then you can just use pip to
+First you need to make sure you have Python 3.5+, pip_, and setuptools_.  Then you can just use pip to
 install from PyPI_.
 
 .. _pip: https://pypi.python.org/pypi/pip
@@ -25,7 +25,7 @@ install from PyPI_.
 
 Requirements for Installing
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-* If you have Python 3 >=3.4 installed from `python.org
+* If you have Python 3 >=3.5 installed from `python.org
   <https://www.python.org>`_, you will already have pip_ and
   setuptools_, but may need to upgrade to the latest versions:
 
@@ -124,10 +124,6 @@ If you wish to permanently uninstall ``cmd2``, this can also easily be done with
 
     pip uninstall cmd2
 
-Extra requirements for Python 3.4
----------------------------------
-``cmd2`` requires the ``contextlib2`` module for Python 3.4.  This is used to temporarily redirect
-stdout and stderr.  Also when using Python 3.4, ``cmd2`` requires the ``typing`` module backport.
 
 Extra requirement for macOS
 ===========================
