@@ -9,8 +9,8 @@ learn to create scripts.
 
 However, there comes a time when technical end users want more capability and power.  In particular it is common that
 users will want to create a script with conditional control flow - where the next command run will depend on the results
-from the previous command.  This is where the ability to run Python scripts inside a cmd2 application via the pyscript
-command and the "pyscript <script> [arguments]" syntax comes into play.
+from the previous command.  This is where the ability to run Python scripts inside a cmd2 application via the
+run_pyscript command and the "run_pyscript <script> [arguments]" syntax comes into play.
 
 This application and the "scripts/conditional.py" script serve as an example for one way in which this can be done.
 """

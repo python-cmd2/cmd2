@@ -2,7 +2,7 @@
 # flake8: noqa F821
 """
 A cmd2 script that saves the help text for every command, sub-command, and topic to a file.
-This is meant to be run within a cmd2 session using pyscript.
+This is meant to be run within a cmd2 session using run_pyscript.
 """
 
 import argparse
