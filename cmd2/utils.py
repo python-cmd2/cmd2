@@ -5,6 +5,7 @@ import collections
 import glob
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -375,6 +376,21 @@ def get_exes_in_path(starts_with: str) -> List[str]:
             exes_set.add(os.path.basename(match))
 
     return list(exes_set)
+
+
+def center_text(msg: str, *, pad: str = ' ') -> str:
+    """Centers text horizontally for display within the current terminal, optionally padding both sides.
+
+    :param msg: message to display in the center
+    :param pad: (optional) if provided, the first character will be used to pad both sides of the message
+    :return: centered message, optionally padded on both sides with pad_char
+    """
+    term_width = shutil.get_terminal_size().columns
+    surrounded_msg = ' {} '.format(msg)
+    if not pad:
+        pad = ' '
+    fill_char = pad[:1]
+    return surrounded_msg.center(term_width, fill_char)
 
 
 class StdSim(object):
