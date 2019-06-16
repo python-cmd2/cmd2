@@ -4,7 +4,7 @@ Cmd2 unit/functional testing
 """
 import sys
 from contextlib import redirect_stdout, redirect_stderr
-from typing import Optional
+from typing import List, Optional, Union
 from unittest import mock
 
 from pytest import fixture
@@ -25,31 +25,23 @@ except ImportError:
     except ImportError:
         pass
 
-# Help text for base cmd2.Cmd application
-BASE_HELP = """Documented commands (type help <topic>):
-========================================
-alias  help     load   py        quit          run_script  shell    
-edit   history  macro  pyscript  run_pyscript  set         shortcuts
-"""  # noqa: W291
 
-BASE_HELP_VERBOSE = """
-Documented commands (type help <topic>):
-================================================================================
-alias               Manage aliases
-edit                Edit a file in a text editor
-help                List available commands or provide detailed help for a specific command
-history             View, run, edit, save, or clear previously entered commands
-load                Run commands in script file that is encoded as either ASCII or UTF-8 text
-macro               Manage macros
-py                  Invoke Python command or shell
-pyscript            Run a Python script file inside the console
-quit                Exit this application
-run_pyscript        Run a Python script file inside the console
-run_script          Run commands in script file that is encoded as either ASCII or UTF-8 text
-set                 Set a settable parameter or show current settings of parameters
-shell               Execute a command as if at the OS prompt
-shortcuts           List available shortcuts
-"""
+def verify_help_text(cmd2_app: cmd2.Cmd, help_output: Union[str, List[str]]) -> None:
+    """This function verifies that all expected commands are present in the help text.
+
+    :param cmd2_app: instance of cmd2.Cmd
+    :param help_output: output of help, either as a string or list of strings
+    """
+    if isinstance(help_output, str):
+        help_text = help_output
+    else:
+        help_text = ''.join(help_output)
+    commands = cmd2_app.get_visible_commands()
+    for command in commands:
+        assert command in help_text
+
+    # TODO: Consider adding checks for categories and for verbose history
+
 
 # Help text for the history command
 HELP_HISTORY = """Usage: history [-h] [-r | -e | -o FILE | -t TRANSCRIPT | -c] [-s] [-x] [-v]

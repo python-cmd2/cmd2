@@ -14,7 +14,7 @@ from unittest import mock
 import pytest
 
 import cmd2
-from .conftest import run_cmd, BASE_HELP_VERBOSE
+from .conftest import run_cmd, verify_help_text
 from cmd2 import transcript
 from cmd2.utils import StdSim
 
@@ -211,9 +211,8 @@ def test_run_script_record_transcript(base_app, request):
     with open(transcript_fname) as f:
         xscript = f.read()
 
-    expected = '(Cmd) help -v\n' + BASE_HELP_VERBOSE + '\n'
-
-    assert xscript == expected
+    assert xscript.startswith('(Cmd) help -v\n')
+    verify_help_text(base_app, xscript)
 
 
 def test_generate_transcript_stop(capsys):
