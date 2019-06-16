@@ -63,7 +63,7 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'&': 'speak'})
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         super().__init__(use_ipython=True, multiline_commands=['orate'], shortcuts=shortcuts)

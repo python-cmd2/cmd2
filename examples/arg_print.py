@@ -19,7 +19,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
 
     def __init__(self):
         # Create command shortcuts which are typically 1 character abbreviations which can be used in place of a command
-        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'$': 'aprint', '%': 'oprint'})
         super().__init__(shortcuts=shortcuts)
 

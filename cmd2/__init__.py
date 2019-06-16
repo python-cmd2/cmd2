@@ -12,4 +12,5 @@ except DistributionNotFound:
 
 from .cmd2 import Cmd, Statement, EmptyStatement, categorize
 from .cmd2 import with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category
+from .constants import DEFAULT_SHORTCUTS
 from .pyscript_bridge import CommandResult
