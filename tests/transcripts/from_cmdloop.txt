@@ -1,14 +1,6 @@
 # responses with trailing spaces have been matched with a regex
 # so you can see where they are.
 
-(Cmd) help
-
-Documented commands (type help <topic>):
-========================================
-alias  history  mumble   py        run_pyscript  set        speak/ */
-edit   load     nothing  pyscript  run_script    shell/ */
-help   macro    orate    quit      say           shortcuts/ */
-
 (Cmd) help say
 usage: speak [-h] [-p] [-s] [-r REPEAT]/ */
 
@@ -36,13 +28,12 @@ OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 (Cmd) history
-    1  help
-    2  help say
-    3  say goodnight, Gracie
-    4  say -ps --repeat=5 goodnight, Gracie
-    5  set maxrepeats 5
-    6  say -ps --repeat=5 goodnight, Gracie
-(Cmd) history -r 4
+    1  help say
+    2  say goodnight, Gracie
+    3  say -ps --repeat=5 goodnight, Gracie
+    4  set maxrepeats 5
+    5  say -ps --repeat=5 goodnight, Gracie
+(Cmd) history -r 3
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
