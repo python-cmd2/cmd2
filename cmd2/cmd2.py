@@ -3708,7 +3708,10 @@ class Cmd(cmd.Cmd):
 
         :param transcript_paths: list of transcript test file paths
         """
+        import time
         import unittest
+        import cmd2
+        from colorama import Style
         from .transcript import Cmd2TestCase
 
         class TestMyAppCase(Cmd2TestCase):
@@ -3721,15 +3724,28 @@ class Cmd(cmd.Cmd):
             self.exit_code = -1
             return
 
+        verinfo = ".".join(map(str, sys.version_info[:3]))
+        num_transcripts = len(transcripts_expanded)
+        plural = '' if len(transcripts_expanded) == 1 else 's'
+        self.poutput(Style.BRIGHT + utils.center_text('cmd2 transcript test', pad='=') + Style.RESET_ALL)
+        self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
+                                                                             rl_type))
+        self.poutput('cwd: {}'.format(os.getcwd()))
+        self.poutput('cmd2 app: {}'.format(sys.argv[0]))
+        self.poutput(Style.BRIGHT + 'collected {} transcript{}\n'.format(num_transcripts, plural) + Style.RESET_ALL)
+
         self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
         stream = utils.StdSim(sys.stderr)
         runner = unittest.TextTestRunner(stream=stream)
+        start_time = time.time()
         test_results = runner.run(testcase)
+        execution_time = time.time() - start_time
         if test_results.wasSuccessful():
             self._decolorized_write(sys.stderr, stream.read())
-            self.poutput('Tests passed', color=Fore.LIGHTGREEN_EX)
+            finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
+            self.poutput(Style.BRIGHT + utils.center_text(finish_msg, pad='=') + Style.RESET_ALL, color=Fore.GREEN)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()
