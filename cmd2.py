@@ -3663,7 +3663,6 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
         """Generate a transcript file from a given history of commands."""
         # Save the current echo state, and turn it off. We inject commands into the
         # output using a different mechanism
-        import io
 
         saved_echo = self.echo
         self.echo = False
@@ -3695,7 +3694,7 @@ a..b, a:b, a:, ..b  items by indices (inclusive)
             transcript += command
             # create a new string buffer and set it to stdout to catch the output
             # of the command
-            membuf = io.StringIO()
+            membuf = StringIO()
             self.stdout = membuf
             # then run the command and let the output go into our buffer
             self.onecmd_plus_hooks(history_item)
