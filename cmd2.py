@@ -3988,6 +3988,7 @@ class ParserManager:
 
         multilineCommand.setParseAction(lambda x: x[0])
         oneline_command.setParseAction(lambda x: x[0])
+        output_destination_parser.setParseAction(lambda x: x[0])
 
         if blankLinesAllowed:
             blankLineTerminationParser = pyparsing.NoMatch
