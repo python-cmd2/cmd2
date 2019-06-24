@@ -423,6 +423,10 @@ class Cmd(cmd.Cmd):
         # True if running inside a Python script or interactive console, False otherwise
         self._in_py = False
 
+        # Stores results from the last command run to enable usage of results in a Python script or interactive console
+        # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
+        self.last_result = None
+
         # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
         self._script_dir = []
 

@@ -58,7 +58,7 @@ class CmdLineApp(cmd2.Cmd):
         if not arglist or len(arglist) != 1:
             self.perror("cd requires exactly 1 argument:", traceback_war=False)
             self.do_help('cd')
-            self._last_result = cmd2.CommandResult('', 'Bad arguments')
+            self.last_result = cmd2.CommandResult('', 'Bad arguments')
             return
 
         # Convert relative paths to absolute paths
@@ -84,7 +84,7 @@ class CmdLineApp(cmd2.Cmd):
 
         if err:
             self.perror(err, traceback_war=False)
-        self._last_result = cmd2.CommandResult(out, err, data)
+        self.last_result = cmd2.CommandResult(out, err, data)
 
     # Enable tab completion for cd command
     def complete_cd(self, text, line, begidx, endidx):
@@ -100,7 +100,7 @@ class CmdLineApp(cmd2.Cmd):
         if unknown:
             self.perror("dir does not take any positional arguments:", traceback_war=False)
             self.do_help('dir')
-            self._last_result = cmd2.CommandResult('', 'Bad arguments')
+            self.last_result = cmd2.CommandResult('', 'Bad arguments')
             return
 
         # Get the contents as a list
@@ -113,7 +113,7 @@ class CmdLineApp(cmd2.Cmd):
             self.stdout.write(fmt.format(f))
         self.stdout.write('\n')
 
-        self._last_result = cmd2.CommandResult(data=contents)
+        self.last_result = cmd2.CommandResult(data=contents)
 
 
 if __name__ == '__main__':

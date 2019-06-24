@@ -1241,16 +1241,16 @@ class CommandResultApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     def do_affirmative(self, arg):
-        self._last_result = cmd2.CommandResult(arg, data=True)
+        self.last_result = cmd2.CommandResult(arg, data=True)
 
     def do_negative(self, arg):
-        self._last_result = cmd2.CommandResult(arg, data=False)
+        self.last_result = cmd2.CommandResult(arg, data=False)
 
     def do_affirmative_no_data(self, arg):
-        self._last_result = cmd2.CommandResult(arg)
+        self.last_result = cmd2.CommandResult(arg)
 
     def do_negative_no_data(self, arg):
-        self._last_result = cmd2.CommandResult('', arg)
+        self.last_result = cmd2.CommandResult('', arg)
 
 @pytest.fixture
 def commandresult_app():
@@ -1260,22 +1260,22 @@ def commandresult_app():
 def test_commandresult_truthy(commandresult_app):
     arg = 'foo'
     run_cmd(commandresult_app, 'affirmative {}'.format(arg))
-    assert commandresult_app._last_result
-    assert commandresult_app._last_result == cmd2.CommandResult(arg, data=True)
+    assert commandresult_app.last_result
+    assert commandresult_app.last_result == cmd2.CommandResult(arg, data=True)
 
     run_cmd(commandresult_app, 'affirmative_no_data {}'.format(arg))
-    assert commandresult_app._last_result
-    assert commandresult_app._last_result == cmd2.CommandResult(arg)
+    assert commandresult_app.last_result
+    assert commandresult_app.last_result == cmd2.CommandResult(arg)
 
 def test_commandresult_falsy(commandresult_app):
     arg = 'bar'
     run_cmd(commandresult_app, 'negative {}'.format(arg))
-    assert not commandresult_app._last_result
-    assert commandresult_app._last_result == cmd2.CommandResult(arg, data=False)
+    assert not commandresult_app.last_result
+    assert commandresult_app.last_result == cmd2.CommandResult(arg, data=False)
 
     run_cmd(commandresult_app, 'negative_no_data {}'.format(arg))
-    assert not commandresult_app._last_result
-    assert commandresult_app._last_result == cmd2.CommandResult('', arg)
+    assert not commandresult_app.last_result
+    assert commandresult_app.last_result == cmd2.CommandResult('', arg)
 
 
 def test_is_text_file_bad_input(base_app):
