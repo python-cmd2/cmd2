@@ -382,7 +382,7 @@ class TabCompleteExample(cmd2.Cmd):
                                                      self,
                                                      arg_choices=choices)
 
-        tokens, _ = self._tokens_for_completion(line, begidx, endidx)
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)
 
         return results
@@ -443,7 +443,7 @@ class TabCompleteExample(cmd2.Cmd):
     # Demonstrates a custom completion function that does more with the command line than is
     # allowed by the standard completion functions
     def _filter_episodes(self, text, line, begidx, endidx, show_db, user_lib):
-        tokens, _ = self._tokens_for_completion(line, begidx, endidx)
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         show_id = tokens[3]
         if show_id:
             if show_id in show_db:
@@ -530,7 +530,7 @@ class TabCompleteExample(cmd2.Cmd):
                                                      self,
                                                      subcmd_args_lookup=library_subcommand_groups)
 
-        tokens, _ = self._tokens_for_completion(line, begidx, endidx)
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         results = completer.complete_command(tokens, text, line, begidx, endidx)
 
         return results

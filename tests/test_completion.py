@@ -658,7 +658,7 @@ def test_tokens_for_completion_quoted(cmd2_app):
     expected_tokens = ['list_food', 'Pi', '']
     expected_raw_tokens = ['list_food', '"Pi"', '']
 
-    tokens, raw_tokens = cmd2_app._tokens_for_completion(line, begidx, endidx)
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
     assert expected_tokens == tokens
     assert expected_raw_tokens == raw_tokens
 
@@ -671,7 +671,7 @@ def test_tokens_for_completion_unclosed_quote(cmd2_app):
     expected_tokens = ['list_food', 'Pi']
     expected_raw_tokens = ['list_food', '"Pi']
 
-    tokens, raw_tokens = cmd2_app._tokens_for_completion(line, begidx, endidx)
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
     assert expected_tokens == tokens
     assert expected_raw_tokens == raw_tokens
 
@@ -685,7 +685,7 @@ def test_tokens_for_completion_redirect(cmd2_app):
     expected_tokens = ['command', '|', '<', '>>', 'file']
     expected_raw_tokens = ['command', '|', '<', '>>', 'file']
 
-    tokens, raw_tokens = cmd2_app._tokens_for_completion(line, begidx, endidx)
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
     assert expected_tokens == tokens
     assert expected_raw_tokens == raw_tokens
 
@@ -699,7 +699,7 @@ def test_tokens_for_completion_quoted_redirect(cmd2_app):
     expected_tokens = ['command', '>file']
     expected_raw_tokens = ['command', '">file']
 
-    tokens, raw_tokens = cmd2_app._tokens_for_completion(line, begidx, endidx)
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
     assert expected_tokens == tokens
     assert expected_raw_tokens == raw_tokens
 
@@ -713,7 +713,7 @@ def test_tokens_for_completion_redirect_off(cmd2_app):
     expected_tokens = ['command', '>file']
     expected_raw_tokens = ['command', '>file']
 
-    tokens, raw_tokens = cmd2_app._tokens_for_completion(line, begidx, endidx)
+    tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
     assert expected_tokens == tokens
     assert expected_raw_tokens == raw_tokens
 

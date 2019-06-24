@@ -724,7 +724,7 @@ class Cmd(cmd.Cmd):
             # noinspection PyUnresolvedReferences
             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
-    def _tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[List[str], List[str]]:
+    def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[List[str], List[str]]:
         """
         Used by tab completion functions to get all tokens through the one being completed
         :param line: the current input line with leading whitespace removed
@@ -938,7 +938,7 @@ class Cmd(cmd.Cmd):
         :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
-        tokens, _ = self._tokens_for_completion(line, begidx, endidx)
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         if not tokens:
             return []
 
@@ -980,7 +980,7 @@ class Cmd(cmd.Cmd):
         :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
-        tokens, _ = self._tokens_for_completion(line, begidx, endidx)
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         if not tokens:
             return []
 
@@ -1192,7 +1192,7 @@ class Cmd(cmd.Cmd):
 
             # Get all tokens through the one being completed. We want the raw tokens
             # so we can tell if redirection strings are quoted and ignore them.
-            _, raw_tokens = self._tokens_for_completion(line, begidx, endidx)
+            _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
             if not raw_tokens:
                 return []
 
@@ -1397,7 +1397,7 @@ class Cmd(cmd.Cmd):
                 line = expanded_line
 
                 # Get all tokens through the one being completed
-                tokens, raw_tokens = self._tokens_for_completion(line, begidx, endidx)
+                tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
                 # Check if we either had a parsing error or are trying to complete the command token
                 # The latter can happen if " or ' was entered as the command
@@ -1570,7 +1570,7 @@ class Cmd(cmd.Cmd):
         """Default completion function for argparse commands."""
         completer = AutoCompleter(argparser, self)
 
-        tokens, _ = self._tokens_for_completion(line, begidx, endidx)
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         if not tokens:
             return []
 
@@ -2607,7 +2607,7 @@ class Cmd(cmd.Cmd):
         """Completes the subcommand argument of help"""
 
         # Get all tokens through the one being completed
-        tokens, _ = self._tokens_for_completion(line, begidx, endidx)
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
 
         if not tokens:
             return []
