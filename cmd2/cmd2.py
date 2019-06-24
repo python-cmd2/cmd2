@@ -427,14 +427,14 @@ class Cmd(cmd.Cmd):
         self._script_dir = []
 
         # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
-        self._sigint_protection = utils.ContextFlag()
+        self.sigint_protection = utils.ContextFlag()
 
         # If the current command created a process to pipe to, then this will be a ProcReader object.
         # Otherwise it will be None. Its used to know when a pipe process can be killed and/or waited upon.
         self._cur_pipe_proc_reader = None
 
         # Used by complete() for readline tab completion
-        self._completion_matches = []
+        self.completion_matches = []
 
         # Used to keep track of whether we are redirecting or piping output
         self._redirecting = False
@@ -537,7 +537,7 @@ class Cmd(cmd.Cmd):
         # This lock should be acquired before doing any asynchronous changes to the terminal to
         # ensure the updates to the terminal don't interfere with the input being typed or output
         # being printed by a command.
-        self._terminal_lock = threading.RLock()
+        self.terminal_lock = threading.RLock()
 
         # Commands that have been disabled from use. This is to support commands that are only available
         # during specific states of the application. This dictionary's keys are the command names and its
@@ -688,7 +688,7 @@ class Cmd(cmd.Cmd):
 
                     # Prevent KeyboardInterrupts while in the pager. The pager application will
                     # still receive the SIGINT since it is in the same process group as us.
-                    with self._sigint_protection:
+                    with self.sigint_protection:
                         pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                         pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
                 else:
@@ -1398,7 +1398,7 @@ class Cmd(cmd.Cmd):
                 # Check if we either had a parsing error or are trying to complete the command token
                 # The latter can happen if " or ' was entered as the command
                 if len(tokens) <= 1:
-                    self._completion_matches = []
+                    self.completion_matches = []
                     return None
 
                 # Text we need to remove from completions later
@@ -1456,20 +1456,20 @@ class Cmd(cmd.Cmd):
 
                 # Attempt tab completion for redirection first, and if that isn't occurring,
                 # call the completer function for the current command
-                self._completion_matches = self._redirect_complete(text, line, begidx, endidx, compfunc)
+                self.completion_matches = self._redirect_complete(text, line, begidx, endidx, compfunc)
 
-                if self._completion_matches:
+                if self.completion_matches:
 
                     # Eliminate duplicates
-                    self._completion_matches = utils.remove_duplicates(self._completion_matches)
+                    self.completion_matches = utils.remove_duplicates(self.completion_matches)
                     self.display_matches = utils.remove_duplicates(self.display_matches)
 
                     if not self.display_matches:
-                        # Since self.display_matches is empty, set it to self._completion_matches
+                        # Since self.display_matches is empty, set it to self.completion_matches
                         # before we alter them. That way the suggestions will reflect how we parsed
                         # the token being completed and not how readline did.
                         import copy
-                        self.display_matches = copy.copy(self._completion_matches)
+                        self.display_matches = copy.copy(self.completion_matches)
 
                     # Check if we need to add an opening quote
                     if not unclosed_quote:
@@ -1477,7 +1477,7 @@ class Cmd(cmd.Cmd):
                         add_quote = False
 
                         # This is the tab completion text that will appear on the command line.
-                        common_prefix = os.path.commonprefix(self._completion_matches)
+                        common_prefix = os.path.commonprefix(self.completion_matches)
 
                         if self.matches_delimited:
                             # Check if any portion of the display matches appears in the tab completion
@@ -1490,36 +1490,36 @@ class Cmd(cmd.Cmd):
                                 add_quote = True
 
                         # If there is a tab completion and any match has a space, then add an opening quote
-                        elif common_prefix and any(' ' in match for match in self._completion_matches):
+                        elif common_prefix and any(' ' in match for match in self.completion_matches):
                             add_quote = True
 
                         if add_quote:
                             # Figure out what kind of quote to add and save it as the unclosed_quote
-                            if any('"' in match for match in self._completion_matches):
+                            if any('"' in match for match in self.completion_matches):
                                 unclosed_quote = "'"
                             else:
                                 unclosed_quote = '"'
 
-                            self._completion_matches = [unclosed_quote + match for match in self._completion_matches]
+                            self.completion_matches = [unclosed_quote + match for match in self.completion_matches]
 
                     # Check if we need to remove text from the beginning of tab completions
                     elif text_to_remove:
-                        self._completion_matches = \
-                            [match.replace(text_to_remove, '', 1) for match in self._completion_matches]
+                        self.completion_matches = \
+                            [match.replace(text_to_remove, '', 1) for match in self.completion_matches]
 
                     # Check if we need to restore a shortcut in the tab completions
                     # so it doesn't get erased from the command line
                     if shortcut_to_restore:
-                        self._completion_matches = \
-                            [shortcut_to_restore + match for match in self._completion_matches]
+                        self.completion_matches = \
+                            [shortcut_to_restore + match for match in self.completion_matches]
 
             else:
                 # Complete token against anything a user can run
-                self._completion_matches = self.basic_complete(text, line, begidx, endidx,
-                                                               self._get_commands_aliases_and_macros_for_completion())
+                self.completion_matches = self.basic_complete(text, line, begidx, endidx,
+                                                              self._get_commands_aliases_and_macros_for_completion())
 
             # Handle single result
-            if len(self._completion_matches) == 1:
+            if len(self.completion_matches) == 1:
                 str_to_append = ''
 
                 # Add a closing quote if needed and allowed
@@ -1530,16 +1530,16 @@ class Cmd(cmd.Cmd):
                 if self.allow_appended_space and endidx == len(line):
                     str_to_append += ' '
 
-                self._completion_matches[0] += str_to_append
+                self.completion_matches[0] += str_to_append
 
             # Sort matches if they haven't already been sorted
             if not self.matches_sorted:
-                self._completion_matches.sort(key=self.matches_sort_key)
+                self.completion_matches.sort(key=self.matches_sort_key)
                 self.display_matches.sort(key=self.matches_sort_key)
                 self.matches_sorted = True
 
         try:
-            return self._completion_matches[state]
+            return self.completion_matches[state]
         except IndexError:
             return None
 
@@ -1631,7 +1631,7 @@ class Cmd(cmd.Cmd):
             self._cur_pipe_proc_reader.send_sigint()
 
         # Check if we are allowed to re-raise the KeyboardInterrupt
-        if not self._sigint_protection:
+        if not self.sigint_protection:
             raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def precmd(self, statement: Statement) -> Statement:
@@ -1700,7 +1700,7 @@ class Cmd(cmd.Cmd):
 
             try:
                 # Get sigint protection while we set up redirection
-                with self._sigint_protection:
+                with self.sigint_protection:
                     if pyscript_bridge_call:
                         # Start saving command's stdout at this point
                         self.stdout.pause_storage = False
@@ -1743,7 +1743,7 @@ class Cmd(cmd.Cmd):
                         self.pfeedback('Elapsed: {}'.format(datetime.datetime.now() - timestart))
             finally:
                 # Get sigint protection while we restore stuff
-                with self._sigint_protection:
+                with self.sigint_protection:
                     if saved_state is not None:
                         self._restore_output(statement, saved_state)
 
@@ -1765,7 +1765,7 @@ class Cmd(cmd.Cmd):
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
 
-        with self._sigint_protection:
+        with self.sigint_protection:
             if not sys.platform.startswith('win') and self.stdout.isatty():
                 # Before the next command runs, fix any terminal problems like those
                 # caused by certain binary characters having been printed to it.
@@ -2147,10 +2147,10 @@ class Cmd(cmd.Cmd):
         if self.use_rawinput:
             try:
                 if sys.stdin.isatty():
-                    # Wrap in try since _terminal_lock may not be locked when this function is called from unit tests
+                    # Wrap in try since terminal_lock may not be locked when this function is called from unit tests
                     try:
                         # A prompt is about to be drawn. Allow asynchronous changes to the terminal.
-                        self._terminal_lock.release()
+                        self.terminal_lock.release()
                     except RuntimeError:
                         pass
 
@@ -2166,7 +2166,7 @@ class Cmd(cmd.Cmd):
             finally:
                 if sys.stdin.isatty():
                     # The prompt is gone. Do not allow asynchronous changes to the terminal.
-                    self._terminal_lock.acquire()
+                    self.terminal_lock.acquire()
         else:
             if self.stdin.isatty():
                 # on a tty, print the prompt first, then read the line
@@ -2970,7 +2970,7 @@ class Cmd(cmd.Cmd):
 
         # Prevent KeyboardInterrupts while in the shell process. The shell process will
         # still receive the SIGINT since it is in the same process group as us.
-        with self._sigint_protection:
+        with self.sigint_protection:
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
             proc = subprocess.Popen(expanded_command,
                                     stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
@@ -3490,7 +3490,7 @@ class Cmd(cmd.Cmd):
 
         commands_run = 0
         try:
-            with self._sigint_protection:
+            with self.sigint_protection:
                 # Disable echo while we manually redirect stdout to a StringIO buffer
                 saved_echo = self.echo
                 saved_stdout = self.stdout
@@ -3535,7 +3535,7 @@ class Cmd(cmd.Cmd):
                 if stop:
                     break
         finally:
-            with self._sigint_protection:
+            with self.sigint_protection:
                 # Restore altered attributes to their original state
                 self.echo = saved_echo
                 self.stdout = saved_stdout
@@ -3655,7 +3655,7 @@ class Cmd(cmd.Cmd):
                     return self.runcmds_plus_hooks(script_commands)
 
             finally:
-                with self._sigint_protection:
+                with self.sigint_protection:
                     # Check if a script dir was added before an exception occurred
                     if orig_script_dir_count != len(self._script_dir):
                         self._script_dir.pop()
@@ -3765,14 +3765,14 @@ class Cmd(cmd.Cmd):
         To the user it appears as if an alert message is printed above the prompt and their current input
         text and cursor location is left alone.
 
-        IMPORTANT: This function will not print an alert unless it can acquire self._terminal_lock to ensure
+        IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
                    to guarantee the alert prints.
 
         :param alert_msg: the message to display to the user
         :param new_prompt: if you also want to change the prompt that is displayed, then include it here
                            see async_update_prompt() docstring for guidance on updating a prompt
-        :raises RuntimeError if called while another thread holds _terminal_lock
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         if not (vt100_support and self.use_rawinput):
             return
@@ -3781,8 +3781,8 @@ class Cmd(cmd.Cmd):
         import colorama.ansi as ansi
         from colorama import Cursor
 
-        # Sanity check that can't fail if self._terminal_lock was acquired before calling this function
-        if self._terminal_lock.acquire(blocking=False):
+        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
+        if self.terminal_lock.acquire(blocking=False):
 
             # Figure out what prompt is displaying
             current_prompt = self.continuation_prompt if self._at_continuation_prompt else self.prompt
@@ -3857,10 +3857,10 @@ class Cmd(cmd.Cmd):
                 # Redraw the prompt and input lines
                 rl_force_redisplay()
 
-            self._terminal_lock.release()
+            self.terminal_lock.release()
 
         else:
-            raise RuntimeError("another thread holds _terminal_lock")
+            raise RuntimeError("another thread holds terminal_lock")
 
     def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
         """
@@ -3870,7 +3870,7 @@ class Cmd(cmd.Cmd):
         it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
         be shifted and the update will not be seamless.
 
-        IMPORTANT: This function will not update the prompt unless it can acquire self._terminal_lock to ensure
+        IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
                    to guarantee the prompt changes.
 
@@ -3879,7 +3879,7 @@ class Cmd(cmd.Cmd):
                    and display immediately after the multiline line command completes.
 
         :param new_prompt: what to change the prompt to
-        :raises RuntimeError if called while another thread holds _terminal_lock
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         self.async_alert('', new_prompt)
 
@@ -3887,18 +3887,18 @@ class Cmd(cmd.Cmd):
         """
         Set the terminal window title
 
-        IMPORTANT: This function will not set the title unless it can acquire self._terminal_lock to avoid
+        IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid
                    writing to stderr while a command is running. Therefore it is best to acquire the lock
                    before calling this function to guarantee the title changes.
 
         :param title: the new window title
-        :raises RuntimeError if called while another thread holds _terminal_lock
+        :raises RuntimeError if called while another thread holds terminal_lock
         """
         if not vt100_support:
             return
 
-        # Sanity check that can't fail if self._terminal_lock was acquired before calling this function
-        if self._terminal_lock.acquire(blocking=False):
+        # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
+        if self.terminal_lock.acquire(blocking=False):
             try:
                 import colorama.ansi as ansi
                 sys.stderr.write(ansi.set_title(title))
@@ -3906,10 +3906,10 @@ class Cmd(cmd.Cmd):
                 # Debugging in Pycharm has issues with setting terminal title
                 pass
             finally:
-                self._terminal_lock.release()
+                self.terminal_lock.release()
 
         else:
-            raise RuntimeError("another thread holds _terminal_lock")
+            raise RuntimeError("another thread holds terminal_lock")
 
     def enable_command(self, command: str) -> None:
         """
@@ -4027,7 +4027,7 @@ class Cmd(cmd.Cmd):
         signal.signal(signal.SIGINT, self.sigint_handler)
 
         # Grab terminal lock before the prompt has been drawn by readline
-        self._terminal_lock.acquire()
+        self.terminal_lock.acquire()
 
         # Always run the preloop first
         for func in self._preloop_hooks:
@@ -4056,7 +4056,7 @@ class Cmd(cmd.Cmd):
 
         # Release terminal lock now that postloop code should have stopped any terminal updater threads
         # This will also zero the lock count in case cmdloop() is called again
-        self._terminal_lock.release()
+        self.terminal_lock.release()
 
         # Restore the original signal handler
         signal.signal(signal.SIGINT, original_sigint_handler)
