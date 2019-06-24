@@ -6,8 +6,8 @@ If the user wants to run a transcript (see docs/transcript.rst),
 we need a mechanism to run each command in the transcript as
 a unit test, comparing the expected output to the actual output.
 
-This file contains the classess necessary to make that work. These
-classes are used in cmd2.py::run_transcript_tests()
+This file contains the class necessary to make that work. This
+class is used in cmd2.py::run_transcript_tests()
 """
 import re
 import unittest
@@ -27,26 +27,31 @@ class Cmd2TestCase(unittest.TestCase):
     """
     cmdapp = None
 
-    def fetchTranscripts(self):
-        self.transcripts = {}
-        for fname in self.cmdapp.testfiles:
-            tfile = open(fname)
-            self.transcripts[fname] = iter(tfile.readlines())
-            tfile.close()
-
     def setUp(self):
         if self.cmdapp:
-            self.fetchTranscripts()
+            self._fetchTranscripts()
 
             # Trap stdout
             self._orig_stdout = self.cmdapp.stdout
             self.cmdapp.stdout = utils.StdSim(self.cmdapp.stdout)
+
+    def tearDown(self):
+        if self.cmdapp:
+            # Restore stdout
+            self.cmdapp.stdout = self._orig_stdout
 
     def runTest(self):  # was testall
         if self.cmdapp:
             its = sorted(self.transcripts.items())
             for (fname, transcript) in its:
                 self._test_transcript(fname, transcript)
+
+    def _fetchTranscripts(self):
+        self.transcripts = {}
+        for fname in self.cmdapp.testfiles:
+            tfile = open(fname)
+            self.transcripts[fname] = iter(tfile.readlines())
+            tfile.close()
 
     def _test_transcript(self, fname: str, transcript):
         line_num = 0
@@ -205,8 +210,3 @@ class Cmd2TestCase(unittest.TestCase):
                     # slash is not escaped, this is what we are looking for
                     break
         return regex, pos, start
-
-    def tearDown(self):
-        if self.cmdapp:
-            # Restore stdout
-            self.cmdapp.stdout = self._orig_stdout

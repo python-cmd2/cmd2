@@ -5,6 +5,7 @@ import collections
 import glob
 import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
@@ -346,6 +347,50 @@ def files_from_glob_patterns(patterns: List[str], access=os.F_OK) -> List[str]:
         matches = files_from_glob_pattern(pattern, access=access)
         files.extend(matches)
     return files
+
+
+def get_exes_in_path(starts_with: str) -> List[str]:
+    """Returns names of executables in a user's path
+
+    :param starts_with: what the exes should start with. leave blank for all exes in path.
+    :return: a list of matching exe names
+    """
+    # Purposely don't match any executable containing wildcards
+    wildcards = ['*', '?']
+    for wildcard in wildcards:
+        if wildcard in starts_with:
+            return []
+
+    # Get a list of every directory in the PATH environment variable and ignore symbolic links
+    paths = [p for p in os.getenv('PATH').split(os.path.pathsep) if not os.path.islink(p)]
+
+    # Use a set to store exe names since there can be duplicates
+    exes_set = set()
+
+    # Find every executable file in the user's path that matches the pattern
+    for path in paths:
+        full_path = os.path.join(path, starts_with)
+        matches = files_from_glob_pattern(full_path + '*', access=os.X_OK)
+
+        for match in matches:
+            exes_set.add(os.path.basename(match))
+
+    return list(exes_set)
+
+
+def center_text(msg: str, *, pad: str = ' ') -> str:
+    """Centers text horizontally for display within the current terminal, optionally padding both sides.
+
+    :param msg: message to display in the center
+    :param pad: (optional) if provided, the first character will be used to pad both sides of the message
+    :return: centered message, optionally padded on both sides with pad_char
+    """
+    term_width = shutil.get_terminal_size().columns
+    surrounded_msg = ' {} '.format(msg)
+    if not pad:
+        pad = ' '
+    fill_char = pad[:1]
+    return surrounded_msg.center(term_width, fill_char)
 
 
 class StdSim(object):

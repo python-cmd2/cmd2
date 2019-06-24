@@ -375,7 +375,7 @@ def test_default_to_shell_completion(cmd2_app, request):
         command = 'egrep'
 
     # Make sure the command is on the testing system
-    assert command in cmd2_app.get_exes_in_path(command)
+    assert command in utils.get_exes_in_path(command)
     line = '{} {}'.format(command, text)
 
     endidx = len(line)
@@ -695,7 +695,7 @@ def test_tokens_for_completion_quoted_redirect(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    cmd2_app.statement_parser.redirection = True
+    cmd2_app._statement_parser.redirection = True
     expected_tokens = ['command', '>file']
     expected_raw_tokens = ['command', '">file']
 
@@ -709,7 +709,7 @@ def test_tokens_for_completion_redirect_off(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    cmd2_app.statement_parser.allow_redirection = False
+    cmd2_app._statement_parser.allow_redirection = False
     expected_tokens = ['command', '>file']
     expected_raw_tokens = ['command', '>file']
 

@@ -1,13 +1,18 @@
-## 0.9.14 (TBD, 2019
+## 0.9.14 (TBD, 2019)
 * Enhancements
     * Added support for and testing with Python 3.8, starting with 3.8 beta
+    * Improved information displayed during transcript testing
 * Breaking Changes
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019 and is no longer supported by `cmd2`
+        * If you need to use Python 3.4, you should pin your requirements to use `cmd2` 0.9.13
+    * Made lots of changes to minimize the public API of the `cmd2.Cmd` class
+        * Attributes and methods we do not intend to be public now all begin with an underscore
+        * We make no API stability guarantees about these internal functions
 * **Renamed Commands Notice**
     * The following commands have been renamed. The old names will be supported until the next release. 
-        * load --> run_script
-        * _relative_load --> _relative_run_script
-        * pyscript --> run_pyscript
+        * `load` --> `run_script`
+        * `_relative_load` --> `_relative_run_script`
+        * `pyscript` --> `run_pyscript`
 
 ## 0.9.13 (June 14, 2019)
 * Bug Fixes

@@ -241,7 +241,7 @@ class CmdLineApp(cmd2.Cmd):
 
     def __init__(self):
         self.maxrepeats = 3
-        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'&': 'speak'})
 
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell

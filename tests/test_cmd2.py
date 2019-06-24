@@ -22,8 +22,7 @@ except ImportError:
 
 import cmd2
 from cmd2 import clipboard, constants, utils
-from .conftest import run_cmd, normalize, BASE_HELP, BASE_HELP_VERBOSE, \
-    HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
+from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
 def CreateOutsimApp():
     c = cmd2.Cmd()
@@ -53,13 +52,11 @@ def test_empty_statement(base_app):
 
 def test_base_help(base_app):
     out, err = run_cmd(base_app, 'help')
-    expected = normalize(BASE_HELP)
-    assert out == expected
+    verify_help_text(base_app, out)
 
 def test_base_help_verbose(base_app):
     out, err = run_cmd(base_app, 'help -v')
-    expected = normalize(BASE_HELP_VERBOSE)
-    assert out == expected
+    verify_help_text(base_app, out)
 
     # Make sure :param type lines are filtered out of help summary
     help_doc = base_app.do_help.__func__.__doc__
@@ -67,7 +64,8 @@ def test_base_help_verbose(base_app):
     base_app.do_help.__func__.__doc__ = help_doc
 
     out, err = run_cmd(base_app, 'help --verbose')
-    assert out == expected
+    verify_help_text(base_app, out)
+    assert ':param' not in ''.join(out)
 
 def test_base_argparse_help(base_app):
     # Verify that "set -h" gives the same output as "help set" and that it starts in a way that makes sense
@@ -112,7 +110,7 @@ def test_base_show_readonly(base_app):
     expected = normalize(SHOW_TXT + '\nRead only settings:' + """
         Commands may be terminated with: {}
         Output redirection and pipes allowed: {}
-""".format(base_app.statement_parser.terminators, base_app.allow_redirection))
+""".format(base_app._statement_parser.terminators, base_app.allow_redirection))
     assert out == expected
 
 
@@ -427,18 +425,17 @@ def test_output_redirection(base_app):
     try:
         # Verify that writing to a file works
         run_cmd(base_app, 'help > {}'.format(filename))
-        expected = normalize(BASE_HELP)
         with open(filename) as f:
-            content = normalize(f.read())
-        assert content == expected
+            content = f.read()
+        verify_help_text(base_app, content)
 
         # Verify that appending to a file also works
         run_cmd(base_app, 'help history >> {}'.format(filename))
-        expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
         with open(filename) as f:
-            content = normalize(f.read())
-        assert content == expected
-    except:
+            appended_content = f.read()
+        assert appended_content.startswith(content)
+        assert len(appended_content) > len(content)
+    except Exception:
         raise
     finally:
         os.remove(filename)
@@ -448,19 +445,18 @@ def test_output_redirection_to_nonexistent_directory(base_app):
 
     # Verify that writing to a file in a non-existent directory doesn't work
     run_cmd(base_app, 'help > {}'.format(filename))
-    expected = normalize(BASE_HELP)
     with pytest.raises(FileNotFoundError):
         with open(filename) as f:
-            content = normalize(f.read())
-        assert content == expected
+            content = f.read()
+        verify_help_text(base_app, content)
 
     # Verify that appending to a file also works
     run_cmd(base_app, 'help history >> {}'.format(filename))
-    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
     with pytest.raises(FileNotFoundError):
         with open(filename) as f:
-            content = normalize(f.read())
-        assert content == expected
+            appended_content = f.read()
+        verify_help_text(base_app, appended_content)
+        assert len(appended_content) > len(content)
 
 def test_output_redirection_to_too_long_filename(base_app):
     filename = '~/sdkfhksdjfhkjdshfkjsdhfkjsdhfkjdshfkjdshfkjshdfkhdsfkjhewfuihewiufhweiufhiweufhiuewhiuewhfiuwehfia' \
@@ -471,19 +467,18 @@ def test_output_redirection_to_too_long_filename(base_app):
 
     # Verify that writing to a file in a non-existent directory doesn't work
     run_cmd(base_app, 'help > {}'.format(filename))
-    expected = normalize(BASE_HELP)
     with pytest.raises(OSError):
         with open(filename) as f:
-            content = normalize(f.read())
-        assert content == expected
+            content = f.read()
+        verify_help_text(base_app, content)
 
     # Verify that appending to a file also works
     run_cmd(base_app, 'help history >> {}'.format(filename))
-    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
     with pytest.raises(OSError):
         with open(filename) as f:
-            content = normalize(f.read())
-        assert content == expected
+            appended_content = f.read()
+        verify_help_text(base_app, content)
+        assert len(appended_content) > len(content)
 
 
 def test_feedback_to_output_true(base_app):
@@ -524,14 +519,13 @@ def test_feedback_to_output_false(base_app):
 
 def test_disallow_redirection(base_app):
     # Set allow_redirection to False
-    base_app.statement_parser.allow_redirection = False
+    base_app._statement_parser.allow_redirection = False
 
     filename = 'test_allow_redirect.txt'
 
     # Verify output wasn't redirected
     out, err = run_cmd(base_app, 'help > {}'.format(filename))
-    expected = normalize(BASE_HELP)
-    assert out == expected
+    verify_help_text(base_app, out)
 
     # Verify that no file got created
     assert not os.path.exists(filename)
@@ -574,13 +568,14 @@ def test_pipe_to_shell_error(base_app):
 def test_send_to_paste_buffer(base_app):
     # Test writing to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help >')
-    expected = normalize(BASE_HELP)
-    assert normalize(cmd2.cmd2.get_paste_buffer()) == expected
+    paste_contents = cmd2.cmd2.get_paste_buffer()
+    verify_help_text(base_app, paste_contents)
 
     # Test appending to the PasteBuffer/Clipboard
     run_cmd(base_app, 'help history >>')
-    expected = normalize(BASE_HELP + '\n' + HELP_HISTORY)
-    assert normalize(cmd2.cmd2.get_paste_buffer()) == expected
+    appended_contents = cmd2.cmd2.get_paste_buffer()
+    assert appended_contents.startswith(paste_contents)
+    assert len(appended_contents) > len(paste_contents)
 
 
 def test_base_timing(base_app):
@@ -901,17 +896,7 @@ def test_custom_command_help(help_app):
 
 def test_custom_help_menu(help_app):
     out, err = run_cmd(help_app, 'help')
-    expected = normalize("""
-Documented commands (type help <topic>):
-========================================
-alias  help     load   py        quit          run_script  shell      squat
-edit   history  macro  pyscript  run_pyscript  set         shortcuts
-
-Undocumented commands:
-======================
-undoc
-""")
-    assert out == expected
+    verify_help_text(help_app, out)
 
 def test_help_undocumented(help_app):
     out, err = run_cmd(help_app, 'help undoc')
@@ -962,62 +947,11 @@ def helpcat_app():
 
 def test_help_cat_base(helpcat_app):
     out, err = run_cmd(helpcat_app, 'help')
-    expected = normalize("""Documented commands (type help <topic>):
-
-Custom Category
-===============
-edit  squat
-
-Some Category
-=============
-cat_nodoc  diddly
-
-Other
-=====
-alias  history  macro  pyscript  run_pyscript  set    shortcuts
-help   load     py     quit      run_script    shell
-
-Undocumented commands:
-======================
-undoc
-""")
-    assert out == expected
+    verify_help_text(helpcat_app, out)
 
 def test_help_cat_verbose(helpcat_app):
     out, err = run_cmd(helpcat_app, 'help --verbose')
-    expected = normalize("""Documented commands (type help <topic>):
-
-Custom Category
-================================================================================
-edit                This overrides the edit command and does nothing.
-squat               This command does diddly squat...
-
-Some Category
-================================================================================
-cat_nodoc
-diddly              This command does diddly
-
-Other
-================================================================================
-alias               Manage aliases
-help                List available commands or provide detailed help for a specific command
-history             View, run, edit, save, or clear previously entered commands
-load                Run commands in script file that is encoded as either ASCII or UTF-8 text
-macro               Manage macros
-py                  Invoke Python command or shell
-pyscript            Run a Python script file inside the console
-quit                Exit this application
-run_pyscript        Run a Python script file inside the console
-run_script          Run commands in script file that is encoded as either ASCII or UTF-8 text
-set                 Set a settable parameter or show current settings of parameters
-shell               Execute a command as if at the OS prompt
-shortcuts           List available shortcuts
-
-Undocumented commands:
-======================
-undoc
-""")
-    assert out == expected
+    verify_help_text(helpcat_app, out)
 
 
 class SelectApp(cmd2.Cmd):
@@ -1291,7 +1225,7 @@ def test_multiline_input_line_to_statement(multiline_app):
 
 def test_clipboard_failure(base_app, capsys):
     # Force cmd2 clipboard to be disabled
-    base_app.can_clip = False
+    base_app._can_clip = False
 
     # Redirect command output to the clipboard when a clipboard isn't present
     base_app.onecmd_plus_hooks('help > ')
@@ -1307,16 +1241,16 @@ class CommandResultApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     def do_affirmative(self, arg):
-        self._last_result = cmd2.CommandResult(arg, data=True)
+        self.last_result = cmd2.CommandResult(arg, data=True)
 
     def do_negative(self, arg):
-        self._last_result = cmd2.CommandResult(arg, data=False)
+        self.last_result = cmd2.CommandResult(arg, data=False)
 
     def do_affirmative_no_data(self, arg):
-        self._last_result = cmd2.CommandResult(arg)
+        self.last_result = cmd2.CommandResult(arg)
 
     def do_negative_no_data(self, arg):
-        self._last_result = cmd2.CommandResult('', arg)
+        self.last_result = cmd2.CommandResult('', arg)
 
 @pytest.fixture
 def commandresult_app():
@@ -1326,22 +1260,22 @@ def commandresult_app():
 def test_commandresult_truthy(commandresult_app):
     arg = 'foo'
     run_cmd(commandresult_app, 'affirmative {}'.format(arg))
-    assert commandresult_app._last_result
-    assert commandresult_app._last_result == cmd2.CommandResult(arg, data=True)
+    assert commandresult_app.last_result
+    assert commandresult_app.last_result == cmd2.CommandResult(arg, data=True)
 
     run_cmd(commandresult_app, 'affirmative_no_data {}'.format(arg))
-    assert commandresult_app._last_result
-    assert commandresult_app._last_result == cmd2.CommandResult(arg)
+    assert commandresult_app.last_result
+    assert commandresult_app.last_result == cmd2.CommandResult(arg)
 
 def test_commandresult_falsy(commandresult_app):
     arg = 'bar'
     run_cmd(commandresult_app, 'negative {}'.format(arg))
-    assert not commandresult_app._last_result
-    assert commandresult_app._last_result == cmd2.CommandResult(arg, data=False)
+    assert not commandresult_app.last_result
+    assert commandresult_app.last_result == cmd2.CommandResult(arg, data=False)
 
     run_cmd(commandresult_app, 'negative_no_data {}'.format(arg))
-    assert not commandresult_app._last_result
-    assert commandresult_app._last_result == cmd2.CommandResult('', arg)
+    assert not commandresult_app.last_result
+    assert commandresult_app.last_result == cmd2.CommandResult('', arg)
 
 
 def test_is_text_file_bad_input(base_app):
@@ -1468,7 +1402,7 @@ def test_raw_input(base_app):
     m = mock.Mock(name='input', return_value=fake_input)
     builtins.input = m
 
-    line = base_app.pseudo_raw_input('(cmd2)')
+    line = base_app._pseudo_raw_input('(cmd2)')
     assert line == fake_input
 
 def test_stdin_input():
@@ -1480,7 +1414,7 @@ def test_stdin_input():
     m = mock.Mock(name='readline', return_value=fake_input)
     app.stdin.readline = m
 
-    line = app.pseudo_raw_input('(cmd2)')
+    line = app._pseudo_raw_input('(cmd2)')
     assert line == fake_input
 
 def test_empty_stdin_input():
@@ -1492,7 +1426,7 @@ def test_empty_stdin_input():
     m = mock.Mock(name='readline', return_value=fake_input)
     app.stdin.readline = m
 
-    line = app.pseudo_raw_input('(cmd2)')
+    line = app._pseudo_raw_input('(cmd2)')
     assert line == 'eof'
 
 def test_poutput_string(outsim_app):
@@ -1560,17 +1494,17 @@ def test_get_alias_names(base_app):
     run_cmd(base_app, 'alias create fake run_pyscript')
     run_cmd(base_app, 'alias create ls !ls -hal')
     assert len(base_app.aliases) == 2
-    assert sorted(base_app.get_alias_names()) == ['fake', 'ls']
+    assert sorted(base_app._get_alias_names()) == ['fake', 'ls']
 
 def test_get_macro_names(base_app):
     assert len(base_app.macros) == 0
     run_cmd(base_app, 'macro create foo !echo foo')
     run_cmd(base_app, 'macro create bar !echo bar')
     assert len(base_app.macros) == 2
-    assert sorted(base_app.get_macro_names()) == ['bar', 'foo']
+    assert sorted(base_app._get_macro_names()) == ['bar', 'foo']
 
 def test_get_settable_names(base_app):
-    assert sorted(base_app.get_settable_names()) == sorted(base_app.settable.keys())
+    assert sorted(base_app._get_settable_names()) == sorted(base_app.settable.keys())
 
 def test_alias_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'alias')
@@ -1656,12 +1590,10 @@ def test_multiple_aliases(base_app):
     run_cmd(base_app, 'alias create {} help'.format(alias1))
     run_cmd(base_app, 'alias create {} help -v'.format(alias2))
     out, err = run_cmd(base_app, alias1)
-    expected = normalize(BASE_HELP)
-    assert out == expected
+    verify_help_text(base_app, out)
 
     out, err = run_cmd(base_app, alias2)
-    expected = normalize(BASE_HELP_VERBOSE)
-    assert out == expected
+    verify_help_text(base_app, out)
 
 def test_macro_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'macro')
@@ -1716,8 +1648,7 @@ def test_macro_create_with_args(base_app):
 
     # Run the macro
     out, err = run_cmd(base_app, 'fake help -v')
-    expected = normalize(BASE_HELP_VERBOSE)
-    assert out == expected
+    verify_help_text(base_app, out)
 
 def test_macro_create_with_escaped_args(base_app):
     # Create the macro
@@ -1810,12 +1741,11 @@ def test_multiple_macros(base_app):
     run_cmd(base_app, 'macro create {} help'.format(macro1))
     run_cmd(base_app, 'macro create {} help -v'.format(macro2))
     out, err = run_cmd(base_app, macro1)
-    expected = normalize(BASE_HELP)
-    assert out == expected
+    verify_help_text(base_app, out)
 
-    out, err = run_cmd(base_app, macro2)
-    expected = normalize(BASE_HELP_VERBOSE)
-    assert out == expected
+    out2, err2 = run_cmd(base_app, macro2)
+    verify_help_text(base_app, out2)
+    assert len(out2) > len(out)
 
 def test_nonexistent_macro(base_app):
     from cmd2.parsing import StatementParser
@@ -1840,7 +1770,7 @@ def test_ppaged_strips_color_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
     outsim_app.colors = cmd2.constants.COLORS_TERMINAL
-    outsim_app.redirecting = True
+    outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
@@ -1849,7 +1779,7 @@ def test_ppaged_strips_color_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
     outsim_app.colors = cmd2.constants.COLORS_ALWAYS
-    outsim_app.redirecting = True
+    outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
     assert out == Fore.RED + msg + end
@@ -1878,7 +1808,7 @@ def test_onecmd_raw_str_continue(outsim_app):
     stop = outsim_app.onecmd(line)
     out = outsim_app.stdout.getvalue()
     assert not stop
-    assert normalize(out) == normalize(BASE_HELP)
+    verify_help_text(outsim_app, out)
 
 def test_onecmd_raw_str_quit(outsim_app):
     line = "quit"

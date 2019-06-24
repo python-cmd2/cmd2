@@ -33,7 +33,7 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
 
   class App(Cmd2):
       def __init__(self):
-        shortcuts = dict(self.DEFAULT_SHORTCUTS)
+        shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
         shortcuts.update({'*': 'sneeze', '~': 'squirm'})
         cmd2.Cmd.__init__(self, shortcuts=shortcuts)
 

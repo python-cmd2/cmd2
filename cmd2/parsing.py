@@ -324,7 +324,7 @@ class StatementParser:
         This string is suitable for inclusion in an error message of your
         choice:
 
-        valid, errmsg = statement_parser.is_valid_command('>')
+        valid, errmsg = _statement_parser.is_valid_command('>')
         if not valid:
             errmsg = "Alias {}".format(errmsg)
         """

@@ -27,10 +27,10 @@ original_dir = os.getcwd()
 app('cd {}'.format(directory))
 
 # Conditionally do something based on the results of the last command
-if self._last_result:
+if self.last_result:
     print('\nContents of directory {!r}:'.format(directory))
     app('dir -l')
-    print('{}\n'.format(self._last_result.data))
+    print('{}\n'.format(self.last_result.data))
 
     # Change back to where we were
     print('Changing back to original directory: {!r}'.format(original_dir))

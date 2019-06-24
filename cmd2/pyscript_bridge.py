@@ -23,7 +23,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
 
     Any combination of these fields can be used when developing a scripting API for a given command.
     By default stdout, stderr, and stop will be captured for you. If there is additional command specific data,
-    then write that to cmd2's _last_result member. That becomes the data member of this tuple.
+    then write that to cmd2's last_result member. That becomes the data member of this tuple.
 
     In some cases, the data member may contain everything needed for a command and storing stdout
     and stderr might just be a duplication of data that wastes memory. In that case, the StdSim can
@@ -88,7 +88,7 @@ class PyscriptBridge(object):
         # This will be used to capture sys.stderr
         copy_stderr = StdSim(sys.stderr, echo)
 
-        self._cmd2_app._last_result = None
+        self._cmd2_app.last_result = None
 
         stop = False
         try:
@@ -105,5 +105,5 @@ class PyscriptBridge(object):
         result = CommandResult(stdout=copy_cmd_stdout.getvalue(),
                                stderr=copy_stderr.getvalue() if copy_stderr.getvalue() else None,
                                stop=stop,
-                               data=self._cmd2_app._last_result)
+                               data=self._cmd2_app.last_result)
         return result
