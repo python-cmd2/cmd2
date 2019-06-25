@@ -624,14 +624,13 @@ class Cmd(cmd.Cmd):
             err_msg = utils.style_message(msg, end=end, fg=fg, bg=bg)
             self._decolorized_write(sys.stderr, err_msg)
 
-    def pexcept(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '', traceback_war: bool = True) -> None:
+    def pexcept(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '') -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
 
         :param msg: message or Exception to print
         :param end: (optional) string appended after the end of the message, default a newline
         :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
         :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
-        :param traceback_war: (optional) If False, traceback warning will not be written to stderr
         """
         if self.debug and sys.exc_info() != (None, None, None):
             import traceback
@@ -645,7 +644,7 @@ class Cmd(cmd.Cmd):
         err_msg = utils.style_message(err_msg, end=end, fg=fg, bg=bg)
         self._decolorized_write(sys.stderr, err_msg)
 
-        if traceback_war and not self.debug:
+        if not self.debug:
             warning = "To enable full traceback, run the following command:  'set debug true'"
             warning = utils.style_message(warning, fg="lightyellow")
             self._decolorized_write(sys.stderr, warning)
@@ -1687,7 +1686,7 @@ class Cmd(cmd.Cmd):
             return self._run_cmdfinalization_hooks(stop, None)
         except ValueError as ex:
             # If shlex.split failed on syntax, let user know what's going on
-            self.pexcept("Invalid syntax: {}".format(ex), traceback_war=False)
+            self.pexcept("Invalid syntax: {}".format(ex))
             return stop
 
         # now that we have a statement, run it with all the hooks
@@ -2048,7 +2047,7 @@ class Cmd(cmd.Cmd):
                     saved_state.redirecting = True
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
-                    self.pexcept('Failed to redirect because - {}'.format(ex), traceback_war=False)
+                    self.pexcept('Failed to redirect because - {}'.format(ex))
                     redir_error = True
             else:
                 # going to a paste buffer
@@ -3062,8 +3061,7 @@ class Cmd(cmd.Cmd):
                     with open(expanded_filename) as f:
                         interp.runcode(f.read())
                 except OSError as ex:
-                    error_msg = "Error opening script file '{}': {}".format(expanded_filename, ex)
-                    self.pexcept(error_msg, traceback_war=False)
+                    self.pexcept("Error opening script file '{}': {}".format(expanded_filename, ex))
 
             def py_quit():
                 """Function callable from the interactive Python console to exit that environment"""
@@ -3407,7 +3405,7 @@ class Cmd(cmd.Cmd):
                             fobj.write('{}\n'.format(item.raw))
                 plural = 's' if len(history) > 1 else ''
             except OSError as e:
-                self.pexcept('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
+                self.pexcept('Saving {!r} - {}'.format(args.output_file, e))
             else:
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
         elif args.transcript:
@@ -3454,7 +3452,7 @@ class Cmd(cmd.Cmd):
             pass
         except OSError as ex:
             msg = "can not read persistent history file '{}': {}"
-            self.pexcept(msg.format(hist_file, ex), traceback_war=False)
+            self.pexcept(msg.format(hist_file, ex))
             return
 
         self.history = history
@@ -3490,7 +3488,7 @@ class Cmd(cmd.Cmd):
                 pickle.dump(self.history, fobj)
         except OSError as ex:
             msg = "can not write persistent history file '{}': {}"
-            self.pexcept(msg.format(self.persistent_history_file, ex), traceback_war=False)
+            self.pexcept(msg.format(self.persistent_history_file, ex))
 
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
         """
@@ -3565,7 +3563,7 @@ class Cmd(cmd.Cmd):
             with open(transcript_file, 'w') as fout:
                 fout.write(transcript)
         except OSError as ex:
-            self.pexcept('Failed to save transcript: {}'.format(ex), traceback_war=False)
+            self.pexcept('Failed to save transcript: {}'.format(ex))
         else:
             # and let the user know what we did
             if commands_run > 1:
