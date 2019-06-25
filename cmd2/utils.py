@@ -12,7 +12,6 @@ import threading
 import unicodedata
 from typing import Any, Iterable, List, Optional, TextIO, Union
 
-from colorama import Style
 from wcwidth import wcswidth
 
 from . import constants
@@ -60,7 +59,10 @@ def style_message(msg: Any, end: str = '\n', fg: str = '', bg: str = '') -> str:
         except KeyError:
             raise ValueError('Color {} does not exist.'.format(bg))
     values.append(msg)
-    values.append(Style.RESET_ALL)
+    if fg:
+        values.append(constants.FG_COLORS['reset'])
+    if bg:
+        values.append(constants.BG_COLORS['reset'])
     values.append(end)
     return "".join(values)
 
