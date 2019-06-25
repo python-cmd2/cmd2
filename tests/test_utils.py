@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from colorama import Fore
+from colorama import Fore, Back
 import cmd2.utils as cu
 
 HELLO_WORLD = 'Hello, world!'
@@ -24,6 +24,25 @@ def test_ansi_safe_wcswidth():
     base_str = HELLO_WORLD
     ansi_str = Fore.GREEN + base_str + Fore.RESET
     assert cu.ansi_safe_wcswidth(ansi_str) != len(ansi_str)
+
+def test_style_message():
+    base_str = HELLO_WORLD
+    ansi_str = Fore.BLUE + Back.GREEN + base_str + Fore.RESET + Back.RESET + '\n\n'
+    assert cu.style_message(base_str, end='\n\n', fg='blue', bg='green')
+
+def test_style_message_color_not_exist():
+    base_str = HELLO_WORLD
+    try:
+        cu.style_message(base_str, fg='hello', bg='green')
+        assert False
+    except ValueError:
+        assert True
+
+    try:
+        cu.style_message(base_str, fg='blue', bg='hello')
+        assert False
+    except ValueError:
+        assert True
 
 def test_strip_quotes_no_quotes():
     base_str = HELLO_WORLD
