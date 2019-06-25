@@ -12,6 +12,7 @@ import threading
 import unicodedata
 from typing import Any, Iterable, List, Optional, TextIO, Union
 
+from colorama import Style
 from wcwidth import wcswidth
 
 from . import constants
@@ -34,6 +35,34 @@ def ansi_safe_wcswidth(text: str) -> int:
     """
     # Strip ANSI escape codes since they cause wcswidth to return -1
     return wcswidth(strip_ansi(text))
+
+
+def style_message(msg: Any, end: str = '\n', fg: str = '', bg: str = '') -> str:
+    """
+    Styles a message
+
+    :param msg: Any object compatible with str.format()
+    :param end: (optional) Ending character similar to python's print()
+    :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
+    :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
+
+    """
+    values = []
+    msg = "{}".format(msg)
+    if fg:
+        try:
+            values.append(constants.FG_COLORS[fg.lower()])
+        except KeyError:
+            raise ValueError('Color {} does not exist.'.format(fg))
+    if bg:
+        try:
+            values.append(constants.BG_COLORS[bg.lower()])
+        except KeyError:
+            raise ValueError('Color {} does not exist.'.format(bg))
+    values.append(msg)
+    values.append(Style.RESET_ALL)
+    values.append(end)
+    return "".join(values)
 
 
 def is_quoted(arg: str) -> bool:

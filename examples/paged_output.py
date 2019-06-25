@@ -22,7 +22,7 @@ class PagedOutput(cmd2.Cmd):
                 text = f.read()
             self.ppaged(text, chop=chop)
         except FileNotFoundError:
-            self.perror('ERROR: file {!r} not found'.format(filename), traceback_war=False)
+            self.pexcept('ERROR: file {!r} not found'.format(filename), traceback_war=False)
 
     @cmd2.with_argument_list
     def do_page_wrap(self, args: List[str]):
@@ -31,7 +31,7 @@ class PagedOutput(cmd2.Cmd):
         Usage: page_wrap <file_path>
         """
         if not args:
-            self.perror('page_wrap requires a path to a file as an argument', traceback_war=False)
+            self.pexcept('page_wrap requires a path to a file as an argument', traceback_war=False)
             return
         self.page_file(args[0], chop=False)
 
@@ -46,7 +46,7 @@ class PagedOutput(cmd2.Cmd):
         Usage: page_chop <file_path>
         """
         if not args:
-            self.perror('page_truncate requires a path to a file as an argument', traceback_war=False)
+            self.pexcept('page_truncate requires a path to a file as an argument', traceback_war=False)
             return
         self.page_file(args[0], chop=True)
 

@@ -587,7 +587,7 @@ class Cmd(cmd.Cmd):
             msg = utils.strip_ansi(msg)
         fileobj.write(msg)
 
-    def poutput(self, msg: Any, end: str = '\n', color: str = '') -> None:
+    def poutput(self, msg: Any, end: str = '\n', fg: str = '', bg: str = '') -> None:
         """Smarter self.stdout.write(); color aware and adds newline of not present.
 
         Also handles BrokenPipeError exceptions for when a commands's output has
@@ -596,16 +596,13 @@ class Cmd(cmd.Cmd):
 
         :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
         :param end: (optional) string appended after the end of the message if not already present, default a newline
-        :param color: (optional) color escape to output this message with
+        :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
+        :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
         """
         if msg is not None and msg != '':
             try:
-                msg_str = '{}'.format(msg)
-                if not msg_str.endswith(end):
-                    msg_str += end
-                if color:
-                    msg_str = color + msg_str + Fore.RESET
-                self._decolorized_write(self.stdout, msg_str)
+                final_msg = utils.style_message(msg, end=end, fg=fg, bg=bg)
+                self._decolorized_write(self.stdout, final_msg)
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another
                 # process and that process closes before the command is
@@ -615,30 +612,43 @@ class Cmd(cmd.Cmd):
                 if self.broken_pipe_warning:
                     sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, err: Union[str, Exception], traceback_war: bool = True, err_color: str = Fore.LIGHTRED_EX,
-               war_color: str = Fore.LIGHTYELLOW_EX) -> None:
-        """ Print error message to sys.stderr and if debug is true, print an exception Traceback if one exists.
+    def perror(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '') -> None:
+        """ Print error message to sys.stderr
 
-        :param err: an Exception or error message to print out
-        :param traceback_war: (optional) if True, print a message to let user know they can enable debug
-        :param err_color: (optional) color escape to output error with
-        :param war_color: (optional) color escape to output warning with
+        :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
+        :param end: (optional) string appended after the end of the message if not already present, default a newline
+        :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
+        :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
+        """
+        if msg is not None and msg != '':
+            err_msg = utils.style_message(msg, end=end, fg=fg, bg=bg)
+            self._decolorized_write(sys.stderr, err_msg)
+
+    def pexcept(self, err: Any, end: str = '\n', fg: str = 'lightred', bg: str = '', traceback_war: bool = True) -> None:
+        """ Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
+
+        :param msg: message or Exception to print to current stdout
+        :param end: (optional) string appended after the end of the message if not already present, default a newline
+        :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
+        :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
+        :param traceback_war: (optional) If False, traceback warning will not be written to stderr
         """
         if self.debug and sys.exc_info() != (None, None, None):
             import traceback
             traceback.print_exc()
 
         if isinstance(err, Exception):
-            err_msg = "EXCEPTION of type '{}' occurred with message: '{}'\n".format(type(err).__name__, err)
+            err_msg = "EXCEPTION of type '{}' occurred with message: '{}'".format(type(err).__name__, err)
         else:
-            err_msg = "{}\n".format(err)
-        err_msg = err_color + err_msg + Fore.RESET
+            err_msg = err
+
+        err_msg = utils.style_message(err_msg, end=end, fg=fg, bg=bg)
         self._decolorized_write(sys.stderr, err_msg)
 
         if traceback_war and not self.debug:
-            war = "To enable full traceback, run the following command:  'set debug true'\n"
-            war = war_color + war + Fore.RESET
-            self._decolorized_write(sys.stderr, war)
+            warning = "To enable full traceback, run the following command:  'set debug true'"
+            warning = utils.style_message(warning, fg="lightyellow")
+            self._decolorized_write(sys.stderr, warning)
 
     def pfeedback(self, msg: str) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -1562,7 +1572,7 @@ class Cmd(cmd.Cmd):
         try:
             return self._complete_worker(text, state)
         except Exception as e:
-            self.perror(e)
+            self.pexcept(e)
             return None
 
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
@@ -1677,7 +1687,7 @@ class Cmd(cmd.Cmd):
             return self._run_cmdfinalization_hooks(stop, None)
         except ValueError as ex:
             # If shlex.split failed on syntax, let user know whats going on
-            self.perror("Invalid syntax: {}".format(ex), traceback_war=False)
+            self.pexcept("Invalid syntax: {}".format(ex), traceback_war=False)
             return stop
 
         # now that we have a statement, run it with all the hooks
@@ -1762,7 +1772,7 @@ class Cmd(cmd.Cmd):
             # don't do anything, but do allow command finalization hooks to run
             pass
         except Exception as ex:
-            self.perror(ex)
+            self.pexcept(ex)
         finally:
             return self._run_cmdfinalization_hooks(stop, statement)
 
@@ -1785,7 +1795,7 @@ class Cmd(cmd.Cmd):
             # modifications to the statement
             return data.stop
         except Exception as ex:
-            self.perror(ex)
+            self.pexcept(ex)
 
     def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]]) -> bool:
         """
@@ -1925,8 +1935,8 @@ class Cmd(cmd.Cmd):
 
         # Make sure enough arguments were passed in
         if len(statement.arg_list) < macro.minimum_arg_count:
-            self.perror("The macro '{}' expects at least {} argument(s)".format(statement.command,
-                                                                                macro.minimum_arg_count),
+            self.pexcept("The macro '{}' expects at least {} argument(s)".format(statement.command,
+                                                                                 macro.minimum_arg_count),
                         traceback_war=False)
             return None
 
@@ -2008,7 +2018,7 @@ class Cmd(cmd.Cmd):
 
             # Check if the pipe process already exited
             if proc.returncode is not None:
-                self.perror('Pipe process exited with code {} before command could run'.format(proc.returncode))
+                self.pexcept('Pipe process exited with code {} before command could run'.format(proc.returncode))
                 subproc_stdin.close()
                 new_stdout.close()
                 redir_error = True
@@ -2020,8 +2030,8 @@ class Cmd(cmd.Cmd):
         elif statement.output:
             import tempfile
             if (not statement.output_to) and (not self._can_clip):
-                self.perror("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable",
-                            traceback_war=False)
+                self.pexcept("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable",
+                             traceback_war=False)
                 redir_error = True
 
             elif statement.output_to:
@@ -2036,7 +2046,7 @@ class Cmd(cmd.Cmd):
                     saved_state.redirecting = True
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
-                    self.perror('Failed to redirect because - {}'.format(ex), traceback_war=False)
+                    self.pexcept('Failed to redirect because - {}'.format(ex), traceback_war=False)
                     redir_error = True
             else:
                 # going to a paste buffer
@@ -2268,11 +2278,11 @@ class Cmd(cmd.Cmd):
         # Validate the alias name
         valid, errmsg = self._statement_parser.is_valid_command(args.name)
         if not valid:
-            self.perror("Invalid alias name: {}".format(errmsg), traceback_war=False)
+            self.pexcept("Invalid alias name: {}".format(errmsg), traceback_war=False)
             return
 
         if args.name in self.macros:
-            self.perror("Alias cannot have the same name as a macro", traceback_war=False)
+            self.pexcept("Alias cannot have the same name as a macro", traceback_war=False)
             return
 
         # Unquote redirection and terminator tokens
@@ -2303,7 +2313,7 @@ class Cmd(cmd.Cmd):
                     del self.aliases[cur_name]
                     self.poutput("Alias '{}' deleted".format(cur_name))
                 else:
-                    self.perror("Alias '{}' does not exist".format(cur_name), traceback_war=False)
+                    self.pexcept("Alias '{}' does not exist".format(cur_name), traceback_war=False)
 
     def _alias_list(self, args: argparse.Namespace) -> None:
         """List some or all aliases"""
@@ -2312,7 +2322,7 @@ class Cmd(cmd.Cmd):
                 if cur_name in self.aliases:
                     self.poutput("alias create {} {}".format(cur_name, self.aliases[cur_name]))
                 else:
-                    self.perror("Alias '{}' not found".format(cur_name), traceback_war=False)
+                    self.pexcept("Alias '{}' not found".format(cur_name), traceback_war=False)
         else:
             sorted_aliases = utils.alphabetical_sort(self.aliases)
             for cur_alias in sorted_aliases:
@@ -2399,15 +2409,15 @@ class Cmd(cmd.Cmd):
         # Validate the macro name
         valid, errmsg = self._statement_parser.is_valid_command(args.name)
         if not valid:
-            self.perror("Invalid macro name: {}".format(errmsg), traceback_war=False)
+            self.pexcept("Invalid macro name: {}".format(errmsg), traceback_war=False)
             return
 
         if args.name in self.get_all_commands():
-            self.perror("Macro cannot have the same name as a command", traceback_war=False)
+            self.pexcept("Macro cannot have the same name as a command", traceback_war=False)
             return
 
         if args.name in self.aliases:
-            self.perror("Macro cannot have the same name as an alias", traceback_war=False)
+            self.pexcept("Macro cannot have the same name as an alias", traceback_war=False)
             return
 
         # Unquote redirection and terminator tokens
@@ -2434,7 +2444,7 @@ class Cmd(cmd.Cmd):
                 cur_num_str = (re.findall(MacroArg.digit_pattern, cur_match.group())[0])
                 cur_num = int(cur_num_str)
                 if cur_num < 1:
-                    self.perror("Argument numbers must be greater than 0", traceback_war=False)
+                    self.pexcept("Argument numbers must be greater than 0", traceback_war=False)
                     return
 
                 arg_nums.add(cur_num)
@@ -2448,8 +2458,8 @@ class Cmd(cmd.Cmd):
 
         # Make sure the argument numbers are continuous
         if len(arg_nums) != max_arg_num:
-            self.perror("Not all numbers between 1 and {} are present "
-                        "in the argument placeholders".format(max_arg_num), traceback_war=False)
+            self.pexcept("Not all numbers between 1 and {} are present "
+                         "in the argument placeholders".format(max_arg_num), traceback_war=False)
             return
 
         # Find all escaped arguments
@@ -2484,7 +2494,7 @@ class Cmd(cmd.Cmd):
                     del self.macros[cur_name]
                     self.poutput("Macro '{}' deleted".format(cur_name))
                 else:
-                    self.perror("Macro '{}' does not exist".format(cur_name), traceback_war=False)
+                    self.pexcept("Macro '{}' does not exist".format(cur_name), traceback_war=False)
 
     def _macro_list(self, args: argparse.Namespace) -> None:
         """List some or all macros"""
@@ -2493,7 +2503,7 @@ class Cmd(cmd.Cmd):
                 if cur_name in self.macros:
                     self.poutput("macro create {} {}".format(cur_name, self.macros[cur_name].value))
                 else:
-                    self.perror("Macro '{}' not found".format(cur_name), traceback_war=False)
+                    self.pexcept("Macro '{}' not found".format(cur_name), traceback_war=False)
         else:
             sorted_macros = utils.alphabetical_sort(self.macros)
             for cur_macro in sorted_macros:
@@ -2713,12 +2723,12 @@ class Cmd(cmd.Cmd):
 
         if len(cmds_cats) == 0:
             # No categories found, fall back to standard behavior
-            self.poutput("{}\n".format(str(self.doc_leader)))
+            self.poutput("{}".format(str(self.doc_leader)))
             self._print_topics(self.doc_header, cmds_doc, verbose)
         else:
             # Categories found, Organize all commands by category
-            self.poutput('{}\n'.format(str(self.doc_leader)))
-            self.poutput('{}\n\n'.format(str(self.doc_header)))
+            self.poutput('{}'.format(str(self.doc_leader)))
+            self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
             for category in sorted(cmds_cats.keys()):
                 self._print_topics(category, cmds_cats[category], verbose)
             self._print_topics('Other', cmds_doc, verbose)
@@ -2806,7 +2816,7 @@ class Cmd(cmd.Cmd):
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self._statement_parser.shortcuts))
-        self.poutput("Shortcuts for other commands:\n{}\n".format(result))
+        self.poutput("Shortcuts for other commands:\n{}".format(result))
 
     @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
     def do_eof(self, _: argparse.Namespace) -> bool:
@@ -2845,7 +2855,7 @@ class Cmd(cmd.Cmd):
                 except IndexError:
                     fulloptions.append((opt[0], opt[0]))
         for (idx, (_, text)) in enumerate(fulloptions):
-            self.poutput('  %2d. %s\n' % (idx + 1, text))
+            self.poutput('  %2d. %s' % (idx + 1, text))
         while True:
             safe_prompt = rl_make_safe_prompt(prompt)
             response = input(safe_prompt)
@@ -2862,8 +2872,8 @@ class Cmd(cmd.Cmd):
                 result = fulloptions[choice - 1][0]
                 break
             except (ValueError, IndexError):
-                self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:\n".format(response,
-                                                                                                   len(fulloptions)))
+                self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:".format(
+                    response, len(fulloptions)))
         return result
 
     def _cmdenvironment(self) -> str:
@@ -2902,8 +2912,8 @@ class Cmd(cmd.Cmd):
             if args.all:
                 self.poutput('\nRead only settings:{}'.format(self._cmdenvironment()))
         else:
-            self.perror("Parameter '{}' not supported (type 'set' for list of parameters).".format(param),
-                        traceback_war=False)
+            self.pexcept("Parameter '{}' not supported (type 'set' for list of parameters).".format(param),
+                         traceback_war=False)
 
     set_description = ("Set a settable parameter or show current settings of parameters\n"
                        "\n"
@@ -2944,7 +2954,7 @@ class Cmd(cmd.Cmd):
         value = utils.cast(current_value, value)
         setattr(self, param, value)
 
-        self.poutput('{} - was: {}\nnow: {}\n'.format(param, current_value, value))
+        self.poutput('{} - was: {}\nnow: {}'.format(param, current_value, value))
 
         # See if we need to call a change hook for this settable
         if current_value != value:
@@ -3028,7 +3038,7 @@ class Cmd(cmd.Cmd):
         from .pyscript_bridge import PyscriptBridge
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
-            self.perror(err, traceback_war=False)
+            self.pexcept(err, traceback_war=False)
             return False
 
         bridge = PyscriptBridge(self)
@@ -3051,7 +3061,7 @@ class Cmd(cmd.Cmd):
                         interp.runcode(f.read())
                 except OSError as ex:
                     error_msg = "Error opening script file '{}': {}".format(expanded_filename, ex)
-                    self.perror(error_msg, traceback_war=False)
+                    self.pexcept(error_msg, traceback_war=False)
 
             def py_quit():
                 """Function callable from the interactive Python console to exit that environment"""
@@ -3235,9 +3245,9 @@ class Cmd(cmd.Cmd):
             # Restore command line arguments to original state
             sys.argv = orig_args
             if args.__statement__.command == "pyscript":
-                self.perror("pyscript has been renamed and will be removed in the next release, "
+                self.pexcept("pyscript has been renamed and will be removed in the next release, "
                             "please use run_pyscript instead\n",
-                            traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
+                            fg="lightyellow", traceback_war=False)
 
         return py_return
 
@@ -3367,9 +3377,9 @@ class Cmd(cmd.Cmd):
 
         if args.run:
             if cowardly_refuse_to_run:
-                self.perror("Cowardly refusing to run all previously entered commands.", traceback_war=False)
-                self.perror("If this is what you want to do, specify '1:' as the range of history.",
-                            traceback_war=False)
+                self.pexcept("Cowardly refusing to run all previously entered commands.", traceback_war=False)
+                self.pexcept("If this is what you want to do, specify '1:' as the range of history.",
+                             traceback_war=False)
             else:
                 return self.runcmds_plus_hooks(history)
         elif args.edit:
@@ -3397,7 +3407,7 @@ class Cmd(cmd.Cmd):
                 plural = 's' if len(history) > 1 else ''
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
             except Exception as e:
-                self.perror('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
+                self.pexcept('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
         elif args.transcript:
             self._generate_transcript(history, args.transcript)
         else:
@@ -3431,7 +3441,7 @@ class Cmd(cmd.Cmd):
         # error, not a `IsADirectoryError`. So we'll check it ourselves.
         if os.path.isdir(hist_file):
             msg = "persistent history file '{}' is a directory"
-            self.perror(msg.format(hist_file))
+            self.pexcept(msg.format(hist_file))
             return
 
         try:
@@ -3442,7 +3452,7 @@ class Cmd(cmd.Cmd):
             pass
         except OSError as ex:
             msg = "can not read persistent history file '{}': {}"
-            self.perror(msg.format(hist_file, ex), traceback_war=False)
+            self.pexcept(msg.format(hist_file, ex), traceback_war=False)
             return
 
         self.history = history
@@ -3478,7 +3488,7 @@ class Cmd(cmd.Cmd):
                 pickle.dump(self.history, fobj)
         except OSError as ex:
             msg = "can not write persistent history file '{}': {}"
-            self.perror(msg.format(self.persistent_history_file, ex), traceback_war=False)
+            self.pexcept(msg.format(self.persistent_history_file, ex), traceback_war=False)
 
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
         """
@@ -3488,8 +3498,8 @@ class Cmd(cmd.Cmd):
         transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
         transcript_dir = os.path.dirname(transcript_path)
         if not os.path.isdir(transcript_dir) or not os.access(transcript_dir, os.W_OK):
-            self.perror("{!r} is not a directory or you don't have write access".format(transcript_dir),
-                        traceback_war=False)
+            self.pexcept("{!r} is not a directory or you don't have write access".format(transcript_dir),
+                         traceback_war=False)
             return
 
         commands_run = 0
@@ -3547,14 +3557,14 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(warning, err_color=Fore.LIGHTYELLOW_EX, traceback_war=False)
+            self.pexcept(warning, fg="lightyellow", traceback_war=False)
 
         # finally, we can write the transcript out to the file
         try:
             with open(transcript_file, 'w') as fout:
                 fout.write(transcript)
         except OSError as ex:
-            self.perror('Failed to save transcript: {}'.format(ex), traceback_war=False)
+            self.pexcept('Failed to save transcript: {}'.format(ex), traceback_war=False)
         else:
             # and let the user know what we did
             if commands_run > 1:
@@ -3622,22 +3632,22 @@ class Cmd(cmd.Cmd):
         try:
             # Make sure the path exists and we can access it
             if not os.path.exists(expanded_path):
-                self.perror("'{}' does not exist or cannot be accessed".format(expanded_path), traceback_war=False)
+                self.pexcept("'{}' does not exist or cannot be accessed".format(expanded_path), traceback_war=False)
                 return
 
             # Make sure expanded_path points to a file
             if not os.path.isfile(expanded_path):
-                self.perror("'{}' is not a file".format(expanded_path), traceback_war=False)
+                self.pexcept("'{}' is not a file".format(expanded_path), traceback_war=False)
                 return
 
             # Make sure the file is not empty
             if os.path.getsize(expanded_path) == 0:
-                self.perror("'{}' is empty".format(expanded_path), traceback_war=False)
+                self.pexcept("'{}' is empty".format(expanded_path), traceback_war=False)
                 return
 
             # Make sure the file is ASCII or UTF-8 encoded text
             if not utils.is_text_file(expanded_path):
-                self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path), traceback_war=False)
+                self.pexcept("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path), traceback_war=False)
                 return
 
             try:
@@ -3645,7 +3655,7 @@ class Cmd(cmd.Cmd):
                 with open(expanded_path, encoding='utf-8') as target:
                     script_commands = target.read().splitlines()
             except OSError as ex:  # pragma: no cover
-                self.perror("Problem accessing script from '{}': {}".format(expanded_path, ex))
+                self.pexcept("Problem accessing script from '{}': {}".format(expanded_path, ex))
                 return
 
             orig_script_dir_count = len(self._script_dir)
@@ -3665,9 +3675,9 @@ class Cmd(cmd.Cmd):
                         self._script_dir.pop()
         finally:
             if args.__statement__.command == "load":
-                self.perror("load has been renamed and will be removed in the next release, "
+                self.pexcept("load has been renamed and will be removed in the next release, "
                             "please use run_script instead\n",
-                            traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
+                            fg="lightyellow", traceback_war=False)
 
     # load has been deprecated
     do_load = do_run_script
@@ -3692,9 +3702,9 @@ class Cmd(cmd.Cmd):
         :return: True if running of commands should stop
         """
         if args.__statement__.command == "_relative_load":
-            self.perror("_relative_load has been renamed and will be removed in the next release, "
-                        "please use _relative_run_script instead\n",
-                        traceback_war=False, err_color=Fore.LIGHTYELLOW_EX)
+            self.pexcept("_relative_load has been renamed and will be removed in the next release, "
+                         "please use _relative_run_script instead\n",
+                         fg="lightyellow", traceback_war=False)
 
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
@@ -3724,19 +3734,19 @@ class Cmd(cmd.Cmd):
         # Validate that there is at least one transcript file
         transcripts_expanded = utils.files_from_glob_patterns(transcript_paths, access=os.R_OK)
         if not transcripts_expanded:
-            self.perror('No test files found - nothing to test', traceback_war=False)
+            self.pexcept('No test files found - nothing to test', traceback_war=False)
             self.exit_code = -1
             return
 
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(Style.BRIGHT + utils.center_text('cmd2 transcript test', pad='=') + Style.RESET_ALL)
+        self.poutput(Style.BRIGHT + utils.center_text('cmd2 transcript test', pad='='))
         self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
                                                                              rl_type))
         self.poutput('cwd: {}'.format(os.getcwd()))
         self.poutput('cmd2 app: {}'.format(sys.argv[0]))
-        self.poutput(Style.BRIGHT + 'collected {} transcript{}\n'.format(num_transcripts, plural) + Style.RESET_ALL)
+        self.poutput(Style.BRIGHT + 'collected {} transcript{}'.format(num_transcripts, plural))
 
         self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -3749,7 +3759,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self._decolorized_write(sys.stderr, stream.read())
             finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            self.poutput(Style.BRIGHT + utils.center_text(finish_msg, pad='=') + Style.RESET_ALL, color=Fore.GREEN)
+            self.poutput(Style.BRIGHT + utils.center_text(finish_msg, pad='='), fg="green")
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()
@@ -3758,7 +3768,7 @@ class Cmd(cmd.Cmd):
             start = end_of_trace + file_offset
 
             # But print the transcript file name and line number followed by what was expected and what was observed
-            self.perror(error_str[start:], traceback_war=False)
+            self.pexcept(error_str[start:], traceback_war=False)
 
             # Return a failure error code to support automated transcript-based testing
             self.exit_code = -1
@@ -4048,7 +4058,7 @@ class Cmd(cmd.Cmd):
 
             # Print the intro, if there is one, right after the preloop
             if self.intro is not None:
-                self.poutput(str(self.intro) + "\n")
+                self.poutput(self.intro)
 
             # And then call _cmdloop() to enter the main loop
             self._cmdloop()

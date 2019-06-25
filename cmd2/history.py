@@ -16,8 +16,8 @@ from .parsing import Statement
 @attr.s(frozen=True)
 class HistoryItem():
     """Class used to represent one command in the History list"""
-    _listformat = ' {:>4}  {}\n'
-    _ex_listformat = ' {:>4}x {}\n'
+    _listformat = ' {:>4}  {}'
+    _ex_listformat = ' {:>4}x {}'
 
     statement = attr.ib(default=None, validator=attr.validators.instance_of(Statement))
     idx = attr.ib(default=None, validator=attr.validators.instance_of(int))
