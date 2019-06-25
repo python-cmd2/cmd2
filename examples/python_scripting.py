@@ -56,7 +56,7 @@ class CmdLineApp(cmd2.Cmd):
         """
         # Expect 1 argument, the directory to change to
         if not arglist or len(arglist) != 1:
-            self.pexcept("cd requires exactly 1 argument:", traceback_war=False)
+            self.perror("cd requires exactly 1 argument:")
             self.do_help('cd')
             self.last_result = cmd2.CommandResult('', 'Bad arguments')
             return
@@ -83,7 +83,7 @@ class CmdLineApp(cmd2.Cmd):
                 data = path
 
         if err:
-            self.pexcept(err, traceback_war=False)
+            self.perror(err)
         self.last_result = cmd2.CommandResult(out, err, data)
 
     # Enable tab completion for cd command
@@ -98,7 +98,7 @@ class CmdLineApp(cmd2.Cmd):
         """List contents of current directory."""
         # No arguments for this command
         if unknown:
-            self.pexcept("dir does not take any positional arguments:", traceback_war=False)
+            self.perror("dir does not take any positional arguments:")
             self.do_help('dir')
             self.last_result = cmd2.CommandResult('', 'Bad arguments')
             return

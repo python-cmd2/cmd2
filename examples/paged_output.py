@@ -14,15 +14,15 @@ class PagedOutput(cmd2.Cmd):
     def __init__(self):
         super().__init__()
 
-    def page_file(self, file_path: str, chop: bool=False):
+    def page_file(self, file_path: str, chop: bool = False):
         """Helper method to prevent having too much duplicated code."""
         filename = os.path.expanduser(file_path)
         try:
             with open(filename, 'r') as f:
                 text = f.read()
             self.ppaged(text, chop=chop)
-        except FileNotFoundError:
-            self.pexcept('ERROR: file {!r} not found'.format(filename), traceback_war=False)
+        except OSError as ex:
+            self.pexcept('Error reading {!r}: {}'.format(filename, ex))
 
     @cmd2.with_argument_list
     def do_page_wrap(self, args: List[str]):
@@ -31,7 +31,7 @@ class PagedOutput(cmd2.Cmd):
         Usage: page_wrap <file_path>
         """
         if not args:
-            self.pexcept('page_wrap requires a path to a file as an argument', traceback_war=False)
+            self.perror('page_wrap requires a path to a file as an argument')
             return
         self.page_file(args[0], chop=False)
 
@@ -46,7 +46,7 @@ class PagedOutput(cmd2.Cmd):
         Usage: page_chop <file_path>
         """
         if not args:
-            self.pexcept('page_truncate requires a path to a file as an argument', traceback_war=False)
+            self.perror('page_truncate requires a path to a file as an argument')
             return
         self.page_file(args[0], chop=True)
 
