@@ -1462,7 +1462,7 @@ def test_poutput_color_always(outsim_app):
     outsim_app.colors = 'Always'
     outsim_app.poutput(msg, fg='cyan')
     out = outsim_app.stdout.getvalue()
-    expected = Fore.CYAN + msg + Style.RESET_ALL + '\n'
+    expected = Fore.CYAN + msg + Fore.RESET + '\n'
     assert out == expected
 
 def test_poutput_color_never(outsim_app):
