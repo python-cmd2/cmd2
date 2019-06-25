@@ -36,12 +36,11 @@ def ansi_safe_wcswidth(text: str) -> int:
     return wcswidth(strip_ansi(text))
 
 
-def style_message(msg: Any, end: str = '\n', fg: str = '', bg: str = '') -> str:
+def style_message(msg: Any, *, fg: str = '', bg: str = '') -> str:
     """
     Styles a message
 
     :param msg: Any object compatible with str.format()
-    :param end: (optional) Ending character similar to python's print()
     :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
     :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
 
@@ -63,7 +62,6 @@ def style_message(msg: Any, end: str = '\n', fg: str = '', bg: str = '') -> str:
         values.append(constants.FG_COLORS['reset'])
     if bg:
         values.append(constants.BG_COLORS['reset'])
-    values.append(end)
     return "".join(values)
 
 

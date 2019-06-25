@@ -601,7 +601,7 @@ class Cmd(cmd.Cmd):
         """
         if msg is not None and msg != '':
             try:
-                final_msg = utils.style_message(msg, end=end, fg=fg, bg=bg)
+                final_msg = utils.style_message(msg, fg=fg, bg=bg) + end
                 self._decolorized_write(self.stdout, final_msg)
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another
@@ -621,7 +621,7 @@ class Cmd(cmd.Cmd):
         :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
         """
         if msg is not None and msg != '':
-            err_msg = utils.style_message(msg, end=end, fg=fg, bg=bg)
+            err_msg = utils.style_message(msg, fg=fg, bg=bg) + end
             self._decolorized_write(sys.stderr, err_msg)
 
     def pexcept(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '') -> None:
@@ -641,12 +641,12 @@ class Cmd(cmd.Cmd):
         else:
             err_msg = msg
 
-        err_msg = utils.style_message(err_msg, end=end, fg=fg, bg=bg)
+        err_msg = utils.style_message(err_msg, fg=fg, bg=bg) + end
         self._decolorized_write(sys.stderr, err_msg)
 
         if not self.debug:
             warning = "To enable full traceback, run the following command:  'set debug true'"
-            warning = utils.style_message(warning, fg="lightyellow")
+            warning = utils.style_message(warning, fg="lightyellow") + end
             self._decolorized_write(sys.stderr, warning)
 
     def pfeedback(self, msg: str) -> None:
