@@ -588,13 +588,13 @@ class Cmd(cmd.Cmd):
         fileobj.write(msg)
 
     def poutput(self, msg: Any, end: str = '\n', fg: str = '', bg: str = '') -> None:
-        """Smarter self.stdout.write(); color aware and adds newline of not present.
+        """Smarter self.stdout.write(); color aware and adds newline by default
 
         Also handles BrokenPipeError exceptions for when a commands's output has
         been piped to another process and that process terminates before the
         cmd2 command is finished executing.
 
-        :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
+        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: (optional) string appended after the end of the message, default a newline
         :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
         :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
@@ -613,9 +613,9 @@ class Cmd(cmd.Cmd):
                     sys.stderr.write(self.broken_pipe_warning)
 
     def perror(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '') -> None:
-        """ Print error message to sys.stderr
+        """Smarter sys.stderr.write(); color aware and adds newline by default
 
-        :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
+        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: (optional) string appended after the end of the message, default a newline
         :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
         :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
@@ -624,10 +624,10 @@ class Cmd(cmd.Cmd):
             err_msg = utils.style_message(msg, end=end, fg=fg, bg=bg)
             self._decolorized_write(sys.stderr, err_msg)
 
-    def pexcept(self, err: Any, end: str = '\n', fg: str = 'lightred', bg: str = '', traceback_war: bool = True) -> None:
-        """ Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
+    def pexcept(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '', traceback_war: bool = True) -> None:
+        """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
 
-        :param msg: message or Exception to print to current stdout
+        :param msg: message or Exception to print
         :param end: (optional) string appended after the end of the message, default a newline
         :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
         :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
@@ -637,10 +637,10 @@ class Cmd(cmd.Cmd):
             import traceback
             traceback.print_exc()
 
-        if isinstance(err, Exception):
-            err_msg = "EXCEPTION of type '{}' occurred with message: '{}'".format(type(err).__name__, err)
+        if isinstance(msg, Exception):
+            err_msg = "EXCEPTION of type '{}' occurred with message: '{}'".format(type(msg).__name__, msg)
         else:
-            err_msg = err
+            err_msg = msg
 
         err_msg = utils.style_message(err_msg, end=end, fg=fg, bg=bg)
         self._decolorized_write(sys.stderr, err_msg)
@@ -1686,7 +1686,7 @@ class Cmd(cmd.Cmd):
         except EmptyStatement:
             return self._run_cmdfinalization_hooks(stop, None)
         except ValueError as ex:
-            # If shlex.split failed on syntax, let user know whats going on
+            # If shlex.split failed on syntax, let user know what's going on
             self.pexcept("Invalid syntax: {}".format(ex), traceback_war=False)
             return stop
 
@@ -3247,11 +3247,9 @@ class Cmd(cmd.Cmd):
             # Restore command line arguments to original state
             sys.argv = orig_args
             if args.__statement__.command == "pyscript":
-                self.pexcept(
-                    "pyscript has been renamed and will be removed in the next release, "
-                    "please use run_pyscript instead\n",
-                    fg="lightyellow", traceback_war=False
-                )
+                self.perror("pyscript has been renamed and will be removed in the next release, "
+                            "please use run_pyscript instead\n",
+                            fg="lightyellow")
 
         return py_return
 
@@ -3408,9 +3406,10 @@ class Cmd(cmd.Cmd):
                         else:
                             fobj.write('{}\n'.format(item.raw))
                 plural = 's' if len(history) > 1 else ''
-                self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
-            except Exception as e:
+            except OSError as e:
                 self.pexcept('Saving {!r} - {}'.format(args.output_file, e), traceback_war=False)
+            else:
+                self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
         elif args.transcript:
             self._generate_transcript(history, args.transcript)
         else:
@@ -3677,11 +3676,9 @@ class Cmd(cmd.Cmd):
                         self._script_dir.pop()
         finally:
             if args.__statement__.command == "load":
-                self.pexcept(
-                    "load has been renamed and will be removed in the next release, "
-                    "please use run_script instead\n",
-                    fg="lightyellow", traceback_war=False
-                )
+                self.perror("load has been renamed and will be removed in the next release, "
+                            "please use run_script instead\n",
+                            fg="lightyellow")
 
     # load has been deprecated
     do_load = do_run_script
