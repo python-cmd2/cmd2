@@ -46,7 +46,7 @@ class HistoryItem():
         if verbose:
             ret_str = self._listformat.format(self.idx, self.raw.rstrip())
             if self.raw != self.expanded.rstrip():
-                ret_str += self._ex_listformat.format(self.idx, self.expanded.rstrip())
+                ret_str += '\n' + self._ex_listformat.format(self.idx, self.expanded.rstrip())
         else:
             if expanded:
                 ret_str = self.expanded.rstrip()
