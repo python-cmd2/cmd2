@@ -41,8 +41,8 @@ def style(text: Any, *, fg: str = '', bg: str = '') -> str:
     Applies style to text
 
     :param text: Any object compatible with str.format()
-    :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
-    :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
+    :param fg: Foreground color. Accepts color names like 'red' or 'blue'
+    :param bg: Background color. Accepts color names like 'red' or 'blue'
 
     """
     values = []
@@ -411,7 +411,7 @@ def center_text(msg: str, *, pad: str = ' ') -> str:
     """Centers text horizontally for display within the current terminal, optionally padding both sides.
 
     :param msg: message to display in the center
-    :param pad: (optional) if provided, the first character will be used to pad both sides of the message
+    :param pad: if provided, the first character will be used to pad both sides of the message
     :return: centered message, optionally padded on both sides with pad_char
     """
     term_width = shutil.get_terminal_size().columns

@@ -337,20 +337,20 @@ class Cmd(cmd.Cmd):
                  terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None) -> None:
         """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
 
-        :param completekey: (optional) readline name of a completion key, default to Tab
-        :param stdin: (optional) alternate input file object, if not specified, sys.stdin is used
-        :param stdout: (optional) alternate output file object, if not specified, sys.stdout is used
-        :param persistent_history_file: (optional) file path to load a persistent cmd2 command history from
-        :param persistent_history_length: (optional) max number of history items to write to the persistent history file
-        :param startup_script: (optional) file path to a script to execute at startup
-        :param use_ipython: (optional) should the "ipy" command be included for an embedded IPython shell
-        :param allow_cli_args: (optional) if True, then cmd2 will process command line arguments as either
-                                          commands to be run or, if -t is specified, transcript files to run.
-                                          This should be set to False if your application parses its own arguments.
-        :param transcript_files: (optional) allows running transcript tests when allow_cli_args is False
-        :param allow_redirection: (optional) should output redirection and pipes be allowed
-        :param multiline_commands: (optional) list of commands allowed to accept multi-line input
-        :param shortcuts: (optional) dictionary containing shortcuts for commands
+        :param completekey: readline name of a completion key, default to Tab
+        :param stdin: alternate input file object, if not specified, sys.stdin is used
+        :param stdout: alternate output file object, if not specified, sys.stdout is used
+        :param persistent_history_file: file path to load a persistent cmd2 command history from
+        :param persistent_history_length: max number of history items to write to the persistent history file
+        :param startup_script: file path to a script to execute at startup
+        :param use_ipython: should the "ipy" command be included for an embedded IPython shell
+        :param allow_cli_args: if True, then cmd2 will process command line arguments as either
+                               commands to be run or, if -t is specified, transcript files to run.
+                               This should be set to False if your application parses its own arguments.
+        :param transcript_files: allow running transcript tests when allow_cli_args is False
+        :param allow_redirection: should output redirection and pipes be allowed
+        :param multiline_commands: list of commands allowed to accept multi-line input
+        :param shortcuts: dictionary containing shortcuts for commands
         """
         # If use_ipython is False, make sure the do_ipy() method doesn't exit
         if not use_ipython:
@@ -595,7 +595,7 @@ class Cmd(cmd.Cmd):
         cmd2 command is finished executing.
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
-        :param end: (optional) string appended after the end of the message, default a newline
+        :param end: string appended after the end of the message, default a newline
         """
         try:
             self._decolorized_write(self.stdout, "{}{}".format(msg, end))
@@ -612,9 +612,9 @@ class Cmd(cmd.Cmd):
         """Print message to sys.stderr
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
-        :param end: (optional) string appended after the end of the message, default a newline
-        :param add_color: (optional) If True, then color will be added to the message text. Set to False in cases where
-                                     the message text already has the desired style. Defaults to True.
+        :param end: string appended after the end of the message, default a newline
+        :param add_color: If True, then color will be added to the message text. Set to False in cases where
+                          the message text already has the desired style. Defaults to True.
         """
         if add_color:
             final_msg = utils.style(msg, fg='lightred')
@@ -626,9 +626,9 @@ class Cmd(cmd.Cmd):
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
 
         :param msg: message or Exception to print
-        :param end: (optional) string appended after the end of the message, default a newline
-        :param add_color: (optional) If True, then color will be added to the message text. Set to False in cases where
-                                     the message text already has the desired style. Defaults to True.
+        :param end: string appended after the end of the message, default a newline
+        :param add_color: If True, then color will be added to the message text. Set to False in cases where
+                          the message text already has the desired style. Defaults to True.
         """
         if self.debug and sys.exc_info() != (None, None, None):
             import traceback

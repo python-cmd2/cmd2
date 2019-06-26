@@ -153,7 +153,7 @@ class History(list):
         """Return an index or slice of the History list,
 
         :param span: string containing an index or a slice
-        :param include_persisted: (optional) if True, then retrieve full results including from persisted history
+        :param include_persisted: if True, then retrieve full results including from persisted history
         :return: a list of HistoryItems
 
         This method can accommodate input in any of these forms:
@@ -227,7 +227,7 @@ class History(list):
         """Find history items which contain a given string
 
         :param search: the string to search for
-        :param include_persisted: (optional) if True, then search full history including persisted history
+        :param include_persisted: if True, then search full history including persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
         def isin(history_item):
@@ -244,7 +244,7 @@ class History(list):
         """Find history items which match a given regular expression
 
         :param regex: the regular expression to search for.
-        :param include_persisted: (optional) if True, then search full history including persisted history
+        :param include_persisted: if True, then search full history including persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
         regex = regex.strip()

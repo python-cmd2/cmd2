@@ -257,11 +257,11 @@ class StatementParser:
         * multiline commands
         * shortcuts
 
-        :param allow_redirection: (optional) should redirection and pipes be allowed?
-        :param terminators: (optional) iterable containing strings which should terminate multiline commands
-        :param multiline_commands: (optional) iterable containing the names of commands that accept multiline input
-        :param aliases: (optional) dictionary contaiing aliases
-        :param shortcuts (optional) an iterable of tuples with each tuple containing the shortcut and the expansion
+        :param allow_redirection: should redirection and pipes be allowed?
+        :param terminators: iterable containing strings which should terminate multiline commands
+        :param multiline_commands: iterable containing the names of commands that accept multiline input
+        :param aliases: dictionary containing aliases
+        :param shortcuts: an iterable of tuples with each tuple containing the shortcut and the expansion
         """
         self.allow_redirection = allow_redirection
         if terminators is None:
