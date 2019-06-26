@@ -21,7 +21,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-from cmd2 import clipboard, constants, utils
+from cmd2 import ansi, clipboard, constants, utils
 from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
 def CreateOutsimApp():
@@ -1460,7 +1460,7 @@ def test_poutput_none(outsim_app):
 def test_poutput_color_always(outsim_app):
     msg = 'Hello World'
     outsim_app.colors = 'Always'
-    outsim_app.poutput(utils.style(msg, fg='cyan'))
+    outsim_app.poutput(ansi.style(msg, fg='cyan'))
     out = outsim_app.stdout.getvalue()
     expected = Fore.CYAN + msg + Fore.RESET + '\n'
     assert out == expected
@@ -1468,7 +1468,7 @@ def test_poutput_color_always(outsim_app):
 def test_poutput_color_never(outsim_app):
     msg = 'Hello World'
     outsim_app.colors = 'Never'
-    outsim_app.poutput(utils.style(msg, fg='cyan'))
+    outsim_app.poutput(ansi.style(msg, fg='cyan'))
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
     assert out == expected
@@ -1767,7 +1767,7 @@ def test_ppaged(outsim_app):
 def test_ppaged_strips_color_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
-    outsim_app.colors = cmd2.constants.COLORS_TERMINAL
+    outsim_app.colors = cmd2.constants.ANSI_TERMINAL
     outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
@@ -1776,7 +1776,7 @@ def test_ppaged_strips_color_when_redirecting(outsim_app):
 def test_ppaged_strips_color_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
-    outsim_app.colors = cmd2.constants.COLORS_ALWAYS
+    outsim_app.colors = cmd2.constants.ANSI_ALWAYS
     outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
@@ -1912,11 +1912,11 @@ class ColorsApp(cmd2.Cmd):
 
 def test_colors_default():
     app = ColorsApp()
-    assert app.colors == cmd2.constants.COLORS_TERMINAL
+    assert app.colors == cmd2.constants.ANSI_TERMINAL
 
 def test_colors_pouterr_always_tty(mocker, capsys):
     app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_ALWAYS
+    app.colors = cmd2.constants.ANSI_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -1938,7 +1938,7 @@ def test_colors_pouterr_always_tty(mocker, capsys):
 
 def test_colors_pouterr_always_notty(mocker, capsys):
     app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_ALWAYS
+    app.colors = cmd2.constants.ANSI_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -1960,7 +1960,7 @@ def test_colors_pouterr_always_notty(mocker, capsys):
 
 def test_colors_terminal_tty(mocker, capsys):
     app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_TERMINAL
+    app.colors = cmd2.constants.ANSI_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -1981,7 +1981,7 @@ def test_colors_terminal_tty(mocker, capsys):
 
 def test_colors_terminal_notty(mocker, capsys):
     app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_TERMINAL
+    app.colors = cmd2.constants.ANSI_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -1995,7 +1995,7 @@ def test_colors_terminal_notty(mocker, capsys):
 
 def test_colors_never_tty(mocker, capsys):
     app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_NEVER
+    app.colors = cmd2.constants.ANSI_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2009,7 +2009,7 @@ def test_colors_never_tty(mocker, capsys):
 
 def test_colors_never_notty(mocker, capsys):
     app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_NEVER
+    app.colors = cmd2.constants.ANSI_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 

@@ -45,6 +45,7 @@ from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Un
 import colorama
 from colorama import Fore
 
+from . import ansi
 from . import constants
 from . import plugin
 from . import utils
@@ -374,7 +375,7 @@ class Cmd(cmd.Cmd):
         self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
 
         # Attributes which ARE dynamically settable at runtime
-        self.colors = constants.COLORS_TERMINAL
+        self.colors = constants.ANSI_TERMINAL
         self.continuation_prompt = '> '
         self.debug = False
         self.echo = False
@@ -559,7 +560,7 @@ class Cmd(cmd.Cmd):
 
         :return: prompt stripped of any ANSI escape codes
         """
-        return utils.strip_ansi(self.prompt)
+        return ansi.strip_ansi(self.prompt)
 
     @property
     def aliases(self) -> Dict[str, str]:
@@ -579,12 +580,11 @@ class Cmd(cmd.Cmd):
     def _decolorized_write(self, fileobj: IO, msg: str) -> None:
         """Write a string to a fileobject, stripping ANSI escape sequences if necessary
 
-        Honor the current colors setting, which requires us to check whether the
-        fileobject is a tty.
+        Honor the current colors setting, which requires us to check whether the fileobject is a tty.
         """
-        if self.colors.lower() == constants.COLORS_NEVER.lower() or \
-                (self.colors.lower() == constants.COLORS_TERMINAL.lower() and not fileobj.isatty()):
-            msg = utils.strip_ansi(msg)
+        if self.colors.lower() == constants.ANSI_NEVER.lower() or \
+                (self.colors.lower() == constants.ANSI_TERMINAL.lower() and not fileobj.isatty()):
+            msg = ansi.strip_ansi(msg)
         fileobj.write(msg)
 
     def poutput(self, msg: Any, *, end: str = '\n') -> None:
@@ -617,7 +617,7 @@ class Cmd(cmd.Cmd):
                           the message text already has the desired style. Defaults to True.
         """
         if add_color:
-            final_msg = utils.style(msg, fg='lightred')
+            final_msg = ansi.style(msg, fg='lightred')
         else:
             final_msg = "{}".format(msg)
         self._decolorized_write(sys.stderr, final_msg + end)
@@ -640,11 +640,11 @@ class Cmd(cmd.Cmd):
             final_msg = "{}".format(msg)
 
         if add_color:
-            final_msg = utils.style(final_msg, fg='lightred')
+            final_msg = ansi.style(final_msg, fg='lightred')
 
         if not self.debug:
             warning = "\nTo enable full traceback, run the following command:  'set debug true'"
-            final_msg += utils.style(warning, fg="lightyellow")
+            final_msg += ansi.style(warning, fg="lightyellow")
 
         # Set add_color to False since style has already been applied
         self.perror(final_msg, end=end, add_color=False)
@@ -692,8 +692,8 @@ class Cmd(cmd.Cmd):
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self._redirecting and not self._in_py and not self._script_dir:
-                    if self.colors.lower() == constants.COLORS_NEVER.lower():
-                        msg_str = utils.strip_ansi(msg_str)
+                    if self.colors.lower() == constants.ANSI_NEVER.lower():
+                        msg_str = ansi.strip_ansi(msg_str)
 
                     pager = self.pager
                     if chop:
@@ -1278,7 +1278,7 @@ class Cmd(cmd.Cmd):
                 longest_match_length = 0
 
                 for cur_match in matches_to_display:
-                    cur_length = utils.ansi_safe_wcswidth(cur_match)
+                    cur_length = ansi.ansi_safe_wcswidth(cur_match)
                     if cur_length > longest_match_length:
                         longest_match_length = cur_length
             else:
@@ -2750,7 +2750,7 @@ class Cmd(cmd.Cmd):
                 widest = 0
                 # measure the commands
                 for command in cmds:
-                    width = utils.ansi_safe_wcswidth(command)
+                    width = ansi.ansi_safe_wcswidth(command)
                     if width > widest:
                         widest = width
                 # add a 4-space pad
@@ -3247,7 +3247,7 @@ class Cmd(cmd.Cmd):
             if args.__statement__.command == "pyscript":
                 warning = ("pyscript has been renamed and will be removed in the next release, "
                            "please use run_pyscript instead\n")
-                self.perror(utils.style(warning, fg="lightyellow"))
+                self.perror(ansi.style(warning, fg="lightyellow"))
 
         return py_return
 
@@ -3556,7 +3556,7 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(utils.style(warning, fg="lightyellow"))
+            self.perror(ansi.style(warning, fg="lightyellow"))
 
         # finally, we can write the transcript out to the file
         try:
@@ -3676,7 +3676,7 @@ class Cmd(cmd.Cmd):
             if args.__statement__.command == "load":
                 warning = ("load has been renamed and will be removed in the next release, "
                            "please use run_script instead\n")
-                self.perror(utils.style(warning, fg="lightyellow"))
+                self.perror(ansi.style(warning, fg="lightyellow"))
 
     # load has been deprecated
     do_load = do_run_script
@@ -3703,7 +3703,7 @@ class Cmd(cmd.Cmd):
         if args.__statement__.command == "_relative_load":
             warning = ("_relative_load has been renamed and will be removed in the next release, "
                        "please use _relative_run_script instead\n")
-            self.perror(utils.style(warning, fg="lightyellow"))
+            self.perror(ansi.style(warning, fg="lightyellow"))
 
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
@@ -3724,7 +3724,6 @@ class Cmd(cmd.Cmd):
         import time
         import unittest
         import cmd2
-        from colorama import Style
         from .transcript import Cmd2TestCase
 
         class TestMyAppCase(Cmd2TestCase):
@@ -3740,12 +3739,12 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(Style.BRIGHT + utils.center_text('cmd2 transcript test', pad='=') + Style.NORMAL)
+        self.poutput(ansi.style(utils.center_text('cmd2 transcript test', pad='='), bold=True))
         self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
                                                                              rl_type))
         self.poutput('cwd: {}'.format(os.getcwd()))
         self.poutput('cmd2 app: {}'.format(sys.argv[0]))
-        self.poutput(Style.BRIGHT + 'collected {} transcript{}'.format(num_transcripts, plural) + Style.NORMAL)
+        self.poutput(ansi.style('collected {} transcript{}'.format(num_transcripts, plural), bold=True))
 
         self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -3758,8 +3757,8 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self._decolorized_write(sys.stderr, stream.read())
             finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            finish_msg = utils.style(utils.center_text(finish_msg, pad='='), fg="green")
-            self.poutput(Style.BRIGHT + finish_msg + Style.NORMAL)
+            finish_msg = ansi.style(utils.center_text(finish_msg, pad='='), fg="green", bold=True)
+            self.poutput(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()
@@ -3827,14 +3826,14 @@ class Cmd(cmd.Cmd):
                 # That will be included in the input lines calculations since that is where the cursor is.
                 num_prompt_terminal_lines = 0
                 for line in prompt_lines[:-1]:
-                    line_width = utils.ansi_safe_wcswidth(line)
+                    line_width = ansi.ansi_safe_wcswidth(line)
                     num_prompt_terminal_lines += int(line_width / terminal_size.columns) + 1
 
                 # Now calculate how many terminal lines are take up by the input
                 last_prompt_line = prompt_lines[-1]
-                last_prompt_line_width = utils.ansi_safe_wcswidth(last_prompt_line)
+                last_prompt_line_width = ansi.ansi_safe_wcswidth(last_prompt_line)
 
-                input_width = last_prompt_line_width + utils.ansi_safe_wcswidth(readline.get_line_buffer())
+                input_width = last_prompt_line_width + ansi.ansi_safe_wcswidth(readline.get_line_buffer())
 
                 num_input_terminal_lines = int(input_width / terminal_size.columns) + 1
 

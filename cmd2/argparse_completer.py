@@ -68,8 +68,8 @@ from typing import List, Dict, Tuple, Callable, Union
 
 from colorama import Fore
 
+from .ansi import ansi_safe_wcswidth
 from .rl_utils import rl_force_redisplay
-from .utils import ansi_safe_wcswidth
 
 # attribute that can optionally added to an argparse argument (called an Action) to
 # define the completion choices for the argument. You may provide a Collection or a Function.
