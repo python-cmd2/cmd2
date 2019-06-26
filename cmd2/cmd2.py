@@ -3738,13 +3738,12 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(ansi.style(utils.center_text('cmd2 transcript test', pad='='), ansi.TextStyle(bold=True)))
+        self.poutput(ansi.style(utils.center_text('cmd2 transcript test', pad='='), bold=True))
         self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
                                                                              rl_type))
         self.poutput('cwd: {}'.format(os.getcwd()))
         self.poutput('cmd2 app: {}'.format(sys.argv[0]))
-        self.poutput(ansi.style('collected {} transcript{}'.format(num_transcripts, plural),
-                                ansi.TextStyle(bold=True)))
+        self.poutput(ansi.style('collected {} transcript{}'.format(num_transcripts, plural), bold=True))
 
         self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -3757,7 +3756,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self._decolorized_write(sys.stderr, stream.read())
             finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            finish_msg = ansi.style(utils.center_text(finish_msg, pad='='), ansi.TextStyle(fg="green", bold=True))
+            finish_msg = ansi.style(utils.center_text(finish_msg, pad='='), ansi.SuccessStyle)
             self.poutput(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users

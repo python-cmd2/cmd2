@@ -29,18 +29,18 @@ def test_ansi_safe_wcswidth():
 def test_style():
     base_str = HELLO_WORLD
     ansi_str = Fore.BLUE + Back.GREEN + base_str + Fore.RESET + Back.RESET
-    assert ansi.style(base_str, ansi.TextStyle(fg='blue', bg='green')) == ansi_str
+    assert ansi.style(base_str, fg='blue', bg='green') == ansi_str
 
 def test_style_color_not_exist():
     base_str = HELLO_WORLD
     try:
-        ansi.style(base_str, ansi.TextStyle(fg='fake', bg='green'))
+        ansi.style(base_str, fg='fake', bg='green')
         assert False
     except ValueError:
         assert True
 
     try:
-        ansi.style(base_str, ansi.TextStyle(fg='blue', bg='fake'))
+        ansi.style(base_str, fg='blue', bg='fake')
         assert False
     except ValueError:
         assert True

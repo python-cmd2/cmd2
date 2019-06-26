@@ -1,7 +1,7 @@
 # coding=utf-8
 """Support for ANSI escape codes which are used for things like applying style to text"""
 import re
-from typing import Any
+from typing import Any, Optional
 
 import colorama
 from colorama import Fore, Back, Style
@@ -95,17 +95,32 @@ class TextStyle:
 
 
 # Default styles. These can be altered to suit an application's needs.
-SuccessStyle = TextStyle(fg='green')
+SuccessStyle = TextStyle(fg='green', bold=True)
 WarningStyle = TextStyle(fg='lightyellow')
 ErrorStyle = TextStyle(fg='lightred')
 
 
-def style(text: Any, text_style: TextStyle) -> str:
+def style(text: Any, text_style: Optional[TextStyle] = None, *,
+          fg: Optional[str] = None, bg: Optional[str] = None,
+          bold: Optional[bool] = None, underline: Optional[bool] = None) -> str:
     """
     Applies a style to text
 
     :param text: Any object compatible with str.format()
-    :param text_style: the style to be applied
+    :param text_style: a TextStyle object. Defaults to None.
+
+    The following are keyword-only parameters which allow calling style without creating a TextStyle object
+        style(text, fg='blue')
+
+    They can also be used to override a setting in a provided TextStyle
+        style(text, ErrorStyle, underline=True)
+
+    :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'lightred'). Defaults to None.
+    :param bg: background color. Expects color names in BG_COLORS (e.g. 'black'). Defaults to None.
+    :param bold: apply the bold style if True. Defaults to None.
+    :param underline: apply the underline style if True. Defaults to None.
+
+    :return: the stylized string
     """
     # List of strings that add style
     additions = []
@@ -116,26 +131,38 @@ def style(text: Any, text_style: TextStyle) -> str:
     # Convert the text object into a string if it isn't already one
     text = "{}".format(text)
 
-    if text_style.fg:
+    # Figure out what parameters to use
+    if fg is None and text_style is not None:
+        fg = text_style.fg
+    if bg is None and text_style is not None:
+        bg = text_style.bg
+    if bold is None and text_style is not None:
+        bold = text_style.bold
+    if underline is None and text_style is not None:
+        underline = text_style.underline
+
+    # Process the style settings
+    if fg:
         try:
-            additions.append(FG_COLORS[text_style.fg.lower()])
+            additions.append(FG_COLORS[fg.lower()])
             removals.append(FG_COLORS['reset'])
         except KeyError:
-            raise ValueError('Color {} does not exist.'.format(text_style.fg))
+            raise ValueError('Color {} does not exist.'.format(fg))
 
-    if text_style.bg:
+    if bg:
         try:
-            additions.append(BG_COLORS[text_style.bg.lower()])
+            additions.append(BG_COLORS[bg.lower()])
             removals.append(BG_COLORS['reset'])
         except KeyError:
-            raise ValueError('Color {} does not exist.'.format(text_style.bg))
+            raise ValueError('Color {} does not exist.'.format(bg))
 
-    if text_style.bold:
+    if bold:
         additions.append(Style.BRIGHT)
         removals.append(Style.NORMAL)
 
-    if text_style.underline:
+    if underline:
         additions.append(UNDERLINE_ENABLE)
         removals.append(UNDERLINE_DISABLE)
 
+    # Combine the ANSI escape strings with the text
     return "".join(additions) + text + "".join(removals)

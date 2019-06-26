@@ -1460,7 +1460,7 @@ def test_poutput_none(outsim_app):
 def test_poutput_color_always(outsim_app):
     msg = 'Hello World'
     outsim_app.colors = 'Always'
-    outsim_app.poutput(ansi.style(msg, ansi.TextStyle(fg='cyan')))
+    outsim_app.poutput(ansi.style(msg, fg='cyan'))
     out = outsim_app.stdout.getvalue()
     expected = Fore.CYAN + msg + Fore.RESET + '\n'
     assert out == expected
@@ -1468,7 +1468,7 @@ def test_poutput_color_always(outsim_app):
 def test_poutput_color_never(outsim_app):
     msg = 'Hello World'
     outsim_app.colors = 'Never'
-    outsim_app.poutput(ansi.style(msg, ansi.TextStyle(fg='cyan')))
+    outsim_app.poutput(ansi.style(msg, fg='cyan'))
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
     assert out == expected
