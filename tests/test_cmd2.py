@@ -354,11 +354,11 @@ def test_run_script_nested_run_scripts(base_app, request):
     expected = """
 %s
 _relative_run_script precmds.txt
-set colors Always
+set allow_ansi Always
 help
 shortcuts
 _relative_run_script postcmds.txt
-set colors Never""" % initial_run
+set allow_ansi Never""" % initial_run
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
@@ -373,11 +373,11 @@ def test_runcmds_plus_hooks(base_app, request):
                                  'run_script ' + postfilepath])
     expected = """
 run_script %s
-set colors Always
+set allow_ansi Always
 help
 shortcuts
 run_script %s
-set colors Never""" % (prefilepath, postfilepath)
+set allow_ansi Never""" % (prefilepath, postfilepath)
 
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
