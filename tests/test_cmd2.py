@@ -1356,7 +1356,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     app, out = piped_rawinput_true(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1].startswith('colors:')
+    assert out[1].startswith('allow_ansi:')
 
 # using the decorator puts the original input function back when this unit test returns
 @mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
@@ -1364,7 +1364,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
     firstline = out.splitlines()[0]
-    assert firstline.startswith('colors:')
+    assert firstline.startswith('allow_ansi:')
     assert not '{}{}'.format(app.prompt, command) in out
 
 # the next helper function and two tests check for piped
@@ -1383,13 +1383,13 @@ def test_pseudo_raw_input_piped_rawinput_false_echo_true(capsys):
     app, out = piped_rawinput_false(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1].startswith('colors:')
+    assert out[1].startswith('allow_ansi:')
 
 def test_pseudo_raw_input_piped_rawinput_false_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_false(capsys, False, command)
     firstline = out.splitlines()[0]
-    assert firstline.startswith('colors:')
+    assert firstline.startswith('allow_ansi:')
     assert not '{}{}'.format(app.prompt, command) in out
 
 
@@ -1459,7 +1459,7 @@ def test_poutput_none(outsim_app):
 
 def test_poutput_color_always(outsim_app):
     msg = 'Hello World'
-    outsim_app.colors = 'Always'
+    outsim_app.allow_ansi = 'Always'
     outsim_app.poutput(ansi.style(msg, fg='cyan'))
     out = outsim_app.stdout.getvalue()
     expected = Fore.CYAN + msg + Fore.RESET + '\n'
@@ -1467,7 +1467,7 @@ def test_poutput_color_always(outsim_app):
 
 def test_poutput_color_never(outsim_app):
     msg = 'Hello World'
-    outsim_app.colors = 'Never'
+    outsim_app.allow_ansi = 'Never'
     outsim_app.poutput(ansi.style(msg, fg='cyan'))
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
@@ -1764,19 +1764,19 @@ def test_ppaged(outsim_app):
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
 
-def test_ppaged_strips_color_when_redirecting(outsim_app):
+def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
-    outsim_app.colors = cmd2.constants.ANSI_TERMINAL
+    outsim_app.allow_ansi = cmd2.constants.ANSI_TERMINAL
     outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
 
-def test_ppaged_strips_color_when_redirecting_if_always(outsim_app):
+def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
-    outsim_app.colors = cmd2.constants.ANSI_ALWAYS
+    outsim_app.allow_ansi = cmd2.constants.ANSI_ALWAYS
     outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
@@ -1895,7 +1895,7 @@ def test_exit_code_nonzero(exit_code_repl):
     assert out == expected
 
 
-class ColorsApp(cmd2.Cmd):
+class AnsiApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -1910,13 +1910,13 @@ class ColorsApp(cmd2.Cmd):
         # perror uses colors by default
         self.perror(args)
 
-def test_colors_default():
-    app = ColorsApp()
-    assert app.colors == cmd2.constants.ANSI_TERMINAL
+def test_ansi_default():
+    app = AnsiApp()
+    assert app.allow_ansi == cmd2.constants.ANSI_TERMINAL
 
-def test_colors_pouterr_always_tty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.ANSI_ALWAYS
+def test_ansi_pouterr_always_tty(mocker, capsys):
+    app = AnsiApp()
+    app.allow_ansi = cmd2.constants.ANSI_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -1936,9 +1936,9 @@ def test_colors_pouterr_always_tty(mocker, capsys):
     assert len(err) > len('oopsie\n')
     assert 'oopsie' in err
 
-def test_colors_pouterr_always_notty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.ANSI_ALWAYS
+def test_ansi_pouterr_always_notty(mocker, capsys):
+    app = AnsiApp()
+    app.allow_ansi = cmd2.constants.ANSI_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -1958,9 +1958,9 @@ def test_colors_pouterr_always_notty(mocker, capsys):
     assert len(err) > len('oopsie\n')
     assert 'oopsie' in err
 
-def test_colors_terminal_tty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.ANSI_TERMINAL
+def test_ansi_terminal_tty(mocker, capsys):
+    app = AnsiApp()
+    app.allow_ansi = cmd2.constants.ANSI_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -1979,9 +1979,9 @@ def test_colors_terminal_tty(mocker, capsys):
     assert len(err) > len('oopsie\n')
     assert 'oopsie' in err
 
-def test_colors_terminal_notty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.ANSI_TERMINAL
+def test_ansi_terminal_notty(mocker, capsys):
+    app = AnsiApp()
+    app.allow_ansi = cmd2.constants.ANSI_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -1993,9 +1993,9 @@ def test_colors_terminal_notty(mocker, capsys):
     out, err = capsys.readouterr()
     assert out == err == 'oopsie\n'
 
-def test_colors_never_tty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.ANSI_NEVER
+def test_ansi_never_tty(mocker, capsys):
+    app = AnsiApp()
+    app.allow_ansi = cmd2.constants.ANSI_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2007,9 +2007,9 @@ def test_colors_never_tty(mocker, capsys):
     out, err = capsys.readouterr()
     assert out == err == 'oopsie\n'
 
-def test_colors_never_notty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.ANSI_NEVER
+def test_ansi_never_notty(mocker, capsys):
+    app = AnsiApp()
+    app.allow_ansi = cmd2.constants.ANSI_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 

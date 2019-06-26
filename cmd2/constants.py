@@ -17,7 +17,7 @@ LINE_FEED = '\n'
 
 DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'run_script', '@@': '_relative_run_script'}
 
-# Values for cmd2 setting that determines when to allow ANSI escape codes
+# Values for cmd2's allow_ansi setting
 ANSI_NEVER = 'Never'
 ANSI_TERMINAL = 'Terminal'
 ANSI_ALWAYS = 'Always'

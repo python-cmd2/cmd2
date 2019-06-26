@@ -374,7 +374,7 @@ class Cmd(cmd.Cmd):
         self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
 
         # Attributes which ARE dynamically settable at runtime
-        self.colors = constants.ANSI_TERMINAL
+        self.allow_ansi = constants.ANSI_TERMINAL
         self.continuation_prompt = '> '
         self.debug = False
         self.echo = False
@@ -385,7 +385,7 @@ class Cmd(cmd.Cmd):
         self.timing = False  # Prints elapsed time for each command
 
         # To make an attribute settable with the "do_set" command, add it to this ...
-        self.settable = {'colors': 'Allow colorized output (valid values: Terminal, Always, Never)',
+        self.settable = {'allow_ansi': 'Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)',
                          'continuation_prompt': 'On 2nd+ line of input',
                          'debug': 'Show full error stack on error',
                          'echo': 'Echo command issued into output',
@@ -581,8 +581,8 @@ class Cmd(cmd.Cmd):
 
         Honor the current colors setting, which requires us to check whether the fileobject is a tty.
         """
-        if self.colors.lower() == constants.ANSI_NEVER.lower() or \
-                (self.colors.lower() == constants.ANSI_TERMINAL.lower() and not fileobj.isatty()):
+        if self.allow_ansi.lower() == constants.ANSI_NEVER.lower() or \
+                (self.allow_ansi.lower() == constants.ANSI_TERMINAL.lower() and not fileobj.isatty()):
             msg = ansi.strip_ansi(msg)
         fileobj.write(msg)
 
@@ -691,7 +691,7 @@ class Cmd(cmd.Cmd):
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self._redirecting and not self._in_py and not self._script_dir:
-                    if self.colors.lower() == constants.ANSI_NEVER.lower():
+                    if self.allow_ansi.lower() == constants.ANSI_NEVER.lower():
                         msg_str = ansi.strip_ansi(msg_str)
 
                     pager = self.pager
