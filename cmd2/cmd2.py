@@ -3792,7 +3792,6 @@ class Cmd(cmd.Cmd):
             return
 
         import shutil
-        import colorama.ansi as ansi
         from colorama import Cursor
 
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
@@ -3854,10 +3853,10 @@ class Cmd(cmd.Cmd):
 
                 # Clear each line from the bottom up so that the cursor ends up on the first prompt line
                 total_lines = num_prompt_terminal_lines + num_input_terminal_lines
-                terminal_str += (ansi.clear_line() + Cursor.UP(1)) * (total_lines - 1)
+                terminal_str += (colorama.ansi.clear_line() + Cursor.UP(1)) * (total_lines - 1)
 
                 # Clear the first prompt line
-                terminal_str += ansi.clear_line()
+                terminal_str += colorama.ansi.clear_line()
 
                 # Move the cursor to the beginning of the first prompt line and print the alert
                 terminal_str += '\r' + alert_msg
@@ -3914,8 +3913,7 @@ class Cmd(cmd.Cmd):
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
             try:
-                import colorama.ansi as ansi
-                sys.stderr.write(ansi.set_title(title))
+                sys.stderr.write(colorama.ansi.set_title(title))
             except AttributeError:
                 # Debugging in Pycharm has issues with setting terminal title
                 pass

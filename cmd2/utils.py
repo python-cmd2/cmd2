@@ -12,6 +12,7 @@ import threading
 import unicodedata
 from typing import Any, Iterable, List, Optional, TextIO, Union
 
+from colorama import Style
 from wcwidth import wcswidth
 
 from . import constants
@@ -36,14 +37,15 @@ def ansi_safe_wcswidth(text: str) -> int:
     return wcswidth(strip_ansi(text))
 
 
-def style(text: Any, *, fg: str = '', bg: str = '') -> str:
+def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
     """
     Applies style to text
 
     :param text: Any object compatible with str.format()
-    :param fg: Foreground color. Accepts color names like 'red' or 'blue'
-    :param bg: Background color. Accepts color names like 'red' or 'blue'
-
+    :param fg: foreground color. Accepts color names like 'red' or 'blue'
+    :param bg: background color. Accepts color names like 'red' or 'blue'
+    :param bold: apply the bold style if True. Defaults to False.
+    :param underline: apply the underline style if True. Defaults to False.
     """
     values = []
     text = "{}".format(text)
@@ -57,11 +59,21 @@ def style(text: Any, *, fg: str = '', bg: str = '') -> str:
             values.append(constants.BG_COLORS[bg.lower()])
         except KeyError:
             raise ValueError('Color {} does not exist.'.format(bg))
+    if bold:
+        values.append(Style.BRIGHT)
+    if underline:
+        values.append(constants.Underline.ENABLE)
+
     values.append(text)
     if fg:
         values.append(constants.FG_COLORS['reset'])
     if bg:
         values.append(constants.BG_COLORS['reset'])
+    if bold:
+        values.append(Style.NORMAL)
+    if underline:
+        values.append(constants.Underline.DISABLE)
+
     return "".join(values)
 
 

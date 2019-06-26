@@ -4,6 +4,7 @@
 
 import re
 
+import colorama
 from colorama import Fore, Back
 
 # Used for command parsing, output redirection, tab completion and word
@@ -69,5 +70,14 @@ BG_COLORS = {
     'lightwhite': Back.LIGHTWHITE_EX,
     'reset': Back.RESET,
 }
+
+
+# Underline style built upon Colorama class
+class UnderlineStyle(colorama.ansi.AnsiCodes):
+    ENABLE = 4
+    DISABLE = 24
+
+
+Underline = UnderlineStyle()
 
 DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'run_script', '@@': '_relative_run_script'}
