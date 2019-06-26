@@ -617,7 +617,7 @@ class Cmd(cmd.Cmd):
                                      the message text already has the desired style. Defaults to True.
         """
         if add_color:
-            final_msg = utils.style_message(msg, fg='lightred')
+            final_msg = utils.style(msg, fg='lightred')
         else:
             final_msg = "{}".format(msg)
         self._decolorized_write(sys.stderr, final_msg + end)
@@ -640,11 +640,11 @@ class Cmd(cmd.Cmd):
             final_msg = "{}".format(msg)
 
         if add_color:
-            final_msg = utils.style_message(final_msg, fg='lightred')
+            final_msg = utils.style(final_msg, fg='lightred')
 
         if not self.debug:
             warning = "\nTo enable full traceback, run the following command:  'set debug true'"
-            final_msg += utils.style_message(warning, fg="lightyellow")
+            final_msg += utils.style(warning, fg="lightyellow")
 
         # Set add_color to False since style has already been applied
         self.perror(final_msg, end=end, add_color=False)
@@ -3247,7 +3247,7 @@ class Cmd(cmd.Cmd):
             if args.__statement__.command == "pyscript":
                 warning = ("pyscript has been renamed and will be removed in the next release, "
                            "please use run_pyscript instead\n")
-                self.perror(utils.style_message(warning, fg="lightyellow"))
+                self.perror(utils.style(warning, fg="lightyellow"))
 
         return py_return
 
@@ -3556,7 +3556,7 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(utils.style_message(warning, fg="lightyellow"))
+            self.perror(utils.style(warning, fg="lightyellow"))
 
         # finally, we can write the transcript out to the file
         try:
@@ -3676,7 +3676,7 @@ class Cmd(cmd.Cmd):
             if args.__statement__.command == "load":
                 warning = ("load has been renamed and will be removed in the next release, "
                            "please use run_script instead\n")
-                self.perror(utils.style_message(warning, fg="lightyellow"))
+                self.perror(utils.style(warning, fg="lightyellow"))
 
     # load has been deprecated
     do_load = do_run_script
@@ -3703,7 +3703,7 @@ class Cmd(cmd.Cmd):
         if args.__statement__.command == "_relative_load":
             warning = ("_relative_load has been renamed and will be removed in the next release, "
                        "please use _relative_run_script instead\n")
-            self.perror(utils.style_message(warning, fg="lightyellow"))
+            self.perror(utils.style(warning, fg="lightyellow"))
 
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
@@ -3758,7 +3758,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self._decolorized_write(sys.stderr, stream.read())
             finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            finish_msg = utils.style_message(utils.center_text(finish_msg, pad='='), fg="green")
+            finish_msg = utils.style(utils.center_text(finish_msg, pad='='), fg="green")
             self.poutput(Style.BRIGHT + finish_msg + Style.NORMAL)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users

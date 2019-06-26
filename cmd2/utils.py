@@ -36,17 +36,17 @@ def ansi_safe_wcswidth(text: str) -> int:
     return wcswidth(strip_ansi(text))
 
 
-def style_message(msg: Any, *, fg: str = '', bg: str = '') -> str:
+def style(text: Any, *, fg: str = '', bg: str = '') -> str:
     """
-    Styles a message
+    Applies style to text
 
-    :param msg: Any object compatible with str.format()
+    :param text: Any object compatible with str.format()
     :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
     :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
 
     """
     values = []
-    msg = "{}".format(msg)
+    text = "{}".format(text)
     if fg:
         try:
             values.append(constants.FG_COLORS[fg.lower()])
@@ -57,7 +57,7 @@ def style_message(msg: Any, *, fg: str = '', bg: str = '') -> str:
             values.append(constants.BG_COLORS[bg.lower()])
         except KeyError:
             raise ValueError('Color {} does not exist.'.format(bg))
-    values.append(msg)
+    values.append(text)
     if fg:
         values.append(constants.FG_COLORS['reset'])
     if bg:
