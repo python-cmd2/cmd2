@@ -9,6 +9,7 @@ It demonstrates many features of cmd2.
 import argparse
 
 import cmd2
+import cmd2.ansi
 from cmd2.constants import MULTILINE_TERMINATOR
 
 
@@ -69,7 +70,7 @@ class Pirate(cmd2.Cmd):
 
     def do_sing(self, arg):
         """Sing a colorful song."""
-        self.poutput(cmd2.ansi.style(arg, fg=self.songcolor))
+        self.poutput(cmd2.ansi.style(arg, cmd2.ansi.TextStyle(fg=self.songcolor)))
 
     yo_parser = argparse.ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")

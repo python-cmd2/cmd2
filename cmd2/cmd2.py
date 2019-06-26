@@ -43,7 +43,6 @@ from contextlib import redirect_stdout
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
 
 import colorama
-from colorama import Fore
 
 from . import ansi
 from . import constants
@@ -61,7 +60,7 @@ if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
-    sys.stderr.write(Fore.LIGHTYELLOW_EX + rl_warning + Fore.RESET)
+    sys.stderr.write(ansi.style(rl_warning, ansi.WarningStyle))
 else:
     from .rl_utils import rl_force_redisplay, readline
 
@@ -608,27 +607,27 @@ class Cmd(cmd.Cmd):
             if self.broken_pipe_warning:
                 sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, msg: Any, *, end: str = '\n', add_color: bool = True) -> None:
+    def perror(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """Print message to sys.stderr
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message, default a newline
-        :param add_color: If True, then color will be added to the message text. Set to False in cases where
-                          the message text already has the desired style. Defaults to True.
+        :param apply_style: If True, then ErrorStyle will be applied to the message text. Set to False in cases
+                            where the message text already has the desired style. Defaults to True.
         """
-        if add_color:
-            final_msg = ansi.style(msg, fg='lightred')
+        if apply_style:
+            final_msg = ansi.style(msg, ansi.ErrorStyle)
         else:
             final_msg = "{}".format(msg)
         self._decolorized_write(sys.stderr, final_msg + end)
 
-    def pexcept(self, msg: Any, *, end: str = '\n', add_color: bool = True) -> None:
+    def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
 
         :param msg: message or Exception to print
         :param end: string appended after the end of the message, default a newline
-        :param add_color: If True, then color will be added to the message text. Set to False in cases where
-                          the message text already has the desired style. Defaults to True.
+        :param apply_style: If True, then ErrorStyle will be applied to the message text. Set to False in cases
+                            where the message text already has the desired style. Defaults to True.
         """
         if self.debug and sys.exc_info() != (None, None, None):
             import traceback
@@ -639,15 +638,15 @@ class Cmd(cmd.Cmd):
         else:
             final_msg = "{}".format(msg)
 
-        if add_color:
-            final_msg = ansi.style(final_msg, fg='lightred')
+        if apply_style:
+            final_msg = ansi.style(final_msg, ansi.ErrorStyle)
 
         if not self.debug:
             warning = "\nTo enable full traceback, run the following command:  'set debug true'"
-            final_msg += ansi.style(warning, fg="lightyellow")
+            final_msg += ansi.style(warning, ansi.WarningStyle)
 
-        # Set add_color to False since style has already been applied
-        self.perror(final_msg, end=end, add_color=False)
+        # Set apply_style to False since style has already been applied
+        self.perror(final_msg, end=end, apply_style=False)
 
     def pfeedback(self, msg: str) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -3247,7 +3246,7 @@ class Cmd(cmd.Cmd):
             if args.__statement__.command == "pyscript":
                 warning = ("pyscript has been renamed and will be removed in the next release, "
                            "please use run_pyscript instead\n")
-                self.perror(ansi.style(warning, fg="lightyellow"))
+                self.perror(ansi.style(warning, ansi.WarningStyle))
 
         return py_return
 
@@ -3556,7 +3555,7 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(ansi.style(warning, fg="lightyellow"))
+            self.perror(ansi.style(warning, ansi.WarningStyle))
 
         # finally, we can write the transcript out to the file
         try:
@@ -3676,7 +3675,7 @@ class Cmd(cmd.Cmd):
             if args.__statement__.command == "load":
                 warning = ("load has been renamed and will be removed in the next release, "
                            "please use run_script instead\n")
-                self.perror(ansi.style(warning, fg="lightyellow"))
+                self.perror(ansi.style(warning, ansi.WarningStyle))
 
     # load has been deprecated
     do_load = do_run_script
@@ -3703,7 +3702,7 @@ class Cmd(cmd.Cmd):
         if args.__statement__.command == "_relative_load":
             warning = ("_relative_load has been renamed and will be removed in the next release, "
                        "please use _relative_run_script instead\n")
-            self.perror(ansi.style(warning, fg="lightyellow"))
+            self.perror(ansi.style(warning, ansi.WarningStyle))
 
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
@@ -3739,12 +3738,13 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(ansi.style(utils.center_text('cmd2 transcript test', pad='='), bold=True))
+        self.poutput(ansi.style(utils.center_text('cmd2 transcript test', pad='='), ansi.TextStyle(bold=True)))
         self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
                                                                              rl_type))
         self.poutput('cwd: {}'.format(os.getcwd()))
         self.poutput('cmd2 app: {}'.format(sys.argv[0]))
-        self.poutput(ansi.style('collected {} transcript{}'.format(num_transcripts, plural), bold=True))
+        self.poutput(ansi.style('collected {} transcript{}'.format(num_transcripts, plural),
+                                ansi.TextStyle(bold=True)))
 
         self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -3757,7 +3757,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self._decolorized_write(sys.stderr, stream.read())
             finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            finish_msg = ansi.style(utils.center_text(finish_msg, pad='='), fg="green", bold=True)
+            finish_msg = ansi.style(utils.center_text(finish_msg, pad='='), ansi.TextStyle(fg="green", bold=True))
             self.poutput(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
