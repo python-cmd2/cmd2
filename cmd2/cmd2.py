@@ -60,7 +60,7 @@ if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
                  "pyreadline on Windows or gnureadline on Mac.\n\n"
-    sys.stderr.write(ansi.style(rl_warning, ansi.WarningStyle))
+    sys.stderr.write(ansi.style_warning(rl_warning))
 else:
     from .rl_utils import rl_force_redisplay, readline
 
@@ -616,7 +616,7 @@ class Cmd(cmd.Cmd):
                             where the message text already has the desired style. Defaults to True.
         """
         if apply_style:
-            final_msg = ansi.style(msg, ansi.ErrorStyle)
+            final_msg = ansi.style_error(msg)
         else:
             final_msg = "{}".format(msg)
         self._decolorized_write(sys.stderr, final_msg + end)
@@ -639,11 +639,11 @@ class Cmd(cmd.Cmd):
             final_msg = "{}".format(msg)
 
         if apply_style:
-            final_msg = ansi.style(final_msg, ansi.ErrorStyle)
+            final_msg = ansi.style_error(final_msg)
 
         if not self.debug:
             warning = "\nTo enable full traceback, run the following command:  'set debug true'"
-            final_msg += ansi.style(warning, ansi.WarningStyle)
+            final_msg += ansi.style_warning(warning)
 
         # Set apply_style to False since style has already been applied
         self.perror(final_msg, end=end, apply_style=False)
@@ -3246,7 +3246,7 @@ class Cmd(cmd.Cmd):
             if args.__statement__.command == "pyscript":
                 warning = ("pyscript has been renamed and will be removed in the next release, "
                            "please use run_pyscript instead\n")
-                self.perror(ansi.style(warning, ansi.WarningStyle))
+                self.perror(ansi.style_warning(warning))
 
         return py_return
 
@@ -3555,7 +3555,7 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(ansi.style(warning, ansi.WarningStyle))
+            self.perror(ansi.style_warning(warning))
 
         # finally, we can write the transcript out to the file
         try:
@@ -3675,7 +3675,7 @@ class Cmd(cmd.Cmd):
             if args.__statement__.command == "load":
                 warning = ("load has been renamed and will be removed in the next release, "
                            "please use run_script instead\n")
-                self.perror(ansi.style(warning, ansi.WarningStyle))
+                self.perror(ansi.style_warning(warning))
 
     # load has been deprecated
     do_load = do_run_script
@@ -3702,7 +3702,7 @@ class Cmd(cmd.Cmd):
         if args.__statement__.command == "_relative_load":
             warning = ("_relative_load has been renamed and will be removed in the next release, "
                        "please use _relative_run_script instead\n")
-            self.perror(ansi.style(warning, ansi.WarningStyle))
+            self.perror(ansi.style_warning(warning))
 
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
@@ -3756,7 +3756,7 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self._decolorized_write(sys.stderr, stream.read())
             finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            finish_msg = ansi.style(utils.center_text(finish_msg, pad='='), ansi.SuccessStyle)
+            finish_msg = ansi.style_success(utils.center_text(finish_msg, pad='='))
             self.poutput(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users

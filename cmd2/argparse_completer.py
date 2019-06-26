@@ -66,7 +66,7 @@ import sys
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
 from typing import List, Dict, Tuple, Callable, Union
 
-from .ansi import ansi_safe_wcswidth, style, ErrorStyle
+from .ansi import ansi_safe_wcswidth, style_error
 from .rl_utils import rl_force_redisplay
 
 # attribute that can optionally added to an argparse argument (called an Action) to
@@ -994,7 +994,7 @@ class ACArgumentParser(argparse.ArgumentParser):
             linum += 1
 
         self.print_usage(sys.stderr)
-        formatted_message = style(formatted_message, ErrorStyle)
+        formatted_message = style_error(formatted_message)
         self.exit(2, '{}\n\n'.format(formatted_message))
 
     def format_help(self) -> str:

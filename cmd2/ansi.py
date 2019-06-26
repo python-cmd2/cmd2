@@ -1,7 +1,8 @@
 # coding=utf-8
 """Support for ANSI escape codes which are used for things like applying style to text"""
+import functools
 import re
-from typing import Any, Optional
+from typing import Any
 
 import colorama
 from colorama import Fore, Back, Style
@@ -77,48 +78,15 @@ UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
 UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
 
 
-class TextStyle:
-    """Style settings for text"""
-
-    def __init__(self, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False):
-        """
-        Initializer
-        :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'lightred'). Defaults to blank.
-        :param bg: background color. Expects color names in BG_COLORS (e.g. 'black'). Defaults to blank.
-        :param bold: apply the bold style if True. Defaults to False.
-        :param underline: apply the underline style if True. Defaults to False.
-        """
-        self.fg = fg
-        self.bg = bg
-        self.bold = bold
-        self.underline = underline
-
-
-# Default styles. These can be altered to suit an application's needs.
-SuccessStyle = TextStyle(fg='green', bold=True)
-WarningStyle = TextStyle(fg='lightyellow')
-ErrorStyle = TextStyle(fg='lightred')
-
-
-def style(text: Any, text_style: Optional[TextStyle] = None, *,
-          fg: Optional[str] = None, bg: Optional[str] = None,
-          bold: Optional[bool] = None, underline: Optional[bool] = None) -> str:
+def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
     """
     Applies a style to text
 
     :param text: Any object compatible with str.format()
-    :param text_style: a TextStyle object. Defaults to None.
-
-    The following are keyword-only parameters which allow calling style without creating a TextStyle object
-        style(text, fg='blue')
-
-    They can also be used to override a setting in a provided TextStyle
-        style(text, ErrorStyle, underline=True)
-
-    :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'lightred'). Defaults to None.
-    :param bg: background color. Expects color names in BG_COLORS (e.g. 'black'). Defaults to None.
-    :param bold: apply the bold style if True. Defaults to None.
-    :param underline: apply the underline style if True. Defaults to None.
+    :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'lightred'). Defaults to no color.
+    :param bg: background color. Expects color names in BG_COLORS (e.g. 'black'). Defaults to no color.
+    :param bold: apply the bold style if True. Defaults to False.
+    :param underline: apply the underline style if True. Defaults to False.
 
     :return: the stylized string
     """
@@ -130,16 +98,6 @@ def style(text: Any, text_style: Optional[TextStyle] = None, *,
 
     # Convert the text object into a string if it isn't already one
     text = "{}".format(text)
-
-    # Figure out what parameters to use
-    if fg is None and text_style is not None:
-        fg = text_style.fg
-    if bg is None and text_style is not None:
-        bg = text_style.bg
-    if bold is None and text_style is not None:
-        bold = text_style.bold
-    if underline is None and text_style is not None:
-        underline = text_style.underline
 
     # Process the style settings
     if fg:
@@ -166,3 +124,9 @@ def style(text: Any, text_style: Optional[TextStyle] = None, *,
 
     # Combine the ANSI escape strings with the text
     return "".join(additions) + text + "".join(removals)
+
+
+# Default styles. These can be altered to suit an application's needs.
+style_success = functools.partial(style, fg='green', bold=True)
+style_warning = functools.partial(style, fg='lightyellow')
+style_error = functools.partial(style, fg='lightred')
