@@ -80,7 +80,7 @@ UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
 
 def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
     """
-    Applies a style to text
+    Applies styles to text
 
     :param text: Any object compatible with str.format()
     :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'lightred'). Defaults to no color.
@@ -126,7 +126,9 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
     return "".join(additions) + text + "".join(removals)
 
 
-# Default styles. These can be altered to suit an application's needs.
+# Default styles for printing strings of various types.
+# These can be altered to suit an application's needs and only need to be a
+# function with the following structure: func(str) -> str
 style_success = functools.partial(style, fg='green', bold=True)
 style_warning = functools.partial(style, fg='lightyellow')
 style_error = functools.partial(style, fg='lightred')
