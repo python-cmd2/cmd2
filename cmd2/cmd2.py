@@ -608,42 +608,46 @@ class Cmd(cmd.Cmd):
             if self.broken_pipe_warning:
                 sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '') -> None:
-        """Smarter sys.stderr.write(); color aware and adds newline by default
+    def perror(self, msg: Any, *, end: str = '\n', add_color: bool = True) -> None:
+        """Print message to sys.stderr
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: (optional) string appended after the end of the message, default a newline
-        :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
-        :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
+        :param add_color: (optional) If True, then color will be added to the message text. Set to False in cases where
+                                     the message text already has the desired style. Defaults to True.
         """
-        if msg is not None and msg != '':
-            err_msg = utils.style_message(msg, fg=fg, bg=bg) + end
-            self._decolorized_write(sys.stderr, err_msg)
+        if add_color:
+            final_msg = utils.style_message(msg, fg='lightred')
+        else:
+            final_msg = "{}".format(msg)
+        self._decolorized_write(sys.stderr, final_msg + end)
 
-    def pexcept(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '') -> None:
+    def pexcept(self, msg: Any, *, end: str = '\n', add_color: bool = True) -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
 
         :param msg: message or Exception to print
         :param end: (optional) string appended after the end of the message, default a newline
-        :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
-        :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
+        :param add_color: (optional) If True, then color will be added to the message text. Set to False in cases where
+                                     the message text already has the desired style. Defaults to True.
         """
         if self.debug and sys.exc_info() != (None, None, None):
             import traceback
             traceback.print_exc()
 
         if isinstance(msg, Exception):
-            err_msg = "EXCEPTION of type '{}' occurred with message: '{}'".format(type(msg).__name__, msg)
+            final_msg = "EXCEPTION of type '{}' occurred with message: '{}'".format(type(msg).__name__, msg)
         else:
-            err_msg = msg
+            final_msg = "{}".format(msg)
 
-        err_msg = utils.style_message(err_msg, fg=fg, bg=bg) + end
-        self._decolorized_write(sys.stderr, err_msg)
+        if add_color:
+            final_msg = utils.style_message(final_msg, fg='lightred')
 
         if not self.debug:
-            warning = "To enable full traceback, run the following command:  'set debug true'"
-            warning = utils.style_message(warning, fg="lightyellow") + end
-            self._decolorized_write(sys.stderr, warning)
+            warning = "\nTo enable full traceback, run the following command:  'set debug true'"
+            final_msg += utils.style_message(warning, fg="lightyellow")
+
+        # Set add_color to False since style has already been applied
+        self.perror(final_msg, end=end, add_color=False)
 
     def pfeedback(self, msg: str) -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
@@ -3241,9 +3245,9 @@ class Cmd(cmd.Cmd):
             # Restore command line arguments to original state
             sys.argv = orig_args
             if args.__statement__.command == "pyscript":
-                self.perror("pyscript has been renamed and will be removed in the next release, "
-                            "please use run_pyscript instead\n",
-                            fg="lightyellow")
+                warning = ("pyscript has been renamed and will be removed in the next release, "
+                           "please use run_pyscript instead\n")
+                self.perror(utils.style_message(warning, fg="lightyellow"))
 
         return py_return
 
@@ -3552,7 +3556,7 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(warning, fg="lightyellow")
+            self.perror(utils.style_message(warning, fg="lightyellow"))
 
         # finally, we can write the transcript out to the file
         try:
@@ -3670,9 +3674,9 @@ class Cmd(cmd.Cmd):
                         self._script_dir.pop()
         finally:
             if args.__statement__.command == "load":
-                self.perror("load has been renamed and will be removed in the next release, "
-                            "please use run_script instead\n",
-                            fg="lightyellow")
+                warning = ("load has been renamed and will be removed in the next release, "
+                           "please use run_script instead\n")
+                self.perror(utils.style_message(warning, fg="lightyellow"))
 
     # load has been deprecated
     do_load = do_run_script
@@ -3697,11 +3701,9 @@ class Cmd(cmd.Cmd):
         :return: True if running of commands should stop
         """
         if args.__statement__.command == "_relative_load":
-            self.perror(
-                "_relative_load has been renamed and will be removed in the next release, "
-                "please use _relative_run_script instead\n",
-                fg="lightyellow"
-            )
+            warning = ("_relative_load has been renamed and will be removed in the next release, "
+                       "please use _relative_run_script instead\n")
+            self.perror(utils.style_message(warning, fg="lightyellow"))
 
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
