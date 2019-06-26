@@ -8,21 +8,9 @@ It demonstrates many features of cmd2.
 """
 import argparse
 
-from colorama import Fore
-
 import cmd2
+from cmd2 import utils
 from cmd2.constants import MULTILINE_TERMINATOR
-
-COLORS = {
-    'black': Fore.BLACK,
-    'red': Fore.RED,
-    'green': Fore.GREEN,
-    'yellow': Fore.YELLOW,
-    'blue': Fore.BLUE,
-    'magenta': Fore.MAGENTA,
-    'cyan': Fore.CYAN,
-    'white': Fore.WHITE,
-}
 
 
 class Pirate(cmd2.Cmd):
@@ -82,7 +70,7 @@ class Pirate(cmd2.Cmd):
 
     def do_sing(self, arg):
         """Sing a colorful song."""
-        self.poutput(arg, fg=self.songcolor)
+        self.poutput(utils.style_message(arg, fg=self.songcolor))
 
     yo_parser = argparse.ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")

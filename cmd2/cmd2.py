@@ -587,8 +587,8 @@ class Cmd(cmd.Cmd):
             msg = utils.strip_ansi(msg)
         fileobj.write(msg)
 
-    def poutput(self, msg: Any, end: str = '\n', fg: str = '', bg: str = '') -> None:
-        """Smarter self.stdout.write(); color aware and adds newline by default
+    def poutput(self, msg: Any, *, end: str = '\n') -> None:
+        """Print message to self.stdout and appends a newline by default
 
         Also handles BrokenPipeError exceptions for when a commands's output has
         been piped to another process and that process terminates before the
@@ -596,21 +596,17 @@ class Cmd(cmd.Cmd):
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: (optional) string appended after the end of the message, default a newline
-        :param fg: (optional) Foreground color. Accepts color names like 'red' or 'blue'
-        :param bg: (optional) Background color. Accepts color names like 'red' or 'blue'
         """
-        if msg is not None and msg != '':
-            try:
-                final_msg = utils.style_message(msg, fg=fg, bg=bg) + end
-                self._decolorized_write(self.stdout, final_msg)
-            except BrokenPipeError:
-                # This occurs if a command's output is being piped to another
-                # process and that process closes before the command is
-                # finished. If you would like your application to print a
-                # warning message, then set the broken_pipe_warning attribute
-                # to the message you want printed.
-                if self.broken_pipe_warning:
-                    sys.stderr.write(self.broken_pipe_warning)
+        try:
+            self._decolorized_write(self.stdout, "{}{}".format(msg, end))
+        except BrokenPipeError:
+            # This occurs if a command's output is being piped to another
+            # process and that process closes before the command is
+            # finished. If you would like your application to print a
+            # warning message, then set the broken_pipe_warning attribute
+            # to the message you want printed.
+            if self.broken_pipe_warning:
+                sys.stderr.write(self.broken_pipe_warning)
 
     def perror(self, msg: Any, end: str = '\n', fg: str = 'lightred', bg: str = '') -> None:
         """Smarter sys.stderr.write(); color aware and adds newline by default
@@ -3742,12 +3738,12 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(Style.BRIGHT + utils.center_text('cmd2 transcript test', pad='='))
+        self.poutput(Style.BRIGHT + utils.center_text('cmd2 transcript test', pad='=') + Style.NORMAL)
         self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
                                                                              rl_type))
         self.poutput('cwd: {}'.format(os.getcwd()))
         self.poutput('cmd2 app: {}'.format(sys.argv[0]))
-        self.poutput(Style.BRIGHT + 'collected {} transcript{}'.format(num_transcripts, plural))
+        self.poutput(Style.BRIGHT + 'collected {} transcript{}'.format(num_transcripts, plural) + Style.NORMAL)
 
         self.__class__.testfiles = transcripts_expanded
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
@@ -3760,7 +3756,8 @@ class Cmd(cmd.Cmd):
         if test_results.wasSuccessful():
             self._decolorized_write(sys.stderr, stream.read())
             finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            self.poutput(Style.BRIGHT + utils.center_text(finish_msg, pad='='), fg="green")
+            finish_msg = utils.style_message(utils.center_text(finish_msg, pad='='), fg="green")
+            self.poutput(Style.BRIGHT + finish_msg + Style.NORMAL)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
             error_str = stream.read()
