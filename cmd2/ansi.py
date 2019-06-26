@@ -72,6 +72,11 @@ def ansi_safe_wcswidth(text: str) -> int:
     return wcswidth(strip_ansi(text))
 
 
+# ANSI escape strings not provided by colorama
+UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
+UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
+
+
 class TextStyle:
     """Style settings for text"""
 
@@ -102,37 +107,35 @@ def style(text: Any, text_style: TextStyle) -> str:
     :param text: Any object compatible with str.format()
     :param text_style: the style to be applied
     """
-    values = []
+    # List of strings that add style
+    additions = []
+
+    # List of strings that remove style
+    removals = []
+
+    # Convert the text object into a string if it isn't already one
     text = "{}".format(text)
 
-    # Add styles
     if text_style.fg:
         try:
-            values.append(FG_COLORS[text_style.fg.lower()])
+            additions.append(FG_COLORS[text_style.fg.lower()])
+            removals.append(FG_COLORS['reset'])
         except KeyError:
             raise ValueError('Color {} does not exist.'.format(text_style.fg))
+
     if text_style.bg:
         try:
-            values.append(BG_COLORS[text_style.bg.lower()])
+            additions.append(BG_COLORS[text_style.bg.lower()])
+            removals.append(BG_COLORS['reset'])
         except KeyError:
             raise ValueError('Color {} does not exist.'.format(text_style.bg))
+
     if text_style.bold:
-        values.append(Style.BRIGHT)
+        additions.append(Style.BRIGHT)
+        removals.append(Style.NORMAL)
+
     if text_style.underline:
-        underline_enable = colorama.ansi.code_to_chars(4)
-        values.append(underline_enable)
+        additions.append(UNDERLINE_ENABLE)
+        removals.append(UNDERLINE_DISABLE)
 
-    values.append(text)
-
-    # Remove styles
-    if text_style.fg:
-        values.append(FG_COLORS['reset'])
-    if text_style.bg:
-        values.append(BG_COLORS['reset'])
-    if text_style.bold:
-        values.append(Style.NORMAL)
-    if text_style.underline:
-        underline_disable = colorama.ansi.code_to_chars(24)
-        values.append(underline_disable)
-
-    return "".join(values)
+    return "".join(additions) + text + "".join(removals)
