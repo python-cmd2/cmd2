@@ -8,6 +8,14 @@ import colorama
 from colorama import Fore, Back, Style
 from wcwidth import wcswidth
 
+# Values for allow_ansi setting
+ANSI_NEVER = 'Never'
+ANSI_TERMINAL = 'Terminal'
+ANSI_ALWAYS = 'Always'
+
+# Controls when ANSI escape sequences are allowed in output
+allow_ansi = ANSI_TERMINAL
+
 # Regular expression to match ANSI escape sequences
 ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
 

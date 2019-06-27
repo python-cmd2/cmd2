@@ -1459,7 +1459,7 @@ def test_poutput_none(outsim_app):
 
 def test_poutput_color_always(outsim_app):
     msg = 'Hello World'
-    outsim_app.allow_ansi = 'Always'
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
     outsim_app.poutput(ansi.style(msg, fg='cyan'))
     out = outsim_app.stdout.getvalue()
     expected = Fore.CYAN + msg + Fore.RESET + '\n'
@@ -1467,7 +1467,7 @@ def test_poutput_color_always(outsim_app):
 
 def test_poutput_color_never(outsim_app):
     msg = 'Hello World'
-    outsim_app.allow_ansi = 'Never'
+    ansi.allow_ansi = ansi.ANSI_NEVER
     outsim_app.poutput(ansi.style(msg, fg='cyan'))
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
@@ -1767,7 +1767,7 @@ def test_ppaged(outsim_app):
 def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
-    outsim_app.allow_ansi = cmd2.constants.ANSI_TERMINAL
+    ansi.allow_ansi = ansi.ANSI_TERMINAL
     outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
@@ -1776,7 +1776,7 @@ def test_ppaged_strips_ansi_when_redirecting(outsim_app):
 def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
-    outsim_app.allow_ansi = cmd2.constants.ANSI_ALWAYS
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
     outsim_app._redirecting = True
     outsim_app.ppaged(Fore.RED + msg)
     out = outsim_app.stdout.getvalue()
@@ -1910,13 +1910,9 @@ class AnsiApp(cmd2.Cmd):
         # perror uses colors by default
         self.perror(args)
 
-def test_ansi_default():
-    app = AnsiApp()
-    assert app.allow_ansi == cmd2.constants.ANSI_TERMINAL
-
 def test_ansi_pouterr_always_tty(mocker, capsys):
     app = AnsiApp()
-    app.allow_ansi = cmd2.constants.ANSI_ALWAYS
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -1938,7 +1934,7 @@ def test_ansi_pouterr_always_tty(mocker, capsys):
 
 def test_ansi_pouterr_always_notty(mocker, capsys):
     app = AnsiApp()
-    app.allow_ansi = cmd2.constants.ANSI_ALWAYS
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -1960,7 +1956,7 @@ def test_ansi_pouterr_always_notty(mocker, capsys):
 
 def test_ansi_terminal_tty(mocker, capsys):
     app = AnsiApp()
-    app.allow_ansi = cmd2.constants.ANSI_TERMINAL
+    ansi.allow_ansi = ansi.ANSI_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -1981,7 +1977,7 @@ def test_ansi_terminal_tty(mocker, capsys):
 
 def test_ansi_terminal_notty(mocker, capsys):
     app = AnsiApp()
-    app.allow_ansi = cmd2.constants.ANSI_TERMINAL
+    ansi.allow_ansi = ansi.ANSI_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -1995,7 +1991,7 @@ def test_ansi_terminal_notty(mocker, capsys):
 
 def test_ansi_never_tty(mocker, capsys):
     app = AnsiApp()
-    app.allow_ansi = cmd2.constants.ANSI_NEVER
+    ansi.allow_ansi = ansi.ANSI_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2009,7 +2005,7 @@ def test_ansi_never_tty(mocker, capsys):
 
 def test_ansi_never_notty(mocker, capsys):
     app = AnsiApp()
-    app.allow_ansi = cmd2.constants.ANSI_NEVER
+    ansi.allow_ansi = ansi.ANSI_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 

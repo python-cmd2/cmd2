@@ -374,7 +374,6 @@ class Cmd(cmd.Cmd):
         self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
 
         # Attributes which ARE dynamically settable at runtime
-        self.allow_ansi = constants.ANSI_TERMINAL
         self.continuation_prompt = '> '
         self.debug = False
         self.echo = False
@@ -385,16 +384,20 @@ class Cmd(cmd.Cmd):
         self.timing = False  # Prints elapsed time for each command
 
         # To make an attribute settable with the "do_set" command, add it to this ...
-        self.settable = {'allow_ansi': 'Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)',
-                         'continuation_prompt': 'On 2nd+ line of input',
-                         'debug': 'Show full error stack on error',
-                         'echo': 'Echo command issued into output',
-                         'editor': 'Program used by ``edit``',
-                         'feedback_to_output': 'Include nonessentials in `|`, `>` results',
-                         'locals_in_py': 'Allow access to your application in py via self',
-                         'prompt': 'The prompt issued to solicit input',
-                         'quiet': "Don't print nonessential feedback",
-                         'timing': 'Report execution times'}
+        self.settable = \
+            {
+                # allow_ansi is a special case in which it's an application-wide setting defined in ansi.py
+                'allow_ansi': 'Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)',
+                'continuation_prompt': 'On 2nd+ line of input',
+                'debug': 'Show full error stack on error',
+                'echo': 'Echo command issued into output',
+                'editor': 'Program used by ``edit``',
+                'feedback_to_output': 'Include nonessentials in `|`, `>` results',
+                'locals_in_py': 'Allow access to your application in py via self',
+                'prompt': 'The prompt issued to solicit input',
+                'quiet': "Don't print nonessential feedback",
+                'timing': 'Report execution times'
+            }
 
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', '_relative_load', '_relative_run_script']
@@ -551,6 +554,16 @@ class Cmd(cmd.Cmd):
     # -----  Methods related to presenting output to the user -----
 
     @property
+    def allow_ansi(self) -> str:
+        """Read-only property needed to support do_set when it reads allow_ansi"""
+        return ansi.allow_ansi
+
+    @allow_ansi.setter
+    def allow_ansi(self, new_val: str) -> None:
+        """Read-only property needed to support do_set when it sets allow_ansi"""
+        ansi.allow_ansi = new_val
+
+    @property
     def visible_prompt(self) -> str:
         """Read-only property to get the visible prompt with any ANSI escape codes stripped.
 
@@ -581,8 +594,8 @@ class Cmd(cmd.Cmd):
 
         Honor the current colors setting, which requires us to check whether the fileobject is a tty.
         """
-        if self.allow_ansi.lower() == constants.ANSI_NEVER.lower() or \
-                (self.allow_ansi.lower() == constants.ANSI_TERMINAL.lower() and not fileobj.isatty()):
+        if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower() or \
+                (ansi.allow_ansi.lower() == ansi.ANSI_TERMINAL.lower() and not fileobj.isatty()):
             msg = ansi.strip_ansi(msg)
         fileobj.write(msg)
 
@@ -612,7 +625,7 @@ class Cmd(cmd.Cmd):
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ErrorStyle will be applied to the message text. Set to False in cases
+        :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
         """
         if apply_style:
@@ -691,7 +704,7 @@ class Cmd(cmd.Cmd):
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
                 if functional_terminal and not self._redirecting and not self._in_py and not self._script_dir:
-                    if self.allow_ansi.lower() == constants.ANSI_NEVER.lower():
+                    if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower():
                         msg_str = ansi.strip_ansi(msg_str)
 
                     pager = self.pager
