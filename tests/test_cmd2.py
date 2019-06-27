@@ -1457,7 +1457,7 @@ def test_poutput_none(outsim_app):
     expected = 'None\n'
     assert out == expected
 
-def test_poutput_color_always(outsim_app):
+def test_poutput_ansi_always(outsim_app):
     msg = 'Hello World'
     ansi.allow_ansi = ansi.ANSI_ALWAYS
     outsim_app.poutput(ansi.style(msg, fg='cyan'))
@@ -1465,7 +1465,7 @@ def test_poutput_color_always(outsim_app):
     expected = Fore.CYAN + msg + Fore.RESET + '\n'
     assert out == expected
 
-def test_poutput_color_never(outsim_app):
+def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
     ansi.allow_ansi = ansi.ANSI_NEVER
     outsim_app.poutput(ansi.style(msg, fg='cyan'))

@@ -8,42 +8,10 @@ import sys
 
 import pytest
 
-from colorama import Fore, Back
 import cmd2.utils as cu
-import cmd2.ansi as ansi
 
 HELLO_WORLD = 'Hello, world!'
 
-
-def test_strip_ansi():
-    base_str = HELLO_WORLD
-    ansi_str = Fore.GREEN + base_str + Fore.RESET
-    assert base_str != ansi_str
-    assert base_str == ansi.strip_ansi(ansi_str)
-
-def test_ansi_safe_wcswidth():
-    base_str = HELLO_WORLD
-    ansi_str = Fore.GREEN + base_str + Fore.RESET
-    assert ansi.ansi_safe_wcswidth(ansi_str) != len(ansi_str)
-
-def test_style():
-    base_str = HELLO_WORLD
-    ansi_str = Fore.BLUE + Back.GREEN + base_str + Fore.RESET + Back.RESET
-    assert ansi.style(base_str, fg='blue', bg='green') == ansi_str
-
-def test_style_color_not_exist():
-    base_str = HELLO_WORLD
-    try:
-        ansi.style(base_str, fg='fake', bg='green')
-        assert False
-    except ValueError:
-        assert True
-
-    try:
-        ansi.style(base_str, fg='blue', bg='fake')
-        assert False
-    except ValueError:
-        assert True
 
 def test_strip_quotes_no_quotes():
     base_str = HELLO_WORLD
