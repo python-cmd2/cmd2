@@ -3407,7 +3407,7 @@ class Cmd(cmd.Cmd):
                             fobj.write('{}\n'.format(item.raw))
                 plural = 's' if len(history) > 1 else ''
             except OSError as e:
-                self.pexcept('Saving {!r} - {}'.format(args.output_file, e))
+                self.pexcept('Error saving {!r} - {}'.format(args.output_file, e))
             else:
                 self.pfeedback('{} command{} saved to {}'.format(len(history), plural, args.output_file))
         elif args.transcript:
