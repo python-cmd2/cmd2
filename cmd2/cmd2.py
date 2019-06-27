@@ -27,7 +27,7 @@ Git repository on GitHub at https://github.com/python-cmd2/cmd2
 # import this module, many of these imports are lazy-loaded
 # i.e. we only import the module when we use it
 # For example, we don't import the 'traceback' module
-# until the perror() function is called and the debug
+# until the pexcept() function is called and the debug
 # setting is True
 import argparse
 import cmd

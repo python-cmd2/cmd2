@@ -2,12 +2,30 @@
 * Enhancements
     * Added support for and testing with Python 3.8, starting with 3.8 beta
     * Improved information displayed during transcript testing
+    * Added `ansi` module with functions and constants to support ANSI escape sequences which are used for things
+    like applying style to text
+    * Added support for applying styles (color, bold, underline) to text via `style()` function in `ansi` module
+    * Added default styles to ansi.py for printing `success`, `warning`. and `error` text. These are the styles used
+    by cmd2 and can be overridden to match the color scheme of your application.
+    * Added `ansi_aware_write()` function to `ansi` module. This function takes into account the value of `allow_ansi`
+    to determine if ANSI escape sequences should be stripped when not writing to a tty. See documentation for more
+    information on the `allow_ansi` setting.
 * Breaking Changes
     * Python 3.4 reached its [end of life](https://www.python.org/dev/peps/pep-0429/) on March 18, 2019 and is no longer supported by `cmd2`
         * If you need to use Python 3.4, you should pin your requirements to use `cmd2` 0.9.13
     * Made lots of changes to minimize the public API of the `cmd2.Cmd` class
         * Attributes and methods we do not intend to be public now all begin with an underscore
         * We make no API stability guarantees about these internal functions
+    * Split `perror` into 2 functions:
+        * `perror` - print a message to sys.stderr
+        * `pexcept` - print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
+    * Removed color parameters from `poutput` and `perror` since more powerful styles now exist. See the docstrings
+    of these methods for more information on applying styles to output messages.
+    * Moved `cmd2.Cmd.colors` to ansi.py and renamed it to `allow_ansi`. This is now an application-wide setting.
+    * Renamed the following constants and moved them to ansi.py
+        * `COLORS_ALWAYS` --> `ANSI_ALWAYS`
+        * `COLORS_NEVER` --> `ANSI_NEVER`
+        * `COLORS_TERMINAL` --> `ANSI_TERMINAL`
 * **Renamed Commands Notice**
     * The following commands have been renamed. The old names will be supported until the next release. 
         * `load` --> `run_script`
