@@ -40,7 +40,7 @@ import sys
 import threading
 from collections import namedtuple
 from contextlib import redirect_stdout
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union, IO
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
 
 import colorama
 
@@ -589,16 +589,6 @@ class Cmd(cmd.Cmd):
         """Setter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
         self._statement_parser.allow_redirection = value
 
-    def _decolorized_write(self, fileobj: IO, msg: str) -> None:
-        """Write a string to a fileobject, stripping ANSI escape sequences if necessary
-
-        Honor the current colors setting, which requires us to check whether the fileobject is a tty.
-        """
-        if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower() or \
-                (ansi.allow_ansi.lower() == ansi.ANSI_TERMINAL.lower() and not fileobj.isatty()):
-            msg = ansi.strip_ansi(msg)
-        fileobj.write(msg)
-
     def poutput(self, msg: Any, *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
 
@@ -610,7 +600,7 @@ class Cmd(cmd.Cmd):
         :param end: string appended after the end of the message, default a newline
         """
         try:
-            self._decolorized_write(self.stdout, "{}{}".format(msg, end))
+            ansi.ansi_aware_write(self.stdout, "{}{}".format(msg, end))
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another
             # process and that process closes before the command is
@@ -632,7 +622,7 @@ class Cmd(cmd.Cmd):
             final_msg = ansi.style_error(msg)
         else:
             final_msg = "{}".format(msg)
-        self._decolorized_write(sys.stderr, final_msg + end)
+        ansi.ansi_aware_write(sys.stderr, final_msg + end)
 
     def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
@@ -668,7 +658,7 @@ class Cmd(cmd.Cmd):
             if self.feedback_to_output:
                 self.poutput(msg)
             else:
-                self._decolorized_write(sys.stderr, "{}\n".format(msg))
+                ansi.ansi_aware_write(sys.stderr, "{}\n".format(msg))
 
     def ppaged(self, msg: str, end: str = '\n', chop: bool = False) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
@@ -717,7 +707,7 @@ class Cmd(cmd.Cmd):
                         pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                         pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
                 else:
-                    self._decolorized_write(self.stdout, msg_str)
+                    ansi.ansi_aware_write(self.stdout, msg_str)
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished. If you would like your application to print a warning message, then set the
@@ -2162,7 +2152,7 @@ class Cmd(cmd.Cmd):
             return self.do_shell(statement.command_and_args)
         else:
             err_msg = self.default_error.format(statement.command)
-            self._decolorized_write(sys.stderr, "{}\n".format(err_msg))
+            ansi.ansi_aware_write(sys.stderr, "{}\n".format(err_msg))
 
     def _pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -2695,7 +2685,7 @@ class Cmd(cmd.Cmd):
             # If there is no help information then print an error
             elif help_func is None and (func is None or not func.__doc__):
                 err_msg = self.help_error.format(args.command)
-                self._decolorized_write(sys.stderr, "{}\n".format(err_msg))
+                ansi.ansi_aware_write(sys.stderr, "{}\n".format(err_msg))
 
             # Otherwise delegate to cmd base class do_help()
             else:
@@ -3767,7 +3757,7 @@ class Cmd(cmd.Cmd):
         test_results = runner.run(testcase)
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
-            self._decolorized_write(sys.stderr, stream.read())
+            ansi.ansi_aware_write(sys.stderr, stream.read())
             finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
             finish_msg = ansi.style_success(utils.center_text(finish_msg, pad='='))
             self.poutput(finish_msg)
@@ -4026,7 +4016,7 @@ class Cmd(cmd.Cmd):
         :param message_to_print: the message reporting that the command is disabled
         :param kwargs: not used
         """
-        self._decolorized_write(sys.stderr, "{}\n".format(message_to_print))
+        ansi.ansi_aware_write(sys.stderr, "{}\n".format(message_to_print))
 
     def cmdloop(self, intro: Optional[str] = None) -> int:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.

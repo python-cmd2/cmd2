@@ -66,7 +66,7 @@ import sys
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
 from typing import List, Dict, Tuple, Callable, Union
 
-from .ansi import ansi_safe_wcswidth, style_error
+from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
 from .rl_utils import rl_force_redisplay
 
 # attribute that can optionally added to an argparse argument (called an Action) to
@@ -1046,6 +1046,13 @@ class ACArgumentParser(argparse.ArgumentParser):
 
         # determine help from format above
         return formatter.format_help() + '\n'
+
+    def _print_message(self, message, file=None):
+        # Override _print_message to use ansi_aware_write() since we use ANSI escape characters to support color
+        if message:
+            if file is None:
+                file = _sys.stderr
+            ansi_aware_write(file, message)
 
     def _get_nargs_pattern(self, action) -> str:
         # Override _get_nargs_pattern behavior to use the nargs ranges provided by AutoCompleter

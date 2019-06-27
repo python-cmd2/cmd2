@@ -2,7 +2,7 @@
 """Support for ANSI escape sequences which are used for things like applying style to text"""
 import functools
 import re
-from typing import Any
+from typing import Any, IO
 
 import colorama
 from colorama import Fore, Back, Style
@@ -61,9 +61,14 @@ BG_COLORS = {
     'reset': Back.RESET,
 }
 
+# ANSI escape sequences not provided by colorama
+UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
+UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
+
 
 def strip_ansi(text: str) -> str:
-    """Strip ANSI escape sequences from a string.
+    """
+    Strip ANSI escape sequences from a string.
 
     :param text: string which may contain ANSI escape sequences
     :return: the same string with any ANSI escape sequences removed
@@ -73,7 +78,7 @@ def strip_ansi(text: str) -> str:
 
 def ansi_safe_wcswidth(text: str) -> int:
     """
-    Wraps wcswidth to make it compatible with colored strings
+    Wrap wcswidth to make it compatible with strings that contains ANSI escape sequences
 
     :param text: the string being measured
     """
@@ -81,9 +86,17 @@ def ansi_safe_wcswidth(text: str) -> int:
     return wcswidth(strip_ansi(text))
 
 
-# ANSI escape sequences not provided by colorama
-UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
-UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
+def ansi_aware_write(fileobj: IO, msg: str) -> None:
+    """
+    Write a string to a fileobject and strip its ANSI escape sequences if required by allow_ansi setting
+
+    :param fileobj: the file object being written to
+    :param msg: the string being written
+    """
+    if allow_ansi.lower() == ANSI_NEVER.lower() or \
+            (allow_ansi.lower() == ANSI_TERMINAL.lower() and not fileobj.isatty()):
+        msg = strip_ansi(msg)
+    fileobj.write(msg)
 
 
 def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
