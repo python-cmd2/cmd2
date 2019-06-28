@@ -138,8 +138,8 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
     to undo whatever styling was done at the beginning.
 
     :param text: Any object compatible with str.format()
-    :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'red'). Defaults to no color.
-    :param bg: background color. Expects color names in BG_COLORS (e.g. 'black'). Defaults to no color.
+    :param fg: foreground color. Relies on `fg_lookup()` to retrieve ANSI escape based on name. Defaults to no color.
+    :param bg: background color. Relies on `bg_lookup()` to retrieve ANSI escape based on name. Defaults to no color.
     :param bold: apply the bold style if True. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
     :return: the stylized string
