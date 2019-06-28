@@ -71,11 +71,7 @@ def test_style_color_not_exist():
         ansi.style(base_str, fg='blue', bg='fake')
 
 
-def test_fg_lookup_dict():
-    assert ansi.fg_lookup('gray') == Fore.LIGHTBLACK_EX
-
-
-def test_fg_lookup_colorama():
+def test_fg_lookup_exist():
     assert ansi.fg_lookup('green') == Fore.GREEN
 
 
@@ -84,11 +80,7 @@ def test_fg_lookup_nonexist():
         ansi.fg_lookup('foo')
 
 
-def test_bg_lookup_dict():
-    assert ansi.bg_lookup('gray') == Back.LIGHTBLACK_EX
-
-
-def test_bg_lookup_colorama():
+def test_bg_lookup_exist():
     assert ansi.bg_lookup('green') == Back.GREEN
 
 

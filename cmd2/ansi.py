@@ -21,15 +21,15 @@ ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
 
 # Foreground color presets
 FG_COLORS = {
+    'black': Fore.BLACK,
+    'red': Fore.RED,
+    'green': Fore.GREEN,
+    'yellow': Fore.YELLOW,
+    'blue': Fore.BLUE,
+    'magenta': Fore.MAGENTA,
+    'cyan': Fore.CYAN,
+    'white': Fore.WHITE,
     'reset': Fore.RESET,
-    'gray': Fore.LIGHTBLACK_EX,
-    'lightred': Fore.LIGHTRED_EX,
-    'lightblue': Fore.LIGHTBLUE_EX,
-    'lightgreen': Fore.LIGHTGREEN_EX,
-    'lightyellow': Fore.LIGHTYELLOW_EX,
-    'lightmagenta': Fore.LIGHTMAGENTA_EX,
-    'lightcyan': Fore.LIGHTCYAN_EX,
-    'lightwhite': Fore.LIGHTWHITE_EX,
     'bright_black': Fore.LIGHTBLACK_EX,
     'bright_red': Fore.LIGHTRED_EX,
     'bright_green': Fore.LIGHTGREEN_EX,
@@ -39,19 +39,18 @@ FG_COLORS = {
     'bright_cyan': Fore.LIGHTCYAN_EX,
     'bright_white': Fore.LIGHTWHITE_EX,
 }
-FG_RESET = FG_COLORS['reset']
 
 # Background color presets
 BG_COLORS = {
+    'black': Back.BLACK,
+    'red': Back.RED,
+    'green': Back.GREEN,
+    'yellow': Back.YELLOW,
+    'blue': Back.BLUE,
+    'magenta': Back.MAGENTA,
+    'cyan': Back.CYAN,
+    'white': Back.WHITE,
     'reset': Back.RESET,
-    'gray': Back.LIGHTBLACK_EX,
-    'lightred': Back.LIGHTRED_EX,
-    'lightblue': Back.LIGHTBLUE_EX,
-    'lightgreen': Back.LIGHTGREEN_EX,
-    'lightyellow': Back.LIGHTYELLOW_EX,
-    'lightmagenta': Back.LIGHTMAGENTA_EX,
-    'lightcyan': Back.LIGHTCYAN_EX,
-    'lightwhite': Back.LIGHTWHITE_EX,
     'bright_black': Back.LIGHTBLACK_EX,
     'bright_red': Back.LIGHTRED_EX,
     'bright_green': Back.LIGHTGREEN_EX,
@@ -61,7 +60,10 @@ BG_COLORS = {
     'bright_cyan': Back.LIGHTCYAN_EX,
     'bright_white': Back.LIGHTWHITE_EX,
 }
+
+FG_RESET = FG_COLORS['reset']
 BG_RESET = BG_COLORS['reset']
+RESET_ALL = Style.RESET_ALL
 
 # ANSI escape sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
@@ -104,8 +106,6 @@ def ansi_aware_write(fileobj: IO, msg: str) -> None:
 def fg_lookup(fg_name: str) -> str:
     """Look up ANSI escape codes based on foreground color name.
 
-    This function first searches the FG_COLORS dictionary and then falls back to searching colorama.Fore.
-
     :param fg_name: foreground color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError if the color cannot be found
@@ -113,17 +113,12 @@ def fg_lookup(fg_name: str) -> str:
     try:
         ansi_escape = FG_COLORS[fg_name.lower()]
     except KeyError:
-        try:
-            ansi_escape = getattr(Fore, fg_name.upper())
-        except AttributeError:
-            raise ValueError('Foreground color {!r} does not exist.'.format(fg_name))
+        raise ValueError('Foreground color {!r} does not exist.'.format(fg_name))
     return ansi_escape
 
 
 def bg_lookup(bg_name: str) -> str:
     """Look up ANSI escape codes based on background color name.
-
-    This function first searches the BG_COLORS dictionary and then falls back to searching colorama.Back.
 
     :param bg_name: background color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
@@ -132,10 +127,7 @@ def bg_lookup(bg_name: str) -> str:
     try:
         ansi_escape = BG_COLORS[bg_name.lower()]
     except KeyError:
-        try:
-            ansi_escape = getattr(Back, bg_name.upper())
-        except AttributeError:
-            raise ValueError('Background color {!r} does not exist.'.format(bg_name))
+        raise ValueError('Background color {!r} does not exist.'.format(bg_name))
     return ansi_escape
 
 
@@ -144,7 +136,7 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
     Applies styles to text
 
     :param text: Any object compatible with str.format()
-    :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'lightred'). Defaults to no color.
+    :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'red'). Defaults to no color.
     :param bg: background color. Expects color names in BG_COLORS (e.g. 'black'). Defaults to no color.
     :param bold: apply the bold style if True. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
@@ -186,5 +178,5 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
 # These can be altered to suit an application's needs and only need to be a
 # function with the following structure: func(str) -> str
 style_success = functools.partial(style, fg='green', bold=True)
-style_warning = functools.partial(style, fg='lightyellow')
-style_error = functools.partial(style, fg='lightred')
+style_warning = functools.partial(style, fg='bright_yellow')
+style_error = functools.partial(style, fg='bright_red')

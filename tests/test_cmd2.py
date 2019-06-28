@@ -11,7 +11,6 @@ import os
 import sys
 import tempfile
 
-from colorama import Fore, Back, Style
 import pytest
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
@@ -846,9 +845,9 @@ def test_ansi_prompt_not_esacped(base_app):
 def test_ansi_prompt_escaped():
     from cmd2.rl_utils import rl_make_safe_prompt
     app = cmd2.Cmd()
-    color = Fore.CYAN
+    color = 'cyan'
     prompt = 'InColor'
-    color_prompt = color + prompt + Fore.RESET
+    color_prompt = ansi.style(prompt, fg=color)
 
     readline_hack_start = "\x01"
     readline_hack_end = "\x02"
@@ -857,11 +856,11 @@ def test_ansi_prompt_escaped():
     assert prompt != color_prompt
     if sys.platform.startswith('win'):
         # PyReadline on Windows doesn't suffer from the GNU readline bug which requires the hack
-        assert readline_safe_prompt.startswith(color)
-        assert readline_safe_prompt.endswith(Fore.RESET)
+        assert readline_safe_prompt.startswith(ansi.fg_lookup(color))
+        assert readline_safe_prompt.endswith(ansi.FG_RESET)
     else:
-        assert readline_safe_prompt.startswith(readline_hack_start + color + readline_hack_end)
-        assert readline_safe_prompt.endswith(readline_hack_start + Fore.RESET + readline_hack_end)
+        assert readline_safe_prompt.startswith(readline_hack_start + ansi.fg_lookup(color) + readline_hack_end)
+        assert readline_safe_prompt.endswith(readline_hack_start + ansi.FG_RESET + readline_hack_end)
 
 
 class HelpApp(cmd2.Cmd):
@@ -1460,17 +1459,22 @@ def test_poutput_none(outsim_app):
 def test_poutput_ansi_always(outsim_app):
     msg = 'Hello World'
     ansi.allow_ansi = ansi.ANSI_ALWAYS
-    outsim_app.poutput(ansi.style(msg, fg='cyan'))
+    colored_msg = ansi.style(msg, fg='cyan')
+    outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
-    expected = Fore.CYAN + msg + Fore.RESET + '\n'
+    expected = colored_msg + '\n'
+    assert colored_msg != msg
     assert out == expected
+
 
 def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
     ansi.allow_ansi = ansi.ANSI_NEVER
-    outsim_app.poutput(ansi.style(msg, fg='cyan'))
+    colored_msg = ansi.style(msg, fg='cyan')
+    outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
+    assert colored_msg != msg
     assert out == expected
 
 
@@ -1769,7 +1773,7 @@ def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     end = '\n'
     ansi.allow_ansi = ansi.ANSI_TERMINAL
     outsim_app._redirecting = True
-    outsim_app.ppaged(Fore.RED + msg)
+    outsim_app.ppaged(ansi.style(msg, fg='red'))
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
 
@@ -1778,9 +1782,10 @@ def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
     end = '\n'
     ansi.allow_ansi = ansi.ANSI_ALWAYS
     outsim_app._redirecting = True
-    outsim_app.ppaged(Fore.RED + msg)
+    colored_msg = ansi.style(msg, fg='red')
+    outsim_app.ppaged(colored_msg)
     out = outsim_app.stdout.getvalue()
-    assert out == Fore.RED + msg + end
+    assert out == colored_msg + end
 
 # we override cmd.parseline() so we always get consistent
 # command parsing by parent methods we don't override
@@ -1904,9 +1909,7 @@ class AnsiApp(cmd2.Cmd):
         self.perror(args)
 
     def do_echo_error(self, args):
-        color_on = Fore.RED + Back.BLACK
-        color_off = Style.RESET_ALL
-        self.poutput(color_on + args + color_off)
+        self.poutput(ansi.style(args, fg='red'))
         # perror uses colors by default
         self.perror(args)
 
