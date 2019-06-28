@@ -86,6 +86,8 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     speak_parser.add_argument('-f', '--fg', choices=FG_COLORS, help='foreground color to apply to output')
     speak_parser.add_argument('-b', '--bg', choices=BG_COLORS, help='background color to apply to output')
+    speak_parser.add_argument('-l', '--bold', action='store_true', help='bold the output')
+    speak_parser.add_argument('-u', '--underline', action='store_true', help='underline the output')
     speak_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(speak_parser)
@@ -100,7 +102,7 @@ class CmdLineApp(cmd2.Cmd):
             words.append(word)
 
         repetitions = args.repeat or 1
-        output_str = ansi.style(' '.join(words), fg=args.fg, bg=args.bg)
+        output_str = ansi.style(' '.join(words), fg=args.fg, bg=args.bg, bold=args.bold, underline=args.underline)
 
         for i in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
