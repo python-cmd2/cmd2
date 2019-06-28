@@ -69,3 +69,29 @@ def test_style_color_not_exist():
 
     with pytest.raises(ValueError):
         ansi.style(base_str, fg='blue', bg='fake')
+
+
+def test_fg_lookup_dict():
+    assert ansi.fg_lookup('gray') == Fore.LIGHTBLACK_EX
+
+
+def test_fg_lookup_colorama():
+    assert ansi.fg_lookup('green') == Fore.GREEN
+
+
+def test_fg_lookup_nonexist():
+    with pytest.raises(ValueError):
+        ansi.fg_lookup('foo')
+
+
+def test_bg_lookup_dict():
+    assert ansi.bg_lookup('gray') == Back.LIGHTBLACK_EX
+
+
+def test_bg_lookup_colorama():
+    assert ansi.bg_lookup('green') == Back.GREEN
+
+
+def test_bg_lookup_nonexist():
+    with pytest.raises(ValueError):
+        ansi.bg_lookup('bar')

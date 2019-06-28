@@ -21,14 +21,7 @@ ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
 
 # Foreground color presets
 FG_COLORS = {
-    'black': Fore.BLACK,
-    'red': Fore.RED,
-    'green': Fore.GREEN,
-    'yellow': Fore.YELLOW,
-    'blue': Fore.BLUE,
-    'magenta': Fore.MAGENTA,
-    'cyan': Fore.CYAN,
-    'white': Fore.WHITE,
+    'reset': Fore.RESET,
     'gray': Fore.LIGHTBLACK_EX,
     'lightred': Fore.LIGHTRED_EX,
     'lightblue': Fore.LIGHTBLUE_EX,
@@ -37,19 +30,20 @@ FG_COLORS = {
     'lightmagenta': Fore.LIGHTMAGENTA_EX,
     'lightcyan': Fore.LIGHTCYAN_EX,
     'lightwhite': Fore.LIGHTWHITE_EX,
-    'reset': Fore.RESET,
+    'bright_black': Fore.LIGHTBLACK_EX,
+    'bright_red': Fore.LIGHTRED_EX,
+    'bright_green': Fore.LIGHTGREEN_EX,
+    'bright_yellow': Fore.LIGHTYELLOW_EX,
+    'bright_blue': Fore.LIGHTBLUE_EX,
+    'bright_magenta': Fore.LIGHTMAGENTA_EX,
+    'bright_cyan': Fore.LIGHTCYAN_EX,
+    'bright_white': Fore.LIGHTWHITE_EX,
 }
+FG_RESET = FG_COLORS['reset']
 
 # Background color presets
 BG_COLORS = {
-    'black': Back.BLACK,
-    'red': Back.RED,
-    'green': Back.GREEN,
-    'yellow': Back.YELLOW,
-    'blue': Back.BLUE,
-    'magenta': Back.MAGENTA,
-    'cyan': Back.CYAN,
-    'white': Back.WHITE,
+    'reset': Back.RESET,
     'gray': Back.LIGHTBLACK_EX,
     'lightred': Back.LIGHTRED_EX,
     'lightblue': Back.LIGHTBLUE_EX,
@@ -58,8 +52,16 @@ BG_COLORS = {
     'lightmagenta': Back.LIGHTMAGENTA_EX,
     'lightcyan': Back.LIGHTCYAN_EX,
     'lightwhite': Back.LIGHTWHITE_EX,
-    'reset': Back.RESET,
+    'bright_black': Back.LIGHTBLACK_EX,
+    'bright_red': Back.LIGHTRED_EX,
+    'bright_green': Back.LIGHTGREEN_EX,
+    'bright_yellow': Back.LIGHTYELLOW_EX,
+    'bright_blue': Back.LIGHTBLUE_EX,
+    'bright_magenta': Back.LIGHTMAGENTA_EX,
+    'bright_cyan': Back.LIGHTCYAN_EX,
+    'bright_white': Back.LIGHTWHITE_EX,
 }
+BG_RESET = BG_COLORS['reset']
 
 # ANSI escape sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
@@ -99,6 +101,44 @@ def ansi_aware_write(fileobj: IO, msg: str) -> None:
     fileobj.write(msg)
 
 
+def fg_lookup(fg_name: str) -> str:
+    """Look up ANSI escape codes based on foreground color name.
+
+    This function first searches the FG_COLORS dictionary and then falls back to searching colorama.Fore.
+
+    :param fg_name: foreground color name to look up ANSI escape code(s) for
+    :return: ANSI escape code(s) associated with this color
+    :raises ValueError if the color cannot be found
+    """
+    try:
+        ansi_escape = FG_COLORS[fg_name.lower()]
+    except KeyError:
+        try:
+            ansi_escape = getattr(Fore, fg_name.upper())
+        except AttributeError:
+            raise ValueError('Foreground color {!r} does not exist.'.format(fg_name))
+    return ansi_escape
+
+
+def bg_lookup(bg_name: str) -> str:
+    """Look up ANSI escape codes based on background color name.
+
+    This function first searches the BG_COLORS dictionary and then falls back to searching colorama.Back.
+
+    :param bg_name: background color name to look up ANSI escape code(s) for
+    :return: ANSI escape code(s) associated with this color
+    :raises ValueError if the color cannot be found
+    """
+    try:
+        ansi_escape = BG_COLORS[bg_name.lower()]
+    except KeyError:
+        try:
+            ansi_escape = getattr(Back, bg_name.upper())
+        except AttributeError:
+            raise ValueError('Background color {!r} does not exist.'.format(bg_name))
+    return ansi_escape
+
+
 def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
     """
     Applies styles to text
@@ -110,6 +150,7 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
     :param underline: apply the underline style if True. Defaults to False.
 
     :return: the stylized string
+    :raises ValueError if fg or bg color does cannot be found
     """
     # List of strings that add style
     additions = []
@@ -122,18 +163,12 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
 
     # Process the style settings
     if fg:
-        try:
-            additions.append(FG_COLORS[fg.lower()])
-            removals.append(FG_COLORS['reset'])
-        except KeyError:
-            raise ValueError('Color {} does not exist.'.format(fg))
+        additions.append(fg_lookup(fg))
+        removals.append(FG_RESET)
 
     if bg:
-        try:
-            additions.append(BG_COLORS[bg.lower()])
-            removals.append(BG_COLORS['reset'])
-        except KeyError:
-            raise ValueError('Color {} does not exist.'.format(bg))
+        additions.append(bg_lookup(bg))
+        removals.append(BG_RESET)
 
     if bold:
         additions.append(Style.BRIGHT)
