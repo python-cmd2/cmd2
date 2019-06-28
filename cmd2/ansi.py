@@ -29,7 +29,6 @@ FG_COLORS = {
     'magenta': Fore.MAGENTA,
     'cyan': Fore.CYAN,
     'white': Fore.WHITE,
-    'reset': Fore.RESET,
     'bright_black': Fore.LIGHTBLACK_EX,
     'bright_red': Fore.LIGHTRED_EX,
     'bright_green': Fore.LIGHTGREEN_EX,
@@ -38,6 +37,7 @@ FG_COLORS = {
     'bright_magenta': Fore.LIGHTMAGENTA_EX,
     'bright_cyan': Fore.LIGHTCYAN_EX,
     'bright_white': Fore.LIGHTWHITE_EX,
+    'reset': Fore.RESET,
 }
 
 # Background color presets
@@ -50,7 +50,6 @@ BG_COLORS = {
     'magenta': Back.MAGENTA,
     'cyan': Back.CYAN,
     'white': Back.WHITE,
-    'reset': Back.RESET,
     'bright_black': Back.LIGHTBLACK_EX,
     'bright_red': Back.LIGHTRED_EX,
     'bright_green': Back.LIGHTGREEN_EX,
@@ -59,6 +58,7 @@ BG_COLORS = {
     'bright_magenta': Back.LIGHTMAGENTA_EX,
     'bright_cyan': Back.LIGHTCYAN_EX,
     'bright_white': Back.LIGHTWHITE_EX,
+    'reset': Back.RESET,
 }
 
 FG_RESET = FG_COLORS['reset']
