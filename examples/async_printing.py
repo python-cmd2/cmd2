@@ -144,7 +144,7 @@ class AlerterApp(cmd2.Cmd):
         """
         fg_color = random.choice(list(ansi.FG_COLORS.keys()))
         bg_color = random.choice(list(ansi.BG_COLORS.keys()))
-        return ansi.style(self.visible_prompt, fg=fg_color, bg=bg_color)
+        return ansi.style(self.visible_prompt.rstrip(), fg=fg_color, bg=bg_color) + ' '
 
     def _alerter_thread_func(self) -> None:
         """ Prints alerts and updates the prompt any time the prompt is showing """
