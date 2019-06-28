@@ -141,7 +141,7 @@ instead.  These methods have these advantages:
 Colored Output
 ==============
 
-The output methods in the previous section all honor the ``colors`` setting,
+The output methods in the previous section all honor the ``allow_ansi`` setting,
 which has three possible values:
 
 Never
@@ -152,13 +152,16 @@ Terminal
     (the default value) poutput(), pfeedback(), and ppaged() do not strip any
     ANSI escape sequences when the output is a terminal, but if the output is
     a pipe or a file the escape sequences are stripped. If you want colorized
-    output you must add ANSI escape sequences, preferably using some python
-    color library like `plumbum.colors`, `colorama`, `blessings`, or
-    `termcolor`.
+    output you must add ANSI escape sequences using either cmd2's internal ansi
+    module or another color library such as `plumbum.colors`, `colorama`, or `colored`.
 
 Always
     poutput(), pfeedback(), and ppaged() never strip ANSI escape sequences,
     regardless of the output destination
+
+Colored and otherwise styled output can be generated using the `ansi.style()` function:
+
+.. automethod:: cmd2.ansi.style
 
 
 .. _quiet:

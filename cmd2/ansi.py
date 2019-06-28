@@ -132,17 +132,17 @@ def bg_lookup(bg_name: str) -> str:
 
 
 def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
-    """
-    Applies styles to text
+    """Styles a string with ANSI colors and/or styles and returns the new string.
+
+    The styling is self contained which means that at the end of the string reset code(s) are issued
+    to undo whatever styling was done at the beginning.
 
     :param text: Any object compatible with str.format()
     :param fg: foreground color. Expects color names in FG_COLORS (e.g. 'red'). Defaults to no color.
     :param bg: background color. Expects color names in BG_COLORS (e.g. 'black'). Defaults to no color.
     :param bold: apply the bold style if True. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
-
     :return: the stylized string
-    :raises ValueError if fg or bg color does cannot be found
     """
     # List of strings that add style
     additions = []

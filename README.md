@@ -43,6 +43,7 @@ Main Features
 - Built-in regression testing framework for your applications (transcript-based testing)
 - Transcripts for use with built-in regression can be automatically generated from `history -t` or `run_script -t`
 - Alerts that seamlessly print while user enters text at prompt
+- Colored and stylized output using `ansi.style()`
 
 Python 2.7 support is EOL
 -------------------------
@@ -89,7 +90,7 @@ Instructions for implementing each feature follow.
     class MyApp(cmd2.Cmd):
         def do_foo(self, args):
             """This docstring is the built-in help for the foo command."""
-            print('foo bar baz')
+            print(cmd2.ansi.style('foo bar baz', fg='red'))
     ```
     - By default the docstring for your **do_foo** method is the help for the **foo** command
         - NOTE: This doesn't apply if you use one of the `argparse` decorators mentioned below
@@ -314,11 +315,10 @@ example/transcript_regex.txt:
 
 ```text
 # Run this transcript with "python example.py -t transcript_regex.txt"
-# The regex for colors is because no color on Windows.
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
-colors: /(True|False)/
+allow_ansi: Terminal
 continuation_prompt: >/ /
 debug: False
 echo: False
@@ -331,9 +331,7 @@ quiet: False
 timing: False
 ```
 
-Note how a regular expression `/(True|False)/` is used for output of the **show color** command since
-colored text is currently not available for cmd2 on Windows.  Regular expressions can be used anywhere within a
-transcript file simply by enclosing them within forward slashes, `/`.
+Regular expressions can be used anywhere within a transcript file simply by enclosing them within forward slashes, `/`.
 
 
 Found a bug?
