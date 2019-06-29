@@ -18,9 +18,12 @@
         * We make no API stability guarantees about these internal functions
     * Split `perror` into 2 functions:
         * `perror` - print a message to sys.stderr
-        * `pexcept` - print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
-    * Removed color parameters from `poutput` and `perror` since more powerful styles now exist. See the docstrings
-    of these methods for more information on applying styles to output messages.
+        * `pexcept` - print Exception message to sys.stderr. If debug is true, print exception traceback if one exists
+    * Signature of `poutput` and `perror` significantly changed
+        * Removed color parameters `color`, `err_color`, and `war_color` from `poutput` and `perror` 
+            * See the docstrings of these methods or the [cmd2 docs](https://cmd2.readthedocs.io/en/latest/unfreefeatures.html#poutput-pfeedback-perror-ppaged) for more info on applying styles to output messages
+        * `end` argument is now keyword-only and cannot be specified positionally
+        * `traceback_war` no longer exists as an argument since it isn't needed now that `perror` and `pexcept` exist
     * Moved `cmd2.Cmd.colors` to ansi.py and renamed it to `allow_ansi`. This is now an application-wide setting.
     * Renamed the following constants and moved them to ansi.py
         * `COLORS_ALWAYS` --> `ANSI_ALWAYS`
