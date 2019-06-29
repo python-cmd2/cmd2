@@ -387,7 +387,10 @@ class Cmd(cmd.Cmd):
         self.settable = \
             {
                 # allow_ansi is a special case in which it's an application-wide setting defined in ansi.py
-                'allow_ansi': 'Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)',
+                'allow_ansi': ('Allow ANSI escape sequences in output '
+                               '(valid values: {}, {}, {})'.format(ansi.ANSI_TERMINAL,
+                                                                   ansi.ANSI_ALWAYS,
+                                                                   ansi.ANSI_NEVER)),
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
@@ -561,7 +564,11 @@ class Cmd(cmd.Cmd):
     @allow_ansi.setter
     def allow_ansi(self, new_val: str) -> None:
         """Read-only property needed to support do_set when it sets allow_ansi"""
-        ansi.allow_ansi = new_val
+        if new_val not in (ansi.ANSI_TERMINAL, ansi.ANSI_ALWAYS, ansi.ANSI_NEVER):
+            self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.ANSI_TERMINAL,
+                                                                              ansi.ANSI_ALWAYS, ansi.ANSI_NEVER))
+        else:
+            ansi.allow_ansi = new_val
 
     @property
     def visible_prompt(self) -> str:
@@ -2953,17 +2960,20 @@ class Cmd(cmd.Cmd):
                 return self._show(args, param)
 
         # Update the settable's value
-        current_value = getattr(self, param)
-        value = utils.cast(current_value, value)
-        setattr(self, param, value)
+        orig_value = getattr(self, param)
+        setattr(self, param, utils.cast(orig_value, value))
 
-        self.poutput('{} - was: {}\nnow: {}'.format(param, current_value, value))
+        # In cases where a Python property is used to validate and update a settable's value, its value will not
+        # change if the passed in one is invalid. Therefore we should read its actual value back and not assume.
+        new_value = getattr(self, param)
+
+        self.poutput('{} - was: {}\nnow: {}'.format(param, orig_value, new_value))
 
         # See if we need to call a change hook for this settable
-        if current_value != value:
+        if orig_value != new_value:
             onchange_hook = getattr(self, '_onchange_{}'.format(param), None)
             if onchange_hook is not None:
-                onchange_hook(old=current_value, new=value)
+                onchange_hook(old=orig_value, new=new_value)
 
     shell_parser = ACArgumentParser()
     setattr(shell_parser.add_argument('command', help='the command to run'),

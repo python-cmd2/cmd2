@@ -181,6 +181,20 @@ now: True
     out, err = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
 
+@pytest.mark.parametrize('new_val, is_valid', [
+    (ansi.ANSI_NEVER, False),
+    (ansi.ANSI_TERMINAL, False),
+    (ansi.ANSI_ALWAYS, False),
+    ('invalid', True),
+])
+def test_set_allow_ansi(base_app, new_val, is_valid):
+    out, err = run_cmd(base_app, 'set allow_ansi {}'.format(new_val))
+    assert bool(err) == is_valid
+
+    # Reload ansi module to reset allow_ansi to its default since it's an
+    # application-wide setting that can affect other unit tests.
+    import importlib
+    importlib.reload(ansi)
 
 class OnChangeHookApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
