@@ -564,12 +564,16 @@ class Cmd(cmd.Cmd):
     @allow_ansi.setter
     def allow_ansi(self, new_val: str) -> None:
         """Setter property needed to support do_set when it updates allow_ansi"""
-        new_val = new_val.capitalize()
-        if new_val not in (ansi.ANSI_TERMINAL, ansi.ANSI_ALWAYS, ansi.ANSI_NEVER):
+        new_val = new_val.lower()
+        if new_val == ansi.ANSI_TERMINAL.lower():
+            ansi.allow_ansi = ansi.ANSI_TERMINAL
+        elif new_val == ansi.ANSI_ALWAYS.lower():
+            ansi.allow_ansi = ansi.ANSI_ALWAYS
+        elif new_val == ansi.ANSI_NEVER.lower():
+            ansi.allow_ansi = ansi.ANSI_NEVER
+        else:
             self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.ANSI_TERMINAL,
                                                                               ansi.ANSI_ALWAYS, ansi.ANSI_NEVER))
-        else:
-            ansi.allow_ansi = new_val
 
     @property
     def visible_prompt(self) -> str:
