@@ -8,22 +8,10 @@ import sys
 
 import pytest
 
-from colorama import Fore
 import cmd2.utils as cu
 
 HELLO_WORLD = 'Hello, world!'
 
-
-def test_strip_ansi():
-    base_str = HELLO_WORLD
-    ansi_str = Fore.GREEN + base_str + Fore.RESET
-    assert base_str != ansi_str
-    assert base_str == cu.strip_ansi(ansi_str)
-
-def test_ansi_safe_wcswidth():
-    base_str = HELLO_WORLD
-    ansi_str = Fore.GREEN + base_str + Fore.RESET
-    assert cu.ansi_safe_wcswidth(ansi_str) != len(ansi_str)
 
 def test_strip_quotes_no_quotes():
     base_str = HELLO_WORLD
@@ -257,7 +245,8 @@ def test_proc_reader_terminate(pr_none):
     else:
         assert ret_code == -signal.SIGTERM
 
-@pytest.mark.skipif(sys.platform == 'linux', reason="Test doesn't work correctly on TravisCI")
+@pytest.mark.skipif(not sys.platform.startswith('win'),
+                    reason="Test doesn't work correctly on TravisCI and is unreliable on Azure DevOps macOS")
 def test_proc_reader_wait(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.wait()

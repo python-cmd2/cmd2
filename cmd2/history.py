@@ -16,8 +16,8 @@ from .parsing import Statement
 @attr.s(frozen=True)
 class HistoryItem():
     """Class used to represent one command in the History list"""
-    _listformat = ' {:>4}  {}\n'
-    _ex_listformat = ' {:>4}x {}\n'
+    _listformat = ' {:>4}  {}'
+    _ex_listformat = ' {:>4}x {}'
 
     statement = attr.ib(default=None, validator=attr.validators.instance_of(Statement))
     idx = attr.ib(default=None, validator=attr.validators.instance_of(int))
@@ -46,7 +46,7 @@ class HistoryItem():
         if verbose:
             ret_str = self._listformat.format(self.idx, self.raw.rstrip())
             if self.raw != self.expanded.rstrip():
-                ret_str += self._ex_listformat.format(self.idx, self.expanded.rstrip())
+                ret_str += '\n' + self._ex_listformat.format(self.idx, self.expanded.rstrip())
         else:
             if expanded:
                 ret_str = self.expanded.rstrip()
@@ -153,7 +153,7 @@ class History(list):
         """Return an index or slice of the History list,
 
         :param span: string containing an index or a slice
-        :param include_persisted: (optional) if True, then retrieve full results including from persisted history
+        :param include_persisted: if True, then retrieve full results including from persisted history
         :return: a list of HistoryItems
 
         This method can accommodate input in any of these forms:
@@ -227,7 +227,7 @@ class History(list):
         """Find history items which contain a given string
 
         :param search: the string to search for
-        :param include_persisted: (optional) if True, then search full history including persisted history
+        :param include_persisted: if True, then search full history including persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
         def isin(history_item):
@@ -244,7 +244,7 @@ class History(list):
         """Find history items which match a given regular expression
 
         :param regex: the regular expression to search for.
-        :param include_persisted: (optional) if True, then search full history including persisted history
+        :param include_persisted: if True, then search full history including persisted history
         :return: a list of history items, or an empty list if the string was not found
         """
         regex = regex.strip()

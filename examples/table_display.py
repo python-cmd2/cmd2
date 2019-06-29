@@ -9,7 +9,8 @@ You can use the arrow keys (left, right, up, and down) to scroll around the tabl
 You can quit out of the pager by typing "q".  You can also search for text within the pager using "/".
 
 WARNING: This example requires the tableformatter module: https://github.com/python-tableformatter/tableformatter
-- pip install tableformatter
+and either the colored or colorama module
+- pip install tableformatter colorama
 """
 from typing import Tuple
 

@@ -11,7 +11,6 @@ import os
 import sys
 import tempfile
 
-from colorama import Fore, Back, Style
 import pytest
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
@@ -21,7 +20,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-from cmd2 import clipboard, constants, utils
+from cmd2 import ansi, clipboard, constants, utils
 from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
 def CreateOutsimApp():
@@ -182,6 +181,30 @@ now: True
     out, err = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
 
+@pytest.mark.parametrize('new_val, is_valid, expected', [
+    (ansi.ANSI_NEVER, False, ansi.ANSI_NEVER),
+    ('neVeR', False, ansi.ANSI_NEVER),
+    (ansi.ANSI_TERMINAL, False, ansi.ANSI_TERMINAL),
+    ('TeRMInal', False, ansi.ANSI_TERMINAL),
+    (ansi.ANSI_ALWAYS, False, ansi.ANSI_ALWAYS),
+    ('AlWaYs', False, ansi.ANSI_ALWAYS),
+    ('invalid', True, ansi.ANSI_TERMINAL),
+])
+def test_set_allow_ansi(base_app, new_val, is_valid, expected):
+    # Initialize allow_ansi for this test
+    ansi.allow_ansi = ansi.ANSI_TERMINAL
+
+    # Use the set command to alter it
+    out, err = run_cmd(base_app, 'set allow_ansi {}'.format(new_val))
+
+    # Verify the results
+    assert bool(err) == is_valid
+    assert ansi.allow_ansi == expected
+
+    # Reload ansi module to reset allow_ansi to its default since it's an
+    # application-wide setting that can affect other unit tests.
+    import importlib
+    importlib.reload(ansi)
 
 class OnChangeHookApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
@@ -354,11 +377,11 @@ def test_run_script_nested_run_scripts(base_app, request):
     expected = """
 %s
 _relative_run_script precmds.txt
-set colors Always
+set allow_ansi Always
 help
 shortcuts
 _relative_run_script postcmds.txt
-set colors Never""" % initial_run
+set allow_ansi Never""" % initial_run
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
@@ -373,11 +396,11 @@ def test_runcmds_plus_hooks(base_app, request):
                                  'run_script ' + postfilepath])
     expected = """
 run_script %s
-set colors Always
+set allow_ansi Always
 help
 shortcuts
 run_script %s
-set colors Never""" % (prefilepath, postfilepath)
+set allow_ansi Never""" % (prefilepath, postfilepath)
 
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
@@ -846,9 +869,9 @@ def test_ansi_prompt_not_esacped(base_app):
 def test_ansi_prompt_escaped():
     from cmd2.rl_utils import rl_make_safe_prompt
     app = cmd2.Cmd()
-    color = Fore.CYAN
+    color = 'cyan'
     prompt = 'InColor'
-    color_prompt = color + prompt + Fore.RESET
+    color_prompt = ansi.style(prompt, fg=color)
 
     readline_hack_start = "\x01"
     readline_hack_end = "\x02"
@@ -857,11 +880,11 @@ def test_ansi_prompt_escaped():
     assert prompt != color_prompt
     if sys.platform.startswith('win'):
         # PyReadline on Windows doesn't suffer from the GNU readline bug which requires the hack
-        assert readline_safe_prompt.startswith(color)
-        assert readline_safe_prompt.endswith(Fore.RESET)
+        assert readline_safe_prompt.startswith(ansi.fg_lookup(color))
+        assert readline_safe_prompt.endswith(ansi.FG_RESET)
     else:
-        assert readline_safe_prompt.startswith(readline_hack_start + color + readline_hack_end)
-        assert readline_safe_prompt.endswith(readline_hack_start + Fore.RESET + readline_hack_end)
+        assert readline_safe_prompt.startswith(readline_hack_start + ansi.fg_lookup(color) + readline_hack_end)
+        assert readline_safe_prompt.endswith(readline_hack_start + ansi.FG_RESET + readline_hack_end)
 
 
 class HelpApp(cmd2.Cmd):
@@ -1356,7 +1379,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
     app, out = piped_rawinput_true(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1].startswith('colors:')
+    assert out[1].startswith('allow_ansi:')
 
 # using the decorator puts the original input function back when this unit test returns
 @mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
@@ -1364,7 +1387,7 @@ def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_true(capsys, False, command)
     firstline = out.splitlines()[0]
-    assert firstline.startswith('colors:')
+    assert firstline.startswith('allow_ansi:')
     assert not '{}{}'.format(app.prompt, command) in out
 
 # the next helper function and two tests check for piped
@@ -1383,13 +1406,13 @@ def test_pseudo_raw_input_piped_rawinput_false_echo_true(capsys):
     app, out = piped_rawinput_false(capsys, True, command)
     out = out.splitlines()
     assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1].startswith('colors:')
+    assert out[1].startswith('allow_ansi:')
 
 def test_pseudo_raw_input_piped_rawinput_false_echo_false(capsys):
     command = 'set'
     app, out = piped_rawinput_false(capsys, False, command)
     firstline = out.splitlines()[0]
-    assert firstline.startswith('colors:')
+    assert firstline.startswith('allow_ansi:')
     assert not '{}{}'.format(app.prompt, command) in out
 
 
@@ -1447,32 +1470,35 @@ def test_poutput_empty_string(outsim_app):
     msg = ''
     outsim_app.poutput(msg)
     out = outsim_app.stdout.getvalue()
-    expected = msg
+    expected = '\n'
     assert out == expected
 
 def test_poutput_none(outsim_app):
     msg = None
     outsim_app.poutput(msg)
     out = outsim_app.stdout.getvalue()
-    expected = ''
+    expected = 'None\n'
     assert out == expected
 
-def test_poutput_color_always(outsim_app):
+def test_poutput_ansi_always(outsim_app):
     msg = 'Hello World'
-    color = Fore.CYAN
-    outsim_app.colors = 'Always'
-    outsim_app.poutput(msg, color=color)
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    colored_msg = ansi.style(msg, fg='cyan')
+    outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
-    expected = color + msg + '\n' + Fore.RESET
+    expected = colored_msg + '\n'
+    assert colored_msg != msg
     assert out == expected
 
-def test_poutput_color_never(outsim_app):
+
+def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
-    color = Fore.CYAN
-    outsim_app.colors = 'Never'
-    outsim_app.poutput(msg, color=color)
+    ansi.allow_ansi = ansi.ANSI_NEVER
+    colored_msg = ansi.style(msg, fg='cyan')
+    outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
     expected = msg + '\n'
+    assert colored_msg != msg
     assert out == expected
 
 
@@ -1766,23 +1792,24 @@ def test_ppaged(outsim_app):
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
 
-def test_ppaged_strips_color_when_redirecting(outsim_app):
+def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
-    outsim_app.colors = cmd2.constants.COLORS_TERMINAL
+    ansi.allow_ansi = ansi.ANSI_TERMINAL
     outsim_app._redirecting = True
-    outsim_app.ppaged(Fore.RED + msg)
+    outsim_app.ppaged(ansi.style(msg, fg='red'))
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
 
-def test_ppaged_strips_color_when_redirecting_if_always(outsim_app):
+def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
-    outsim_app.colors = cmd2.constants.COLORS_ALWAYS
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
     outsim_app._redirecting = True
-    outsim_app.ppaged(Fore.RED + msg)
+    colored_msg = ansi.style(msg, fg='red')
+    outsim_app.ppaged(colored_msg)
     out = outsim_app.stdout.getvalue()
-    assert out == Fore.RED + msg + end
+    assert out == colored_msg + end
 
 # we override cmd.parseline() so we always get consistent
 # command parsing by parent methods we don't override
@@ -1897,28 +1924,22 @@ def test_exit_code_nonzero(exit_code_repl):
     assert out == expected
 
 
-class ColorsApp(cmd2.Cmd):
+class AnsiApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def do_echo(self, args):
         self.poutput(args)
-        self.perror(args, False)
+        self.perror(args)
 
     def do_echo_error(self, args):
-        color_on = Fore.RED + Back.BLACK
-        color_off = Style.RESET_ALL
-        self.poutput(color_on + args + color_off)
+        self.poutput(ansi.style(args, fg='red'))
         # perror uses colors by default
-        self.perror(args, False)
+        self.perror(args)
 
-def test_colors_default():
-    app = ColorsApp()
-    assert app.colors == cmd2.constants.COLORS_TERMINAL
-
-def test_colors_pouterr_always_tty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_ALWAYS
+def test_ansi_pouterr_always_tty(mocker, capsys):
+    app = AnsiApp()
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -1938,9 +1959,9 @@ def test_colors_pouterr_always_tty(mocker, capsys):
     assert len(err) > len('oopsie\n')
     assert 'oopsie' in err
 
-def test_colors_pouterr_always_notty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_ALWAYS
+def test_ansi_pouterr_always_notty(mocker, capsys):
+    app = AnsiApp()
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -1960,9 +1981,9 @@ def test_colors_pouterr_always_notty(mocker, capsys):
     assert len(err) > len('oopsie\n')
     assert 'oopsie' in err
 
-def test_colors_terminal_tty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_TERMINAL
+def test_ansi_terminal_tty(mocker, capsys):
+    app = AnsiApp()
+    ansi.allow_ansi = ansi.ANSI_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -1981,9 +2002,9 @@ def test_colors_terminal_tty(mocker, capsys):
     assert len(err) > len('oopsie\n')
     assert 'oopsie' in err
 
-def test_colors_terminal_notty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_TERMINAL
+def test_ansi_terminal_notty(mocker, capsys):
+    app = AnsiApp()
+    ansi.allow_ansi = ansi.ANSI_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -1995,9 +2016,9 @@ def test_colors_terminal_notty(mocker, capsys):
     out, err = capsys.readouterr()
     assert out == err == 'oopsie\n'
 
-def test_colors_never_tty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_NEVER
+def test_ansi_never_tty(mocker, capsys):
+    app = AnsiApp()
+    ansi.allow_ansi = ansi.ANSI_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2009,9 +2030,9 @@ def test_colors_never_tty(mocker, capsys):
     out, err = capsys.readouterr()
     assert out == err == 'oopsie\n'
 
-def test_colors_never_notty(mocker, capsys):
-    app = ColorsApp()
-    app.colors = cmd2.constants.COLORS_NEVER
+def test_ansi_never_notty(mocker, capsys):
+    app = AnsiApp()
+    ansi.allow_ansi = ansi.ANSI_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 

@@ -265,7 +265,7 @@ Here's what it looks like::
         """List contents of current directory."""
         # No arguments for this command
         if unknown:
-            self.perror("dir does not take any positional arguments:", traceback_war=False)
+            self.perror("dir does not take any positional arguments:")
             self.do_help('dir')
             self.last_result = CommandResult('', 'Bad arguments')
             return

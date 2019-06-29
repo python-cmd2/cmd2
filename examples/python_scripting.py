@@ -17,9 +17,8 @@ This application and the "scripts/conditional.py" script serve as an example for
 import argparse
 import os
 
-from colorama import Fore
-
 import cmd2
+from cmd2 import ansi
 
 
 class CmdLineApp(cmd2.Cmd):
@@ -35,7 +34,7 @@ class CmdLineApp(cmd2.Cmd):
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.prompt = Fore.CYAN + '{!r} $ '.format(self.cwd) + Fore.RESET
+        self.prompt = ansi.style('{!r} $ '.format(self.cwd), fg='cyan')
 
     def postcmd(self, stop: bool, line: str) -> bool:
         """Hook method executed just after a command dispatch is finished.
@@ -56,7 +55,7 @@ class CmdLineApp(cmd2.Cmd):
         """
         # Expect 1 argument, the directory to change to
         if not arglist or len(arglist) != 1:
-            self.perror("cd requires exactly 1 argument:", traceback_war=False)
+            self.perror("cd requires exactly 1 argument:")
             self.do_help('cd')
             self.last_result = cmd2.CommandResult('', 'Bad arguments')
             return
@@ -83,7 +82,7 @@ class CmdLineApp(cmd2.Cmd):
                 data = path
 
         if err:
-            self.perror(err, traceback_war=False)
+            self.perror(err)
         self.last_result = cmd2.CommandResult(out, err, data)
 
     # Enable tab completion for cd command
@@ -98,7 +97,7 @@ class CmdLineApp(cmd2.Cmd):
         """List contents of current directory."""
         # No arguments for this command
         if unknown:
-            self.perror("dir does not take any positional arguments:", traceback_war=False)
+            self.perror("dir does not take any positional arguments:")
             self.do_help('dir')
             self.last_result = cmd2.CommandResult('', 'Bad arguments')
             return

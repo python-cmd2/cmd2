@@ -8,21 +8,9 @@ It demonstrates many features of cmd2.
 """
 import argparse
 
-from colorama import Fore
-
 import cmd2
+import cmd2.ansi
 from cmd2.constants import MULTILINE_TERMINATOR
-
-COLORS = {
-    'black': Fore.BLACK,
-    'red': Fore.RED,
-    'green': Fore.GREEN,
-    'yellow': Fore.YELLOW,
-    'blue': Fore.BLUE,
-    'magenta': Fore.MAGENTA,
-    'cyan': Fore.CYAN,
-    'white': Fore.WHITE,
-}
 
 
 class Pirate(cmd2.Cmd):
@@ -34,7 +22,7 @@ class Pirate(cmd2.Cmd):
         super().__init__(multiline_commands=['sing'], terminators=[MULTILINE_TERMINATOR, '...'], shortcuts=shortcuts)
 
         self.default_to_shell = True
-        self.songcolor = Fore.BLUE
+        self.songcolor = 'blue'
 
         # Make songcolor settable at runtime
         self.settable['songcolor'] = 'Color to ``sing`` in (black/red/green/yellow/blue/magenta/cyan/white)'
@@ -82,8 +70,7 @@ class Pirate(cmd2.Cmd):
 
     def do_sing(self, arg):
         """Sing a colorful song."""
-        color_escape = COLORS.get(self.songcolor, Fore.RESET)
-        self.poutput(arg, color=color_escape)
+        self.poutput(cmd2.ansi.style(arg, fg=self.songcolor))
 
     yo_parser = argparse.ArgumentParser()
     yo_parser.add_argument('--ho', type=int, default=2, help="How often to chant 'ho'")
@@ -101,7 +88,7 @@ class Pirate(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
-    # Create an instance of the Pirate derived class and enter the REPL with cmdlooop().
+    # Create an instance of the Pirate derived class and enter the REPL with cmdloop().
     pirate = Pirate()
     sys_exit_code = pirate.cmdloop()
     print('Exiting with code: {!r}'.format(sys_exit_code))

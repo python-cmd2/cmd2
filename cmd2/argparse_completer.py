@@ -66,10 +66,8 @@ import sys
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
 from typing import List, Dict, Tuple, Callable, Union
 
-from colorama import Fore
-
+from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
 from .rl_utils import rl_force_redisplay
-from .utils import ansi_safe_wcswidth
 
 # attribute that can optionally added to an argparse argument (called an Action) to
 # define the completion choices for the argument. You may provide a Collection or a Function.
@@ -996,7 +994,8 @@ class ACArgumentParser(argparse.ArgumentParser):
             linum += 1
 
         self.print_usage(sys.stderr)
-        self.exit(2, Fore.LIGHTRED_EX + '{}\n\n'.format(formatted_message) + Fore.RESET)
+        formatted_message = style_error(formatted_message)
+        self.exit(2, '{}\n\n'.format(formatted_message))
 
     def format_help(self) -> str:
         """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
@@ -1047,6 +1046,13 @@ class ACArgumentParser(argparse.ArgumentParser):
 
         # determine help from format above
         return formatter.format_help() + '\n'
+
+    def _print_message(self, message, file=None):
+        # Override _print_message to use ansi_aware_write() since we use ANSI escape characters to support color
+        if message:
+            if file is None:
+                file = _sys.stderr
+            ansi_aware_write(file, message)
 
     def _get_nargs_pattern(self, action) -> str:
         # Override _get_nargs_pattern behavior to use the nargs ranges provided by AutoCompleter

@@ -4,15 +4,13 @@
 A simple example demonstrating an application that asynchronously prints alerts, updates the prompt
 and changes the window title
 """
-
 import random
 import threading
 import time
 from typing import List
 
-from colorama import Fore
-
 import cmd2
+from cmd2 import ansi
 
 ALERTS = ["Watch as this application prints alerts and updates the prompt",
           "This will only happen when the prompt is present",
@@ -141,26 +139,12 @@ class AlerterApp(cmd2.Cmd):
         return alert_str
 
     def _generate_colored_prompt(self) -> str:
-        """
-        Randomly generates a colored prompt
+        """Randomly generates a colored prompt
         :return: the new prompt
         """
-        rand_num = random.randint(1, 20)
-
-        status_color = Fore.RESET
-
-        if rand_num == 1:
-            status_color = Fore.LIGHTRED_EX
-        elif rand_num == 2:
-            status_color = Fore.LIGHTYELLOW_EX
-        elif rand_num == 3:
-            status_color = Fore.CYAN
-        elif rand_num == 4:
-            status_color = Fore.LIGHTGREEN_EX
-        elif rand_num == 5:
-            status_color = Fore.LIGHTBLUE_EX
-
-        return status_color + self.visible_prompt + Fore.RESET
+        fg_color = random.choice(list(ansi.FG_COLORS.keys()))
+        bg_color = random.choice(list(ansi.BG_COLORS.keys()))
+        return ansi.style(self.visible_prompt.rstrip(), fg=fg_color, bg=bg_color) + ' '
 
     def _alerter_thread_func(self) -> None:
         """ Prints alerts and updates the prompt any time the prompt is showing """

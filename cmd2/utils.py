@@ -12,28 +12,7 @@ import threading
 import unicodedata
 from typing import Any, Iterable, List, Optional, TextIO, Union
 
-from wcwidth import wcswidth
-
 from . import constants
-
-
-def strip_ansi(text: str) -> str:
-    """Strip ANSI escape codes from a string.
-
-    :param text: string which may contain ANSI escape codes
-    :return: the same string with any ANSI escape codes removed
-    """
-    return constants.ANSI_ESCAPE_RE.sub('', text)
-
-
-def ansi_safe_wcswidth(text: str) -> int:
-    """
-    Wraps wcswidth to make it compatible with colored strings
-
-    :param text: the string being measured
-    """
-    # Strip ANSI escape codes since they cause wcswidth to return -1
-    return wcswidth(strip_ansi(text))
 
 
 def is_quoted(arg: str) -> bool:
@@ -382,7 +361,7 @@ def center_text(msg: str, *, pad: str = ' ') -> str:
     """Centers text horizontally for display within the current terminal, optionally padding both sides.
 
     :param msg: message to display in the center
-    :param pad: (optional) if provided, the first character will be used to pad both sides of the message
+    :param pad: if provided, the first character will be used to pad both sides of the message
     :return: centered message, optionally padded on both sides with pad_char
     """
     term_width = shutil.get_terminal_size().columns

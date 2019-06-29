@@ -1,1 +1,1 @@
-set colors Never
+set allow_ansi Never

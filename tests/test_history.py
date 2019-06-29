@@ -461,6 +461,17 @@ def test_history_output_file(base_app):
         content = normalize(f.read())
     assert content == expected
 
+def test_history_bad_output_file(base_app):
+    run_cmd(base_app, 'help')
+    run_cmd(base_app, 'shortcuts')
+    run_cmd(base_app, 'help history')
+
+    fname = os.path.join(os.path.sep, "fake", "fake", "fake")
+    out, err = run_cmd(base_app, 'history -o "{}"'.format(fname))
+
+    assert not out
+    assert "Error saving" in err[0]
+
 def test_history_edit(base_app, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really
     # going to call it due to the mock
@@ -492,21 +503,23 @@ def test_history_run_one_command(base_app):
     out2, err2 = run_cmd(base_app, 'history -r 1')
     assert out1 == out2
 
-def test_history_clear(base_app):
+def test_history_clear(hist_file):
     # Add commands to history
-    run_cmd(base_app, 'help')
-    run_cmd(base_app, 'alias')
+    app = cmd2.Cmd(persistent_history_file=hist_file)
+    run_cmd(app, 'help')
+    run_cmd(app, 'alias')
 
     # Make sure history has items
-    out, err = run_cmd(base_app, 'history')
+    out, err = run_cmd(app, 'history')
     assert out
 
     # Clear the history
-    run_cmd(base_app, 'history --clear')
+    run_cmd(app, 'history --clear')
 
-    # Make sure history is empty
-    out, err = run_cmd(base_app, 'history')
+    # Make sure history is empty and its file is gone
+    out, err = run_cmd(app, 'history')
     assert out == []
+    assert not os.path.exists(hist_file)
 
 def test_history_verbose_with_other_options(base_app):
     # make sure -v shows a usage error if any other options are present
