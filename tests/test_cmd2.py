@@ -181,18 +181,25 @@ now: True
     out, err = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
 
-@pytest.mark.parametrize('new_val, is_valid', [
-    (ansi.ANSI_NEVER, False),
-    (ansi.ANSI_TERMINAL, False),
-    (ansi.ANSI_ALWAYS, False),
-    ('neVeR', False),
-    ('TeRMInal', False),
-    ('AlWaYs', False),
-    ('invalid', True),
+@pytest.mark.parametrize('new_val, is_valid, expected', [
+    (ansi.ANSI_NEVER, False, ansi.ANSI_NEVER),
+    ('neVeR', False, ansi.ANSI_NEVER),
+    (ansi.ANSI_TERMINAL, False, ansi.ANSI_TERMINAL),
+    ('TeRMInal', False, ansi.ANSI_TERMINAL),
+    (ansi.ANSI_ALWAYS, False, ansi.ANSI_ALWAYS),
+    ('AlWaYs', False, ansi.ANSI_ALWAYS),
+    ('invalid', True, ansi.ANSI_TERMINAL),
 ])
-def test_set_allow_ansi(base_app, new_val, is_valid):
+def test_set_allow_ansi(base_app, new_val, is_valid, expected):
+    # Initialize allow_ansi for this test
+    ansi.allow_ansi = ansi.ANSI_TERMINAL
+
+    # Use the set command to alter it
     out, err = run_cmd(base_app, 'set allow_ansi {}'.format(new_val))
+
+    # Verify the results
     assert bool(err) == is_valid
+    assert ansi.allow_ansi == expected
 
     # Reload ansi module to reset allow_ansi to its default since it's an
     # application-wide setting that can affect other unit tests.

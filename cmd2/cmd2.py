@@ -563,8 +563,9 @@ class Cmd(cmd.Cmd):
 
     @allow_ansi.setter
     def allow_ansi(self, new_val: str) -> None:
-        """Read-only property needed to support do_set when it sets allow_ansi"""
-        if new_val.lower() not in (ansi.ANSI_TERMINAL.lower(), ansi.ANSI_ALWAYS.lower(), ansi.ANSI_NEVER.lower()):
+        """Setter property needed to support do_set when it updates allow_ansi"""
+        new_val = new_val.capitalize()
+        if new_val not in (ansi.ANSI_TERMINAL, ansi.ANSI_ALWAYS, ansi.ANSI_NEVER):
             self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.ANSI_TERMINAL,
                                                                               ansi.ANSI_ALWAYS, ansi.ANSI_NEVER))
         else:
