@@ -1,4 +1,4 @@
-## 0.9.14 (TBD, 2019)
+## 0.9.14 (June 29, 2019)
 * Enhancements
     * Added support for and testing with Python 3.8, starting with 3.8 beta
     * Improved information displayed during transcript testing
