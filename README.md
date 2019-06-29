@@ -91,7 +91,7 @@ Instructions for implementing each feature follow.
     class MyApp(cmd2.Cmd):
         def do_foo(self, args):
             """This docstring is the built-in help for the foo command."""
-            print(cmd2.ansi.style('foo bar baz', fg='red'))
+            self.poutput(cmd2.style('foo bar baz', fg='red'))
     ```
     - By default the docstring for your **do_foo** method is the help for the **foo** command
         - NOTE: This doesn't apply if you use one of the `argparse` decorators mentioned below
