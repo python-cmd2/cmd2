@@ -84,8 +84,3 @@ def test_run_pyscript_stop(base_app, request):
     python_script = os.path.join(test_dir, 'pyscript', 'stop.py')
     stop = base_app.onecmd_plus_hooks('run_pyscript {}'.format(python_script))
     assert stop
-
-def test_pyscript_deprecated(base_app):
-    """Delete this when pyscript alias is removed"""
-    _, err = run_cmd(base_app, "pyscript fake")
-    assert "pyscript has been renamed and will be removed" in err[-1]

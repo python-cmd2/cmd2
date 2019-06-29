@@ -3261,15 +3261,8 @@ class Cmd(cmd.Cmd):
         finally:
             # Restore command line arguments to original state
             sys.argv = orig_args
-            if args.__statement__.command == "pyscript":
-                warning = ("pyscript has been renamed and will be removed in the next release, "
-                           "please use run_pyscript instead\n")
-                self.perror(ansi.style_warning(warning))
 
         return py_return
-
-    # pyscript is deprecated
-    do_pyscript = do_run_pyscript
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
@@ -3644,59 +3637,49 @@ class Cmd(cmd.Cmd):
         """
         expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
 
-        # Wrap everything in a try/finally just to make sure the warning prints at end if `load` was called
+        # Make sure the path exists and we can access it
+        if not os.path.exists(expanded_path):
+            self.perror("'{}' does not exist or cannot be accessed".format(expanded_path))
+            return
+
+        # Make sure expanded_path points to a file
+        if not os.path.isfile(expanded_path):
+            self.perror("'{}' is not a file".format(expanded_path))
+            return
+
+        # Make sure the file is not empty
+        if os.path.getsize(expanded_path) == 0:
+            self.perror("'{}' is empty".format(expanded_path))
+            return
+
+        # Make sure the file is ASCII or UTF-8 encoded text
+        if not utils.is_text_file(expanded_path):
+            self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path))
+            return
+
         try:
-            # Make sure the path exists and we can access it
-            if not os.path.exists(expanded_path):
-                self.perror("'{}' does not exist or cannot be accessed".format(expanded_path))
-                return
+            # Read all lines of the script
+            with open(expanded_path, encoding='utf-8') as target:
+                script_commands = target.read().splitlines()
+        except OSError as ex:  # pragma: no cover
+            self.pexcept("Problem accessing script from '{}': {}".format(expanded_path, ex))
+            return
 
-            # Make sure expanded_path points to a file
-            if not os.path.isfile(expanded_path):
-                self.perror("'{}' is not a file".format(expanded_path))
-                return
+        orig_script_dir_count = len(self._script_dir)
 
-            # Make sure the file is not empty
-            if os.path.getsize(expanded_path) == 0:
-                self.perror("'{}' is empty".format(expanded_path))
-                return
+        try:
+            self._script_dir.append(os.path.dirname(expanded_path))
 
-            # Make sure the file is ASCII or UTF-8 encoded text
-            if not utils.is_text_file(expanded_path):
-                self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path))
-                return
+            if args.transcript:
+                self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
+            else:
+                return self.runcmds_plus_hooks(script_commands)
 
-            try:
-                # Read all lines of the script
-                with open(expanded_path, encoding='utf-8') as target:
-                    script_commands = target.read().splitlines()
-            except OSError as ex:  # pragma: no cover
-                self.pexcept("Problem accessing script from '{}': {}".format(expanded_path, ex))
-                return
-
-            orig_script_dir_count = len(self._script_dir)
-
-            try:
-                self._script_dir.append(os.path.dirname(expanded_path))
-
-                if args.transcript:
-                    self._generate_transcript(script_commands, os.path.expanduser(args.transcript))
-                else:
-                    return self.runcmds_plus_hooks(script_commands)
-
-            finally:
-                with self.sigint_protection:
-                    # Check if a script dir was added before an exception occurred
-                    if orig_script_dir_count != len(self._script_dir):
-                        self._script_dir.pop()
         finally:
-            if args.__statement__.command == "load":
-                warning = ("load has been renamed and will be removed in the next release, "
-                           "please use run_script instead\n")
-                self.perror(ansi.style_warning(warning))
-
-    # load has been deprecated
-    do_load = do_run_script
+            with self.sigint_protection:
+                # Check if a script dir was added before an exception occurred
+                if orig_script_dir_count != len(self._script_dir):
+                    self._script_dir.pop()
 
     relative_run_script_description = run_script_description
     relative_run_script_description += (
@@ -3717,18 +3700,10 @@ class Cmd(cmd.Cmd):
         Run commands in script file that is encoded as either ASCII or UTF-8 text
         :return: True if running of commands should stop
         """
-        if args.__statement__.command == "_relative_load":
-            warning = ("_relative_load has been renamed and will be removed in the next release, "
-                       "please use _relative_run_script instead\n")
-            self.perror(ansi.style_warning(warning))
-
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
         return self.do_run_script(relative_path)
-
-    # _relative_load has been deprecated
-    do__relative_load = do__relative_run_script
 
     def _run_transcript_tests(self, transcript_paths: List[str]) -> None:
         """Runs transcript tests for provided file(s).

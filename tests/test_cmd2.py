@@ -306,11 +306,6 @@ def test_run_script(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-def test_load_deprecated(base_app):
-    """Delete this when load alias is removed"""
-    _, err = run_cmd(base_app, "load fake")
-    assert "load has been renamed and will be removed" in err[-1]
-
 def test_run_script_with_empty_args(base_app):
     out, err = run_cmd(base_app, 'run_script')
     assert "the following arguments are required" in err[1]
@@ -435,11 +430,6 @@ def test_relative_run_script(base_app, request):
 def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
     assert 'Error: the following arguments' in err[1]
-
-def test_relative_load_deprecated(base_app):
-    """Delete this when _relative_load alias is removed"""
-    _, err = run_cmd(base_app, "_relative_load fake")
-    assert "_relative_load has been renamed and will be removed" in err[0]
 
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
@@ -1848,8 +1838,8 @@ def test_onecmd_raw_str_quit(outsim_app):
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
-    expected_commands = ['_relative_load', '_relative_run_script', 'alias', 'edit', 'eof', 'help', 'history', 'load',
-                         'macro', 'py', 'pyscript', 'quit', 'run_pyscript', 'run_script', 'set', 'shell', 'shortcuts']
+    expected_commands = ['_relative_run_script', 'alias', 'edit', 'eof', 'help', 'history', 'macro',
+                         'py', 'quit', 'run_pyscript', 'run_script', 'set', 'shell', 'shortcuts']
     assert commands == expected_commands
 
 def test_get_help_topics(base_app):
