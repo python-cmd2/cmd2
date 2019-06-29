@@ -185,6 +185,9 @@ now: True
     (ansi.ANSI_NEVER, False),
     (ansi.ANSI_TERMINAL, False),
     (ansi.ANSI_ALWAYS, False),
+    ('neVeR', False),
+    ('TeRMInal', False),
+    ('AlWaYs', False),
     ('invalid', True),
 ])
 def test_set_allow_ansi(base_app, new_val, is_valid):
