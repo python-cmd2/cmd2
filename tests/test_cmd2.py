@@ -1480,7 +1480,6 @@ def test_poutput_ansi_always(outsim_app):
     assert colored_msg != msg
     assert out == expected
 
-
 def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
     ansi.allow_ansi = ansi.ANSI_NEVER
@@ -2148,7 +2147,7 @@ def test_disabled_message_command_name(disable_commands_app):
 
 def test_startup_script(request):
     test_dir = os.path.dirname(request.module.__file__)
-    startup_script = os.path.join(os.path.dirname(__file__), '.cmd2rc')
+    startup_script = os.path.join(test_dir, '.cmd2rc')
     app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
     assert len(app._startup_commands) == 1
     assert app._startup_commands[0] == "run_script '{}'".format(startup_script)
@@ -2157,3 +2156,9 @@ def test_startup_script(request):
     out, err = run_cmd(app, 'alias list')
     assert len(out) > 1
     assert 'alias create ls' in out[0]
+
+
+def test_transcripts_at_init():
+    transcript_files = ['foo', 'bar']
+    app = cmd2.Cmd(allow_cli_args=False, transcript_files=transcript_files)
+    assert app._transcript_files == transcript_files
