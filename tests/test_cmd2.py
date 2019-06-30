@@ -306,11 +306,6 @@ def test_run_script(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-def test_load_deprecated(base_app):
-    """Delete this when load alias is removed"""
-    _, err = run_cmd(base_app, "load fake")
-    assert "load has been renamed and will be removed" in err[-1]
-
 def test_run_script_with_empty_args(base_app):
     out, err = run_cmd(base_app, 'run_script')
     assert "the following arguments are required" in err[1]
@@ -435,11 +430,6 @@ def test_relative_run_script(base_app, request):
 def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
     assert 'Error: the following arguments' in err[1]
-
-def test_relative_load_deprecated(base_app):
-    """Delete this when _relative_load alias is removed"""
-    _, err = run_cmd(base_app, "_relative_load fake")
-    assert "_relative_load has been renamed and will be removed" in err[0]
 
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
@@ -1490,7 +1480,6 @@ def test_poutput_ansi_always(outsim_app):
     assert colored_msg != msg
     assert out == expected
 
-
 def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
     ansi.allow_ansi = ansi.ANSI_NEVER
@@ -1848,8 +1837,8 @@ def test_onecmd_raw_str_quit(outsim_app):
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
     commands = base_app.get_all_commands()
-    expected_commands = ['_relative_load', '_relative_run_script', 'alias', 'edit', 'eof', 'help', 'history', 'load',
-                         'macro', 'py', 'pyscript', 'quit', 'run_pyscript', 'run_script', 'set', 'shell', 'shortcuts']
+    expected_commands = ['_relative_run_script', 'alias', 'edit', 'eof', 'help', 'history', 'macro',
+                         'py', 'quit', 'run_pyscript', 'run_script', 'set', 'shell', 'shortcuts']
     assert commands == expected_commands
 
 def test_get_help_topics(base_app):
@@ -2154,3 +2143,22 @@ def test_disabled_message_command_name(disable_commands_app):
 
     out, err = run_cmd(disable_commands_app, 'has_help_func')
     assert err[0].startswith('has_help_func is currently disabled')
+
+
+def test_startup_script(request):
+    test_dir = os.path.dirname(request.module.__file__)
+    startup_script = os.path.join(test_dir, '.cmd2rc')
+    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
+    assert len(app._startup_commands) == 1
+    assert app._startup_commands[0] == "run_script '{}'".format(startup_script)
+    app._startup_commands.append('quit')
+    app.cmdloop()
+    out, err = run_cmd(app, 'alias list')
+    assert len(out) > 1
+    assert 'alias create ls' in out[0]
+
+
+def test_transcripts_at_init():
+    transcript_files = ['foo', 'bar']
+    app = cmd2.Cmd(allow_cli_args=False, transcript_files=transcript_files)
+    assert app._transcript_files == transcript_files

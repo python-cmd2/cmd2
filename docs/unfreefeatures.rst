@@ -248,12 +248,8 @@ By default, the ``help`` command displays::
 
   Documented commands (type help <topic>):
   ========================================
-  alias    findleakers  pyscript    sessions             status       vminfo
-  config   help         quit        set                  stop         which
-  connect  history      redeploy    shell                thread_dump
-  deploy   list         resources   shortcuts            unalias
-  edit     load         restart     sslconnectorciphers  undeploy
-  expire   py           serverinfo  start                version
+  alias  help     ipy    py    run_pyscript  set    shortcuts
+  edit   history  macro  quit  run_script    shell
 
 If you have a large number of commands, you can optionally group your commands into categories.
 Here's the output from the example ``help_categories.py``::
@@ -265,6 +261,10 @@ Here's the output from the example ``help_categories.py``::
   deploy  findleakers  redeploy  sessions  stop
   expire  list         restart   start     undeploy
 
+  Command Management
+  ==================
+  disable_commands  enable_commands
+
   Connecting
   ==========
   connect  which
@@ -275,9 +275,8 @@ Here's the output from the example ``help_categories.py``::
 
   Other
   =====
-  alias   edit  history  py        quit  shell      unalias
-  config  help  load     pyscript  set   shortcuts  version
-
+  alias   edit  history  py    run_pyscript  set    shortcuts
+  config  help  macro    quit  run_script    shell  version
 
 There are 2 methods of specifying command categories, using the ``@with_category`` decorator or with the
 ``categorize()`` function. Once a single command category is detected, the help output switches to a categorized

@@ -1,3 +1,12 @@
+## 0.9.15 (July TBD, 2019)
+* **Renamed Commands Notice**
+    * The following commands were renamed in the last release and have been removed in this release
+        * `load` - replaced by `run_script`
+        * `_relative_load` - replaced by `_relative_run_script`
+        * `pyscript` - replaced by `run_pyscript`
+    * We apologize for any inconvenience, but the new names are more self-descriptive
+        * Lots of end users were confused particularly about what exactly `load` should be loading
+
 ## 0.9.14 (June 29, 2019)
 * Enhancements
     * Added support for and testing with Python 3.8, starting with 3.8 beta
