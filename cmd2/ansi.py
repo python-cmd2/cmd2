@@ -188,18 +188,17 @@ style_warning = functools.partial(style, fg='bright_yellow')
 style_error = functools.partial(style, fg='bright_red')
 
 
-def async_alert_str(*, prompt: str, line: str, alert_msg: str) -> str:
+def async_alert_str(*, prompt: str, line: str, cursor_offset: int, alert_msg: str) -> str:
     """Calculate the desired string, including ANSI escape codes, for displaying an asynchronous alert message.
 
     :param prompt: prompt that is displayed on the current line
     :param line: current contents of the Readline line buffer
+    :param cursor_offset: the offset of the current cursor position within line
     :param alert_msg: the message to display to the user
     :return: the correct string so that the alert message appears to the user to be printed above the current line.
     """
     import shutil
     from colorama import Cursor
-
-    from .rl_utils import rl_get_point
 
     # Get the size of the terminal
     terminal_size = shutil.get_terminal_size()
@@ -223,7 +222,7 @@ def async_alert_str(*, prompt: str, line: str, alert_msg: str) -> str:
     num_input_terminal_lines = int(input_width / terminal_size.columns) + 1
 
     # Get the cursor's offset from the beginning of the first input line
-    cursor_input_offset = last_prompt_line_width + rl_get_point()
+    cursor_input_offset = last_prompt_line_width + cursor_offset
 
     # Calculate what input line the cursor is on
     cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1

@@ -52,7 +52,7 @@ from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 
 # Set up readline
-from .rl_utils import rl_type, RlType, rl_set_prompt, vt100_support, rl_make_safe_prompt
+from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
 
 if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
@@ -3801,7 +3801,7 @@ class Cmd(cmd.Cmd):
 
             if update_terminal:
                 terminal_str = ansi.async_alert_str(prompt=current_prompt, line=readline.get_line_buffer(),
-                                                    alert_msg=alert_msg)
+                                                    cursor_offset=rl_get_point(), alert_msg=alert_msg)
                 if rl_type == RlType.GNU:
                     sys.stderr.write(terminal_str)
                 elif rl_type == RlType.PYREADLINE:
