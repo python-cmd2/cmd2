@@ -8,6 +8,9 @@ import colorama
 from colorama import Fore, Back, Style
 from wcwidth import wcswidth
 
+# On Windows, filter ANSI escape codes out of text sent to stdout/stderr, and replace them with equivalent Win32 calls
+colorama.init(strip=False)
+
 # Values for allow_ansi setting
 ANSI_NEVER = 'Never'
 ANSI_TERMINAL = 'Terminal'
@@ -64,6 +67,9 @@ BG_COLORS = {
 FG_RESET = FG_COLORS['reset']
 BG_RESET = BG_COLORS['reset']
 RESET_ALL = Style.RESET_ALL
+
+BRIGHT = Style.BRIGHT
+NORMAL = Style.NORMAL
 
 # ANSI escape sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
@@ -180,3 +186,71 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
 style_success = functools.partial(style, fg='green', bold=True)
 style_warning = functools.partial(style, fg='bright_yellow')
 style_error = functools.partial(style, fg='bright_red')
+
+
+def async_alert_str(*, prompt: str, line: str, alert_msg: str) -> str:
+    """Calculate the desired string, including ANSI escape codes, for displaying an asynchronous alert message.
+
+    :param prompt: prompt that is displayed on the current line
+    :param line: current contents of the Readline line buffer
+    :param alert_msg: the message to display to the user
+    :return: the correct string so that the alert message appears to the user to be printed above the current line.
+    """
+    import shutil
+    from colorama import Cursor
+
+    from .rl_utils import rl_get_point
+
+    # Get the size of the terminal
+    terminal_size = shutil.get_terminal_size()
+
+    # Split the prompt lines since it can contain newline characters.
+    prompt_lines = prompt.splitlines()
+
+    # Calculate how many terminal lines are taken up by all prompt lines except for the last one.
+    # That will be included in the input lines calculations since that is where the cursor is.
+    num_prompt_terminal_lines = 0
+    for line in prompt_lines[:-1]:
+        line_width = ansi_safe_wcswidth(line)
+        num_prompt_terminal_lines += int(line_width / terminal_size.columns) + 1
+
+    # Now calculate how many terminal lines are take up by the input
+    last_prompt_line = prompt_lines[-1]
+    last_prompt_line_width = ansi_safe_wcswidth(last_prompt_line)
+
+    input_width = last_prompt_line_width + ansi_safe_wcswidth(line)
+
+    num_input_terminal_lines = int(input_width / terminal_size.columns) + 1
+
+    # Get the cursor's offset from the beginning of the first input line
+    cursor_input_offset = last_prompt_line_width + rl_get_point()
+
+    # Calculate what input line the cursor is on
+    cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
+
+    # Create a string that when printed will clear all input lines and display the alert
+    terminal_str = ''
+
+    # Move the cursor down to the last input line
+    if cursor_input_line != num_input_terminal_lines:
+        terminal_str += Cursor.DOWN(num_input_terminal_lines - cursor_input_line)
+
+    # Clear each line from the bottom up so that the cursor ends up on the first prompt line
+    total_lines = num_prompt_terminal_lines + num_input_terminal_lines
+    terminal_str += (colorama.ansi.clear_line() + Cursor.UP(1)) * (total_lines - 1)
+
+    # Clear the first prompt line
+    terminal_str += colorama.ansi.clear_line()
+
+    # Move the cursor to the beginning of the first prompt line and print the alert
+    terminal_str += '\r' + alert_msg
+    return terminal_str
+
+
+def set_title_str(title: str) -> str:
+    """Get the required string, including ANSI escape codes, for setting window title for the terminal.
+
+    :param title: new title for the window
+    :return string to write to sys.stderr in order to set the window title to the desired test
+    """
+    return colorama.ansi.set_title(title)
