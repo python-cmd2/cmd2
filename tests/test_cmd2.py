@@ -2144,3 +2144,16 @@ def test_disabled_message_command_name(disable_commands_app):
 
     out, err = run_cmd(disable_commands_app, 'has_help_func')
     assert err[0].startswith('has_help_func is currently disabled')
+
+
+def test_startup_script(request):
+    test_dir = os.path.dirname(request.module.__file__)
+    startup_script = os.path.join(os.path.dirname(__file__), '.cmd2rc')
+    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
+    assert len(app._startup_commands) == 1
+    assert app._startup_commands[0] == "run_script '{}'".format(startup_script)
+    app._startup_commands.append('quit')
+    app.cmdloop()
+    out, err = run_cmd(app, 'alias list')
+    assert len(out) > 1
+    assert 'alias create ls' in out[0]

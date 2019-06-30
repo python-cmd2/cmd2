@@ -1,0 +1,2 @@
+alias create ls !ls -hal
+alias create pwd !pwd
