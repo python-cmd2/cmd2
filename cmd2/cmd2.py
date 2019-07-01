@@ -1195,7 +1195,7 @@ class Cmd(cmd.Cmd):
 
     def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: Callable) -> List[str]:
         """Called by complete() as the first tab completion function for all commands
-        It determines if it should tab complete for redirection (|, <, >, >>) or use the
+        It determines if it should tab complete for redirection (|, >, >>) or use the
         completer function for the current command
 
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
@@ -1214,28 +1214,58 @@ class Cmd(cmd.Cmd):
             if not raw_tokens:
                 return []
 
+            # Must at least have the command
             if len(raw_tokens) > 1:
 
-                # Check if there are redirection strings prior to the token being completed
-                seen_pipe = False
+                # True when command line contains any redirection tokens
                 has_redirection = False
 
-                for cur_token in raw_tokens[:-1]:
+                # Keep track of state while examining tokens
+                in_pipe = False
+                in_file_redir = False
+                do_shell_completion = False
+                do_path_completion = False
+                prior_token = None
+
+                for cur_token in raw_tokens:
+                    # Process redirection tokens
                     if cur_token in constants.REDIRECTION_TOKENS:
                         has_redirection = True
 
+                        # Check if we are at a pipe
                         if cur_token == constants.REDIRECTION_PIPE:
-                            seen_pipe = True
+                            # Do not complete bad syntax (e.g cmd | |)
+                            if prior_token == constants.REDIRECTION_PIPE:
+                                return []
 
-                # Get token prior to the one being completed
-                prior_token = raw_tokens[-2]
+                            in_pipe = True
+                            in_file_redir = False
 
-                # If a pipe is right before the token being completed, complete a shell command as the piped process
-                if prior_token == constants.REDIRECTION_PIPE:
+                        # Otherwise this is a file redirection token
+                        else:
+                            if prior_token in constants.REDIRECTION_TOKENS or in_file_redir:
+                                # Do not complete bad syntax (e.g cmd | >) (e.g cmd > blah >)
+                                return []
+
+                            in_pipe = False
+                            in_file_redir = True
+
+                    # Not a redirection token
+                    else:
+                        do_shell_completion = False
+                        do_path_completion = False
+
+                        if prior_token == constants.REDIRECTION_PIPE:
+                            do_shell_completion = True
+                        elif in_pipe or prior_token in (constants.REDIRECTION_OUTPUT, constants.REDIRECTION_APPEND):
+                            do_path_completion = True
+
+                    prior_token = cur_token
+
+                if do_shell_completion:
                     return self.shell_cmd_complete(text, line, begidx, endidx)
 
-                # Otherwise do path completion either as files to redirectors or arguments to the piped process
-                elif prior_token in constants.REDIRECTION_TOKENS or seen_pipe:
+                elif do_path_completion:
                     return self.path_complete(text, line, begidx, endidx)
 
                 # If there were redirection strings anywhere on the command line, then we

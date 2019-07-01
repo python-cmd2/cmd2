@@ -6,15 +6,23 @@ Unit/functional testing for readline tab-completion functions in the cmd2.py mod
 These are primarily tests related to readline completer functions which handle tab-completion of cmd2/cmd commands,
 file system paths, and shell commands.
 """
+# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
+try:
+    import mock
+except ImportError:
+    from unittest import mock
+
 import argparse
+import enum
 import os
 import sys
 
 import pytest
+
 import cmd2
 from cmd2 import utils
-from .conftest import base_app, complete_tester, normalize, run_cmd
 from examples.subcommands import SubcommandsExample
+from .conftest import complete_tester, normalize, run_cmd
 
 # List of strings used with completion functions
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato', 'Cheese "Pizza"']
@@ -853,6 +861,71 @@ def test_quote_as_command(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is None and not cmd2_app.completion_matches
+
+
+# Used by redirect_complete tests
+class RedirCompType(enum.Enum):
+    SHELL_CMD = 1,
+    PATH = 2,
+    DEFAULT = 3,
+    NONE = 4
+
+    """   
+    fake > > 
+    fake | grep > file 
+    fake | grep > file > 
+    """
+
+@pytest.mark.parametrize('line, comp_type', [
+    ('fake', RedirCompType.DEFAULT),
+    ('fake arg', RedirCompType.DEFAULT),
+    ('fake |', RedirCompType.SHELL_CMD),
+    ('fake | grep', RedirCompType.PATH),
+    ('fake | grep arg', RedirCompType.PATH),
+    ('fake | grep >', RedirCompType.PATH),
+    ('fake | grep > >', RedirCompType.NONE),
+    ('fake | grep > file', RedirCompType.NONE),
+    ('fake | grep > file >', RedirCompType.NONE),
+    ('fake | grep > file |', RedirCompType.SHELL_CMD),
+    ('fake | grep > file | grep', RedirCompType.PATH),
+    ('fake | |', RedirCompType.NONE),
+    ('fake | >', RedirCompType.NONE),
+    ('fake >', RedirCompType.PATH),
+    ('fake >>', RedirCompType.PATH),
+    ('fake > >', RedirCompType.NONE),
+    ('fake > |', RedirCompType.SHELL_CMD),
+    ('fake >> file |', RedirCompType.SHELL_CMD),
+    ('fake >> file | grep', RedirCompType.PATH),
+    ('fake > file', RedirCompType.NONE),
+    ('fake > file >', RedirCompType.NONE),
+    ('fake > file >>', RedirCompType.NONE),
+])
+def test_redirect_complete(cmd2_app, monkeypatch, line, comp_type):
+    shell_cmd_complete_mock = mock.MagicMock(name='shell_cmd_complete')
+    monkeypatch.setattr("cmd2.Cmd.shell_cmd_complete", shell_cmd_complete_mock)
+
+    path_complete_mock = mock.MagicMock(name='path_complete')
+    monkeypatch.setattr("cmd2.Cmd.path_complete", path_complete_mock)
+
+    default_complete_mock = mock.MagicMock(name='fake_completer')
+
+    text = ''
+    line = '{} {}'.format(line, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    cmd2_app._redirect_complete(text, line, begidx, endidx, default_complete_mock)
+
+    if comp_type == RedirCompType.SHELL_CMD:
+        shell_cmd_complete_mock.assert_called_once()
+    elif comp_type == RedirCompType.PATH:
+        path_complete_mock.assert_called_once()
+    elif comp_type == RedirCompType.DEFAULT:
+        default_complete_mock.assert_called_once()
+    else:
+        shell_cmd_complete_mock.assert_not_called()
+        path_complete_mock.assert_not_called()
+        default_complete_mock.assert_not_called()
 
 @pytest.fixture
 def sc_app():
