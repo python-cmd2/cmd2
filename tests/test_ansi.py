@@ -99,3 +99,14 @@ def test_set_title_str():
     BEL = '\007'
     title = HELLO_WORLD
     assert ansi.set_title_str(title) == OSC + '2;' + title + BEL
+
+
+@pytest.mark.parametrize('cols, prompt, line, cursor, msg, expected', [
+    (127, '(Cmd) ', 'help his', 12, ansi.style('Hello World!', fg='magenta'), '\x1b[2K\r\x1b[35mHello World!\x1b[39m'),
+    (127, '\n(Cmd) ', 'help ', 5, 'foo', '\x1b[2K\x1b[1A\x1b[2K\rfoo'),
+    (10, '(Cmd) ', 'help history of the american republic', 4, 'boo', '\x1b[3B\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\x1b[1A\x1b[2K\rboo')
+])
+def test_async_alert_str(cols, prompt, line, cursor, msg, expected):
+    alert_str = ansi.async_alert_str(terminal_columns=cols, prompt=prompt, line=line, cursor_offset=cursor,
+                                     alert_msg=msg)
+    assert  alert_str == expected

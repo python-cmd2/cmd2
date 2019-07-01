@@ -3830,7 +3830,9 @@ class Cmd(cmd.Cmd):
                     update_terminal = True
 
             if update_terminal:
-                terminal_str = ansi.async_alert_str(prompt=current_prompt, line=readline.get_line_buffer(),
+                import shutil
+                terminal_str = ansi.async_alert_str(terminal_columns=shutil.get_terminal_size().columns,
+                                                    prompt=current_prompt, line=readline.get_line_buffer(),
                                                     cursor_offset=rl_get_point(), alert_msg=alert_msg)
                 if rl_type == RlType.GNU:
                     sys.stderr.write(terminal_str)

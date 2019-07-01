@@ -188,21 +188,17 @@ style_warning = functools.partial(style, fg='bright_yellow')
 style_error = functools.partial(style, fg='bright_red')
 
 
-def async_alert_str(*, prompt: str, line: str, cursor_offset: int, alert_msg: str) -> str:
+def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_offset: int, alert_msg: str) -> str:
     """Calculate the desired string, including ANSI escape codes, for displaying an asynchronous alert message.
 
+    :param terminal_columns: terminal width (number of columns)
     :param prompt: prompt that is displayed on the current line
     :param line: current contents of the Readline line buffer
     :param cursor_offset: the offset of the current cursor position within line
     :param alert_msg: the message to display to the user
     :return: the correct string so that the alert message appears to the user to be printed above the current line.
     """
-    import shutil
     from colorama import Cursor
-
-    # Get the size of the terminal
-    terminal_size = shutil.get_terminal_size()
-
     # Split the prompt lines since it can contain newline characters.
     prompt_lines = prompt.splitlines()
 
@@ -211,7 +207,7 @@ def async_alert_str(*, prompt: str, line: str, cursor_offset: int, alert_msg: st
     num_prompt_terminal_lines = 0
     for line in prompt_lines[:-1]:
         line_width = ansi_safe_wcswidth(line)
-        num_prompt_terminal_lines += int(line_width / terminal_size.columns) + 1
+        num_prompt_terminal_lines += int(line_width / terminal_columns) + 1
 
     # Now calculate how many terminal lines are take up by the input
     last_prompt_line = prompt_lines[-1]
@@ -219,13 +215,13 @@ def async_alert_str(*, prompt: str, line: str, cursor_offset: int, alert_msg: st
 
     input_width = last_prompt_line_width + ansi_safe_wcswidth(line)
 
-    num_input_terminal_lines = int(input_width / terminal_size.columns) + 1
+    num_input_terminal_lines = int(input_width / terminal_columns) + 1
 
     # Get the cursor's offset from the beginning of the first input line
     cursor_input_offset = last_prompt_line_width + cursor_offset
 
     # Calculate what input line the cursor is on
-    cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
+    cursor_input_line = int(cursor_input_offset / terminal_columns) + 1
 
     # Create a string that when printed will clear all input lines and display the alert
     terminal_str = ''
