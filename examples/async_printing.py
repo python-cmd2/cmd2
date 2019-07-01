@@ -19,7 +19,7 @@ ALERTS = ["Watch as this application prints alerts and updates the prompt",
           "Keep typing...",
           "Move that cursor...",
           "Pretty seamless, eh?",
-          "Feedback can also be given in the window title. Notice the arg count up there?",
+          "Feedback can also be given in the window title. Notice the alert count up there?",
           "You can stop and start the alerts by typing stop_alerts and start_alerts",
           "This demo will now continue to print alerts at random intervals"
           ]

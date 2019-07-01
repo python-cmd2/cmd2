@@ -109,4 +109,4 @@ def test_set_title_str():
 def test_async_alert_str(cols, prompt, line, cursor, msg, expected):
     alert_str = ansi.async_alert_str(terminal_columns=cols, prompt=prompt, line=line, cursor_offset=cursor,
                                      alert_msg=msg)
-    assert  alert_str == expected
+    assert alert_str == expected
