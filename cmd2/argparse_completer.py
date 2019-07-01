@@ -1,6 +1,6 @@
 # coding=utf-8
 # flake8: noqa C901
-# NOTE: Ignoreing flake8 cyclomatic complexity in this file because the complexity due to copy-and-paste overrides from
+# NOTE: Ignoring flake8 cyclomatic complexity in this file because the complexity due to copy-and-paste overrides from
 #       argparse
 """
 AutoCompleter interprets the argparse.ArgumentParser internals to automatically
@@ -252,29 +252,30 @@ class AutoCompleter(object):
             self.needed = False
             self.variable = False
 
-    def __init__(self,
-                 parser: argparse.ArgumentParser,
-                 cmd2_app,
-                 token_start_index: int = 1,
+    def __init__(self, parser: argparse.ArgumentParser, cmd2_app, *,
+                 tab_for_arg_help: bool = True, token_start_index: int = 1,
                  arg_choices: Dict[str, Union[List, Tuple, Callable]] = None,
-                 subcmd_args_lookup: dict = None,
-                 tab_for_arg_help: bool = True) -> None:
+                 subcmd_args_lookup: dict = None, ) -> None:
         """
         Create an AutoCompleter
 
         :param parser: ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application. Enables argparse argument completion with class methods
+        :param tab_for_arg_help: Enable of disable argument help when there's no completion result
+
+        # The following parameters are intended for internal use when AutoCompleter creates other AutoCompleters
+        # for subcommands. Developers don't need to worry about overriding these values.
         :param token_start_index: index of the token to start parsing at
         :param arg_choices: dictionary mapping from argparse argument 'dest' name to list of choices
-        :param subcmd_args_lookup: mapping a sub-command group name to a tuple to fill the child\
-        AutoCompleter's arg_choices and subcmd_args_lookup parameters
-        :param tab_for_arg_help: Enable of disable argument help when there's no completion result
+        :param subcmd_args_lookup: mapping a sub-command group name to a tuple to fill the child
+                                   AutoCompleter's arg_choices and subcmd_args_lookup parameters
         """
         if not subcmd_args_lookup:
             subcmd_args_lookup = {}
             forward_arg_choices = True
         else:
             forward_arg_choices = False
+
         self._parser = parser
         self._cmd2_app = cmd2_app
         self._arg_choices = arg_choices.copy() if arg_choices is not None else {}
@@ -285,6 +286,7 @@ class AutoCompleter(object):
         self._flags_without_args = []  # all flags that don't take arguments
         self._flag_to_action = {}  # maps flags to the argparse action object
         self._positional_actions = []  # argument names for positional arguments (by position index)
+
         # maps action name to sub-command autocompleter:
         #   action_name -> dict(sub_command -> completer)
         self._positional_completers = {}
@@ -295,6 +297,7 @@ class AutoCompleter(object):
             # if there are choices defined, record them in the arguments dictionary
             if action.choices is not None:
                 self._arg_choices[action.dest] = action.choices
+
             # if completion choices are tagged on the action, record them
             elif hasattr(action, ACTION_ARG_CHOICES):
                 action_arg_choices = getattr(action, ACTION_ARG_CHOICES)
@@ -308,18 +311,30 @@ class AutoCompleter(object):
                     self._flag_to_action[option] = action
                     if action.nargs == 0:
                         self._flags_without_args.append(option)
+
+            # Otherwise this is a positional parameter
             else:
                 self._positional_actions.append(action)
 
                 if isinstance(action, argparse._SubParsersAction):
                     sub_completers = {}
                     sub_commands = []
-                    args_for_action = subcmd_args_lookup[action.dest]\
-                        if action.dest in subcmd_args_lookup else {}
+
+                    if action.dest in subcmd_args_lookup:
+                        args_for_action = subcmd_args_lookup[action.dest]
+                    else:
+                        args_for_action = {}
+
+                    # Create an AutoCompleter for each subcommand of this command
                     for subcmd in action.choices:
-                        (subcmd_args, subcmd_lookup) = args_for_action[subcmd] if \
-                            subcmd in args_for_action else \
-                            (arg_choices, subcmd_args_lookup) if forward_arg_choices else ({}, {})
+
+                        if subcmd in args_for_action:
+                            (subcmd_args, subcmd_lookup) = args_for_action[subcmd]
+                        elif forward_arg_choices:
+                            subcmd_args, subcmd_lookup = arg_choices, subcmd_args_lookup
+                        else:
+                            subcmd_args, subcmd_lookup = {}, {}
+
                         subcmd_start = token_start_index + len(self._positional_actions)
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd],
                                                                cmd2_app,
@@ -328,11 +343,15 @@ class AutoCompleter(object):
                                                                subcmd_args_lookup=subcmd_lookup,
                                                                tab_for_arg_help=tab_for_arg_help)
                         sub_commands.append(subcmd)
+
                     self._positional_completers[action.dest] = sub_completers
                     self._arg_choices[action.dest] = sub_commands
 
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
+        if not tokens:
+            return []
+
         # Count which positional argument index we're at now. Loop through all tokens on the command line so far
         # Skip any flags or flag parameter tokens
         next_pos_arg_index = 0
