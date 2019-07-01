@@ -58,7 +58,7 @@ if 'pyreadline' in sys.modules:
 
             retVal = False
 
-            # Check if  ENABLE_VIRTUAL_TERMINAL_PROCESSING is already enabled
+            # Check if ENABLE_VIRTUAL_TERMINAL_PROCESSING is already enabled
             if (cur_mode.value & ENABLE_VIRTUAL_TERMINAL_PROCESSING) != 0:
                 retVal = True
 

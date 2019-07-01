@@ -42,8 +42,6 @@ from collections import namedtuple
 from contextlib import redirect_stdout
 from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
 
-import colorama
-
 from . import ansi
 from . import constants
 from . import plugin
@@ -358,9 +356,6 @@ class Cmd(cmd.Cmd):
                 del Cmd.do_ipy
             except AttributeError:
                 pass
-
-        # Override whether ansi codes should be stripped from the output since cmd2 has its own logic for doing this
-        colorama.init(strip=False)
 
         # initialize plugin system
         # needs to be done before we call __init__(0)
@@ -3812,9 +3807,6 @@ class Cmd(cmd.Cmd):
         if not (vt100_support and self.use_rawinput):
             return
 
-        import shutil
-        from colorama import Cursor
-
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
 
@@ -3838,50 +3830,10 @@ class Cmd(cmd.Cmd):
                     update_terminal = True
 
             if update_terminal:
-                # Get the size of the terminal
-                terminal_size = shutil.get_terminal_size()
-
-                # Split the prompt lines since it can contain newline characters.
-                prompt_lines = current_prompt.splitlines()
-
-                # Calculate how many terminal lines are taken up by all prompt lines except for the last one.
-                # That will be included in the input lines calculations since that is where the cursor is.
-                num_prompt_terminal_lines = 0
-                for line in prompt_lines[:-1]:
-                    line_width = ansi.ansi_safe_wcswidth(line)
-                    num_prompt_terminal_lines += int(line_width / terminal_size.columns) + 1
-
-                # Now calculate how many terminal lines are take up by the input
-                last_prompt_line = prompt_lines[-1]
-                last_prompt_line_width = ansi.ansi_safe_wcswidth(last_prompt_line)
-
-                input_width = last_prompt_line_width + ansi.ansi_safe_wcswidth(readline.get_line_buffer())
-
-                num_input_terminal_lines = int(input_width / terminal_size.columns) + 1
-
-                # Get the cursor's offset from the beginning of the first input line
-                cursor_input_offset = last_prompt_line_width + rl_get_point()
-
-                # Calculate what input line the cursor is on
-                cursor_input_line = int(cursor_input_offset / terminal_size.columns) + 1
-
-                # Create a string that when printed will clear all input lines and display the alert
-                terminal_str = ''
-
-                # Move the cursor down to the last input line
-                if cursor_input_line != num_input_terminal_lines:
-                    terminal_str += Cursor.DOWN(num_input_terminal_lines - cursor_input_line)
-
-                # Clear each line from the bottom up so that the cursor ends up on the first prompt line
-                total_lines = num_prompt_terminal_lines + num_input_terminal_lines
-                terminal_str += (colorama.ansi.clear_line() + Cursor.UP(1)) * (total_lines - 1)
-
-                # Clear the first prompt line
-                terminal_str += colorama.ansi.clear_line()
-
-                # Move the cursor to the beginning of the first prompt line and print the alert
-                terminal_str += '\r' + alert_msg
-
+                import shutil
+                terminal_str = ansi.async_alert_str(terminal_columns=shutil.get_terminal_size().columns,
+                                                    prompt=current_prompt, line=readline.get_line_buffer(),
+                                                    cursor_offset=rl_get_point(), alert_msg=alert_msg)
                 if rl_type == RlType.GNU:
                     sys.stderr.write(terminal_str)
                 elif rl_type == RlType.PYREADLINE:
@@ -3934,7 +3886,7 @@ class Cmd(cmd.Cmd):
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
             try:
-                sys.stderr.write(colorama.ansi.set_title(title))
+                sys.stderr.write(ansi.set_title_str(title))
             except AttributeError:
                 # Debugging in Pycharm has issues with setting terminal title
                 pass
