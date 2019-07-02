@@ -861,21 +861,6 @@ class Cmd(cmd.Cmd):
 
         return tokens, raw_tokens
 
-    # noinspection PyUnusedLocal
-    @staticmethod
-    def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against: Iterable) -> List[str]:
-        """
-        Performs tab completion against a list
-
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
-        :param line: the current input line with leading whitespace removed
-        :param begidx: the beginning index of the prefix text
-        :param endidx: the ending index of the prefix text
-        :param match_against: the list being matched against
-        :return: a list of possible tab completions
-        """
-        return [cur_match for cur_match in match_against if cur_match.startswith(text)]
-
     def delimiter_complete(self, text: str, line: str, begidx: int, endidx: int, match_against: Iterable,
                            delimiter: str) -> List[str]:
         """
