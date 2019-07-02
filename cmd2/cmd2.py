@@ -910,7 +910,7 @@ class Cmd(cmd.Cmd):
         :param delimiter: what delimits each portion of the matches (ex: paths are delimited by a slash)
         :return: a list of possible tab completions
         """
-        matches = self.basic_complete(text, line, begidx, endidx, match_against)
+        matches = utils.basic_complete(text, line, begidx, endidx, match_against)
 
         # Display only the portion of the match that's being completed based on delimiter
         if matches:
@@ -971,7 +971,7 @@ class Cmd(cmd.Cmd):
 
         # Perform tab completion using a Collection
         if isinstance(match_against, Collection):
-            completions_matches = self.basic_complete(text, line, begidx, endidx, match_against)
+            completions_matches = utils.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
         elif callable(match_against):
@@ -1015,7 +1015,7 @@ class Cmd(cmd.Cmd):
 
         # Perform tab completion using a Collection
         if isinstance(match_against, Collection):
-            matches = self.basic_complete(text, line, begidx, endidx, match_against)
+            matches = utils.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
         elif callable(match_against):
@@ -1567,8 +1567,8 @@ class Cmd(cmd.Cmd):
 
             else:
                 # Complete token against anything a user can run
-                self.completion_matches = self.basic_complete(text, line, begidx, endidx,
-                                                              self._get_commands_aliases_and_macros_for_completion())
+                self.completion_matches = utils.basic_complete(text, line, begidx, endidx,
+                                                               self._get_commands_aliases_and_macros_for_completion())
 
             # Handle single result
             if len(self.completion_matches) == 1:
@@ -2648,7 +2648,7 @@ class Cmd(cmd.Cmd):
         topics = set(self.get_help_topics())
         visible_commands = set(self.get_visible_commands())
         strs_to_match = list(topics | visible_commands)
-        return self.basic_complete(text, line, begidx, endidx, strs_to_match)
+        return utils.basic_complete(text, line, begidx, endidx, strs_to_match)
 
     def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the subcommand argument of help"""

@@ -67,7 +67,7 @@ class CompletionsExample(cmd2.Cmd):
         pass
 
     def complete_test_basic(self, text, line, begidx, endidx):
-        return self.basic_complete(text, line, begidx, endidx, food_item_strs)
+        return utils.basic_complete(text, line, begidx, endidx, food_item_strs)
 
     def do_test_delimited(self, args):
         pass
@@ -80,7 +80,7 @@ class CompletionsExample(cmd2.Cmd):
 
     def complete_test_sort_key(self, text, line, begidx, endidx):
         num_strs = ['2', '11', '1']
-        return self.basic_complete(text, line, begidx, endidx, num_strs)
+        return utils.basic_complete(text, line, begidx, endidx, num_strs)
 
     def do_test_raise_exception(self, args):
         pass
@@ -524,7 +524,7 @@ def test_basic_completion_single(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
+    assert utils.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
 def test_basic_completion_multiple(cmd2_app):
     text = ''
@@ -532,7 +532,7 @@ def test_basic_completion_multiple(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    matches = sorted(cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs))
+    matches = sorted(utils.basic_complete(text, line, begidx, endidx, food_item_strs))
     assert matches == sorted(food_item_strs)
 
 def test_basic_completion_nomatch(cmd2_app):
@@ -541,7 +541,7 @@ def test_basic_completion_nomatch(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == []
+    assert utils.basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
 def test_delimiter_completion(cmd2_app):
     text = '/home/'

@@ -69,6 +69,8 @@ from typing import List, Dict, Tuple, Callable, Union
 from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
 from .rl_utils import rl_force_redisplay
 
+from . import utils
+
 # attribute that can optionally added to an argparse argument (called an Action) to
 # define the completion choices for the argument. You may provide a Collection or a Function.
 ACTION_ARG_CHOICES = 'arg_choices'
@@ -571,8 +573,8 @@ class AutoCompleter(object):
         # a flag prefix then we'll complete the list of flag options
         if not flag_arg.needed and len(tokens[-1]) > 0 and tokens[-1][0] in self._parser.prefix_chars and \
                 not skip_remaining_flags:
-            return self._cmd2_app.basic_complete(text, line, begidx, endidx,
-                                                 [flag for flag in self._flags if flag not in matched_flags])
+            return utils.basic_complete(text, line, begidx, endidx,
+                                        [flag for flag in self._flags if flag not in matched_flags])
         # we're not at a positional argument, see if we're in a flag argument
         elif not current_is_positional:
             if flag_action is not None:
@@ -644,7 +646,7 @@ class AutoCompleter(object):
                         if token in completers:
                             return completers[token].complete_command_help(tokens, text, line, begidx, endidx)
                         else:
-                            return self._cmd2_app.basic_complete(text, line, begidx, endidx, completers.keys())
+                            return utils.basic_complete(text, line, begidx, endidx, completers.keys())
         return []
 
     def format_help(self, tokens: List[str]) -> str:
@@ -703,8 +705,8 @@ class AutoCompleter(object):
                 else:
                     return completer(text, line, begidx, endidx)
             else:
-                return self._cmd2_app.basic_complete(text, line, begidx, endidx,
-                                                     self._resolve_choices_for_arg(action, used_values))
+                return utils.basic_complete(text, line, begidx, endidx,
+                                            self._resolve_choices_for_arg(action, used_values))
 
         return []
 
