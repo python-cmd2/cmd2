@@ -64,17 +64,20 @@ import sys
 
 # imports copied from argparse to support our customized argparse functions
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
-from typing import Any, List, Dict, Tuple, Callable, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from . import utils
 from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
 from .rl_utils import rl_force_redisplay
 
-# Custom argparse argument attribute that means the argument's choices come from a ArgChoicesCallable
+# Argparse argument attribute that stores an ArgChoicesCallable
 ARG_CHOICES_CALLABLE = 'arg_choices_callable'
 
-ACTION_SUPPRESS_HINT = 'suppress_hint'
-ACTION_DESCRIPTIVE_COMPLETION_HEADER = 'desc_header'
+# Argparse argument attribute that suppresses tab-completion hints
+ARG_SUPPRESS_HINT = 'arg_suppress_hint'
+
+# Argparse argument attribute that prints descriptive header when using CompletionItems
+ARG_DESCRIPTIVE_COMPLETION_HEADER = 'desc_header'
 
 
 class ArgChoicesCallable:
@@ -85,70 +88,75 @@ class ArgChoicesCallable:
     def __init__(self, is_method: bool, is_completer: bool, to_call: Callable):
         """
         Initializer
-
-        :param is_method: True if to_call is an instance method of a cmd2 app
+        :param is_method: True if to_call is an instance method of a cmd2 app. False if it is a function.
         :param is_completer: True if to_call is a tab completion routine which expects
                              the args: text, line, begidx, endidx
         :param to_call: the callable object that will be called to provide choices for the argument
         """
-        self.is_completer = is_completer
         self.is_method = is_method
+        self.is_completer = is_completer
         self.to_call = to_call
 
 
-def set_arg_completer_function(arg_action: argparse.Action,
-                               completer: Callable[[str, str, int, int], List[str]]):
+# Save the original _ActionsContainer.add_argument because we need to patch it
+actual_actions_container_add_argument = argparse._ActionsContainer.add_argument
+
+
+def patched_add_argument(self, *args,
+                         choices_function: Optional[Callable[[], List[str]]] = None,
+                         choices_method: Optional[Callable[[Any], List[str]]] = None,
+                         completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
+                         completer_method: Optional[Callable[[Any, str, str, int, int], List[str]]] = None,
+                         suppress_hint: bool = False,
+                         description_header: Optional[str] = None,
+                         **kwargs):
     """
-    Set a tab completion function for an argparse argument to provide its choices.
-
-    Note: If completer is an instance method of a cmd2 app, then use set_arg_completer_method() instead.
-
-    :param arg_action: the argument action being added to
-    :param completer: the completer function to call
+    This is a patched version of _ActionsContainer.add_argument() that supports more settings needed by cmd2
+    :param self:
+    :param args:
+    :param choices_function:
+    :param choices_method:
+    :param completer_function:
+    :param completer_method:
+    :param suppress_hint:
+    :param description_header:
+    :param kwargs:
+    :return:
     """
-    choices_callable = ArgChoicesCallable(is_method=False, is_completer=True, to_call=completer)
-    setattr(arg_action, ARG_CHOICES_CALLABLE, choices_callable)
+    # Call the actual add_argument function
+    new_arg = actual_actions_container_add_argument(self, *args, **kwargs)
+
+    # Verify consistent use of arguments
+    choice_params = [new_arg.choices, choices_function, choices_method, completer_function, completer_method]
+    num_set = len(choice_params) - choice_params.count(None)
+
+    if num_set > 1:
+        err_msg = ("Only one of the following may be used in an argparser argument at a time:\n"
+                   "choices, choices_function, choices_method, completer_function, completer_method")
+        raise (ValueError(err_msg))
+
+    # Set the custom attributes
+    if choices_function:
+        setattr(new_arg, ARG_CHOICES_CALLABLE,
+                ArgChoicesCallable(is_method=False, is_completer=False, to_call=choices_function))
+    elif choices_method:
+        setattr(new_arg, ARG_CHOICES_CALLABLE,
+                ArgChoicesCallable(is_method=True, is_completer=False, to_call=choices_method))
+    elif completer_function:
+        setattr(new_arg, ARG_CHOICES_CALLABLE,
+                ArgChoicesCallable(is_method=False, is_completer=True, to_call=completer_function))
+    elif completer_method:
+        setattr(new_arg, ARG_CHOICES_CALLABLE,
+                ArgChoicesCallable(is_method=True, is_completer=True, to_call=completer_method))
+
+    setattr(new_arg, ARG_SUPPRESS_HINT, suppress_hint)
+    setattr(new_arg, ARG_DESCRIPTIVE_COMPLETION_HEADER, description_header)
+
+    return new_arg
 
 
-def set_arg_completer_method(arg_action: argparse.Action, completer: Callable[[Any, str, str, int, int], List[str]]):
-    """
-    Set a tab completion method for an argparse argument to provide its choices.
-
-    Note: This function expects completer to be an instance method of a cmd2 app. If completer is a function,
-    then use set_arg_completer_function() instead.
-
-    :param arg_action: the argument action being added to
-    :param completer: the completer function to call
-    """
-    choices_callable = ArgChoicesCallable(is_method=True, is_completer=True, to_call=completer)
-    setattr(arg_action, ARG_CHOICES_CALLABLE, choices_callable)
-
-
-def set_arg_choices_function(arg_action: argparse.Action, choices_func: Callable[[], List[str]]):
-    """
-    Set a function for an argparse argument to provide its choices.
-
-    Note: If choices_func is an instance method of a cmd2 app, then use set_arg_choices_method() instead.
-
-    :param arg_action: the argument action being added to
-    :param choices_func: the function to call
-    """
-    choices_callable = ArgChoicesCallable(is_method=False, is_completer=False, to_call=choices_func)
-    setattr(arg_action, ARG_CHOICES_CALLABLE, choices_callable)
-
-
-def set_arg_choices_method(arg_action: argparse.Action, choices_method: Callable[[Any], List[str]]):
-    """
-    Set a method for an argparse argument to provide its choices.
-
-    Note: This function expects choices_method to be an instance method of a cmd2 app. If choices_method is a function,
-    then use set_arg_choices_function() instead.
-
-    :param arg_action: the argument action being added to
-    :param choices_method: the method to call
-    """
-    choices_callable = ArgChoicesCallable(is_method=True, is_completer=False, to_call=choices_method)
-    setattr(arg_action, ARG_CHOICES_CALLABLE, choices_callable)
+# Overwrite _ActionsContainer.add_argument with our patched version
+argparse._ActionsContainer.add_argument = patched_add_argument
 
 
 class CompletionItem(str):
@@ -697,7 +705,7 @@ class AutoCompleter(object):
                 completions_with_desc.append(entry)
 
             try:
-                desc_header = action.desc_header
+                desc_header = getattr(action, ARG_DESCRIPTIVE_COMPLETION_HEADER)
             except AttributeError:
                 desc_header = 'Description'
             header = '\n{: <{token_width}}{}'.format(action.dest.upper(), desc_header, token_width=token_width + 2)
@@ -784,13 +792,9 @@ class AutoCompleter(object):
             return
 
         # is parameter hinting disabled for this parameter?
-        try:
-            suppress_hint = getattr(action, ACTION_SUPPRESS_HINT)
-        except AttributeError:
-            pass
-        else:
-            if suppress_hint:
-                return
+        suppress_hint = getattr(action, ARG_SUPPRESS_HINT, False)
+        if suppress_hint:
+            return
 
         if action.option_strings:
             flags = ', '.join(action.option_strings)
