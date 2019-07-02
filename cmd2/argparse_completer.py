@@ -64,18 +64,91 @@ import sys
 
 # imports copied from argparse to support our customized argparse functions
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
-from typing import List, Dict, Tuple, Callable, Union
+from typing import Any, List, Dict, Tuple, Callable, Union
 
+from . import utils
 from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
 from .rl_utils import rl_force_redisplay
 
-from . import utils
+# Custom argparse argument attribute that means the argument's choices come from a ArgChoicesCallable
+ARG_CHOICES_CALLABLE = 'arg_choices_callable'
 
-# attribute that can optionally added to an argparse argument (called an Action) to
-# define the completion choices for the argument. You may provide a Collection or a Function.
-ACTION_ARG_CHOICES = 'arg_choices'
 ACTION_SUPPRESS_HINT = 'suppress_hint'
 ACTION_DESCRIPTIVE_COMPLETION_HEADER = 'desc_header'
+
+
+class ArgChoicesCallable:
+    """
+    Enables using a callable as the choices provider for an argparse argument.
+    While argparse has the built-in choices attribute, it is limited to an iterable.
+    """
+    def __init__(self, is_method: bool, is_completer: bool, to_call: Callable):
+        """
+        Initializer
+
+        :param is_method: True if to_call is an instance method of a cmd2 app
+        :param is_completer: True if to_call is a tab completion routine which expects
+                             the args: text, line, begidx, endidx
+        :param to_call: the callable object that will be called to provide choices for the argument
+        """
+        self.is_completer = is_completer
+        self.is_method = is_method
+        self.to_call = to_call
+
+
+def set_arg_completer_function(arg_action: argparse.Action,
+                               completer: Callable[[str, str, int, int], List[str]]):
+    """
+    Set a tab completion function for an argparse argument to provide its choices.
+
+    Note: If completer is an instance method of a cmd2 app, then use set_arg_completer_method() instead.
+
+    :param arg_action: the argument action being added to
+    :param completer: the completer function to call
+    """
+    choices_callable = ArgChoicesCallable(is_method=False, is_completer=True, to_call=completer)
+    setattr(arg_action, ARG_CHOICES_CALLABLE, choices_callable)
+
+
+def set_arg_completer_method(arg_action: argparse.Action, completer: Callable[[Any, str, str, int, int], List[str]]):
+    """
+    Set a tab completion method for an argparse argument to provide its choices.
+
+    Note: This function expects completer to be an instance method of a cmd2 app. If completer is a function,
+    then use set_arg_completer_function() instead.
+
+    :param arg_action: the argument action being added to
+    :param completer: the completer function to call
+    """
+    choices_callable = ArgChoicesCallable(is_method=True, is_completer=True, to_call=completer)
+    setattr(arg_action, ARG_CHOICES_CALLABLE, choices_callable)
+
+
+def set_arg_choices_function(arg_action: argparse.Action, choices_func: Callable[[], List[str]]):
+    """
+    Set a function for an argparse argument to provide its choices.
+
+    Note: If choices_func is an instance method of a cmd2 app, then use set_arg_choices_method() instead.
+
+    :param arg_action: the argument action being added to
+    :param choices_func: the function to call
+    """
+    choices_callable = ArgChoicesCallable(is_method=False, is_completer=False, to_call=choices_func)
+    setattr(arg_action, ARG_CHOICES_CALLABLE, choices_callable)
+
+
+def set_arg_choices_method(arg_action: argparse.Action, choices_method: Callable[[Any], List[str]]):
+    """
+    Set a method for an argparse argument to provide its choices.
+
+    Note: This function expects choices_method to be an instance method of a cmd2 app. If choices_method is a function,
+    then use set_arg_choices_function() instead.
+
+    :param arg_action: the argument action being added to
+    :param choices_method: the method to call
+    """
+    choices_callable = ArgChoicesCallable(is_method=True, is_completer=False, to_call=choices_method)
+    setattr(arg_action, ARG_CHOICES_CALLABLE, choices_callable)
 
 
 class CompletionItem(str):
@@ -262,7 +335,7 @@ class AutoCompleter(object):
         Create an AutoCompleter
 
         :param parser: ArgumentParser instance
-        :param cmd2_app: reference to the Cmd2 application. Enables argparse argument completion with class methods
+        :param cmd2_app: reference to the Cmd2 application that owns this AutoCompleter
         :param tab_for_arg_help: Enable of disable argument help when there's no completion result
 
         # The following parameters are intended for internal use when AutoCompleter creates other AutoCompleters
@@ -300,10 +373,10 @@ class AutoCompleter(object):
             if action.choices is not None:
                 self._arg_choices[action.dest] = action.choices
 
-            # if completion choices are tagged on the action, record them
-            elif hasattr(action, ACTION_ARG_CHOICES):
-                action_arg_choices = getattr(action, ACTION_ARG_CHOICES)
-                self._arg_choices[action.dest] = action_arg_choices
+            # otherwise check if a callable provides the choices for this argument
+            elif hasattr(action, ARG_CHOICES_CALLABLE):
+                arg_choice_callable = getattr(action, ARG_CHOICES_CALLABLE)
+                self._arg_choices[action.dest] = arg_choice_callable
 
             # if the parameter is flag based, it will have option_strings
             if action.option_strings:
@@ -388,9 +461,9 @@ class AutoCompleter(object):
             if not is_potential_flag(token, self._parser) and flag_action is not None:
                 flag_arg.count += 1
 
-                # does this complete a option item for the flag
+                # does this complete an option item for the flag
                 arg_choices = self._resolve_choices_for_arg(flag_action)
-                # if the current token matches the current position's autocomplete argument list,
+                # if the current token matches the current flag's autocomplete argument list,
                 # track that we've used it already.  Unless this is the current token, then keep it.
                 if not is_last_token and token in arg_choices:
                     consumed_arg_values.setdefault(flag_action.dest, [])
@@ -400,7 +473,7 @@ class AutoCompleter(object):
             """Consuming token as positional argument"""
             pos_arg.count += 1
 
-            # does this complete a option item for the flag
+            # does this complete an option item for the positional
             arg_choices = self._resolve_choices_for_arg(pos_action)
             # if the current token matches the current position's autocomplete argument list,
             # track that we've used it already.  Unless this is the current token, then keep it.
@@ -580,7 +653,6 @@ class AutoCompleter(object):
             if flag_action is not None:
                 consumed = consumed_arg_values[flag_action.dest]\
                     if flag_action.dest in consumed_arg_values else []
-                # current_items.extend(self._resolve_choices_for_arg(flag_action, consumed))
                 completion_results = self._complete_for_arg(flag_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
                     self._print_action_help(flag_action)
@@ -661,73 +733,48 @@ class AutoCompleter(object):
                             return completers[token].format_help(tokens)
         return self._parser.format_help()
 
-    def _complete_for_arg(self, action: argparse.Action,
-                          text: str,
-                          line: str,
-                          begidx: int,
-                          endidx: int,
-                          used_values=()) -> List[str]:
-        if action.dest in self._arg_choices:
-            arg_choices = self._arg_choices[action.dest]
+    def _complete_for_arg(self, arg: argparse.Action,
+                          text: str, line: str, begidx: int, endidx: int, used_values=()) -> List[str]:
+        """Tab completion routine for argparse arguments"""
 
-            # if arg_choices is a tuple
-            #   Let's see if it's a custom completion function.  If it is, return what it provides
-            # To do this, we make sure the first element is either a callable
-            #   or it's the name of a callable in the application
-            if isinstance(arg_choices, tuple) and len(arg_choices) > 0 and \
-                    (callable(arg_choices[0]) or
-                         (isinstance(arg_choices[0], str) and hasattr(self._cmd2_app, arg_choices[0]) and
-                          callable(getattr(self._cmd2_app, arg_choices[0]))
-                          )
-                     ):
+        # Check the arg provides choices to the user
+        if arg.dest in self._arg_choices:
+            arg_choices = self._arg_choices[arg.dest]
 
-                if callable(arg_choices[0]):
-                    completer = arg_choices[0]
+            # Check if the argument uses a specific tab completion function to provide its choices
+            if isinstance(arg_choices, ArgChoicesCallable) and arg_choices.is_completer:
+                if arg_choices.is_method:
+                    return arg_choices.to_call(self._cmd2_app, text, line, begidx, endidx)
                 else:
-                    completer = getattr(self._cmd2_app, arg_choices[0])
+                    return arg_choices.to_call(text, line, begidx, endidx)
 
-                # extract the positional and keyword arguments from the tuple
-                list_args = None
-                kw_args = None
-                for index in range(1, len(arg_choices)):
-                    if isinstance(arg_choices[index], list) or isinstance(arg_choices[index], tuple):
-                        list_args = arg_choices[index]
-                    elif isinstance(arg_choices[index], dict):
-                        kw_args = arg_choices[index]
-
-                # call the provided function differently depending on the provided positional and keyword arguments
-                if list_args is not None and kw_args is not None:
-                    return completer(text, line, begidx, endidx, *list_args, **kw_args)
-                elif list_args is not None:
-                    return completer(text, line, begidx, endidx, *list_args)
-                elif kw_args is not None:
-                    return completer(text, line, begidx, endidx, **kw_args)
-                else:
-                    return completer(text, line, begidx, endidx)
+            # Otherwise use basic_complete on the choices
             else:
-                return utils.basic_complete(text, line, begidx, endidx,
-                                            self._resolve_choices_for_arg(action, used_values))
+                # Since choices can be various types like int, we must convert them to
+                # before strings before doing tab completion matching.
+                choices = [str(choice) for choice in self._resolve_choices_for_arg(arg, used_values)]
+                return utils.basic_complete(text, line, begidx, endidx, choices)
 
         return []
 
-    def _resolve_choices_for_arg(self, action: argparse.Action, used_values=()) -> List[str]:
-        if action.dest in self._arg_choices:
-            args = self._arg_choices[action.dest]
+    def _resolve_choices_for_arg(self, arg: argparse.Action, used_values=()) -> List[str]:
+        """Retrieve a list of choices that are available for a particular argument"""
+        if arg.dest in self._arg_choices:
+            arg_choices = self._arg_choices[arg.dest]
 
-            # is the argument a string? If so, see if we can find an attribute in the
-            # application matching the string.
-            if isinstance(args, str):
-                args = getattr(self._cmd2_app, args)
+            # Check if arg_choices is an ArgChoicesCallable that generates a choice list
+            if isinstance(arg_choices, ArgChoicesCallable):
+                if arg_choices.is_completer:
+                    # Tab completion routines are handled in other functions
+                    return []
+                else:
+                    if arg_choices.is_method:
+                        arg_choices = arg_choices.to_call(self._cmd2_app)
+                    else:
+                        arg_choices = arg_choices.to_call()
 
-            # is the provided argument a callable. If so, call it
-            if callable(args):
-                try:
-                    args = args(self._cmd2_app)
-                except TypeError:
-                    args = args()
-
-            # filter out arguments we already used
-            return [arg for arg in args if arg not in used_values]
+            # Filter out arguments we already used
+            return [choice for choice in arg_choices if choice not in used_values]
 
         return []
 

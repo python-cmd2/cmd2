@@ -46,7 +46,7 @@ from . import ansi
 from . import constants
 from . import plugin
 from . import utils
-from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOICES
+from .argparse_completer import AutoCompleter, ACArgumentParser, set_arg_choices_method, set_arg_completer_method
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
@@ -617,7 +617,8 @@ class Cmd(cmd.Cmd):
             if self.broken_pipe_warning:
                 sys.stderr.write(self.broken_pipe_warning)
 
-    def perror(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+    @staticmethod
+    def perror(msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """Print message to sys.stderr
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
@@ -2380,11 +2381,11 @@ class Cmd(cmd.Cmd):
                                                       description=alias_create_description,
                                                       epilog=alias_create_epilog)
     alias_create_parser.add_argument('name', help='name of this alias')
-    setattr(alias_create_parser.add_argument('command', help='what the alias resolves to'),
-            ACTION_ARG_CHOICES, _get_commands_aliases_and_macros_for_completion)
-    setattr(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                             help='arguments to pass to command'),
-            ACTION_ARG_CHOICES, ('path_complete',))
+    set_arg_choices_method(alias_create_parser.add_argument('command', help='what the alias resolves to'),
+                           _get_commands_aliases_and_macros_for_completion)
+    set_arg_completer_method(alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
+                                                              help='arguments to pass to command'),
+                             path_complete)
     alias_create_parser.set_defaults(func=_alias_create)
 
     # alias -> delete
@@ -2392,8 +2393,8 @@ class Cmd(cmd.Cmd):
     alias_delete_description = "Delete specified aliases or all aliases if --all is used"
     alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
                                                       description=alias_delete_description)
-    setattr(alias_delete_parser.add_argument('name', nargs='*', help='alias to delete'),
-            ACTION_ARG_CHOICES, _get_alias_names)
+    set_arg_choices_method(alias_delete_parser.add_argument('name', nargs='*', help='alias to delete'),
+                           _get_alias_names)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
     alias_delete_parser.set_defaults(func=_alias_delete)
 
@@ -2406,8 +2407,8 @@ class Cmd(cmd.Cmd):
 
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
-    setattr(alias_list_parser.add_argument('name', nargs="*", help='alias to list'),
-            ACTION_ARG_CHOICES, _get_alias_names)
+    set_arg_choices_method(alias_list_parser.add_argument('name', nargs="*", help='alias to list'),
+                           _get_alias_names)
     alias_list_parser.set_defaults(func=_alias_list)
 
     # Preserve quotes since we are passing strings to other commands
@@ -2585,11 +2586,11 @@ class Cmd(cmd.Cmd):
                                                       description=macro_create_description,
                                                       epilog=macro_create_epilog)
     macro_create_parser.add_argument('name', help='name of this macro')
-    setattr(macro_create_parser.add_argument('command', help='what the macro resolves to'),
-            ACTION_ARG_CHOICES, _get_commands_aliases_and_macros_for_completion)
-    setattr(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                             help='arguments to pass to command'),
-            ACTION_ARG_CHOICES, ('path_complete',))
+    set_arg_choices_method(macro_create_parser.add_argument('command', help='what the macro resolves to'),
+                           _get_commands_aliases_and_macros_for_completion)
+    set_arg_completer_method(macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
+                                                              help='arguments to pass to command'),
+                             path_complete)
     macro_create_parser.set_defaults(func=_macro_create)
 
     # macro -> delete
@@ -2597,8 +2598,8 @@ class Cmd(cmd.Cmd):
     macro_delete_description = "Delete specified macros or all macros if --all is used"
     macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
                                                       description=macro_delete_description)
-    setattr(macro_delete_parser.add_argument('name', nargs='*', help='macro to delete'),
-            ACTION_ARG_CHOICES, _get_macro_names)
+    set_arg_choices_method(macro_delete_parser.add_argument('name', nargs='*', help='macro to delete'),
+                           _get_macro_names)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
     macro_delete_parser.set_defaults(func=_macro_delete)
 
@@ -2610,8 +2611,8 @@ class Cmd(cmd.Cmd):
                               "Without arguments, all macros will be listed.")
 
     macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
-    setattr(macro_list_parser.add_argument('name', nargs="*", help='macro to list'),
-            ACTION_ARG_CHOICES, _get_macro_names)
+    set_arg_choices_method(macro_list_parser.add_argument('name', nargs="*", help='macro to list'),
+                           _get_macro_names)
     macro_list_parser.set_defaults(func=_macro_list)
 
     # Preserve quotes since we are passing strings to other commands
@@ -2670,12 +2671,11 @@ class Cmd(cmd.Cmd):
         return matches
 
     help_parser = ACArgumentParser()
-
-    setattr(help_parser.add_argument('command', help="command to retrieve help for", nargs="?"),
-            ACTION_ARG_CHOICES, ('complete_help_command',))
-    setattr(help_parser.add_argument('subcommand', help="sub-command to retrieve help for",
-                                     nargs=argparse.REMAINDER),
-            ACTION_ARG_CHOICES, ('complete_help_subcommand',))
+    set_arg_completer_method(help_parser.add_argument('command', nargs="?", help="command to retrieve help for"),
+                             complete_help_command)
+    set_arg_completer_method(help_parser.add_argument('subcommand', nargs=argparse.REMAINDER,
+                                                      help="sub-command to retrieve help for"),
+                             complete_help_subcommand)
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
@@ -2944,8 +2944,8 @@ class Cmd(cmd.Cmd):
     set_parser = ACArgumentParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    setattr(set_parser.add_argument('param', nargs='?', help='parameter to set or view'),
-            ACTION_ARG_CHOICES, _get_settable_names)
+    set_arg_choices_method(set_parser.add_argument('param', nargs='?', help='parameter to set or view'),
+                           _get_settable_names)
     set_parser.add_argument('value', nargs='?', help='the new value for settable')
 
     @with_argparser(set_parser)
@@ -2987,11 +2987,11 @@ class Cmd(cmd.Cmd):
                 onchange_hook(old=orig_value, new=new_value)
 
     shell_parser = ACArgumentParser()
-    setattr(shell_parser.add_argument('command', help='the command to run'),
-            ACTION_ARG_CHOICES, ('shell_cmd_complete',))
-    setattr(shell_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                      help='arguments to pass to command'),
-            ACTION_ARG_CHOICES, ('path_complete',))
+    set_arg_completer_method(shell_parser.add_argument('command', help='the command to run'),
+                             shell_cmd_complete)
+    set_arg_completer_method(shell_parser.add_argument('command_args', nargs=argparse.REMAINDER,
+                                                       help='arguments to pass to command'),
+                             path_complete)
 
     # Preserve quotes since we are passing these strings to the shell
     @with_argparser(shell_parser, preserve_quotes=True)
@@ -3052,8 +3052,8 @@ class Cmd(cmd.Cmd):
                       "by providing no arguments to py and run more complex statements there.")
 
     py_parser = ACArgumentParser(description=py_description)
-    py_parser.add_argument('command', help="command to run", nargs='?')
-    py_parser.add_argument('remainder', help="remainder of command", nargs=argparse.REMAINDER)
+    py_parser.add_argument('command', nargs='?', help="command to run")
+    py_parser.add_argument('remainder', nargs=argparse.REMAINDER, help="remainder of command")
 
     # Preserve quotes since we are passing these strings to Python
     @with_argparser(py_parser, preserve_quotes=True)
@@ -3238,11 +3238,11 @@ class Cmd(cmd.Cmd):
         return bridge.stop
 
     run_pyscript_parser = ACArgumentParser()
-    setattr(run_pyscript_parser.add_argument('script_path', help='path to the script file'),
-            ACTION_ARG_CHOICES, ('path_complete',))
-    setattr(run_pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
-                                             help='arguments to pass to script'),
-            ACTION_ARG_CHOICES, ('path_complete',))
+    set_arg_completer_method(run_pyscript_parser.add_argument('script_path', help='path to the script file'),
+                             path_complete)
+    set_arg_completer_method(run_pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
+                                                              help='arguments to pass to script'),
+                             path_complete)
 
     @with_argparser(run_pyscript_parser)
     def do_run_pyscript(self, args: argparse.Namespace) -> bool:
@@ -3300,13 +3300,13 @@ class Cmd(cmd.Cmd):
     history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_action_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
-    setattr(history_action_group.add_argument('-o', '--output-file', metavar='FILE',
-                                              help='output commands to a script file, implies -s'),
-            ACTION_ARG_CHOICES, ('path_complete',))
-    setattr(history_action_group.add_argument('-t', '--transcript',
-                                              help='output commands and results to a transcript file,\n'
-                                                   'implies -s'),
-            ACTION_ARG_CHOICES, ('path_complete',))
+    set_arg_completer_method(history_action_group.add_argument('-o', '--output-file', metavar='FILE',
+                                                               help='output commands to a script file, implies -s'),
+                             path_complete)
+    set_arg_completer_method(history_action_group.add_argument('-t', '--transcript',
+                                                               help='output commands and results to a transcript\n'
+                                                                    'file, implies -s'),
+                             path_complete)
     history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
 
     history_format_group = history_parser.add_argument_group(title='formatting')
@@ -3596,8 +3596,8 @@ class Cmd(cmd.Cmd):
                         "  set editor (program-name)")
 
     edit_parser = ACArgumentParser(description=edit_description)
-    setattr(edit_parser.add_argument('file_path', help="path to a file to open in editor", nargs="?"),
-            ACTION_ARG_CHOICES, ('path_complete',))
+    set_arg_completer_method(edit_parser.add_argument('file_path', nargs="?", help="path to a file to open in editor"),
+                             path_complete)
 
     @with_argparser(edit_parser)
     def do_edit(self, args: argparse.Namespace) -> None:
@@ -3629,11 +3629,11 @@ class Cmd(cmd.Cmd):
                               )
 
     run_script_parser = ACArgumentParser(description=run_script_description)
-    setattr(run_script_parser.add_argument('-t', '--transcript',
-                                           help='record the output of the script as a transcript file'),
-            ACTION_ARG_CHOICES, ('path_complete',))
-    setattr(run_script_parser.add_argument('script_path', help="path to the script file"),
-            ACTION_ARG_CHOICES, ('path_complete',))
+    set_arg_completer_method(run_script_parser.add_argument('-t', '--transcript', help='record the output of the '
+                                                                                       'script as a transcript file'),
+                             path_complete)
+    set_arg_completer_method(run_script_parser.add_argument('script_path', help="path to the script file"),
+                             path_complete)
 
     @with_argparser(run_script_parser)
     def do_run_script(self, args: argparse.Namespace) -> Optional[bool]:
@@ -3962,7 +3962,8 @@ class Cmd(cmd.Cmd):
                 self.disable_command(cmd_name, message_to_print)
 
     # noinspection PyUnusedLocal
-    def _report_disabled_command_usage(self, *args, message_to_print: str, **kwargs) -> None:
+    @staticmethod
+    def _report_disabled_command_usage(*args, message_to_print: str, **kwargs) -> None:
         """
         Report when a disabled command has been run or had help called on it
         :param args: not used
