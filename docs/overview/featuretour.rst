@@ -1,6 +1,5 @@
-Features
-========
+Feature Highlights
+==================
 
-Briefly describe the list of major features, linking to the more detailed description
-of each features elsewhere in the documentation.
-
+[Briefly describe the list of major features, linking to the more detailed description
+of each features elsewhere in the documentation.]

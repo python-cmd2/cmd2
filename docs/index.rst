@@ -24,21 +24,16 @@ The basic use of ``cmd2`` is identical to that of cmd_.
      app.cmdloop()
 
 
-Overview
---------
+Getting Started
+---------------
 
-[create links with short descriptions to the various overview pages here]
+.. include:: overview/summary.rst
 
 .. toctree::
    :maxdepth: 2
    :hidden:
-   :caption: Overview
 
-   overview/featuretour
-   overview/installation
-   overview/alternatives
-   overview/resources
-   examples/quickstart
+   overview/index
 
 
 Migrating from cmd
@@ -48,14 +43,8 @@ Migrating from cmd
 
 .. toctree::
    :maxdepth: 2
-   :hidden:
-   :caption: Migrating from cmd
 
-   migrating/why
-   migrating/incompatibilities
-   migrating/minimum
-   migrating/free_features
-   migrating/nextsteps
+   migrating/index
 
 
 Features
@@ -65,27 +54,17 @@ Features
 
 .. toctree::
    :maxdepth: 2
-   :hidden:
-   :caption: Features
 
-   features/generating_output
-   features/argument_processing
-   features/prompt
-   features/help
-   features/history
-   features/startup_commands
-   features/shortcuts_aliases_macros
-   features/settings
-   features/completion
-   features/os
-   features/multiline
-   features/disable_commands
-   features/clipboard
-   features/transcript
-   features/hooks
-   features/plugins
-   features/scripting
-   features/embedded_python_shells
+   features/index
+
+
+API Reference
+-------------
+
+.. toctree::
+   :maxdepth: 2
+
+   api/index
 
 
 Examples
@@ -95,25 +74,8 @@ Examples
 
 .. toctree::
    :maxdepth: 2
-   :hidden:
-   :caption: Examples
 
-   examples/quickstart
-
-
-API Reference
--------------
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: API Reference
-
-   api/cmd
-   api/decorators
-   api/exceptions
-   api/utility_functions
-   api/utility_classes
+   examples/index
 
 
 Meta
