@@ -3183,7 +3183,7 @@ class Cmd(cmd.Cmd):
                             readline.set_completion_display_matches_hook(None)
                         elif rl_type == RlType.PYREADLINE:
                             # noinspection PyUnresolvedReferences
-                            readline.rl.mode._display_completions = self._display_matches_pyreadline
+                            readline.rl.mode._display_completions = orig_pyreadline_display
 
                         # Save off the current completer and set a new one in the Python console
                         # Make sure it tab completes from its locals() dictionary
