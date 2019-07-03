@@ -50,7 +50,7 @@ from .argparse_completer import AutoCompleter, ACArgumentParser, ACTION_ARG_CHOI
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
-giut 
+
 # Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
 
