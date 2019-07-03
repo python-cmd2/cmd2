@@ -18,6 +18,7 @@ from . import constants
 def is_quoted(arg: str) -> bool:
     """
     Checks if a string is quoted
+
     :param arg: the string being checked for quotes
     :return: True if a string is quoted
     """

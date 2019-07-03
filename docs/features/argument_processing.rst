@@ -1,6 +1,5 @@
 .. _decorators:
 
-===================
 Argument Processing
 ===================
 
@@ -25,12 +24,16 @@ processing decorators in your ``cmd2`` applications.
 
 
 Decorators provided by cmd2 for argument processing
-===================================================
+---------------------------------------------------
+
 ``cmd2`` provides the following decorators for assisting with parsing arguments passed to commands:
 
 .. automethod:: cmd2.cmd2.with_argument_list
+   :noindex:
 .. automethod:: cmd2.cmd2.with_argparser
+   :noindex:
 .. automethod:: cmd2.cmd2.with_argparser_and_unknown_args
+   :noindex:
 
 All of these decorators accept an optional **preserve_quotes** argument which defaults to ``False``.
 Setting this argument to ``True`` is useful for cases where you are passing the arguments to another
@@ -38,7 +41,7 @@ command which might have its own argument parsing.
 
 
 Using the argument parser decorator
-===================================
+-----------------------------------
 
 For each command in the ``cmd2`` subclass which requires argument parsing,
 create a unique instance of ``argparse.ArgumentParser()`` which can parse the
@@ -91,7 +94,7 @@ Here's what it looks like::
 
 
 Help Messages
-=============
+-------------
 
 By default, cmd2 uses the docstring of the command method when a user asks
 for help on the command. When you use the ``@with_argparser``
@@ -198,7 +201,7 @@ Which yields:
 
 
 Receiving an argument list
-==========================
+--------------------------
 
 The default behavior of ``cmd2`` is to pass the user input directly to your
 ``do_*`` methods as a string. The object passed to your method is actually a
@@ -248,7 +251,8 @@ argument list instead of a string::
 
 
 Using the argument parser decorator and also receiving a list of unknown positional arguments
-===============================================================================================
+---------------------------------------------------------------------------------------------
+
 If you want all unknown arguments to be passed to your command as a list of strings, then
 decorate the command method with the ``@with_argparser_and_unknown_args`` decorator.
 
@@ -276,7 +280,8 @@ Here's what it looks like::
         ...
 
 Using custom argparse.Namespace with argument parser decorators
-===============================================================================================
+---------------------------------------------------------------
+
 In some cases, it may be necessary to write custom ``argparse`` code that is dependent on state data of your
 application.  To support this ability while still allowing use of the decorators, both ``@with_argparser`` and
 ``@with_argparser_and_unknown_args`` have an optional argument called ``ns_provider``.
@@ -301,7 +306,8 @@ The Namespace is passed by the decorators to the ``argparse`` parsing functions 
 to the state data it needs for its parsing logic.
 
 Sub-commands
-============
+------------
+
 Sub-commands are supported for commands using either the ``@with_argparser`` or
 ``@with_argparser_and_unknown_args`` decorator.  The syntax for supporting them is based on argparse sub-parsers.
 
