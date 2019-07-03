@@ -70,9 +70,22 @@ Features
 
    features/generating_output
    features/argument_processing
+   features/prompt
    features/help
+   features/history
+   features/startup_commands
+   features/shortcuts_aliases_macros
+   features/settings
+   features/completion
+   features/os
+   features/multiline
+   features/disable_commands
+   features/clipboard
    features/transcript
    features/hooks
+   features/plugins
+   features/scripting
+   features/embedded_python_shells
 
 
 Examples

@@ -3,8 +3,10 @@ Generating Output
 
 how to generate output
 
-poutput
+- poutput
+- perror
+- paging
+- exceptions
+- color support
 
-perror
 
-paging

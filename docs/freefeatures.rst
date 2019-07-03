@@ -26,20 +26,6 @@ Simply include one command per line, typed exactly as you would inside a ``cmd2`
 .. automethod:: cmd2.cmd2.Cmd.do_edit
 
 
-Comments
-========
-
-Any command line input where the first non-whitespace character is a `#` will be treated as a comment.
-This means any `#` character appearing later in the command will be treated as a literal. The same
-applies to a `#` in the middle of a multiline command, even if it is the first character on a line.
-
-Comments can be useful in :ref:`scripts`, but would be pointless within an interactive session.
-
-::
-
-  (Cmd) # this is a comment
-  (Cmd) this # is not a comment
-
 Startup Initialization Script
 =============================
 You can execute commands from a startup initialization script by passing a file path to the ``startup_script``
