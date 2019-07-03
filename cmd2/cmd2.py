@@ -40,7 +40,7 @@ import sys
 import threading
 from collections import namedtuple
 from contextlib import redirect_stdout
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
 from . import ansi
 from . import constants
@@ -79,29 +79,6 @@ else:
 
         rl_basic_quote_characters = ctypes.c_char_p.in_dll(readline_lib, "rl_basic_quote_characters")
         orig_rl_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-
-# Collection is a container that is sizable and iterable
-# It was introduced in Python 3.6. We will try to import it, otherwise use our implementation
-try:
-    from collections.abc import Collection, Iterable
-except ImportError:
-    from collections.abc import Sized, Iterable, Container
-
-    # noinspection PyAbstractClass
-    class Collection(Sized, Iterable, Container):
-
-        __slots__ = ()
-
-        # noinspection PyPep8Naming
-        @classmethod
-        def __subclasshook__(cls, C):
-            if cls is Collection:
-                if any("__len__" in B.__dict__ for B in C.__mro__) and \
-                        any("__iter__" in B.__dict__ for B in C.__mro__) and \
-                        any("__contains__" in B.__dict__ for B in C.__mro__):
-                    return True
-            return NotImplemented
-
 
 # Detect whether IPython is installed to determine if the built-in "ipy" command should be included
 ipython_available = True
@@ -955,8 +932,8 @@ class Cmd(cmd.Cmd):
             if flag in flag_dict:
                 match_against = flag_dict[flag]
 
-        # Perform tab completion using a Collection
-        if isinstance(match_against, Collection):
+        # Perform tab completion using an Iterable
+        if isinstance(match_against, Iterable):
             completions_matches = utils.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
@@ -999,8 +976,8 @@ class Cmd(cmd.Cmd):
         else:
             match_against = all_else
 
-        # Perform tab completion using a Collection
-        if isinstance(match_against, Collection):
+        # Perform tab completion using a Iterable
+        if isinstance(match_against, Iterable):
             matches = utils.basic_complete(text, line, begidx, endidx, match_against)
 
         # Perform tab completion using a function
