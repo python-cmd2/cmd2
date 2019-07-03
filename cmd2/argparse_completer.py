@@ -64,7 +64,7 @@ import sys
 
 # imports copied from argparse to support our customized argparse functions
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Iterable, Dict, List, Optional, Tuple, Union
 
 from . import utils
 from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
@@ -103,25 +103,31 @@ orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
 def add_argument_wrapper(self, *args,
-                         choices_function: Optional[Callable[[], List[str]]] = None,
-                         choices_method: Optional[Callable[[Any], List[str]]] = None,
+                         choices_function: Optional[Callable[[], Iterable[Any]]] = None,
+                         choices_method: Optional[Callable[[Any], Iterable[Any]]] = None,
                          completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
                          completer_method: Optional[Callable[[Any, str, str, int, int], List[str]]] = None,
                          suppress_hint: bool = False,
                          description_header: Optional[str] = None,
-                         **kwargs):
+                         **kwargs) -> argparse.Action:
     """
-    This is a wrapper around _ActionsContainer.add_argument() that supports more settings needed by cmd2
+    This is a wrapper around _ActionsContainer.add_argument() that supports more settings needed by AutoCompleter
+
+    # Args from original function
     :param self:
     :param args:
+
+    # Added args used by AutoCompleter
     :param choices_function:
     :param choices_method:
     :param completer_function:
     :param completer_method:
     :param suppress_hint:
     :param description_header:
+
+    # Args from original function
     :param kwargs:
-    :return:
+    :return: the created argument action
     """
     # Call the original add_argument function
     new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
@@ -758,10 +764,8 @@ class AutoCompleter(object):
 
             # Otherwise use basic_complete on the choices
             else:
-                # Since choices can be various types like int, we must convert them to
-                # before strings before doing tab completion matching.
-                choices = [str(choice) for choice in self._resolve_choices_for_arg(arg, used_values)]
-                return utils.basic_complete(text, line, begidx, endidx, choices)
+                return utils.basic_complete(text, line, begidx, endidx,
+                                            self._resolve_choices_for_arg(arg, used_values))
 
         return []
 
@@ -780,6 +784,14 @@ class AutoCompleter(object):
                         arg_choices = arg_choices.to_call(self._cmd2_app)
                     else:
                         arg_choices = arg_choices.to_call()
+
+            # Since arg_choices can be any iterable type, convert to a list
+            arg_choices = list(arg_choices)
+
+            # Since choices can be various types like int, we must convert them to strings
+            for index, choice in enumerate(arg_choices):
+                if not isinstance(choice, str,):
+                    arg_choices[index] = str(choice)
 
             # Filter out arguments we already used
             return [choice for choice in arg_choices if choice not in used_values]
