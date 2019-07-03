@@ -98,11 +98,11 @@ class ArgChoicesCallable:
         self.to_call = to_call
 
 
-# Save the original _ActionsContainer.add_argument because we need to patch it
-actual_actions_container_add_argument = argparse._ActionsContainer.add_argument
+# Save original _ActionsContainer.add_argument's value because we will replace it with our wrapper
+orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
-def patched_add_argument(self, *args,
+def add_argument_wrapper(self, *args,
                          choices_function: Optional[Callable[[], List[str]]] = None,
                          choices_method: Optional[Callable[[Any], List[str]]] = None,
                          completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
@@ -111,7 +111,7 @@ def patched_add_argument(self, *args,
                          description_header: Optional[str] = None,
                          **kwargs):
     """
-    This is a patched version of _ActionsContainer.add_argument() that supports more settings needed by cmd2
+    This is a wrapper around _ActionsContainer.add_argument() that supports more settings needed by cmd2
     :param self:
     :param args:
     :param choices_function:
@@ -123,8 +123,8 @@ def patched_add_argument(self, *args,
     :param kwargs:
     :return:
     """
-    # Call the actual add_argument function
-    new_arg = actual_actions_container_add_argument(self, *args, **kwargs)
+    # Call the original add_argument function
+    new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
     # Verify consistent use of arguments
     choice_params = [new_arg.choices, choices_function, choices_method, completer_function, completer_method]
@@ -155,8 +155,8 @@ def patched_add_argument(self, *args,
     return new_arg
 
 
-# Overwrite _ActionsContainer.add_argument with our patched version
-argparse._ActionsContainer.add_argument = patched_add_argument
+# Overwrite _ActionsContainer.add_argument with our wrapper
+argparse._ActionsContainer.add_argument = add_argument_wrapper
 
 
 class CompletionItem(str):
