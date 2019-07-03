@@ -300,17 +300,6 @@ class Cmd2ArgParser(argparse.ArgumentParser):
         super().__init__(*args, **kwargs)
         register_custom_actions(self)
 
-        self._custom_error_message = ''
-
-    # Begin cmd2 customization
-    def set_custom_message(self, custom_message: str = '') -> None:
-        """
-        Allows an error message override to the error() function, useful when forcing a
-        re-parse of arguments with newly required parameters
-        """
-        self._custom_error_message = custom_message
-    # End cmd2 customization
-
     def add_subparsers(self, **kwargs):
         """Custom override. Sets a default title if one was not given."""
         if 'title' not in kwargs:
@@ -320,10 +309,6 @@ class Cmd2ArgParser(argparse.ArgumentParser):
 
     def error(self, message: str) -> None:
         """Custom override that applies custom formatting to the error message"""
-        if self._custom_error_message:
-            message = self._custom_error_message
-            self._custom_error_message = ''
-
         lines = message.split('\n')
         linum = 0
         formatted_message = ''
