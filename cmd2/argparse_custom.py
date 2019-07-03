@@ -111,7 +111,7 @@ def register_custom_actions(parser: argparse.ArgumentParser) -> None:
 
 
 # noinspection PyCompatibility,PyShadowingBuiltins,PyShadowingBuiltins
-class ACHelpFormatter(argparse.RawTextHelpFormatter):
+class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
     def _format_usage(self, usage, actions, groups, prefix) -> str:
@@ -295,7 +295,7 @@ class Cmd2ArgParser(argparse.ArgumentParser):
 
     def __init__(self, *args, **kwargs) -> None:
         if 'formatter_class' not in kwargs:
-            kwargs['formatter_class'] = ACHelpFormatter
+            kwargs['formatter_class'] = Cmd2HelpFormatter
 
         super().__init__(*args, **kwargs)
         register_custom_actions(self)
