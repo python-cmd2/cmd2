@@ -439,7 +439,7 @@ class AutoCompleter(object):
                     arg_state.max = action.nargs
 
         # This next block of processing tries to parse all parameters before the last parameter.
-        # We're trying to determine what specific argument the current cursor positition should be
+        # We're trying to determine what specific argument the current cursor position should be
         # matched with. When we finish parsing all of the arguments, we can determine whether the
         # last token is a positional or flag argument and which specific argument it is.
         #
