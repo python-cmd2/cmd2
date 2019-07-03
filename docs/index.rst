@@ -1,3 +1,4 @@
+====
 cmd2
 ====
 
@@ -25,19 +26,19 @@ The basic use of ``cmd2`` is identical to that of cmd_.
 
 
 Getting Started
----------------
+===============
 
 .. include:: overview/summary.rst
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :hidden:
 
    overview/index
 
 
 Migrating from cmd
-------------------
+==================
 
 [create links with short descriptions to the various migrating pages here]
 
@@ -48,7 +49,7 @@ Migrating from cmd
 
 
 Features
---------
+========
 
 [create links with short descriptions to the various feature pages here]
 
@@ -59,7 +60,7 @@ Features
 
 
 API Reference
--------------
+=============
 
 .. toctree::
    :maxdepth: 2
@@ -68,7 +69,7 @@ API Reference
 
 
 Examples
---------------------
+========
 
 [create links with short descriptions to the various examples pages here]
 
@@ -79,7 +80,9 @@ Examples
 
 
 Meta
-----
+====
+
+:doc:`doc_conventions`
 
 .. toctree::
    :maxdepth: 2
@@ -90,9 +93,14 @@ Meta
 
 
 To Be Integrated
-----------------
+================
 
 Files from old documentation to be integrated into new structure
+
+* :doc:`freefeatures`
+* :doc:`integrating`
+* :doc:`settingchanges`
+* :doc:`unfreefeatures`
 
 .. toctree::
    :maxdepth: 2
