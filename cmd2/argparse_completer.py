@@ -1,8 +1,9 @@
 # coding=utf-8
 # flake8: noqa C901
-# NOTE: Ignoring flake8 cyclomatic complexity in this file because the complexity due to copy-and-paste overrides from
-#       argparse
+# NOTE: Ignoring flake8 cyclomatic complexity in this file
 """
+This module adds tab completion to argparse parsers within cmd2 apps.
+
 AutoCompleter interprets the argparse.ArgumentParser internals to automatically
 generate the completion options for each argument.
 
@@ -59,22 +60,19 @@ How to supply completion choice lists or functions for sub-commands:
 
 import argparse
 import os
-import re as _re
-import sys
-
-# imports copied from argparse to support our customized argparse functions
-from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _, _get_action_name, SUPPRESS
+from argparse import SUPPRESS
 from typing import Any, Callable, Iterable, Dict, List, Optional, Tuple, Union
 
 from . import utils
-from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
+from .ansi import ansi_safe_wcswidth
+from .argparse_custom import _RangeAction
 from .rl_utils import rl_force_redisplay
 
 # Argparse argument attribute that stores an ArgChoicesCallable
-ARG_CHOICES_CALLABLE = 'arg_choices_callable'
+ARG_CHOICES_CALLABLE = 'choices_callable'
 
 # Argparse argument attribute that suppresses tab-completion hints
-ARG_SUPPRESS_HINT = 'arg_suppress_hint'
+ARG_SUPPRESS_HINT = 'suppress_hint'
 
 # Argparse argument attribute that prints descriptive header when using CompletionItems
 ARG_DESCRIPTIVE_COMPLETION_HEADER = 'desc_header'
@@ -114,19 +112,27 @@ def add_argument_wrapper(self, *args,
     This is a wrapper around _ActionsContainer.add_argument() that supports more settings needed by AutoCompleter
 
     # Args from original function
-    :param self:
-    :param args:
+    :param self: instance of the _ActionsContainer being added to
+    :param args: arguments expected by argparse._ActionsContainer.add_argument
 
     # Added args used by AutoCompleter
-    :param choices_function:
-    :param choices_method:
-    :param completer_function:
-    :param completer_method:
-    :param suppress_hint:
-    :param description_header:
+    :param choices_function: function that provides choices for this argument
+    :param choices_method: cmd2-app method that provides choices for this argument
+    :param completer_function: tab-completion function that provides choices for this argument
+    :param completer_method: cmd2-app tab-completion method that provides choices for this argument
+    :param suppress_hint: when AutoCompleter has no choices to show during tab completion, it displays the current
+                          argument's help text as a hint. Set this to True to suppress the hint. Defaults to False.
+    :param description_header: if the provided choices are CompletionItems, then this header will display
+                               during tab completion. Defaults to None.
 
     # Args from original function
-    :param kwargs:
+    :param kwargs: keyword-arguments recognized by argparse._ActionsContainer.add_argument
+
+    Note: You can only use 1 of the following in your argument:
+          choices, choices_function, choices_method, completer_function, completer_method
+
+          See the header of this file for more information
+
     :return: the created argument action
     """
     # Call the original add_argument function
@@ -141,7 +147,7 @@ def add_argument_wrapper(self, *args,
                    "choices, choices_function, choices_method, completer_function, completer_method")
         raise (ValueError(err_msg))
 
-    # Set the custom attributes
+    # Set the custom attributes used by AutoCompleter
     if choices_function:
         setattr(new_arg, ARG_CHOICES_CALLABLE,
                 ArgChoicesCallable(is_method=False, is_completer=False, to_call=choices_function))
@@ -199,99 +205,6 @@ class CompletionItem(str):
     # noinspection PyMissingConstructor,PyUnusedLocal
     def __init__(self, o, desc='', *args, **kwargs) -> None:
         self.description = desc
-
-
-class _RangeAction(object):
-    def __init__(self, nargs: Union[int, str, Tuple[int, int], None]) -> None:
-        self.nargs_min = None
-        self.nargs_max = None
-
-        # pre-process special ranged nargs
-        if isinstance(nargs, tuple):
-            if len(nargs) != 2 or not isinstance(nargs[0], int) or not isinstance(nargs[1], int):
-                raise ValueError('Ranged values for nargs must be a tuple of 2 integers')
-            if nargs[0] >= nargs[1]:
-                raise ValueError('Invalid nargs range. The first value must be less than the second')
-            if nargs[0] < 0:
-                raise ValueError('Negative numbers are invalid for nargs range.')
-            narg_range = nargs
-            self.nargs_min = nargs[0]
-            self.nargs_max = nargs[1]
-            if narg_range[0] == 0:
-                if narg_range[1] > 1:
-                    self.nargs_adjusted = '*'
-                else:
-                    # this shouldn't use a range tuple, but yet here we are
-                    self.nargs_adjusted = '?'
-            else:
-                self.nargs_adjusted = '+'
-        else:
-            self.nargs_adjusted = nargs
-
-
-# noinspection PyShadowingBuiltins,PyShadowingBuiltins
-class _StoreRangeAction(argparse._StoreAction, _RangeAction):
-    def __init__(self,
-                 option_strings,
-                 dest,
-                 nargs=None,
-                 const=None,
-                 default=None,
-                 type=None,
-                 choices=None,
-                 required=False,
-                 help=None,
-                 metavar=None) -> None:
-
-        _RangeAction.__init__(self, nargs)
-
-        argparse._StoreAction.__init__(self,
-                                       option_strings=option_strings,
-                                       dest=dest,
-                                       nargs=self.nargs_adjusted,
-                                       const=const,
-                                       default=default,
-                                       type=type,
-                                       choices=choices,
-                                       required=required,
-                                       help=help,
-                                       metavar=metavar)
-
-
-# noinspection PyShadowingBuiltins,PyShadowingBuiltins
-class _AppendRangeAction(argparse._AppendAction, _RangeAction):
-    def __init__(self,
-                 option_strings,
-                 dest,
-                 nargs=None,
-                 const=None,
-                 default=None,
-                 type=None,
-                 choices=None,
-                 required=False,
-                 help=None,
-                 metavar=None) -> None:
-
-        _RangeAction.__init__(self, nargs)
-
-        argparse._AppendAction.__init__(self,
-                                        option_strings=option_strings,
-                                        dest=dest,
-                                        nargs=self.nargs_adjusted,
-                                        const=const,
-                                        default=default,
-                                        type=type,
-                                        choices=choices,
-                                        required=required,
-                                        help=help,
-                                        metavar=metavar)
-
-
-def register_custom_actions(parser: argparse.ArgumentParser) -> None:
-    """Register custom argument action types"""
-    parser.register('action', None, _StoreRangeAction)
-    parser.register('action', 'store', _StoreRangeAction)
-    parser.register('action', 'append', _AppendRangeAction)
 
 
 def is_potential_flag(token: str, parser: argparse.ArgumentParser) -> bool:
@@ -843,582 +756,3 @@ class AutoCompleter(object):
 
         # Redraw prompt and input line
         rl_force_redisplay()
-
-
-###############################################################################
-# Unless otherwise noted, everything below this point are copied from Python's
-# argparse implementation with minor tweaks to adjust output.
-# Changes are noted if it's buried in a block of copied code. Otherwise the
-# function will check for a special case and fall back to the parent function
-###############################################################################
-
-
-# noinspection PyCompatibility,PyShadowingBuiltins,PyShadowingBuiltins
-class ACHelpFormatter(argparse.RawTextHelpFormatter):
-    """Custom help formatter to configure ordering of help text"""
-
-    def _format_usage(self, usage, actions, groups, prefix) -> str:
-        if prefix is None:
-            prefix = _('Usage: ')
-
-        # if usage is specified, use that
-        if usage is not None:
-            usage %= dict(prog=self._prog)
-
-        # if no optionals or positionals are available, usage is just prog
-        elif usage is None and not actions:
-            usage = '%(prog)s' % dict(prog=self._prog)
-
-        # if optionals and positionals are available, calculate usage
-        elif usage is None:
-            prog = '%(prog)s' % dict(prog=self._prog)
-
-            # split optionals from positionals
-            optionals = []
-            positionals = []
-            # Begin cmd2 customization (separates required and optional, applies to all changes in this function)
-            required_options = []
-            for action in actions:
-                if action.option_strings:
-                    if action.required:
-                        required_options.append(action)
-                    else:
-                        optionals.append(action)
-                else:
-                    positionals.append(action)
-            # End cmd2 customization
-
-            # build full usage string
-            format = self._format_actions_usage
-            action_usage = format(required_options + optionals + positionals, groups)
-            usage = ' '.join([s for s in [prog, action_usage] if s])
-
-            # wrap the usage parts if it's too long
-            text_width = self._width - self._current_indent
-            if len(prefix) + len(usage) > text_width:
-
-                # Begin cmd2 customization
-
-                # break usage into wrappable parts
-                part_regexp = r'\(.*?\)+|\[.*?\]+|\S+'
-                req_usage = format(required_options, groups)
-                opt_usage = format(optionals, groups)
-                pos_usage = format(positionals, groups)
-                req_parts = _re.findall(part_regexp, req_usage)
-                opt_parts = _re.findall(part_regexp, opt_usage)
-                pos_parts = _re.findall(part_regexp, pos_usage)
-                assert ' '.join(req_parts) == req_usage
-                assert ' '.join(opt_parts) == opt_usage
-                assert ' '.join(pos_parts) == pos_usage
-
-                # End cmd2 customization
-
-                # helper for wrapping lines
-                # noinspection PyMissingOrEmptyDocstring,PyShadowingNames
-                def get_lines(parts, indent, prefix=None):
-                    lines = []
-                    line = []
-                    if prefix is not None:
-                        line_len = len(prefix) - 1
-                    else:
-                        line_len = len(indent) - 1
-                    for part in parts:
-                        if line_len + 1 + len(part) > text_width and line:
-                            lines.append(indent + ' '.join(line))
-                            line = []
-                            line_len = len(indent) - 1
-                        line.append(part)
-                        line_len += len(part) + 1
-                    if line:
-                        lines.append(indent + ' '.join(line))
-                    if prefix is not None:
-                        lines[0] = lines[0][len(indent):]
-                    return lines
-
-                # if prog is short, follow it with optionals or positionals
-                if len(prefix) + len(prog) <= 0.75 * text_width:
-                    indent = ' ' * (len(prefix) + len(prog) + 1)
-                    # Begin cmd2 customization
-                    if req_parts:
-                        lines = get_lines([prog] + req_parts, indent, prefix)
-                        lines.extend(get_lines(opt_parts, indent))
-                        lines.extend(get_lines(pos_parts, indent))
-                    elif opt_parts:
-                        lines = get_lines([prog] + opt_parts, indent, prefix)
-                        lines.extend(get_lines(pos_parts, indent))
-                    elif pos_parts:
-                        lines = get_lines([prog] + pos_parts, indent, prefix)
-                    else:
-                        lines = [prog]
-                    # End cmd2 customization
-
-                # if prog is long, put it on its own line
-                else:
-                    indent = ' ' * len(prefix)
-                    # Begin cmd2 customization
-                    parts = req_parts + opt_parts + pos_parts
-                    lines = get_lines(parts, indent)
-                    if len(lines) > 1:
-                        lines = []
-                        lines.extend(get_lines(req_parts, indent))
-                        lines.extend(get_lines(opt_parts, indent))
-                        lines.extend(get_lines(pos_parts, indent))
-                    # End cmd2 customization
-                    lines = [prog] + lines
-
-                # join lines into usage
-                usage = '\n'.join(lines)
-
-        # prefix with 'Usage:'
-        return '%s%s\n\n' % (prefix, usage)
-
-    def _format_action_invocation(self, action) -> str:
-        if not action.option_strings:
-            default = self._get_default_metavar_for_positional(action)
-            metavar, = self._metavar_formatter(action, default)(1)
-            return metavar
-
-        else:
-            parts = []
-
-            # if the Optional doesn't take a value, format is:
-            #    -s, --long
-            if action.nargs == 0:
-                parts.extend(action.option_strings)
-                return ', '.join(parts)
-
-            # Begin cmd2 customization (less verbose)
-            # if the Optional takes a value, format is:
-            #    -s, --long ARGS
-            else:
-                default = self._get_default_metavar_for_optional(action)
-                args_string = self._format_args(action, default)
-
-                return ', '.join(action.option_strings) + ' ' + args_string
-            # End cmd2 customization
-
-    def _metavar_formatter(self, action, default_metavar) -> Callable:
-        if action.metavar is not None:
-            result = action.metavar
-        elif action.choices is not None:
-            choice_strs = [str(choice) for choice in action.choices]
-            # Begin cmd2 customization (added space after comma)
-            result = '{%s}' % ', '.join(choice_strs)
-            # End cmd2 customization
-        else:
-            result = default_metavar
-
-        # noinspection PyMissingOrEmptyDocstring
-        def format(tuple_size):
-            if isinstance(result, tuple):
-                return result
-            else:
-                return (result, ) * tuple_size
-        return format
-
-    def _format_args(self, action, default_metavar) -> str:
-        get_metavar = self._metavar_formatter(action, default_metavar)
-        # Begin cmd2 customization (less verbose)
-        if isinstance(action, _RangeAction) and \
-                action.nargs_min is not None and action.nargs_max is not None:
-            result = '{}{{{}..{}}}'.format('%s' % get_metavar(1), action.nargs_min, action.nargs_max)
-        elif action.nargs == ZERO_OR_MORE:
-            result = '[%s [...]]' % get_metavar(1)
-        elif action.nargs == ONE_OR_MORE:
-            result = '%s [...]' % get_metavar(1)
-        # End cmd2 customization
-        else:
-            result = super()._format_args(action, default_metavar)
-        return result
-
-
-# noinspection PyCompatibility
-class ACArgumentParser(argparse.ArgumentParser):
-    """Custom argparse class to override error method to change default help text."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        if 'formatter_class' not in kwargs:
-            kwargs['formatter_class'] = ACHelpFormatter
-
-        super().__init__(*args, **kwargs)
-        register_custom_actions(self)
-
-        self._custom_error_message = ''
-
-    # Begin cmd2 customization
-    def set_custom_message(self, custom_message: str = '') -> None:
-        """
-        Allows an error message override to the error() function, useful when forcing a
-        re-parse of arguments with newly required parameters
-        """
-        self._custom_error_message = custom_message
-    # End cmd2 customization
-
-    def add_subparsers(self, **kwargs):
-        """Custom override. Sets a default title if one was not given."""
-        if 'title' not in kwargs:
-            kwargs['title'] = 'sub-commands'
-
-        return super().add_subparsers(**kwargs)
-
-    def error(self, message: str) -> None:
-        """Custom error override. Allows application to control the error being displayed by argparse"""
-        if self._custom_error_message:
-            message = self._custom_error_message
-            self._custom_error_message = ''
-
-        lines = message.split('\n')
-        linum = 0
-        formatted_message = ''
-        for line in lines:
-            if linum == 0:
-                formatted_message = 'Error: ' + line
-            else:
-                formatted_message += '\n       ' + line
-            linum += 1
-
-        self.print_usage(sys.stderr)
-        formatted_message = style_error(formatted_message)
-        self.exit(2, '{}\n\n'.format(formatted_message))
-
-    def format_help(self) -> str:
-        """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
-        formatter = self._get_formatter()
-
-        # usage
-        formatter.add_usage(self.usage, self._actions,
-                            self._mutually_exclusive_groups)
-
-        # description
-        formatter.add_text(self.description)
-
-        # Begin cmd2 customization (separate required and optional arguments)
-
-        # positionals, optionals and user-defined groups
-        for action_group in self._action_groups:
-            if action_group.title == 'optional arguments':
-                # check if the arguments are required, group accordingly
-                req_args = []
-                opt_args = []
-                for action in action_group._group_actions:
-                    if action.required:
-                        req_args.append(action)
-                    else:
-                        opt_args.append(action)
-
-                # separately display required arguments
-                formatter.start_section('required arguments')
-                formatter.add_text(action_group.description)
-                formatter.add_arguments(req_args)
-                formatter.end_section()
-
-                # now display truly optional arguments
-                formatter.start_section(action_group.title)
-                formatter.add_text(action_group.description)
-                formatter.add_arguments(opt_args)
-                formatter.end_section()
-            else:
-                formatter.start_section(action_group.title)
-                formatter.add_text(action_group.description)
-                formatter.add_arguments(action_group._group_actions)
-                formatter.end_section()
-
-        # End cmd2 customization
-
-        # epilog
-        formatter.add_text(self.epilog)
-
-        # determine help from format above
-        return formatter.format_help() + '\n'
-
-    def _print_message(self, message, file=None):
-        # Override _print_message to use ansi_aware_write() since we use ANSI escape characters to support color
-        if message:
-            if file is None:
-                file = _sys.stderr
-            ansi_aware_write(file, message)
-
-    def _get_nargs_pattern(self, action) -> str:
-        # Override _get_nargs_pattern behavior to use the nargs ranges provided by AutoCompleter
-        if isinstance(action, _RangeAction) and \
-                action.nargs_min is not None and action.nargs_max is not None:
-            nargs_pattern = '(-*A{{{},{}}}-*)'.format(action.nargs_min, action.nargs_max)
-
-            # if this is an optional action, -- is not allowed
-            if action.option_strings:
-                nargs_pattern = nargs_pattern.replace('-*', '')
-                nargs_pattern = nargs_pattern.replace('-', '')
-            return nargs_pattern
-        return super(ACArgumentParser, self)._get_nargs_pattern(action)
-
-    def _match_argument(self, action, arg_strings_pattern) -> int:
-        # match the pattern for this action to the arg strings
-        nargs_pattern = self._get_nargs_pattern(action)
-        match = _re.match(nargs_pattern, arg_strings_pattern)
-
-        # raise an exception if we weren't able to find a match
-        if match is None:
-            if isinstance(action, _RangeAction) and \
-                    action.nargs_min is not None and action.nargs_max is not None:
-                raise ArgumentError(action,
-                                    'Expected between {} and {} arguments'.format(action.nargs_min, action.nargs_max))
-
-        return super(ACArgumentParser, self)._match_argument(action, arg_strings_pattern)
-
-    # This is the official python implementation with a 5 year old patch applied
-    # See the comment below describing the patch
-    def _parse_known_args(self, arg_strings, namespace) -> Tuple[argparse.Namespace, List[str]]:  # pragma: no cover
-        # replace arg strings that are file references
-        if self.fromfile_prefix_chars is not None:
-            arg_strings = self._read_args_from_files(arg_strings)
-
-        # map all mutually exclusive arguments to the other arguments
-        # they can't occur with
-        action_conflicts = {}
-        for mutex_group in self._mutually_exclusive_groups:
-            group_actions = mutex_group._group_actions
-            for i, mutex_action in enumerate(mutex_group._group_actions):
-                conflicts = action_conflicts.setdefault(mutex_action, [])
-                conflicts.extend(group_actions[:i])
-                conflicts.extend(group_actions[i + 1:])
-
-        # find all option indices, and determine the arg_string_pattern
-        # which has an 'O' if there is an option at an index,
-        # an 'A' if there is an argument, or a '-' if there is a '--'
-        option_string_indices = {}
-        arg_string_pattern_parts = []
-        arg_strings_iter = iter(arg_strings)
-        for i, arg_string in enumerate(arg_strings_iter):
-
-            # all args after -- are non-options
-            if arg_string == '--':
-                arg_string_pattern_parts.append('-')
-                for cur_string in arg_strings_iter:
-                    arg_string_pattern_parts.append('A')
-
-            # otherwise, add the arg to the arg strings
-            # and note the index if it was an option
-            else:
-                option_tuple = self._parse_optional(arg_string)
-                if option_tuple is None:
-                    pattern = 'A'
-                else:
-                    option_string_indices[i] = option_tuple
-                    pattern = 'O'
-                arg_string_pattern_parts.append(pattern)
-
-        # join the pieces together to form the pattern
-        arg_strings_pattern = ''.join(arg_string_pattern_parts)
-
-        # converts arg strings to the appropriate and then takes the action
-        seen_actions = set()
-        seen_non_default_actions = set()
-
-        def take_action(action, argument_strings, option_string=None):
-            seen_actions.add(action)
-            argument_values = self._get_values(action, argument_strings)
-
-            # error if this argument is not allowed with other previously
-            # seen arguments, assuming that actions that use the default
-            # value don't really count as "present"
-            if argument_values is not action.default:
-                seen_non_default_actions.add(action)
-                for conflict_action in action_conflicts.get(action, []):
-                    if conflict_action in seen_non_default_actions:
-                        msg = _('not allowed with argument %s')
-                        action_name = _get_action_name(conflict_action)
-                        raise ArgumentError(action, msg % action_name)
-
-            # take the action if we didn't receive a SUPPRESS value
-            # (e.g. from a default)
-            if argument_values is not SUPPRESS:
-                action(self, namespace, argument_values, option_string)
-
-        # function to convert arg_strings into an optional action
-        def consume_optional(start_index):
-
-            # get the optional identified at this index
-            option_tuple = option_string_indices[start_index]
-            action, option_string, explicit_arg = option_tuple
-
-            # identify additional optionals in the same arg string
-            # (e.g. -xyz is the same as -x -y -z if no args are required)
-            match_argument = self._match_argument
-            action_tuples = []
-            while True:
-
-                # if we found no optional action, skip it
-                if action is None:
-                    extras.append(arg_strings[start_index])
-                    return start_index + 1
-
-                # if there is an explicit argument, try to match the
-                # optional's string arguments to only this
-                if explicit_arg is not None:
-                    arg_count = match_argument(action, 'A')
-
-                    # if the action is a single-dash option and takes no
-                    # arguments, try to parse more single-dash options out
-                    # of the tail of the option string
-                    chars = self.prefix_chars
-                    if arg_count == 0 and option_string[1] not in chars:
-                        action_tuples.append((action, [], option_string))
-                        char = option_string[0]
-                        option_string = char + explicit_arg[0]
-                        new_explicit_arg = explicit_arg[1:] or None
-                        optionals_map = self._option_string_actions
-                        if option_string in optionals_map:
-                            action = optionals_map[option_string]
-                            explicit_arg = new_explicit_arg
-                        else:
-                            msg = _('ignored explicit argument %r')
-                            raise ArgumentError(action, msg % explicit_arg)
-
-                    # if the action expect exactly one argument, we've
-                    # successfully matched the option; exit the loop
-                    elif arg_count == 1:
-                        stop = start_index + 1
-                        args = [explicit_arg]
-                        action_tuples.append((action, args, option_string))
-                        break
-
-                    # error if a double-dash option did not use the
-                    # explicit argument
-                    else:
-                        msg = _('ignored explicit argument %r')
-                        raise ArgumentError(action, msg % explicit_arg)
-
-                # if there is no explicit argument, try to match the
-                # optional's string arguments with the following strings
-                # if successful, exit the loop
-                else:
-                    start = start_index + 1
-                    selected_patterns = arg_strings_pattern[start:]
-                    arg_count = match_argument(action, selected_patterns)
-                    stop = start + arg_count
-                    args = arg_strings[start:stop]
-                    action_tuples.append((action, args, option_string))
-                    break
-
-            # add the Optional to the list and return the index at which
-            # the Optional's string args stopped
-            assert action_tuples
-            for action, args, option_string in action_tuples:
-                take_action(action, args, option_string)
-            return stop
-
-        # the list of Positionals left to be parsed; this is modified
-        # by consume_positionals()
-        positionals = self._get_positional_actions()
-
-        # function to convert arg_strings into positional actions
-        def consume_positionals(start_index):
-            # match as many Positionals as possible
-            match_partial = self._match_arguments_partial
-            selected_pattern = arg_strings_pattern[start_index:]
-            arg_counts = match_partial(positionals, selected_pattern)
-
-            ####################################################################
-            # Applied mixed.patch from https://bugs.python.org/issue15112
-            if 'O' in arg_strings_pattern[start_index:]:
-                # if there is an optional after this, remove
-                # 'empty' positionals from the current match
-
-                while len(arg_counts) > 1 and arg_counts[-1] == 0:
-                    arg_counts = arg_counts[:-1]
-            ####################################################################
-
-            # slice off the appropriate arg strings for each Positional
-            # and add the Positional and its args to the list
-            for action, arg_count in zip(positionals, arg_counts):
-                args = arg_strings[start_index: start_index + arg_count]
-                start_index += arg_count
-                take_action(action, args)
-
-            # slice off the Positionals that we just parsed and return the
-            # index at which the Positionals' string args stopped
-            positionals[:] = positionals[len(arg_counts):]
-            return start_index
-
-        # consume Positionals and Optionals alternately, until we have
-        # passed the last option string
-        extras = []
-        start_index = 0
-        if option_string_indices:
-            max_option_string_index = max(option_string_indices)
-        else:
-            max_option_string_index = -1
-        while start_index <= max_option_string_index:
-
-            # consume any Positionals preceding the next option
-            next_option_string_index = min([
-                index
-                for index in option_string_indices
-                if index >= start_index])
-            if start_index != next_option_string_index:
-                positionals_end_index = consume_positionals(start_index)
-
-                # only try to parse the next optional if we didn't consume
-                # the option string during the positionals parsing
-                if positionals_end_index > start_index:
-                    start_index = positionals_end_index
-                    continue
-                else:
-                    start_index = positionals_end_index
-
-            # if we consumed all the positionals we could and we're not
-            # at the index of an option string, there were extra arguments
-            if start_index not in option_string_indices:
-                strings = arg_strings[start_index:next_option_string_index]
-                extras.extend(strings)
-                start_index = next_option_string_index
-
-            # consume the next optional and any arguments for it
-            start_index = consume_optional(start_index)
-
-        # consume any positionals following the last Optional
-        stop_index = consume_positionals(start_index)
-
-        # if we didn't consume all the argument strings, there were extras
-        extras.extend(arg_strings[stop_index:])
-
-        # make sure all required actions were present and also convert
-        # action defaults which were not given as arguments
-        required_actions = []
-        for action in self._actions:
-            if action not in seen_actions:
-                if action.required:
-                    required_actions.append(_get_action_name(action))
-                else:
-                    # Convert action default now instead of doing it before
-                    # parsing arguments to avoid calling convert functions
-                    # twice (which may fail) if the argument was given, but
-                    # only if it was defined already in the namespace
-                    if (action.default is not None and
-                            isinstance(action.default, str) and
-                            hasattr(namespace, action.dest) and
-                            action.default is getattr(namespace, action.dest)):
-                        setattr(namespace, action.dest,
-                                self._get_value(action, action.default))
-
-        if required_actions:
-            self.error(_('the following arguments are required: %s') %
-                       ', '.join(required_actions))
-
-        # make sure all required groups had one option present
-        for group in self._mutually_exclusive_groups:
-            if group.required:
-                for action in group._group_actions:
-                    if action in seen_non_default_actions:
-                        break
-
-                # if no actions were used, report the error
-                else:
-                    names = [_get_action_name(action)
-                             for action in group._group_actions
-                             if action.help is not SUPPRESS]
-                    msg = _('one of the arguments %s is required')
-                    self.error(msg % ' '.join(names))
-
-        # return the updated namespace and the extra arguments
-        return namespace, extras

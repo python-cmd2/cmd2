@@ -46,7 +46,8 @@ from . import ansi
 from . import constants
 from . import plugin
 from . import utils
-from .argparse_completer import AutoCompleter, ACArgumentParser
+from .argparse_completer import AutoCompleter
+from .argparse_custom import Cmd2ArgParser
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
@@ -2333,7 +2334,7 @@ class Cmd(cmd.Cmd):
                          "An alias is a command that enables replacement of a word by another string.")
     alias_epilog = ("See also:\n"
                     "  macro")
-    alias_parser = ACArgumentParser(description=alias_description, epilog=alias_epilog, prog='alias')
+    alias_parser = Cmd2ArgParser(description=alias_description, epilog=alias_epilog, prog='alias')
 
     # Add sub-commands to alias
     alias_subparsers = alias_parser.add_subparsers()
@@ -2512,7 +2513,7 @@ class Cmd(cmd.Cmd):
                          "A macro is similar to an alias, but it can contain argument placeholders.")
     macro_epilog = ("See also:\n"
                     "  alias")
-    macro_parser = ACArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
+    macro_parser = Cmd2ArgParser(description=macro_description, epilog=macro_epilog, prog='macro')
 
     # Add sub-commands to macro
     macro_subparsers = macro_parser.add_subparsers()
@@ -2641,7 +2642,7 @@ class Cmd(cmd.Cmd):
 
         return matches
 
-    help_parser = ACArgumentParser()
+    help_parser = Cmd2ArgParser()
     help_parser.add_argument('command', nargs="?", help="command to retrieve help for",
                              completer_method=complete_help_command)
     help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="sub-command to retrieve help for",
@@ -2804,19 +2805,19 @@ class Cmd(cmd.Cmd):
                         command = ''
                 self.stdout.write("\n")
 
-    @with_argparser(ACArgumentParser())
+    @with_argparser(Cmd2ArgParser())
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
         result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self._statement_parser.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}".format(result))
 
-    @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
+    @with_argparser(Cmd2ArgParser(epilog=INTERNAL_COMMAND_EPILOG))
     def do_eof(self, _: argparse.Namespace) -> bool:
         """Called when <Ctrl>-D is pressed"""
         # Return True to stop the command loop
         return True
 
-    @with_argparser(ACArgumentParser())
+    @with_argparser(Cmd2ArgParser())
     def do_quit(self, _: argparse.Namespace) -> bool:
         """Exit this application"""
         # Return True to stop the command loop
@@ -2911,7 +2912,7 @@ class Cmd(cmd.Cmd):
                        "Accepts abbreviated parameter names so long as there is no ambiguity.\n"
                        "Call without arguments for a list of settable parameters with their values.")
 
-    set_parser = ACArgumentParser(description=set_description)
+    set_parser = Cmd2ArgParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('param', nargs='?', help='parameter to set or view', choices_method=_get_settable_names)
@@ -2955,7 +2956,7 @@ class Cmd(cmd.Cmd):
             if onchange_hook is not None:
                 onchange_hook(old=orig_value, new=new_value)
 
-    shell_parser = ACArgumentParser()
+    shell_parser = Cmd2ArgParser()
     shell_parser.add_argument('command', help='the command to run', completer_method=shell_cmd_complete)
     shell_parser.add_argument('command_args', nargs=argparse.REMAINDER, help='arguments to pass to command',
                               completer_method=path_complete)
@@ -3018,7 +3019,7 @@ class Cmd(cmd.Cmd):
                       "If you see strange parsing behavior, it's best to just open the Python shell\n"
                       "by providing no arguments to py and run more complex statements there.")
 
-    py_parser = ACArgumentParser(description=py_description)
+    py_parser = Cmd2ArgParser(description=py_description)
     py_parser.add_argument('command', nargs='?', help="command to run")
     py_parser.add_argument('remainder', nargs=argparse.REMAINDER, help="remainder of command")
 
@@ -3204,7 +3205,7 @@ class Cmd(cmd.Cmd):
 
         return bridge.stop
 
-    run_pyscript_parser = ACArgumentParser()
+    run_pyscript_parser = Cmd2ArgParser()
     run_pyscript_parser.add_argument('script_path', help='path to the script file', completer_method=path_complete)
     run_pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
                                      help='arguments to pass to script', completer_method=path_complete)
@@ -3237,7 +3238,7 @@ class Cmd(cmd.Cmd):
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
-        @with_argparser(ACArgumentParser())
+        @with_argparser(Cmd2ArgParser())
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
             from .pyscript_bridge import PyscriptBridge
@@ -3260,7 +3261,7 @@ class Cmd(cmd.Cmd):
 
     history_description = "View, run, edit, save, or clear previously entered commands"
 
-    history_parser = ACArgumentParser(description=history_description)
+    history_parser = Cmd2ArgParser(description=history_description)
     history_action_group = history_parser.add_mutually_exclusive_group()
     history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_action_group.add_argument('-e', '--edit', action='store_true',
@@ -3559,7 +3560,7 @@ class Cmd(cmd.Cmd):
                         "\n"
                         "  set editor (program-name)")
 
-    edit_parser = ACArgumentParser(description=edit_description)
+    edit_parser = Cmd2ArgParser(description=edit_description)
     edit_parser.add_argument('file_path', nargs="?",
                              help="path to a file to open in editor", completer_method=path_complete)
 
@@ -3591,7 +3592,7 @@ class Cmd(cmd.Cmd):
                               "If the -r/--record_transcript flag is used, this command instead records\n"
                               "the output of the script commands to a transcript for testing purposes.\n")
 
-    run_script_parser = ACArgumentParser(description=run_script_description)
+    run_script_parser = Cmd2ArgParser(description=run_script_description)
     run_script_parser.add_argument('-t', '--transcript', help='record the output of the script as a transcript file',
                                    completer_method=path_complete)
     run_script_parser.add_argument('script_path', help="path to the script file", completer_method=path_complete)
@@ -3657,8 +3658,8 @@ class Cmd(cmd.Cmd):
     relative_run_script_epilog = ("Notes:\n"
                                   "  This command is intended to only be used within text file scripts.")
 
-    relative_run_script_parser = ACArgumentParser(description=relative_run_script_description,
-                                                  epilog=relative_run_script_epilog)
+    relative_run_script_parser = Cmd2ArgParser(description=relative_run_script_description,
+                                               epilog=relative_run_script_epilog)
     relative_run_script_parser.add_argument('file_path', help='a file path pointing to a script')
 
     @with_argparser(relative_run_script_parser)
