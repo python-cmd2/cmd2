@@ -840,8 +840,8 @@ class Cmd(cmd.Cmd):
 
         return tokens, raw_tokens
 
-    def delimiter_complete(self, text: str, line: str, begidx: int, endidx: int, match_against: Iterable,
-                           delimiter: str) -> List[str]:
+    def delimiter_complete(self, text: str, line: str, begidx: int, endidx: int,
+                           match_against: Iterable, delimiter: str) -> List[str]:
         """
         Performs tab completion against a list but each match is split on a delimiter and only
         the portion of the match being tab completed is shown as the completion suggestions.
@@ -902,7 +902,7 @@ class Cmd(cmd.Cmd):
         return matches
 
     def flag_based_complete(self, text: str, line: str, begidx: int, endidx: int,
-                            flag_dict: Dict[str, Union[Iterable, Callable]],
+                            flag_dict: Dict[str, Union[Iterable, Callable]], *,
                             all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """
         Tab completes based on a particular flag preceding the token being completed
@@ -944,7 +944,7 @@ class Cmd(cmd.Cmd):
         return completions_matches
 
     def index_based_complete(self, text: str, line: str, begidx: int, endidx: int,
-                             index_dict: Mapping[int, Union[Iterable, Callable]],
+                             index_dict: Mapping[int, Union[Iterable, Callable]], *,
                              all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """
         Tab completes based on a fixed position in the input string
@@ -988,7 +988,7 @@ class Cmd(cmd.Cmd):
         return matches
 
     # noinspection PyUnusedLocal
-    def path_complete(self, text: str, line: str, begidx: int, endidx: int,
+    def path_complete(self, text: str, line: str, begidx: int, endidx: int, *,
                       path_filter: Optional[Callable[[str], bool]] = None) -> List[str]:
         """Performs completion of local file system paths
 
@@ -1132,7 +1132,7 @@ class Cmd(cmd.Cmd):
 
         return matches
 
-    def shell_cmd_complete(self, text: str, line: str, begidx: int, endidx: int,
+    def shell_cmd_complete(self, text: str, line: str, begidx: int, endidx: int, *,
                            complete_blank: bool = False) -> List[str]:
         """Performs completion of executables either in a user's path or a given path
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
@@ -1155,7 +1155,7 @@ class Cmd(cmd.Cmd):
         # Otherwise look for executables in the given path
         else:
             return self.path_complete(text, line, begidx, endidx,
-                                      lambda path: os.path.isdir(path) or os.access(path, os.X_OK))
+                                      path_filter=lambda path: os.path.isdir(path) or os.access(path, os.X_OK))
 
     def _redirect_complete(self, text: str, line: str, begidx: int, endidx: int, compfunc: Callable) -> List[str]:
         """Called by complete() as the first tab completion function for all commands
