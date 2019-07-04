@@ -4,11 +4,13 @@
 A example usage of the AutoCompleter
 """
 import argparse
+import functools
 import itertools
 from typing import List
 
 import cmd2
 from cmd2 import argparse_completer, utils
+from cmd2.argparse_custom import Cmd2ArgParser
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
@@ -102,6 +104,7 @@ class TabCompleteExample(cmd2.Cmd):
             '/home/other user/tests.db'
         ]
 
+    # noinspection PyMethodMayBeStatic
     def instance_query_actors(self) -> List[str]:
         """Simulating a function that queries and returns a completion values"""
         return actors
@@ -123,11 +126,11 @@ class TabCompleteExample(cmd2.Cmd):
     # This demonstrates a number of customizations of the AutoCompleter version of ArgumentParser
     #  - The help output will separately group required vs optional flags
     #  - The help output for arguments with multiple flags or with append=True is more concise
-    #  - ACArgumentParser adds the ability to specify ranges of argument counts in 'nargs'
+    #  - cmd2 adds the ability to specify ranges of argument counts in 'nargs'
 
     suggest_description = "Suggest command demonstrates argparse customizations.\n"
     suggest_description += "See hybrid_suggest and orig_suggest to compare the help output."
-    suggest_parser = argparse_completer.ACArgumentParser(description=suggest_description)
+    suggest_parser = Cmd2ArgParser(description=suggest_description)
 
     suggest_parser.add_argument('-t', '--type', choices=['movie', 'show'], required=True)
     suggest_parser.add_argument('-d', '--duration', nargs=(1, 2), action='append',
@@ -146,9 +149,6 @@ class TabCompleteExample(cmd2.Cmd):
     # to enable narg ranges without the help changes using this method
 
     suggest_parser_hybrid = argparse.ArgumentParser()
-    # This registers the custom narg range handling
-    argparse_completer.register_custom_actions(suggest_parser_hybrid)
-
     suggest_parser_hybrid.add_argument('-t', '--type', choices=['movie', 'show'], required=True)
     suggest_parser_hybrid.add_argument('-d', '--duration', nargs=(1, 2), action='append',
                                        help='Duration constraint in minutes.\n'
@@ -211,7 +211,7 @@ class TabCompleteExample(cmd2.Cmd):
                                   '\n    '.join(ep_list)))
                 print()
 
-    video_parser = argparse_completer.ACArgumentParser(prog='media')
+    video_parser = Cmd2ArgParser(prog='media')
 
     video_types_subparsers = video_parser.add_subparsers(title='Media Types', dest='type')
 
@@ -225,45 +225,29 @@ class TabCompleteExample(cmd2.Cmd):
     vid_movies_list_parser.add_argument('-t', '--title', help='Title Filter')
     vid_movies_list_parser.add_argument('-r', '--rating', help='Rating Filter', nargs='+',
                                         choices=ratings_types)
-    # save a reference to the action object
-    director_action = vid_movies_list_parser.add_argument('-d', '--director', help='Director Filter')
-    actor_action = vid_movies_list_parser.add_argument('-a', '--actor', help='Actor Filter', action='append')
-
-    # tag the action objects with completion providers. This can be a collection or a callable
-    setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
-    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, query_actors)
+    vid_movies_list_parser.add_argument('-d', '--director', help='Director Filter', choices=static_list_directors)
+    vid_movies_list_parser.add_argument('-a', '--actor', help='Actor Filter', action='append',
+                                        choices_function=query_actors)
 
     vid_movies_add_parser = vid_movies_commands_subparsers.add_parser('add')
     vid_movies_add_parser.add_argument('title', help='Movie Title')
     vid_movies_add_parser.add_argument('rating', help='Movie Rating', choices=ratings_types)
 
-    # save a reference to the action object
-    director_action = vid_movies_add_parser.add_argument('-d', '--director', help='Director', nargs=(1, 2),
-                                                         required=True)
-    actor_action = vid_movies_add_parser.add_argument('actor', help='Actors', nargs='*')
+    vid_movies_add_parser.add_argument('-d', '--director', help='Director', nargs=(1, 2), required=True,
+                                       choices=static_list_directors)
+    vid_movies_add_parser.add_argument('actor', help='Actors', nargs='*', choices_method=instance_query_actors)
 
     vid_movies_load_parser = vid_movies_commands_subparsers.add_parser('load')
-    vid_movie_file_action = vid_movies_load_parser.add_argument('movie_file', help='Movie database')
+    vid_movies_load_parser.add_argument('movie_file', help='Movie database',
+                                        completer_method=functools.partial(cmd2.Cmd.delimiter_complete,
+                                                                           delimiter='/', match_against=file_list))
 
     vid_movies_read_parser = vid_movies_commands_subparsers.add_parser('read')
-    vid_movie_fread_action = vid_movies_read_parser.add_argument('movie_file', help='Movie database')
-
-    # tag the action objects with completion providers. This can be a collection or a callable
-    setattr(director_action, argparse_completer.ACTION_ARG_CHOICES, static_list_directors)
-    setattr(actor_action, argparse_completer.ACTION_ARG_CHOICES, 'instance_query_actors')
-
-    # tag the file property with a custom completion function 'delimiter_complete' provided by cmd2.
-    setattr(vid_movie_file_action, argparse_completer.ACTION_ARG_CHOICES,
-            ('delimiter_complete',
-             {'delimiter': '/',
-              'match_against': file_list}))
-    setattr(vid_movie_fread_action, argparse_completer.ACTION_ARG_CHOICES,
-            ('path_complete',))
+    vid_movies_read_parser.add_argument('movie_file', help='Movie database', completer_method=cmd2.Cmd.path_complete)
 
     vid_movies_delete_parser = vid_movies_commands_subparsers.add_parser('delete')
-    vid_delete_movie_id = vid_movies_delete_parser.add_argument('movie_id', help='Movie ID')
-    setattr(vid_delete_movie_id, argparse_completer.ACTION_ARG_CHOICES, instance_query_movie_ids)
-    setattr(vid_delete_movie_id, argparse_completer.ACTION_DESCRIPTIVE_COMPLETION_HEADER, 'Title')
+    vid_movies_delete_parser.add_argument('movie_id', help='Movie ID', choices_method=instance_query_movie_ids,
+                                          descriptive_header='Title')
 
     vid_shows_parser = video_types_subparsers.add_parser('shows')
     vid_shows_parser.set_defaults(func=_do_vid_media_shows)
@@ -318,7 +302,7 @@ class TabCompleteExample(cmd2.Cmd):
                                   '\n    '.join(ep_list)))
                 print()
 
-    media_parser = argparse_completer.ACArgumentParser(prog='media')
+    media_parser = Cmd2ArgParser(prog='media')
 
     media_types_subparsers = media_parser.add_subparsers(title='Media Types', dest='type')
 
@@ -342,9 +326,8 @@ class TabCompleteExample(cmd2.Cmd):
     movies_add_parser.add_argument('actor', help='Actors', nargs=argparse.REMAINDER)
 
     movies_delete_parser = movies_commands_subparsers.add_parser('delete')
-    movies_delete_movie_id = movies_delete_parser.add_argument('movie_id', help='Movie ID')
-    setattr(movies_delete_movie_id, argparse_completer.ACTION_ARG_CHOICES, 'instance_query_movie_ids')
-    setattr(movies_delete_movie_id, argparse_completer.ACTION_DESCRIPTIVE_COMPLETION_HEADER, 'Title')
+    movies_delete_parser.add_argument('movie_id', help='Movie ID', choices_method=instance_query_movie_ids,
+                                      descriptive_header='Title')
 
     movies_load_parser = movies_commands_subparsers.add_parser('load')
     movie_file_action = movies_load_parser.add_argument('movie_file', help='Movie database')
@@ -403,17 +386,20 @@ class TabCompleteExample(cmd2.Cmd):
         if not args.type:
             self.do_help('library show')
 
+    # noinspection PyMethodMayBeStatic
     def _query_movie_database(self):
         return list(set(TabCompleteExample.MOVIE_DATABASE_IDS).difference(set(TabCompleteExample.USER_MOVIE_LIBRARY)))
 
+    # noinspection PyMethodMayBeStatic
     def _query_movie_user_library(self):
         return TabCompleteExample.USER_MOVIE_LIBRARY
 
+    # noinspection PyMethodMayBeStatic, PyUnusedLocal
     def _filter_library(self, text, line, begidx, endidx, full, exclude=()):
         candidates = list(set(full).difference(set(exclude)))
         return [entry for entry in candidates if entry.startswith(text)]
 
-    library_parser = argparse_completer.ACArgumentParser(prog='library')
+    library_parser = Cmd2ArgParser(prog='library')
 
     library_subcommands = library_parser.add_subparsers(title='Media Types', dest='type')
 
