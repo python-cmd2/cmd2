@@ -44,22 +44,26 @@ class ChoicesCallable:
         self.to_call = to_call
 
 
-# Save original _ActionsContainer.add_argument's value because we will replace it with our wrapper
+############################################################################################################
+# Patch _ActionsContainer.add_argument with our wrapper to support more arguments
+############################################################################################################
+
+# Save original _ActionsContainer.add_argument so we can call it in our wrapper
 # noinspection PyProtectedMember
 orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
-def add_argument_wrapper(self, *args,
-                         nargs: Union[int, str, Tuple[int, int], None] = None,
-                         choices_function: Optional[Callable[[], Iterable[Any]]] = None,
-                         choices_method: Optional[Callable[[Any], Iterable[Any]]] = None,
-                         completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
-                         completer_method: Optional[Callable[[Any, str, str, int, int], List[str]]] = None,
-                         suppress_hint: bool = False,
-                         descriptive_header: Optional[str] = None,
-                         **kwargs) -> argparse.Action:
+def _add_argument_wrapper(self, *args,
+                          nargs: Union[int, str, Tuple[int, int], None] = None,
+                          choices_function: Optional[Callable[[], Iterable[Any]]] = None,
+                          choices_method: Optional[Callable[[Any], Iterable[Any]]] = None,
+                          completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
+                          completer_method: Optional[Callable[[Any, str, str, int, int], List[str]]] = None,
+                          suppress_hint: bool = False,
+                          descriptive_header: Optional[str] = None,
+                          **kwargs) -> argparse.Action:
     """
-    This is a wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
+    Wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
 
     # Args from original function
     :param self: instance of the _ActionsContainer being added to
@@ -156,8 +160,64 @@ def add_argument_wrapper(self, *args,
 
 # Overwrite _ActionsContainer.add_argument with our wrapper
 # noinspection PyProtectedMember
-argparse._ActionsContainer.add_argument = add_argument_wrapper
+argparse._ActionsContainer.add_argument = _add_argument_wrapper
 
+############################################################################################################
+# Patch ArgumentParser._get_nargs_pattern with our wrapper to nargs ranges
+############################################################################################################
+
+# Save original ArgumentParser._get_nargs_pattern so we can call it in our wrapper
+# noinspection PyProtectedMember
+orig_argument_parser_get_nargs_pattern = argparse.ArgumentParser._get_nargs_pattern
+
+
+# noinspection PyProtectedMember
+def _get_nargs_pattern_wrapper(self, action) -> str:
+    # Wrapper around ArgumentParser._get_nargs_pattern behavior to support nargs ranges
+    nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+    if nargs_range is not None:
+        nargs_pattern = '(-*A{{{},{}}}-*)'.format(nargs_range[0], nargs_range[1])
+
+        # if this is an optional action, -- is not allowed
+        if action.option_strings:
+            nargs_pattern = nargs_pattern.replace('-*', '')
+            nargs_pattern = nargs_pattern.replace('-', '')
+        return nargs_pattern
+
+    return orig_argument_parser_get_nargs_pattern(self, action)
+
+
+# Overwrite ArgumentParser._get_nargs_pattern with our wrapper
+# noinspection PyProtectedMember
+argparse.ArgumentParser._get_nargs_pattern = _get_nargs_pattern_wrapper
+
+
+############################################################################################################
+# Patch ArgumentParser._match_argument with our wrapper to nargs ranges
+############################################################################################################
+# noinspection PyProtectedMember
+orig_argument_parser_match_argument = argparse.ArgumentParser._match_argument
+
+
+# noinspection PyProtectedMember
+def _match_argument_wrapper(self, action, arg_strings_pattern) -> int:
+    # Wrapper around ArgumentParser._match_argument behavior to support nargs ranges
+    nargs_pattern = self._get_nargs_pattern(action)
+    match = _re.match(nargs_pattern, arg_strings_pattern)
+
+    # raise an exception if we weren't able to find a match
+    if match is None:
+        nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+        if nargs_range is not None:
+            raise ArgumentError(action,
+                                'Expected between {} and {} arguments'.format(nargs_range[0], nargs_range[1]))
+
+    return orig_argument_parser_match_argument(self, action, arg_strings_pattern)
+
+
+# Overwrite ArgumentParser._match_argument with our wrapper
+# noinspection PyProtectedMember
+argparse.ArgumentParser._match_argument = _match_argument_wrapper
 
 ############################################################################################################
 # Unless otherwise noted, everything below this point are copied from Python's
@@ -350,7 +410,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
 # noinspection PyCompatibility
 class Cmd2ArgParser(argparse.ArgumentParser):
-    """Custom argparse class to override error method to change default help text."""
+    """Custom ArgumentParser class that improves error and help output"""
 
     def __init__(self, *args, **kwargs) -> None:
         if 'formatter_class' not in kwargs:
@@ -438,33 +498,3 @@ class Cmd2ArgParser(argparse.ArgumentParser):
             if file is None:
                 file = sys.stderr
             ansi_aware_write(file, message)
-
-    # noinspection PyProtectedMember
-    def _get_nargs_pattern(self, action) -> str:
-        # Override _get_nargs_pattern behavior to support the nargs ranges
-        nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
-        if nargs_range is not None:
-            nargs_pattern = '(-*A{{{},{}}}-*)'.format(nargs_range[0], nargs_range[1])
-
-            # if this is an optional action, -- is not allowed
-            if action.option_strings:
-                nargs_pattern = nargs_pattern.replace('-*', '')
-                nargs_pattern = nargs_pattern.replace('-', '')
-            return nargs_pattern
-
-        return super()._get_nargs_pattern(action)
-
-    # noinspection PyProtectedMember
-    def _match_argument(self, action, arg_strings_pattern) -> int:
-        # Override _match_argument behavior to support nargs ranges
-        nargs_pattern = self._get_nargs_pattern(action)
-        match = _re.match(nargs_pattern, arg_strings_pattern)
-
-        # raise an exception if we weren't able to find a match
-        if match is None:
-            nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
-            if nargs_range is not None:
-                raise ArgumentError(action,
-                                    'Expected between {} and {} arguments'.format(nargs_range[0], nargs_range[1]))
-
-        return super()._match_argument(action, arg_strings_pattern)
