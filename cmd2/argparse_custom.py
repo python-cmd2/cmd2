@@ -66,7 +66,7 @@ def add_argument_wrapper(self, *args,
     :param args: arguments expected by argparse._ActionsContainer.add_argument
 
     # Customized arguments from original function
-    :param nargs: extends argparse nargs attribute by allowing tuples which specify a range (min, max)
+    :param nargs: extends argparse nargs functionality by allowing tuples which specify a range (min, max)
 
     # Added args used by AutoCompleter
     :param choices_function: function that provides choices for this argument
@@ -88,38 +88,40 @@ def add_argument_wrapper(self, *args,
 
     :return: the created argument action
     """
-    # pre-process special ranged nargs
+    # Pre-process special ranged nargs
     nargs_range = None
 
-    if isinstance(nargs, tuple):
-        if len(nargs) != 2 or not isinstance(nargs[0], int) or not isinstance(nargs[1], int):
-            raise ValueError('Ranged values for nargs must be a tuple of 2 integers')
-        if nargs[0] >= nargs[1]:
-            raise ValueError('Invalid nargs range. The first value must be less than the second')
-        if nargs[0] < 0:
-            raise ValueError('Negative numbers are invalid for nargs range.')
+    if nargs is not None:
+        # Check if nargs was given as a range
+        if isinstance(nargs, tuple):
 
-        # nargs_range is a two-item tuple (min, max)
-        nargs_range = nargs
+            # Validate nargs tuple
+            if len(nargs) != 2 or not isinstance(nargs[0], int) or not isinstance(nargs[1], int):
+                raise ValueError('Ranged values for nargs must be a tuple of 2 integers')
+            if nargs[0] >= nargs[1]:
+                raise ValueError('Invalid nargs range. The first value must be less than the second')
+            if nargs[0] < 0:
+                raise ValueError('Negative numbers are invalid for nargs range')
 
-        if nargs[0] == 0:
-            if nargs[1] > 1:
-                nargs_adjusted = '*'
+            # Save the nargs tuple as our range setting
+            nargs_range = nargs
+
+            # Convert nargs into a format argparse recognizes
+            if nargs_range[0] == 0:
+                if nargs_range[1] > 1:
+                    nargs_adjusted = '*'
+                else:
+                    nargs_adjusted = '?'
             else:
-                # this shouldn't use a range tuple, but yet here we are
-                nargs_adjusted = '?'
+                nargs_adjusted = '+'
         else:
-            nargs_adjusted = '+'
-    else:
-        nargs_adjusted = nargs
+            nargs_adjusted = nargs
 
-    # Call the original add_argument function
-    if nargs_adjusted is not None:
+        # Add the argparse-recognized version of nargs to kwargs
         kwargs['nargs'] = nargs_adjusted
-    new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
-    if nargs_range is not None:
-        setattr(new_arg, ATTR_NARGS_RANGE, nargs_range)
+    # Create the argument using the original add_argument function
+    new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
     # Verify consistent use of arguments
     choice_params = [new_arg.choices, choices_function, choices_method, completer_function, completer_method]
@@ -130,7 +132,9 @@ def add_argument_wrapper(self, *args,
                    "choices, choices_function, choices_method, completer_function, completer_method")
         raise (ValueError(err_msg))
 
-    # Set the custom attributes used by AutoCompleter
+    # Set the custom attributes
+    setattr(new_arg, ATTR_NARGS_RANGE, nargs_range)
+
     if choices_function:
         setattr(new_arg, ATTR_CHOICES_CALLABLE,
                 ChoicesCallable(is_method=False, is_completer=False, to_call=choices_function))
