@@ -38,11 +38,6 @@ class CmdLineApp(cmd2.Cmd):
     # Setting this true makes it run a shell command if a cmd2/cmd command doesn't exist
     # default_to_shell = True
     def __init__(self, *args, **kwargs):
-        # sneakily remove the cmd2.Cmd command called run_script
-        # this lets a user enter a command like "l5" and allows it to
-        # be unambiguous
-        delattr(cmd2.Cmd, "do_run_script")
-
         super().__init__(*args, **kwargs)
 
         # register three hooks
