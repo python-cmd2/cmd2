@@ -2,112 +2,165 @@
 import argparse
 import re as _re
 import sys
-
+# noinspection PyUnresolvedReferences,PyProtectedMember
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
-from typing import Callable, Tuple, Union
+from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
 from .ansi import ansi_aware_write, style_error
 
+############################################################################################################
+# The following are names of custom argparse argument attributes added by cmd2
+############################################################################################################
 
-class _RangeAction(object):
-    def __init__(self, nargs: Union[int, str, Tuple[int, int], None]) -> None:
-        self.nargs_min = None
-        self.nargs_max = None
+# A tuple specifying nargs as a range (min, max)
+ATTR_NARGS_RANGE = 'nargs_range'
 
-        # pre-process special ranged nargs
-        if isinstance(nargs, tuple):
-            if len(nargs) != 2 or not isinstance(nargs[0], int) or not isinstance(nargs[1], int):
-                raise ValueError('Ranged values for nargs must be a tuple of 2 integers')
-            if nargs[0] >= nargs[1]:
-                raise ValueError('Invalid nargs range. The first value must be less than the second')
-            if nargs[0] < 0:
-                raise ValueError('Negative numbers are invalid for nargs range.')
-            narg_range = nargs
-            self.nargs_min = nargs[0]
-            self.nargs_max = nargs[1]
-            if narg_range[0] == 0:
-                if narg_range[1] > 1:
-                    self.nargs_adjusted = '*'
-                else:
-                    # this shouldn't use a range tuple, but yet here we are
-                    self.nargs_adjusted = '?'
+# ChoicesCallable object that specifies the function to be called which provides choices to the argument
+ATTR_CHOICES_CALLABLE = 'choices_callable'
+
+# Pressing tab normally displays the help text for the argument if no choices are available
+# Setting this attribute to True will suppress these hints
+ATTR_SUPPRESS_TAB_HINT = 'suppress_tab_hint'
+
+# Descriptive header that prints when using CompletionItems
+ATTR_DESCRIPTIVE_COMPLETION_HEADER = 'desc_completion_header'
+
+
+class ChoicesCallable:
+    """
+    Enables using a callable as the choices provider for an argparse argument.
+    While argparse has the built-in choices attribute, it is limited to an iterable.
+    """
+    def __init__(self, is_method: bool, is_completer: bool, to_call: Callable):
+        """
+        Initializer
+        :param is_method: True if to_call is an instance method of a cmd2 app. False if it is a function.
+        :param is_completer: True if to_call is a tab completion routine which expects
+                             the args: text, line, begidx, endidx
+        :param to_call: the callable object that will be called to provide choices for the argument
+        """
+        self.is_method = is_method
+        self.is_completer = is_completer
+        self.to_call = to_call
+
+
+# Save original _ActionsContainer.add_argument's value because we will replace it with our wrapper
+# noinspection PyProtectedMember
+orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
+
+
+def add_argument_wrapper(self, *args,
+                         nargs: Union[int, str, Tuple[int, int], None] = None,
+                         choices_function: Optional[Callable[[], Iterable[Any]]] = None,
+                         choices_method: Optional[Callable[[Any], Iterable[Any]]] = None,
+                         completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
+                         completer_method: Optional[Callable[[Any, str, str, int, int], List[str]]] = None,
+                         suppress_hint: bool = False,
+                         descriptive_header: Optional[str] = None,
+                         **kwargs) -> argparse.Action:
+    """
+    This is a wrapper around _ActionsContainer.add_argument() which supports more settings used by cmd2
+
+    # Args from original function
+    :param self: instance of the _ActionsContainer being added to
+    :param args: arguments expected by argparse._ActionsContainer.add_argument
+
+    # Customized arguments from original function
+    :param nargs: extends argparse nargs attribute by allowing tuples which specify a range (min, max)
+
+    # Added args used by AutoCompleter
+    :param choices_function: function that provides choices for this argument
+    :param choices_method: cmd2-app method that provides choices for this argument
+    :param completer_function: tab-completion function that provides choices for this argument
+    :param completer_method: cmd2-app tab-completion method that provides choices for this argument
+    :param suppress_hint: when AutoCompleter has no choices to show during tab completion, it displays the current
+                          argument's help text as a hint. Set this to True to suppress the hint. Defaults to False.
+    :param descriptive_header: if the provided choices are CompletionItems, then this header will display
+                               during tab completion. Defaults to None.
+
+    # Args from original function
+    :param kwargs: keyword-arguments recognized by argparse._ActionsContainer.add_argument
+
+    Note: You can only use 1 of the following in your argument:
+          choices, choices_function, choices_method, completer_function, completer_method
+
+          See the header of this file for more information
+
+    :return: the created argument action
+    """
+    # pre-process special ranged nargs
+    nargs_range = None
+
+    if isinstance(nargs, tuple):
+        if len(nargs) != 2 or not isinstance(nargs[0], int) or not isinstance(nargs[1], int):
+            raise ValueError('Ranged values for nargs must be a tuple of 2 integers')
+        if nargs[0] >= nargs[1]:
+            raise ValueError('Invalid nargs range. The first value must be less than the second')
+        if nargs[0] < 0:
+            raise ValueError('Negative numbers are invalid for nargs range.')
+
+        # nargs_range is a two-item tuple (min, max)
+        nargs_range = nargs
+
+        if nargs[0] == 0:
+            if nargs[1] > 1:
+                nargs_adjusted = '*'
             else:
-                self.nargs_adjusted = '+'
+                # this shouldn't use a range tuple, but yet here we are
+                nargs_adjusted = '?'
         else:
-            self.nargs_adjusted = nargs
+            nargs_adjusted = '+'
+    else:
+        nargs_adjusted = nargs
+
+    # Call the original add_argument function
+    if nargs_adjusted is not None:
+        kwargs['nargs'] = nargs_adjusted
+    new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
+
+    if nargs_range is not None:
+        setattr(new_arg, ATTR_NARGS_RANGE, nargs_range)
+
+    # Verify consistent use of arguments
+    choice_params = [new_arg.choices, choices_function, choices_method, completer_function, completer_method]
+    num_set = len(choice_params) - choice_params.count(None)
+
+    if num_set > 1:
+        err_msg = ("Only one of the following may be used in an argparser argument at a time:\n"
+                   "choices, choices_function, choices_method, completer_function, completer_method")
+        raise (ValueError(err_msg))
+
+    # Set the custom attributes used by AutoCompleter
+    if choices_function:
+        setattr(new_arg, ATTR_CHOICES_CALLABLE,
+                ChoicesCallable(is_method=False, is_completer=False, to_call=choices_function))
+    elif choices_method:
+        setattr(new_arg, ATTR_CHOICES_CALLABLE,
+                ChoicesCallable(is_method=True, is_completer=False, to_call=choices_method))
+    elif completer_function:
+        setattr(new_arg, ATTR_CHOICES_CALLABLE,
+                ChoicesCallable(is_method=False, is_completer=True, to_call=completer_function))
+    elif completer_method:
+        setattr(new_arg, ATTR_CHOICES_CALLABLE,
+                ChoicesCallable(is_method=True, is_completer=True, to_call=completer_method))
+
+    setattr(new_arg, ATTR_SUPPRESS_TAB_HINT, suppress_hint)
+    setattr(new_arg, ATTR_DESCRIPTIVE_COMPLETION_HEADER, descriptive_header)
+
+    return new_arg
 
 
-# noinspection PyShadowingBuiltins,PyShadowingBuiltins
-class _StoreRangeAction(argparse._StoreAction, _RangeAction):
-    def __init__(self,
-                 option_strings,
-                 dest,
-                 nargs=None,
-                 const=None,
-                 default=None,
-                 type=None,
-                 choices=None,
-                 required=False,
-                 help=None,
-                 metavar=None) -> None:
-
-        _RangeAction.__init__(self, nargs)
-
-        argparse._StoreAction.__init__(self,
-                                       option_strings=option_strings,
-                                       dest=dest,
-                                       nargs=self.nargs_adjusted,
-                                       const=const,
-                                       default=default,
-                                       type=type,
-                                       choices=choices,
-                                       required=required,
-                                       help=help,
-                                       metavar=metavar)
+# Overwrite _ActionsContainer.add_argument with our wrapper
+# noinspection PyProtectedMember
+argparse._ActionsContainer.add_argument = add_argument_wrapper
 
 
-# noinspection PyShadowingBuiltins,PyShadowingBuiltins
-class _AppendRangeAction(argparse._AppendAction, _RangeAction):
-    def __init__(self,
-                 option_strings,
-                 dest,
-                 nargs=None,
-                 const=None,
-                 default=None,
-                 type=None,
-                 choices=None,
-                 required=False,
-                 help=None,
-                 metavar=None) -> None:
-
-        _RangeAction.__init__(self, nargs)
-
-        argparse._AppendAction.__init__(self,
-                                        option_strings=option_strings,
-                                        dest=dest,
-                                        nargs=self.nargs_adjusted,
-                                        const=const,
-                                        default=default,
-                                        type=type,
-                                        choices=choices,
-                                        required=required,
-                                        help=help,
-                                        metavar=metavar)
-
-
-def register_custom_actions(parser: argparse.ArgumentParser) -> None:
-    """Register custom argument action types"""
-    parser.register('action', None, _StoreRangeAction)
-    parser.register('action', 'store', _StoreRangeAction)
-    parser.register('action', 'append', _AppendRangeAction)
-
-
-###############################################################################
+############################################################################################################
 # Unless otherwise noted, everything below this point are copied from Python's
 # argparse implementation with minor tweaks to adjust output.
 # Changes are noted if it's buried in a block of copied code. Otherwise the
 # function will check for a special case and fall back to the parent function
-###############################################################################
+############################################################################################################
 
 
 # noinspection PyCompatibility,PyShadowingBuiltins,PyShadowingBuiltins
@@ -273,12 +326,14 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 return (result, ) * tuple_size
         return format
 
+    # noinspection PyProtectedMember
     def _format_args(self, action, default_metavar) -> str:
         get_metavar = self._metavar_formatter(action, default_metavar)
         # Begin cmd2 customization (less verbose)
-        if isinstance(action, _RangeAction) and \
-                action.nargs_min is not None and action.nargs_max is not None:
-            result = '{}{{{}..{}}}'.format('%s' % get_metavar(1), action.nargs_min, action.nargs_max)
+        nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+
+        if nargs_range is not None:
+            result = '{}{{{}..{}}}'.format('%s' % get_metavar(1), nargs_range[0], nargs_range[1])
         elif action.nargs == ZERO_OR_MORE:
             result = '[%s [...]]' % get_metavar(1)
         elif action.nargs == ONE_OR_MORE:
@@ -298,7 +353,6 @@ class Cmd2ArgParser(argparse.ArgumentParser):
             kwargs['formatter_class'] = Cmd2HelpFormatter
 
         super().__init__(*args, **kwargs)
-        register_custom_actions(self)
 
     def add_subparsers(self, **kwargs):
         """Custom override. Sets a default title if one was not given."""
@@ -323,6 +377,7 @@ class Cmd2ArgParser(argparse.ArgumentParser):
         formatted_message = style_error(formatted_message)
         self.exit(2, '{}\n\n'.format(formatted_message))
 
+    # noinspection PyProtectedMember
     def format_help(self) -> str:
         """Copy of format_help() from argparse.ArgumentParser with tweaks to separately display required parameters"""
         formatter = self._get_formatter()
@@ -380,11 +435,12 @@ class Cmd2ArgParser(argparse.ArgumentParser):
                 file = sys.stderr
             ansi_aware_write(file, message)
 
+    # noinspection PyProtectedMember
     def _get_nargs_pattern(self, action) -> str:
-        # Override _get_nargs_pattern behavior to use the nargs ranges provided by AutoCompleter
-        if isinstance(action, _RangeAction) and \
-                action.nargs_min is not None and action.nargs_max is not None:
-            nargs_pattern = '(-*A{{{},{}}}-*)'.format(action.nargs_min, action.nargs_max)
+        # Override _get_nargs_pattern behavior to support the nargs ranges
+        nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+        if nargs_range is not None:
+            nargs_pattern = '(-*A{{{},{}}}-*)'.format(nargs_range[0], nargs_range[1])
 
             # if this is an optional action, -- is not allowed
             if action.option_strings:
@@ -394,16 +450,17 @@ class Cmd2ArgParser(argparse.ArgumentParser):
 
         return super()._get_nargs_pattern(action)
 
+    # noinspection PyProtectedMember
     def _match_argument(self, action, arg_strings_pattern) -> int:
-        # Override _match_argument behavior to use the nargs ranges provided by AutoCompleter
+        # Override _match_argument behavior to support nargs ranges
         nargs_pattern = self._get_nargs_pattern(action)
         match = _re.match(nargs_pattern, arg_strings_pattern)
 
         # raise an exception if we weren't able to find a match
         if match is None:
-            if isinstance(action, _RangeAction) and \
-                    action.nargs_min is not None and action.nargs_max is not None:
+            nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+            if nargs_range is not None:
                 raise ArgumentError(action,
-                                    'Expected between {} and {} arguments'.format(action.nargs_min, action.nargs_max))
+                                    'Expected between {} and {} arguments'.format(nargs_range[0], nargs_range[1]))
 
         return super()._match_argument(action, arg_strings_pattern)
