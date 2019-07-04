@@ -319,18 +319,18 @@ class AutoCompleter(object):
                 if action.nargs is None:
                     arg_state.min = 1
                     arg_state.max = 1
-                elif action.nargs == '+':
+                elif action.nargs == argparse.ONE_OR_MORE:
                     arg_state.min = 1
                     arg_state.max = float('inf')
                     arg_state.variable = True
-                elif action.nargs == '*' or action.nargs == argparse.REMAINDER:
+                elif action.nargs == argparse.ZERO_OR_MORE or action.nargs == argparse.REMAINDER:
                     arg_state.min = 0
                     arg_state.max = float('inf')
                     arg_state.variable = True
                     if action.nargs == argparse.REMAINDER:
                         remainder['action'] = action
                         remainder['arg'] = arg_state
-                elif action.nargs == '?':
+                elif action.nargs == argparse.OPTIONAL:
                     arg_state.min = 0
                     arg_state.max = 1
                     arg_state.variable = True

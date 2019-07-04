@@ -113,11 +113,11 @@ def _add_argument_wrapper(self, *args,
             # Convert nargs into a format argparse recognizes
             if nargs_range[0] == 0:
                 if nargs_range[1] > 1:
-                    nargs_adjusted = '*'
+                    nargs_adjusted = argparse.ZERO_OR_MORE
                 else:
-                    nargs_adjusted = '?'
+                    nargs_adjusted = argparse.OPTIONAL
             else:
-                nargs_adjusted = '+'
+                nargs_adjusted = argparse.ONE_OR_MORE
         else:
             nargs_adjusted = nargs
 

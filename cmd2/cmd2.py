@@ -2370,7 +2370,8 @@ class Cmd(cmd.Cmd):
     alias_delete_description = "Delete specified aliases or all aliases if --all is used"
     alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
                                                       description=alias_delete_description)
-    alias_delete_parser.add_argument('name', nargs='*', help='alias to delete', choices_method=_get_alias_names)
+    alias_delete_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE,
+                                     help='alias to delete', choices_method=_get_alias_names)
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
     alias_delete_parser.set_defaults(func=_alias_delete)
 
@@ -2383,7 +2384,8 @@ class Cmd(cmd.Cmd):
 
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
-    alias_list_parser.add_argument('name', nargs="*", help='alias to list', choices_method=_get_alias_names)
+    alias_list_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE,
+                                   help='alias to list', choices_method=_get_alias_names)
     alias_list_parser.set_defaults(func=_alias_list)
 
     # Preserve quotes since we are passing strings to other commands
@@ -2572,7 +2574,8 @@ class Cmd(cmd.Cmd):
     macro_delete_description = "Delete specified macros or all macros if --all is used"
     macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
                                                       description=macro_delete_description)
-    macro_delete_parser.add_argument('name', nargs='*', help='macro to delete', choices_method=_get_macro_names)
+    macro_delete_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE,
+                                     help='macro to delete', choices_method=_get_macro_names)
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
     macro_delete_parser.set_defaults(func=_macro_delete)
 
@@ -2584,7 +2587,8 @@ class Cmd(cmd.Cmd):
                               "Without arguments, all macros will be listed.")
 
     macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
-    macro_list_parser.add_argument('name', nargs="*", help='macro to list', choices_method=_get_macro_names)
+    macro_list_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE,
+                                   help='macro to list', choices_method=_get_macro_names)
     macro_list_parser.set_defaults(func=_macro_list)
 
     # Preserve quotes since we are passing strings to other commands
@@ -2643,7 +2647,7 @@ class Cmd(cmd.Cmd):
         return matches
 
     help_parser = Cmd2ArgParser()
-    help_parser.add_argument('command', nargs="?", help="command to retrieve help for",
+    help_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to retrieve help for",
                              completer_method=complete_help_command)
     help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="sub-command to retrieve help for",
                              completer_method=complete_help_subcommand)
@@ -2915,8 +2919,9 @@ class Cmd(cmd.Cmd):
     set_parser = Cmd2ArgParser(description=set_description)
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    set_parser.add_argument('param', nargs='?', help='parameter to set or view', choices_method=_get_settable_names)
-    set_parser.add_argument('value', nargs='?', help='the new value for settable')
+    set_parser.add_argument('param', nargs=argparse.OPTIONAL, help='parameter to set or view',
+                            choices_method=_get_settable_names)
+    set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='the new value for settable')
 
     @with_argparser(set_parser)
     def do_set(self, args: argparse.Namespace) -> None:
@@ -3020,7 +3025,7 @@ class Cmd(cmd.Cmd):
                       "by providing no arguments to py and run more complex statements there.")
 
     py_parser = Cmd2ArgParser(description=py_description)
-    py_parser.add_argument('command', nargs='?', help="command to run")
+    py_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to run")
     py_parser.add_argument('remainder', nargs=argparse.REMAINDER, help="remainder of command")
 
     # Preserve quotes since we are passing these strings to Python
@@ -3293,7 +3298,7 @@ class Cmd(cmd.Cmd):
                         "a..b, a:b, a:, ..b  items by indices (inclusive)\n"
                         "string              items containing string\n"
                         "/regex/             items matching regular expression")
-    history_parser.add_argument('arg', nargs='?', help=history_arg_help)
+    history_parser.add_argument('arg', nargs=argparse.OPTIONAL, help=history_arg_help)
 
     @with_argparser(history_parser)
     def do_history(self, args: argparse.Namespace) -> Optional[bool]:
@@ -3561,7 +3566,7 @@ class Cmd(cmd.Cmd):
                         "  set editor (program-name)")
 
     edit_parser = Cmd2ArgParser(description=edit_description)
-    edit_parser.add_argument('file_path', nargs="?",
+    edit_parser.add_argument('file_path', nargs=argparse.OPTIONAL,
                              help="path to a file to open in editor", completer_method=path_complete)
 
     @with_argparser(edit_parser)
