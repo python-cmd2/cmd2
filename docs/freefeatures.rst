@@ -373,7 +373,7 @@ save the first 5 commands entered in this session to a text file::
     (Cmd) history :5 -o history.txt
 
 The ``history`` command can also save both the commands and their output to a
-text file. This is called a transcript. See :doc:`features/transcript` for more
+text file. This is called a transcript. See :doc:`features/transcripts` for more
 information on how transcripts work, and what you can use them for. To create a
 transcript use the ``-t`` or ``--transcription`` option::
 
@@ -480,7 +480,7 @@ back into the app as a unit test.
 
    OK
 
-See :doc:`features/transcript` for more details.
+See :doc:`features/transcripts` for more details.
 
 
 Tab-Completion

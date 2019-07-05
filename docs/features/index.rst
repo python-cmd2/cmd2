@@ -4,6 +4,7 @@ Features
 .. toctree::
    :maxdepth: 1
 
+   commands
    generating_output
    argument_processing
    prompt
@@ -14,10 +15,11 @@ Features
    settings
    completion
    os
-   multiline
+   multiline_commands
    disable_commands
    clipboard
-   transcript
+   transcripts
+   initialization
    hooks
    plugins
    scripting

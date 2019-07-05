@@ -1,6 +1,5 @@
-========================
-Transcript based testing
-========================
+Transcripts
+===========
 
 A transcript is both the input and output of a successful session of a
 ``cmd2``-based app which is saved to a text file. With no extra work on your

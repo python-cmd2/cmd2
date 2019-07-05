@@ -79,6 +79,8 @@ and
 
 See :ref:`custom title<features/argument_processing:Help Messages>`
 
+[TODO what's the right way to link to source code? Can we make it link to the tag that the
+documentation is rendered from?]
 
 
 Autolinking

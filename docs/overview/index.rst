@@ -6,10 +6,11 @@ Getting Started
    :hidden:
 
    featuretour
+   ../examples/example
    installation
    integrating
    alternatives
    resources
-   ../examples/quickstart
+
 
 .. include:: summary.rst
