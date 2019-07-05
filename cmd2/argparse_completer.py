@@ -61,7 +61,7 @@ How to supply completion choice lists or functions for sub-commands:
 import argparse
 import os
 from argparse import SUPPRESS
-from typing import Callable, Dict, List, Tuple, Union
+from typing import List, Union
 
 from . import utils
 from .ansi import ansi_safe_wcswidth
@@ -135,7 +135,7 @@ def is_potential_flag(token: str, parser: argparse.ArgumentParser) -> bool:
 
 
 class AutoCompleter(object):
-    """Automatically command line tab completion based on argparse parameters"""
+    """Automatic command line tab completion based on argparse parameters"""
 
     class _ArgumentState(object):
         def __init__(self) -> None:
@@ -154,32 +154,18 @@ class AutoCompleter(object):
             self.variable = False
 
     def __init__(self, parser: argparse.ArgumentParser, cmd2_app, *,
-                 tab_for_arg_help: bool = True, token_start_index: int = 1,
-                 arg_choices: Dict[str, Union[List, Tuple, Callable]] = None,
-                 subcmd_args_lookup: dict = None, ) -> None:
+                 tab_for_arg_help: bool = True, token_start_index: int = 1) -> None:
         """
         Create an AutoCompleter
 
         :param parser: ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this AutoCompleter
-        :param tab_for_arg_help: Enable of disable argument help when there's no completion result
-
-        # The following parameters are intended for internal use when AutoCompleter creates other AutoCompleters
-        # for subcommands. Developers don't need to worry about overriding these values.
+        :param tab_for_arg_help: If True, then argument help will display when there's no completion result
         :param token_start_index: index of the token to start parsing at
-        :param arg_choices: dictionary mapping from argparse argument 'dest' name to list of choices
-        :param subcmd_args_lookup: mapping a sub-command group name to a tuple to fill the child
-                                   AutoCompleter's arg_choices and subcmd_args_lookup parameters
         """
-        if not subcmd_args_lookup:
-            subcmd_args_lookup = {}
-            forward_arg_choices = True
-        else:
-            forward_arg_choices = False
-
         self._parser = parser
         self._cmd2_app = cmd2_app
-        self._arg_choices = arg_choices.copy() if arg_choices is not None else {}
+        self._arg_choices = {}
         self._token_start_index = token_start_index
         self._tab_for_arg_help = tab_for_arg_help
 
@@ -221,27 +207,13 @@ class AutoCompleter(object):
                     sub_completers = {}
                     sub_commands = []
 
-                    if action.dest in subcmd_args_lookup:
-                        args_for_action = subcmd_args_lookup[action.dest]
-                    else:
-                        args_for_action = {}
-
                     # Create an AutoCompleter for each subcommand of this command
                     for subcmd in action.choices:
-
-                        if subcmd in args_for_action:
-                            (subcmd_args, subcmd_lookup) = args_for_action[subcmd]
-                        elif forward_arg_choices:
-                            subcmd_args, subcmd_lookup = arg_choices, subcmd_args_lookup
-                        else:
-                            subcmd_args, subcmd_lookup = {}, {}
 
                         subcmd_start = token_start_index + len(self._positional_actions)
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd],
                                                                cmd2_app,
                                                                token_start_index=subcmd_start,
-                                                               arg_choices=subcmd_args,
-                                                               subcmd_args_lookup=subcmd_lookup,
                                                                tab_for_arg_help=tab_for_arg_help)
                         sub_commands.append(subcmd)
 
@@ -535,7 +507,15 @@ class AutoCompleter(object):
         return completions
 
     def complete_command_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Supports the completion of sub-commands for commands through the cmd2 help command."""
+        """
+        Supports the completion of sub-command names
+        :param tokens: command line tokens
+        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :return: List of subcommand completions
+        """
         for idx, token in enumerate(tokens):
             if idx >= self._token_start_index:
                 if self._positional_completers:
@@ -549,7 +529,11 @@ class AutoCompleter(object):
         return []
 
     def format_help(self, tokens: List[str]) -> str:
-        """Supports the completion of sub-commands for commands through the cmd2 help command."""
+        """
+        Retrieve help text of a subcommand
+        :param tokens: command line tokens
+        :return: help text of the subcommand being queried
+        """
         for idx, token in enumerate(tokens):
             if idx >= self._token_start_index:
                 if self._positional_completers:
