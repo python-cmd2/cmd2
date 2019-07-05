@@ -106,6 +106,7 @@ class CompletionItem(str):
         self.description = desc
 
 
+# noinspection PyProtectedMember
 def is_potential_flag(token: str, parser: argparse.ArgumentParser) -> bool:
     """Determine if a token looks like a potential flag. Based on argparse._parse_optional()."""
     # if it's an empty string, it was meant to be a positional
@@ -134,6 +135,7 @@ def is_potential_flag(token: str, parser: argparse.ArgumentParser) -> bool:
     return True
 
 
+# noinspection PyProtectedMember
 class AutoCompleter(object):
     """Automatic command line tab completion based on argparse parameters"""
 
@@ -279,36 +281,36 @@ class AutoCompleter(object):
                 consumed_arg_values.setdefault(pos_action.dest, [])
                 consumed_arg_values[pos_action.dest].append(token)
 
-        def process_action_nargs(action: argparse.Action, arg_state: AutoCompleter._ArgumentState) -> None:
+        def process_action_nargs(arg_action: argparse.Action, arg_state: AutoCompleter._ArgumentState) -> None:
             """Process the current argparse Action and initialize the ArgumentState object used
             to track what arguments we have processed for this action"""
-            nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
+            nargs_range = getattr(arg_action, ATTR_NARGS_RANGE, None)
             if nargs_range is not None:
                 arg_state.min = nargs_range[0]
                 arg_state.max = nargs_range[1]
                 arg_state.variable = True
             if arg_state.min is None or arg_state.max is None:
-                if action.nargs is None:
+                if arg_action.nargs is None:
                     arg_state.min = 1
                     arg_state.max = 1
-                elif action.nargs == argparse.ONE_OR_MORE:
+                elif arg_action.nargs == argparse.ONE_OR_MORE:
                     arg_state.min = 1
                     arg_state.max = float('inf')
                     arg_state.variable = True
-                elif action.nargs == argparse.ZERO_OR_MORE or action.nargs == argparse.REMAINDER:
+                elif arg_action.nargs == argparse.ZERO_OR_MORE or arg_action.nargs == argparse.REMAINDER:
                     arg_state.min = 0
                     arg_state.max = float('inf')
                     arg_state.variable = True
-                    if action.nargs == argparse.REMAINDER:
-                        remainder['action'] = action
+                    if arg_action.nargs == argparse.REMAINDER:
+                        remainder['action'] = arg_action
                         remainder['arg'] = arg_state
-                elif action.nargs == argparse.OPTIONAL:
+                elif arg_action.nargs == argparse.OPTIONAL:
                     arg_state.min = 0
                     arg_state.max = 1
                     arg_state.variable = True
                 else:
-                    arg_state.min = action.nargs
-                    arg_state.max = action.nargs
+                    arg_state.min = arg_action.nargs
+                    arg_state.max = arg_action.nargs
 
         # This next block of processing tries to parse all parameters before the last parameter.
         # We're trying to determine what specific argument the current cursor position should be
