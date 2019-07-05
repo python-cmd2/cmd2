@@ -60,7 +60,6 @@ How to supply completion choice lists or functions for sub-commands:
 
 import argparse
 import os
-from argparse import SUPPRESS
 from typing import List, Union
 
 from . import utils
@@ -470,7 +469,7 @@ class AutoCompleter(object):
                     if flag_action.dest in consumed_arg_values else []
                 completion_results = self._complete_for_arg(flag_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
-                    self._print_action_help(flag_action)
+                    self._print_arg_hint(flag_action)
                 elif len(completion_results) > 1:
                     completion_results = self._format_completions(flag_action, completion_results)
 
@@ -481,7 +480,7 @@ class AutoCompleter(object):
                 consumed = consumed_arg_values[pos_name] if pos_name in consumed_arg_values else []
                 completion_results = self._complete_for_arg(pos_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
-                    self._print_action_help(pos_action)
+                    self._print_arg_hint(pos_action)
                 elif len(completion_results) > 1:
                     completion_results = self._format_completions(pos_action, completion_results)
 
@@ -611,33 +610,34 @@ class AutoCompleter(object):
 
         return []
 
-    def _print_action_help(self, action: argparse.Action) -> None:
+    def _print_arg_hint(self, arg: argparse.Action) -> None:
+        """Print argument hint to the terminal when tab completion results in no results"""
         # is parameter hinting disabled globally?
         if not self._tab_for_arg_help:
             return
 
         # is parameter hinting disabled for this parameter?
-        suppress_hint = getattr(action, ATTR_SUPPRESS_TAB_HINT, False)
+        suppress_hint = getattr(arg, ATTR_SUPPRESS_TAB_HINT, False)
         if suppress_hint:
             return
 
-        if action.option_strings:
-            flags = ', '.join(action.option_strings)
+        # Check if this is a flag
+        if arg.option_strings:
+            flags = ', '.join(arg.option_strings)
             param = ''
-            if action.nargs is None or action.nargs != 0:
-                param += ' ' + str(action.dest).upper()
+            if arg.nargs is None or arg.nargs != 0:
+                param += ' ' + str(arg.dest).upper()
 
             prefix = '{}{}'.format(flags, param)
-        else:
-            if action.dest != SUPPRESS:
-                prefix = '{}'.format(str(action.dest).upper())
-            else:
-                prefix = ''
 
-        if action.help is None:
+        # Otherwise this is a positional
+        else:
+            prefix = '{}'.format(str(arg.dest).upper())
+
+        if not arg.help or arg.help == argparse.SUPPRESS:
             help_text = ''
         else:
-            help_text = action.help
+            help_text = arg.help
 
         # is there anything to print for this parameter?
         if not prefix and not help_text:
