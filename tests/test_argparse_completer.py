@@ -10,6 +10,7 @@ import pytest
 
 import cmd2
 from cmd2 import with_argparser
+from cmd2.argparse_completer import is_potential_flag
 from cmd2.argparse_custom import Cmd2ArgParser
 from cmd2.utils import StdSim
 from .conftest import run_cmd, complete_tester
@@ -273,3 +274,17 @@ def test_autocomp_flags_choices(ac_app, flag, completions):
 #
 #     # Since -- appeared before the -- being completed, nothing should be completed
 #     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
+
+def test_is_potential_flag():
+    parser = Cmd2ArgParser()
+
+    # Not valid flags
+    assert not is_potential_flag('', parser)
+    assert not is_potential_flag('non-flag', parser)
+    assert not is_potential_flag('-', parser)
+    assert not is_potential_flag('--has space', parser)
+    assert not is_potential_flag('-2', parser)
+
+    # Valid flags
+    assert is_potential_flag('-flag', parser)
+    assert is_potential_flag('--flag', parser)

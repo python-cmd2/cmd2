@@ -4,7 +4,6 @@ Unit/functional testing for argparse customizations in cmd2
 """
 import pytest
 from cmd2.argparse_custom import Cmd2ArgParser
-from cmd2.argparse_completer import is_potential_flag
 
 
 def test_acarg_narg_empty_tuple():
@@ -50,18 +49,3 @@ def test_acarg_narg_tuple_zero_base():
 def test_acarg_narg_tuple_zero_to_one():
     parser = Cmd2ArgParser(prog='test')
     parser.add_argument('tuple', nargs=(0, 1))
-
-
-def test_is_potential_flag():
-    parser = Cmd2ArgParser()
-
-    # Not valid flags
-    assert not is_potential_flag('', parser)
-    assert not is_potential_flag('non-flag', parser)
-    assert not is_potential_flag('-', parser)
-    assert not is_potential_flag('--has space', parser)
-    assert not is_potential_flag('-2', parser)
-
-    # Valid flags
-    assert is_potential_flag('-flag', parser)
-    assert is_potential_flag('--flag', parser)
