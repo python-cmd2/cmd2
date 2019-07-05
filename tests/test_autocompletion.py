@@ -3,244 +3,273 @@
 """
 Unit/functional testing for argparse completer in cmd2
 """
+import argparse
+from typing import List
+
 import pytest
 
+import cmd2
+from cmd2 import with_argparser
+from cmd2.argparse_custom import Cmd2ArgParser
 from cmd2.utils import StdSim
-from .conftest import run_cmd, normalize, complete_tester
+from .conftest import run_cmd, complete_tester
 
-from examples.tab_autocompletion import TabCompleteExample
+# Lists used in our tests
+static_choices_list = ['static', 'choices']
+choices_from_function = ['choices', 'function']
+choices_from_method = ['choices', 'method']
+
+
+def choices_function() -> List[str]:
+    """Function that provides choices"""
+    return choices_from_function
+
+
+class AutoCompleteTester(cmd2.Cmd):
+    """Cmd2 app that exercises AutoCompleter class"""
+    def __init__(self):
+        super().__init__()
+
+    def choices_method(self) -> List[str]:
+        """Method that provides choices"""
+        return choices_from_method
+
+    # Basic command with no subcommands that exercises tab completing choices from various sources
+    basic_parser = Cmd2ArgParser()
+    basic_parser.add_argument("-n", "--no_choices", help="a flag with no choices")
+    basic_parser.add_argument("-l", "--choices_list", help="a flag populated with a choices list",
+                              choices=static_choices_list)
+    basic_parser.add_argument("-f", "--choices_function", help="a flag populated with a choices function",
+                              choices_function=choices_function)
+    basic_parser.add_argument("-m", "--choices_method", help="a flag populated with a choices method",
+                              choices_method=choices_method)
+
+    basic_parser.add_argument("no_choice_pos", help="a positional with no choices")
+    basic_parser.add_argument("choices_list_pos", help="a positional populated with a choices list",
+                              choices=static_choices_list)
+    basic_parser.add_argument("choices_function_pos", help="a positional populated with a choices function",
+                              choices_function=choices_function)
+    basic_parser.add_argument("choices_method_pos", help="a positional populated with a choices method",
+                              choices_method=choices_method)
+
+    @with_argparser(basic_parser)
+    def do_basic(self, args: argparse.Namespace) -> None:
+        pass
+
 
 @pytest.fixture
-def cmd2_app():
-    app = TabCompleteExample()
+def ac_app():
+    app = AutoCompleteTester()
     app.stdout = StdSim(app.stdout)
     return app
 
 
-SUGGEST_HELP = '''Usage: suggest -t {movie, show} [-h] [-d DURATION{1..2}]
-
-Suggest command demonstrates argparse customizations.
-See hybrid_suggest and orig_suggest to compare the help output.
-
-required arguments:
-  -t, --type {movie, show}
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -d, --duration DURATION{1..2}
-                        Duration constraint in minutes.
-                        	single value - maximum duration
-                        	[a, b] - duration range'''
-
-
-def test_help_required_group(cmd2_app):
-    out1, err1 = run_cmd(cmd2_app, 'suggest -h')
-    out2, err2 = run_cmd(cmd2_app, 'help suggest')
-
+def test_help_basic(ac_app):
+    out1, err1 = run_cmd(ac_app, 'basic -h')
+    out2, err2 = run_cmd(ac_app, 'help basic')
     assert out1 == out2
-    assert out1[0].startswith('Usage: suggest')
-    assert out1[1] == ''
-    assert out1[2].startswith('Suggest command demonstrates argparse customizations.')
-    assert out1 == normalize(SUGGEST_HELP)
 
 
-def test_autocomp_flags(cmd2_app):
+def test_autocomp_flags(ac_app):
     text = '-'
-    line = 'suggest {}'.format(text)
+    line = 'basic {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['--duration', '--help', '--type', '-d', '-h', '-t']
+           ac_app.completion_matches == ['--choices_function', '--choices_list', '--choices_method', '--help',
+                                         '--no_choices', '-f', '-h', '-l', '-m', '-n']
 
 
-def test_autcomp_hint(cmd2_app, capsys):
+def test_autcomp_hint(ac_app, capsys):
     text = ''
-    line = 'suggest -d {}'.format(text)
+    line = 'basic -n {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
     out, err = capsys.readouterr()
 
-    assert out == '''
-Hint:
-  -d, --duration DURATION    Duration constraint in minutes.
-                             	single value - maximum duration
-                             	[a, b] - duration range
-
-'''
-
-def test_autcomp_flag_comp(cmd2_app, capsys):
-    text = '--d'
-    line = 'suggest {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    out, err = capsys.readouterr()
-
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['--duration ']
-
-
-def test_autocomp_flags_choices(cmd2_app):
-    text = ''
-    line = 'suggest -t {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['movie', 'show']
-
-
-def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
-    text = ''
-    line = 'suggest -d 2 {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    out, err = capsys.readouterr()
-
-    assert out == '''
-Hint:
-  -d, --duration DURATION    Duration constraint in minutes.
-                             	single value - maximum duration
-                             	[a, b] - duration range
-
-'''
-
-def test_autocomp_flags_narg_max(cmd2_app):
-    text = ''
-    line = 'suggest d 2 3 {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is None
+    assert 'a flag with no choices' in out
 
 
-def test_autcomp_narg_beyond_max(cmd2_app):
-    out, err = run_cmd(cmd2_app, 'suggest -t movie -d 3 4 5')
-    assert 'Error: unrecognized arguments: 5' in err[1]
-
-
-def test_autocomp_subcmd_flag_comp_func_attr(cmd2_app):
-    text = 'A'
-    line = 'video movies list -a "{}'.format(text)
+def test_autcomp_flag_comp(ac_app):
+    text = '--ch'
+    line = 'basic {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
+           ac_app.completion_matches == ['--choices_function', '--choices_list', '--choices_method']
 
 
-def test_autocomp_subcmd_flag_comp_list_attr(cmd2_app):
-    text = 'G'
-    line = 'video movies list -d {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and first_match == '"Gareth Edwards'
-
-
-def test_autocomp_pos_consumed(cmd2_app):
+@pytest.mark.parametrize('flag, completions', [
+    ('-l', static_choices_list),
+    ('--choices_list', static_choices_list),
+    ('-f', choices_from_function),
+    ('--choices_function', choices_from_function),
+    ('-m', choices_from_method),
+    ('--choices_method', choices_from_method),
+])
+def test_autocomp_flags_choices(ac_app, flag, completions):
     text = ''
-    line = 'library movie add SW_EP01 {}'.format(text)
+    line = 'basic {} {}'.format(flag, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is None
-
-
-def test_autocomp_pos_after_flag(cmd2_app):
-    text = 'Joh'
-    line = 'video movies add -d "George Lucas" -- "Han Solo" PG "Emilia Clarke" "{}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
     assert first_match is not None and \
-           cmd2_app.completion_matches == ['John Boyega" ']
+           ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
-def test_autocomp_custom_func_dict_arg(cmd2_app):
-    text = '/home/user/'
-    line = 'video movies load {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['/home/user/another.db', '/home/user/file space.db', '/home/user/file.db']
-
-
-def test_argparse_remainder_flag_completion(cmd2_app):
-    import cmd2
-    import argparse
-
-    # Test flag completion as first arg of positional with nargs=argparse.REMAINDER
-    text = '--h'
-    line = 'help command {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # --h should not complete into --help because we are in the argparse.REMAINDER section
-    assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
-
-    # Test flag completion within an already started positional with nargs=argparse.REMAINDER
-    text = '--h'
-    line = 'help command subcommand {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # --h should not complete into --help because we are in the argparse.REMAINDER section
-    assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
-
-    # Test a flag with nargs=argparse.REMAINDER
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-f', nargs=argparse.REMAINDER)
-
-    # Overwrite eof's parser for this test
-    cmd2.Cmd.do_eof.argparser = parser
-
-    text = '--h'
-    line = 'eof -f {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # --h should not complete into --help because we are in the argparse.REMAINDER section
-    assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
-
-
-def test_completion_after_double_dash(cmd2_app):
-    """
-    Test completion after --, which argparse says (all args after -- are non-options)
-    All of these tests occur outside of an argparse.REMAINDER section since those tests
-    are handled in test_argparse_remainder_flag_completion
-    """
-
-    # Test -- as the last token
-    text = '--'
-    line = 'help {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # Since -- is the last token, then it should show flag choices
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and '--help' in cmd2_app.completion_matches
-
-    # Test -- to end all flag completion
-    text = '--'
-    line = 'help -- {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    # Since -- appeared before the -- being completed, nothing should be completed
-    assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
+# def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
+#     text = ''
+#     line = 'suggest -d 2 {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+#     out, err = capsys.readouterr()
+#
+#     assert out == '''
+# Hint:
+#   -d, --duration DURATION    Duration constraint in minutes.
+#                              	single value - maximum duration
+#                              	[a, b] - duration range
+#
+# '''
+#
+# def test_autocomp_flags_narg_max(cmd2_app):
+#     text = ''
+#     line = 'suggest d 2 3 {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+#     assert first_match is None
+#
+#
+# def test_autcomp_narg_beyond_max(cmd2_app):
+#     out, err = run_cmd(cmd2_app, 'suggest -t movie -d 3 4 5')
+#     assert 'Error: unrecognized arguments: 5' in err[1]
+#
+#
+# def test_autocomp_subcmd_flag_comp_func_attr(cmd2_app):
+#     text = 'A'
+#     line = 'video movies list -a "{}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+#     assert first_match is not None and \
+#            cmd2_app.completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
+#
+#
+# def test_autocomp_subcmd_flag_comp_list_attr(cmd2_app):
+#     text = 'G'
+#     line = 'video movies list -d {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+#     assert first_match is not None and first_match == '"Gareth Edwards'
+#
+#
+# def test_autocomp_pos_consumed(cmd2_app):
+#     text = ''
+#     line = 'library movie add SW_EP01 {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+#     assert first_match is None
+#
+#
+# def test_autocomp_pos_after_flag(cmd2_app):
+#     text = 'Joh'
+#     line = 'video movies add -d "George Lucas" -- "Han Solo" PG "Emilia Clarke" "{}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+#     assert first_match is not None and \
+#            cmd2_app.completion_matches == ['John Boyega" ']
+#
+#
+# def test_autocomp_custom_func_dict_arg(cmd2_app):
+#     text = '/home/user/'
+#     line = 'video movies load {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+#     assert first_match is not None and \
+#            cmd2_app.completion_matches == ['/home/user/another.db', '/home/user/file space.db', '/home/user/file.db']
+#
+#
+# def test_argparse_remainder_flag_completion(cmd2_app):
+#     import cmd2
+#     import argparse
+#
+#     # Test flag completion as first arg of positional with nargs=argparse.REMAINDER
+#     text = '--h'
+#     line = 'help command {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     # --h should not complete into --help because we are in the argparse.REMAINDER section
+#     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
+#
+#     # Test flag completion within an already started positional with nargs=argparse.REMAINDER
+#     text = '--h'
+#     line = 'help command subcommand {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     # --h should not complete into --help because we are in the argparse.REMAINDER section
+#     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
+#
+#     # Test a flag with nargs=argparse.REMAINDER
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument('-f', nargs=argparse.REMAINDER)
+#
+#     # Overwrite eof's parser for this test
+#     cmd2.Cmd.do_eof.argparser = parser
+#
+#     text = '--h'
+#     line = 'eof -f {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     # --h should not complete into --help because we are in the argparse.REMAINDER section
+#     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
+#
+#
+# def test_completion_after_double_dash(cmd2_app):
+#     """
+#     Test completion after --, which argparse says (all args after -- are non-options)
+#     All of these tests occur outside of an argparse.REMAINDER section since those tests
+#     are handled in test_argparse_remainder_flag_completion
+#     """
+#
+#     # Test -- as the last token
+#     text = '--'
+#     line = 'help {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     # Since -- is the last token, then it should show flag choices
+#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+#     assert first_match is not None and '--help' in cmd2_app.completion_matches
+#
+#     # Test -- to end all flag completion
+#     text = '--'
+#     line = 'help -- {}'.format(text)
+#     endidx = len(line)
+#     begidx = endidx - len(text)
+#
+#     # Since -- appeared before the -- being completed, nothing should be completed
+#     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None

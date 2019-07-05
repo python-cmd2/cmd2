@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
-"""A simple example demonstrating how to use flag and index based tab-completion functions
+"""
+A simple example demonstrating how to use flag and index based tab-completion functions
+For argparse-based tab completion, see tab_autocompletion.py
 """
 import argparse
 
