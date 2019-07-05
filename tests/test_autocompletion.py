@@ -32,22 +32,6 @@ optional arguments:
                         	single value - maximum duration
                         	[a, b] - duration range'''
 
-MEDIA_MOVIES_ADD_HELP = '''Usage: media movies add -d DIRECTOR{1..2}
-                        [-h]
-                        title {G, PG, PG-13, R, NC-17} ...
-
-positional arguments:
-  title                 Movie Title
-  {G, PG, PG-13, R, NC-17}
-                        Movie Rating
-  actor                 Actors
-
-required arguments:
-  -d, --director DIRECTOR{1..2}
-                        Director
-
-optional arguments:
-  -h, --help            show this help message and exit'''
 
 def test_help_required_group(cmd2_app):
     out1, err1 = run_cmd(cmd2_app, 'suggest -h')
@@ -60,15 +44,6 @@ def test_help_required_group(cmd2_app):
     assert out1 == normalize(SUGGEST_HELP)
 
 
-def test_help_required_group_long(cmd2_app):
-    out1, err1 = run_cmd(cmd2_app, 'media movies add -h')
-    out2, err2 = run_cmd(cmd2_app, 'help media movies add')
-
-    assert out1 == out2
-    assert out1[0].startswith('Usage: media movies add')
-    assert out1 == normalize(MEDIA_MOVIES_ADD_HELP)
-
-
 def test_autocomp_flags(cmd2_app):
     text = '-'
     line = 'suggest {}'.format(text)
@@ -78,6 +53,7 @@ def test_autocomp_flags(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
            cmd2_app.completion_matches == ['--duration', '--help', '--type', '-d', '-h', '-t']
+
 
 def test_autcomp_hint(cmd2_app, capsys):
     text = ''
@@ -152,59 +128,6 @@ def test_autcomp_narg_beyond_max(cmd2_app):
     assert 'Error: unrecognized arguments: 5' in err[1]
 
 
-def test_autocomp_subcmd_nested(cmd2_app):
-    text = ''
-    line = 'media movies {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['add', 'delete', 'list', 'load']
-
-
-def test_autocomp_subcmd_flag_choices_append(cmd2_app):
-    text = ''
-    line = 'media movies list -r {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['G', 'NC-17', 'PG', 'PG-13', 'R']
-
-def test_autocomp_subcmd_flag_choices_append_exclude(cmd2_app):
-    text = ''
-    line = 'media movies list -r PG PG-13 {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['G', 'NC-17', 'R']
-
-
-def test_autocomp_subcmd_flag_comp_func(cmd2_app):
-    text = 'A'
-    line = 'media movies list -a "{}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
-
-
-def test_autocomp_subcmd_flag_comp_list(cmd2_app):
-    text = 'G'
-    line = 'media movies list -d {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and first_match == '"Gareth Edwards'
-
-
 def test_autocomp_subcmd_flag_comp_func_attr(cmd2_app):
     text = 'A'
     line = 'video movies list -a "{}'.format(text)
@@ -245,28 +168,6 @@ def test_autocomp_pos_after_flag(cmd2_app):
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
            cmd2_app.completion_matches == ['John Boyega" ']
-
-
-def test_autocomp_custom_func_list_arg(cmd2_app):
-    text = 'SW_'
-    line = 'library show add {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['SW_CW', 'SW_REB', 'SW_TCW']
-
-
-def test_autocomp_custom_func_list_and_dict_arg(cmd2_app):
-    text = ''
-    line = 'library show add SW_REB {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and \
-           cmd2_app.completion_matches == ['S01E02', 'S01E03', 'S02E01', 'S02E03']
 
 
 def test_autocomp_custom_func_dict_arg(cmd2_app):
