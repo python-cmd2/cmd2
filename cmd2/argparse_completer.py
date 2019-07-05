@@ -97,12 +97,26 @@ class CompletionItem(str):
 
     Instead of this:
         1     2     3
-    """
-    def __new__(cls, o, desc='', *args, **kwargs) -> str:
-        return str.__new__(cls, o, *args, **kwargs)
 
-    # noinspection PyMissingConstructor,PyUnusedLocal
-    def __init__(self, o, desc='', *args, **kwargs) -> None:
+    Example:
+        token = 1
+        token_description = "My Item"
+        completion_item = CompletionItem(token, token_description)
+    """
+    def __new__(cls, value: object, *args, **kwargs) -> str:
+        return super().__new__(cls, value)
+
+    # noinspection PyUnusedLocal
+    def __init__(self, value: object, desc: str = '', *args, **kwargs) -> None:
+        """
+        CompletionItem Initializer
+
+        :param value: the value being tab completed
+        :param desc: description text to display
+        :param args: args for str __init__
+        :param kwargs: kwargs for str __init__
+        """
+        super().__init__(*args, **kwargs)
         self.description = desc
 
 
