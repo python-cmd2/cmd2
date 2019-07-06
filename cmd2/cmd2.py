@@ -46,7 +46,7 @@ from . import ansi
 from . import constants
 from . import plugin
 from . import utils
-from .argparse_completer import AutoCompleter
+from .argparse_completer import AutoCompleter, CompletionItem
 from .argparse_custom import Cmd2ArgParser
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .history import History, HistoryItem
@@ -1605,13 +1605,13 @@ class Cmd(cmd.Cmd):
 
         return commands
 
-    def _get_alias_names(self) -> List[str]:
+    def _get_alias_completion_items(self) -> List[CompletionItem]:
         """Return list of current alias names"""
-        return list(self.aliases)
+        return [CompletionItem(cur_key, self.aliases[cur_key]) for cur_key in self.aliases]
 
-    def _get_macro_names(self) -> List[str]:
-        """Return list of current macro names"""
-        return list(self.macros)
+    def _get_macro_completion_items(self) -> List[CompletionItem]:
+        """Return list of current alias names"""
+        return [CompletionItem(cur_key, self.macros[cur_key].value) for cur_key in self.macros]
 
     def _get_settable_names(self) -> List[str]:
         """Return list of current settable names"""
@@ -1620,8 +1620,8 @@ class Cmd(cmd.Cmd):
     def _get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
         visible_commands = set(self.get_visible_commands())
-        alias_names = set(self._get_alias_names())
-        macro_names = set(self._get_macro_names())
+        alias_names = set(self.aliases)
+        macro_names = set(self.macros)
         return list(visible_commands | alias_names | macro_names)
 
     def get_help_topics(self) -> List[str]:
@@ -2370,8 +2370,8 @@ class Cmd(cmd.Cmd):
     alias_delete_description = "Delete specified aliases or all aliases if --all is used"
     alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
                                                       description=alias_delete_description)
-    alias_delete_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE,
-                                     help='alias to delete', choices_method=_get_alias_names)
+    alias_delete_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE, help='alias to delete',
+                                     choices_method=_get_alias_completion_items, descriptive_header='Value')
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
     alias_delete_parser.set_defaults(func=_alias_delete)
 
@@ -2384,8 +2384,8 @@ class Cmd(cmd.Cmd):
 
     alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
                                                     description=alias_list_description)
-    alias_list_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE,
-                                   help='alias to list', choices_method=_get_alias_names)
+    alias_list_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE, help='alias to list',
+                                   choices_method=_get_alias_completion_items, descriptive_header='Value')
     alias_list_parser.set_defaults(func=_alias_list)
 
     # Preserve quotes since we are passing strings to other commands
@@ -2574,8 +2574,8 @@ class Cmd(cmd.Cmd):
     macro_delete_description = "Delete specified macros or all macros if --all is used"
     macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
                                                       description=macro_delete_description)
-    macro_delete_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE,
-                                     help='macro to delete', choices_method=_get_macro_names)
+    macro_delete_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE, help='macro to delete',
+                                     choices_method=_get_macro_completion_items, descriptive_header='Value')
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
     macro_delete_parser.set_defaults(func=_macro_delete)
 
@@ -2587,8 +2587,8 @@ class Cmd(cmd.Cmd):
                               "Without arguments, all macros will be listed.")
 
     macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
-    macro_list_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE,
-                                   help='macro to list', choices_method=_get_macro_names)
+    macro_list_parser.add_argument('name', nargs=argparse.ZERO_OR_MORE, help='macro to list',
+                                   choices_method=_get_macro_completion_items, descriptive_header='Value')
     macro_list_parser.set_defaults(func=_macro_list)
 
     # Preserve quotes since we are passing strings to other commands
