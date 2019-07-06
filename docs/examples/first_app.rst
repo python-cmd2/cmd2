@@ -13,7 +13,7 @@ features of ``cmd2``:
 * :ref:`features/help:Help`
 * :ref:`features/shortcuts_aliases_macros:Shortcuts`
 * :ref:`features/multiline_commands:Multiline Commands`
-* :ref:`features/history:Command History`
+* :ref:`features/history:History`
 
 If you don't want to type as we go, you can download the complete source for
 this example.
@@ -278,7 +278,7 @@ History
 you don't need to do anything to enable this functionality, you get it for
 free. If you want the history of commands to persist between invocations of
 your application, you'll need to do a little work. The
-:ref:`features/history:Command History` page has all the details.
+:ref:`features/history:History` page has all the details.
 
 Users can access command history using two methods:
 
