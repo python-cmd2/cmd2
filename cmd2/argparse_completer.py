@@ -59,7 +59,7 @@ How to supply completion choice lists or functions for sub-commands:
 """
 
 import argparse
-import os
+import shutil
 from typing import List, Union
 
 from . import utils
@@ -504,7 +504,7 @@ class AutoCompleter(object):
                 if item_width > token_width:
                     token_width = item_width
 
-            term_size = os.get_terminal_size()
+            term_size = shutil.get_terminal_size()
             fill_width = int(term_size.columns * .6) - (token_width + 2)
             for item in completions:
                 entry = '{: <{token_width}}{: <{fill_width}}'.format(item, item.description,

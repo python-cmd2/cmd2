@@ -1584,18 +1584,18 @@ class Cmd(cmd.Cmd):
 
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
                               argparser: argparse.ArgumentParser) -> List[str]:
-        """Default completion function for argparse commands."""
+        """Default completion function for argparse commands"""
         completer = AutoCompleter(argparser, self)
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         return completer.complete_command(tokens, text, line, begidx, endidx)
 
     def get_all_commands(self) -> List[str]:
-        """Returns a list of all commands."""
+        """Return a list of all commands"""
         return [name[len(COMMAND_FUNC_PREFIX):] for name in self.get_names()
                 if name.startswith(COMMAND_FUNC_PREFIX) and callable(getattr(self, name))]
 
     def get_visible_commands(self) -> List[str]:
-        """Returns a list of commands that have not been hidden or disabled."""
+        """Return a list of commands that have not been hidden or disabled"""
         commands = self.get_all_commands()
 
         # Remove the hidden commands

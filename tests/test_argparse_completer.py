@@ -79,9 +79,9 @@ class AutoCompleteTester(cmd2.Cmd):
     completer_parser = Cmd2ArgParser()
 
     # Flags args for completer command
-    completer_parser.add_argument("-f", "--function", help="a flag populated with a choices function",
+    completer_parser.add_argument("-f", "--function", help="a flag using a completer function",
                                   completer_function=completer_function)
-    completer_parser.add_argument("-m", "--method", help="a flag populated with a choices method",
+    completer_parser.add_argument("-m", "--method", help="a flag using a completer method",
                                   completer_method=completer_method)
 
     # Positional args for completer command
@@ -102,10 +102,65 @@ def ac_app():
     return app
 
 
-def test_help_basic(ac_app):
-    out1, err1 = run_cmd(ac_app, 'choices -h')
-    out2, err2 = run_cmd(ac_app, 'help choices')
+def test_help(ac_app):
+    out1, err1 = run_cmd(ac_app, 'alias -h')
+    out2, err2 = run_cmd(ac_app, 'help alias')
     assert out1 == out2
+
+
+def test_help_subcommand(ac_app):
+    out1, err1 = run_cmd(ac_app, 'alias create -h')
+    out2, err2 = run_cmd(ac_app, 'help alias create')
+    assert out1 == out2
+
+
+def test_complete_help(ac_app):
+    text = 'al'
+    line = 'help {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None and ac_app.completion_matches == ['alias ']
+
+
+def test_complete_help_subcommand(ac_app):
+    text = 'cre'
+    line = 'help alias {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None and ac_app.completion_matches == ['create ']
+
+
+@pytest.mark.parametrize('num_aliases, show_description', [
+    # The number of completion results determines if the description field of CompletionItems gets displayed
+    # in the tab completions. The count must be greater than 1 and less than ac_app.max_completion_items,
+    # which defaults to 50.
+    (1, False),
+    (5, True),
+    (100, False),
+])
+def test_completion_items(ac_app, num_aliases, show_description):
+    # Create aliases
+    for i in range(0, num_aliases):
+        run_cmd(ac_app, 'alias create fake{} help'.format(i))
+
+    assert len(ac_app.aliases) == num_aliases
+
+    text = 'fake'
+    line = 'alias list {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None
+    assert len(ac_app.completion_matches) == num_aliases
+    assert len(ac_app.display_matches) == num_aliases
+
+    # If show_description is True, the alias's value will be in the display text
+    assert ('help' in ac_app.display_matches[0]) == show_description
 
 
 @pytest.mark.parametrize('text, completions', [
