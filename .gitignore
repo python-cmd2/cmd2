@@ -32,3 +32,6 @@ cmd2_history.dat
 
 # Pipenv Lock file
 Pipfile.lock
+
+# Virtualenv directory
+.venv
