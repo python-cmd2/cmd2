@@ -1,0 +1,26 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[packages]
+attrs = ">=16.3.0"
+colorama = ">=0.3.7"
+pyperclip = ">=1.6"
+wcwidth = ">=0.1.7"
+
+[dev-packages]
+cmd2 = {editable = true,path = "."}
+codecov = "*"
+flake8 = "*"
+gnureadline = {version = "*",sys_platform = "== 'darwin'"}
+invoke = "*"
+mock = {version = "*",markers = "python_version < '3.6'"}
+pyreadline = {version = "*",sys_platform = "== 'win32'"}
+pytest = "*"
+pytest-cov = "*"
+pytest-mock = "*"
+sphinx = "*"
+sphinx-autobuild = "*"
+sphinx-rtd-theme = "*"
+twine = ">=1.11"
