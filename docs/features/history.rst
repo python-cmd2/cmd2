@@ -1,5 +1,5 @@
-Command History
-===============
+History
+=======
 
 For Developers
 --------------
