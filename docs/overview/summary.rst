@@ -11,11 +11,9 @@ want to add more functionality with very little work?
 ``cmd2`` is a powerful python library for building command line applications.
 Start here to find out if this library is a good fit for your needs.
 
-* :ref:`overview/featuretour:Feature Highlights` - a quick tour of a few of the
-  features in ``cmd2``, for both developers and users
-* :ref:`examples/example:Simple Application` - a sample application showing 5 key features of ``cmd2``
 * :ref:`overview/installation:Installation Instructions` - how to install
   ``cmd2`` and associated optional dependencies
+* :ref:`examples/first_app:First Application` - a sample application showing 8 key features of ``cmd2``
 * :ref:`overview/integrating:Integrate cmd2 Into Your Project` - adding ``cmd2``
   to your project
 * :ref:`overview/alternatives:Alternatives` - other python packages that might

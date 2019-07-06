@@ -1,5 +1,5 @@
-Simple Application
-==================
+First Application
+=================
 
 .. _cmd: https://docs.python.org/3/library/cmd.html
 
@@ -16,36 +16,34 @@ Here's a quick walkthrough of a simple application which demonstrates 8 features
 * History
 
 If you don't want to type as we go, you can download the complete source for
-this example app.
+this example.
 
 
 Basic Application
 -----------------
 
-First we need to create a new ``cmd2`` application. Create a new file ``example.py`` with the following contents::
+First we need to create a new ``cmd2`` application. Create a new file ``first_app.py`` with the following contents::
 
     #!/usr/bin/env python
-    """
-    A sample application for cmd2.
-    """
+    """A simple cmd2 application."""
     import cmd2
 
 
-    class CmdLineApp(cmd2.Cmd):
-        """Example cmd2 application. """
+    class FirstApp(cmd2.Cmd):
+        """A simple cmd2 application."""
 
 
     if __name__ == '__main__':
         import sys
-        c = CmdLineApp()
+        c = FirstApp()
         sys.exit(c.cmdloop())
 
-We have a new class ``CmdLineApp`` which is a subclass of
+We have a new class ``FirstApp`` which is a subclass of
 :ref:`api/cmd:cmd2.Cmd`. When we tell python to run our file like this:
 
 .. code-block:: shell
 
-   $ python example.py
+   $ python first_app.py
 
 it creates an instance of our class, and calls the ``cmdloop()`` method. This
 method accepts user input and runs commands based on that input. Because we
@@ -79,7 +77,7 @@ command to see the settings, like this:
 
 .. code-block:: shell
 
-   $ python example.py
+   $ python first_app.py
    (Cmd) set
 
 you will see our ``maxrepeats`` setting show up with it's default value of ``3``.
@@ -93,7 +91,7 @@ whatever we tell it to say. We are going to use an :ref:`argument processor
 <features/argument_processing:Argument Processing>` so the ``speak`` command can
 shout and talk piglatin. We will also use some built in methods for
 :ref:`generating output <features/generating_output:Generating Output>`. Add
-this code to ``example.py``, so that the ``speak_parser`` attribute and the
+this code to ``first_app.py``, so that the ``speak_parser`` attribute and the
 ``do_speak()`` method are part of the ``CmdLineApp()`` class::
 
     speak_parser = argparse.ArgumentParser()
@@ -124,8 +122,8 @@ Up at the top of the script, you'll also need to add::
 There's a bit to unpack here, so let's walk through it. We created
 ``speak_parser``, which uses the `argparse
 <https://docs.python.org/3/library/argparse.html>`_ module from the Python
-standard library to parse command line input from a user. There is nothing thus far
-that is specific to ``cmd2``.
+standard library to parse command line input from a user. There is nothing thus
+far that is specific to ``cmd2``.
 
 There is also a new method called ``do_speak()``. In both cmd_ and ``cmd2``,
 methods that start with ``do_`` become new commands, so by defining this method
@@ -261,18 +259,20 @@ History
 ``cmd2`` tracks the history of the commands that users enter. As a developer,
 you don't need to do anything to enable this functionality, you get it for free.
 If you want the history of commands to persist between invocations of your
-application, you'll need to do a little work. The
-:ref:`features/history:Command History` page has all the details.
+application, you'll need to do a little work. The :ref:`features/history:Command
+History` page has all the details.
 
 Users can access command history using two methods:
 
-- the `readline <https://docs.python.org/3/library/readline.html>`_ library which provides a python interface to the `GNU readline library <https://tiswww.case.edu/php/chet/readline/rltop.html>`_.
+- the `readline <https://docs.python.org/3/library/readline.html>`_ library
+  which provides a python interface to the `GNU readline library
+  <https://tiswww.case.edu/php/chet/readline/rltop.html>`_
 - the ``history`` command which is built-in to ``cmd2``
 
-From the prompt in a ``cmd2``-based application, you can press ``<CNTL>-p`` to
-move to the previously entered command, and ``<CNTL>-n`` to move to the next
-command. You can also search through the command history usint ``<CNTL>-r``. The
-`GNU Readline User Manual
+From the prompt in a ``cmd2``-based application, you can press ``Control-p`` to
+move to the previously entered command, and ``Control-n`` to move to the next
+command. You can also search through the command history using ``Control-r``.
+The `GNU Readline User Manual
 <https://tiswww.case.edu/php/chet/readline/rluserman.html>`_ has all the
 details, including all the available commands, and instructions for customizing
 the key bindings.
@@ -286,15 +286,17 @@ With the selected commands, users can:
 - save the commands to a file
 - run the commands, saving both the commands and their output to a file
 
-Learn more about the ``history`` command by typing ``history -h`` at any ``cmd2`` input prompt, or by exploring :ref:`Command History For Users <features/history:For Users>`.
+Learn more about the ``history`` command by typing ``history -h`` at any
+``cmd2`` input prompt, or by exploring :ref:`Command History For Users
+<features/history:For Users>`.
 
 
 Conclusion
 ----------
 
-You've just created a simple, but functional command line application. With minimal work
-on your part, the application leverages many robust features of ``cmd2``. To learn more
-you can:
+You've just created a simple, but functional command line application. With
+minimal work on your part, the application leverages many robust features of
+``cmd2``. To learn more you can:
 
 - Dive into all of the :doc:`../features/index` that ``cmd2`` provides
 - Look at more :doc:`../examples/index`

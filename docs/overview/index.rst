@@ -5,9 +5,8 @@ Getting Started
    :maxdepth: 1
    :hidden:
 
-   featuretour
-   ../examples/example
    installation
+   ../examples/first_app
    integrating
    alternatives
    resources
