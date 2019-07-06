@@ -13,7 +13,6 @@ A simple application using cmd2 which demonstrates 8 key features:
     * History
 """
 import argparse
-import random
 
 import cmd2
 
