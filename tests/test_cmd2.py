@@ -21,7 +21,6 @@ except ImportError:
 
 import cmd2
 from cmd2 import ansi, clipboard, constants, utils
-from cmd2.argparse_completer import CompletionItem
 from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
 
 def CreateOutsimApp():
@@ -1506,33 +1505,32 @@ invalid_command_name = [
 ]
 
 def test_get_alias_completion_items(base_app):
-    assert len(base_app.aliases) == 0
     run_cmd(base_app, 'alias create fake run_pyscript')
     run_cmd(base_app, 'alias create ls !ls -hal')
-    assert len(base_app.aliases) == 2
 
-    expected = sorted([CompletionItem('fake', 'run_pyscript'), CompletionItem('ls', '!ls -hal')])
-    results = sorted(base_app._get_alias_completion_items())
+    results = base_app._get_alias_completion_items()
+    assert len(results) == len(base_app.aliases)
 
-    for index, cur_res in enumerate(results):
-        assert cur_res == expected[index]
-        assert cur_res.description == expected[index].description
+    for cur_res in results:
+        assert cur_res in base_app.aliases
+        assert cur_res.description == base_app.aliases[cur_res]
 
 def test_get_macro_completion_items(base_app):
-    assert len(base_app.macros) == 0
     run_cmd(base_app, 'macro create foo !echo foo')
     run_cmd(base_app, 'macro create bar !echo bar')
-    assert len(base_app.macros) == 2
 
-    expected = sorted([CompletionItem('foo', '!echo foo'), CompletionItem('bar', '!echo bar')])
-    results = sorted(base_app._get_macro_completion_items())
+    results = base_app._get_macro_completion_items()
+    assert len(results) == len(base_app.macros)
 
-    for index, cur_res in enumerate(results):
-        assert cur_res == expected[index]
-        assert cur_res.description == expected[index].description
+    for cur_res in results:
+        assert cur_res in base_app.macros
+        assert cur_res.description == base_app.macros[cur_res].value
 
 def test_get_settable_names(base_app):
-    assert sorted(base_app._get_settable_names()) == sorted(base_app.settable.keys())
+    results = base_app._get_settable_completion_items()
+    for cur_res in results:
+        assert cur_res in base_app.settable
+        assert cur_res.description == base_app.settable[cur_res]
 
 def test_alias_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'alias')

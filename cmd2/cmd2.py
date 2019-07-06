@@ -1606,16 +1606,16 @@ class Cmd(cmd.Cmd):
         return commands
 
     def _get_alias_completion_items(self) -> List[CompletionItem]:
-        """Return list of current alias names"""
+        """Return list of current alias names and values as CompletionItems"""
         return [CompletionItem(cur_key, self.aliases[cur_key]) for cur_key in self.aliases]
 
     def _get_macro_completion_items(self) -> List[CompletionItem]:
-        """Return list of current alias names"""
+        """Return list of current macro names and values as CompletionItems"""
         return [CompletionItem(cur_key, self.macros[cur_key].value) for cur_key in self.macros]
 
-    def _get_settable_names(self) -> List[str]:
-        """Return list of current settable names"""
-        return list(self.settable)
+    def _get_settable_completion_items(self) -> List[CompletionItem]:
+        """Return list of current settable names and descriptions as CompletionItems"""
+        return [CompletionItem(cur_key, self.settable[cur_key]) for cur_key in self.settable]
 
     def _get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
@@ -2920,7 +2920,7 @@ class Cmd(cmd.Cmd):
     set_parser.add_argument('-a', '--all', action='store_true', help='display read-only settings as well')
     set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
     set_parser.add_argument('param', nargs=argparse.OPTIONAL, help='parameter to set or view',
-                            choices_method=_get_settable_names)
+                            choices_method=_get_settable_completion_items, descriptive_header='Description')
     set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='the new value for settable')
 
     @with_argparser(set_parser)
