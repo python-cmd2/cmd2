@@ -7,5 +7,5 @@ API Reference
    cmd
    decorators
    exceptions
-   utility_functions
    utility_classes
+   utility_functions

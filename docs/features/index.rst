@@ -4,23 +4,23 @@ Features
 .. toctree::
    :maxdepth: 1
 
-   commands
-   generating_output
    argument_processing
-   prompt
+   clipboard
+   commands
+   completion
+   disable_commands
+   embedded_python_shells
+   generating_output
    help
    history
-   startup_commands
-   shortcuts_aliases_macros
-   settings
-   completion
-   os
-   multiline_commands
-   disable_commands
-   clipboard
-   transcripts
-   initialization
    hooks
+   initialization
+   multiline_commands
+   os
    plugins
+   prompt
    scripting
-   embedded_python_shells
+   settings
+   shortcuts_aliases_macros
+   startup_commands
+   transcripts
