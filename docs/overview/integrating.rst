@@ -1,27 +1,37 @@
-Integrate cmd2 into your project
---------------------------------
+Integrate cmd2 Into Your Project
+================================
 
-[TODO - show how to use semantic versions to add the correct version string to setup.py ]
+Once installed, you will want to ensure that your project's dependencies
+include ``cmd2``. Make sure your ``setup.py`` includes the following::
 
-[TODO - this is probably outdated advice]
+  install_requires=[
+    'cmd2>=1,<2',
+  ]
 
-``cmd2`` is contained in a small number of Python files, which can be easily
-copied into your project.  *The copyright and license notice must be retained*.
+The ``cmd2`` project uses `Semantic Versioning <https://semver.org>`_, which
+means that any incompatible API changes will be release with a new major version
+number. We recommend that you follow the advice given by the Python Packaging
+User Guide related to `install_requires
+<https://packaging.python.org/discussions/install-requires-vs-requirements/>`_.
+By setting an upper bound on the allowed version, you can ensure that your
+project does not inadvertently get installed with an incompatible future version
+of ``cmd2``.
 
-This is an option suitable for advanced Python users.  You can simply include
-the files within your project's hierarchy. If you want to modify ``cmd2``, this
-may be a reasonable option.  Though, we encourage you to use stock ``cmd2`` and
-either composition or inheritance to achieve the same goal.
 
-This approach will obviously NOT automatically install the required 3rd-party
-dependencies, so you need to make sure the following Python packages are
-installed:
+macOS Considerations
+--------------------
 
-  * attrs
-  * colorama
-  * pyperclip
-  * wcwidth
+TODO need a section about how to get the right readline installed on macos
 
-On Windows, there is an additional dependency:
 
-  * pyreadline
+Windows Considerations
+-------------------------------
+
+If you would like to use :ref:`features/completion:Completion`, and you want
+your application to run on Windows, you will need to ensure you install the
+``pyreadline`` package. Make sure to include the following in your ``setup.py``::
+
+  install_requires=[
+    'cmd2>=1,<2',
+    ":sys_platform=='win32'": ['pyreadline'],
+  ]

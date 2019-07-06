@@ -8,8 +8,8 @@ application?
 Already built an application that uses cmd_ from the python standard library and
 want to add more functionality with very little work?
 
-``cmd2`` is a powerful python library for built command line applications. Start
-here to find out if this library is a good fit for your needs.
+``cmd2`` is a powerful python library for building command line applications.
+Start here to find out if this library is a good fit for your needs.
 
 * :ref:`overview/featuretour:Feature Highlights` - a quick tour of a few of the
   features in ``cmd2``, for both developers and users
