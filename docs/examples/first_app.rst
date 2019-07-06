@@ -3,8 +3,8 @@ First Application
 
 .. _cmd: https://docs.python.org/3/library/cmd.html
 
-Here's a quick walkthrough of a simple application which demonstrates 8 features of
-``cmd2``:
+Here's a quick walkthrough of a simple application which demonstrates 8
+features of ``cmd2``:
 
 * Settings
 * Commands
@@ -22,7 +22,8 @@ this example.
 Basic Application
 -----------------
 
-First we need to create a new ``cmd2`` application. Create a new file ``first_app.py`` with the following contents::
+First we need to create a new ``cmd2`` application. Create a new file
+``first_app.py`` with the following contents::
 
     #!/usr/bin/env python
     """A simple cmd2 application."""
@@ -80,7 +81,8 @@ command to see the settings, like this:
    $ python first_app.py
    (Cmd) set
 
-you will see our ``maxrepeats`` setting show up with it's default value of ``3``.
+you will see our ``maxrepeats`` setting show up with it's default value of
+``3``.
 
 
 Create A Command
@@ -88,8 +90,8 @@ Create A Command
 
 Now we will create our first command, called ``speak`` which will echo back
 whatever we tell it to say. We are going to use an :ref:`argument processor
-<features/argument_processing:Argument Processing>` so the ``speak`` command can
-shout and talk piglatin. We will also use some built in methods for
+<features/argument_processing:Argument Processing>` so the ``speak`` command
+can shout and talk piglatin. We will also use some built in methods for
 :ref:`generating output <features/generating_output:Generating Output>`. Add
 this code to ``first_app.py``, so that the ``speak_parser`` attribute and the
 ``do_speak()`` method are part of the ``CmdLineApp()`` class::
@@ -133,39 +135,53 @@ Note the ``@cmd2.with_argparser`` decorator on the ``do_speak()`` method. This
 decorator does 3 useful things for us:
 
 1. It tells ``cmd2`` to process all input for the ``speak`` command using the
-   argparser we defined. If the user input doesn't meet the requirements defined by
-   the argparser, then an error will be displayed for the user.
+   argparser we defined. If the user input doesn't meet the requirements
+   defined by the argparser, then an error will be displayed for the user.
 2. It alters our ``do_speak`` method so that instead of receiving the raw user
    input as a parameter, we receive the namespace from the argparser.
 3. It creates a help message for us based on the argparser.
 
 You can see in the body of the method how we use the namespace from the
-argparser (passed in as the variable ``args``). We build an array of words which
-we will output, honoring both the ``--piglatin`` and ``--shout`` options.
+argparser (passed in as the variable ``args``). We build an array of words
+which we will output, honoring both the ``--piglatin`` and ``--shout`` options.
 
-At the end of the method, we use our ``maxrepeats`` setting as an upper limit to
-the number of times we will print the output.
+At the end of the method, we use our ``maxrepeats`` setting as an upper limit
+to the number of times we will print the output.
 
 The last thing you'll notice is that we used the ``self.poutput()`` method to
 display our output. ``poutput()`` is a method provided by ``cmd2``, which I
-strongly recommend you use anytime you want to :ref:`generate output <features/generating_output:Generating Output>`. It provides the following benefits:
+strongly recommend you use anytime you want to :ref:`generate output
+<features/generating_output:Generating Output>`. It provides the following
+benefits:
 
-1. Allows the user to redirect output to a text file or pipe it to a shell process
+1. Allows the user to redirect output to a text file or pipe it to a shell
+   process
 2. Gracefully handles ``BrokenPipeWarning`` exceptions for redirected output
-3. Makes the output show up in a :ref:`transcript <features/transcripts:Transcripts>`
-4. Honors the setting to strip embedded ansi sequences (typically used for background and foreground colors)
+3. Makes the output show up in a :ref:`transcript
+   <features/transcripts:Transcripts>`
+4. Honors the setting to strip embedded ansi sequences (typically used for
+   background and foreground colors)
 
-Go run the script again, and try out the ``speak`` command. Try typing ``help speak``, and you
-will see a lovely usage message describing the various options for the command.
+Go run the script again, and try out the ``speak`` command. Try typing ``help
+speak``, and you will see a lovely usage message describing the various options
+for the command.
 
 With those few lines of code, we created a :ref:`command
-<features/commands:Commands>`, used an :ref:`Argument Processor <features/argument_processing:Argument Processing>`, added a nice :ref:`help message <features/help:Help>` for our users, and :ref:`generated some output <features/generating_output:Generating Output>`.
+<features/commands:Commands>`, used an :ref:`Argument Processor
+<features/argument_processing:Argument Processing>`, added a nice :ref:`help
+message <features/help:Help>` for our users, and :ref:`generated some output
+<features/generating_output:Generating Output>`.
 
 
 Shortcuts
 ---------
 
-``cmd2`` has several capabilities to simplify repetitive user input: :ref:`Shortcuts, Aliases, and Macros <features/shortcuts_aliases_macros:Shortcuts, Aliases, and Macros>`. Let's add a shortcut to our application. Shortcuts are character strings that can be used instead of a command name. For example, ``cmd2`` has support for a shortcut ``!`` which runs the ``shell`` command. So instead of typing this:
+``cmd2`` has several capabilities to simplify repetitive user input:
+:ref:`Shortcuts, Aliases, and Macros
+<features/shortcuts_aliases_macros:Shortcuts, Aliases, and Macros>`. Let's add
+a shortcut to our application. Shortcuts are character strings that can be used
+instead of a command name. For example, ``cmd2`` has support for a shortcut
+``!`` which runs the ``shell`` command. So instead of typing this:
 
 .. code-block:: shell
 
@@ -177,7 +193,8 @@ you can type this:
 
    (Cmd) !ls -al
 
-Let's add a shortcut for our ``speak`` command. Change the ``__init__()`` method so it looks like this::
+Let's add a shortcut for our ``speak`` command. Change the ``__init__()``
+method so it looks like this::
 
     def __init__(self):
         shortcuts = cmd2.DEFAULT_SHORTCUTS
@@ -202,19 +219,20 @@ Run your app again, and type:
 
    (Cmd) shortcuts
 
-to see the list of all of the shortcuts, including the one for speak that we just created.
+to see the list of all of the shortcuts, including the one for speak that we
+just created.
 
 
 Multiline Commands
 ------------------
 
-Some use cases benefit from the ability to have commands that span more than one
-line. For example, you might want the ability for your user to type in a SQL
-command, which can often span lines and which are terminated with a semicolon.
-Let's add a :ref:`multiline command <features/multiline_commands:Multiline
-Commands>` to our application. First we'll create a new command called
-``orate``. This code shows both the definition of our ``speak`` command, and the
-``orate`` command::
+Some use cases benefit from the ability to have commands that span more than
+one line. For example, you might want the ability for your user to type in a
+SQL command, which can often span lines and which are terminated with a
+semicolon. Let's add a :ref:`multiline command
+<features/multiline_commands:Multiline Commands>` to our application. First
+we'll create a new command called ``orate``. This code shows both the
+definition of our ``speak`` command, and the ``orate`` command::
 
     @cmd2.with_argparser(speak_parser)
     def do_speak(self, args):
@@ -248,19 +266,19 @@ Now when you run the example, you can type something like this:
     > A kingdom for a stage, princes to act
     > And monarchs to behold the swelling scene! ;
 
-Notice the prompt changes to indicate that input is still ongoing. ``cmd2`` will
-continue prompting for input until it sees an unquoted semicolon (the default
-multi-line command termination character).
+Notice the prompt changes to indicate that input is still ongoing. ``cmd2``
+will continue prompting for input until it sees an unquoted semicolon (the
+default multi-line command termination character).
 
 
 History
 -------
 
 ``cmd2`` tracks the history of the commands that users enter. As a developer,
-you don't need to do anything to enable this functionality, you get it for free.
-If you want the history of commands to persist between invocations of your
-application, you'll need to do a little work. The :ref:`features/history:Command
-History` page has all the details.
+you don't need to do anything to enable this functionality, you get it for
+free. If you want the history of commands to persist between invocations of
+your application, you'll need to do a little work. The
+:ref:`features/history:Command History` page has all the details.
 
 Users can access command history using two methods:
 
@@ -282,7 +300,8 @@ commands from history by number, range, string search, or regular expression.
 With the selected commands, users can:
 
 - re-run the commands
-- edit the selected commands in a text editor, and run them after the text editor exits
+- edit the selected commands in a text editor, and run them after the text
+  editor exits
 - save the commands to a file
 - run the commands, saving both the commands and their output to a file
 

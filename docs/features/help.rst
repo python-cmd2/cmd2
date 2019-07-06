@@ -17,8 +17,8 @@ By default, the ``help`` command displays::
   alias  help     ipy    py    run_pyscript  set    shortcuts
   edit   history  macro  quit  run_script    shell
 
-If you have a large number of commands, you can optionally group your commands into categories.
-Here's the output from the example ``help_categories.py``::
+If you have a large number of commands, you can optionally group your commands
+into categories. Here's the output from the example ``help_categories.py``::
 
   Documented commands (type help <topic>):
 
@@ -44,9 +44,11 @@ Here's the output from the example ``help_categories.py``::
   alias   edit  history  py    run_pyscript  set    shortcuts
   config  help  macro    quit  run_script    shell  version
 
-There are 2 methods of specifying command categories, using the ``@with_category`` decorator or with the
-``categorize()`` function. Once a single command category is detected, the help output switches to a categorized
-mode of display. All commands with an explicit category defined default to the category `Other`.
+There are 2 methods of specifying command categories, using the
+``@with_category`` decorator or with the ``categorize()`` function. Once a
+single command category is detected, the help output switches to a categorized
+mode of display. All commands with an explicit category defined default to the
+category `Other`.
 
 Using the ``@with_category`` decorator::
 
@@ -85,8 +87,8 @@ Using the ``categorize()`` function:
                     do_stop,
                     do_findleakers), CMD_CAT_APP_MGMT)
 
-The ``help`` command also has a verbose option (``help -v`` or ``help --verbose``) that combines
-the help categories with per-command Help Messages::
+The ``help`` command also has a verbose option (``help -v`` or ``help
+--verbose``) that combines the help categories with per-command Help Messages::
 
     Documented commands (type help <topic>):
 

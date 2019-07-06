@@ -51,10 +51,10 @@ loop::
     (Cmd)
 
 You may need more control over command line arguments passed from the operating
-system shell. For example, you might have a command inside your ``cmd2`` program
-which itself accepts arguments, and maybe even option strings. Say you wanted to
-run the ``speak`` command from the operating system shell, but have it say it in
-pig latin::
+system shell. For example, you might have a command inside your ``cmd2``
+program which itself accepts arguments, and maybe even option strings. Say you
+wanted to run the ``speak`` command from the operating system shell, but have
+it say it in pig latin::
 
     $ python example/example.py speak -p hello there
     python example.py speak -p hello there
@@ -66,7 +66,8 @@ pig latin::
     (Cmd)
 
 Uh-oh, that's not what we wanted. ``cmd2`` treated ``-p``, ``hello``, and
-``there`` as commands, which don't exist in that program, thus the syntax errors.
+``there`` as commands, which don't exist in that program, thus the syntax
+errors.
 
 There is an easy way around this, which is demonstrated in
 ``examples/cmd_as_argument.py``. By setting ``allow_cli_args=False`` you can so
@@ -85,8 +86,8 @@ Integrating cmd2 with event loops
 Throughout this documentation we have focused on the **90%** use case, that is
 the use case we believe around **90+%** of our user base is looking for.  This
 focuses on ease of use and the best out-of-the-box experience where developers
-get the most functionality for the least amount of effort.  We are talking about
-running cmd2 applications with the ``cmdloop()`` method::
+get the most functionality for the least amount of effort.  We are talking
+about running cmd2 applications with the ``cmdloop()`` method::
 
     from cmd2 import Cmd
     class App(Cmd):
@@ -142,7 +143,8 @@ The **onecmd_plus_hooks()** method will do the following to execute a single
 #. Add statement to history
 #. Call `do_command` method
 #. Call methods registered with `register_postcmd_hook()`
-#. Call `postcmd(stop, statement)` - for backwards compatibility with ``cmd.Cmd``
+#. Call `postcmd(stop, statement)` - for backwards compatibility with
+   ``cmd.Cmd``
 #. Stop timer and display the elapsed time
 #. Stop redirecting output if it was redirected
 #. Call methods registered with `register_cmdfinalization_hook()`

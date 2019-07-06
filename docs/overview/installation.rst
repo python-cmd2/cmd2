@@ -104,7 +104,8 @@ Upgrade an already installed ``cmd2`` to the latest version from PyPI_::
 
     pip install -U cmd2
 
-This will upgrade to the newest stable version of ``cmd2`` and will also upgrade any dependencies if necessary.
+This will upgrade to the newest stable version of ``cmd2`` and will also
+upgrade any dependencies if necessary.
 
 
 Uninstalling cmd2
@@ -121,8 +122,8 @@ macOS comes with the `libedit <http://thrysoee.dk/editline/>`_ library which is
 similar, but not identical, to GNU Readline. Tab-completion for ``cmd2``
 applications is only tested against GNU Readline.
 
-There are several ways GNU Readline can be installed within a Python environment
-on a Mac, detailed in the following subsections.
+There are several ways GNU Readline can be installed within a Python
+environment on a Mac, detailed in the following subsections.
 
 
 gnureadline Python module
