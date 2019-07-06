@@ -12,13 +12,16 @@ import cmd2
 from cmd2 import with_argparser
 from cmd2.argparse_completer import is_potential_flag
 from cmd2.argparse_custom import Cmd2ArgParser
-from cmd2.utils import StdSim
+from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
 # Lists used in our tests
-static_choices_list = ['static', 'choices']
-choices_from_function = ['choices', 'function']
-choices_from_method = ['choices', 'method']
+static_choices_list = ['static', 'choices', 'stop', 'here']
+choices_from_function = ['choices', 'function', 'chatty', 'smith']
+choices_from_method = ['choices', 'method', 'most', 'improved']
+
+completions_from_function = ['completions', 'function', 'fairly', 'complete']
+completions_from_method = ['completions', 'method', 'missed', 'spot']
 
 
 def choices_function() -> List[str]:
@@ -26,17 +29,16 @@ def choices_function() -> List[str]:
     return choices_from_function
 
 
+def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    """Tab completion function"""
+    return basic_complete(text, line, begidx, endidx, completions_from_function)
+
+
+# noinspection PyMethodMayBeStatic
 class AutoCompleteTester(cmd2.Cmd):
     """Cmd2 app that exercises AutoCompleter class"""
     def __init__(self):
         super().__init__()
-
-    ############################################################################################################
-    # Begin code related to testing help and subcommand completion
-    ############################################################################################################
-    basic_parser = Cmd2ArgParser(prog='basic')
-    basic_subparsers = basic_parser.add_subparsers()
-
 
     ############################################################################################################
     # Begin code related to testing choices, choices_function, and choices_method parameters
@@ -48,25 +50,48 @@ class AutoCompleteTester(cmd2.Cmd):
     choices_parser = Cmd2ArgParser()
 
     # Flags args for choices command
-    choices_parser.add_argument("-n", "--no_choices", help="a flag with no choices")
-    choices_parser.add_argument("-l", "--choices_list", help="a flag populated with a choices list",
+    choices_parser.add_argument("-l", "--list", help="a flag populated with a choices list",
                                 choices=static_choices_list)
-    choices_parser.add_argument("-f", "--choices_function", help="a flag populated with a choices function",
+    choices_parser.add_argument("-f", "--function", help="a flag populated with a choices function",
                                 choices_function=choices_function)
-    choices_parser.add_argument("-m", "--choices_method", help="a flag populated with a choices method",
+    choices_parser.add_argument("-m", "--method", help="a flag populated with a choices method",
                                 choices_method=choices_method)
 
     # Positional args for choices command
-    choices_parser.add_argument("no_choice_pos", help="a positional with no choices")
-    choices_parser.add_argument("choices_list_pos", help="a positional populated with a choices list",
+    choices_parser.add_argument("list_pos", help="a positional populated with a choices list",
                                 choices=static_choices_list)
-    choices_parser.add_argument("choices_function_pos", help="a positional populated with a choices function",
+    choices_parser.add_argument("function_pos", help="a positional populated with a choices function",
                                 choices_function=choices_function)
-    choices_parser.add_argument("choices_method_pos", help="a positional populated with a choices method",
+    choices_parser.add_argument("method_pos", help="a positional populated with a choices method",
                                 choices_method=choices_method)
 
     @with_argparser(choices_parser)
     def do_choices(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
+    # Begin code related to testing completer_function and completer_method parameters
+    ############################################################################################################
+    def completer_method(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Tab completion method"""
+        return basic_complete(text, line, begidx, endidx, completions_from_method)
+
+    completer_parser = Cmd2ArgParser()
+
+    # Flags args for completer command
+    completer_parser.add_argument("-f", "--function", help="a flag populated with a choices function",
+                                  completer_function=completer_function)
+    completer_parser.add_argument("-m", "--method", help="a flag populated with a choices method",
+                                  completer_method=completer_method)
+
+    # Positional args for completer command
+    completer_parser.add_argument("function_pos", help="a positional using a completer function",
+                                  completer_function=completer_function)
+    completer_parser.add_argument("method_pos", help="a positional using a completer method",
+                                  completer_method=completer_method)
+
+    @with_argparser(completer_parser)
+    def do_completer(self, args: argparse.Namespace) -> None:
         pass
 
 
@@ -83,76 +108,83 @@ def test_help_basic(ac_app):
     assert out1 == out2
 
 
-def test_autocomp_flags(ac_app):
-    text = '-'
-    line = 'choices {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and \
-           ac_app.completion_matches == ['--choices_function', '--choices_list', '--choices_method', '--help',
-                                         '--no_choices', '-f', '-h', '-l', '-m', '-n']
-
-
-def test_autcomp_flag_hint(ac_app, capsys):
-    text = ''
-    line = 'choices -n {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    out, err = capsys.readouterr()
-
-    assert first_match is None
-    assert 'a flag with no choices' in out
-
-
-def test_autcomp_flag_completion(ac_app):
-    text = '--ch'
-    line = 'choices {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and \
-           ac_app.completion_matches == ['--choices_function', '--choices_list', '--choices_method']
-
-@pytest.mark.parametrize('flag, completions', [
-    ('-l', static_choices_list),
-    ('--choices_list', static_choices_list),
-    ('-f', choices_from_function),
-    ('--choices_function', choices_from_function),
-    ('-m', choices_from_method),
-    ('--choices_method', choices_from_method),
+@pytest.mark.parametrize('text, completions', [
+    ('-', ['--function', '--help', '--list', '--method', '-f', '-h', '-l', '-m']),
+    ('--', ['--function', '--help', '--list', '--method']),
+    ('-f', ['-f ']),
+    ('--f', ['--function ']),
 ])
-def test_autocomp_flag_choices_completion(ac_app, flag, completions):
-    text = ''
+def test_autcomp_flag_completion(ac_app, text, completions):
+    line = 'choices {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None and ac_app.completion_matches == completions
+
+
+@pytest.mark.parametrize('flag, text, completions', [
+    ('-l', '', static_choices_list),
+    ('--list', 's', ['static', 'stop']),
+    ('-f', '', choices_from_function),
+    ('--function', 'ch', ['choices', 'chatty']),
+    ('-m', '', choices_from_method),
+    ('--method', 'm', ['method', 'most']),
+])
+def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
     line = 'choices {} {}'.format(flag, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and \
-           ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
-@pytest.mark.parametrize('pos, completions', [
-    (2, static_choices_list),    # choices_list_pos
-    (3, choices_from_function),  # choices_function_pos
-    (4, choices_from_method),    # choices_method_pos
+@pytest.mark.parametrize('pos, text, completions', [
+    (1, '', static_choices_list),
+    (1, 's', ['static', 'stop']),
+    (2, '', choices_from_function),
+    (2, 'ch', ['choices', 'chatty']),
+    (3, '', choices_from_method),
+    (3, 'm', ['method', 'most']),
 ])
-def test_autocomp_positional_choices_completion(ac_app, pos, completions):
-    # Test completions of positional arguments by generating a line were preceding positionals are already filled
-    text = ''
+def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
+    # Generate line were preceding positionals are already filled
     line = 'choices {} {}'.format('foo ' * (pos - 1), text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and \
-           ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
+@pytest.mark.parametrize('flag, text, completions', [
+    ('-f', '', completions_from_function),
+    ('--function', 'f', ['function', 'fairly']),
+    ('-m', '', completions_from_method),
+    ('--method', 'm', ['method', 'missed']),
+])
+def test_autocomp_flag_completers(ac_app, flag, text, completions):
+    line = 'completer {} {}'.format(flag, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+
+@pytest.mark.parametrize('pos, text, completions', [
+    (1, '', completions_from_function),
+    (1, 'c', ['completions', 'complete']),
+    (2, '', completions_from_method),
+    (2, 'm', ['method', 'missed']),
+])
+def test_autocomp_positional_completers(ac_app, pos, text, completions):
+    # Generate line were preceding positionals are already filled
+    line = 'completer {} {}'.format('foo ' * (pos - 1), text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 # def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
 #     text = ''
