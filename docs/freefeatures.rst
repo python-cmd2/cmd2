@@ -21,10 +21,13 @@ Simply include one command per line, typed exactly as you would inside a
 ``cmd2`` application.
 
 .. automethod:: cmd2.cmd2.Cmd.do_run_script
+    :noindex:
 
 .. automethod:: cmd2.cmd2.Cmd.do__relative_run_script
+    :noindex:
 
 .. automethod:: cmd2.cmd2.Cmd.do_edit
+    :noindex:
 
 
 Startup Initialization Script
@@ -257,8 +260,10 @@ Several generically useful commands are defined
 with automatically included ``do_`` methods.
 
 .. automethod:: cmd2.cmd2.Cmd.do_quit
+    :noindex:
 
 .. automethod:: cmd2.cmd2.Cmd.do_shell
+    :noindex:
 
 ( ``!`` is a shortcut for ``shell``; thus ``!ls``
 is equivalent to ``shell ls``.)

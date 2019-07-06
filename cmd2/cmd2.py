@@ -720,23 +720,20 @@ class Cmd(cmd.Cmd):
             readline.rl.mode._display_completions = self._display_matches_pyreadline
 
     def tokens_for_completion(self, line: str, begidx: int, endidx: int) -> Tuple[List[str], List[str]]:
-        """
-        Used by tab completion functions to get all tokens through the one being completed
+        """Used by tab completion functions to get all tokens through the one being completed.
+
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
         :return: A 2 item tuple where the items are
-                 On Success
-                     tokens: list of unquoted tokens
-                             this is generally the list needed for tab completion functions
-                     raw_tokens: list of tokens with any quotes preserved
-                                 this can be used to know if a token was quoted or is missing a closing quote
-
-                     Both lists are guaranteed to have at least 1 item
-                     The last item in both lists is the token being tab completed
-
-                 On Failure
-                    Two empty lists
+                 **On Success**
+                 - tokens: list of unquoted tokens - this is generally the list needed for tab completion functions
+                 - raw_tokens: list of tokens with any quotes preserved = this can be used to know if a token was quoted
+                 or is missing a closing quote
+                 Both lists are guaranteed to have at least 1 item. The last item in both lists is the token being tab
+                 completed
+                 **On Failure**
+                 - Two empty lists
         """
         import copy
         unclosed_quote = ''
@@ -917,18 +914,18 @@ class Cmd(cmd.Cmd):
     def flag_based_complete(self, text: str, line: str, begidx: int, endidx: int,
                             flag_dict: Dict[str, Union[Iterable, Callable]],
                             all_else: Union[None, Iterable, Callable] = None) -> List[str]:
-        """
-        Tab completes based on a particular flag preceding the token being completed
+        """Tab completes based on a particular flag preceding the token being completed.
+
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
         :param flag_dict: dictionary whose structure is the following:
-                          keys - flags (ex: -c, --create) that result in tab completion for the next
-                                 argument in the command line
-                          values - there are two types of values
-                             1. iterable list of strings to match against (dictionaries, lists, etc.)
-                             2. function that performs tab completion (ex: path_complete)
+                          `keys` - flags (ex: -c, --create) that result in tab completion for the next argument in the
+                          command line
+                          `values` - there are two types of values:
+                          1. iterable list of strings to match against (dictionaries, lists, etc.)
+                          2. function that performs tab completion (ex: path_complete)
         :param all_else: an optional parameter for tab completing any token that isn't preceded by a flag in flag_dict
         :return: a list of possible tab completions
         """
@@ -959,18 +956,18 @@ class Cmd(cmd.Cmd):
     def index_based_complete(self, text: str, line: str, begidx: int, endidx: int,
                              index_dict: Mapping[int, Union[Iterable, Callable]],
                              all_else: Union[None, Iterable, Callable] = None) -> List[str]:
-        """
-        Tab completes based on a fixed position in the input string
+        """Tab completes based on a fixed position in the input string.
+
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
         :param index_dict: dictionary whose structure is the following:
-                           keys - 0-based token indexes into command line that determine which tokens
-                                  perform tab completion
-                           values - there are two types of values
-                              1. iterable list of strings to match against (dictionaries, lists, etc.)
-                              2. function that performs tab completion (ex: path_complete)
+                           `keys` - 0-based token indexes into command line that determine which tokens perform tab
+                           completion
+                           `values` - there are two types of values:
+                           1. iterable list of strings to match against (dictionaries, lists, etc.)
+                           2. function that performs tab completion (ex: path_complete)
         :param all_else: an optional parameter for tab completing any token that isn't at an index in index_dict
         :return: a list of possible tab completions
         """
@@ -1148,13 +1145,13 @@ class Cmd(cmd.Cmd):
     def shell_cmd_complete(self, text: str, line: str, begidx: int, endidx: int,
                            complete_blank: bool = False) -> List[str]:
         """Performs completion of executables either in a user's path or a given path
+
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
-        :param complete_blank: If True, then a blank will complete all shell commands in a user's path
-                               If False, then no completion is performed
-                               Defaults to False to match Bash shell behavior
+        :param complete_blank: If True, then a blank will complete all shell commands in a user's path. If False, then
+                               no completion is performed. Defaults to False to match Bash shell behavior.
         :return: a list of possible tab completions
         """
         # Don't tab complete anything if no shell command has been started
@@ -1653,7 +1650,7 @@ class Cmd(cmd.Cmd):
         If you need custom SIGINT behavior, then override this function.
 
         :param signum: signal number
-        :param frame
+        :param frame: required param for signal handlers
         """
         if self._cur_pipe_proc_reader is not None:
             # Pass the SIGINT to the current pipe process
@@ -3633,8 +3630,8 @@ class Cmd(cmd.Cmd):
 
     @with_argparser(run_script_parser)
     def do_run_script(self, args: argparse.Namespace) -> Optional[bool]:
-        """
-        Run commands in script file that is encoded as either ASCII or UTF-8 text
+        """Run commands in script file that is encoded as either ASCII or UTF-8 text.
+
         :return: True if running of commands should stop
         """
         expanded_path = os.path.abspath(os.path.expanduser(args.script_path))
@@ -3772,6 +3769,8 @@ class Cmd(cmd.Cmd):
         To the user it appears as if an alert message is printed above the prompt and their current input
         text and cursor location is left alone.
 
+        Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
+
         IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
                    to guarantee the alert prints.
@@ -3779,7 +3778,6 @@ class Cmd(cmd.Cmd):
         :param alert_msg: the message to display to the user
         :param new_prompt: if you also want to change the prompt that is displayed, then include it here
                            see async_update_prompt() docstring for guidance on updating a prompt
-        :raises RuntimeError if called while another thread holds terminal_lock
         """
         if not (vt100_support and self.use_rawinput):
             return
@@ -3833,6 +3831,8 @@ class Cmd(cmd.Cmd):
         it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
         be shifted and the update will not be seamless.
 
+        Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
+
         IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
                    to guarantee the prompt changes.
@@ -3842,20 +3842,19 @@ class Cmd(cmd.Cmd):
                    and display immediately after the multiline line command completes.
 
         :param new_prompt: what to change the prompt to
-        :raises RuntimeError if called while another thread holds terminal_lock
         """
         self.async_alert('', new_prompt)
 
     def set_window_title(self, title: str) -> None:  # pragma: no cover
-        """
-        Set the terminal window title
+        """Set the terminal window title.
+
+        Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
 
         IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid
                    writing to stderr while a command is running. Therefore it is best to acquire the lock
                    before calling this function to guarantee the title changes.
 
         :param title: the new window title
-        :raises RuntimeError if called while another thread holds terminal_lock
         """
         if not vt100_support:
             return
@@ -3940,14 +3939,12 @@ class Cmd(cmd.Cmd):
         setattr(self, help_func_name, new_func)
 
     def disable_category(self, category: str, message_to_print: str) -> None:
-        """
-        Disable an entire category of commands
+        """Disable an entire category of commands.
+
         :param category: the category to disable
         :param message_to_print: what to print when anything in this category is run or help is called on it
-                                 while disabled
-
-                                 The variable COMMAND_NAME can be used as a placeholder for the name of the
-                                 command being disabled.
+                                 while disabled. The variable COMMAND_NAME can be used as a placeholder for the name
+                                 of the command being disabled.
                                  ex: message_to_print = "{} is currently disabled".format(COMMAND_NAME)
         """
         all_commands = self.get_all_commands()

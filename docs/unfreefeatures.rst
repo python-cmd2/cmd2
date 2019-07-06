@@ -110,9 +110,13 @@ output flexibility).  ``cmd2`` applications can use ``self.poutput('output')``,
 - Option to display long output using a pager via ``ppaged()``
 
 .. automethod:: cmd2.cmd2.Cmd.poutput
+    :noindex:
 .. automethod:: cmd2.cmd2.Cmd.perror
+    :noindex:
 .. automethod:: cmd2.cmd2.Cmd.pfeedback
+    :noindex:
 .. automethod:: cmd2.cmd2.Cmd.ppaged
+    :noindex:
 
 
 Colored Output
@@ -166,6 +170,7 @@ Presents numbered options to user, as bash ``select``.
 ``app.select``, not ``app.do_select``).
 
 .. automethod:: cmd2.cmd2.Cmd.select
+    :noindex:
 
 ::
 
