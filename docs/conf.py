@@ -37,6 +37,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc',
+              'sphinx.ext.autosectionlabel',
               'sphinx.ext.intersphinx',
               'sphinx.ext.doctest',
               'sphinx.ext.todo']
@@ -55,8 +56,8 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'cmd2'
-copyright = '2010-2018, Catherine Devlin and Todd Leonhardt'
-author = 'Catherine Devlin and Todd Leonhardt'
+copyright = '2010-2019, cmd2 contributors'
+author = 'cmd2 contributors'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -85,6 +86,8 @@ pygments_style = 'sphinx'
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+# configure autosectionlabel extension
+autosectionlabel_prefix_document = True
 
 # -- Options for HTML output ---------------------------------------------------
 

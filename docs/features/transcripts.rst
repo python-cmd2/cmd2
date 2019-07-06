@@ -1,6 +1,5 @@
-========================
-Transcript based testing
-========================
+Transcripts
+===========
 
 A transcript is both the input and output of a successful session of a
 ``cmd2``-based app which is saved to a text file. With no extra work on your
@@ -10,12 +9,12 @@ from commands that produce dynamic or variable output.
 
 .. highlight:: none
 
-Creating a transcript
-=====================
 
-Automatically from history
---------------------------
-A transcript can automatically generated based upon commands previously executed in the *history* using ``history -t``::
+Creating From History
+---------------------
+
+A transcript can automatically generated based upon commands previously
+executed in the *history* using ``history -t``::
 
     (Cmd) help
     ...
@@ -28,23 +27,29 @@ This is by far the easiest way to generate a transcript.
 
 .. warning::
 
-   Make sure you use the **poutput()** method in your ``cmd2`` application for generating command output.  This method
-   of the ``cmd2.Cmd`` class ensure that output is properly redirected when redirecting to a file, piping to a shell
-   command, and when generating a transcript.
+   Make sure you use the **poutput()** method in your ``cmd2`` application for
+   generating command output.  This method of the ``cmd2.Cmd`` class ensure
+   that output is properly redirected when redirecting to a file, piping to a
+   shell command, and when generating a transcript.
 
-Automatically from a script file
---------------------------------
-A transcript can also be automatically generated from a script file using ``run_script -t``::
+
+Creating From A Script File
+---------------------------
+
+A transcript can also be automatically generated from a script file using
+``run_script -t``::
 
     (Cmd) run_script scripts/script.txt -t transcript.txt
     2 commands and their outputs saved to transcript file 'transcript.txt'
     (Cmd)
 
-This is a particularly attractive option for automatically regenerating transcripts for regression testing as your ``cmd2``
-application changes.
+This is a particularly attractive option for automatically regenerating
+transcripts for regression testing as your ``cmd2`` application changes.
 
-Manually
---------
+
+Creating Manually
+-----------------
+
 Here's a transcript created from ``python examples/example.py``::
 
    (Cmd) say -r 3 Goodnight, Gracie
@@ -83,7 +88,8 @@ lines of the transcript as comments::
    maybe we could like go to er lunch right?
 
 In this example I've used several different commenting styles, and even bare
-text. It doesn't matter what you put on those beginning lines. Everything before::
+text. It doesn't matter what you put on those beginning lines. Everything
+before::
 
    (Cmd) say -r 3 Goodnight, Gracie
 
@@ -91,7 +97,7 @@ will be ignored.
 
 
 Regular Expressions
-===================
+-------------------
 
 If we used the above transcript as-is, it would likely fail. As you can see,
 the ``mumble`` command doesn't always return the same thing: it inserts random
@@ -106,9 +112,10 @@ and are surrounded by slashes::
    /.*\bmaybe\b.*\bcould\b.*\blunch\b.*/
 
 Without creating a tutorial on regular expressions, this one matches anything
-that has the words ``maybe``, ``could``, and ``lunch`` in that order. It doesn't
-ensure that ``we`` or ``go`` or ``to`` appear in the output, but it does work if
-mumble happens to add words to the beginning or the end of the output.
+that has the words ``maybe``, ``could``, and ``lunch`` in that order. It
+doesn't ensure that ``we`` or ``go`` or ``to`` appear in the output, but it
+does work if mumble happens to add words to the beginning or the end of the
+output.
 
 Since the output could be multiple lines long, ``cmd2`` uses multiline regular
 expression matching, and also uses the ``DOTALL`` flag. These two flags subtly
@@ -117,7 +124,8 @@ change the behavior of commonly used special characters like ``.``, ``^`` and
 documentation <https://docs.python.org/3/library/re.html>`_.
 
 If your output has slashes in it, you will need to escape those slashes so the
-stuff between them is not interpred as a regular expression. In this transcript::
+stuff between them is not interpred as a regular expression. In this
+transcript::
 
    (Cmd) say cd /usr/local/lib/python3.6/site-packages
    /usr/local/lib/python3.6/site-packages
@@ -153,13 +161,13 @@ the path instead of specifying it verbatim, or we can escape the slashes::
    of a failing transcript is an extra or missing newline.
 
    If you are using regular expressions, be aware that depending on how you
-   write your regex, the newlines after the regex may or may not matter.
-   ``\Z`` matches *after* the newline at the end of the string, whereas
-   ``$`` matches the end of the string *or* just before a newline.
+   write your regex, the newlines after the regex may or may not matter. ``\Z``
+   matches *after* the newline at the end of the string, whereas ``$`` matches
+   the end of the string *or* just before a newline.
 
 
-Running a transcript
-====================
+Running A Transcript
+--------------------
 
 Once you have created a transcript, it's easy to have your application play it
 back and check the output. From within the ``examples/`` directory::
@@ -178,8 +186,8 @@ output matches the expected result from the transcript.
 .. note::
 
    If you have set ``allow_cli_args`` to False in order to disable parsing of
-   command line arguments at invocation, then the use of ``-t`` or ``--test``
-   to run transcript testing is automatically disabled. In this case, you can
+   command line arguments at invocation, then the use of ``-t`` or ``--test`` to
+   run transcript testing is automatically disabled. In this case, you can
    alternatively provide a value for the optional ``transcript_files`` when
    constructing the instance of your ``cmd2.Cmd`` derived class in order to
    cause a transcript test to run::
