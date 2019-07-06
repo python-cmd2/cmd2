@@ -1,7 +1,5 @@
-.. cmd2 documentation for application and command lifecycle and the available hooks
-
-cmd2 Application Lifecycle and Hooks
-====================================
+Hooks
+=====
 
 The typical way of starting a cmd2 application is as follows::
 
@@ -16,6 +14,7 @@ The typical way of starting a cmd2 application is as follows::
 There are several pre-existing methods and attributes which you can tweak to
 control the overall behavior of your application before, during, and after the
 command processing loop.
+
 
 Application Lifecycle Hooks
 ---------------------------
@@ -114,8 +113,9 @@ If a hook raises any other exception:
 
 Specific types of hook methods have additional options as described below.
 
+
 Postparsing Hooks
-^^^^^^^^^^^^^^^^^
+-----------------
 
 Postparsing hooks are called after the user input has been parsed but before
 execution of the command. These hooks can be used to:
@@ -186,7 +186,7 @@ attribute set to ``True``:
 
 
 Precommand Hooks
-^^^^^^^^^^^^^^^^^
+----------------
 
 Precommand hooks can modify the user input, but can not request the application
 terminate. If your hook needs to be able to exit the application, you should
@@ -224,7 +224,7 @@ with ``cmd.Cmd``, this method is passed a ``Statement``, not a
 
 
 Postcommand Hooks
-^^^^^^^^^^^^^^^^^^
+-----------------
 
 Once the command method has returned (i.e. the ``do_command(self, statement)
 method`` has been called and returns, all postcommand hooks are called. If
@@ -254,10 +254,11 @@ After all registered postcommand hooks have been called,
 ``self.postcmd(statement)`` will be called to retain full backward compatibility
 with ``cmd.Cmd``.
 
-If any postcommand hook (registered or ``self.postcmd()``) returns a ``PostcommandData`` object
-with the stop attribute set to ``True``, subsequent postcommand hooks will still be called, as
-will the command finalization hooks, but once those hooks have all been called, the application
-will terminate.  Likewise, if ``self.postcmd()`` returns ``True``, the command finalization hooks
+If any postcommand hook (registered or ``self.postcmd()``) returns a
+``PostcommandData`` object with the stop attribute set to ``True``, subsequent
+postcommand hooks will still be called, as will the command finalization hooks,
+but once those hooks have all been called, the application will terminate.
+Likewise, if ``self.postcmd()`` returns ``True``, the command finalization hooks
 will be called before the application terminates.
 
 Any postcommand hook can change the value of the ``stop`` parameter before
@@ -270,7 +271,7 @@ compelling reason to do otherwise.
 
 
 Command Finalization Hooks
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+--------------------------
 
 Command finalization hooks are called even if one of the other types of hooks or
 the command method raise an exception. Here's how to create and register a
@@ -284,7 +285,9 @@ command finalization hook::
         def myhookmethod(self, stop, statement):
             return stop
 
-Command Finalization hooks must check whether the statement object is ``None``. There are certain circumstances where these hooks may be called before the statement has been parsed, so you can't always rely on having a statement.
+Command Finalization hooks must check whether the statement object is ``None``.
+There are certain circumstances where these hooks may be called before the
+statement has been parsed, so you can't always rely on having a statement.
 
 If any prior postparsing or precommand hook has requested the application to
 terminate, the value of the ``stop`` parameter passed to the first command
