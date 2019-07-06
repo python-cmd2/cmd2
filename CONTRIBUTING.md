@@ -10,7 +10,8 @@ We welcome pull requests from cmd2 users and seasoned Python developers alike! F
 
 Remember to feel free to ask for help by leaving a comment within the Issue.
 
-Working on your first pull request? You can learn how from this *free* series [How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github).
+Working on your first pull request? You can learn how from this *free* series 
+[How to Contribute to an Open Source Project on GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github).
 
 ###### If you've found a bug that is not on the board, [follow these steps](README.md#found-a-bug).
 
@@ -49,7 +50,7 @@ The tables below list all prerequisites along with the minimum required version 
 | [python](https://www.python.org/downloads/)         | `3.5`           |
 | [attrs](https://github.com/python-attrs/attrs)      | `16.3`          |
 | [colorama](https://github.com/tartley/colorama)     | `0.3.7`         |
-| [pyperclip](https://github.com/asweigart/pyperclip) | `1.5.27`        |
+| [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
 | [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.1.7`         |
 
 
@@ -70,6 +71,7 @@ The tables below list all prerequisites along with the minimum required version 
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
 | [pytest-cov](https://pypi.python.org/pypi/pytest-cov) | `2.4` |
+| [flake8](http://flake8.pycqa.org/en/latest/)| `3.0`           |
 
 If Python is already installed in your machine, run the following commands to validate the versions:
 
@@ -80,26 +82,33 @@ $ pip freeze | grep pyperclip
 
 If your versions are lower than the prerequisite versions, you should update.
 
-If you do not already have Python installed on your machine, we recommend using the [Anaconda](https://www.continuum.io/downloads) distribution because it provides an excellent out-of-the-box install on all platforms (Windows, Mac, and Linux) and because it supports having multiple Python environments (versions of Python) installed simultaneously.
+If you do not already have Python installed on your machine, we recommend using the 
+[Anaconda](https://www.continuum.io/downloads) distribution because it provides an excellent out-of-the-box install on 
+all platforms (Windows, Mac, and Linux) and because it supports having multiple Python environments (versions of Python) 
+installed simultaneously.
 
 ### Forking the project
 
 #### Setting up your system
 
-1. Install [Git](https://git-scm.com/) or your favorite Git client.  If you aren't comfortable with Git at the command-line, then both [SmartGit](http://www.syntevo.com/smartgit/) and [GitKraken](https://www.gitkraken.com) are excellent cross-platform graphical Git clients.
+1. Install [Git](https://git-scm.com/) or your favorite Git client.  If you aren't comfortable with Git at the 
+command-line, then both [SmartGit](http://www.syntevo.com/smartgit/) and [GitKraken](https://www.gitkraken.com) are 
+excellent cross-platform graphical Git clients.
 2. (Optional) [Set up an SSH key](https://help.github.com/articles/generating-an-ssh-key/) for GitHub.
 3. Create a parent projects directory on your system. For this guide, it will be assumed that it is `~/src`.
 
 #### Forking cmd2
 
 1. Go to the top-level cmd2 repository: <https://github.com/python-cmd2/cmd2>
-2. Click the "Fork" button in the upper right hand corner of the interface ([more details here](https://help.github.com/articles/fork-a-repo/))
+2. Click the "Fork" button in the upper right hand corner of the interface 
+([more details here](https://help.github.com/articles/fork-a-repo/))
 3. After the repository has been forked, you will be taken to your copy of the cmd2 repo at `yourUsername/cmd2`
 
 #### Cloning your fork
 
 1. Open a terminal / command line / Bash shell in your projects directory (_e.g.: `~/src/`_)
-2. Clone your fork of cmd2, making sure to replace `yourUsername` with your GitHub username. This will download the entire cmd2 repo to your projects directory.
+2. Clone your fork of cmd2, making sure to replace `yourUsername` with your GitHub username. This will download the 
+entire cmd2 repo to your projects directory.
 
 ```sh
 $ git clone https://github.com/yourUsername/cmd2.git
@@ -156,11 +165,14 @@ Do this prior to every time you create a branch for a PR:
 
 ### Creating a branch
 
-Before you start working, you will need to create a separate branch specific to the issue or feature you're working on. You will push your work to this branch.
+Before you start working, you will need to create a separate branch specific to the issue or feature you're working on. 
+You will push your work to this branch.
 
 #### Naming your branch
 
-Name the branch something like `fix/xxx` or `feature/xxx` where `xxx` is a short description of the changes or feature you are attempting to add. For example `fix/script-files` would be a branch where you fix something specific to script files.
+Name the branch something like `fix/xxx` or `feature/xxx` where `xxx` is a short description of the changes or feature 
+you are attempting to add. For example `fix/script-files` would be a branch where you fix something specific to script 
+files.
 
 #### Adding your branch
 
@@ -180,7 +192,31 @@ $ git push origin [name_of_your_new_branch]
 
 
 ### Setting up for cmd2 development
-For doing cmd2 development, it is recommended you create a virutal environment using Conda or Virtualenv and install the package from the source.
+For doing cmd2 development, it is recommended you create a virutal environment using Conda or Virtualenv and install the 
+package from the source.
+
+#### Create a new environment for cmd2 using Pipenv
+`cmd2` has support for using [Pipenv](https://docs.pipenv.org/en/latest/) for development.  
+
+`Pipenv` essentially combines the features of `pip` and `virtualenv` into a single tool.  `cmd2` contains a Pipfile which
+ makes it extremely easy to setup a `cmd2` development environment using `pipenv`.  
+
+To create a virtual environment and install everything needed for `cmd2` development using `pipenv`, do the following 
+from a GitHub checkout:
+```sh
+pipenv install --dev
+```
+
+To create a new virtualenv, using a specific version of Python you have installed (and on your PATH), use the 
+--python VERSION flag, like so:
+```sh
+pipenv install --dev --python 3.7
+```
+
+Then you can enter that virtual environment with:
+```sh
+pipenv shell
+```
 
 #### Create a new environment for cmd2 using Conda
 ```sh
@@ -291,7 +327,10 @@ served (usually [http://localhost:8000](http://localhost:8000)).
 
 ### Static code analysis
 
-You should have some sort of [PEP 8](https://www.python.org/dev/peps/pep-0008/)-based linting running in your editor or IDE or at the command line before you commit code.  [pylint](https://www.pylint.org) is a good Python linter which can be run at the command line but also can integrate with many IDEs and editors.
+You should have some sort of [PEP 8](https://www.python.org/dev/peps/pep-0008/)-based linting running in your editor or 
+IDE or at the command line before you commit code.  `cmd2` uses [flake8](http://flake8.pycqa.org/en/latest/) as part of
+its continuous integration (CI) process.  [pylint](https://www.pylint.org) is another good Python linter which can be 
+run at the command line but also can integrate with many IDEs and editors.
 
 > Please do not ignore any linting errors in code you write or modify, as they are meant to **help** you and to ensure a clean and simple code base.  Don't worry about linting errors in code you don't touch though - cleaning up the legacy code is a work in progress.
 
