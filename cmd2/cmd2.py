@@ -468,6 +468,11 @@ class Cmd(cmd.Cmd):
         # Otherwise it can be set to any custom key to meet your needs.
         self.matches_sort_key = ALPHABETICAL_SORT_KEY
 
+        # The maximum number of CompletionItems to display during tab completion. If the number of possible
+        # completions exceeds this number, suggestions will be displayed in the typical columnized format and
+        # will not include the description value of the CompletionItems.
+        self.max_completion_items = 50
+
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
         # in reset_completion_defaults() and it is up to completer functions to set them before returning results.

@@ -1526,7 +1526,7 @@ def test_get_macro_completion_items(base_app):
         assert cur_res in base_app.macros
         assert cur_res.description == base_app.macros[cur_res].value
 
-def test_get_settable_names(base_app):
+def test_get_settable_completion_items(base_app):
     results = base_app._get_settable_completion_items()
     for cur_res in results:
         assert cur_res in base_app.settable

@@ -487,7 +487,9 @@ class AutoCompleter(object):
         return completion_results
 
     def _format_completions(self, action, completions: List[Union[str, CompletionItem]]) -> List[str]:
-        if completions and len(completions) > 1 and isinstance(completions[0], CompletionItem):
+        # Check if the results are CompletionItems and that there aren't too many to display
+        if 1 < len(completions) <= self._cmd2_app.max_completion_items and \
+                isinstance(completions[0], CompletionItem):
 
             # If the user has not already sorted the CompletionItems, then sort them before appending the descriptions
             if not self._cmd2_app.matches_sorted:
