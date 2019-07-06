@@ -90,6 +90,7 @@ Meta
    :caption: Meta
 
    doc_conventions
+   copyright
 
 
 To Be Integrated

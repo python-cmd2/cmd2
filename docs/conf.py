@@ -56,7 +56,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'cmd2'
-copyright = '2010-2019, Catherine Devlin and Todd Leonhardt'
+copyright = '2010-2019, cmd2 contributors'
 author = 'cmd2 contributors'
 
 # The version info for the project you're documenting, acts as replacement for
