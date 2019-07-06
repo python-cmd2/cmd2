@@ -12,6 +12,7 @@ wcwidth = ">=0.1.7"
 [dev-packages]
 cmd2 = {editable = true,path = "."}
 codecov = "*"
+doc8 = "*"
 flake8 = "*"
 gnureadline = {version = "*",sys_platform = "== 'darwin'"}
 invoke = "*"
