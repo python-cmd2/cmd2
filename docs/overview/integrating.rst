@@ -18,12 +18,6 @@ project does not inadvertently get installed with an incompatible future version
 of ``cmd2``.
 
 
-macOS Considerations
---------------------
-
-TODO need a section about how to get the right readline installed on macos
-
-
 Windows Considerations
 -------------------------------
 
