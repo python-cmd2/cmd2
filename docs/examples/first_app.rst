@@ -6,14 +6,14 @@ First Application
 Here's a quick walkthrough of a simple application which demonstrates 8
 features of ``cmd2``:
 
-* Settings
-* Commands
-* Argument Parsing
-* Generating Output
-* Help
-* Shortcuts
-* Multiline Commands
-* History
+* :ref:`features/settings:Settings`
+* :ref:`features/commands:Commands`
+* :ref:`features/argument_processing:Argument Processing`
+* :ref:`features/generating_output:Generating Output`
+* :ref:`features/help:Help`
+* :ref:`features/shortcuts_aliases_macros:Shortcuts`
+* :ref:`features/multiline_commands:Multiline Commands`
+* :ref:`features/history:Command History`
 
 If you don't want to type as we go, you can download the complete source for
 this example.
