@@ -10,7 +10,7 @@ import pytest
 
 import cmd2
 from cmd2 import with_argparser
-from cmd2.argparse_completer import is_potential_flag
+from cmd2.argparse_completer import CompletionItem, is_potential_flag, DEFAULT_DESCRIPTIVE_HEADER
 from cmd2.argparse_custom import Cmd2ArgParser
 from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
@@ -47,6 +47,14 @@ class AutoCompleteTester(cmd2.Cmd):
         """Method that provides choices"""
         return choices_from_method
 
+    def completion_item_method(self) -> List[CompletionItem]:
+        """Choices method that returns CompletionItems"""
+        items = []
+        for i in range(0, 10):
+            main_str = 'main_str{}'.format(i)
+            items.append(CompletionItem(main_str, desc='blah blah'))
+        return items
+
     choices_parser = Cmd2ArgParser()
 
     # Flag args for choices command
@@ -56,6 +64,8 @@ class AutoCompleteTester(cmd2.Cmd):
                                 choices_function=choices_function)
     choices_parser.add_argument("-m", "--method", help="a flag populated with a choices method",
                                 choices_method=choices_method)
+    choices_parser.add_argument('-n', "--no_header", help='this arg has a no descriptive header',
+                                choices_method=completion_item_method)
 
     # Positional args for choices command
     choices_parser.add_argument("list_pos", help="a positional populated with a choices list",
@@ -134,38 +144,9 @@ def test_complete_help_subcommand(ac_app):
     assert first_match is not None and ac_app.completion_matches == ['create ']
 
 
-@pytest.mark.parametrize('num_aliases, show_description', [
-    # The number of completion results determines if the description field of CompletionItems gets displayed
-    # in the tab completions. The count must be greater than 1 and less than ac_app.max_completion_items,
-    # which defaults to 50.
-    (1, False),
-    (5, True),
-    (100, False),
-])
-def test_completion_items(ac_app, num_aliases, show_description):
-    # Create aliases
-    for i in range(0, num_aliases):
-        run_cmd(ac_app, 'alias create fake{} help'.format(i))
-
-    assert len(ac_app.aliases) == num_aliases
-
-    text = 'fake'
-    line = 'alias list {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None
-    assert len(ac_app.completion_matches) == num_aliases
-    assert len(ac_app.display_matches) == num_aliases
-
-    # If show_description is True, the alias's value will be in the display text
-    assert ('help' in ac_app.display_matches[0]) == show_description
-
-
 @pytest.mark.parametrize('text, completions', [
-    ('-', ['--function', '--help', '--list', '--method', '-f', '-h', '-l', '-m']),
-    ('--', ['--function', '--help', '--list', '--method']),
+    ('-', ['--function', '--help', '--list', '--method', '--no_header', '-f', '-h', '-l', '-m', '-n']),
+    ('--', ['--function', '--help', '--list', '--method', '--no_header']),
     ('-f', ['-f ']),
     ('--f', ['--function ']),
 ])
@@ -240,6 +221,47 @@ def test_autocomp_positional_completers(ac_app, pos, text, completions):
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
     assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+
+
+@pytest.mark.parametrize('num_aliases, show_description', [
+    # The number of completion results determines if the description field of CompletionItems gets displayed
+    # in the tab completions. The count must be greater than 1 and less than ac_app.max_completion_items,
+    # which defaults to 50.
+    (1, False),
+    (5, True),
+    (100, False),
+])
+def test_completion_items(ac_app, num_aliases, show_description):
+    # Create aliases
+    for i in range(0, num_aliases):
+        run_cmd(ac_app, 'alias create fake{} help'.format(i))
+
+    assert len(ac_app.aliases) == num_aliases
+
+    text = 'fake'
+    line = 'alias list {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is not None
+    assert len(ac_app.completion_matches) == num_aliases
+    assert len(ac_app.display_matches) == num_aliases
+
+    # If show_description is True, the alias's value will be in the display text
+    assert ('help' in ac_app.display_matches[0]) == show_description
+
+
+def test_completion_items_default_header(ac_app):
+    text = ''
+    line = 'choices -n {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    # This positional argument did not provide a descriptive header, so it should be DEFAULT_DESCRIPTIVE_HEADER
+    complete_tester(text, line, begidx, endidx, ac_app)
+    assert DEFAULT_DESCRIPTIVE_HEADER in ac_app.completion_header
+
 
 # def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
 #     text = ''
