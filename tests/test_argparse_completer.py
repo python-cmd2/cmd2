@@ -49,7 +49,7 @@ class AutoCompleteTester(cmd2.Cmd):
 
     choices_parser = Cmd2ArgParser()
 
-    # Flags args for choices command
+    # Flag args for choices command
     choices_parser.add_argument("-l", "--list", help="a flag populated with a choices list",
                                 choices=static_choices_list)
     choices_parser.add_argument("-f", "--function", help="a flag populated with a choices function",
@@ -78,7 +78,7 @@ class AutoCompleteTester(cmd2.Cmd):
 
     completer_parser = Cmd2ArgParser()
 
-    # Flags args for completer command
+    # Flag args for completer command
     completer_parser.add_argument("-f", "--function", help="a flag using a completer function",
                                   completer_function=completer_function)
     completer_parser.add_argument("-m", "--method", help="a flag using a completer method",

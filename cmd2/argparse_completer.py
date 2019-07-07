@@ -68,6 +68,9 @@ from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION
 from .argparse_custom import ChoicesCallable, ATTR_CHOICES_CALLABLE
 from .rl_utils import rl_force_redisplay
 
+# If no descriptive header is supplied, then this will be used instead
+DEFAULT_DESCRIPTIVE_HEADER = 'Description'
+
 
 class CompletionItem(str):
     """
@@ -512,10 +515,9 @@ class AutoCompleter(object):
                                                                      fill_width=fill_width)
                 completions_with_desc.append(entry)
 
-            try:
-                desc_header = getattr(action, ATTR_DESCRIPTIVE_COMPLETION_HEADER)
-            except AttributeError:
-                desc_header = 'Description'
+            desc_header = getattr(action, ATTR_DESCRIPTIVE_COMPLETION_HEADER, None)
+            if desc_header is None:
+                desc_header = DEFAULT_DESCRIPTIVE_HEADER
             header = '\n{: <{token_width}}{}'.format(action.dest.upper(), desc_header, token_width=token_width + 2)
 
             self._cmd2_app.completion_header = header
