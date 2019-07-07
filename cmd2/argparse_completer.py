@@ -454,16 +454,28 @@ class AutoCompleter(object):
 
         # Here we're done parsing all of the prior arguments. We know what the next argument is.
 
-        completion_results = []
-
         # if we don't have a flag to populate with arguments and the last token starts with
         # a flag prefix then we'll complete the list of flag options
-        if not flag_arg.needed and len(tokens[-1]) > 0 and tokens[-1][0] in self._parser.prefix_chars and \
-                not skip_remaining_flags:
-            return utils.basic_complete(text, line, begidx, endidx,
-                                        [flag for flag in self._flags if flag not in matched_flags])
+        if not flag_arg.needed and len(tokens[-1]) > 0 and \
+                tokens[-1][0] in self._parser.prefix_chars and not skip_remaining_flags:
+
+            # Build a list of flags that can be tab completed
+            match_against = []
+
+            for flag in self._flags:
+                # Make sure this flag hasn't already been used
+                if flag not in matched_flags:
+                    # Make sure this flag isn't considered hidden
+                    action = self._flag_to_action[flag]
+                    if action.help != argparse.SUPPRESS:
+                        match_against.append(flag)
+
+            return utils.basic_complete(text, line, begidx, endidx, match_against)
+
+        completion_results = []
+
         # we're not at a positional argument, see if we're in a flag argument
-        elif not current_is_positional:
+        if not current_is_positional:
             if flag_action is not None:
                 consumed = consumed_arg_values[flag_action.dest]\
                     if flag_action.dest in consumed_arg_values else []
@@ -614,35 +626,26 @@ class AutoCompleter(object):
     @staticmethod
     def _print_arg_hint(arg: argparse.Action) -> None:
         """Print argument hint to the terminal when tab completion results in no results"""
-        # is hinting disabled for this argument?
+
+        # Check if hinting is disabled
         suppress_hint = getattr(arg, ATTR_SUPPRESS_TAB_HINT, False)
-        if suppress_hint:
+        if suppress_hint or arg.help == argparse.SUPPRESS:
             return
 
         # Check if this is a flag
         if arg.option_strings:
             flags = ', '.join(arg.option_strings)
-            param = ''
-            if arg.nargs is None or arg.nargs != 0:
-                param += ' ' + str(arg.dest).upper()
-
+            param = ' ' + str(arg.dest).upper()
             prefix = '{}{}'.format(flags, param)
 
         # Otherwise this is a positional
         else:
             prefix = '{}'.format(str(arg.dest).upper())
 
-        if not arg.help or arg.help == argparse.SUPPRESS:
-            help_text = ''
-        else:
-            help_text = arg.help
-
-        # is there anything to print for this parameter?
-        if not prefix and not help_text:
-            return
-
         prefix = '  {0: <{width}}    '.format(prefix, width=20)
         pref_len = len(prefix)
+
+        help_text = '' if arg.help is None else arg.help
         help_lines = help_text.splitlines()
 
         if len(help_lines) == 1:

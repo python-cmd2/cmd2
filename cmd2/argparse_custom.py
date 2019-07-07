@@ -59,7 +59,7 @@ def _add_argument_wrapper(self, *args,
                           choices_method: Optional[Callable[[Any], Iterable[Any]]] = None,
                           completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
                           completer_method: Optional[Callable[[Any, str, str, int, int], List[str]]] = None,
-                          suppress_hint: bool = False,
+                          suppress_tab_hint: bool = False,
                           descriptive_header: Optional[str] = None,
                           **kwargs) -> argparse.Action:
     """
@@ -77,8 +77,8 @@ def _add_argument_wrapper(self, *args,
     :param choices_method: cmd2-app method that provides choices for this argument
     :param completer_function: tab-completion function that provides choices for this argument
     :param completer_method: cmd2-app tab-completion method that provides choices for this argument
-    :param suppress_hint: when AutoCompleter has no choices to show during tab completion, it displays the current
-                          argument's help text as a hint. Set this to True to suppress the hint. Defaults to False.
+    :param suppress_tab_hint: when AutoCompleter has no choices to show during tab completion, it displays the current
+                              argument's help text as a hint. Set this to True to suppress the hint. Defaults to False.
     :param descriptive_header: if the provided choices are CompletionItems, then this header will display
                                during tab completion. Defaults to None.
 
@@ -152,7 +152,7 @@ def _add_argument_wrapper(self, *args,
         setattr(new_arg, ATTR_CHOICES_CALLABLE,
                 ChoicesCallable(is_method=True, is_completer=True, to_call=completer_method))
 
-    setattr(new_arg, ATTR_SUPPRESS_TAB_HINT, suppress_hint)
+    setattr(new_arg, ATTR_SUPPRESS_TAB_HINT, suppress_tab_hint)
     setattr(new_arg, ATTR_DESCRIPTIVE_COMPLETION_HEADER, descriptive_header)
 
     return new_arg

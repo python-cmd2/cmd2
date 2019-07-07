@@ -104,6 +104,21 @@ class AutoCompleteTester(cmd2.Cmd):
     def do_completer(self, args: argparse.Namespace) -> None:
         pass
 
+    ############################################################################################################
+    # Begin code related to testing tab hints
+    ############################################################################################################
+    hint_parser = Cmd2ArgParser()
+    hint_parser.add_argument('-f', '--flag', help='a flag arg')
+    hint_parser.add_argument('-s', '--suppressed_help', help=argparse.SUPPRESS)
+    hint_parser.add_argument('-t', '--suppressed_hint', help='a flag arg', suppress_tab_hint=True)
+
+    hint_parser.add_argument('hint_pos', help='here is a hint\nwith new lines')
+    hint_parser.add_argument('no_help_pos')
+
+    @with_argparser(hint_parser)
+    def do_hint(self, args: argparse.Namespace) -> None:
+        pass
+
 
 @pytest.fixture
 def ac_app():
@@ -262,6 +277,82 @@ def test_completion_items_default_header(ac_app):
     complete_tester(text, line, begidx, endidx, ac_app)
     assert DEFAULT_DESCRIPTIVE_HEADER in ac_app.completion_header
 
+
+def test_autocomp_hint_flag(ac_app, capsys):
+    text = ''
+    line = 'hint --flag {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    out, err = capsys.readouterr()
+
+    assert first_match is None
+    assert out == '''
+Hint:
+  -f, --flag FLAG         a flag arg
+
+'''
+
+
+def test_autocomp_hint_suppressed_help(ac_app, capsys):
+    text = ''
+    line = 'hint --suppressed_help {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    out, err = capsys.readouterr()
+
+    assert first_match is None
+    assert not out
+
+
+def test_autocomp_hint_suppressed_hint(ac_app, capsys):
+    text = ''
+    line = 'hint --suppressed_hint {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    out, err = capsys.readouterr()
+
+    assert first_match is None
+    assert not out
+
+
+def test_autocomp_hint_pos(ac_app, capsys):
+    text = ''
+    line = 'hint {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    out, err = capsys.readouterr()
+
+    assert first_match is None
+    assert out == '''
+Hint:
+  HINT_POS                here is a hint
+                          with new lines
+
+'''
+
+def test_autocomp_hint_no_help(ac_app, capsys):
+    text = ''
+    line = 'hint foo {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    out, err = capsys.readouterr()
+
+    assert first_match is None
+    assert not out == '''
+Hint:
+  NO_HELP_POS            
+
+'''
 
 # def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
 #     text = ''
