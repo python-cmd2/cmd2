@@ -172,20 +172,18 @@ class AutoCompleter(object):
             self.variable = False
 
     def __init__(self, parser: argparse.ArgumentParser, cmd2_app, *,
-                 tab_for_arg_help: bool = True, token_start_index: int = 1) -> None:
+                 token_start_index: int = 1) -> None:
         """
         Create an AutoCompleter
 
         :param parser: ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this AutoCompleter
-        :param tab_for_arg_help: If True, then argument help will display when there's no completion result
         :param token_start_index: index of the token to start parsing at
         """
         self._parser = parser
         self._cmd2_app = cmd2_app
         self._arg_choices = {}
         self._token_start_index = token_start_index
-        self._tab_for_arg_help = tab_for_arg_help
 
         self._flags = []  # all flags in this command
         self._flags_without_args = []  # all flags that don't take arguments
@@ -231,8 +229,7 @@ class AutoCompleter(object):
                         subcmd_start = token_start_index + len(self._positional_actions)
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd],
                                                                cmd2_app,
-                                                               token_start_index=subcmd_start,
-                                                               tab_for_arg_help=tab_for_arg_help)
+                                                               token_start_index=subcmd_start)
                         sub_commands.append(subcmd)
 
                     self._positional_completers[action.dest] = sub_completers
@@ -614,13 +611,10 @@ class AutoCompleter(object):
 
         return []
 
-    def _print_arg_hint(self, arg: argparse.Action) -> None:
+    @staticmethod
+    def _print_arg_hint(arg: argparse.Action) -> None:
         """Print argument hint to the terminal when tab completion results in no results"""
-        # is parameter hinting disabled globally?
-        if not self._tab_for_arg_help:
-            return
-
-        # is parameter hinting disabled for this parameter?
+        # is hinting disabled for this argument?
         suppress_hint = getattr(arg, ATTR_SUPPRESS_TAB_HINT, False)
         if suppress_hint:
             return
