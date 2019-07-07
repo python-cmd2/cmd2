@@ -26,10 +26,9 @@ class CmdLineApp(cmd2.Cmd):
     MUMBLE_LAST = ['right?']
 
     def __init__(self):
-        shortcuts = dict(cmd2.DEFAULT_SHORTCUTS)
+        shortcuts = cmd2.DEFAULT_SHORTCUTS
         shortcuts.update({'&': 'speak'})
-        # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
-        super().__init__(use_ipython=False, multiline_commands=['orate'], shortcuts=shortcuts)
+        super().__init__(multiline_commands=['orate'], shortcuts=shortcuts)
 
         # Make maxrepeats settable at runtime
         self.maxrepeats = 3
@@ -52,7 +51,7 @@ class CmdLineApp(cmd2.Cmd):
                 word = word.upper()
             words.append(word)
         repetitions = args.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
             self.poutput(' '.join(words))
 

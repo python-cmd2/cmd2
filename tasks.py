@@ -101,6 +101,12 @@ def docs(context, builder='html'):
     context.run(cmdline)
 namespace.add_task(docs)
 
+@invoke.task()
+def doc8(context):
+    "Check documentation with doc8"
+    context.run('doc8 docs --ignore-path docs/_build')
+namespace.add_task(doc8)
+
 @invoke.task
 def docs_clean(context):
     "Remove rendered documentation"
@@ -193,7 +199,7 @@ def validatetag(context):
     tag = result.stdout.rstrip()
 
     # Validate that the Git tag appears to be a valid version number
-    ver_regex = re.compile('(\d+)\.(\d+)\.(\d+)')
+    ver_regex = re.compile(r'(\d+)\.(\d+)\.(\d+)')
     match = ver_regex.fullmatch(tag)
     if match is None:
         print('Tag {!r} does not appear to be a valid version number'.format(tag))

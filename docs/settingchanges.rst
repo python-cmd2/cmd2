@@ -12,9 +12,10 @@ its name is included in the dictionary ``app.settable``.
 Shortcuts
 =========
 
-Command shortcuts for long command names and common commands can make life more convenient for your users.
-Shortcuts are used without a space separating them from their arguments, like ``!ls``.  By default, the
-following shortcuts are defined:
+Command shortcuts for long command names and common commands can make life more
+convenient for your users. Shortcuts are used without a space separating them
+from their arguments, like ``!ls``.  By default, the following shortcuts are
+defined:
 
   ``?``
     help
@@ -39,17 +40,19 @@ To define more shortcuts, update the dict ``App.shortcuts`` with the
 
 .. warning::
 
-  Shortcuts need to be created by updating the ``shortcuts`` dictionary attribute prior to calling the
-  ``cmd2.Cmd`` super class ``__init__()`` method.  Moreover, that super class init method needs to be called after
-  updating the ``shortcuts`` attribute  This warning applies in general to many other attributes which are not
-  settable at runtime.
+  Shortcuts need to be created by updating the ``shortcuts`` dictionary
+  attribute prior to calling the ``cmd2.Cmd`` super class ``__init__()``
+  method.  Moreover, that super class init method needs to be called after
+  updating the ``shortcuts`` attribute  This warning applies in general to many
+  other attributes which are not settable at runtime.
 
 
 Aliases
 =======
 
-In addition to shortcuts, ``cmd2`` provides a full alias feature via the ``alias`` command. Aliases work in a similar
-fashion to aliases in the Bash shell.
+In addition to shortcuts, ``cmd2`` provides a full alias feature via the
+``alias`` command. Aliases work in a similar fashion to aliases in the Bash
+shell.
 
 The syntax to create an alias is: ``alias create name command [args]``.
 
@@ -57,9 +60,10 @@ The syntax to create an alias is: ``alias create name command [args]``.
 
 For more details run: ``help alias create``
 
-Use ``alias list`` to see all or some of your aliases. The output of this command displays your aliases using the same command that
-was used to create them. Therefore you can place this output in a ``cmd2`` startup script to recreate your aliases each time
-you start the application
+Use ``alias list`` to see all or some of your aliases. The output of this
+command displays your aliases using the same command that was used to create
+them. Therefore you can place this output in a ``cmd2`` startup script to
+recreate your aliases each time you start the application
 
   Ex: ``alias list``
 
@@ -72,8 +76,9 @@ For more details run: ``help alias delete``
 Macros
 ======
 
-``cmd2`` provides a feature that is similar to aliases called macros. The major difference between macros and aliases
-is that macros can contain argument placeholders. Arguments are expressed when creating a macro using {#} notation
+``cmd2`` provides a feature that is similar to aliases called macros. The major
+difference between macros and aliases is that macros can contain argument
+placeholders. Arguments are expressed when creating a macro using {#} notation
 where {1} means the first argument.
 
 The following creates a macro called my_macro that expects two arguments:
@@ -87,8 +92,9 @@ command is run. For example:
 
 For more details run: ``help macro create``
 
-The macro command has ``list`` and ``delete`` subcommands that function identically to the alias subcommands of the
-same name. Like aliases, macros can be created via a ``cmd2`` startup script to preserve them across application
+The macro command has ``list`` and ``delete`` subcommands that function
+identically to the alias subcommands of the same name. Like aliases, macros can
+be created via a ``cmd2`` startup script to preserve them across application
 sessions.
 
 For more details on listing macros run: ``help macro list``
@@ -99,20 +105,18 @@ For more details on deleting macros run: ``help macro delete``
 Default to shell
 ================
 
-Every ``cmd2`` application can execute operating-system
-level (shell) commands with ``shell`` or a ``!``
-shortcut::
+Every ``cmd2`` application can execute operating-system level (shell) commands
+with ``shell`` or a ``!`` shortcut::
 
   (Cmd) shell which python
   /usr/bin/python
   (Cmd) !which python
   /usr/bin/python
 
-However, if the parameter ``default_to_shell`` is
-``True``, then *every* command will be attempted on
-the operating system.  Only if that attempt fails
-(i.e., produces a nonzero return value) will the
-application's own ``default`` method be called.
+However, if the parameter ``default_to_shell`` is ``True``, then *every*
+command will be attempted on the operating system.  Only if that attempt fails
+(i.e., produces a nonzero return value) will the application's own ``default``
+method be called.
 
 ::
 
@@ -125,11 +129,10 @@ application's own ``default`` method be called.
 Quit on SIGINT
 ==============
 
-On many shells, SIGINT (most often triggered by the user
-pressing Ctrl+C) only cancels the current line, not the
-entire command loop. By default, a ``cmd2`` application will quit
-on receiving this signal. However, if ``quit_on_sigint`` is
-set to ``False``, then the current line will simply be cancelled.
+On many shells, SIGINT (most often triggered by the user pressing Ctrl+C) only
+cancels the current line, not the entire command loop. By default, a ``cmd2``
+application will quit on receiving this signal. However, if ``quit_on_sigint``
+is set to ``False``, then the current line will simply be cancelled.
 
 ::
 
@@ -144,21 +147,20 @@ set to ``False``, then the current line will simply be cancelled.
 Timing
 ======
 
-Setting ``App.timing`` to ``True`` outputs timing data after
-every application command is executed.  |settable|
+Setting ``App.timing`` to ``True`` outputs timing data after every application
+command is executed.  |settable|
 
 Echo
 ====
 
-If ``True``, each command the user issues will be repeated
-to the screen before it is executed.  This is particularly
-useful when running scripts.
+If ``True``, each command the user issues will be repeated to the screen before
+it is executed.  This is particularly useful when running scripts.
 
 Debug
 =====
 
-Setting ``App.debug`` to ``True`` will produce detailed error stacks
-whenever the application generates an error.  |settable|
+Setting ``App.debug`` to ``True`` will produce detailed error stacks whenever
+the application generates an error.  |settable|
 
 .. |settable| replace:: The user can ``set`` this parameter
                         during application execution.
@@ -185,7 +187,8 @@ with::
     quiet: False                   # Don't print nonessential feedback
     timing: False                  # Report execution times
 
-Any of these user-settable parameters can be set while running your app with the ``set`` command like so::
+Any of these user-settable parameters can be set while running your app with
+the ``set`` command like so::
 
     set allow_ansi Never
 
