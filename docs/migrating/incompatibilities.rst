@@ -7,16 +7,42 @@ Incompatibilities
 things that are not.
 
 
-cmd.emptyline()
+Cmd.emptyline()
 ---------------
 
-The `cmd.emptyline()
+The `Cmd.emptyline()
 <https://docs.python.org/3/library/cmd.html#cmd.Cmd.emptyline>`_ function is
 called when an empty line is entered in response to the prompt. By default, in
 cmd_ if this method is not overridden, it repeats and executes the last
 nonempty command entered.  However, no end user we have encountered views this
 as expected or desirable default behavior.  Thus, the default behavior in
 ``cmd2`` is to simply go to the next line and issue the prompt again.  At this
-time, cmd2 completely ignores empty lines and the base class cmd.emptyline()
-method never gets called and thus the emptyline() behavior cannot be
-overridden.
+time, ``cmd2`` completely ignores empty lines and the base class
+cmd.emptyline() method never gets called and thus the emptyline() behavior
+cannot be overridden.
+
+
+Cmd.identchars
+--------------
+
+In cmd_, the `Cmd.identchars
+<https://docs.python.org/3/library/cmd.html#cmd.Cmd.identchars>`_ attribute
+contains the string of characters accepted for command names.  Since version
+0.9.0, ``cmd2`` has ignored ``identchars``. cmd_ uses those characters to split
+the first "word" of the input, but the parsing logic in ``cmd2`` parses on
+whitespace.  This has the added benefit of full unicode support, unlike cmd_ or
+versions of ``cmd2`` prior to 0.9.0.
+
+
+Cmd.cmdqueue
+------------
+In cmd_, the `Cmd.cmdqueue
+<https://docs.python.org/3/library/cmd.html#cmd.Cmd.cmdqueue>`_ attribute
+contains A list of queued input lines. The cmdqueue list is checked in
+``cmdloop()`` when new input is needed; if it is nonempty, its elements will be
+processed in order, as if entered at the prompt.
+
+Since version 0.9.13 ``cmd2`` has removed support for ``Cmd.cmdqueue``.
+Reasoning about application behavior is much easier without this queue present.
+If developers need this sort of thing, they can add it in their application.
+
