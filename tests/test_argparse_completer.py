@@ -9,9 +9,8 @@ from typing import List
 import pytest
 
 import cmd2
-from cmd2 import with_argparser
-from cmd2.argparse_completer import CompletionItem, is_potential_flag, DEFAULT_DESCRIPTIVE_HEADER
-from cmd2.argparse_custom import Cmd2ArgParser
+from cmd2 import with_argparser, Cmd2ArgParser, CompletionItem
+from cmd2.argparse_completer import is_potential_flag, DEFAULT_DESCRIPTIVE_HEADER
 from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
@@ -208,6 +207,7 @@ def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
     assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
+
 @pytest.mark.parametrize('flag, text, completions', [
     ('-f', '', completions_from_function),
     ('--function', 'f', ['function', 'fairly']),
@@ -221,6 +221,7 @@ def test_autocomp_flag_completers(ac_app, flag, text, completions):
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
     assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+
 
 @pytest.mark.parametrize('pos, text, completions', [
     (1, '', completions_from_function),
@@ -337,6 +338,7 @@ Hint:
                           with new lines
 
 '''
+
 
 def test_autocomp_hint_no_help(ac_app, capsys):
     text = ''
@@ -502,6 +504,7 @@ Hint:
 #
 #     # Since -- appeared before the -- being completed, nothing should be completed
 #     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
+
 
 def test_is_potential_flag():
     parser = Cmd2ArgParser()

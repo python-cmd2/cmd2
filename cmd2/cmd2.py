@@ -46,8 +46,7 @@ from . import ansi
 from . import constants
 from . import plugin
 from . import utils
-from .argparse_completer import AutoCompleter, CompletionItem
-from .argparse_custom import Cmd2ArgParser
+from .argparse_custom import Cmd2ArgParser, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
@@ -1582,6 +1581,7 @@ class Cmd(cmd.Cmd):
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
                               argparser: argparse.ArgumentParser) -> List[str]:
         """Default completion function for argparse commands"""
+        from .argparse_completer import AutoCompleter
         completer = AutoCompleter(argparser, self)
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         return completer.complete_command(tokens, text, line, begidx, endidx)
@@ -2643,6 +2643,7 @@ class Cmd(cmd.Cmd):
         # Check if this is a command with an argparse function
         func = self.cmd_func(command)
         if func and hasattr(func, 'argparser'):
+            from .argparse_completer import AutoCompleter
             completer = AutoCompleter(getattr(func, 'argparser'), self)
             matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
 
@@ -2673,6 +2674,7 @@ class Cmd(cmd.Cmd):
 
             # If the command function uses argparse, then use argparse's help
             if func and hasattr(func, 'argparser'):
+                from .argparse_completer import AutoCompleter
                 completer = AutoCompleter(getattr(func, 'argparser'), self)
                 tokens = [args.command] + args.subcommand
                 self.poutput(completer.format_help(tokens))

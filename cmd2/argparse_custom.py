@@ -26,6 +26,56 @@ ATTR_SUPPRESS_TAB_HINT = 'suppress_tab_hint'
 ATTR_DESCRIPTIVE_COMPLETION_HEADER = 'desc_completion_header'
 
 
+class CompletionItem(str):
+    """
+    Completion item with descriptive text attached
+
+    Returning this instead of a regular string for completion results will signal the
+    autocompleter to output the completions results in a table of completion tokens
+    with descriptions instead of just a table of tokens.
+
+    For example, you'd see this:
+        TOKEN          Description
+        MY_TOKEN       Info about my token
+        SOME_TOKEN     Info about some token
+        YET_ANOTHER    Yet more info
+
+    Instead of this:
+        TOKEN_ID   SOME_TOKEN   YET_ANOTHER
+
+    This is especially useful if you want to complete ID numbers in a more
+    user-friendly manner. For example, you can provide this:
+
+        ITEM_ID     Item Name
+        1           My item
+        2           Another item
+        3           Yet another item
+
+    Instead of this:
+        1     2     3
+
+    Example:
+        token = 1
+        token_description = "My Item"
+        completion_item = CompletionItem(token, token_description)
+    """
+    def __new__(cls, value: object, *args, **kwargs) -> str:
+        return super().__new__(cls, value)
+
+    # noinspection PyUnusedLocal
+    def __init__(self, value: object, desc: str = '', *args, **kwargs) -> None:
+        """
+        CompletionItem Initializer
+
+        :param value: the value being tab completed
+        :param desc: description text to display
+        :param args: args for str __init__
+        :param kwargs: kwargs for str __init__
+        """
+        super().__init__(*args, **kwargs)
+        self.description = desc
+
+
 class ChoicesCallable:
     """
     Enables using a callable as the choices provider for an argparse argument.
@@ -77,8 +127,10 @@ def _add_argument_wrapper(self, *args,
     :param choices_method: cmd2-app method that provides choices for this argument
     :param completer_function: tab-completion function that provides choices for this argument
     :param completer_method: cmd2-app tab-completion method that provides choices for this argument
-    :param suppress_tab_hint: when AutoCompleter has no choices to show during tab completion, it displays the current
-                              argument's help text as a hint. Set this to True to suppress the hint. Defaults to False.
+    :param suppress_tab_hint: when AutoCompleter has no results to show during tab completion, it displays the current
+                              argument's help text as a hint. Set this to True to suppress the hint. If this argument's
+                              help text is set to argparse.SUPPRESS, then tab hints will not display regardless of the
+                              value passed for suppress_tab_hint. Defaults to False.
     :param descriptive_header: if the provided choices are CompletionItems, then this header will display
                                during tab completion. Defaults to None.
 

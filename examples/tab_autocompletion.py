@@ -8,8 +8,7 @@ import functools
 from typing import List
 
 import cmd2
-from cmd2 import argparse_completer, utils
-from cmd2.argparse_custom import Cmd2ArgParser
+from cmd2 import utils, Cmd2ArgParser, CompletionItem
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
@@ -116,7 +115,7 @@ class TabCompleteExample(cmd2.Cmd):
         for movie_id in utils.natural_sort(self.MOVIE_DATABASE_IDS):
             if movie_id in self.MOVIE_DATABASE:
                 movie_entry = self.MOVIE_DATABASE[movie_id]
-                completions_with_desc.append(argparse_completer.CompletionItem(movie_id, movie_entry['title']))
+                completions_with_desc.append(CompletionItem(movie_id, movie_entry['title']))
 
         # Mark that we already sorted the matches
         self.matches_sorted = True

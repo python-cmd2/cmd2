@@ -62,64 +62,15 @@ import argparse
 import shutil
 from typing import List, Union
 
+from . import cmd2
 from . import utils
 from .ansi import ansi_safe_wcswidth
 from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION_HEADER, ATTR_NARGS_RANGE
-from .argparse_custom import ChoicesCallable, ATTR_CHOICES_CALLABLE
+from .argparse_custom import ChoicesCallable, CompletionItem, ATTR_CHOICES_CALLABLE
 from .rl_utils import rl_force_redisplay
 
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
-
-
-class CompletionItem(str):
-    """
-    Completion item with descriptive text attached
-
-    Returning this instead of a regular string for completion results will signal the
-    autocompleter to output the completions results in a table of completion tokens
-    with descriptions instead of just a table of tokens.
-
-    For example, you'd see this:
-        TOKEN          Description
-        MY_TOKEN       Info about my token
-        SOME_TOKEN     Info about some token
-        YET_ANOTHER    Yet more info
-
-    Instead of this:
-        TOKEN_ID   SOME_TOKEN   YET_ANOTHER
-
-    This is especially useful if you want to complete ID numbers in a more
-    user-friendly manner. For example, you can provide this:
-
-        ITEM_ID     Item Name
-        1           My item
-        2           Another item
-        3           Yet another item
-
-    Instead of this:
-        1     2     3
-
-    Example:
-        token = 1
-        token_description = "My Item"
-        completion_item = CompletionItem(token, token_description)
-    """
-    def __new__(cls, value: object, *args, **kwargs) -> str:
-        return super().__new__(cls, value)
-
-    # noinspection PyUnusedLocal
-    def __init__(self, value: object, desc: str = '', *args, **kwargs) -> None:
-        """
-        CompletionItem Initializer
-
-        :param value: the value being tab completed
-        :param desc: description text to display
-        :param args: args for str __init__
-        :param kwargs: kwargs for str __init__
-        """
-        super().__init__(*args, **kwargs)
-        self.description = desc
 
 
 # noinspection PyProtectedMember
@@ -171,7 +122,7 @@ class AutoCompleter(object):
             self.needed = False
             self.variable = False
 
-    def __init__(self, parser: argparse.ArgumentParser, cmd2_app, *,
+    def __init__(self, parser: argparse.ArgumentParser, cmd2_app: cmd2.Cmd, *,
                  token_start_index: int = 1) -> None:
         """
         Create an AutoCompleter
