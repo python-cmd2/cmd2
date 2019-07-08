@@ -15,6 +15,7 @@ from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
 # Lists used in our tests
+static_int_choices_list = [1, 2, 3, 4, 5]
 static_choices_list = ['static', 'choices', 'stop', 'here']
 choices_from_function = ['choices', 'function', 'chatty', 'smith']
 choices_from_method = ['choices', 'method', 'most', 'improved']
@@ -115,7 +116,7 @@ class AutoCompleteTester(cmd2.Cmd):
 
     choices_parser = Cmd2ArgParser()
 
-    # Flag args for choices command
+    # Flag args for choices command. Include string and non-string arg types.
     choices_parser.add_argument("-l", "--list", help="a flag populated with a choices list",
                                 choices=static_choices_list)
     choices_parser.add_argument("-f", "--function", help="a flag populated with a choices function",
@@ -124,6 +125,8 @@ class AutoCompleteTester(cmd2.Cmd):
                                 choices_method=choices_method)
     choices_parser.add_argument('-n', "--no_header", help='this arg has a no descriptive header',
                                 choices_method=completion_item_method)
+    choices_parser.add_argument('-i', '--int', type=int, help='a flag with an int type',
+                                choices=static_int_choices_list)
 
     # Positional args for choices command
     choices_parser.add_argument("list_pos", help="a positional populated with a choices list",
@@ -221,7 +224,7 @@ def test_complete_help(ac_app, command, text, completions):
     ('-h', '-', ['--normal_flag', '--other_normal_flag', '-n', '-o']),
     ('-h --normal_flag', '-', ['--other_normal_flag', '-o']),
     ('-h --normal_flag', '--', ['--other_normal_flag ']),
-    ('-h --normal_flag -o', '-', []),
+    ('-h --normal_flag -o', '-', [])
 ])
 def test_autcomp_flag_completion(ac_app, used_flags, text, completions):
     line = 'flag {} {}'.format(used_flags, text)
@@ -244,6 +247,8 @@ def test_autcomp_flag_completion(ac_app, used_flags, text, completions):
     ('--function', 'ch', ['choices', 'chatty']),
     ('-m', '', choices_from_method),
     ('--method', 'm', ['method', 'most']),
+    ('-i', '', [str(i) for i in static_int_choices_list]),
+    ('--int', '1', ['1 '])
 ])
 def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
     line = 'choices {} {}'.format(flag, text)
@@ -260,7 +265,7 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
     (2, '', choices_from_function),
     (2, 'ch', ['choices', 'chatty']),
     (3, '', choices_from_method),
-    (3, 'm', ['method', 'most']),
+    (3, 'm', ['method', 'most'])
 ])
 def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     # Generate line were preceding positionals are already filled
@@ -276,7 +281,7 @@ def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     ('-f', '', completions_from_function),
     ('--function', 'f', ['function', 'fairly']),
     ('-m', '', completions_from_method),
-    ('--method', 'm', ['method', 'missed']),
+    ('--method', 'm', ['method', 'missed'])
 ])
 def test_autocomp_flag_completers(ac_app, flag, text, completions):
     line = 'completer {} {}'.format(flag, text)
@@ -291,7 +296,7 @@ def test_autocomp_flag_completers(ac_app, flag, text, completions):
     (1, '', completions_from_function),
     (1, 'c', ['completions', 'complete']),
     (2, '', completions_from_method),
-    (2, 'm', ['method', 'missed']),
+    (2, 'm', ['method', 'missed'])
 ])
 def test_autocomp_positional_completers(ac_app, pos, text, completions):
     # Generate line were preceding positionals are already filled
@@ -309,7 +314,7 @@ def test_autocomp_positional_completers(ac_app, pos, text, completions):
     # which defaults to 50.
     (1, False),
     (5, True),
-    (100, False),
+    (100, False)
 ])
 def test_completion_items(ac_app, num_aliases, show_description):
     # Create aliases
