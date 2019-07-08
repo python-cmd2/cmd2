@@ -10,7 +10,6 @@ import pytest
 
 import cmd2
 from cmd2 import with_argparser, Cmd2ArgParser, CompletionItem
-from cmd2.argparse_completer import is_potential_flag, DEFAULT_DESCRIPTIVE_HEADER
 from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
@@ -85,6 +84,7 @@ class AutoCompleteTester(cmd2.Cmd):
             func(self, args)
         else:
             # No sub-command was provided, so call help
+            # noinspection PyTypeChecker
             self.do_help('music')
 
     ############################################################################################################
@@ -338,6 +338,8 @@ def test_completion_items(ac_app, num_aliases, show_description):
 
 
 def test_completion_items_default_header(ac_app):
+    from cmd2.argparse_completer import DEFAULT_DESCRIPTIVE_HEADER
+
     text = ''
     line = 'choices -n {}'.format(text)
     endidx = len(line)
@@ -576,6 +578,7 @@ Hint:
 
 
 def test_is_potential_flag():
+    from cmd2.argparse_completer import is_potential_flag
     parser = Cmd2ArgParser()
 
     # Not valid flags
@@ -588,3 +591,23 @@ def test_is_potential_flag():
     # Valid flags
     assert is_potential_flag('-flag', parser)
     assert is_potential_flag('--flag', parser)
+
+
+def test_complete_command_no_tokens(ac_app):
+    from cmd2.argparse_completer import AutoCompleter
+
+    parser = Cmd2ArgParser()
+    ac = AutoCompleter(parser, ac_app)
+
+    completions = ac.complete_command(tokens=[], text='', line='', begidx=0, endidx=0)
+    assert not completions
+
+
+def test_complete_command_help_no_tokens(ac_app):
+    from cmd2.argparse_completer import AutoCompleter
+
+    parser = Cmd2ArgParser()
+    ac = AutoCompleter(parser, ac_app)
+
+    completions = ac.complete_command_help(tokens=[], text='', line='', begidx=0, endidx=0)
+    assert not completions
