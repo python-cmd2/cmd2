@@ -87,6 +87,18 @@ class AutoCompleteTester(cmd2.Cmd):
             self.do_help('music')
 
     ############################################################################################################
+    # Begin code related to flag completion
+    ############################################################################################################
+    flag_parser = Cmd2ArgParser()
+    flag_parser.add_argument('-n', '--normal_flag', help='A normal flag', action='store_true')
+    flag_parser.add_argument('-o', '--other_normal_flag', help='The other normal flag', action='store_true')
+    flag_parser.add_argument('-s', '--suppressed_flag', help=argparse.SUPPRESS, action='store_true')
+
+    @with_argparser(flag_parser)
+    def do_flag(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
     # Begin code related to testing choices, choices_function, and choices_method parameters
     ############################################################################################################
     def choices_method(self) -> List[str]:
@@ -199,19 +211,30 @@ def test_complete_help(ac_app, command, text, completions):
     assert first_match is not None and ac_app.completion_matches == completions
 
 
-@pytest.mark.parametrize('text, completions', [
-    ('-', ['--function', '--help', '--list', '--method', '--no_header', '-f', '-h', '-l', '-m', '-n']),
-    ('--', ['--function', '--help', '--list', '--method', '--no_header']),
-    ('-f', ['-f ']),
-    ('--f', ['--function ']),
+@pytest.mark.parametrize('used_flags, text, completions', [
+    ('', '-', ['--help', '--normal_flag', '--other_normal_flag', '-h', '-n', '-o']),
+    ('', '--', ['--help', '--normal_flag', '--other_normal_flag']),
+    ('', '-n', ['-n ']),
+    ('', '--n', ['--normal_flag ']),
+    ('', '-s', []),
+    ('', '--s', []),
+    ('-h', '-', ['--normal_flag', '--other_normal_flag', '-n', '-o']),
+    ('-h --normal_flag', '-', ['--other_normal_flag', '-o']),
+    ('-h --normal_flag', '--', ['--other_normal_flag ']),
+    ('-h --normal_flag -o', '-', []),
 ])
-def test_autcomp_flag_completion(ac_app, text, completions):
-    line = 'choices {}'.format(text)
+def test_autcomp_flag_completion(ac_app, used_flags, text, completions):
+    line = 'flag {} {}'.format(used_flags, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == completions
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == completions
 
 
 @pytest.mark.parametrize('flag, text, completions', [
