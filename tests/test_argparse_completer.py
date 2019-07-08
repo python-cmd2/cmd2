@@ -178,6 +178,21 @@ class AutoCompleteTester(cmd2.Cmd):
         pass
 
     ############################################################################################################
+    # Begin code related to nargs
+    ############################################################################################################
+    nargs_parser = Cmd2ArgParser()
+
+    # Flag args for nargs command
+    nargs_parser.add_argument("--set_value", help="a flag with a set value for nargs", nargs=2,
+                              choices=static_choices_list)
+    nargs_parser.add_argument("--one_or_more", help="a flag with nargs", nargs=argparse.ONE_OR_MORE,
+                              choices=static_choices_list)
+
+    @with_argparser(nargs_parser)
+    def do_nargs(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
     # Begin code related to testing tab hints
     ############################################################################################################
     hint_parser = Cmd2ArgParser()
@@ -198,6 +213,39 @@ def ac_app():
     app = AutoCompleteTester()
     app.stdout = StdSim(app.stdout)
     return app
+
+
+@pytest.mark.parametrize('args, completions', [
+    # nargs = 2
+    ('--set_value', static_choices_list),
+    ('--set_value static', ['choices', 'stop', 'here']),
+    ('--set_value static choices', []),
+
+    # Using the flag again will reset the choices available
+    ('--set_value static choices --set_value', static_choices_list),
+
+    # nargs = ONE_OR_MORE
+    ('--one_or_more', static_choices_list),
+    ('--one_or_more static', ['choices', 'stop', 'here']),
+    ('--one_or_more static choices', ['stop', 'here']),
+
+    # No more flags after a double dash
+    ('-- --one_or_more static choices', []),
+
+])
+def test_autcomp_nargs(ac_app, args, completions):
+    text = ''
+    line = 'nargs {} {}'.format(args, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 @pytest.mark.parametrize('command', [
@@ -223,7 +271,12 @@ def test_complete_help(ac_app, command, text, completions):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == completions
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 @pytest.mark.parametrize('command_and_args, text, completions', [
@@ -268,7 +321,7 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == completions
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 @pytest.mark.parametrize('flag, text, completions', [
@@ -287,7 +340,12 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 @pytest.mark.parametrize('pos, text, completions', [
@@ -305,7 +363,12 @@ def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 @pytest.mark.parametrize('flag, text, completions', [
@@ -320,7 +383,12 @@ def test_autocomp_flag_completers(ac_app, flag, text, completions):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 @pytest.mark.parametrize('pos, text, completions', [
@@ -336,7 +404,12 @@ def test_autocomp_positional_completers(ac_app, pos, text, completions):
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 @pytest.mark.parametrize('num_aliases, show_description', [
@@ -531,16 +604,6 @@ Hint:
 #     assert first_match is not None and \
 #            cmd2_app.completion_matches == ['John Boyega" ']
 #
-#
-# def test_autocomp_custom_func_dict_arg(cmd2_app):
-#     text = '/home/user/'
-#     line = 'video movies load {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-#     assert first_match is not None and \
-#            cmd2_app.completion_matches == ['/home/user/another.db', '/home/user/file space.db', '/home/user/file.db']
 #
 #
 # def test_argparse_remainder_flag_completion(cmd2_app):

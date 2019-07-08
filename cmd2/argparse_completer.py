@@ -227,6 +227,7 @@ class AutoCompleter(object):
 
                 # does this complete an option item for the flag
                 arg_choices = self._resolve_choices_for_arg(flag_action)
+
                 # if the current token matches the current flag's autocomplete argument list,
                 # track that we've used it already.  Unless this is the current token, then keep it.
                 if not is_last_token and token in arg_choices:
@@ -239,42 +240,45 @@ class AutoCompleter(object):
 
             # does this complete an option item for the positional
             arg_choices = self._resolve_choices_for_arg(pos_action)
+
             # if the current token matches the current position's autocomplete argument list,
             # track that we've used it already.  Unless this is the current token, then keep it.
             if not is_last_token and token in arg_choices:
                 consumed_arg_values.setdefault(pos_action.dest, [])
                 consumed_arg_values[pos_action.dest].append(token)
 
-        def process_action_nargs(arg_action: argparse.Action, arg_state: AutoCompleter._ArgumentState) -> None:
-            """Process the current argparse Action and initialize the ArgumentState object used
-            to track what arguments we have processed for this action"""
+        def process_argument_nargs(arg_action: argparse.Action, arg_state: AutoCompleter._ArgumentState) -> None:
+            """Use argument's nargs value to set related values in its ArgumentState object"""
+
+            # Check if nargs is a range
             nargs_range = getattr(arg_action, ATTR_NARGS_RANGE, None)
             if nargs_range is not None:
                 arg_state.min = nargs_range[0]
                 arg_state.max = nargs_range[1]
                 arg_state.variable = True
-            if arg_state.min is None or arg_state.max is None:
-                if arg_action.nargs is None:
-                    arg_state.min = 1
-                    arg_state.max = 1
-                elif arg_action.nargs == argparse.ONE_OR_MORE:
-                    arg_state.min = 1
-                    arg_state.max = float('inf')
-                    arg_state.variable = True
-                elif arg_action.nargs == argparse.ZERO_OR_MORE or arg_action.nargs == argparse.REMAINDER:
-                    arg_state.min = 0
-                    arg_state.max = float('inf')
-                    arg_state.variable = True
-                    if arg_action.nargs == argparse.REMAINDER:
-                        remainder['action'] = arg_action
-                        remainder['arg'] = arg_state
-                elif arg_action.nargs == argparse.OPTIONAL:
-                    arg_state.min = 0
-                    arg_state.max = 1
-                    arg_state.variable = True
-                else:
-                    arg_state.min = arg_action.nargs
-                    arg_state.max = arg_action.nargs
+
+            # Otherwise check against argparse types
+            elif arg_action.nargs is None:
+                arg_state.min = 1
+                arg_state.max = 1
+            elif arg_action.nargs == argparse.ONE_OR_MORE:
+                arg_state.min = 1
+                arg_state.max = float('inf')
+                arg_state.variable = True
+            elif arg_action.nargs == argparse.ZERO_OR_MORE or arg_action.nargs == argparse.REMAINDER:
+                arg_state.min = 0
+                arg_state.max = float('inf')
+                arg_state.variable = True
+                if arg_action.nargs == argparse.REMAINDER:
+                    remainder['action'] = arg_action
+                    remainder['arg'] = arg_state
+            elif arg_action.nargs == argparse.OPTIONAL:
+                arg_state.min = 0
+                arg_state.max = 1
+                arg_state.variable = True
+            else:
+                arg_state.min = arg_action.nargs
+                arg_state.max = arg_action.nargs
 
         # This next block of processing tries to parse all parameters before the last parameter.
         # We're trying to determine what specific argument the current cursor position should be
@@ -333,6 +337,7 @@ class AutoCompleter(object):
                     elif is_potential_flag(token, self._parser) and not skip_remaining_flags:
                         # reset some tracking values
                         flag_arg.reset()
+
                         # don't reset positional tracking because flags can be interspersed anywhere between positionals
                         flag_action = None
 
@@ -345,8 +350,11 @@ class AutoCompleter(object):
                                 flag_action = self._flag_to_action[candidates_flags[0]]
 
                         if flag_action is not None:
-                            # resolve argument counts
-                            process_action_nargs(flag_action, flag_arg)
+                            process_argument_nargs(flag_action, flag_arg)
+
+                            # It's possible we already have consumed values for this flag if it was used earlier
+                            # in the command line. Reset them now for this use of the flag.
+                            consumed_arg_values[flag_action.dest] = []
 
                             # Keep track of what flags have already been used
                             # Flags with action set to append, append_const, and count can be reused
@@ -389,7 +397,7 @@ class AutoCompleter(object):
                                         return sub_completers[token].complete_command(tokens, text, line,
                                                                                       begidx, endidx)
                                 pos_action = action
-                                process_action_nargs(pos_action, pos_arg)
+                                process_argument_nargs(pos_action, pos_arg)
                                 consume_positional_argument()
 
                         elif not is_last_token and pos_arg.max is not None:
@@ -434,8 +442,8 @@ class AutoCompleter(object):
         # we're not at a positional argument, see if we're in a flag argument
         if not current_is_positional:
             if flag_action is not None:
-                consumed = consumed_arg_values[flag_action.dest]\
-                    if flag_action.dest in consumed_arg_values else []
+                consumed = consumed_arg_values[flag_action.dest] if flag_action.dest in consumed_arg_values else []
+
                 completion_results = self._complete_for_arg(flag_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
                     self._print_arg_hint(flag_action)
@@ -445,8 +453,8 @@ class AutoCompleter(object):
         # ok, we're not a flag, see if there's a positional argument to complete
         else:
             if pos_action is not None:
-                pos_name = pos_action.dest
-                consumed = consumed_arg_values[pos_name] if pos_name in consumed_arg_values else []
+                consumed = consumed_arg_values[pos_action.dest] if pos_action.dest in consumed_arg_values else []
+
                 completion_results = self._complete_for_arg(pos_action, text, line, begidx, endidx, consumed)
                 if not completion_results:
                     self._print_arg_hint(pos_action)
