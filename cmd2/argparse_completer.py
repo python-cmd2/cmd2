@@ -321,20 +321,20 @@ class AutoCompleter(object):
                                 self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
                             skip_remaining_flags = True
 
+                    # Handle '--' which tells argparse all remaining arguments are non-flags
+                    if token == '--' and not skip_remaining_flags:
+                        if is_last_token:
+                            # Exit loop and see if -- can be completed into a flag
+                            break
+                        else:
+                            skip_remaining_flags = True
+
                     # At this point we're no longer consuming flag arguments. Is the current argument a potential flag?
-                    if is_potential_flag(token, self._parser) and not skip_remaining_flags:
+                    elif is_potential_flag(token, self._parser) and not skip_remaining_flags:
                         # reset some tracking values
                         flag_arg.reset()
                         # don't reset positional tracking because flags can be interspersed anywhere between positionals
                         flag_action = None
-
-                        if token == '--':
-                            if is_last_token:
-                                # Exit loop and see if -- can be completed into a flag
-                                break
-                            else:
-                                # In argparse, all args after -- are non-flags
-                                skip_remaining_flags = True
 
                         # does the token fully match a known flag?
                         if token in self._flag_to_action:

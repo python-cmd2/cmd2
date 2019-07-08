@@ -90,6 +90,8 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to flag completion
     ############################################################################################################
+
+    # Uses default flag prefix value (-)
     flag_parser = Cmd2ArgParser()
     flag_parser.add_argument('-n', '--normal_flag', help='A normal flag', action='store_true')
     flag_parser.add_argument('-o', '--other_normal_flag', help='The other normal flag', action='store_true')
@@ -97,6 +99,16 @@ class AutoCompleteTester(cmd2.Cmd):
 
     @with_argparser(flag_parser)
     def do_flag(self, args: argparse.Namespace) -> None:
+        pass
+
+    # Uses non-default flag prefix value (+)
+    plus_flag_parser = Cmd2ArgParser(prefix_chars='+')
+    plus_flag_parser.add_argument('+n', '++normal_flag', help='A normal flag', action='store_true')
+    plus_flag_parser.add_argument('+o', '++other_normal_flag', help='The other normal flag', action='store_true')
+    plus_flag_parser.add_argument('+s', '++suppressed_flag', help=argparse.SUPPRESS, action='store_true')
+
+    @with_argparser(plus_flag_parser)
+    def do_plus_flag(self, args: argparse.Namespace) -> None:
         pass
 
     ############################################################################################################
@@ -214,20 +226,39 @@ def test_complete_help(ac_app, command, text, completions):
     assert first_match is not None and ac_app.completion_matches == completions
 
 
-@pytest.mark.parametrize('used_flags, text, completions', [
-    ('', '-', ['--help', '--normal_flag', '--other_normal_flag', '-h', '-n', '-o']),
-    ('', '--', ['--help', '--normal_flag', '--other_normal_flag']),
-    ('', '-n', ['-n ']),
-    ('', '--n', ['--normal_flag ']),
-    ('', '-s', []),
-    ('', '--s', []),
-    ('-h', '-', ['--normal_flag', '--other_normal_flag', '-n', '-o']),
-    ('-h --normal_flag', '-', ['--other_normal_flag', '-o']),
-    ('-h --normal_flag', '--', ['--other_normal_flag ']),
-    ('-h --normal_flag -o', '-', [])
+@pytest.mark.parametrize('command_and_args, text, completions', [
+    # Default flag prefix character (-)
+    ('flag', '-', ['--help', '--normal_flag', '--other_normal_flag', '-h', '-n', '-o']),
+    ('flag', '--', ['--help', '--normal_flag', '--other_normal_flag']),
+    ('flag', '-n', ['-n ']),
+    ('flag', '--n', ['--normal_flag ']),
+    ('flag', '-s', []),
+    ('flag', '--s', []),
+    ('flag -h', '-', ['--normal_flag', '--other_normal_flag', '-n', '-o']),
+    ('flag -h --normal_flag', '-', ['--other_normal_flag', '-o']),
+    ('flag -h --normal_flag', '--', ['--other_normal_flag ']),
+    ('flag -h --normal_flag -o', '-', []),
+
+    # Non-default flag prefix character (+)
+    ('plus_flag', '+', ['++help', '++normal_flag', '++other_normal_flag', '+h', '+n', '+o']),
+    ('plus_flag', '++', ['++help', '++normal_flag', '++other_normal_flag']),
+    ('plus_flag', '+n', ['+n ']),
+    ('plus_flag', '++n', ['++normal_flag ']),
+    ('plus_flag', '+s', []),
+    ('plus_flag', '++s', []),
+    ('plus_flag +h', '+', ['++normal_flag', '++other_normal_flag', '+n', '+o']),
+    ('plus_flag +h ++normal_flag', '+', ['++other_normal_flag', '+o']),
+    ('plus_flag +h ++normal_flag', '++', ['++other_normal_flag ']),
+    ('plus_flag +h ++normal_flag +o', '+', []),
+
+    # Flag completion should not occur after '--' since that tells argparse the all remaining arguments of non-flags
+    ('flag --', '--', []),
+    ('flag --help --', '--', []),
+    ('plus_flag --', '++', []),
+    ('plus_flag ++help --', '++', [])
 ])
-def test_autcomp_flag_completion(ac_app, used_flags, text, completions):
-    line = 'flag {} {}'.format(used_flags, text)
+def test_autcomp_flag_completion(ac_app, command_and_args, text, completions):
+    line = '{} {}'.format(command_and_args, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
@@ -550,31 +581,6 @@ Hint:
 #     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
 #
 #
-# def test_completion_after_double_dash(cmd2_app):
-#     """
-#     Test completion after --, which argparse says (all args after -- are non-options)
-#     All of these tests occur outside of an argparse.REMAINDER section since those tests
-#     are handled in test_argparse_remainder_flag_completion
-#     """
-#
-#     # Test -- as the last token
-#     text = '--'
-#     line = 'help {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     # Since -- is the last token, then it should show flag choices
-#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-#     assert first_match is not None and '--help' in cmd2_app.completion_matches
-#
-#     # Test -- to end all flag completion
-#     text = '--'
-#     line = 'help -- {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     # Since -- appeared before the -- being completed, nothing should be completed
-#     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
 
 
 def test_is_potential_flag():
