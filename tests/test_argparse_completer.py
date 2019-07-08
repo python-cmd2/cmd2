@@ -33,11 +33,58 @@ def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[s
     return basic_complete(text, line, begidx, endidx, completions_from_function)
 
 
-# noinspection PyMethodMayBeStatic
+# noinspection PyMethodMayBeStatic,PyUnusedLocal
 class AutoCompleteTester(cmd2.Cmd):
     """Cmd2 app that exercises AutoCompleter class"""
     def __init__(self):
         super().__init__()
+
+    ############################################################################################################
+    # Begin code related to help and command name completion
+    ############################################################################################################
+    def _music_create(self, args: argparse.Namespace) -> None:
+        """Implements the 'music create' command"""
+        self.poutput('music create')
+
+    def _music_create_jazz(self, args: argparse.Namespace) -> None:
+        """Implements the 'music create jazz' command"""
+        self.poutput('music create jazz')
+
+    def _music_create_rock(self, args: argparse.Namespace) -> None:
+        """Implements the 'music create rock' command"""
+        self.poutput('music create rock')
+
+    # Top level parser for music command
+    music_parser = Cmd2ArgParser(description='Manage music', prog='music')
+
+    # Add sub-commands to music
+    music_subparsers = music_parser.add_subparsers()
+
+    # music -> create
+    music_create_parser = music_subparsers.add_parser('create', help='Create music')
+    music_create_parser.set_defaults(func=_music_create)
+
+    # Add sub-commands to music -> create
+    music_create_subparsers = music_create_parser.add_subparsers()
+
+    # music -> create -> jazz
+    music_create_jazz_parser = music_create_subparsers.add_parser('jazz', help='Create jazz')
+    music_create_jazz_parser.set_defaults(func=_music_create_jazz)
+
+    # music -> create -> rock
+    music_create_rock_parser = music_create_subparsers.add_parser('rock', help='Create rocks')
+    music_create_rock_parser.set_defaults(func=_music_create_rock)
+
+    @with_argparser(music_parser)
+    def do_music(self, args: argparse.Namespace) -> None:
+        """Music command"""
+        func = getattr(args, 'func', None)
+        if func is not None:
+            # Call whatever sub-command function was selected
+            func(self, args)
+        else:
+            # No sub-command was provided, so call help
+            self.do_help('music')
 
     ############################################################################################################
     # Begin code related to testing choices, choices_function, and choices_method parameters
@@ -126,36 +173,30 @@ def ac_app():
     return app
 
 
-def test_help(ac_app):
-    out1, err1 = run_cmd(ac_app, 'alias -h')
-    out2, err2 = run_cmd(ac_app, 'help alias')
+@pytest.mark.parametrize('command', [
+    'music',
+    'music create',
+    'music create rock',
+    'music create jazz'
+])
+def test_help(ac_app, command):
+    out1, err1 = run_cmd(ac_app, '{} -h'.format(command))
+    out2, err2 = run_cmd(ac_app, 'help {}'.format(command))
     assert out1 == out2
 
 
-def test_help_subcommand(ac_app):
-    out1, err1 = run_cmd(ac_app, 'alias create -h')
-    out2, err2 = run_cmd(ac_app, 'help alias create')
-    assert out1 == out2
-
-
-def test_complete_help(ac_app):
-    text = 'al'
-    line = 'help {}'.format(text)
+@pytest.mark.parametrize('command, text, completions', [
+    ('', 'mu', ['music ']),
+    ('music', 'cre', ['create ']),
+    ('music create', '', ['jazz', 'rock'])
+])
+def test_complete_help(ac_app, command, text, completions):
+    line = 'help {} {}'.format(command, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == ['alias ']
-
-
-def test_complete_help_subcommand(ac_app):
-    text = 'cre'
-    line = 'help alias {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    assert first_match is not None and ac_app.completion_matches == ['create ']
+    assert first_match is not None and ac_app.completion_matches == completions
 
 
 @pytest.mark.parametrize('text, completions', [

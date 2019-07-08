@@ -177,9 +177,9 @@ class TabCompleteExample(cmd2.Cmd):
         if not args.type:
             self.do_help('orig_suggest')
 
-    def _do_vid_media_movies(self, args) -> None:
+    def _do_vid_movies(self, args) -> None:
         if not args.command:
-            self.do_help('media movies')
+            self.do_help('video movies')
         elif args.command == 'list':
             for movie_id in TabCompleteExample.MOVIE_DATABASE:
                 movie = TabCompleteExample.MOVIE_DATABASE[movie_id]
@@ -188,9 +188,9 @@ class TabCompleteExample(cmd2.Cmd):
                               ', '.join(movie['director']),
                               '\n    '.join(movie['actor'])))
 
-    def _do_vid_media_shows(self, args) -> None:
+    def _do_vid_shows(self, args) -> None:
         if not args.command:
-            self.do_help('media shows')
+            self.do_help('video shows')
 
         elif args.command == 'list':
             for show_id in TabCompleteExample.SHOW_DATABASE:
@@ -209,7 +209,7 @@ class TabCompleteExample(cmd2.Cmd):
     video_types_subparsers = video_parser.add_subparsers(title='Media Types', dest='type')
 
     vid_movies_parser = video_types_subparsers.add_parser('movies')
-    vid_movies_parser.set_defaults(func=_do_vid_media_movies)
+    vid_movies_parser.set_defaults(func=_do_vid_movies)
 
     vid_movies_commands_subparsers = vid_movies_parser.add_subparsers(title='Commands', dest='command')
 
@@ -243,7 +243,7 @@ class TabCompleteExample(cmd2.Cmd):
                                           descriptive_header='Title')
 
     vid_shows_parser = video_types_subparsers.add_parser('shows')
-    vid_shows_parser.set_defaults(func=_do_vid_media_shows)
+    vid_shows_parser.set_defaults(func=_do_vid_shows)
 
     vid_shows_commands_subparsers = vid_shows_parser.add_subparsers(title='Commands', dest='command')
 
