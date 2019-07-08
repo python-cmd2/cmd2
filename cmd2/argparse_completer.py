@@ -347,7 +347,13 @@ class AutoCompleter(object):
                         if flag_action is not None:
                             # resolve argument counts
                             process_action_nargs(flag_action, flag_arg)
-                            if not is_last_token and not isinstance(flag_action, argparse._AppendAction):
+
+                            # Keep track of what flags have already been used
+                            # Flags with action set to append, append_const, and count can be reused
+                            if not is_last_token and \
+                                    not isinstance(flag_action, argparse._AppendAction) and \
+                                    not isinstance(flag_action, argparse._AppendConstAction) and \
+                                    not isinstance(flag_action, argparse._CountAction):
                                 matched_flags.extend(flag_action.option_strings)
 
                     # current token isn't a potential flag

@@ -94,7 +94,9 @@ class AutoCompleteTester(cmd2.Cmd):
     # Uses default flag prefix value (-)
     flag_parser = Cmd2ArgParser()
     flag_parser.add_argument('-n', '--normal_flag', help='A normal flag', action='store_true')
-    flag_parser.add_argument('-o', '--other_normal_flag', help='The other normal flag', action='store_true')
+    flag_parser.add_argument('-a', '--append_flag', help='Append flag', action='append')
+    flag_parser.add_argument('-o', '--append_const_flag', help='Append const flag', action='append_const', const=True)
+    flag_parser.add_argument('-c', '--count_flag', help='Count flag', action='count')
     flag_parser.add_argument('-s', '--suppressed_flag', help=argparse.SUPPRESS, action='store_true')
 
     @with_argparser(flag_parser)
@@ -104,8 +106,6 @@ class AutoCompleteTester(cmd2.Cmd):
     # Uses non-default flag prefix value (+)
     plus_flag_parser = Cmd2ArgParser(prefix_chars='+')
     plus_flag_parser.add_argument('+n', '++normal_flag', help='A normal flag', action='store_true')
-    plus_flag_parser.add_argument('+o', '++other_normal_flag', help='The other normal flag', action='store_true')
-    plus_flag_parser.add_argument('+s', '++suppressed_flag', help=argparse.SUPPRESS, action='store_true')
 
     @with_argparser(plus_flag_parser)
     def do_plus_flag(self, args: argparse.Namespace) -> None:
@@ -227,31 +227,31 @@ def test_complete_help(ac_app, command, text, completions):
 
 
 @pytest.mark.parametrize('command_and_args, text, completions', [
-    # Default flag prefix character (-)
-    ('flag', '-', ['--help', '--normal_flag', '--other_normal_flag', '-h', '-n', '-o']),
-    ('flag', '--', ['--help', '--normal_flag', '--other_normal_flag']),
+    # Complete all flags (suppressed will not show)
+    ('flag', '-', ['--append_const_flag', '--append_flag', '--count_flag', '--help',
+                   '--normal_flag', '-a', '-c', '-h', '-n', '-o']),
+    ('flag', '--', ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--normal_flag']),
+
+    # Complete individual flag
     ('flag', '-n', ['-n ']),
     ('flag', '--n', ['--normal_flag ']),
+
+    # Suppressed flag should not complete
     ('flag', '-s', []),
     ('flag', '--s', []),
-    ('flag -h', '-', ['--normal_flag', '--other_normal_flag', '-n', '-o']),
-    ('flag -h --normal_flag', '-', ['--other_normal_flag', '-o']),
-    ('flag -h --normal_flag', '--', ['--other_normal_flag ']),
-    ('flag -h --normal_flag -o', '-', []),
+
+    # A used flag should not show in completions
+    ('flag -n', '--', ['--append_const_flag', '--append_flag', '--count_flag', '--help']),
+
+    # Flags with actions set to append, append_const, and count will always show even if they've been used
+    ('flag --append_const_flag -c --append_flag value', '--', ['--append_const_flag', '--append_flag', '--count_flag',
+                                                               '--help', '--normal_flag']),
 
     # Non-default flag prefix character (+)
-    ('plus_flag', '+', ['++help', '++normal_flag', '++other_normal_flag', '+h', '+n', '+o']),
-    ('plus_flag', '++', ['++help', '++normal_flag', '++other_normal_flag']),
-    ('plus_flag', '+n', ['+n ']),
-    ('plus_flag', '++n', ['++normal_flag ']),
-    ('plus_flag', '+s', []),
-    ('plus_flag', '++s', []),
-    ('plus_flag +h', '+', ['++normal_flag', '++other_normal_flag', '+n', '+o']),
-    ('plus_flag +h ++normal_flag', '+', ['++other_normal_flag', '+o']),
-    ('plus_flag +h ++normal_flag', '++', ['++other_normal_flag ']),
-    ('plus_flag +h ++normal_flag +o', '+', []),
+    ('plus_flag', '+', ['++help', '++normal_flag', '+h', '+n']),
+    ('plus_flag', '++', ['++help', '++normal_flag']),
 
-    # Flag completion should not occur after '--' since that tells argparse the all remaining arguments of non-flags
+    # Flag completion should not occur after '--' since that tells argparse all remaining arguments are non-flags
     ('flag --', '--', []),
     ('flag --help --', '--', []),
     ('plus_flag --', '++', []),
