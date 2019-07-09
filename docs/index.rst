@@ -40,8 +40,6 @@ Getting Started
 Migrating from cmd
 ==================
 
-[create links with short descriptions to the various migrating pages here]
-
 .. toctree::
    :maxdepth: 2
 
@@ -50,8 +48,6 @@ Migrating from cmd
 
 Features
 ========
-
-[create links with short descriptions to the various feature pages here]
 
 .. toctree::
    :maxdepth: 2
@@ -70,8 +66,6 @@ API Reference
 
 Examples
 ========
-
-[create links with short descriptions to the various examples pages here]
 
 .. toctree::
    :maxdepth: 2
