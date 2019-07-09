@@ -22,7 +22,9 @@ cmd2
 functionality to make it quicker and easier for developers to create
 feature-rich interactive command-line applications which delight customers.
 
-``cmd2`` can be used as a drop-in replacement for cmd_.  Simply importing
+``cmd2`` can be used as a drop-in replacement for cmd_ with a few minor
+discrepancies as discussed in the
+:ref:`migrating/incompatibilities:Incompatibilities` section.  Simply importing
 ``cmd2`` in place of cmd_ will add many features to an application without any
 further modifications.  Migrating to ``cmd2`` will also open many additional
 doors for making it possible for developers to provide a top-notch interactive

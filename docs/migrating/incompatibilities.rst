@@ -43,6 +43,13 @@ contains A list of queued input lines. The cmdqueue list is checked in
 processed in order, as if entered at the prompt.
 
 Since version 0.9.13 ``cmd2`` has removed support for ``Cmd.cmdqueue``.
-Reasoning about application behavior is much easier without this queue present.
+Because ``cmd2`` supports running commands via the main ``cmdloop()``, text
+scripts, Python scripts, transcripts, and history replays, the only way to
+preserve consistent behavior across these methods was to eliminate the command
+queue. Additionally, reasoning about application behavior is much easier
+without this queue present.
+
 If developers need this sort of thing, they can add it in their application.
+However, if they are not extremely careful there would likely be unintended
+consequences.
 
