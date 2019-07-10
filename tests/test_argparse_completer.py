@@ -21,7 +21,8 @@ choices_from_method = ['choices', 'method', 'most', 'improved']
 
 set_value_choices = ['set', 'value', 'choices']
 one_or_more_choices = ['one', 'or', 'more', 'choices']
-optional_choices = ['optional', 'choices']
+optional_choices = ['a', 'few', 'optional', 'choices']
+range_choices = ['some', 'range', 'choices']
 remainder_choices = ['remainder', 'choices']
 
 completions_from_function = ['completions', 'function', 'fairly', 'complete']
@@ -195,6 +196,8 @@ class AutoCompleteTester(cmd2.Cmd):
                               choices=one_or_more_choices)
     nargs_parser.add_argument("--optional", help="a flag with an optional value", nargs=argparse.OPTIONAL,
                               choices=optional_choices)
+    nargs_parser.add_argument("--range", help="a flag with nargs range", nargs=(1, 2),
+                              choices=range_choices)
     nargs_parser.add_argument("--remainder", help="a flag wanting remaining", nargs=argparse.REMAINDER,
                               choices=remainder_choices)
 
@@ -445,6 +448,19 @@ def test_completion_items(ac_app, num_aliases, show_description):
     # Flag with nargs = ONE_OR_MORE
     ('--one_or_more', one_or_more_choices),
     ('--one_or_more one', ['or', 'more', 'choices']),
+
+    # Flag with nargs = OPTIONAL
+    ('--optional', optional_choices),
+
+    # Only one arg allowed for an OPTIONAL to completions are now empty
+    ('--optional optional', []),
+
+    # Flag with nargs range (1, 2)
+    ('--range', range_choices),
+    ('--range some', ['range', 'choices']),
+
+    # Already used 2 args so no more completions
+    ('--range some range', []),
 
     # Flag with nargs = REMAINDER
     ('--remainder', remainder_choices),
