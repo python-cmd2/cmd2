@@ -42,8 +42,8 @@ def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[s
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
 class AutoCompleteTester(cmd2.Cmd):
     """Cmd2 app that exercises AutoCompleter class"""
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
     ############################################################################################################
     # Begin code related to help and command name completion

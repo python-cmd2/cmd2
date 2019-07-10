@@ -236,14 +236,11 @@ class AutoCompleter(object):
 
         def consume_flag_argument() -> None:
             """Consuming token as a flag argument"""
-            if flag_arg_state is None:
-                return
-
             # if the token does not look like a new flag, then count towards flag arguments
-            if not is_potential_flag(token, self._parser):
+            if flag_arg_state is not None and not is_potential_flag(token, self._parser):
                 flag_arg_state.count += 1
 
-                # does this complete an option item for the flag
+                # Does this complete an option item for the flag?
                 arg_choices = self._resolve_choices_for_arg(flag_arg_state.action)
 
                 # If the current token isn't the one being completed and it's in the flag
@@ -254,19 +251,17 @@ class AutoCompleter(object):
 
         def consume_positional_argument() -> None:
             """Consuming token as positional argument"""
-            if pos_arg_state is None:
-                return
+            if pos_arg_state is not None:
+                pos_arg_state.count += 1
 
-            pos_arg_state.count += 1
+                # Does this complete an option item for the positional?
+                arg_choices = self._resolve_choices_for_arg(pos_arg_state.action)
 
-            # does this complete an option item for the positional
-            arg_choices = self._resolve_choices_for_arg(pos_arg_state.action)
-
-            # If the current token isn't the one being completed and it's in the positional
-            # argument's autocomplete list, then track that we've used it already.
-            if not is_last_token and token in arg_choices:
-                consumed_arg_values.setdefault(pos_arg_state.action.dest, [])
-                consumed_arg_values[pos_arg_state.action.dest].append(token)
+                # If the current token isn't the one being completed and it's in the positional
+                # argument's autocomplete list, then track that we've used it already.
+                if not is_last_token and token in arg_choices:
+                    consumed_arg_values.setdefault(pos_arg_state.action.dest, [])
+                    consumed_arg_values[pos_arg_state.action.dest].append(token)
 
         # This next block of processing tries to parse all parameters before the last parameter.
         # We're trying to determine what specific argument the current cursor position should be
