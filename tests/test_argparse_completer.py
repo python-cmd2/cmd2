@@ -19,6 +19,11 @@ static_choices_list = ['static', 'choices', 'stop', 'here']
 choices_from_function = ['choices', 'function', 'chatty', 'smith']
 choices_from_method = ['choices', 'method', 'most', 'improved']
 
+set_value_choices = ['set', 'value', 'choices']
+one_or_more_choices = ['one', 'or', 'more', 'choices']
+optional_choices = ['optional', 'choices']
+remainder_choices = ['remainder', 'choices']
+
 completions_from_function = ['completions', 'function', 'fairly', 'complete']
 completions_from_method = ['completions', 'method', 'missed', 'spot']
 
@@ -185,11 +190,13 @@ class AutoCompleteTester(cmd2.Cmd):
 
     # Flag args for nargs command
     nargs_parser.add_argument("--set_value", help="a flag with a set value for nargs", nargs=2,
-                              choices=static_choices_list)
+                              choices=set_value_choices)
     nargs_parser.add_argument("--one_or_more", help="a flag wanting one or more args", nargs=argparse.ONE_OR_MORE,
-                              choices=static_choices_list)
+                              choices=one_or_more_choices)
+    nargs_parser.add_argument("--optional", help="a flag with an optional value", nargs=argparse.OPTIONAL,
+                              choices=optional_choices)
     nargs_parser.add_argument("--remainder", help="a flag wanting remaining", nargs=argparse.REMAINDER,
-                              choices=static_choices_list)
+                              choices=remainder_choices)
 
     @with_argparser(nargs_parser)
     def do_nargs(self, args: argparse.Namespace) -> None:
@@ -216,48 +223,6 @@ def ac_app():
     app = AutoCompleteTester()
     app.stdout = StdSim(app.stdout)
     return app
-
-
-@pytest.mark.parametrize('args, completions', [
-    # Flag with nargs = 2
-    ('--set_value', static_choices_list),
-    ('--set_value static', ['choices', 'stop', 'here']),
-    ('--set_value static choices', []),
-
-    # Using the flag again will reset the choices available
-    ('--set_value static choices --set_value', static_choices_list),
-
-    # Flag with nargs = ONE_OR_MORE
-    ('--one_or_more', static_choices_list),
-    ('--one_or_more static', ['choices', 'stop', 'here']),
-    ('--one_or_more static choices', ['stop', 'here']),
-
-    # No more flags after a double dash
-    ('-- --one_or_more static choices', []),
-
-    # Flag with nargs = REMAINDER
-    ('--remainder', static_choices_list),
-    ('--remainder static ', ['choices', 'stop', 'here']),
-
-    # No more flags can appear after a REMAINDER flag)
-    ('--remainder static --set_value', ['choices', 'stop', 'here']),
-
-    # Double dash ends a remainder flag
-    ('--remainder static --', [])
-])
-def test_autcomp_nargs(ac_app, args, completions):
-    text = ''
-    line = 'nargs {} {}'.format(args, text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    if completions:
-        assert first_match is not None
-    else:
-        assert first_match is None
-
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 @pytest.mark.parametrize('command', [
@@ -463,6 +428,53 @@ def test_completion_items(ac_app, num_aliases, show_description):
 
     # If show_description is True, the alias's value will be in the display text
     assert ('help' in ac_app.display_matches[0]) == show_description
+
+
+@pytest.mark.parametrize('args, completions', [
+    # Flag with nargs = 2
+    ('--set_value', set_value_choices),
+    ('--set_value set', ['value', 'choices']),
+    ('--set_value set value choices', []),
+
+    # Another flag can't start until all expected args are filled out
+    ('--set_value --one_or_more', set_value_choices),
+
+    # Using the flag again will reset the choices available
+    ('--set_value set value --set_value', set_value_choices),
+
+    # Flag with nargs = ONE_OR_MORE
+    ('--one_or_more', one_or_more_choices),
+    ('--one_or_more one', ['or', 'more', 'choices']),
+
+    # Flag with nargs = REMAINDER
+    ('--remainder', remainder_choices),
+    ('--remainder remainder ', ['choices ']),
+
+    # No more flags can appear after a REMAINDER flag)
+    ('--remainder choices --set_value', ['remainder ']),
+
+    # Double dash ends the current flag (even if all expected args aren't entered)
+    ('--set_value --', []),
+
+    # Double dash ends a REMAINDER flag
+    ('--remainder remainder --', []),
+
+    # No more flags after a double dash
+    ('-- --one_or_more ', []),
+])
+def test_autcomp_nargs(ac_app, args, completions):
+    text = ''
+    line = 'nargs {} {}'.format(args, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
 def test_completion_items_default_header(ac_app):

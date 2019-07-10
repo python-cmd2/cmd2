@@ -288,18 +288,30 @@ class AutoCompleter(object):
             if token_index >= len(tokens) - 1:
                 is_last_token = True
 
-            # If a remainder action is found, force all future tokens to go to that
+            # If we're in a positional REMAINDER arg, force all future tokens to go to that
             if pos_arg_state is not None and pos_arg_state.is_remainder:
                 consume_positional_argument()
                 continue
+
+            # If we're in a flag REMAINDER arg, force all future tokens to go to that until a double dash is hit
             elif flag_arg_state is not None and flag_arg_state.is_remainder:
                 skip_remaining_flags = True
                 if token == '--':
-                    # End this flag and don't allow any more flags
                     flag_arg_state = None
                 else:
                     consume_flag_argument()
                 continue
+
+            # Handle '--' which tells argparse all remaining arguments are non-flags
+            elif token == '--' and not skip_remaining_flags:
+                if is_last_token:
+                    # Exit loop and see if -- can be completed into a flag
+                    break
+                else:
+                    # End the current flag
+                    flag_arg_state = None
+                    skip_remaining_flags = True
+                    continue
 
             current_is_positional = False
 
@@ -319,16 +331,8 @@ class AutoCompleter(object):
                             self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
                         skip_remaining_flags = True
 
-                # Handle '--' which tells argparse all remaining arguments are non-flags
-                if token == '--' and not skip_remaining_flags:
-                    if is_last_token:
-                        # Exit loop and see if -- can be completed into a flag
-                        break
-                    else:
-                        skip_remaining_flags = True
-
                 # At this point we're no longer consuming flag arguments. Is the current argument a potential flag?
-                elif is_potential_flag(token, self._parser) and not skip_remaining_flags:
+                if is_potential_flag(token, self._parser) and not skip_remaining_flags:
                     # Reset flag arg state but not positional tracking because flags can be
                     # interspersed anywhere between positionals
                     flag_arg_state = None
