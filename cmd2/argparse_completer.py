@@ -228,8 +228,8 @@ class AutoCompleter(object):
                 # does this complete an option item for the flag
                 arg_choices = self._resolve_choices_for_arg(flag_action)
 
-                # if the current token matches the current flag's autocomplete argument list,
-                # track that we've used it already.  Unless this is the current token, then keep it.
+                # If the current token isn't the one being completed and it's in the flag
+                # argument's autocomplete list, then track that we've used it already.
                 if not is_last_token and token in arg_choices:
                     consumed_arg_values.setdefault(flag_action.dest, [])
                     consumed_arg_values[flag_action.dest].append(token)
@@ -241,8 +241,8 @@ class AutoCompleter(object):
             # does this complete an option item for the positional
             arg_choices = self._resolve_choices_for_arg(pos_action)
 
-            # if the current token matches the current position's autocomplete argument list,
-            # track that we've used it already.  Unless this is the current token, then keep it.
+            # If the current token isn't the one being completed and it's in the positional
+            # argument's autocomplete list, then track that we've used it already.
             if not is_last_token and token in arg_choices:
                 consumed_arg_values.setdefault(pos_action.dest, [])
                 consumed_arg_values[pos_action.dest].append(token)
@@ -410,12 +410,12 @@ class AutoCompleter(object):
                 else:
                     consume_flag_argument()
 
-                if remainder['arg'] is not None:
-                    skip_remaining_flags = True
-
-                # don't reset this if we're on the last token - this allows completion to occur on the current token
-                elif not is_last_token and flag_arg.min is not None:
-                    flag_arg.needed = flag_arg.count < flag_arg.min
+                # To allow completion of the final token, we only do the following on preceding tokens
+                if not is_last_token:
+                    if remainder['arg'] is not None:
+                        skip_remaining_flags = True
+                    elif flag_arg.min is not None:
+                        flag_arg.needed = flag_arg.count < flag_arg.min
 
         # Here we're done parsing all of the prior arguments. We know what the next argument is.
 
