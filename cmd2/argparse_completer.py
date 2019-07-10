@@ -125,17 +125,17 @@ class AutoCompleter(object):
             elif self.action.nargs is None:
                 self.min = 1
                 self.max = 1
-            elif self.action.nargs == argparse.ONE_OR_MORE:
-                self.min = 1
-                self.max = float('inf')
+            elif self.action.nargs == argparse.OPTIONAL:
+                self.min = 0
+                self.max = 1
                 self.variable = True
             elif self.action.nargs == argparse.ZERO_OR_MORE or self.action.nargs == argparse.REMAINDER:
                 self.min = 0
                 self.max = float('inf')
                 self.variable = True
-            elif self.action.nargs == argparse.OPTIONAL:
-                self.min = 0
-                self.max = 1
+            elif self.action.nargs == argparse.ONE_OR_MORE:
+                self.min = 1
+                self.max = float('inf')
                 self.variable = True
             else:
                 self.min = self.action.nargs
@@ -404,9 +404,8 @@ class AutoCompleter(object):
                     consume_flag_argument()
 
             # To allow completion of the final token, we only do the following on preceding tokens
-            if not is_last_token:
-                if flag_arg_state is not None and flag_arg_state.min is not None:
-                    flag_arg_state.needed = flag_arg_state.count < flag_arg_state.min
+            if not is_last_token and flag_arg_state is not None:
+                flag_arg_state.needed = flag_arg_state.count < flag_arg_state.min
 
         # Here we're done parsing all of the prior arguments. We know what the next argument is.
 
@@ -493,7 +492,7 @@ class AutoCompleter(object):
 
     def complete_command_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
-        Supports the completion of sub-command names
+        Supports cmd2's help command in the completion of sub-command names
         :param tokens: command line tokens
         :param text: the string prefix we are attempting to match (all returned matches must begin with it)
         :param line: the current input line with leading whitespace removed
