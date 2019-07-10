@@ -98,6 +98,7 @@ class AutoCompleteTester(cmd2.Cmd):
     flag_parser.add_argument('-o', '--append_const_flag', help='Append const flag', action='append_const', const=True)
     flag_parser.add_argument('-c', '--count_flag', help='Count flag', action='count')
     flag_parser.add_argument('-s', '--suppressed_flag', help=argparse.SUPPRESS, action='store_true')
+    flag_parser.add_argument('-r', '--remainder_flag', nargs=argparse.REMAINDER, help='a remainder flag')
 
     @with_argparser(flag_parser)
     def do_flag(self, args: argparse.Namespace) -> None:
@@ -185,7 +186,9 @@ class AutoCompleteTester(cmd2.Cmd):
     # Flag args for nargs command
     nargs_parser.add_argument("--set_value", help="a flag with a set value for nargs", nargs=2,
                               choices=static_choices_list)
-    nargs_parser.add_argument("--one_or_more", help="a flag with nargs", nargs=argparse.ONE_OR_MORE,
+    nargs_parser.add_argument("--one_or_more", help="a flag wanting one or more args", nargs=argparse.ONE_OR_MORE,
+                              choices=static_choices_list)
+    nargs_parser.add_argument("--remainder", help="a flag wanting remaining", nargs=argparse.REMAINDER,
                               choices=static_choices_list)
 
     @with_argparser(nargs_parser)
@@ -216,7 +219,7 @@ def ac_app():
 
 
 @pytest.mark.parametrize('args, completions', [
-    # nargs = 2
+    # Flag with nargs = 2
     ('--set_value', static_choices_list),
     ('--set_value static', ['choices', 'stop', 'here']),
     ('--set_value static choices', []),
@@ -224,7 +227,7 @@ def ac_app():
     # Using the flag again will reset the choices available
     ('--set_value static choices --set_value', static_choices_list),
 
-    # nargs = ONE_OR_MORE
+    # Flag with nargs = ONE_OR_MORE
     ('--one_or_more', static_choices_list),
     ('--one_or_more static', ['choices', 'stop', 'here']),
     ('--one_or_more static choices', ['stop', 'here']),
@@ -232,6 +235,12 @@ def ac_app():
     # No more flags after a double dash
     ('-- --one_or_more static choices', []),
 
+    # Flag with nargs = REMAINDER
+    ('--remainder', static_choices_list),
+    ('--remainder static ', ['choices', 'stop', 'here']),
+
+    # No more flags can appear after a REMAINDER flag)
+    ('--remainder static --set_value', ['choices', 'stop', 'here'])
 ])
 def test_autcomp_nargs(ac_app, args, completions):
     text = ''
@@ -281,24 +290,36 @@ def test_complete_help(ac_app, command, text, completions):
 
 @pytest.mark.parametrize('command_and_args, text, completions', [
     # Complete all flags (suppressed will not show)
-    ('flag', '-', ['--append_const_flag', '--append_flag', '--count_flag', '--help',
-                   '--normal_flag', '-a', '-c', '-h', '-n', '-o']),
-    ('flag', '--', ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--normal_flag']),
+    ('flag', '-', ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--normal_flag',
+                   '--remainder_flag', '-a', '-c', '-h', '-n', '-o', '-r']),
+    ('flag', '--', ['--append_const_flag', '--append_flag', '--count_flag', '--help',
+                    '--normal_flag', '--remainder_flag']),
 
     # Complete individual flag
     ('flag', '-n', ['-n ']),
     ('flag', '--n', ['--normal_flag ']),
+
+    # No flags should complete until current flag has its args
+    ('flag --append_flag', '-', []),
+
+    # Complete REMAINDER flag name
+    ('flag', '-r', ['-r ']),
+    ('flag', '--r', ['--remainder_flag ']),
+
+    # No flags after a REMAINDER should complete
+    ('flag -r value', '-', []),
+    ('flag --remainder_flag value', '--', []),
 
     # Suppressed flag should not complete
     ('flag', '-s', []),
     ('flag', '--s', []),
 
     # A used flag should not show in completions
-    ('flag -n', '--', ['--append_const_flag', '--append_flag', '--count_flag', '--help']),
+    ('flag -n', '--', ['--append_const_flag', '--append_flag', '--count_flag', '--help', '--remainder_flag']),
 
     # Flags with actions set to append, append_const, and count will always show even if they've been used
     ('flag --append_const_flag -c --append_flag value', '--', ['--append_const_flag', '--append_flag', '--count_flag',
-                                                               '--help', '--normal_flag']),
+                                                               '--help', '--normal_flag', '--remainder_flag']),
 
     # Non-default flag prefix character (+)
     ('plus_flag', '+', ['++help', '++normal_flag', '+h', '+n']),
