@@ -224,9 +224,6 @@ class AutoCompleter(object):
         # _ArgumentState of the current flag
         flag_arg_state = None
 
-        # dict is used because object wrapper is necessary to allow inner functions to modify outer variables
-        remainder = {'arg': None, 'action': None}
-
         matched_flags = []
         current_is_positional = False
         consumed_arg_values = {}  # dict(arg_name -> [values, ...])
@@ -404,9 +401,7 @@ class AutoCompleter(object):
 
             # To allow completion of the final token, we only do the following on preceding tokens
             if not is_last_token:
-                if remainder['arg'] is not None:
-                    skip_remaining_flags = True
-                elif flag_arg_state is not None and flag_arg_state.min is not None:
+                if flag_arg_state is not None and flag_arg_state.min is not None:
                     flag_arg_state.needed = flag_arg_state.count < flag_arg_state.min
 
         # Here we're done parsing all of the prior arguments. We know what the next argument is.
