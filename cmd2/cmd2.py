@@ -1926,8 +1926,6 @@ class Cmd(cmd.Cmd):
         :param statement: the parsed statement from the command line
         :return: the resolved macro or None on error
         """
-        from itertools import islice
-
         if statement.command not in self.macros.keys():
             raise KeyError('{} is not a macro'.format(statement.command))
 
@@ -1960,7 +1958,7 @@ class Cmd(cmd.Cmd):
             resolved = parts[0] + replacement + parts[1]
 
         # Append extra arguments and use statement.arg_list since these arguments need their quotes preserved
-        for arg in islice(statement.arg_list, macro.minimum_arg_count, None):
+        for arg in statement.arg_list[macro.minimum_arg_count:]:
             resolved += ' ' + arg
 
         # Restore any terminator, suffix, redirection, etc.

@@ -188,7 +188,7 @@ class AutoCompleter(object):
 
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
-        if not tokens:
+        if len(tokens) <= self._token_start_index:
             return []
 
         # Count which positional argument index we're at now. Loop through all tokens on the command line so far
@@ -291,131 +291,131 @@ class AutoCompleter(object):
         # arguments will be hidden from the list of available flags. Also, arguments with a
         # defined list of possible values will exclude values that have already been used.
 
-        # notes when the last token has been reached
+        # Notes when the token being completed has been reached
         is_last_token = False
 
-        for idx, token in enumerate(tokens):
-            is_last_token = idx >= len(tokens) - 1
+        # Enumerate over the sliced list
+        for loop_index, token in enumerate(tokens[self._token_start_index:]):
+            token_index = loop_index + self._token_start_index
+            if token_index >= len(tokens) - 1:
+                is_last_token = True
 
-            # Only start at the start token index
-            if idx >= self._token_start_index:
+            # If a remainder action is found, force all future tokens to go to that
+            if remainder['arg'] is not None:
+                if remainder['action'] == pos_action:
+                    consume_positional_argument()
+                    continue
+                elif remainder['action'] == flag_action:
+                    consume_flag_argument()
+                    continue
 
-                # If a remainder action is found, force all future tokens to go to that
-                if remainder['arg'] is not None:
-                    if remainder['action'] == pos_action:
-                        consume_positional_argument()
-                        continue
-                    elif remainder['action'] == flag_action:
-                        consume_flag_argument()
-                        continue
+            current_is_positional = False
+            # Are we consuming flag arguments?
+            if not flag_arg.needed:
 
-                current_is_positional = False
-                # Are we consuming flag arguments?
-                if not flag_arg.needed:
+                if not skip_remaining_flags:
+                    # Special case when each of the following is true:
+                    #   - We're not in the middle of consuming flag arguments
+                    #   - The current positional argument count has hit the max count
+                    #   - The next positional argument is a REMAINDER argument
+                    # Argparse will now treat all future tokens as arguments to the positional including tokens that
+                    # look like flags so the completer should skip any flag related processing once this happens
+                    if (pos_action is not None) and pos_arg.count >= pos_arg.max and \
+                            next_pos_arg_index < len(self._positional_actions) and \
+                            self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
+                        skip_remaining_flags = True
 
-                    if not skip_remaining_flags:
-                        # Special case when each of the following is true:
-                        #   - We're not in the middle of consuming flag arguments
-                        #   - The current positional argument count has hit the max count
-                        #   - The next positional argument is a REMAINDER argument
-                        # Argparse will now treat all future tokens as arguments to the positional including tokens that
-                        # look like flags so the completer should skip any flag related processing once this happens
-                        if (pos_action is not None) and pos_arg.count >= pos_arg.max and \
-                                next_pos_arg_index < len(self._positional_actions) and \
-                                self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
-                            skip_remaining_flags = True
-
-                    # Handle '--' which tells argparse all remaining arguments are non-flags
-                    if token == '--' and not skip_remaining_flags:
-                        if is_last_token:
-                            # Exit loop and see if -- can be completed into a flag
-                            break
-                        else:
-                            skip_remaining_flags = True
-
-                    # At this point we're no longer consuming flag arguments. Is the current argument a potential flag?
-                    elif is_potential_flag(token, self._parser) and not skip_remaining_flags:
-                        # reset some tracking values
-                        flag_arg.reset()
-
-                        # don't reset positional tracking because flags can be interspersed anywhere between positionals
-                        flag_action = None
-
-                        # does the token fully match a known flag?
-                        if token in self._flag_to_action:
-                            flag_action = self._flag_to_action[token]
-                        elif hasattr(self._parser, 'allow_abbrev') and self._parser.allow_abbrev:
-                            candidates_flags = [flag for flag in self._flag_to_action if flag.startswith(token)]
-                            if len(candidates_flags) == 1:
-                                flag_action = self._flag_to_action[candidates_flags[0]]
-
-                        if flag_action is not None:
-                            process_argument_nargs(flag_action, flag_arg)
-
-                            # It's possible we already have consumed values for this flag if it was used earlier
-                            # in the command line. Reset them now for this use of the flag.
-                            consumed_arg_values[flag_action.dest] = []
-
-                            # Keep track of what flags have already been used
-                            # Flags with action set to append, append_const, and count can be reused
-                            if not is_last_token and \
-                                    not isinstance(flag_action, argparse._AppendAction) and \
-                                    not isinstance(flag_action, argparse._AppendConstAction) and \
-                                    not isinstance(flag_action, argparse._CountAction):
-                                matched_flags.extend(flag_action.option_strings)
-
-                    # current token isn't a potential flag
-                    #   - does the last flag accept variable arguments?
-                    #   - have we reached the max arg count for the flag?
-                    elif not flag_arg.variable or flag_arg.count >= flag_arg.max:
-                        # previous flag doesn't accept variable arguments, count this as a positional argument
-
-                        # reset flag tracking variables
-                        flag_arg.reset()
-                        flag_action = None
-                        current_is_positional = True
-
-                        if len(token) > 0 and pos_action is not None and pos_arg.count < pos_arg.max:
-                            # we have positional action match and we haven't reached the max arg count, consume
-                            # the positional argument and move on.
-                            consume_positional_argument()
-                        elif pos_action is None or pos_arg.count >= pos_arg.max:
-                            # if we don't have a current positional action or we've reached the max count for the action
-                            # close out the current positional argument state and set up for the next one
-                            pos_index = next_pos_arg_index
-                            next_pos_arg_index += 1
-                            pos_arg.reset()
-                            pos_action = None
-
-                            # are we at a sub-command? If so, forward to the matching completer
-                            if pos_index < len(self._positional_actions):
-                                action = self._positional_actions[pos_index]
-                                pos_name = action.dest
-                                if pos_name in self._positional_completers:
-                                    sub_completers = self._positional_completers[pos_name]
-                                    if token in sub_completers:
-                                        return sub_completers[token].complete_command(tokens, text, line,
-                                                                                      begidx, endidx)
-                                pos_action = action
-                                process_argument_nargs(pos_action, pos_arg)
-                                consume_positional_argument()
-
-                        elif not is_last_token and pos_arg.max is not None:
-                            pos_action = None
-                            pos_arg.reset()
-
+                # Handle '--' which tells argparse all remaining arguments are non-flags
+                if token == '--' and not skip_remaining_flags:
+                    if is_last_token:
+                        # Exit loop and see if -- can be completed into a flag
+                        break
                     else:
-                        consume_flag_argument()
+                        skip_remaining_flags = True
+
+                # At this point we're no longer consuming flag arguments. Is the current argument a potential flag?
+                elif is_potential_flag(token, self._parser) and not skip_remaining_flags:
+                    # reset some tracking values
+                    flag_arg.reset()
+
+                    # don't reset positional tracking because flags can be interspersed anywhere between positionals
+                    flag_action = None
+
+                    # does the token fully match a known flag?
+                    if token in self._flag_to_action:
+                        flag_action = self._flag_to_action[token]
+                    elif hasattr(self._parser, 'allow_abbrev') and self._parser.allow_abbrev:
+                        candidates_flags = [flag for flag in self._flag_to_action if flag.startswith(token)]
+                        if len(candidates_flags) == 1:
+                            flag_action = self._flag_to_action[candidates_flags[0]]
+
+                    if flag_action is not None:
+                        process_argument_nargs(flag_action, flag_arg)
+
+                        # It's possible we already have consumed values for this flag if it was used earlier
+                        # in the command line. Reset them now for this use of the flag.
+                        consumed_arg_values[flag_action.dest] = []
+
+                        # Keep track of what flags have already been used
+                        # Flags with action set to append, append_const, and count can be reused
+                        if not is_last_token and \
+                                not isinstance(flag_action, argparse._AppendAction) and \
+                                not isinstance(flag_action, argparse._AppendConstAction) and \
+                                not isinstance(flag_action, argparse._CountAction):
+                            matched_flags.extend(flag_action.option_strings)
+
+                # current token isn't a potential flag
+                #   - does the last flag accept variable arguments?
+                #   - have we reached the max arg count for the flag?
+                elif not flag_arg.variable or flag_arg.count >= flag_arg.max:
+                    # previous flag doesn't accept variable arguments, count this as a positional argument
+
+                    # reset flag tracking variables
+                    flag_arg.reset()
+                    flag_action = None
+                    current_is_positional = True
+
+                    if len(token) > 0 and pos_action is not None and pos_arg.count < pos_arg.max:
+                        # we have positional action match and we haven't reached the max arg count, consume
+                        # the positional argument and move on.
+                        consume_positional_argument()
+                    elif pos_action is None or pos_arg.count >= pos_arg.max:
+                        # if we don't have a current positional action or we've reached the max count for the action
+                        # close out the current positional argument state and set up for the next one
+                        pos_index = next_pos_arg_index
+                        next_pos_arg_index += 1
+                        pos_arg.reset()
+                        pos_action = None
+
+                        # are we at a sub-command? If so, forward to the matching completer
+                        if pos_index < len(self._positional_actions):
+                            action = self._positional_actions[pos_index]
+                            pos_name = action.dest
+                            if pos_name in self._positional_completers:
+                                sub_completers = self._positional_completers[pos_name]
+                                if token in sub_completers:
+                                    return sub_completers[token].complete_command(tokens, text, line,
+                                                                                  begidx, endidx)
+                            pos_action = action
+                            process_argument_nargs(pos_action, pos_arg)
+                            consume_positional_argument()
+
+                    elif not is_last_token and pos_arg.max is not None:
+                        pos_action = None
+                        pos_arg.reset()
 
                 else:
                     consume_flag_argument()
 
-                # To allow completion of the final token, we only do the following on preceding tokens
-                if not is_last_token:
-                    if remainder['arg'] is not None:
-                        skip_remaining_flags = True
-                    elif flag_arg.min is not None:
-                        flag_arg.needed = flag_arg.count < flag_arg.min
+            else:
+                consume_flag_argument()
+
+            # To allow completion of the final token, we only do the following on preceding tokens
+            if not is_last_token:
+                if remainder['arg'] is not None:
+                    skip_remaining_flags = True
+                elif flag_arg.min is not None:
+                    flag_arg.needed = flag_arg.count < flag_arg.min
 
         # Here we're done parsing all of the prior arguments. We know what the next argument is.
 
@@ -509,16 +509,15 @@ class AutoCompleter(object):
         :param endidx: the ending index of the prefix text
         :return: List of subcommand completions
         """
-        for idx, token in enumerate(tokens):
-            if idx >= self._token_start_index:
-                if self._positional_completers:
-                    # For now argparse only allows 1 sub-command group per level
-                    # so this will only loop once.
-                    for completers in self._positional_completers.values():
-                        if token in completers:
-                            return completers[token].complete_command_help(tokens, text, line, begidx, endidx)
-                        else:
-                            return utils.basic_complete(text, line, begidx, endidx, completers.keys())
+        for token in tokens[self._token_start_index:]:
+            if self._positional_completers:
+                # For now argparse only allows 1 sub-command group per level
+                # so this will only loop once.
+                for completers in self._positional_completers.values():
+                    if token in completers:
+                        return completers[token].complete_command_help(tokens, text, line, begidx, endidx)
+                    else:
+                        return utils.basic_complete(text, line, begidx, endidx, completers.keys())
         return []
 
     def format_help(self, tokens: List[str]) -> str:
@@ -527,14 +526,13 @@ class AutoCompleter(object):
         :param tokens: command line tokens
         :return: help text of the subcommand being queried
         """
-        for idx, token in enumerate(tokens):
-            if idx >= self._token_start_index:
-                if self._positional_completers:
-                    # For now argparse only allows 1 sub-command group per level
-                    # so this will only loop once.
-                    for completers in self._positional_completers.values():
-                        if token in completers:
-                            return completers[token].format_help(tokens)
+        for token in tokens[self._token_start_index:]:
+            if self._positional_completers:
+                # For now argparse only allows 1 sub-command group per level
+                # so this will only loop once.
+                for completers in self._positional_completers.values():
+                    if token in completers:
+                        return completers[token].format_help(tokens)
         return self._parser.format_help()
 
     def _complete_for_arg(self, arg: argparse.Action,
