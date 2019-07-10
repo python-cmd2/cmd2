@@ -25,6 +25,8 @@ optional_choices = ['a', 'few', 'optional', 'choices']
 range_choices = ['some', 'range', 'choices']
 remainder_choices = ['remainder', 'choices']
 
+positional_choices = ['the', 'positional', 'choices']
+
 completions_from_function = ['completions', 'function', 'fairly', 'complete']
 completions_from_method = ['completions', 'method', 'missed', 'spot']
 
@@ -199,6 +201,11 @@ class AutoCompleteTester(cmd2.Cmd):
     nargs_parser.add_argument("--range", help="a flag with nargs range", nargs=(1, 2),
                               choices=range_choices)
     nargs_parser.add_argument("--remainder", help="a flag wanting remaining", nargs=argparse.REMAINDER,
+                              choices=remainder_choices)
+
+    nargs_parser.add_argument("normal_pos", help="a remainder positional", nargs=2,
+                              choices=positional_choices)
+    nargs_parser.add_argument("remainder_pos", help="a remainder positional", nargs=argparse.REMAINDER,
                               choices=remainder_choices)
 
     @with_argparser(nargs_parser)
@@ -437,7 +444,9 @@ def test_completion_items(ac_app, num_aliases, show_description):
     # Flag with nargs = 2
     ('--set_value', set_value_choices),
     ('--set_value set', ['value', 'choices']),
-    ('--set_value set value choices', []),
+
+    # Both args are filled. At positional arg now.
+    ('--set_value set value', positional_choices),
 
     # Another flag can't start until all expected args are filled out
     ('--set_value --one_or_more', set_value_choices),
@@ -452,15 +461,15 @@ def test_completion_items(ac_app, num_aliases, show_description):
     # Flag with nargs = OPTIONAL
     ('--optional', optional_choices),
 
-    # Only one arg allowed for an OPTIONAL to completions are now empty
-    ('--optional optional', []),
+    # Only one arg allowed for an OPTIONAL. At positional now.
+    ('--optional optional', positional_choices),
 
     # Flag with nargs range (1, 2)
     ('--range', range_choices),
     ('--range some', ['range', 'choices']),
 
-    # Already used 2 args so no more completions
-    ('--range some range', []),
+    # Already used 2 args so at positional
+    ('--range some range', positional_choices),
 
     # Flag with nargs = REMAINDER
     ('--remainder', remainder_choices),
@@ -470,13 +479,32 @@ def test_completion_items(ac_app, num_aliases, show_description):
     ('--remainder choices --set_value', ['remainder ']),
 
     # Double dash ends the current flag (even if all expected args aren't entered)
-    ('--set_value --', []),
+    ('--set_value --', positional_choices),
 
     # Double dash ends a REMAINDER flag
-    ('--remainder remainder --', []),
+    ('--remainder remainder --', positional_choices),
 
     # No more flags after a double dash
-    ('-- --one_or_more ', []),
+    ('-- --one_or_more ', positional_choices),
+
+    # Consume positional
+    ('', positional_choices),
+    ('positional', ['the', 'choices']),
+
+    # Intermixed flag and positional
+    ('positional --set_value', set_value_choices),
+    ('positional --set_value set', ['value', 'choices']),
+
+    # Intermixed flag and positional with flag finishing
+    ('positional --set_value set value', ['the', 'choices']),
+    ('positional --set_value set --', ['the', 'choices']),
+
+    # REMAINDER positional
+    ('the positional', remainder_choices),
+    ('the positional remainder', ['choices ']),
+
+    # REMAINDER positional. Flags don't work in REMAINDER
+    ('the positional --set_value', remainder_choices),
 ])
 def test_autcomp_nargs(ac_app, args, completions):
     text = ''
@@ -582,121 +610,6 @@ Hint:
   NO_HELP_POS            
 
 '''
-
-# def test_autcomp_hint_in_narg_range(cmd2_app, capsys):
-#     text = ''
-#     line = 'suggest -d 2 {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-#     out, err = capsys.readouterr()
-#
-#     assert out == '''
-# Hint:
-#   -d, --duration DURATION    Duration constraint in minutes.
-#                              	single value - maximum duration
-#                              	[a, b] - duration range
-#
-# '''
-#
-# def test_autocomp_flags_narg_max(cmd2_app):
-#     text = ''
-#     line = 'suggest d 2 3 {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-#     assert first_match is None
-#
-#
-# def test_autcomp_narg_beyond_max(cmd2_app):
-#     out, err = run_cmd(cmd2_app, 'suggest -t movie -d 3 4 5')
-#     assert 'Error: unrecognized arguments: 5' in err[1]
-#
-#
-# def test_autocomp_subcmd_flag_comp_func_attr(cmd2_app):
-#     text = 'A'
-#     line = 'video movies list -a "{}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-#     assert first_match is not None and \
-#            cmd2_app.completion_matches == ['Adam Driver', 'Alec Guinness', 'Andy Serkis', 'Anthony Daniels']
-#
-#
-# def test_autocomp_subcmd_flag_comp_list_attr(cmd2_app):
-#     text = 'G'
-#     line = 'video movies list -d {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-#     assert first_match is not None and first_match == '"Gareth Edwards'
-#
-#
-# def test_autocomp_pos_consumed(cmd2_app):
-#     text = ''
-#     line = 'library movie add SW_EP01 {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-#     assert first_match is None
-#
-#
-# def test_autocomp_pos_after_flag(cmd2_app):
-#     text = 'Joh'
-#     line = 'video movies add -d "George Lucas" -- "Han Solo" PG "Emilia Clarke" "{}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-#     assert first_match is not None and \
-#            cmd2_app.completion_matches == ['John Boyega" ']
-#
-#
-#
-# def test_argparse_remainder_flag_completion(cmd2_app):
-#     import cmd2
-#     import argparse
-#
-#     # Test flag completion as first arg of positional with nargs=argparse.REMAINDER
-#     text = '--h'
-#     line = 'help command {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     # --h should not complete into --help because we are in the argparse.REMAINDER section
-#     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
-#
-#     # Test flag completion within an already started positional with nargs=argparse.REMAINDER
-#     text = '--h'
-#     line = 'help command subcommand {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     # --h should not complete into --help because we are in the argparse.REMAINDER section
-#     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
-#
-#     # Test a flag with nargs=argparse.REMAINDER
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('-f', nargs=argparse.REMAINDER)
-#
-#     # Overwrite eof's parser for this test
-#     cmd2.Cmd.do_eof.argparser = parser
-#
-#     text = '--h'
-#     line = 'eof -f {}'.format(text)
-#     endidx = len(line)
-#     begidx = endidx - len(text)
-#
-#     # --h should not complete into --help because we are in the argparse.REMAINDER section
-#     assert complete_tester(text, line, begidx, endidx, cmd2_app) is None
-#
-#
-
 
 def test_is_potential_flag():
     from cmd2.argparse_completer import is_potential_flag
