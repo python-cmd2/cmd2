@@ -240,7 +240,10 @@ def ac_app():
     ('--remainder static ', ['choices', 'stop', 'here']),
 
     # No more flags can appear after a REMAINDER flag)
-    ('--remainder static --set_value', ['choices', 'stop', 'here'])
+    ('--remainder static --set_value', ['choices', 'stop', 'here']),
+
+    # Double dash ends a remainder flag
+    ('--remainder static --', [])
 ])
 def test_autcomp_nargs(ac_app, args, completions):
     text = ''
@@ -671,14 +674,15 @@ def test_is_potential_flag():
     from cmd2.argparse_completer import is_potential_flag
     parser = Cmd2ArgParser()
 
-    # Not valid flags
+    # Not potential flags
     assert not is_potential_flag('', parser)
     assert not is_potential_flag('non-flag', parser)
-    assert not is_potential_flag('-', parser)
     assert not is_potential_flag('--has space', parser)
     assert not is_potential_flag('-2', parser)
 
-    # Valid flags
+    # Potential flags
+    assert is_potential_flag('-', parser)
+    assert is_potential_flag('--', parser)
     assert is_potential_flag('-flag', parser)
     assert is_potential_flag('--flag', parser)
 
