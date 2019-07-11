@@ -109,7 +109,7 @@ def test_base_show_readonly(base_app):
     expected = normalize(SHOW_TXT + '\nRead only settings:' + """
         Commands may be terminated with: {}
         Output redirection and pipes allowed: {}
-""".format(base_app._statement_parser.terminators, base_app.allow_redirection))
+""".format(base_app.statement_parser.terminators, base_app.allow_redirection))
     assert out == expected
 
 
@@ -532,7 +532,7 @@ def test_feedback_to_output_false(base_app):
 
 def test_disallow_redirection(base_app):
     # Set allow_redirection to False
-    base_app._statement_parser.allow_redirection = False
+    base_app.statement_parser.allow_redirection = False
 
     filename = 'test_allow_redirect.txt'
 
