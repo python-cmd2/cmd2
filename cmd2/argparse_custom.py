@@ -1,4 +1,103 @@
 # coding=utf-8
+"""
+This module adds capabilities to argparse by patching a few of its functions. It also defines a parser
+class called Cmd2ArgParser which improves error and help output over normal argparse. All cmd2 code uses
+this parser and it is recommended that developers of cmd2-based apps either use it or write their own parser
+that inherits from it. This will give a consistent look-and-feel between the help/error output of built-in
+cmd2 commands and the app-specific commands.
+
+Since the new capabilities are added by patching at the argparse API level, they are available whether or
+not Cmd2ArgParser is used. However, the help output of Cmd2ArgParser is customized to notate nargs ranges
+whereas any other parser class won't be as explicit in the usage statement.
+
+############################################################################################################
+# Added capabilities
+############################################################################################################
+
+Extends argparse nargs functionality by allowing tuples which specify a range (min, max)
+    Example:
+        The following command says the -f argument expects between 3 and 5 values (inclusive)
+        parser.add_argument('-f', nargs=(3, 5))
+
+Tab Completion:
+    cmd2 uses its AutoCompleter class to enable argparse-based tab completion on all commands that use the
+    @with_argparse wrappers. Out of the box you get tab completion of commands, sub-commands, and flag names,
+    as well as instructive hints about the current argument that print when tab is pressed. In addition,
+    you can add tab completion for each argument's values using parameters passed to add_argument().
+
+    Below are the 5 add_argument() parameters for enabling tab completion of an argument's value. Only one
+    can be used at a time.
+
+    choices
+        Pass a list of values to the choices parameter.
+        Example:
+            parser.add_argument('-o', '--options', choices=['An Option', 'SomeOtherOption'])
+            parser.add_argument('-o', '--options', choices=my_list)
+
+    choices_function
+        Pass a function that returns choices. This is good in cases where the choice list is dynamically
+        generated when the user hits tab.
+
+        Example:
+            def my_choices_function):
+                ...
+                return my_generated_list
+
+            parser.add_argument('-o', '--options', choices_function=my_choices_function)
+
+    choices_method
+        This is exactly like choices_function, but the function needs to be an instance method of a cmd2-based class.
+        When AutoCompleter calls the method, it will pass the app instance as the self argument. This is good in
+        cases where the list of choices being generated relies on state data of the cmd2-based app
+
+        Example:
+            def my_choices_method(self):
+                ...
+                return my_generated_list
+
+    completer_function
+        Pass a tab-completion function that does custom completion. Since custom tab completion operations commonly
+        need to modify cmd2's instance variables related to tab-completion, it will be rare to need a completer
+        function. completer_method should be used in those cases.
+
+        Example:
+            def my_completer_function(text, line, begidx, endidx):
+                ...
+                return completions
+            parser.add_argument('-o', '--options', completer_function=my_completer_function)
+
+    completer_method
+        This is exactly like completer_function, but the function needs to be an instance method of a cmd2-based class.
+        When AutoCompleter calls the method, it will pass the app instance as the self argument. cmd2 provides
+        a few completer methods for convenience (e.g. path_complete, delimiter_complete)
+
+        Example:
+            This adds file-path completion to an argument
+            parser.add_argument('-o', '--options', completer_method=cmd2.Cmd.path_complete)
+
+
+    In all cases in which function/methods are passed you can use functools.partial() to prepopulate
+    values of the underlying function.
+
+        Example:
+            This says to call path_complete with a preset value for its path_filter argument.
+            completer_method = functools.partial(path_complete,
+                                                 path_filter=lambda path: os.path.isdir(path))
+            parser.add_argument('-o', '--options', choices_method=completer_method)
+
+############################################################################################################
+# Patched argparse functions:
+###########################################################################################################
+argparse._ActionsContainer.add_argument - adds arguments related to tab completion and enables nargs range parsing
+                                          See _add_argument_wrapper for more details on these argument
+
+argparse.ArgumentParser._get_nargs_pattern - adds support to for nargs ranges
+                                             See _get_nargs_pattern_wrapper for more details
+
+argparse.ArgumentParser._match_argument - adds support to for nargs ranges
+                                          See _match_argument_wrapper for more details
+"""
+
 import argparse
 import re as _re
 import sys

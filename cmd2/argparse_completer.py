@@ -2,60 +2,8 @@
 # flake8: noqa C901
 # NOTE: Ignoring flake8 cyclomatic complexity in this file
 """
-This module adds tab completion to argparse parsers within cmd2 apps.
-
-AutoCompleter interprets the argparse.ArgumentParser internals to automatically
-generate the completion options for each argument.
-
-How to supply completion options for each argument:
-    argparse Choices
-    - pass a list of values to the choices parameter of an argparse argument.
-      ex: parser.add_argument('-o', '--options', dest='options', choices=['An Option', 'SomeOtherOption'])
-
-    arg_choices dictionary lookup
-        arg_choices is a dict() mapping from argument name to one of 3 possible values:
-          ex:
-            parser = argparse.ArgumentParser()
-            parser.add_argument('-o', '--options', dest='options')
-            choices = {}
-            mycompleter = AutoCompleter(parser, cmd2_app, completer, 1, choices)
-
-        - static list - provide a static list for each argument name
-          ex:
-            choices['options'] = ['An Option', 'SomeOtherOption']
-
-        - choices function - provide a function that returns a list for each argument name
-          ex:
-            def generate_choices():
-                return ['An Option', 'SomeOtherOption']
-            choices['options'] = generate_choices
-
-        - custom completer function - provide a completer function that will return the list
-            of completion arguments
-          ex 1:
-            def my_completer(text: str, line: str, begidx: int, endidx:int):
-                my_choices = [...]
-                return my_choices
-            choices['options'] = (my_completer)
-          ex 2:
-            def my_completer(text: str, line: str, begidx: int, endidx:int, extra_param: str, another: int):
-                my_choices = [...]
-                return my_choices
-            completer_params = {'extra_param': 'my extra', 'another': 5}
-            choices['options'] = (my_completer, completer_params)
-
-How to supply completion choice lists or functions for sub-commands:
-    subcmd_args_lookup is used to supply a unique pair of arg_choices and subcmd_args_lookup
-    for each sub-command in an argparser subparser group.
-    This requires your subparser group to be named with the dest parameter
-        ex:
-            parser = ArgumentParser()
-            subparsers = parser.add_subparsers(title='Actions', dest='action')
-
-    subcmd_args_lookup maps a named subparser group to a subcommand group dictionary
-    The subcommand group dictionary maps subcommand names to tuple(arg_choices, subcmd_args_lookup)
-
-    For more details of this more complex approach see tab_autocompletion.py in the examples
+This module defines the AutoCompleter class which provides argparse-based tab completion to cmd2 apps.
+See the header of argparse_custom.py for instructions on how to use these features.
 """
 
 import argparse
