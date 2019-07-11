@@ -1,4 +1,8 @@
 ## 0.9.15 (July TBD, 2019)
+*# Enhancements
+    * Greatly simplified using argparse-based tab completion. The new interface is a complete overhaul that breaks
+    the previous way of specifying completion and choices functions. See header of argparse_completer.py for more
+    information. 
 * **Renamed Commands Notice**
     * The following commands were renamed in the last release and have been removed in this release
         * `load` - replaced by `run_script`
@@ -9,7 +13,7 @@
 * Breaking Changes
     * Restored `cmd2.Cmd.statement_parser` to be a public attribute (no underscore) 
         * Since it can be useful for creating [post-parsing hooks](https://cmd2.readthedocs.io/en/latest/features/hooks.html#postparsing-hooks)
-    
+    * Completely overhauled the interface for adding tab completion to argparse arguments. See enhancements for more details.
 
 ## 0.9.14 (June 29, 2019)
 * Enhancements
