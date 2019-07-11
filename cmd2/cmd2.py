@@ -146,9 +146,9 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            _, parsed_arglist = cmd2_instance._statement_parser.get_command_arg_list(command_name,
-                                                                                     statement,
-                                                                                     preserve_quotes)
+            _, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
+                                                                                    statement,
+                                                                                    preserve_quotes)
 
             return func(cmd2_instance, parsed_arglist)
 
@@ -185,9 +185,9 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            statement, parsed_arglist = cmd2_instance._statement_parser.get_command_arg_list(command_name,
-                                                                                             statement,
-                                                                                             preserve_quotes)
+            statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
+                                                                                            statement,
+                                                                                            preserve_quotes)
 
             if ns_provider is None:
                 namespace = None
@@ -243,9 +243,9 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            statement, parsed_arglist = cmd2_instance._statement_parser.get_command_arg_list(command_name,
-                                                                                             statement,
-                                                                                             preserve_quotes)
+            statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
+                                                                                            statement,
+                                                                                            preserve_quotes)
 
             if ns_provider is None:
                 namespace = None
@@ -393,10 +393,10 @@ class Cmd(cmd.Cmd):
         if shortcuts is None:
             shortcuts = constants.DEFAULT_SHORTCUTS
         shortcuts = sorted(shortcuts.items(), reverse=True)
-        self._statement_parser = StatementParser(allow_redirection=allow_redirection,
-                                                 terminators=terminators,
-                                                 multiline_commands=multiline_commands,
-                                                 shortcuts=shortcuts)
+        self.statement_parser = StatementParser(allow_redirection=allow_redirection,
+                                                terminators=terminators,
+                                                multiline_commands=multiline_commands,
+                                                shortcuts=shortcuts)
 
         # True if running inside a Python script or interactive console, False otherwise
         self._in_py = False
@@ -561,17 +561,17 @@ class Cmd(cmd.Cmd):
     @property
     def aliases(self) -> Dict[str, str]:
         """Read-only property to access the aliases stored in the StatementParser."""
-        return self._statement_parser.aliases
+        return self.statement_parser.aliases
 
     @property
     def allow_redirection(self) -> bool:
         """Getter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
-        return self._statement_parser.allow_redirection
+        return self.statement_parser.allow_redirection
 
     @allow_redirection.setter
     def allow_redirection(self, value: bool) -> None:
         """Setter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
-        self._statement_parser.allow_redirection = value
+        self.statement_parser.allow_redirection = value
 
     def poutput(self, msg: Any, *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
@@ -1385,7 +1385,7 @@ class Cmd(cmd.Cmd):
             # from text and update the indexes. This only applies if we are at the the beginning of the line.
             shortcut_to_restore = ''
             if begidx == 0:
-                for (shortcut, _) in self._statement_parser.shortcuts:
+                for (shortcut, _) in self.statement_parser.shortcuts:
                     if text.startswith(shortcut):
                         # Save the shortcut to restore later
                         shortcut_to_restore = shortcut
@@ -1399,7 +1399,7 @@ class Cmd(cmd.Cmd):
             if begidx > 0:
 
                 # Parse the command line
-                statement = self._statement_parser.parse_command_only(line)
+                statement = self.statement_parser.parse_command_only(line)
                 command = statement.command
                 expanded_line = statement.command_and_args
 
@@ -1678,7 +1678,7 @@ class Cmd(cmd.Cmd):
         :param line: line read by readline
         :return: tuple containing (command, args, line)
         """
-        statement = self._statement_parser.parse_command_only(line)
+        statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
     def onecmd_plus_hooks(self, line: str, pyscript_bridge_call: bool = False) -> bool:
@@ -1842,7 +1842,7 @@ class Cmd(cmd.Cmd):
         """
         while True:
             try:
-                statement = self._statement_parser.parse(line)
+                statement = self.statement_parser.parse(line)
                 if statement.multiline_command and statement.terminator:
                     # we have a completed multiline command, we are done
                     break
@@ -1853,7 +1853,7 @@ class Cmd(cmd.Cmd):
             except ValueError:
                 # we have unclosed quotation marks, lets parse only the command
                 # and see if it's a multiline
-                statement = self._statement_parser.parse_command_only(line)
+                statement = self.statement_parser.parse_command_only(line)
                 if not statement.multiline_command:
                     # not a multiline command, so raise the exception
                     raise
@@ -1877,7 +1877,7 @@ class Cmd(cmd.Cmd):
                     raise ex
                 else:
                     self.poutput('^C')
-                    statement = self._statement_parser.parse('')
+                    statement = self.statement_parser.parse('')
                     break
             finally:
                 self._at_continuation_prompt = False
@@ -2290,7 +2290,7 @@ class Cmd(cmd.Cmd):
         """Create or overwrite an alias"""
 
         # Validate the alias name
-        valid, errmsg = self._statement_parser.is_valid_command(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
             self.perror("Invalid alias name: {}".format(errmsg))
             return
@@ -2301,7 +2301,7 @@ class Cmd(cmd.Cmd):
 
         # Unquote redirection and terminator tokens
         tokens_to_unquote = constants.REDIRECTION_TOKENS
-        tokens_to_unquote.extend(self._statement_parser.terminators)
+        tokens_to_unquote.extend(self.statement_parser.terminators)
         utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
 
         # Build the alias value string
@@ -2421,7 +2421,7 @@ class Cmd(cmd.Cmd):
         """Create or overwrite a macro"""
 
         # Validate the macro name
-        valid, errmsg = self._statement_parser.is_valid_command(args.name)
+        valid, errmsg = self.statement_parser.is_valid_command(args.name)
         if not valid:
             self.perror("Invalid macro name: {}".format(errmsg))
             return
@@ -2436,7 +2436,7 @@ class Cmd(cmd.Cmd):
 
         # Unquote redirection and terminator tokens
         tokens_to_unquote = constants.REDIRECTION_TOKENS
-        tokens_to_unquote.extend(self._statement_parser.terminators)
+        tokens_to_unquote.extend(self.statement_parser.terminators)
         utils.unquote_specific_tokens(args.command_args, tokens_to_unquote)
 
         # Build the macro value string
@@ -2830,7 +2830,7 @@ class Cmd(cmd.Cmd):
     @with_argparser(ACArgumentParser())
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
-        result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self._statement_parser.shortcuts))
+        result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.statement_parser.shortcuts))
         self.poutput("Shortcuts for other commands:\n{}".format(result))
 
     @with_argparser(ACArgumentParser(epilog=INTERNAL_COMMAND_EPILOG))
@@ -2899,7 +2899,7 @@ class Cmd(cmd.Cmd):
         read_only_settings = """
         Commands may be terminated with: {}
         Output redirection and pipes allowed: {}"""
-        return read_only_settings.format(str(self._statement_parser.terminators), self.allow_redirection)
+        return read_only_settings.format(str(self.statement_parser.terminators), self.allow_redirection)
 
     def _show(self, args: argparse.Namespace, parameter: str = '') -> None:
         """Shows current settings of parameters.
