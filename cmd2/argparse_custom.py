@@ -85,6 +85,47 @@ Tab Completion:
                                                  path_filter=lambda path: os.path.isdir(path))
             parser.add_argument('-o', '--options', choices_method=completer_method)
 
+CompletionItem Class:
+    This class was added to help in cases where uninformative data is being tab completed. For instance,
+    tab completing ID numbers isn't very helpful to a user without context. Returning a list of CompletionItems
+    instead of a regular string for completion results will signal the AutoCompleter to output the completion
+    results in a table of completion tokens with descriptions instead of just a table of tokens.
+
+    Instead of this:
+        1     2     3
+
+    The user sees this:
+        ITEM_ID     Item Name
+        1           My item
+        2           Another item
+        3           Yet another item
+
+
+    The left-most column is the actual value being tab completed and its header is that value's name.
+    The right column header is defined using the descriptive_header parameter of add_argument(). The right
+    column values come from the CompletionItem.description value.
+
+    Example:
+        token = 1
+        token_description = "My Item"
+        completion_item = CompletionItem(token, token_description)
+
+    Since descriptive_header and CompletionItem.description are just strings, you can format them in
+    such a way to have multiple columns.
+
+    ITEM_ID     Item Name            Checked Out    Due Date
+    1           My item              True           02/02/2022
+    2           Another item         False
+    3           Yet another item     False
+
+    To use CompletionItems, just return them from your choices or completer functions.
+
+    To avoid printing a ton of information to the screen at once when a user presses tab, there is
+    a maximum threshold for the number of CompletionItems that will be shown. It's value is defined
+    in cmd2.Cmd.max_completion_items. It defaults to 50, but can be changed. If the number of completion
+    suggestions exceeds this number, they will be displayed in the typical columnized format and will
+    not include the description value of the CompletionItems.
+
 ############################################################################################################
 # Patched argparse functions:
 ###########################################################################################################
@@ -101,6 +142,7 @@ argparse.ArgumentParser._match_argument - adds support to for nargs ranges
 import argparse
 import re as _re
 import sys
+
 # noinspection PyUnresolvedReferences,PyProtectedMember
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
 from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
@@ -129,34 +171,7 @@ class CompletionItem(str):
     """
     Completion item with descriptive text attached
 
-    Returning this instead of a regular string for completion results will signal the
-    autocompleter to output the completions results in a table of completion tokens
-    with descriptions instead of just a table of tokens.
-
-    For example, you'd see this:
-        TOKEN          Description
-        MY_TOKEN       Info about my token
-        SOME_TOKEN     Info about some token
-        YET_ANOTHER    Yet more info
-
-    Instead of this:
-        TOKEN_ID   SOME_TOKEN   YET_ANOTHER
-
-    This is especially useful if you want to complete ID numbers in a more
-    user-friendly manner. For example, you can provide this:
-
-        ITEM_ID     Item Name
-        1           My item
-        2           Another item
-        3           Yet another item
-
-    Instead of this:
-        1     2     3
-
-    Example:
-        token = 1
-        token_description = "My Item"
-        completion_item = CompletionItem(token, token_description)
+    See header of this file for more information
     """
     def __new__(cls, value: object, *args, **kwargs) -> str:
         return super().__new__(cls, value)
