@@ -703,7 +703,7 @@ def test_tokens_for_completion_quoted_redirect(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    cmd2_app._statement_parser.redirection = True
+    cmd2_app.statement_parser.redirection = True
     expected_tokens = ['command', '>file']
     expected_raw_tokens = ['command', '">file']
 
@@ -717,7 +717,7 @@ def test_tokens_for_completion_redirect_off(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    cmd2_app._statement_parser.allow_redirection = False
+    cmd2_app.statement_parser.allow_redirection = False
     expected_tokens = ['command', '>file']
     expected_raw_tokens = ['command', '>file']
 

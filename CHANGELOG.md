@@ -6,6 +6,10 @@
         * `pyscript` - replaced by `run_pyscript`
     * We apologize for any inconvenience, but the new names are more self-descriptive
         * Lots of end users were confused particularly about what exactly `load` should be loading
+* Breaking Changes
+    * Restored `cmd2.Cmd.statement_parser` to be a public attribute (no underscore) 
+        * Since it can be useful for creating [post-parsing hooks](https://cmd2.readthedocs.io/en/latest/features/hooks.html#postparsing-hooks)
+    
 
 ## 0.9.14 (June 29, 2019)
 * Enhancements
