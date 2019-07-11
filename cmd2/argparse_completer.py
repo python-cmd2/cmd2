@@ -293,10 +293,9 @@ class AutoCompleter(object):
 
                         # Keep track of what flags have already been used
                         # Flags with action set to append, append_const, and count can be reused
-                        if not is_last_token and \
-                                not isinstance(flag_arg_state.action, argparse._AppendAction) and \
-                                not isinstance(flag_arg_state.action, argparse._AppendConstAction) and \
-                                not isinstance(flag_arg_state.action, argparse._CountAction):
+                        if not is_last_token and not isinstance(flag_arg_state.action, (argparse._AppendAction,
+                                                                                        argparse._AppendConstAction,
+                                                                                        argparse._CountAction)):
                             matched_flags.extend(flag_arg_state.action.option_strings)
 
                 # current token isn't a potential flag
@@ -499,7 +498,7 @@ class AutoCompleter(object):
 
             # Since choices can be various types like int, we must convert them to strings
             for index, choice in enumerate(arg_choices):
-                if not isinstance(choice, str,):
+                if not isinstance(choice, str):
                     arg_choices[index] = str(choice)
 
             # Filter out arguments we already used
