@@ -411,6 +411,35 @@ def test_autocomp_positional_completers(ac_app, pos, text, completions):
     assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
+def test_autocomp_blank_token(ac_app):
+    """Force a blank token to make sure AutoCompleter consumes them like argparse does"""
+    from cmd2.argparse_completer import AutoCompleter
+
+    blank = ''
+
+    # Blank flag arg
+    text = ''
+    line = 'completer -m {} {}'.format(blank, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completer = AutoCompleter(ac_app.completer_parser, ac_app)
+    tokens = ['completer', '-f', blank, text]
+    completions = completer.complete_command(tokens, text, line, begidx, endidx)
+    assert completions == completions_from_function
+
+    # Blank positional arg
+    text = ''
+    line = 'completer {} {}'.format(blank, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    completer = AutoCompleter(ac_app.completer_parser, ac_app)
+    tokens = ['completer', blank, text]
+    completions = completer.complete_command(tokens, text, line, begidx, endidx)
+    assert completions == completions_from_method
+
+
 @pytest.mark.parametrize('num_aliases, show_description', [
     # The number of completion results determines if the description field of CompletionItems gets displayed
     # in the tab completions. The count must be greater than 1 and less than ac_app.max_completion_items,
@@ -610,6 +639,7 @@ Hint:
   NO_HELP_POS            
 
 '''
+
 
 def test_is_potential_flag():
     from cmd2.argparse_completer import is_potential_flag

@@ -59,7 +59,6 @@ class AutoCompleter(object):
             self.max = None
             self.count = 0
             self.needed = False
-            self.variable = False
             self.is_remainder = (self.action.nargs == argparse.REMAINDER)
 
             # Check if nargs is a range
@@ -67,7 +66,6 @@ class AutoCompleter(object):
             if nargs_range is not None:
                 self.min = nargs_range[0]
                 self.max = nargs_range[1]
-                self.variable = True
 
             # Otherwise check against argparse types
             elif self.action.nargs is None:
@@ -76,15 +74,12 @@ class AutoCompleter(object):
             elif self.action.nargs == argparse.OPTIONAL:
                 self.min = 0
                 self.max = 1
-                self.variable = True
             elif self.action.nargs == argparse.ZERO_OR_MORE or self.action.nargs == argparse.REMAINDER:
                 self.min = 0
                 self.max = float('inf')
-                self.variable = True
             elif self.action.nargs == argparse.ONE_OR_MORE:
                 self.min = 1
                 self.max = float('inf')
-                self.variable = True
             else:
                 self.min = self.action.nargs
                 self.max = self.action.nargs
@@ -305,18 +300,13 @@ class AutoCompleter(object):
                             matched_flags.extend(flag_arg_state.action.option_strings)
 
                 # current token isn't a potential flag
-                #   - does the last flag accept variable arguments?
-                #   - have we reached the max arg count for the flag?
-                elif flag_arg_state is None or \
-                        not flag_arg_state.variable or \
-                        flag_arg_state.count >= flag_arg_state.max:
-                    # previous flag doesn't accept variable arguments, count this as a positional argument
-
-                    # reset flag tracking variables
+                #   - Is there not a current flag or have we reached the max arg count for the flag?
+                elif flag_arg_state is None or flag_arg_state.count >= flag_arg_state.max:
+                    # Count this as a positional argument
                     flag_arg_state = None
                     current_is_positional = True
 
-                    if len(token) > 0 and pos_arg_state is not None and pos_arg_state.count < pos_arg_state.max:
+                    if pos_arg_state is not None and pos_arg_state.count < pos_arg_state.max:
                         # we have positional action match and we haven't reached the max arg count, consume
                         # the positional argument and move on.
                         consume_positional_argument()
@@ -339,9 +329,6 @@ class AutoCompleter(object):
 
                             pos_arg_state = AutoCompleter._ArgumentState(action)
                             consume_positional_argument()
-
-                    elif not is_last_token and pos_arg_state is not None:
-                        pos_arg_state = None
 
                 else:
                     consume_flag_argument()
