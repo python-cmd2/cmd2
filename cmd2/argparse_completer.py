@@ -187,7 +187,9 @@ class AutoCompleter(object):
                 consumed_arg_values.setdefault(arg_state.action.dest, [])
                 consumed_arg_values[arg_state.action.dest].append(token)
 
-        # Enumerate over the sliced list up to the token being completed
+        #############################################################################################
+        # Parse all but the last token
+        #############################################################################################
         for loop_index, token in enumerate(tokens[self._token_start_index:-1]):
 
             # If we're in a positional REMAINDER arg, force all future tokens to go to that
@@ -304,7 +306,10 @@ class AutoCompleter(object):
                                 self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
                             skip_remaining_flags = True
 
-        # We have now parsed all tokens up to the one being completed and have enough information to do so.
+        #############################################################################################
+        # We have parsed all but the last token and have enough information to complete it
+        #############################################################################################
+
         # Check if we are completing a flag name. This check ignores strings with a length of one, like '-'.
         # This is because that could be the start of a negative number which may be a valid completion for
         # the current argument. We will handle the completion of flags that start with only one prefix

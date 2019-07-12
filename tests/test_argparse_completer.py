@@ -534,6 +534,7 @@ def test_completion_items(ac_app, num_aliases, show_description):
 
     # REMAINDER positional. Flags don't work in REMAINDER
     ('the positional --set_value', remainder_choices),
+    ('the positional remainder --set_value', ['choices '])
 ])
 def test_autcomp_nargs(ac_app, args, completions):
     text = ''
@@ -614,45 +615,50 @@ def test_completion_items_default_header(ac_app):
     assert DEFAULT_DESCRIPTIVE_HEADER in ac_app.completion_header
 
 
-def test_autocomp_hint_flag(ac_app, capsys):
-    text = ''
-    line = 'hint --flag {}'.format(text)
+@pytest.mark.parametrize('command_and_args, text, has_hint', [
+    # Normal cases
+    ('hint', '', True),
+    ('hint --flag', '', True),
+    ('hint --suppressed_help', '', False),
+    ('hint --suppressed_hint', '--', False),
+
+    # Hint because flag does not have enough values to be considered finished
+    ('nargs --one_or_more', '-', True),
+
+    # This flag has reached its minimum value count and therefore a new flag could start.
+    # However the flag can still consume values and the text is not a single prefix character.
+    # Therefor a hint will be shown.
+    ('nargs --one_or_more choices', 'bad_completion', True),
+
+    # Like the previous case, but this time text is a single prefix character which will cause flag
+    # name completion to occur instead of a hint for the current flag.
+    ('nargs --one_or_more choices', '-', False),
+
+    # Hint because this is a REMAINDER flag and therefore no more flag name completions occur.
+    ('nargs --remainder', '-', True),
+
+    # No hint for the positional because text is a single prefix character which results in flag name completion
+    ('hint', '-', False),
+
+    # Hint because this is a REMAINDER positional and therefore no more flag name completions occur.
+    ('nargs the choices', '-', True),
+    ('nargs the choices remainder', '-', True),
+])
+def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys):
+    line = '{} {}'.format(command_and_args, text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    complete_tester(text, line, begidx, endidx, ac_app)
     out, err = capsys.readouterr()
 
-    assert first_match is None and "Hint" in out
+    if has_hint:
+        assert "Hint" in out
+    else:
+        assert "Hint" not in out
 
 
-def test_autocomp_hint_suppressed_help(ac_app, capsys):
-    text = ''
-    line = 'hint --suppressed_help {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    out, err = capsys.readouterr()
-
-    assert first_match is None
-    assert not out
-
-
-def test_autocomp_hint_suppressed_hint(ac_app, capsys):
-    text = ''
-    line = 'hint --suppressed_hint {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    out, err = capsys.readouterr()
-
-    assert first_match is None
-    assert not out
-
-
-def test_autocomp_hint_pos(ac_app, capsys):
+def test_autocomp_hint_multiple_lines(ac_app, capsys):
     text = ''
     line = 'hint {}'.format(text)
     endidx = len(line)
@@ -661,10 +667,16 @@ def test_autocomp_hint_pos(ac_app, capsys):
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
     out, err = capsys.readouterr()
 
-    assert first_match is None and "Hint" in out
+    assert first_match is None
+    assert out == '''
+Hint:
+  HINT_POS                here is a hint
+                          with new lines
+
+'''
 
 
-def test_autocomp_hint_no_help(ac_app, capsys):
+def test_autocomp_hint_no_help_text(ac_app, capsys):
     text = ''
     line = 'hint foo {}'.format(text)
     endidx = len(line)
@@ -673,7 +685,12 @@ def test_autocomp_hint_no_help(ac_app, capsys):
     first_match = complete_tester(text, line, begidx, endidx, ac_app)
     out, err = capsys.readouterr()
 
-    assert first_match is None and "Hint" in out
+    assert first_match is None
+    assert not out == '''
+Hint:
+  NO_HELP_POS            
+
+'''
 
 
 def test_single_prefix_char():
