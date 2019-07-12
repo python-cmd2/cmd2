@@ -14,7 +14,7 @@ from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
 # Lists used in our tests
-static_int_choices_list = [1, 2, 3, 4, 5]
+static_int_choices_list = [-12, -1, -2, 0, 1, 2]
 static_choices_list = ['static', 'choices', 'stop', 'here']
 choices_from_function = ['choices', 'function', 'chatty', 'smith']
 choices_from_method = ['choices', 'method', 'most', 'improved']
@@ -331,7 +331,9 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completions):
     ('-m', '', choices_from_method),
     ('--method', 'm', ['method', 'most']),
     ('-i', '', [str(i) for i in static_int_choices_list]),
-    ('--int', '1', ['1 '])
+    ('--int', '1', ['1 ']),
+    ('--int', '-', ['-12', '-1', '-2']),
+    ('--int', '-1', ['-12', '-1'])
 ])
 def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
     line = 'choices {} {}'.format(flag, text)
@@ -477,9 +479,6 @@ def test_completion_items(ac_app, num_aliases, show_description):
     # Both args are filled. At positional arg now.
     ('--set_value set value', positional_choices),
 
-    # Another flag can't start until all expected args are filled out
-    ('--set_value --one_or_more', set_value_choices),
-
     # Using the flag again will reset the choices available
     ('--set_value set value --set_value', set_value_choices),
 
@@ -507,8 +506,8 @@ def test_completion_items(ac_app, num_aliases, show_description):
     # No more flags can appear after a REMAINDER flag)
     ('--remainder choices --set_value', ['remainder ']),
 
-    # Double dash ends the current flag (even if all expected args aren't entered)
-    ('--set_value --', positional_choices),
+    # Double dash ends the current flag
+    ('--range choice --', positional_choices),
 
     # Double dash ends a REMAINDER flag
     ('--remainder remainder --', positional_choices),
@@ -522,11 +521,11 @@ def test_completion_items(ac_app, num_aliases, show_description):
 
     # Intermixed flag and positional
     ('positional --set_value', set_value_choices),
-    ('positional --set_value set', ['value', 'choices']),
+    ('positional --set_value set', ['choices', 'value']),
 
     # Intermixed flag and positional with flag finishing
     ('positional --set_value set value', ['the', 'choices']),
-    ('positional --set_value set --', ['the', 'choices']),
+    ('positional --range choice --', ['the', 'choices']),
 
     # REMAINDER positional
     ('the positional', remainder_choices),
@@ -548,6 +547,16 @@ def test_autcomp_nargs(ac_app, args, completions):
         assert first_match is None
 
     assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+
+
+"""
+TODO: Add unit tests for unfinished flag errors
+    # Double dash ends the current flag (even if all expected args aren't entered)
+    ('--set_value --', positional_choices),
+
+    # Another flag can't start until all expected args are filled out
+    ('--set_value --one_or_more', set_value_choices),
+"""
 
 
 def test_completion_items_default_header(ac_app):
@@ -641,21 +650,21 @@ Hint:
 '''
 
 
-def test_is_potential_flag():
-    from cmd2.argparse_completer import is_potential_flag
+def test_starts_like_flag():
+    from cmd2.argparse_completer import starts_like_flag
     parser = Cmd2ArgParser()
 
-    # Not potential flags
-    assert not is_potential_flag('', parser)
-    assert not is_potential_flag('non-flag', parser)
-    assert not is_potential_flag('--has space', parser)
-    assert not is_potential_flag('-2', parser)
+    # Does not start like a flag
+    assert not starts_like_flag('', parser)
+    assert not starts_like_flag('non-flag', parser)
+    assert not starts_like_flag('-', parser)
+    assert not starts_like_flag('--has space', parser)
+    assert not starts_like_flag('-2', parser)
 
-    # Potential flags
-    assert is_potential_flag('-', parser)
-    assert is_potential_flag('--', parser)
-    assert is_potential_flag('-flag', parser)
-    assert is_potential_flag('--flag', parser)
+    # Does start like a flag
+    assert starts_like_flag('--', parser)
+    assert starts_like_flag('-flag', parser)
+    assert starts_like_flag('--flag', parser)
 
 
 def test_complete_command_no_tokens(ac_app):
