@@ -539,9 +539,10 @@ class AutoCompleter(object):
         param = ' ' + str(flag_arg_state.action.dest).upper()
         prefix = '{}{}'.format(flags, param)
 
-        prefix = '  {0: <{width}}    '.format(prefix, width=20)
+        out_str = "\nError:\n"
+        out_str += '  {0: <{width}}    '.format(prefix, width=20)
+        out_str += "Flag requires "
 
-        out_str = "This flag expects "
         if flag_arg_state.max == float('inf'):
             out_str += "at least {} ".format(flag_arg_state.min)
 
@@ -553,14 +554,15 @@ class AutoCompleter(object):
             if flag_arg_state.min == flag_arg_state.max:
                 out_str += "{} ".format(flag_arg_state.min)
             else:
-                out_str += "between {} and {} ".format(flag_arg_state.min, flag_arg_state.max)
+                out_str += "{} to {} ".format(flag_arg_state.min, flag_arg_state.max)
 
             if flag_arg_state.max == 1:
                 out_str += "argument"
             else:
                 out_str += "arguments"
 
-        print(style_error('\nError:\n{}{}\n'.format(prefix, out_str)))
+        out_str += ' ({} entered)'.format(flag_arg_state.count)
+        print(style_error('{}\n'.format(out_str)))
 
         # Redraw prompt and input line
         rl_force_redisplay()
