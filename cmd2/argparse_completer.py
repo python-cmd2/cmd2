@@ -21,6 +21,11 @@ from .rl_utils import rl_force_redisplay
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
 
 
+def single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
+    """Returns if a token is just a single flag prefix character"""
+    return token and token[0] in parser.prefix_chars
+
+
 # noinspection PyProtectedMember
 def starts_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
     """
@@ -299,6 +304,7 @@ class AutoCompleter(object):
                                 self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
                             skip_remaining_flags = True
 
+        # We have now parsed all tokens up to the one being completed and have enough information to do so.
         # Check if we are completing a flag name. This check ignores strings with a length of one, like '-'.
         # This is because that could be the start of a negative number which may be a valid completion for
         # the current argument. We will handle the completion of flags that start with only one prefix
@@ -322,8 +328,9 @@ class AutoCompleter(object):
             if completion_results:
                 return completion_results
 
-            # Otherwise, if we haven't completed this flag, then print a hint
-            elif flag_arg_state.count < flag_arg_state.min:
+            # Otherwise, print a hint if the flag isn't finished or text isn't possibly the start of a flag
+            elif flag_arg_state.count < flag_arg_state.min or \
+                    not single_prefix_char(text, self._parser) or skip_remaining_flags:
                 self._print_arg_hint(flag_arg_state.action)
                 return []
 
@@ -345,13 +352,13 @@ class AutoCompleter(object):
                 return completion_results
 
             # Otherwise, print a hint if text isn't possibly the start of a flag
-            elif not (len(text) == 1 and text[0] in self._parser.prefix_chars) or skip_remaining_flags:
+            elif not single_prefix_char(text, self._parser) or skip_remaining_flags:
                 self._print_arg_hint(pos_arg_state.action)
                 return []
 
-        # If we've gotten this far, then text did not complete for a flag name, flag value, or positional.
-        # If text is a single flag-prefix character like '-', try completing it against flag names.
-        if len(text) == 1 and text[0] in self._parser.prefix_chars and not skip_remaining_flags:
+        # Handle case in which text is a single flag prefix character that
+        # didn't complete against any argument values.
+        if single_prefix_char(text, self._parser) and not skip_remaining_flags:
             return self._complete_flags(text, line, begidx, endidx, matched_flags)
 
         return completion_results
