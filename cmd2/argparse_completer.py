@@ -192,7 +192,6 @@ class AutoCompleter(object):
 
             # If we're in a flag REMAINDER arg, force all future tokens to go to that until a double dash is hit
             elif flag_arg_state is not None and flag_arg_state.is_remainder:
-                skip_remaining_flags = True
                 if token == '--':
                     flag_arg_state = None
                 else:
@@ -246,6 +245,7 @@ class AutoCompleter(object):
                     # Keep track of this flag if it can receive arguments
                     if new_arg_state.max > 0:
                         flag_arg_state = new_arg_state
+                        skip_remaining_flags = flag_arg_state.is_remainder
 
                         # It's possible we already have consumed values for this flag if it was used
                         # earlier in the command line. Reset them now for this use of it.
@@ -285,8 +285,12 @@ class AutoCompleter(object):
                 if pos_arg_state is not None:
                     consume_argument(pos_arg_state)
 
+                    # No more flags are allowed if this is a REMAINDER argument
+                    if pos_arg_state.is_remainder:
+                        skip_remaining_flags = True
+
                     # Check if we have finished with this positional
-                    if pos_arg_state.count >= pos_arg_state.max:
+                    elif pos_arg_state.count >= pos_arg_state.max:
                         pos_arg_state = None
 
                         # Check if this a case in which we've finished all positionals before one that has nargs
@@ -550,7 +554,25 @@ class AutoCompleter(object):
 
         prefix = '  {0: <{width}}    '.format(prefix, width=20)
 
-        out_str = "Only {} of the minimum {} arguments were provided".format(flag_arg_state.count, flag_arg_state.min)
+        out_str = "This flag expects "
+        if flag_arg_state.max == float('inf'):
+            out_str += "at least {} ".format(flag_arg_state.min)
+
+            if flag_arg_state.min == 1:
+                out_str += "argument"
+            else:
+                out_str += "arguments"
+        else:
+            if flag_arg_state.min == flag_arg_state.max:
+                out_str += "{} ".format(flag_arg_state.min)
+            else:
+                out_str += "between {} and {} ".format(flag_arg_state.min, flag_arg_state.max)
+
+            if flag_arg_state.max == 1:
+                out_str += "argument"
+            else:
+                out_str += "arguments"
+
         print(style_error('\nError:\n{}{}\n'.format(prefix, out_str)))
 
         # Redraw prompt and input line
