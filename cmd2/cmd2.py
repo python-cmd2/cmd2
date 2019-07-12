@@ -3666,7 +3666,7 @@ class Cmd(cmd.Cmd):
                                   "  This command is intended to only be used within text file scripts.")
 
     relative_run_script_parser = ArgParser(description=relative_run_script_description,
-                                               epilog=relative_run_script_epilog)
+                                           epilog=relative_run_script_epilog)
     relative_run_script_parser.add_argument('file_path', help='a file path pointing to a script')
 
     @with_argparser(relative_run_script_parser)
