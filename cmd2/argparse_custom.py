@@ -140,7 +140,7 @@ argparse.ArgumentParser._match_argument - adds support to for nargs ranges
 """
 
 import argparse
-import re as _re
+import re
 import sys
 
 # noinspection PyUnresolvedReferences,PyProtectedMember
@@ -369,7 +369,7 @@ orig_argument_parser_match_argument = argparse.ArgumentParser._match_argument
 def _match_argument_wrapper(self, action, arg_strings_pattern) -> int:
     # Wrapper around ArgumentParser._match_argument behavior to support nargs ranges
     nargs_pattern = self._get_nargs_pattern(action)
-    match = _re.match(nargs_pattern, arg_strings_pattern)
+    match = re.match(nargs_pattern, arg_strings_pattern)
 
     # raise an exception if we weren't able to find a match
     if match is None:
@@ -444,9 +444,9 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
                 req_usage = format(required_options, groups)
                 opt_usage = format(optionals, groups)
                 pos_usage = format(positionals, groups)
-                req_parts = _re.findall(part_regexp, req_usage)
-                opt_parts = _re.findall(part_regexp, opt_usage)
-                pos_parts = _re.findall(part_regexp, pos_usage)
+                req_parts = re.findall(part_regexp, req_usage)
+                opt_parts = re.findall(part_regexp, opt_usage)
+                pos_parts = re.findall(part_regexp, pos_usage)
                 assert ' '.join(req_parts) == req_usage
                 assert ' '.join(opt_parts) == opt_usage
                 assert ' '.join(pos_parts) == pos_usage
