@@ -11,7 +11,7 @@ except DistributionNotFound:
     pass
 
 from .ansi import style
-from .argparse_custom import Cmd2ArgParser, CompletionItem
+from .argparse_custom import ArgParser, CompletionItem
 from .cmd2 import Cmd, Statement, EmptyStatement, categorize
 from .cmd2 import with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category
 from .constants import DEFAULT_SHORTCUTS

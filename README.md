@@ -150,8 +150,8 @@ Instructions for implementing each feature follow.
 
     See https://cmd2.readthedocs.io/en/latest/argument_processing.html for more details
     
-    NOTE: `cmd2` also provides the `Cmd2ArgParser` customization of `argparse.ArgumentParser` for prettier formatting
-    of help and RangeAction type
+    NOTE: `cmd2` also provides the `cmd2.ArgParser` customization of `argparse.ArgumentParser` for prettier formatting
+    of help and error messages.
 
 - `cmd2` applications function like a full-featured shell in many ways (and are cross-platform)
     - Run arbitrary shell commands by preceding them with `!` or `shell`

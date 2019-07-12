@@ -8,7 +8,7 @@ import functools
 from typing import List
 
 import cmd2
-from cmd2 import utils, Cmd2ArgParser, CompletionItem
+from cmd2 import utils, CompletionItem
 
 actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Peter Mayhew',
           'Anthony Daniels', 'Adam Driver', 'Daisy Ridley', 'John Boyega', 'Oscar Isaac',
@@ -128,7 +128,7 @@ class TabCompleteExample(cmd2.Cmd):
 
     suggest_description = "Suggest command demonstrates argparse customizations.\n"
     suggest_description += "See hybrid_suggest and orig_suggest to compare the help output."
-    suggest_parser = Cmd2ArgParser(description=suggest_description)
+    suggest_parser = cmd2.ArgParser(description=suggest_description)
 
     suggest_parser.add_argument('-t', '--type', choices=['movie', 'show'], required=True)
     suggest_parser.add_argument('-d', '--duration', nargs=(1, 2), action='append',
@@ -204,7 +204,7 @@ class TabCompleteExample(cmd2.Cmd):
                                   '\n    '.join(ep_list)))
                 print()
 
-    video_parser = Cmd2ArgParser(prog='media')
+    video_parser = cmd2.ArgParser(prog='media')
 
     video_types_subparsers = video_parser.add_subparsers(title='Media Types', dest='type')
 

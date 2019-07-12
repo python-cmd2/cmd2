@@ -9,7 +9,7 @@ from typing import List
 import pytest
 
 import cmd2
-from cmd2 import with_argparser, Cmd2ArgParser, CompletionItem
+from cmd2 import with_argparser, CompletionItem
 from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
@@ -63,7 +63,7 @@ class AutoCompleteTester(cmd2.Cmd):
         self.poutput('music create rock')
 
     # Top level parser for music command
-    music_parser = Cmd2ArgParser(description='Manage music', prog='music')
+    music_parser = cmd2.ArgParser(description='Manage music', prog='music')
 
     # Add sub-commands to music
     music_subparsers = music_parser.add_subparsers()
@@ -100,7 +100,7 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
 
     # Uses default flag prefix value (-)
-    flag_parser = Cmd2ArgParser()
+    flag_parser = cmd2.ArgParser()
     flag_parser.add_argument('-n', '--normal_flag', help='A normal flag', action='store_true')
     flag_parser.add_argument('-a', '--append_flag', help='Append flag', action='append')
     flag_parser.add_argument('-o', '--append_const_flag', help='Append const flag', action='append_const', const=True)
@@ -113,7 +113,7 @@ class AutoCompleteTester(cmd2.Cmd):
         pass
 
     # Uses non-default flag prefix value (+)
-    plus_flag_parser = Cmd2ArgParser(prefix_chars='+')
+    plus_flag_parser = cmd2.ArgParser(prefix_chars='+')
     plus_flag_parser.add_argument('+n', '++normal_flag', help='A normal flag', action='store_true')
 
     @with_argparser(plus_flag_parser)
@@ -135,7 +135,7 @@ class AutoCompleteTester(cmd2.Cmd):
             items.append(CompletionItem(main_str, desc='blah blah'))
         return items
 
-    choices_parser = Cmd2ArgParser()
+    choices_parser = cmd2.ArgParser()
 
     # Flag args for choices command. Include string and non-string arg types.
     choices_parser.add_argument("-l", "--list", help="a flag populated with a choices list",
@@ -168,7 +168,7 @@ class AutoCompleteTester(cmd2.Cmd):
         """Tab completion method"""
         return basic_complete(text, line, begidx, endidx, completions_from_method)
 
-    completer_parser = Cmd2ArgParser()
+    completer_parser = cmd2.ArgParser()
 
     # Flag args for completer command
     completer_parser.add_argument("-f", "--function", help="a flag using a completer function",
@@ -189,7 +189,7 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to nargs
     ############################################################################################################
-    nargs_parser = Cmd2ArgParser()
+    nargs_parser = cmd2.ArgParser()
 
     # Flag args for nargs command
     nargs_parser.add_argument("--set_value", help="a flag with a set value for nargs", nargs=2,
@@ -215,7 +215,7 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to testing tab hints
     ############################################################################################################
-    hint_parser = Cmd2ArgParser()
+    hint_parser = cmd2.ArgParser()
     hint_parser.add_argument('-f', '--flag', help='a flag arg')
     hint_parser.add_argument('-s', '--suppressed_help', help=argparse.SUPPRESS)
     hint_parser.add_argument('-t', '--suppressed_hint', help='a flag arg', suppress_tab_hint=True)
@@ -652,7 +652,7 @@ Hint:
 
 def test_starts_like_flag():
     from cmd2.argparse_completer import starts_like_flag
-    parser = Cmd2ArgParser()
+    parser = cmd2.ArgParser()
 
     # Does not start like a flag
     assert not starts_like_flag('', parser)
@@ -670,7 +670,7 @@ def test_starts_like_flag():
 def test_complete_command_no_tokens(ac_app):
     from cmd2.argparse_completer import AutoCompleter
 
-    parser = Cmd2ArgParser()
+    parser = cmd2.ArgParser()
     ac = AutoCompleter(parser, ac_app)
 
     completions = ac.complete_command(tokens=[], text='', line='', begidx=0, endidx=0)
@@ -680,7 +680,7 @@ def test_complete_command_no_tokens(ac_app):
 def test_complete_command_help_no_tokens(ac_app):
     from cmd2.argparse_completer import AutoCompleter
 
-    parser = Cmd2ArgParser()
+    parser = cmd2.ArgParser()
     ac = AutoCompleter(parser, ac_app)
 
     completions = ac.complete_command_help(tokens=[], text='', line='', begidx=0, endidx=0)

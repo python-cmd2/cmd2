@@ -1,13 +1,13 @@
 # coding=utf-8
 """
 This module adds capabilities to argparse by patching a few of its functions. It also defines a parser
-class called Cmd2ArgParser which improves error and help output over normal argparse. All cmd2 code uses
+class called ArgParser which improves error and help output over normal argparse. All cmd2 code uses
 this parser and it is recommended that developers of cmd2-based apps either use it or write their own parser
 that inherits from it. This will give a consistent look-and-feel between the help/error output of built-in
 cmd2 commands and the app-specific commands.
 
 Since the new capabilities are added by patching at the argparse API level, they are available whether or
-not Cmd2ArgParser is used. However, the help output of Cmd2ArgParser is customized to notate nargs ranges
+not ArgParser is used. However, the help output of ArgParser is customized to notate nargs ranges
 whereas any other parser class won't be as explicit in the usage statement.
 
 ############################################################################################################
@@ -575,7 +575,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 
 
 # noinspection PyCompatibility
-class Cmd2ArgParser(argparse.ArgumentParser):
+class ArgParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output"""
 
     def __init__(self, *args, **kwargs) -> None:
