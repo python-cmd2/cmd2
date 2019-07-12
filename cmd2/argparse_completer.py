@@ -328,39 +328,26 @@ class AutoCompleter(object):
                 return []
 
         # Otherwise check if we are completing a positional's argument
-        else:
+        elif pos_arg_state is not None or next_pos_arg_index < len(self._positional_actions):
+
+            # If we aren't current tracking a positional, then get the next positional arg to handle this token
             if pos_arg_state is None:
                 pos_index = next_pos_arg_index
-                next_pos_arg_index += 1
+                action = self._positional_actions[pos_index]
+                pos_arg_state = AutoCompleter._ArgumentState(action)
 
-                # Make sure we are still have positional arguments to fill
-                if pos_index < len(self._positional_actions):
-                    action = self._positional_actions[pos_index]
-                    pos_name = action.dest
+            consumed = consumed_arg_values.get(pos_arg_state.action.dest, [])
+            completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
+                                                        begidx, endidx, consumed)
 
-                    # Are we at a sub-command? If so, forward to the matching completer
-                    if pos_name in self._positional_completers:
-                        sub_completers = self._positional_completers[pos_name]
-                        if text in sub_completers:
-                            return sub_completers[text].complete_command(tokens, text, line,
-                                                                         begidx, endidx)
+            # If we have results, then return them
+            if completion_results:
+                return completion_results
 
-                    # Keep track of the argument
-                    pos_arg_state = AutoCompleter._ArgumentState(action)
-
-            if pos_arg_state is not None:
-                consumed = consumed_arg_values.get(pos_arg_state.action.dest, [])
-                completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
-                                                            begidx, endidx, consumed)
-
-                # If we have results, then return them
-                if completion_results:
-                    return completion_results
-
-                # Otherwise, print a hint if text isn't possibly the start of a flag
-                elif not (len(text) == 1 and text[0] in self._parser.prefix_chars) or skip_remaining_flags:
-                    self._print_arg_hint(pos_arg_state.action)
-                    return []
+            # Otherwise, print a hint if text isn't possibly the start of a flag
+            elif not (len(text) == 1 and text[0] in self._parser.prefix_chars) or skip_remaining_flags:
+                self._print_arg_hint(pos_arg_state.action)
+                return []
 
         # If we've gotten this far, then text did not complete for a flag name, flag value, or positional.
         # If text is a single flag-prefix character like '-', try completing it against flag names.
@@ -548,7 +535,6 @@ class AutoCompleter(object):
     @staticmethod
     def _print_unfinished_flag_error(flag_arg_state: _ArgumentState) -> None:
         """Print an error during tab completion when the user has not finished the current flag"""
-
         flags = ', '.join(flag_arg_state.action.option_strings)
         param = ' ' + str(flag_arg_state.action.dest).upper()
         prefix = '{}{}'.format(flags, param)
