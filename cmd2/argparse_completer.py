@@ -302,7 +302,10 @@ class AutoCompleter(object):
         # Now try to complete the last token
         last_token = tokens[-1]
 
-        # Check if we are completing a flag name
+        # Check if we are completing a flag name. This check ignores strings with a length of one, like '-'.
+        # This is because that could be the start of a negative number which may be a valid completion for
+        # the current argument. We will handle the completion of flags that start with only one prefix
+        # character (-f) at the end.
         if starts_like_flag(last_token, self._parser) and not skip_remaining_flags:
             if flag_arg_state is not None and flag_arg_state.count < flag_arg_state.min:
                 self._print_unfinished_flag_error(flag_arg_state)
@@ -310,9 +313,9 @@ class AutoCompleter(object):
 
             return self._complete_flags(text, line, begidx, endidx, matched_flags)
 
-        # Check if we are completing a flag's argument
         completion_results = []
 
+        # Check if we are completing a flag's argument
         if flag_arg_state is not None:
             consumed = consumed_arg_values.get(flag_arg_state.action.dest, [])
             completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
@@ -362,7 +365,8 @@ class AutoCompleter(object):
                     self._print_arg_hint(pos_arg_state.action)
                     return []
 
-        # If we've gotten this far, then our text did not complete for a flag name or a
+        # If we've gotten this far, then last_token did not complete for a flag name, flag value, or positional.
+        # It's possible last_token is a single flag-prefix character like '-'. Try completing it against flag names.
         if last_token and not skip_remaining_flags:
             return self._complete_flags(text, line, begidx, endidx, matched_flags)
 
