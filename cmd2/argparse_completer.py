@@ -23,7 +23,7 @@ DEFAULT_DESCRIPTIVE_HEADER = 'Description'
 
 def single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
     """Returns if a token is just a single flag prefix character"""
-    return token and token[0] in parser.prefix_chars
+    return len(token) == 1 and token[0] in parser.prefix_chars
 
 
 # noinspection PyProtectedMember

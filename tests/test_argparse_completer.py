@@ -595,7 +595,7 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys)
     if is_error:
         assert "Flag requires" in out
     else:
-        assert not out
+        assert "Flag requires" not in out
 
 
 def test_completion_items_default_header(ac_app):
@@ -687,6 +687,22 @@ Hint:
   NO_HELP_POS            
 
 '''
+
+
+def test_single_prefix_char():
+    from cmd2.argparse_completer import single_prefix_char
+    parser = cmd2.ArgParser(prefix_chars='-+')
+
+    # Invalid
+    assert not single_prefix_char('', parser)
+    assert not single_prefix_char('--', parser)
+    assert not single_prefix_char('-+', parser)
+    assert not single_prefix_char('++has space', parser)
+    assert not single_prefix_char('foo', parser)
+
+    # Valid
+    assert single_prefix_char('-', parser)
+    assert single_prefix_char('+', parser)
 
 
 def test_starts_like_flag():
