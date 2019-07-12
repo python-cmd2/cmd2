@@ -549,14 +549,53 @@ def test_autcomp_nargs(ac_app, args, completions):
     assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
 
 
-"""
-TODO: Add unit tests for unfinished flag errors
-    # Double dash ends the current flag (even if all expected args aren't entered)
-    ('--set_value --', positional_choices),
+@pytest.mark.parametrize('command_and_args, text, is_error', [
+    # Flag is finished before moving on
+    ('hint --flag foo --', '', False),
+    ('hint --flag foo --help', '', False),
+    ('hint --flag foo', '--', False),
 
-    # Another flag can't start until all expected args are filled out
-    ('--set_value --one_or_more', set_value_choices),
-"""
+    ('nargs --one_or_more one --', '', False),
+    ('nargs --one_or_more one or --set_value', '', False),
+    ('nargs --one_or_more one or more', '--', False),
+
+    ('nargs --set_value set value --', '', False),
+    ('nargs --set_value set value --one_or_more', '', False),
+    ('nargs --set_value set value', '--', False),
+
+    ('nargs --range choices --', '', False),
+    ('nargs --range choices range --set_value', '', False),
+    ('nargs --range range', '--', False),
+
+    # Flag is not finished before moving on
+    ('hint --flag --', '', True),
+    ('hint --flag --help', '', True),
+    ('hint --flag', '--', True),
+
+    ('nargs --one_or_more --', '', True),
+    ('nargs --one_or_more --set_value', '', True),
+    ('nargs --one_or_more', '--', True),
+
+    ('nargs --set_value set --', '', True),
+    ('nargs --set_value set --one_or_more', '', True),
+    ('nargs --set_value set', '--', True),
+
+    ('nargs --range --', '', True),
+    ('nargs --range --set_value', '', True),
+    ('nargs --range', '--', True),
+])
+def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys):
+    line = '{} {}'.format(command_and_args, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    complete_tester(text, line, begidx, endidx, ac_app)
+
+    out, err = capsys.readouterr()
+    if is_error:
+        assert "Flag requires" in out
+    else:
+        assert not out
 
 
 def test_completion_items_default_header(ac_app):

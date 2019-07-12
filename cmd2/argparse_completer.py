@@ -550,13 +550,9 @@ class AutoCompleter(object):
         out_str += '  {0: <{width}}    '.format(prefix, width=20)
         out_str += "Flag requires "
 
+        # This handles ONE_OR_MORE
         if flag_arg_state.max == float('inf'):
-            out_str += "at least {} ".format(flag_arg_state.min)
-
-            if flag_arg_state.min == 1:
-                out_str += "argument"
-            else:
-                out_str += "arguments"
+            out_str += "at least {} argument".format(flag_arg_state.min)
         else:
             if flag_arg_state.min == flag_arg_state.max:
                 out_str += "{} ".format(flag_arg_state.min)
