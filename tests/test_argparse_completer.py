@@ -530,6 +530,7 @@ def test_completion_items(ac_app, num_aliases, show_description):
     # REMAINDER positional
     ('the positional', remainder_choices),
     ('the positional remainder', ['choices ']),
+    ('the positional remainder choices', []),
 
     # REMAINDER positional. Flags don't work in REMAINDER
     ('the positional --set_value', remainder_choices),
@@ -562,6 +563,7 @@ def test_autcomp_nargs(ac_app, args, completions):
     ('nargs --set_value set value --', '', False),
     ('nargs --set_value set value --one_or_more', '', False),
     ('nargs --set_value set value', '--', False),
+    ('nargs --set_val set value', '--', False),  # This exercises our abbreviated flag detection
 
     ('nargs --range choices --', '', False),
     ('nargs --range choices range --set_value', '', False),
@@ -579,6 +581,7 @@ def test_autcomp_nargs(ac_app, args, completions):
     ('nargs --set_value set --', '', True),
     ('nargs --set_value set --one_or_more', '', True),
     ('nargs --set_value set', '--', True),
+    ('nargs --set_val set', '--', True),  # This exercises our abbreviated flag detection
 
     ('nargs --range --', '', True),
     ('nargs --range --set_value', '', True),
