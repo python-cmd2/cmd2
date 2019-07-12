@@ -327,7 +327,7 @@ class AutoCompleter(object):
                 self._print_arg_hint(flag_arg_state.action)
                 return []
 
-        # Otherwise check if we are completing a positional's argument
+        # Otherwise check if we have a positional to complete
         elif pos_arg_state is not None or next_pos_arg_index < len(self._positional_actions):
 
             # If we aren't current tracking a positional, then get the next positional arg to handle this token
