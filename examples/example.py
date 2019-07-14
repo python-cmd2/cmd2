@@ -66,7 +66,7 @@ class CmdLineApp(cmd2.Cmd):
     def do_mumble(self, args):
         """Mumbles what you tell me to."""
         repetitions = args.repeat or 1
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             output = []
             if random.random() < .33:
                 output.append(random.choice(self.MUMBLE_FIRST))
