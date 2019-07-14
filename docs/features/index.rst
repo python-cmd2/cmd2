@@ -15,6 +15,7 @@ Features
    history
    hooks
    initialization
+   misc
    multiline_commands
    os
    plugins
