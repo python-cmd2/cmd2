@@ -103,40 +103,78 @@ def test_apcustom_narg_tuple_negative():
 # noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_zero_base():
     parser = cmd2.ArgParser(prog='test')
-    arg = parser.add_argument('tuple', nargs=(0,))
+    arg = parser.add_argument('arg', nargs=(0,))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.nargs_range is None
+    assert "[arg [...]]" in parser.format_help()
 
     parser = cmd2.ArgParser(prog='test')
-    arg = parser.add_argument('tuple', nargs=(0, 1))
+    arg = parser.add_argument('arg', nargs=(0, 1))
     assert arg.nargs == argparse.OPTIONAL
     assert arg.nargs_range is None
+    assert "[arg]" in parser.format_help()
 
     parser = cmd2.ArgParser(prog='test')
-    arg = parser.add_argument('tuple', nargs=(0, 3))
+    arg = parser.add_argument('arg', nargs=(0, 3))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.nargs_range == (0, 3)
+    assert "arg{0..3}" in parser.format_help()
 
 
 # noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_one_base():
     parser = cmd2.ArgParser(prog='test')
-    arg = parser.add_argument('tuple', nargs=(1,))
+    arg = parser.add_argument('arg', nargs=(1,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range is None
+    assert "arg [...]" in parser.format_help()
 
     parser = cmd2.ArgParser(prog='test')
-    arg = parser.add_argument('tuple', nargs=(1, 5))
+    arg = parser.add_argument('arg', nargs=(1, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range is (1, 5)
+    assert arg.nargs_range == (1, 5)
+    assert "arg{1..5}" in parser.format_help()
 
 
 # noinspection PyUnresolvedReferences
-def test_apcustom_narg_tuple_other():
+def test_apcustom_narg_tuple_other_ranges():
+
+    # Test range with no upper bound on max
     parser = cmd2.ArgParser(prog='test')
-    arg = parser.add_argument('tuple', nargs=(2, 5))
+    arg = parser.add_argument('arg', nargs=(2,))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range is (2, 5)
+    assert arg.nargs_range == (2, INFINITY)
+    assert "arg{2+}" in parser.format_help()
+
+    # Valid number of args
+    parser.parse_args('one two'.split())
+    parser.parse_args('one two three'.split())
+
+    # Not enough args
+    with pytest.raises(SystemExit):
+        parser.parse_args('one'.split())
+
+    # Test finite range
+    parser = cmd2.ArgParser(prog='test')
+    arg = parser.add_argument('arg', nargs=(2, 5))
+    assert arg.nargs == argparse.ONE_OR_MORE
+    assert arg.nargs_range == (2, 5)
+    assert "arg{2..5}" in parser.format_help()
+
+    # Valid number of args
+    parser.parse_args('one two'.split())
+    parser.parse_args('one two'.split())
+    parser.parse_args('one two three'.split())
+    parser.parse_args('one two three four'.split())
+    parser.parse_args('one two three four five'.split())
+
+    # Not enough args
+    with pytest.raises(SystemExit):
+        parser.parse_args('one'.split())
+
+    # Too many args
+    with pytest.raises(SystemExit):
+        parser.parse_args('one two three four five six'.split())
 
 
 def test_apcustom_print_message(capsys):
