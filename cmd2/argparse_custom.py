@@ -7,8 +7,8 @@ that inherits from it. This will give a consistent look-and-feel between the hel
 cmd2 commands and the app-specific commands.
 
 Since the new capabilities are added by patching at the argparse API level, they are available whether or
-not ArgParser is used. However, the help output of ArgParser is customized to notate nargs ranges
-whereas any other parser class won't be as explicit in the usage statement.
+not ArgParser is used. However, the help and error output of ArgParser is customized to notate nargs ranges
+whereas any other parser class won't be as explicit in their output.
 
 ############################################################################################################
 # Added capabilities
