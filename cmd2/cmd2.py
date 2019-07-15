@@ -352,6 +352,12 @@ class Cmd(cmd.Cmd):
         self.editor = self.DEFAULT_EDITOR
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.locals_in_py = False
+
+        # The maximum number of CompletionItems to display during tab completion. If the number of completion
+        # suggestions exceeds this number, they will be displayed in the typical columnized format and will
+        # not include the description value of the CompletionItems.
+        self.max_completion_items = 50
+
         self.quiet = False  # Do not suppress nonessential output
         self.timing = False  # Prints elapsed time for each command
 
@@ -369,6 +375,7 @@ class Cmd(cmd.Cmd):
                 'editor': 'Program used by ``edit``',
                 'feedback_to_output': 'Include nonessentials in `|`, `>` results',
                 'locals_in_py': 'Allow access to your application in py via self',
+                'max_completion_items': 'Maximum number of CompletionItems to display during tab completion',
                 'prompt': 'The prompt issued to solicit input',
                 'quiet': "Don't print nonessential feedback",
                 'timing': 'Report execution times'
@@ -466,11 +473,6 @@ class Cmd(cmd.Cmd):
         # case-insensitive alphabetical sort. If natural sorting preferred, then set this to NATURAL_SORT_KEY.
         # Otherwise it can be set to any custom key to meet your needs.
         self.matches_sort_key = ALPHABETICAL_SORT_KEY
-
-        # The maximum number of CompletionItems to display during tab completion. If the number of completion
-        # suggestions exceeds this number, they will be displayed in the typical columnized format and will
-        # not include the description value of the CompletionItems.
-        self.max_completion_items = 50
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
