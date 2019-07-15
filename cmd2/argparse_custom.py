@@ -14,9 +14,14 @@ whereas any other parser class won't be as explicit in their output.
 # Added capabilities
 ############################################################################################################
 
-Extends argparse nargs functionality by allowing tuples which specify a range (min, max)
+Extends argparse nargs functionality by allowing tuples which specify a range (min, max). To specify a max
+value with no upper bound, use a 1-item tuple (min,)
+
     Example:
-        The following command says the -f argument expects between 3 and 5 values (inclusive)
+        # -f argument expects at least 3 values
+        parser.add_argument('-f', nargs=(3,))
+
+        # -f argument expects 3 to 5 values
         parser.add_argument('-f', nargs=(3, 5))
 
 Tab Completion:
@@ -153,6 +158,9 @@ from .ansi import ansi_aware_write, style_error
 # The following are names of custom argparse argument attributes added by cmd2
 ############################################################################################################
 
+# Used in nargs ranges to signify there is no maximum
+INFINITY = float('inf')
+
 # A tuple specifying nargs as a range (min, max)
 ATTR_NARGS_RANGE = 'nargs_range'
 
@@ -165,6 +173,27 @@ ATTR_SUPPRESS_TAB_HINT = 'suppress_tab_hint'
 
 # Descriptive header that prints when using CompletionItems
 ATTR_DESCRIPTIVE_COMPLETION_HEADER = 'desc_completion_header'
+
+
+def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
+    """Generate an error message when the the number of arguments provided is not within the expected range"""
+    err_str = "expected "
+
+    if range_max == INFINITY:
+        err_str += "at least {} argument".format(range_min)
+
+        if range_min != 1:
+            err_str += "s"
+    else:
+        if range_min == range_max:
+            err_str += "{} argument".format(range_min)
+        else:
+            err_str += "{} to {} argument".format(range_min, range_max)
+
+        if range_max != 1:
+            err_str += "s"
+
+    return err_str
 
 
 class CompletionItem(str):
@@ -218,7 +247,7 @@ orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 
 def _add_argument_wrapper(self, *args,
-                          nargs: Union[int, str, Tuple[int, int], None] = None,
+                          nargs: Union[int, str, Tuple[int], Tuple[int, int], None] = None,
                           choices_function: Optional[Callable[[], Iterable[Any]]] = None,
                           choices_method: Optional[Callable[[Any], Iterable[Any]]] = None,
                           completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
@@ -235,6 +264,7 @@ def _add_argument_wrapper(self, *args,
 
     # Customized arguments from original function
     :param nargs: extends argparse nargs functionality by allowing tuples which specify a range (min, max)
+                  to specify a max value with no upper bound, use a 1-item tuple (min,)
 
     # Added args used by AutoCompleter
     :param choices_function: function that provides choices for this argument
@@ -265,9 +295,14 @@ def _add_argument_wrapper(self, *args,
         # Check if nargs was given as a range
         if isinstance(nargs, tuple):
 
+            # Handle 1-item tuple by setting max to INFINITY
+            if len(nargs) == 1:
+                nargs = (nargs[0], INFINITY)
+
             # Validate nargs tuple
-            if len(nargs) != 2 or not isinstance(nargs[0], int) or not isinstance(nargs[1], int):
-                raise ValueError('Ranged values for nargs must be a tuple of 2 integers')
+            if len(nargs) != 2 or not isinstance(nargs[0], int) or \
+                    not (isinstance(nargs[1], int) or nargs[1] == INFINITY):
+                raise ValueError('Ranged values for nargs must be a tuple of 1 or 2 integers')
             if nargs[0] >= nargs[1]:
                 raise ValueError('Invalid nargs range. The first value must be less than the second')
             if nargs[0] < 0:
@@ -275,13 +310,26 @@ def _add_argument_wrapper(self, *args,
 
             # Save the nargs tuple as our range setting
             nargs_range = nargs
+            range_min = nargs_range[0]
+            range_max = nargs_range[1]
 
             # Convert nargs into a format argparse recognizes
-            if nargs_range[0] == 0:
-                if nargs_range[1] > 1:
-                    nargs_adjusted = argparse.ZERO_OR_MORE
-                else:
+            if range_min == 0:
+                if range_max == 1:
                     nargs_adjusted = argparse.OPTIONAL
+
+                    # No range needed since (0, 1) is just argparse.OPTIONAL
+                    nargs_range = None
+                else:
+                    nargs_adjusted = argparse.ZERO_OR_MORE
+                    if range_max == INFINITY:
+                        # No range needed since (0, INFINITY) is just argparse.ZERO_OR_MORE
+                        nargs_range = None
+            elif range_min == 1 and range_max == INFINITY:
+                nargs_adjusted = argparse.ONE_OR_MORE
+
+                # No range needed since (1, INFINITY) is just argparse.ONE_OR_MORE
+                nargs_range = None
             else:
                 nargs_adjusted = argparse.ONE_OR_MORE
         else:
@@ -342,7 +390,12 @@ def _get_nargs_pattern_wrapper(self, action) -> str:
     # Wrapper around ArgumentParser._get_nargs_pattern behavior to support nargs ranges
     nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
     if nargs_range is not None:
-        nargs_pattern = '(-*A{{{},{}}}-*)'.format(nargs_range[0], nargs_range[1])
+        if nargs_range[1] == INFINITY:
+            range_max = ''
+        else:
+            range_max = nargs_range[1]
+
+        nargs_pattern = '(-*A{{{},{}}}-*)'.format(nargs_range[0], range_max)
 
         # if this is an optional action, -- is not allowed
         if action.option_strings:
@@ -375,8 +428,7 @@ def _match_argument_wrapper(self, action, arg_strings_pattern) -> int:
     if match is None:
         nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
         if nargs_range is not None:
-            raise ArgumentError(action,
-                                'Expected between {} and {} arguments'.format(nargs_range[0], nargs_range[1]))
+            raise ArgumentError(action, generate_range_error(nargs_range[0], nargs_range[1]))
 
     return orig_argument_parser_match_argument(self, action, arg_strings_pattern)
 
@@ -563,7 +615,12 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
 
         if nargs_range is not None:
-            result = '{}{{{}..{}}}'.format('%s' % get_metavar(1), nargs_range[0], nargs_range[1])
+            if nargs_range[1] == INFINITY:
+                range_str = '{}+'.format(nargs_range[0])
+            else:
+                range_str = '{}..{}'.format(nargs_range[0], nargs_range[1])
+
+            result = '{}{{{}}}'.format('%s' % get_metavar(1), range_str)
         elif action.nargs == ZERO_OR_MORE:
             result = '[%s [...]]' % get_metavar(1)
         elif action.nargs == ONE_OR_MORE:

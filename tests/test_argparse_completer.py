@@ -596,10 +596,7 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys)
     complete_tester(text, line, begidx, endidx, ac_app)
 
     out, err = capsys.readouterr()
-    if is_error:
-        assert "Flag requires" in out
-    else:
-        assert "Flag requires" not in out
+    assert is_error == all(x in out for x in ["Error:\n", "expected"])
 
 
 def test_completion_items_default_header(ac_app):
@@ -651,11 +648,7 @@ def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys):
 
     complete_tester(text, line, begidx, endidx, ac_app)
     out, err = capsys.readouterr()
-
-    if has_hint:
-        assert "Hint" in out
-    else:
-        assert "Hint" not in out
+    assert has_hint == ("Hint:\n" in out)
 
 
 def test_autocomp_hint_multiple_lines(ac_app, capsys):

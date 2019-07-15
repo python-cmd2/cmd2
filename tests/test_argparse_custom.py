@@ -70,28 +70,20 @@ def test_apcustom_nargs_help_format(cust_app):
 
 def test_apcustom_nargs_not_enough(cust_app):
     out, err = run_cmd(cust_app, 'range --arg1 one')
-    assert 'Error: argument --arg1: Expected between 2 and 3 arguments' in err[2]
+    assert 'Error: argument --arg1: expected 2 to 3 arguments' in err[2]
 
 
-def test_apcustom_narg_empty_tuple():
+@pytest.mark.parametrize('nargs_tuple', [
+    (),
+    ('f', 5),
+    (5, 'f'),
+    (1, 2, 3),
+])
+def test_apcustom_narg_invalid_tuples(nargs_tuple):
     with pytest.raises(ValueError) as excinfo:
         parser = cmd2.ArgParser(prog='test')
-        parser.add_argument('invalid_tuple', nargs=())
-    assert 'Ranged values for nargs must be a tuple of 2 integers' in str(excinfo.value)
-
-
-def test_apcustom_narg_single_tuple():
-    with pytest.raises(ValueError) as excinfo:
-        parser = cmd2.ArgParser(prog='test')
-        parser.add_argument('invalid_tuple', nargs=(1,))
-    assert 'Ranged values for nargs must be a tuple of 2 integers' in str(excinfo.value)
-
-
-def test_apcustom_narg_tuple_triple():
-    with pytest.raises(ValueError) as excinfo:
-        parser = cmd2.ArgParser(prog='test')
-        parser.add_argument('invalid_tuple', nargs=(1, 2, 3))
-    assert 'Ranged values for nargs must be a tuple of 2 integers' in str(excinfo.value)
+        parser.add_argument('invalid_tuple', nargs=nargs_tuple)
+    assert 'Ranged values for nargs must be a tuple of 1 or 2 integers' in str(excinfo.value)
 
 
 def test_apcustom_narg_tuple_order():
@@ -111,6 +103,11 @@ def test_apcustom_narg_tuple_negative():
 def test_apcustom_narg_tuple_zero_base():
     parser = cmd2.ArgParser(prog='test')
     parser.add_argument('tuple', nargs=(0, 3))
+
+
+def test_apcustom_narg_single_tuple():
+    parser = cmd2.ArgParser(prog='test')
+    parser.add_argument('tuple', nargs=(5,))
 
 
 def test_apcustom_narg_tuple_zero_to_one():

@@ -14,7 +14,7 @@ from . import cmd2
 from . import utils
 from .ansi import ansi_safe_wcswidth, style_error
 from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION_HEADER, ATTR_NARGS_RANGE
-from .argparse_custom import ChoicesCallable, CompletionItem, ATTR_CHOICES_CALLABLE
+from .argparse_custom import ChoicesCallable, CompletionItem, ATTR_CHOICES_CALLABLE, INFINITY, generate_range_error
 from .rl_utils import rl_force_redisplay
 
 # If no descriptive header is supplied, then this will be used instead
@@ -83,10 +83,10 @@ class AutoCompleter(object):
                 self.max = 1
             elif self.action.nargs == argparse.ZERO_OR_MORE or self.action.nargs == argparse.REMAINDER:
                 self.min = 0
-                self.max = float('inf')
+                self.max = INFINITY
             elif self.action.nargs == argparse.ONE_OR_MORE:
                 self.min = 1
-                self.max = float('inf')
+                self.max = INFINITY
             else:
                 self.min = self.action.nargs
                 self.max = self.action.nargs
@@ -553,21 +553,7 @@ class AutoCompleter(object):
 
         out_str = "\nError:\n"
         out_str += '  {0: <{width}}    '.format(prefix, width=20)
-        out_str += "Flag requires "
-
-        # This handles ONE_OR_MORE
-        if flag_arg_state.max == float('inf'):
-            out_str += "at least {} argument".format(flag_arg_state.min)
-        else:
-            if flag_arg_state.min == flag_arg_state.max:
-                out_str += "{} ".format(flag_arg_state.min)
-            else:
-                out_str += "{} to {} ".format(flag_arg_state.min, flag_arg_state.max)
-
-            if flag_arg_state.max == 1:
-                out_str += "argument"
-            else:
-                out_str += "arguments"
+        out_str += generate_range_error(flag_arg_state.min, flag_arg_state.max)
 
         out_str += ' ({} entered)'.format(flag_arg_state.count)
         print(style_error('{}\n'.format(out_str)))
