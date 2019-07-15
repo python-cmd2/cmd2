@@ -625,6 +625,8 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
             result = '[%s [...]]' % get_metavar(1)
         elif action.nargs == ONE_OR_MORE:
             result = '%s [...]' % get_metavar(1)
+        elif isinstance(action.nargs, int) and action.nargs > 1:
+            result = '{}{{{}}}'.format('%s' % get_metavar(1), action.nargs)
         # End cmd2 customization
         else:
             result = super()._format_args(action, default_metavar)

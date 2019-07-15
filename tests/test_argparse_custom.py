@@ -17,9 +17,12 @@ class ApCustomTestApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     range_parser = cmd2.ArgParser()
-    range_parser.add_argument('--arg1', nargs=(2, 3))
-    range_parser.add_argument('--arg2', nargs=argparse.ZERO_OR_MORE)
-    range_parser.add_argument('--arg3', nargs=argparse.ONE_OR_MORE)
+    range_parser.add_argument('--arg0', nargs=1)
+    range_parser.add_argument('--arg1', nargs=2)
+    range_parser.add_argument('--arg2', nargs=(3,))
+    range_parser.add_argument('--arg3', nargs=(2, 3))
+    range_parser.add_argument('--arg4', nargs=argparse.ZERO_OR_MORE)
+    range_parser.add_argument('--arg5', nargs=argparse.ONE_OR_MORE)
 
     @cmd2.with_argparser(range_parser)
     def do_range(self, _):
@@ -64,13 +67,30 @@ def test_apcustom_usage():
 
 def test_apcustom_nargs_help_format(cust_app):
     out, err = run_cmd(cust_app, 'help range')
-    assert 'Usage: range [-h] [--arg1 ARG1{2..3}] [--arg2 [ARG2 [...]]]' in out[0]
-    assert '             [--arg3 ARG3 [...]]' in out[1]
+    assert 'Usage: range [-h] [--arg0 ARG0] [--arg1 ARG1{2}] [--arg2 ARG2{3+}]' in out[0]
+    assert '             [--arg3 ARG3{2..3}] [--arg4 [ARG4 [...]]] [--arg5 ARG5 [...]]' in out[1]
 
 
-def test_apcustom_nargs_not_enough(cust_app):
-    out, err = run_cmd(cust_app, 'range --arg1 one')
-    assert 'Error: argument --arg1: expected 2 to 3 arguments' in err[2]
+def test_apcustom_nargs_range_validation(cust_app):
+    # nargs = (3,)
+    out, err = run_cmd(cust_app, 'range --arg2 one two')
+    assert 'Error: argument --arg2: expected at least 3 arguments' in err[2]
+
+    out, err = run_cmd(cust_app, 'range --arg2 one two three')
+    assert not err
+
+    out, err = run_cmd(cust_app, 'range --arg2 one two three four')
+    assert not err
+
+    # nargs = (2,3)
+    out, err = run_cmd(cust_app, 'range --arg3 one')
+    assert 'Error: argument --arg3: expected 2 to 3 arguments' in err[2]
+
+    out, err = run_cmd(cust_app, 'range --arg3 one two')
+    assert not err
+
+    out, err = run_cmd(cust_app, 'range --arg2 one two three')
+    assert not err
 
 
 @pytest.mark.parametrize('nargs_tuple', [
@@ -144,37 +164,12 @@ def test_apcustom_narg_tuple_other_ranges():
     arg = parser.add_argument('arg', nargs=(2,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range == (2, INFINITY)
-    assert "arg{2+}" in parser.format_help()
-
-    # Valid number of args
-    parser.parse_args('one two'.split())
-    parser.parse_args('one two three'.split())
-
-    # Not enough args
-    with pytest.raises(SystemExit):
-        parser.parse_args('one'.split())
 
     # Test finite range
     parser = cmd2.ArgParser(prog='test')
     arg = parser.add_argument('arg', nargs=(2, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range == (2, 5)
-    assert "arg{2..5}" in parser.format_help()
-
-    # Valid number of args
-    parser.parse_args('one two'.split())
-    parser.parse_args('one two'.split())
-    parser.parse_args('one two three'.split())
-    parser.parse_args('one two three four'.split())
-    parser.parse_args('one two three four five'.split())
-
-    # Not enough args
-    with pytest.raises(SystemExit):
-        parser.parse_args('one'.split())
-
-    # Too many args
-    with pytest.raises(SystemExit):
-        parser.parse_args('one two three four five six'.split())
 
 
 def test_apcustom_print_message(capsys):
