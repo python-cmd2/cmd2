@@ -21,16 +21,16 @@ from .rl_utils import rl_force_redisplay
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
 
 
-def single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
+def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
     """Returns if a token is just a single flag prefix character"""
     return len(token) == 1 and token[0] in parser.prefix_chars
 
 
 # noinspection PyProtectedMember
-def starts_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
+def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
     """
-    Determine if a token starts like a flag. Unless an argument has nargs set to argparse.REMAINDER,
-    then anything that starts like a flag can't be consumed as a value for it.
+    Determine if a token looks like a flag. Unless an argument has nargs set to argparse.REMAINDER,
+    then anything that looks like a flag can't be consumed as a value for it.
     Based on argparse._parse_optional().
     """
     # Flags have to be at least characters
@@ -219,7 +219,7 @@ class AutoCompleter(object):
                     continue
 
             # Check the format of the current token to see if it can be an argument's value
-            if starts_like_flag(token, self._parser) and not skip_remaining_flags:
+            if _looks_like_flag(token, self._parser) and not skip_remaining_flags:
 
                 # Check if there is an unfinished flag
                 if flag_arg_state is not None and flag_arg_state.count < flag_arg_state.min:
@@ -314,7 +314,7 @@ class AutoCompleter(object):
         # This is because that could be the start of a negative number which may be a valid completion for
         # the current argument. We will handle the completion of flags that start with only one prefix
         # character (-f) at the end.
-        if starts_like_flag(text, self._parser) and not skip_remaining_flags:
+        if _looks_like_flag(text, self._parser) and not skip_remaining_flags:
             if flag_arg_state is not None and flag_arg_state.count < flag_arg_state.min:
                 self._print_unfinished_flag_error(flag_arg_state)
                 return []
@@ -335,7 +335,7 @@ class AutoCompleter(object):
 
             # Otherwise, print a hint if the flag isn't finished or text isn't possibly the start of a flag
             elif flag_arg_state.count < flag_arg_state.min or \
-                    not single_prefix_char(text, self._parser) or skip_remaining_flags:
+                    not _single_prefix_char(text, self._parser) or skip_remaining_flags:
                 self._print_arg_hint(flag_arg_state.action)
                 return []
 
@@ -357,13 +357,13 @@ class AutoCompleter(object):
                 return completion_results
 
             # Otherwise, print a hint if text isn't possibly the start of a flag
-            elif not single_prefix_char(text, self._parser) or skip_remaining_flags:
+            elif not _single_prefix_char(text, self._parser) or skip_remaining_flags:
                 self._print_arg_hint(pos_arg_state.action)
                 return []
 
         # Handle case in which text is a single flag prefix character that
         # didn't complete against any argument values.
-        if single_prefix_char(text, self._parser) and not skip_remaining_flags:
+        if _single_prefix_char(text, self._parser) and not skip_remaining_flags:
             return self._complete_flags(text, line, begidx, endidx, matched_flags)
 
         return completion_results

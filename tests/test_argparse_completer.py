@@ -694,36 +694,36 @@ Hint:
 
 
 def test_single_prefix_char():
-    from cmd2.argparse_completer import single_prefix_char
+    from cmd2.argparse_completer import _single_prefix_char
     parser = cmd2.ArgParser(prefix_chars='-+')
 
     # Invalid
-    assert not single_prefix_char('', parser)
-    assert not single_prefix_char('--', parser)
-    assert not single_prefix_char('-+', parser)
-    assert not single_prefix_char('++has space', parser)
-    assert not single_prefix_char('foo', parser)
+    assert not _single_prefix_char('', parser)
+    assert not _single_prefix_char('--', parser)
+    assert not _single_prefix_char('-+', parser)
+    assert not _single_prefix_char('++has space', parser)
+    assert not _single_prefix_char('foo', parser)
 
     # Valid
-    assert single_prefix_char('-', parser)
-    assert single_prefix_char('+', parser)
+    assert _single_prefix_char('-', parser)
+    assert _single_prefix_char('+', parser)
 
 
-def test_starts_like_flag():
-    from cmd2.argparse_completer import starts_like_flag
+def test_looks_like_flag():
+    from cmd2.argparse_completer import _looks_like_flag
     parser = cmd2.ArgParser()
 
     # Does not start like a flag
-    assert not starts_like_flag('', parser)
-    assert not starts_like_flag('non-flag', parser)
-    assert not starts_like_flag('-', parser)
-    assert not starts_like_flag('--has space', parser)
-    assert not starts_like_flag('-2', parser)
+    assert not _looks_like_flag('', parser)
+    assert not _looks_like_flag('non-flag', parser)
+    assert not _looks_like_flag('-', parser)
+    assert not _looks_like_flag('--has space', parser)
+    assert not _looks_like_flag('-2', parser)
 
     # Does start like a flag
-    assert starts_like_flag('--', parser)
-    assert starts_like_flag('-flag', parser)
-    assert starts_like_flag('--flag', parser)
+    assert _looks_like_flag('--', parser)
+    assert _looks_like_flag('-flag', parser)
+    assert _looks_like_flag('--flag', parser)
 
 
 def test_complete_command_no_tokens(ac_app):
