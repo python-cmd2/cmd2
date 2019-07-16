@@ -2962,7 +2962,7 @@ class Cmd(cmd.Cmd):
         if orig_value != new_value:
             onchange_hook = getattr(self, '_onchange_{}'.format(param), None)
             if onchange_hook is not None:
-                onchange_hook(old=orig_value, new=new_value)
+                onchange_hook(old=orig_value, new=new_value)  # pylint: disable=not-callable
 
     shell_parser = ArgParser()
     shell_parser.add_argument('command', help='the command to run', completer_method=shell_cmd_complete)
