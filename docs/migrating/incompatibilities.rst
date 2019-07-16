@@ -32,11 +32,12 @@ alphabetic characters, the user could enter a command like ``L20`` and it would
 be interpreted as the command ``L`` with the first argument of ``20``.
 
 Since version 0.9.0, ``cmd2`` has ignored ``identchars``; the parsing logic in
-``cmd2`` splits the command and arguments on whitespace. While cmd_ technically
-supports unicode, but using non-ascii unicode characters in command names while
-simultaneously using ``identchars`` functionality is non-trivial. Requiring
-white space to delimit arguments also ensures reliable operation of many other
-useful ``cmd2`` features, including :ref:`features/completion:Completion` and
+``cmd2`` splits the command and arguments on whitespace. We opted for this
+breaking change because while cmd_ supports unicode, using non-ascii unicode
+characters in command names while simultaneously using ``identchars``
+functionality can be somewhat painful. Requiring white space to delimit
+arguments also ensures reliable operation of many other useful ``cmd2``
+features, including :ref:`features/completion:Completion` and
 :ref:`features/shortcuts_aliases_macros:Shortcuts, Aliases, and Macros`.
 
 If you really need this functionality in your app, you can add it back in by
