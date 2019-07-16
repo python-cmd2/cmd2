@@ -67,7 +67,7 @@ class CompletionsExample(cmd2.Cmd):
         pass
 
     def complete_test_basic(self, text, line, begidx, endidx):
-        return self.basic_complete(text, line, begidx, endidx, food_item_strs)
+        return utils.basic_complete(text, line, begidx, endidx, food_item_strs)
 
     def do_test_delimited(self, args):
         pass
@@ -80,7 +80,7 @@ class CompletionsExample(cmd2.Cmd):
 
     def complete_test_sort_key(self, text, line, begidx, endidx):
         num_strs = ['2', '11', '1']
-        return self.basic_complete(text, line, begidx, endidx, num_strs)
+        return utils.basic_complete(text, line, begidx, endidx, num_strs)
 
     def do_test_raise_exception(self, args):
         pass
@@ -516,7 +516,7 @@ def test_path_completion_directories_only(cmd2_app, request):
 
     expected = [text + 'cripts' + os.path.sep]
 
-    assert cmd2_app.path_complete(text, line, begidx, endidx, os.path.isdir) == expected
+    assert cmd2_app.path_complete(text, line, begidx, endidx, path_filter=os.path.isdir) == expected
 
 def test_basic_completion_single(cmd2_app):
     text = 'Pi'
@@ -524,7 +524,7 @@ def test_basic_completion_single(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
+    assert utils.basic_complete(text, line, begidx, endidx, food_item_strs) == ['Pizza']
 
 def test_basic_completion_multiple(cmd2_app):
     text = ''
@@ -532,7 +532,7 @@ def test_basic_completion_multiple(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    matches = sorted(cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs))
+    matches = sorted(utils.basic_complete(text, line, begidx, endidx, food_item_strs))
     assert matches == sorted(food_item_strs)
 
 def test_basic_completion_nomatch(cmd2_app):
@@ -541,7 +541,7 @@ def test_basic_completion_nomatch(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert cmd2_app.basic_complete(text, line, begidx, endidx, food_item_strs) == []
+    assert utils.basic_complete(text, line, begidx, endidx, food_item_strs) == []
 
 def test_delimiter_completion(cmd2_app):
     text = '/home/'
@@ -592,7 +592,7 @@ def test_flag_based_default_completer(cmd2_app, request):
     begidx = endidx - len(text)
 
     assert cmd2_app.flag_based_complete(text, line, begidx, endidx,
-                                        flag_dict, cmd2_app.path_complete) == [text + 'onftest.py']
+                                        flag_dict, all_else=cmd2_app.path_complete) == [text + 'onftest.py']
 
 def test_flag_based_callable_completer(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -642,7 +642,7 @@ def test_index_based_default_completer(cmd2_app, request):
     begidx = endidx - len(text)
 
     assert cmd2_app.index_based_complete(text, line, begidx, endidx,
-                                         index_dict, cmd2_app.path_complete) == [text + 'onftest.py']
+                                         index_dict, all_else=cmd2_app.path_complete) == [text + 'onftest.py']
 
 def test_index_based_callable_completer(cmd2_app, request):
     test_dir = os.path.dirname(request.module.__file__)
@@ -1072,8 +1072,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
 
     # create the parser for the "sport" sub-command
     parser_sport = base_subparsers.add_parser('sport', help='sport help')
-    sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
-    setattr(sport_arg, 'arg_choices', sport_item_strs)
+    sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport', choices=sport_item_strs)
 
     @cmd2.with_argparser_and_unknown_args(base_parser)
     def do_base(self, args):

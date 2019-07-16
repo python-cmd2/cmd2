@@ -33,8 +33,7 @@ bar_subparsers.add_parser('cranberries', help='cranberries help')
 
 # create the parser for the "sport" sub-command
 parser_sport = base_subparsers.add_parser('sport', help='sport help')
-sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport')
-setattr(sport_arg, 'arg_choices', sport_item_strs)
+sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport', choices=sport_item_strs)
 
 
 # create the top-level parser for the alternate command
@@ -60,8 +59,7 @@ bar2_subparsers.add_parser('cranberries', help='cranberries help')
 
 # create the parser for the "sport" sub-command
 parser_sport2 = base2_subparsers.add_parser('sport', help='sport help')
-sport2_arg = parser_sport2.add_argument('sport', help='Enter name of a sport')
-setattr(sport2_arg, 'arg_choices', sport_item_strs)
+sport2_arg = parser_sport2.add_argument('sport', help='Enter name of a sport', choices=sport_item_strs)
 
 
 class SubcommandsExample(cmd2.Cmd):
