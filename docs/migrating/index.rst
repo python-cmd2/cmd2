@@ -1,11 +1,14 @@
-Migrating from cmd
+Migrating From cmd
 ==================
 
 .. toctree::
    :maxdepth: 1
+   :hidden:
 
    why
    incompatibilities
    minimum
-   free_features
-   nextsteps
+   next_steps
+
+
+.. include:: summary.rst

@@ -40,8 +40,11 @@ Getting Started
 Migrating from cmd
 ==================
 
+.. include:: migrating/summary.rst
+
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
    migrating/index
 

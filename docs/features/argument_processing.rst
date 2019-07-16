@@ -4,8 +4,9 @@ Argument Processing
 ===================
 
 ``cmd2`` makes it easy to add sophisticated argument processing to your
-commands using the ``argparse`` python module. ``cmd2`` handles the following
-for you:
+commands using the `argparse
+<https://docs.python.org/3/library/argparse.html>`_ python module. ``cmd2``
+handles the following for you:
 
 1. Parsing input and quoted strings like the Unix shell
 
@@ -16,7 +17,9 @@ for you:
    The ``Namespace`` includes the ``Statement`` object that was created when
    parsing the command line. It is stored in the ``__statement__`` attribute of
    the ``Namespace``.
+
 4. Adds the usage message from the argument parser to your command.
+
 5. Checks if the ``-h/--help`` option is present, and if so, display the help
    message for the command
 
