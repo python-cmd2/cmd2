@@ -397,9 +397,6 @@ class Cmd(cmd.Cmd):
         self._py_history = []
         self.pyscript_name = 'app'
 
-        if shortcuts is None:
-            shortcuts = constants.DEFAULT_SHORTCUTS
-        shortcuts = sorted(shortcuts.items(), reverse=True)
         self.statement_parser = StatementParser(allow_redirection=allow_redirection,
                                                 terminators=terminators,
                                                 multiline_commands=multiline_commands,
@@ -472,7 +469,7 @@ class Cmd(cmd.Cmd):
         # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
         # cmd2 uses this key for sorting:
         #     command and category names
-        #     alias, macro, and settable names
+        #     alias, macro, settable, and shortcut names
         #     tab completion results when self.matches_sorted is False
         self.default_sort_key = ALPHABETICAL_SORT_KEY
 
@@ -2816,7 +2813,9 @@ class Cmd(cmd.Cmd):
     @with_argparser(ArgParser())
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
-        result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.statement_parser.shortcuts))
+        # Sort the shortcut tuples by name
+        sorted_shortcuts = sorted(self.statement_parser.shortcuts, key=lambda x: self.default_sort_key(x[0]))
+        result = "\n".join('{}: {}'.format(sc[0], sc[1]) for sc in sorted_shortcuts)
         self.poutput("Shortcuts for other commands:\n{}".format(result))
 
     @with_argparser(ArgParser(epilog=INTERNAL_COMMAND_EPILOG))

@@ -74,7 +74,7 @@ Tab Completion:
     completer_method
         This is exactly like completer_function, but the function needs to be an instance method of a cmd2-based class.
         When AutoCompleter calls the method, it will pass the app instance as the self argument. cmd2 provides
-        a few completer methods for convenience (e.g. path_complete, delimiter_complete)
+        a few completer methods for convenience (e.g., path_complete, delimiter_complete)
 
         Example:
             This adds file-path completion to an argument
