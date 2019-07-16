@@ -95,7 +95,6 @@ To Be Integrated
 
 Files from old documentation to be integrated into new structure
 
-* :doc:`freefeatures`
 * :doc:`integrating`
 * :doc:`settingchanges`
 * :doc:`unfreefeatures`
@@ -105,7 +104,6 @@ Files from old documentation to be integrated into new structure
    :hidden:
    :caption: To Be Integrated
 
-   freefeatures
    integrating
    settingchanges
    unfreefeatures

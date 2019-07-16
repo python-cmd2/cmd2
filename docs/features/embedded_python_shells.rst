@@ -61,10 +61,10 @@ the application::
 The ``py`` command also allows you to run Python scripts via ``py
 run('myscript.py')``. This provides a more complicated and more powerful
 scripting capability than that provided by the simple text file scripts
-discussed in :ref:`scripts`.  Python scripts can include conditional control
-flow logic.  See the **python_scripting.py** ``cmd2`` application and the
-**script_conditional.py** script in the ``examples`` source code directory for
-an example of how to achieve this in your own applications.
+discussed in :ref:`features/scripting:Scripting`.  Python scripts can include
+conditional control flow logic.  See the **python_scripting.py** ``cmd2``
+application and the **script_conditional.py** script in the ``examples`` source
+code directory for an example of how to achieve this in your own applications.
 
 Using ``py`` to run scripts directly is considered deprecated.  The newer
 ``run_pyscript`` command is superior for doing this in two primary ways:
