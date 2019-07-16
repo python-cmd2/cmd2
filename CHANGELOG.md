@@ -18,6 +18,7 @@
     * Moved `basic_complete` to utils.py
     * Made optional arguments on the following completer methods keyword-only:
     `delimiter_complete`, `flag_based_complete`, `index_based_complete`. `path_complete`, `shell_cmd_complete`
+    * Renamed history option from `--output-file` to `--output_file`
 
 ## 0.9.14 (June 29, 2019)
 * Enhancements

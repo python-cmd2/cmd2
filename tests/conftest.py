@@ -44,8 +44,8 @@ def verify_help_text(cmd2_app: cmd2.Cmd, help_output: Union[str, List[str]]) -> 
 
 
 # Help text for the history command
-HELP_HISTORY = """Usage: history [-h] [-r | -e | -o FILE | -t TRANSCRIPT | -c] [-s] [-x] [-v]
-               [-a]
+HELP_HISTORY = """Usage: history [-h] [-r | -e | -o FILE | -t TRANSCRIPT_FILE | -c] [-s] [-x]
+               [-v] [-a]
                [arg]
 
 View, run, edit, save, or clear previously entered commands
@@ -61,9 +61,9 @@ optional arguments:
   -h, --help            show this help message and exit
   -r, --run             run selected history items
   -e, --edit            edit and then run selected history items
-  -o, --output-file FILE
+  -o, --output_file FILE
                         output commands to a script file, implies -s
-  -t, --transcript TRANSCRIPT
+  -t, --transcript TRANSCRIPT_FILE
                         output commands and results to a transcript file,
                         implies -s
   -c, --clear           clear all history
