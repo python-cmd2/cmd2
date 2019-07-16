@@ -106,10 +106,10 @@ class AutoCompleter(object):
 
         self._flags = []  # all flags in this command
         self._flag_to_action = {}  # maps flags to the argparse action object
-        self._positional_actions = []  # argument names for positional arguments (by position index)
+        self._positional_actions = []  # actions for positional arguments (by position index)
 
-        # maps action name to sub-command autocompleter:
-        #   action_name -> dict(sub_command -> completer)
+        # maps action to sub-command autocompleter:
+        #   action -> dict(sub_command -> completer)
         self._positional_completers = {}
 
         # Start digging through the argparse structures.
@@ -137,7 +137,7 @@ class AutoCompleter(object):
                                                                cmd2_app,
                                                                token_start_index=subcmd_start)
 
-                    self._positional_completers[action.dest] = sub_completers
+                    self._positional_completers[action] = sub_completers
 
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
@@ -171,8 +171,8 @@ class AutoCompleter(object):
             # If the current token is in the flag argument's autocomplete list,
             # then track that we've used it already.
             if token in arg_choices:
-                consumed_arg_values.setdefault(arg_state.action.dest, [])
-                consumed_arg_values[arg_state.action.dest].append(token)
+                consumed_arg_values.setdefault(arg_state.action, [])
+                consumed_arg_values[arg_state.action].append(token)
 
         #############################################################################################
         # Parse all but the last token
@@ -243,7 +243,7 @@ class AutoCompleter(object):
 
                         # It's possible we already have consumed values for this flag if it was used
                         # earlier in the command line. Reset them now for this use of it.
-                        consumed_arg_values[flag_arg_state.action.dest] = []
+                        consumed_arg_values[flag_arg_state.action] = []
 
             # Check if we are consuming a flag
             elif flag_arg_state is not None:
@@ -263,11 +263,10 @@ class AutoCompleter(object):
                     # Make sure we are still have positional arguments to fill
                     if pos_index < len(self._positional_actions):
                         action = self._positional_actions[pos_index]
-                        pos_name = action.dest
 
                         # Are we at a sub-command? If so, forward to the matching completer
-                        if pos_name in self._positional_completers:
-                            sub_completers = self._positional_completers[pos_name]
+                        if isinstance(action, argparse._SubParsersAction):
+                            sub_completers = self._positional_completers[action]
                             if token in sub_completers:
                                 return sub_completers[token].complete_command(tokens, text, line,
                                                                               begidx, endidx)
@@ -316,7 +315,7 @@ class AutoCompleter(object):
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            consumed = consumed_arg_values.get(flag_arg_state.action.dest, [])
+            consumed = consumed_arg_values.get(flag_arg_state.action, [])
             completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
                                                         begidx, endidx, consumed)
 
@@ -339,7 +338,7 @@ class AutoCompleter(object):
                 action = self._positional_actions[pos_index]
                 pos_arg_state = AutoCompleter._ArgumentState(action)
 
-            consumed = consumed_arg_values.get(pos_arg_state.action.dest, [])
+            consumed = consumed_arg_values.get(pos_arg_state.action, [])
             completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
                                                         begidx, endidx, consumed)
 
