@@ -18,6 +18,8 @@
     * Moved `basic_complete` to utils.py
     * Made optional arguments on the following completer methods keyword-only:
     `delimiter_complete`, `flag_based_complete`, `index_based_complete`. `path_complete`, `shell_cmd_complete`
+    * `StatementParser` now expects shortcuts to be passed in as dictionary. This eliminates the step of converting the
+    shortcuts dictionary into a tuple before creating `StatementParser`.
 
 ## 0.9.14 (June 29, 2019)
 * Enhancements
