@@ -1,7 +1,7 @@
 ## 0.9.15 (July TBD, 2019)
 * Enhancements
     * Greatly simplified using argparse-based tab completion. The new interface is a complete overhaul that breaks
-    the previous way of specifying completion and choices functions. See header of [argparse_completer.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
+    the previous way of specifying completion and choices functions. See header of [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
     for more information. 
 * **Renamed Commands Notice**
     * The following commands were renamed in the last release and have been removed in this release
