@@ -263,7 +263,7 @@ def test_complete_help(ac_app, command, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
 @pytest.mark.parametrize('command_and_args, text, completions', [
@@ -320,7 +320,7 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
 @pytest.mark.parametrize('flag, text, completions', [
@@ -346,7 +346,7 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
 @pytest.mark.parametrize('pos, text, completions', [
@@ -369,7 +369,7 @@ def test_autocomp_positional_choices_completion(ac_app, pos, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
 @pytest.mark.parametrize('flag, text, completions', [
@@ -389,7 +389,7 @@ def test_autocomp_flag_completers(ac_app, flag, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
 @pytest.mark.parametrize('pos, text, completions', [
@@ -410,7 +410,7 @@ def test_autocomp_positional_completers(ac_app, pos, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
 def test_autocomp_blank_token(ac_app):
@@ -548,7 +548,7 @@ def test_autcomp_nargs(ac_app, args, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.matches_sort_key)
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
 @pytest.mark.parametrize('command_and_args, text, is_error', [

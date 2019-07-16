@@ -191,7 +191,7 @@ reference to identify previously entered commands. However, when creating a
 script or a transcript, the command numbers would prevent the script from
 loading properly. The ``-s`` or ``--script`` option instructs the ``history``
 command to suppress the line numbers. This option is automatically set by the
-``--output-file``, ``--transcript``, and ``--edit`` options. If you want to
+``--output_file``, ``--transcript``, and ``--edit`` options. If you want to
 output the history commands with line numbers to a file, you can do it with
 output redirection::
 

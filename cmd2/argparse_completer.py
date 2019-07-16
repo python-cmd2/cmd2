@@ -391,7 +391,7 @@ class AutoCompleter(object):
 
             # If the user has not already sorted the CompletionItems, then sort them before appending the descriptions
             if not self._cmd2_app.matches_sorted:
-                completions.sort(key=self._cmd2_app.matches_sort_key)
+                completions.sort(key=self._cmd2_app.default_sort_key)
                 self._cmd2_app.matches_sorted = True
 
             token_width = ansi_safe_wcswidth(action.dest)
