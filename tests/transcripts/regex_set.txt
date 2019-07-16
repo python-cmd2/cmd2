@@ -11,6 +11,7 @@ echo: False
 editor: /.*/
 feedback_to_output: False
 locals_in_py: False
+max_completion_items: 50
 maxrepeats: 3
 prompt: (Cmd)/ /
 quiet: False

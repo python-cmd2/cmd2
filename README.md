@@ -150,8 +150,8 @@ Instructions for implementing each feature follow.
 
     See https://cmd2.readthedocs.io/en/latest/argument_processing.html for more details
     
-    NOTE: `cmd2` also provides the `ACArgumentParser` customization of `argparse.ArgumentParser` for prettier formatting
-    of help and RangeAction type
+    NOTE: `cmd2` also provides the `cmd2.ArgParser` customization of `argparse.ArgumentParser` for prettier formatting
+    of help and error messages.
 
 - `cmd2` applications function like a full-featured shell in many ways (and are cross-platform)
     - Run arbitrary shell commands by preceding them with `!` or `shell`
@@ -182,8 +182,7 @@ Instructions for implementing each feature follow.
     - `delimiter_complete` helper method for tab completion against a list but each match is split on a delimiter 
         - See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for a demonstration of how to use this feature
     - `cmd2` in combination with `argparse` also provide several advanced capabilities for automatic tab-completion
-            - See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) and
-            [tab_autocomp_dynamic.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocomp_dynamic.py) examples for more info
+            - See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for more info
 
 - Multi-line commands
 

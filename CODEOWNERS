@@ -15,12 +15,14 @@
 
 # cmd2 code
 cmd2/__init__.py           @tleonhardt @kotfu
-cmd2/argparse_completer.py @anselor @kmvanbrunt
+cmd2/ansi.py               @kmvanbrunt @tleonhardt
+cmd2/argparse_*.py         @kmvanbrunt
 cmd2/clipboard.py          @tleonhardt
 cmd2/cmd2.py               @tleonhardt @kmvanbrunt @kotfu
 cmd2/constants.py          @kotfu
 cmd2/parsing.py            @kotfu @kmvanbrunt
-cmd2/pyscript_bridge.py    @anselor @kmvanbrunt
+cmd2/plugin.py             @kotfu
+cmd2/pyscript_bridge.py    @kmvanbrunt
 cmd2/rl_utils.py           @kmvanbrunt
 cmd2/transcript.py         @kotfu
 cmd2/utils.py              @tleonhardt @kotfu @kmvanbrunt
@@ -29,23 +31,21 @@ cmd2/utils.py              @tleonhardt @kotfu @kmvanbrunt
 docs/*                  @tleonhardt @kotfu
 
 # Examples
-examples/env*.py        @kotfu
-examples/help*.py       @anselor
-examples/tab_au*.py     @anselor
-examples/tab_co*.py     @kmvanbrunt
+examples/async_printing.py  @kmvanbrunt
+examples/environment.py     @kotfu
+examples/tab_*.py           @kmvanbrunt
 
 # Unit Tests
-tests/pyscript/*        @anselor @kmvanbrunt
-tests/transcripts/*     @kotfu
-tests/__init__.py       @kotfu
-tests/conftest.py       @kotfu @tleonhardt
-tests/test_acar*.py     @anselor
-tests/test_argp*.py     @kotfu
-tests/test_auto*.py     @anselor
-tests/test_comp*.py     @kmvanbrunt
-tests/test_pars*.py     @kotfu
-tests/test_pysc*.py     @anselor
-tests/test_tran*.py     @kotfu
+tests/pyscript/*              @kmvanbrunt
+tests/transcripts/*           @kotfu
+tests/__init__.py             @kotfu
+tests/conftest.py             @kotfu @tleonhardt
+tests/test_argparse.py        @kotfu
+tests/test_argparse_*.py      @kmvanbrunt
+tests/test_comp*.py           @kmvanbrunt
+tests/test_pars*.py           @kotfu
+tests/test_run_pyscript.py    @kmvanbrunt
+tests/test_transcript.py      @kotfu
 
 # Top-level project stuff
 CONTRIBUTING.md         @tleonhardt @kotfu
