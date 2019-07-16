@@ -19,6 +19,12 @@
     * Made optional arguments on the following completer methods keyword-only:
     `delimiter_complete`, `flag_based_complete`, `index_based_complete`. `path_complete`, `shell_cmd_complete`
     * Renamed history option from `--output-file` to `--output_file`
+    * Renamed `matches_sort_key` to `default_sort_key`. This value determines the default sort ordering of string
+    results like alias, command, category, macro, settable, and shortcut names. Unsorted tab-completion results
+    also are sorted with this key. Its default value (ALPHABETICAL_SORT_KEY) performs a case-insensitive alphabetical
+    sort, but it can be changed to a natural sort by setting the value to NATURAL_SORT_KEY.
+    * `StatementParser` now expects shortcuts to be passed in as dictionary. This eliminates the step of converting the
+    shortcuts dictionary into a tuple before creating `StatementParser`.
 
 ## 0.9.14 (June 29, 2019)
 * Enhancements

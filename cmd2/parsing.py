@@ -249,7 +249,7 @@ class StatementParser:
                  terminators: Optional[Iterable[str]] = None,
                  multiline_commands: Optional[Iterable[str]] = None,
                  aliases: Optional[Dict[str, str]] = None,
-                 shortcuts: Optional[Iterable[Tuple[str, str]]] = None) -> None:
+                 shortcuts: Optional[Dict[str, str]] = None) -> None:
         """Initialize an instance of StatementParser.
 
         The following will get converted to an immutable tuple before storing internally:
@@ -261,7 +261,7 @@ class StatementParser:
         :param terminators: iterable containing strings which should terminate multiline commands
         :param multiline_commands: iterable containing the names of commands that accept multiline input
         :param aliases: dictionary containing aliases
-        :param shortcuts: an iterable of tuples with each tuple containing the shortcut and the expansion
+        :param shortcuts: dictionary containing shortcuts
         """
         self.allow_redirection = allow_redirection
         if terminators is None:
@@ -276,10 +276,13 @@ class StatementParser:
             self.aliases = dict()
         else:
             self.aliases = aliases
+
         if shortcuts is None:
-            self.shortcuts = tuple()
-        else:
-            self.shortcuts = tuple(shortcuts)
+            shortcuts = constants.DEFAULT_SHORTCUTS
+
+        # Sort the shortcuts in descending order by name length because the longest match
+        # should take precedence. (e.g., @@file should match '@@' and not '@'.
+        self.shortcuts = tuple(sorted(shortcuts.items(), key=lambda x: len(x[0]), reverse=True))
 
         # commands have to be a word, so make a regular expression
         # that matches the first word in the line. This regex has three

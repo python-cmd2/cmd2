@@ -397,9 +397,6 @@ class Cmd(cmd.Cmd):
         self._py_history = []
         self.pyscript_name = 'app'
 
-        if shortcuts is None:
-            shortcuts = constants.DEFAULT_SHORTCUTS
-        shortcuts = sorted(shortcuts.items(), reverse=True)
         self.statement_parser = StatementParser(allow_redirection=allow_redirection,
                                                 terminators=terminators,
                                                 multiline_commands=multiline_commands,
@@ -468,11 +465,13 @@ class Cmd(cmd.Cmd):
         elif transcript_files:
             self._transcript_files = transcript_files
 
-        # The default key for sorting tab completion matches. This only applies when the matches are not
-        # already marked as sorted by setting self.matches_sorted to True. Its default value performs a
-        # case-insensitive alphabetical sort. If natural sorting preferred, then set this to NATURAL_SORT_KEY.
-        # Otherwise it can be set to any custom key to meet your needs.
-        self.matches_sort_key = ALPHABETICAL_SORT_KEY
+        # The default key for sorting string results. Its default value performs a case-insensitive alphabetical sort.
+        # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
+        # cmd2 uses this key for sorting:
+        #     command and category names
+        #     alias, macro, settable, and shortcut names
+        #     tab completion results when self.matches_sorted is False
+        self.default_sort_key = ALPHABETICAL_SORT_KEY
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
@@ -501,8 +500,8 @@ class Cmd(cmd.Cmd):
         # quote matches that are completed in a delimited fashion
         self.matches_delimited = False
 
-        # Set to True before returning matches to complete() in cases where matches are sorted with custom ordering.
-        # If False, then complete() will sort the matches using self.matches_sort_key before they are displayed.
+        # Set to True before returning matches to complete() in cases where matches have already been sorted.
+        # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
         self.matches_sorted = False
 
         # Set the pager(s) for use with the ppaged() method for displaying output using a pager
@@ -1107,7 +1106,7 @@ class Cmd(cmd.Cmd):
             self.allow_closing_quote = False
 
         # Sort the matches before any trailing slashes are added
-        matches.sort(key=self.matches_sort_key)
+        matches.sort(key=self.default_sort_key)
         self.matches_sorted = True
 
         # Build display_matches and add a slash to directories
@@ -1553,8 +1552,8 @@ class Cmd(cmd.Cmd):
 
             # Sort matches if they haven't already been sorted
             if not self.matches_sorted:
-                self.completion_matches.sort(key=self.matches_sort_key)
-                self.display_matches.sort(key=self.matches_sort_key)
+                self.completion_matches.sort(key=self.default_sort_key)
+                self.display_matches.sort(key=self.default_sort_key)
                 self.matches_sorted = True
 
         try:
@@ -2326,8 +2325,7 @@ class Cmd(cmd.Cmd):
                 else:
                     self.perror("Alias '{}' not found".format(cur_name))
         else:
-            sorted_aliases = utils.alphabetical_sort(self.aliases)
-            for cur_alias in sorted_aliases:
+            for cur_alias in sorted(self.aliases, key=self.default_sort_key):
                 self.poutput("alias create {} {}".format(cur_alias, self.aliases[cur_alias]))
 
     # Top-level parser for alias
@@ -2507,8 +2505,7 @@ class Cmd(cmd.Cmd):
                 else:
                     self.perror("Macro '{}' not found".format(cur_name))
         else:
-            sorted_macros = utils.alphabetical_sort(self.macros)
-            for cur_macro in sorted_macros:
+            for cur_macro in sorted(self.macros, key=self.default_sort_key):
                 self.poutput("macro create {} {}".format(cur_macro, self.macros[cur_macro].value))
 
     # Top-level parser for macro
@@ -2692,10 +2689,10 @@ class Cmd(cmd.Cmd):
         """Show a list of commands which help can be displayed for.
         """
         # Get a sorted list of help topics
-        help_topics = utils.alphabetical_sort(self.get_help_topics())
+        help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
 
         # Get a sorted list of visible command names
-        visible_commands = utils.alphabetical_sort(self.get_visible_commands())
+        visible_commands = sorted(self.get_visible_commands(), key=self.default_sort_key)
 
         cmds_doc = []
         cmds_undoc = []
@@ -2730,7 +2727,7 @@ class Cmd(cmd.Cmd):
             # Categories found, Organize all commands by category
             self.poutput('{}'.format(str(self.doc_leader)))
             self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
-            for category in sorted(cmds_cats.keys()):
+            for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
                 self._print_topics(category, cmds_cats[category], verbose)
             self._print_topics('Other', cmds_doc, verbose)
 
@@ -2816,7 +2813,9 @@ class Cmd(cmd.Cmd):
     @with_argparser(ArgParser())
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
-        result = "\n".join('%s: %s' % (sc[0], sc[1]) for sc in sorted(self.statement_parser.shortcuts))
+        # Sort the shortcut tuples by name
+        sorted_shortcuts = sorted(self.statement_parser.shortcuts, key=lambda x: self.default_sort_key(x[0]))
+        result = "\n".join('{}: {}'.format(sc[0], sc[1]) for sc in sorted_shortcuts)
         self.poutput("Shortcuts for other commands:\n{}".format(result))
 
     @with_argparser(ArgParser(epilog=INTERNAL_COMMAND_EPILOG))
@@ -2903,7 +2902,7 @@ class Cmd(cmd.Cmd):
                 maxlen = max(maxlen, len(result[p]))
 
         if result:
-            for p in sorted(result):
+            for p in sorted(result, key=self.default_sort_key):
                 if args.long:
                     self.poutput('{} # {}'.format(result[p].ljust(maxlen), self.settable[p]))
                 else:
