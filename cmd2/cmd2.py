@@ -2962,7 +2962,7 @@ class Cmd(cmd.Cmd):
         # See if we need to call a change hook for this settable
         if orig_value != new_value:
             onchange_hook = getattr(self, '_onchange_{}'.format(param), None)
-            if onchange_hook is not None:
+            if onchange_hook is not None and callable(onchange_hook):
                 onchange_hook(old=orig_value, new=new_value)  # pylint: disable=not-callable
 
     shell_parser = ArgParser()
