@@ -18,6 +18,7 @@
     * Moved `basic_complete` to utils.py
     * Made optional arguments on the following completer methods keyword-only:
     `delimiter_complete`, `flag_based_complete`, `index_based_complete`. `path_complete`, `shell_cmd_complete`
+    * Renamed history option from `--output-file` to `--output_file`
     * Renamed `matches_sort_key` to `default_sort_key`. This value determines the default sort ordering of string
     results like alias, command, category, macro, settable, and shortcut names. Unsorted tab-completion results
     also are sorted with this key. Its default value (ALPHABETICAL_SORT_KEY) performs a case-insensitive alphabetical

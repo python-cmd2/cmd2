@@ -160,7 +160,7 @@ would::
     (Cmd) history --edit 2:4
 
 If you want to save the commands to a text file, but not edit and re-run them,
-use the ``-o`` or ``--output-file`` option. This is a great way to create
+use the ``-o`` or ``--output_file`` option. This is a great way to create
 :ref:`scripts`, which can be executed using the ``run_script`` command. To
 save the first 5 commands entered in this session to a text file::
 
@@ -190,7 +190,7 @@ reference to identify previously entered commands. However, when creating a
 script or a transcript, the command numbers would prevent the script from
 loading properly. The ``-s`` or ``--script`` option instructs the ``history``
 command to suppress the line numbers. This option is automatically set by the
-``--output-file``, ``--transcript``, and ``--edit`` options. If you want to
+``--output_file``, ``--transcript``, and ``--edit`` options. If you want to
 output the history commands with line numbers to a file, you can do it with
 output redirection::
 

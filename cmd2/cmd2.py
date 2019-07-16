@@ -3274,11 +3274,11 @@ class Cmd(cmd.Cmd):
     history_action_group.add_argument('-r', '--run', action='store_true', help='run selected history items')
     history_action_group.add_argument('-e', '--edit', action='store_true',
                                       help='edit and then run selected history items')
-    history_action_group.add_argument('-o', '--output-file', metavar='FILE',
+    history_action_group.add_argument('-o', '--output_file', metavar='FILE',
                                       help='output commands to a script file, implies -s',
                                       completer_method=path_complete)
-    history_action_group.add_argument('-t', '--transcript', help='output commands and results to a transcript file,\n'
-                                                                 'implies -s',
+    history_action_group.add_argument('-t', '--transcript', metavar='TRANSCRIPT_FILE',
+                                      help='output commands and results to a transcript file,\nimplies -s',
                                       completer_method=path_complete)
     history_action_group.add_argument('-c', '--clear', action='store_true', help='clear all history')
 
@@ -3597,11 +3597,12 @@ class Cmd(cmd.Cmd):
                               "Script should contain one command per line, just like the command would be\n"
                               "typed in the console.\n"
                               "\n"
-                              "If the -r/--record_transcript flag is used, this command instead records\n"
+                              "If the -t/--transcript flag is used, this command instead records\n"
                               "the output of the script commands to a transcript for testing purposes.\n")
 
     run_script_parser = ArgParser(description=run_script_description)
-    run_script_parser.add_argument('-t', '--transcript', help='record the output of the script as a transcript file',
+    run_script_parser.add_argument('-t', '--transcript', metavar='TRANSCRIPT_FILE',
+                                   help='record the output of the script as a transcript file',
                                    completer_method=path_complete)
     run_script_parser.add_argument('script_path', help="path to the script file", completer_method=path_complete)
 
