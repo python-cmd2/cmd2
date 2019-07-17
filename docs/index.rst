@@ -88,24 +88,3 @@ Meta
 
    doc_conventions
    copyright
-
-
-To Be Integrated
-================
-
-Files from old documentation to be integrated into new structure
-
-* :doc:`freefeatures`
-* :doc:`integrating`
-* :doc:`settingchanges`
-* :doc:`unfreefeatures`
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: To Be Integrated
-
-   freefeatures
-   integrating
-   settingchanges
-   unfreefeatures
