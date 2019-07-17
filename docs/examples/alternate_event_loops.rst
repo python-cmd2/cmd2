@@ -1,12 +1,5 @@
-.. cmd2 documentation for integration with other tools
-
-Integrating cmd2 with external tools
-====================================
-
-
-
-Integrating cmd2 with event loops
----------------------------------
+Alternate Event Loops
+=====================
 
 Throughout this documentation we have focused on the **90%** use case, that is
 the use case we believe around **90+%** of our user base is looking for.  This

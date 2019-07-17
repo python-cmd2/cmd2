@@ -95,7 +95,6 @@ To Be Integrated
 
 Files from old documentation to be integrated into new structure
 
-* :doc:`integrating`
 * :doc:`settingchanges`
 
 .. toctree::
@@ -103,5 +102,4 @@ Files from old documentation to be integrated into new structure
    :hidden:
    :caption: To Be Integrated
 
-   integrating
    settingchanges
