@@ -97,7 +97,6 @@ Files from old documentation to be integrated into new structure
 
 * :doc:`integrating`
 * :doc:`settingchanges`
-* :doc:`unfreefeatures`
 
 .. toctree::
    :maxdepth: 2
@@ -106,4 +105,3 @@ Files from old documentation to be integrated into new structure
 
    integrating
    settingchanges
-   unfreefeatures
