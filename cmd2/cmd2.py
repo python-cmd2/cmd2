@@ -719,6 +719,7 @@ class Cmd(cmd.Cmd):
         self.allow_appended_space = True
         self.allow_closing_quote = True
         self.completion_header = ''
+        self.completion_matches = []
         self.display_matches = []
         self.matches_delimited = False
         self.matches_sorted = False
@@ -871,7 +872,7 @@ class Cmd(cmd.Cmd):
         In this case the delimiter would be :: and the user could easily narrow down what they are looking
         for if they were only shown suggestions in the category they are at in the string.
 
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
@@ -911,7 +912,7 @@ class Cmd(cmd.Cmd):
                             all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """Tab completes based on a particular flag preceding the token being completed.
 
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
@@ -953,7 +954,7 @@ class Cmd(cmd.Cmd):
                              all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """Tab completes based on a fixed position in the input string.
 
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
@@ -997,7 +998,7 @@ class Cmd(cmd.Cmd):
                       path_filter: Optional[Callable[[str], bool]] = None) -> List[str]:
         """Performs completion of local file system paths
 
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
@@ -1141,7 +1142,7 @@ class Cmd(cmd.Cmd):
                            complete_blank: bool = False) -> List[str]:
         """Performs completion of executables either in a user's path or a given path
 
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
@@ -1167,7 +1168,7 @@ class Cmd(cmd.Cmd):
         It determines if it should tab complete for redirection (|, >, >>) or use the
         completer function for the current command
 
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
@@ -1347,247 +1348,241 @@ class Cmd(cmd.Cmd):
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)
 
-    def _complete_worker(self, text: str, state: int) -> Optional[str]:
-        """The actual worker function for tab completion which is called by complete() and returns
-        the next possible completion for 'text'.
-
-        If a command has not been entered, then complete against command list.
-        Otherwise try to call complete_<command> to get list of completions.
-
-        This completer function is called as complete(text, state), for state in 0, 1, 2, …, until it returns a
-        non-string value. It should return the next possible completion starting with text.
-
-        :param text: the current word that user is typing
-        :param state: non-negative integer
+    def _completion_for_command(self, text: str, line: str, begidx: int,
+                                endidx: int, shortcut_to_restore: str) -> None:
         """
-        import functools
-        if state == 0 and rl_type != RlType.NONE:
-            unclosed_quote = ''
-            self._reset_completion_defaults()
+        Helper function for complete() that performs command-specific tab completion
 
-            # Check if we are completing a multiline command
-            if self._at_continuation_prompt:
-                # lstrip and prepend the previously typed portion of this multiline command
-                lstripped_previous = self._multiline_in_progress.lstrip()
-                line = lstripped_previous + readline.get_line_buffer()
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
+        :param line: the current input line with leading whitespace removed
+        :param begidx: the beginning index of the prefix text
+        :param endidx: the ending index of the prefix text
+        :param shortcut_to_restore: if not blank, then this shortcut was removed from text and needs to be
+                                    prepended to all the matches
+        """
+        unclosed_quote = ''
 
-                # Increment the indexes to account for the prepended text
-                begidx = len(lstripped_previous) + readline.get_begidx()
-                endidx = len(lstripped_previous) + readline.get_endidx()
-            else:
-                # lstrip the original line
-                orig_line = readline.get_line_buffer()
-                line = orig_line.lstrip()
-                num_stripped = len(orig_line) - len(line)
+        # Parse the command line
+        statement = self.statement_parser.parse_command_only(line)
+        command = statement.command
+        expanded_line = statement.command_and_args
 
-                # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
-                # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
-                begidx = max(readline.get_begidx() - num_stripped, 0)
-                endidx = max(readline.get_endidx() - num_stripped, 0)
+        # We overwrote line with a properly formatted but fully stripped version
+        # Restore the end spaces since line is only supposed to be lstripped when
+        # passed to completer functions according to Python docs
+        rstripped_len = len(line) - len(line.rstrip())
+        expanded_line += ' ' * rstripped_len
 
-            # Shortcuts are not word break characters when tab completing. Therefore shortcuts become part
-            # of the text variable if there isn't a word break, like a space, after it. We need to remove it
-            # from text and update the indexes. This only applies if we are at the the beginning of the line.
-            shortcut_to_restore = ''
-            if begidx == 0:
-                for (shortcut, _) in self.statement_parser.shortcuts:
-                    if text.startswith(shortcut):
-                        # Save the shortcut to restore later
-                        shortcut_to_restore = shortcut
+        # Fix the index values if expanded_line has a different size than line
+        if len(expanded_line) != len(line):
+            diff = len(expanded_line) - len(line)
+            begidx += diff
+            endidx += diff
 
-                        # Adjust text and where it begins
-                        text = text[len(shortcut_to_restore):]
-                        begidx += len(shortcut_to_restore)
-                        break
+        # Overwrite line to pass into completers
+        line = expanded_line
 
-            # If begidx is greater than 0, then we are no longer completing the command
-            if begidx > 0:
+        # Get all tokens through the one being completed
+        tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
-                # Parse the command line
-                statement = self.statement_parser.parse_command_only(line)
-                command = statement.command
-                expanded_line = statement.command_and_args
+        # Check if we either had a parsing error or are trying to complete the command token
+        # The latter can happen if " or ' was entered as the command
+        if len(tokens) <= 1:
+            return
 
-                # We overwrote line with a properly formatted but fully stripped version
-                # Restore the end spaces since line is only supposed to be lstripped when
-                # passed to completer functions according to Python docs
-                rstripped_len = len(line) - len(line.rstrip())
-                expanded_line += ' ' * rstripped_len
+        # Text we need to remove from completions later
+        text_to_remove = ''
 
-                # Fix the index values if expanded_line has a different size than line
-                if len(expanded_line) != len(line):
-                    diff = len(expanded_line) - len(line)
-                    begidx += diff
-                    endidx += diff
+        # Get the token being completed with any opening quote preserved
+        raw_completion_token = raw_tokens[-1]
 
-                # Overwrite line to pass into completers
-                line = expanded_line
+        # Check if the token being completed has an opening quote
+        if raw_completion_token and raw_completion_token[0] in constants.QUOTES:
 
-                # Get all tokens through the one being completed
-                tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
+            # Since the token is still being completed, we know the opening quote is unclosed
+            unclosed_quote = raw_completion_token[0]
 
-                # Check if we either had a parsing error or are trying to complete the command token
-                # The latter can happen if " or ' was entered as the command
-                if len(tokens) <= 1:
-                    self.completion_matches = []
-                    return None
+            # readline still performs word breaks after a quote. Therefore something like quoted search
+            # text with a space would have resulted in begidx pointing to the middle of the token we
+            # we want to complete. Figure out where that token actually begins and save the beginning
+            # portion of it that was not part of the text readline gave us. We will remove it from the
+            # completions later since readline expects them to start with the original text.
+            actual_begidx = line[:endidx].rfind(tokens[-1])
 
-                # Text we need to remove from completions later
-                text_to_remove = ''
+            if actual_begidx != begidx:
+                text_to_remove = line[actual_begidx:begidx]
 
-                # Get the token being completed with any opening quote preserved
-                raw_completion_token = raw_tokens[-1]
+                # Adjust text and where it begins so the completer routines
+                # get unbroken search text to complete on.
+                text = text_to_remove + text
+                begidx = actual_begidx
 
-                # Check if the token being completed has an opening quote
-                if raw_completion_token and raw_completion_token[0] in constants.QUOTES:
+        # Check if a valid command was entered
+        if command in self.get_all_commands():
+            # Get the completer function for this command
+            compfunc = getattr(self, 'complete_' + command, None)
 
-                    # Since the token is still being completed, we know the opening quote is unclosed
-                    unclosed_quote = raw_completion_token[0]
-
-                    # readline still performs word breaks after a quote. Therefore something like quoted search
-                    # text with a space would have resulted in begidx pointing to the middle of the token we
-                    # we want to complete. Figure out where that token actually begins and save the beginning
-                    # portion of it that was not part of the text readline gave us. We will remove it from the
-                    # completions later since readline expects them to start with the original text.
-                    actual_begidx = line[:endidx].rfind(tokens[-1])
-
-                    if actual_begidx != begidx:
-                        text_to_remove = line[actual_begidx:begidx]
-
-                        # Adjust text and where it begins so the completer routines
-                        # get unbroken search text to complete on.
-                        text = text_to_remove + text
-                        begidx = actual_begidx
-
-                # Check if a valid command was entered
-                if command in self.get_all_commands():
-                    # Get the completer function for this command
-                    compfunc = getattr(self, 'complete_' + command, None)
-
-                    if compfunc is None:
-                        # There's no completer function, next see if the command uses argparser
-                        func = self.cmd_func(command)
-                        if func and hasattr(func, 'argparser'):
-                            compfunc = functools.partial(self._autocomplete_default,
-                                                         argparser=getattr(func, 'argparser'))
-                        else:
-                            compfunc = self.completedefault
-
-                # Check if a macro was entered
-                elif command in self.macros:
-                    compfunc = self.path_complete
-
-                # A valid command was not entered
+            if compfunc is None:
+                # There's no completer function, next see if the command uses argparser
+                func = self.cmd_func(command)
+                if func and hasattr(func, 'argparser'):
+                    import functools
+                    compfunc = functools.partial(self._autocomplete_default,
+                                                 argparser=getattr(func, 'argparser'))
                 else:
-                    # Check if this command should be run as a shell command
-                    if self.default_to_shell and command in utils.get_exes_in_path(command):
-                        compfunc = self.path_complete
-                    else:
-                        compfunc = self.completedefault
+                    compfunc = self.completedefault
 
-                # Attempt tab completion for redirection first, and if that isn't occurring,
-                # call the completer function for the current command
-                self.completion_matches = self._redirect_complete(text, line, begidx, endidx, compfunc)
+        # Check if a macro was entered
+        elif command in self.macros:
+            compfunc = self.path_complete
 
-                if self.completion_matches:
-
-                    # Eliminate duplicates
-                    self.completion_matches = utils.remove_duplicates(self.completion_matches)
-                    self.display_matches = utils.remove_duplicates(self.display_matches)
-
-                    if not self.display_matches:
-                        # Since self.display_matches is empty, set it to self.completion_matches
-                        # before we alter them. That way the suggestions will reflect how we parsed
-                        # the token being completed and not how readline did.
-                        import copy
-                        self.display_matches = copy.copy(self.completion_matches)
-
-                    # Check if we need to add an opening quote
-                    if not unclosed_quote:
-
-                        add_quote = False
-
-                        # This is the tab completion text that will appear on the command line.
-                        common_prefix = os.path.commonprefix(self.completion_matches)
-
-                        if self.matches_delimited:
-                            # Check if any portion of the display matches appears in the tab completion
-                            display_prefix = os.path.commonprefix(self.display_matches)
-
-                            # For delimited matches, we check for a space in what appears before the display
-                            # matches (common_prefix) as well as in the display matches themselves.
-                            if ' ' in common_prefix or (display_prefix
-                                                        and any(' ' in match for match in self.display_matches)):
-                                add_quote = True
-
-                        # If there is a tab completion and any match has a space, then add an opening quote
-                        elif common_prefix and any(' ' in match for match in self.completion_matches):
-                            add_quote = True
-
-                        if add_quote:
-                            # Figure out what kind of quote to add and save it as the unclosed_quote
-                            if any('"' in match for match in self.completion_matches):
-                                unclosed_quote = "'"
-                            else:
-                                unclosed_quote = '"'
-
-                            self.completion_matches = [unclosed_quote + match for match in self.completion_matches]
-
-                    # Check if we need to remove text from the beginning of tab completions
-                    elif text_to_remove:
-                        self.completion_matches = \
-                            [match.replace(text_to_remove, '', 1) for match in self.completion_matches]
-
-                    # Check if we need to restore a shortcut in the tab completions
-                    # so it doesn't get erased from the command line
-                    if shortcut_to_restore:
-                        self.completion_matches = \
-                            [shortcut_to_restore + match for match in self.completion_matches]
-
+        # A valid command was not entered
+        else:
+            # Check if this command should be run as a shell command
+            if self.default_to_shell and command in utils.get_exes_in_path(command):
+                compfunc = self.path_complete
             else:
-                # Complete token against anything a user can run
-                self.completion_matches = utils.basic_complete(text, line, begidx, endidx,
-                                                               self._get_commands_aliases_and_macros_for_completion())
+                compfunc = self.completedefault
 
-            # Handle single result
-            if len(self.completion_matches) == 1:
-                str_to_append = ''
+        # Attempt tab completion for redirection first, and if that isn't occurring,
+        # call the completer function for the current command
+        self.completion_matches = self._redirect_complete(text, line, begidx, endidx, compfunc)
 
-                # Add a closing quote if needed and allowed
-                if self.allow_closing_quote and unclosed_quote:
-                    str_to_append += unclosed_quote
+        if self.completion_matches:
 
-                # If we are at the end of the line, then add a space if allowed
-                if self.allow_appended_space and endidx == len(line):
-                    str_to_append += ' '
+            # Eliminate duplicates
+            self.completion_matches = utils.remove_duplicates(self.completion_matches)
+            self.display_matches = utils.remove_duplicates(self.display_matches)
 
-                self.completion_matches[0] += str_to_append
+            if not self.display_matches:
+                # Since self.display_matches is empty, set it to self.completion_matches
+                # before we alter them. That way the suggestions will reflect how we parsed
+                # the token being completed and not how readline did.
+                import copy
+                self.display_matches = copy.copy(self.completion_matches)
 
-            # Sort matches if they haven't already been sorted
-            if not self.matches_sorted:
-                self.completion_matches.sort(key=self.default_sort_key)
-                self.display_matches.sort(key=self.default_sort_key)
-                self.matches_sorted = True
+            # Check if we need to add an opening quote
+            if not unclosed_quote:
 
-        try:
-            return self.completion_matches[state]
-        except IndexError:
-            return None
+                add_quote = False
+
+                # This is the tab completion text that will appear on the command line.
+                common_prefix = os.path.commonprefix(self.completion_matches)
+
+                if self.matches_delimited:
+                    # Check if any portion of the display matches appears in the tab completion
+                    display_prefix = os.path.commonprefix(self.display_matches)
+
+                    # For delimited matches, we check for a space in what appears before the display
+                    # matches (common_prefix) as well as in the display matches themselves.
+                    if ' ' in common_prefix or (display_prefix
+                                                and any(' ' in match for match in self.display_matches)):
+                        add_quote = True
+
+                # If there is a tab completion and any match has a space, then add an opening quote
+                elif common_prefix and any(' ' in match for match in self.completion_matches):
+                    add_quote = True
+
+                if add_quote:
+                    # Figure out what kind of quote to add and save it as the unclosed_quote
+                    if any('"' in match for match in self.completion_matches):
+                        unclosed_quote = "'"
+                    else:
+                        unclosed_quote = '"'
+
+                    self.completion_matches = [unclosed_quote + match for match in self.completion_matches]
+
+            # Check if we need to remove text from the beginning of tab completions
+            elif text_to_remove:
+                self.completion_matches = [match.replace(text_to_remove, '', 1) for match in self.completion_matches]
+
+            # Check if we need to restore a shortcut in the tab completions
+            # so it doesn't get erased from the command line
+            if shortcut_to_restore:
+                self.completion_matches = [shortcut_to_restore + match for match in self.completion_matches]
+
+            # If we have one result, then add a closing quote if needed and allowed
+            if len(self.completion_matches) == 1 and self.allow_closing_quote and unclosed_quote:
+                self.completion_matches[0] += unclosed_quote
 
     def complete(self, text: str, state: int) -> Optional[str]:
         """Override of cmd2's complete method which returns the next possible completion for 'text'
 
-        This method gets called directly by readline. Since readline suppresses any exception raised
-        in completer functions, they can be difficult to debug. Therefore this function wraps the
-        actual tab completion logic and prints to stderr any exception that occurs before returning
-        control to readline.
+        This completer function is called by readline as complete(text, state), for state in 0, 1, 2, …,
+        until it returns a non-string value. It should return the next possible completion starting with text.
+
+        Since readline suppresses any exception raised in completer functions, they can be difficult to debug.
+        Therefore this function wraps the actual tab completion logic and prints to stderr any exception that
+        occurs before returning control to readline.
 
         :param text: the current word that user is typing
         :param state: non-negative integer
+        :return: the next possible completion for text or None
         """
         # noinspection PyBroadException
         try:
-            return self._complete_worker(text, state)
+            if state == 0 and rl_type != RlType.NONE:
+                self._reset_completion_defaults()
+
+                # Check if we are completing a multiline command
+                if self._at_continuation_prompt:
+                    # lstrip and prepend the previously typed portion of this multiline command
+                    lstripped_previous = self._multiline_in_progress.lstrip()
+                    line = lstripped_previous + readline.get_line_buffer()
+
+                    # Increment the indexes to account for the prepended text
+                    begidx = len(lstripped_previous) + readline.get_begidx()
+                    endidx = len(lstripped_previous) + readline.get_endidx()
+                else:
+                    # lstrip the original line
+                    orig_line = readline.get_line_buffer()
+                    line = orig_line.lstrip()
+                    num_stripped = len(orig_line) - len(line)
+
+                    # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
+                    # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
+                    begidx = max(readline.get_begidx() - num_stripped, 0)
+                    endidx = max(readline.get_endidx() - num_stripped, 0)
+
+                # Shortcuts are not word break characters when tab completing. Therefore shortcuts become part
+                # of the text variable if there isn't a word break, like a space, after it. We need to remove it
+                # from text and update the indexes. This only applies if we are at the the beginning of the line.
+                shortcut_to_restore = ''
+                if begidx == 0:
+                    for (shortcut, _) in self.statement_parser.shortcuts:
+                        if text.startswith(shortcut):
+                            # Save the shortcut to restore later
+                            shortcut_to_restore = shortcut
+
+                            # Adjust text and where it begins
+                            text = text[len(shortcut_to_restore):]
+                            begidx += len(shortcut_to_restore)
+                            break
+
+                # If begidx is greater than 0, then we are no longer completing the first token (command name)
+                if begidx > 0:
+                    self._completion_for_command(text, line, begidx, endidx, shortcut_to_restore)
+
+                # Otherwise complete token against anything a user can run
+                else:
+                    match_against = self._get_commands_aliases_and_macros_for_completion()
+                    self.completion_matches = utils.basic_complete(text, line, begidx, endidx, match_against)
+
+                # If we have one result and we are at the end of the line, then add a space if allowed
+                if len(self.completion_matches) == 1 and endidx == len(line) and self.allow_appended_space:
+                    self.completion_matches[0] += ' '
+
+                # Sort matches if they haven't already been sorted
+                if not self.matches_sorted:
+                    self.completion_matches.sort(key=self.default_sort_key)
+                    self.display_matches.sort(key=self.default_sort_key)
+                    self.matches_sorted = True
+
+            try:
+                return self.completion_matches[state]
+            except IndexError:
+                return None
+
         except Exception as e:
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
             self.perror('\n', end='')

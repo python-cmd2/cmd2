@@ -414,7 +414,7 @@ class AutoCompleter(object):
         """
         Supports cmd2's help command in the completion of sub-command names
         :param tokens: command line tokens
-        :param text: the string prefix we are attempting to match (all returned matches must begin with it)
+        :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
         :param begidx: the beginning index of the prefix text
         :param endidx: the ending index of the prefix text
