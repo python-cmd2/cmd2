@@ -147,3 +147,46 @@ The ``self.exit_code`` attribute of your ``cmd2`` application controls what
 exit code is returned from ``cmdloop()`` when it completes.  It is your job to
 make sure that this exit code gets sent to the shell when your application
 exits by calling ``sys.exit(app.cmdloop())``.
+
+
+Default to shell
+----------------
+
+Every ``cmd2`` application can execute operating-system level (shell) commands
+with ``shell`` or a ``!`` shortcut::
+
+  (Cmd) shell which python
+  /usr/bin/python
+  (Cmd) !which python
+  /usr/bin/python
+
+However, if the parameter ``default_to_shell`` is ``True``, then *every*
+command will be attempted on the operating system.  Only if that attempt fails
+(i.e., produces a nonzero return value) will the application's own ``default``
+method be called.
+
+::
+
+  (Cmd) which python
+  /usr/bin/python
+  (Cmd) my dog has fleas
+  sh: my: not found
+  *** Unknown syntax: my dog has fleas
+
+
+Quit on SIGINT
+--------------
+
+On many shells, SIGINT (most often triggered by the user pressing Ctrl+C) only
+cancels the current line, not the entire command loop. By default, a ``cmd2``
+application will quit on receiving this signal. However, if ``quit_on_sigint``
+is set to ``False``, then the current line will simply be cancelled.
+
+::
+
+  (Cmd) typing a comma^C
+  (Cmd)
+
+.. warning::
+    The default SIGINT behavior will only function properly if **cmdloop** is running
+    in the main thread.
