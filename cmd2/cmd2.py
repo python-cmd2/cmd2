@@ -1576,6 +1576,8 @@ class Cmd(cmd.Cmd):
         try:
             return self._complete_worker(text, state)
         except Exception as e:
+            # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
+            self.perror('\n', end='')
             self.pexcept(e)
             return None
 
