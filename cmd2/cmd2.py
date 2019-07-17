@@ -428,6 +428,9 @@ class Cmd(cmd.Cmd):
         # Used to keep track of whether a continuation prompt is being displayed
         self._at_continuation_prompt = False
 
+        # The multiline command currently being typed which is used to tab complete multiline commands.
+        self._multiline_in_progress = ''
+
         # The error that prints when no help information can be found
         self.help_error = "No help on {}"
 
@@ -1362,15 +1365,25 @@ class Cmd(cmd.Cmd):
             unclosed_quote = ''
             self._reset_completion_defaults()
 
-            # lstrip the original line
-            orig_line = readline.get_line_buffer()
-            line = orig_line.lstrip()
-            stripped = len(orig_line) - len(line)
+            # Check if we are completing a multiline command
+            if self._at_continuation_prompt:
+                # lstrip and prepend the previously typed portion of this multiline command
+                lstripped_previous = self._multiline_in_progress.lstrip()
+                line = lstripped_previous + readline.get_line_buffer()
 
-            # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
-            # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
-            begidx = max(readline.get_begidx() - stripped, 0)
-            endidx = max(readline.get_endidx() - stripped, 0)
+                # Increment the indexes to account for the prepended text
+                begidx = len(lstripped_previous) + readline.get_begidx()
+                endidx = len(lstripped_previous) + readline.get_endidx()
+            else:
+                # lstrip the original line
+                orig_line = readline.get_line_buffer()
+                line = orig_line.lstrip()
+                num_stripped = len(orig_line) - len(line)
+
+                # Calculate new indexes for the stripped line. If the cursor is at a position before the end of a
+                # line of spaces, then the following math could result in negative indexes. Enforce a max of 0.
+                begidx = max(readline.get_begidx() - num_stripped, 0)
+                endidx = max(readline.get_endidx() - num_stripped, 0)
 
             # Shortcuts are not word break characters when tab completing. Therefore shortcuts become part
             # of the text variable if there isn't a word break, like a space, after it. We need to remove it
@@ -1854,15 +1867,19 @@ class Cmd(cmd.Cmd):
             #   - a multiline command with unclosed quotation marks
             try:
                 self._at_continuation_prompt = True
-                newline = self._pseudo_raw_input(self.continuation_prompt)
-                if newline == 'eof':
+
+                # Save the command line up to this point
+                self._multiline_in_progress = line + '\n'
+
+                nextline = self._pseudo_raw_input(self.continuation_prompt)
+                if nextline == 'eof':
                     # they entered either a blank line, or we hit an EOF
                     # for some other reason. Turn the literal 'eof'
                     # into a blank line, which serves as a command
                     # terminator
-                    newline = '\n'
-                    self.poutput(newline)
-                line = '{}\n{}'.format(statement.raw, newline)
+                    nextline = '\n'
+                    self.poutput(nextline)
+                line = '{}{}'.format(self._multiline_in_progress, nextline)
             except KeyboardInterrupt as ex:
                 if self.quit_on_sigint:
                     raise ex
