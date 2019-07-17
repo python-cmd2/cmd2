@@ -1,4 +1,6 @@
 ## 0.9.15 (July TBD, 2019)
+* Bug Fixes
+    * Fixed exception caused by tab completing after an invalid subcommand was entered
 * Enhancements
     * Greatly simplified using argparse-based tab completion. The new interface is a complete overhaul that breaks
     the previous way of specifying completion and choices functions. See header of [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
