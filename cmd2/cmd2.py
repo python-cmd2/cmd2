@@ -2221,7 +2221,7 @@ class Cmd(cmd.Cmd):
                 else:
                     line = 'eof'
 
-        return line.strip()
+        return line.rstrip('\r\n')
 
     def _cmdloop(self) -> None:
         """Repeatedly issue a prompt, accept input, parse an initial prefix
