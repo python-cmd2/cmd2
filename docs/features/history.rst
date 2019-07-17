@@ -160,9 +160,10 @@ would::
     (Cmd) history --edit 2:4
 
 If you want to save the commands to a text file, but not edit and re-run them,
-use the ``-o`` or ``--output_file`` option. This is a great way to create
-:ref:`scripts`, which can be executed using the ``run_script`` command. To
-save the first 5 commands entered in this session to a text file::
+use the ``-o`` or ``--output-file`` option. This is a great way to create
+:ref:`Scripts <features/scripting:Scripting>`, which can be executed using the
+``run_script`` command. To save the first 5 commands entered in this session to
+a text file::
 
     (Cmd) history :5 -o history.txt
 
