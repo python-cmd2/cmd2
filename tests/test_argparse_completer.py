@@ -250,10 +250,33 @@ def test_help(ac_app, command):
 @pytest.mark.parametrize('command, text, completions', [
     ('', 'mu', ['music ']),
     ('music', 'cre', ['create ']),
-    ('music create', '', ['jazz', 'rock'])
+    ('music', 'creab', []),
+    ('music create', '', ['jazz', 'rock']),
+    ('music crea', 'jazz', []),
+    ('music create', 'foo', [])
 ])
 def test_complete_help(ac_app, command, text, completions):
     line = 'help {} {}'.format(command, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
+
+
+@pytest.mark.parametrize('subcommand, text, completions', [
+    ('create', '', ['jazz', 'rock']),
+    ('create', 'ja', ['jazz ']),
+    ('create', 'foo', []),
+    ('creab', 'ja', [])
+])
+def test_subcommand_completions(ac_app, subcommand, text, completions):
+    line = 'music {} {}'.format(subcommand, text)
     endidx = len(line)
     begidx = endidx - len(text)
 

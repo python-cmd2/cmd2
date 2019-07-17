@@ -102,29 +102,19 @@ class AutoCompleter(object):
         """
         self._parser = parser
         self._cmd2_app = cmd2_app
-        self._arg_choices = {}
         self._token_start_index = token_start_index
 
         self._flags = []  # all flags in this command
         self._flag_to_action = {}  # maps flags to the argparse action object
-        self._positional_actions = []  # argument names for positional arguments (by position index)
+        self._positional_actions = []  # actions for positional arguments (by position index)
 
-        # maps action name to sub-command autocompleter:
-        #   action_name -> dict(sub_command -> completer)
+        # maps action to sub-command autocompleter:
+        #   action -> dict(sub_command -> completer)
         self._positional_completers = {}
 
         # Start digging through the argparse structures.
         #   _actions is the top level container of parameter definitions
         for action in self._parser._actions:
-            # if there are choices defined, record them in the arguments dictionary
-            if action.choices is not None:
-                self._arg_choices[action.dest] = action.choices
-
-            # otherwise check if a callable provides the choices for this argument
-            elif hasattr(action, ATTR_CHOICES_CALLABLE):
-                arg_choice_callable = getattr(action, ATTR_CHOICES_CALLABLE)
-                self._arg_choices[action.dest] = arg_choice_callable
-
             # if the parameter is flag based, it will have option_strings
             if action.option_strings:
                 # record each option flag
@@ -138,7 +128,6 @@ class AutoCompleter(object):
 
                 if isinstance(action, argparse._SubParsersAction):
                     sub_completers = {}
-                    sub_commands = []
 
                     # Create an AutoCompleter for each subcommand of this command
                     for subcmd in action.choices:
@@ -147,10 +136,8 @@ class AutoCompleter(object):
                         sub_completers[subcmd] = AutoCompleter(action.choices[subcmd],
                                                                cmd2_app,
                                                                token_start_index=subcmd_start)
-                        sub_commands.append(subcmd)
 
-                    self._positional_completers[action.dest] = sub_completers
-                    self._arg_choices[action.dest] = sub_commands
+                    self._positional_completers[action] = sub_completers
 
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
@@ -184,8 +171,8 @@ class AutoCompleter(object):
             # If the current token is in the flag argument's autocomplete list,
             # then track that we've used it already.
             if token in arg_choices:
-                consumed_arg_values.setdefault(arg_state.action.dest, [])
-                consumed_arg_values[arg_state.action.dest].append(token)
+                consumed_arg_values.setdefault(arg_state.action, [])
+                consumed_arg_values[arg_state.action].append(token)
 
         #############################################################################################
         # Parse all but the last token
@@ -256,7 +243,7 @@ class AutoCompleter(object):
 
                         # It's possible we already have consumed values for this flag if it was used
                         # earlier in the command line. Reset them now for this use of it.
-                        consumed_arg_values[flag_arg_state.action.dest] = []
+                        consumed_arg_values[flag_arg_state.action] = []
 
             # Check if we are consuming a flag
             elif flag_arg_state is not None:
@@ -276,17 +263,20 @@ class AutoCompleter(object):
                     # Make sure we are still have positional arguments to fill
                     if pos_index < len(self._positional_actions):
                         action = self._positional_actions[pos_index]
-                        pos_name = action.dest
 
                         # Are we at a sub-command? If so, forward to the matching completer
-                        if pos_name in self._positional_completers:
-                            sub_completers = self._positional_completers[pos_name]
+                        if isinstance(action, argparse._SubParsersAction):
+                            sub_completers = self._positional_completers[action]
                             if token in sub_completers:
                                 return sub_completers[token].complete_command(tokens, text, line,
                                                                               begidx, endidx)
+                            else:
+                                # Invalid subcommand entered, so no way to complete remaining tokens
+                                return []
 
-                        # Keep track of the argument
-                        pos_arg_state = AutoCompleter._ArgumentState(action)
+                        # Otherwise keep track of the argument
+                        else:
+                            pos_arg_state = AutoCompleter._ArgumentState(action)
 
                 # Check if we have a positional to consume this token
                 if pos_arg_state is not None:
@@ -325,7 +315,7 @@ class AutoCompleter(object):
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            consumed = consumed_arg_values.get(flag_arg_state.action.dest, [])
+            consumed = consumed_arg_values.get(flag_arg_state.action, [])
             completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
                                                         begidx, endidx, consumed)
 
@@ -348,7 +338,7 @@ class AutoCompleter(object):
                 action = self._positional_actions[pos_index]
                 pos_arg_state = AutoCompleter._ArgumentState(action)
 
-            consumed = consumed_arg_values.get(pos_arg_state.action.dest, [])
+            consumed = consumed_arg_values.get(pos_arg_state.action, [])
             completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
                                                         begidx, endidx, consumed)
 
@@ -456,58 +446,66 @@ class AutoCompleter(object):
                         return completers[token].format_help(tokens)
         return self._parser.format_help()
 
-    def _complete_for_arg(self, arg_action: argparse.Action,
+    def _complete_for_arg(self, arg: argparse.Action,
                           text: str, line: str, begidx: int, endidx: int, used_values=()) -> List[str]:
         """Tab completion routine for argparse arguments"""
 
-        results = []
-
         # Check the arg provides choices to the user
-        if arg_action.dest in self._arg_choices:
-            arg_choices = self._arg_choices[arg_action.dest]
+        if arg.choices is not None:
+            arg_choices = arg.choices
+        else:
+            arg_choices = getattr(arg, ATTR_CHOICES_CALLABLE, None)
 
-            # Check if the argument uses a specific tab completion function to provide its choices
-            if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
-                if arg_choices.is_method:
-                    results = arg_choices.to_call(self._cmd2_app, text, line, begidx, endidx)
-                else:
-                    results = arg_choices.to_call(text, line, begidx, endidx)
+        if arg_choices is None:
+            return []
 
-            # Otherwise use basic_complete on the choices
+        # Check if the argument uses a specific tab completion function to provide its choices
+        if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
+            if arg_choices.is_method:
+                results = arg_choices.to_call(self._cmd2_app, text, line, begidx, endidx)
             else:
-                results = utils.basic_complete(text, line, begidx, endidx,
-                                               self._resolve_choices_for_arg(arg_action, used_values))
+                results = arg_choices.to_call(text, line, begidx, endidx)
 
-        return self._format_completions(arg_action, results)
+        # Otherwise use basic_complete on the choices
+        else:
+            results = utils.basic_complete(text, line, begidx, endidx,
+                                           self._resolve_choices_for_arg(arg, used_values))
+
+        return self._format_completions(arg, results)
 
     def _resolve_choices_for_arg(self, arg: argparse.Action, used_values=()) -> List[str]:
         """Retrieve a list of choices that are available for a particular argument"""
-        if arg.dest in self._arg_choices:
-            arg_choices = self._arg_choices[arg.dest]
 
-            # Check if arg_choices is a ChoicesCallable that generates a choice list
-            if isinstance(arg_choices, ChoicesCallable):
-                if arg_choices.is_completer:
-                    # Tab completion routines are handled in other functions
-                    return []
+        # Check the arg provides choices to the user
+        if arg.choices is not None:
+            arg_choices = arg.choices
+        else:
+            arg_choices = getattr(arg, ATTR_CHOICES_CALLABLE, None)
+
+        if arg_choices is None:
+            return []
+
+        # Check if arg_choices is a ChoicesCallable that generates a choice list
+        if isinstance(arg_choices, ChoicesCallable):
+            if arg_choices.is_completer:
+                # Tab completion routines are handled in other functions
+                return []
+            else:
+                if arg_choices.is_method:
+                    arg_choices = arg_choices.to_call(self._cmd2_app)
                 else:
-                    if arg_choices.is_method:
-                        arg_choices = arg_choices.to_call(self._cmd2_app)
-                    else:
-                        arg_choices = arg_choices.to_call()
+                    arg_choices = arg_choices.to_call()
 
-            # Since arg_choices can be any iterable type, convert to a list
-            arg_choices = list(arg_choices)
+        # Since arg_choices can be any iterable type, convert to a list
+        arg_choices = list(arg_choices)
 
-            # Since choices can be various types like int, we must convert them to strings
-            for index, choice in enumerate(arg_choices):
-                if not isinstance(choice, str):
-                    arg_choices[index] = str(choice)
+        # Since choices can be various types like int, we must convert them to strings
+        for index, choice in enumerate(arg_choices):
+            if not isinstance(choice, str):
+                arg_choices[index] = str(choice)
 
-            # Filter out arguments we already used
-            return [choice for choice in arg_choices if choice not in used_values]
-
-        return []
+        # Filter out arguments we already used
+        return [choice for choice in arg_choices if choice not in used_values]
 
     @staticmethod
     def _print_arg_hint(arg: argparse.Action) -> None:
@@ -515,7 +513,7 @@ class AutoCompleter(object):
 
         # Check if hinting is disabled
         suppress_hint = getattr(arg, ATTR_SUPPRESS_TAB_HINT, False)
-        if suppress_hint or arg.help == argparse.SUPPRESS:
+        if suppress_hint or arg.help == argparse.SUPPRESS or arg.dest == argparse.SUPPRESS:
             return
 
         # Check if this is a flag
