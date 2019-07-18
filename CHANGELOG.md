@@ -20,7 +20,7 @@
     * Restored `cmd2.Cmd.statement_parser` to be a public attribute (no underscore) 
         * Since it can be useful for creating [post-parsing hooks](https://cmd2.readthedocs.io/en/latest/features/hooks.html#postparsing-hooks)
     * Completely overhauled the interface for adding tab completion to argparse arguments. See enhancements for more details.
-    * `ACArgumentParser` is now called `ArgParser`
+    * `ACArgumentParser` is now called `Cmd2ArgumentParser`
     * Moved `basic_complete` to utils.py
     * Made optional arguments on the following completer methods keyword-only:
     `delimiter_complete`, `flag_based_complete`, `index_based_complete`. `path_complete`, `shell_cmd_complete`
