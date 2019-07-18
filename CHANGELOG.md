@@ -8,6 +8,7 @@
     * Greatly simplified using argparse-based tab completion. The new interface is a complete overhaul that breaks
     the previous way of specifying completion and choices functions. See header of [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
     for more information. 
+    * Enabled tab completion on multiline commands
 * **Renamed Commands Notice**
     * The following commands were renamed in the last release and have been removed in this release
         * `load` - replaced by `run_script`

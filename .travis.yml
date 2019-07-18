@@ -44,7 +44,7 @@ before_script:
   # stop the build if there are Python syntax errors or undefined names
   # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
   if [[ $TOXENV == py37 ]]; then
-    flake8 . --count --ignore=E252,W503 --max-complexity=31 --max-line-length=127 --show-source --statistics ;
+    flake8 . --count --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics ;
   fi
 
 script:

@@ -239,5 +239,5 @@ namespace.add_task(pypi_test)
 @invoke.task
 def flake8(context):
     "Run flake8 linter and tool for style guide enforcement"
-    context.run("flake8 --ignore=E252,W503 --max-complexity=31 --max-line-length=127 --show-source --statistics --exclude=.git,__pycache__,.tox,.eggs,*.egg,.venv,.idea,.pytest_cache,.vscode,build,dist,htmlcov")
+    context.run("flake8 --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics --exclude=.git,__pycache__,.tox,.eggs,*.egg,.venv,.idea,.pytest_cache,.vscode,build,dist,htmlcov")
 namespace.add_task(flake8)
