@@ -38,6 +38,7 @@ import pickle
 import re
 import sys
 import threading
+from code import InteractiveConsole
 from collections import namedtuple
 from contextlib import redirect_stdout
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
@@ -278,6 +279,24 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
         return cmd_wrapper
 
     return arg_decorator
+
+
+class _SavedReadlineSettings:
+    """readline settings that are backed up when switching between readline environments"""
+    def __init__(self):
+        self.completer = None
+        self.delims = ''
+        self.basic_quotes = None
+
+
+class _SavedCmd2Env:
+    """cmd2 environment settings that are backed up when entering an interactive Python shell"""
+    def __init__(self):
+        self.readline_settings = _SavedReadlineSettings()
+        self.readline_module = None
+        self.history = []
+        self.sys_stdout = None
+        self.sys_stdin = None
 
 
 class EmbeddedConsoleExit(SystemExit):
@@ -2218,15 +2237,13 @@ class Cmd(cmd.Cmd):
 
         return line.rstrip('\r\n')
 
-    def _cmdloop(self) -> None:
-        """Repeatedly issue a prompt, accept input, parse an initial prefix
-        off the received input, and dispatch to action methods, passing them
-        the remainder of the line as argument.
-
-        This serves the same role as cmd.cmdloop().
+    def _set_up_cmd2_readline(self) -> _SavedReadlineSettings:
         """
-        # An almost perfect copy from Cmd; however, the pseudo_raw_input portion
-        # has been split out so that it can be called separately
+        Set up readline with cmd2-specific settings
+        :return: Class containing saved readline settings
+        """
+        readline_settings = _SavedReadlineSettings()
+
         if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
 
             # Set up readline for our tab completion needs
@@ -2234,10 +2251,10 @@ class Cmd(cmd.Cmd):
                 # Set GNU readline's rl_basic_quote_characters to NULL so it won't automatically add a closing quote
                 # We don't need to worry about setting rl_completion_suppress_quote since we never declared
                 # rl_completer_quote_characters.
-                saved_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
+                readline_settings.basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
                 rl_basic_quote_characters.value = None
 
-            saved_completer = readline.get_completer()
+            readline_settings.completer = readline.get_completer()
             readline.set_completer(self.complete)
 
             # Break words on whitespace and quotes when tab completing
@@ -2247,13 +2264,46 @@ class Cmd(cmd.Cmd):
                 # If redirection is allowed, then break words on those characters too
                 completer_delims += ''.join(constants.REDIRECTION_CHARS)
 
-            saved_delims = readline.get_completer_delims()
+            readline_settings.delims = readline.get_completer_delims()
             readline.set_completer_delims(completer_delims)
 
             # Enable tab completion
             readline.parse_and_bind(self.completekey + ": complete")
 
+        return readline_settings
+
+    def _restore_readline(self, readline_settings: _SavedReadlineSettings):
+        """
+        Restore readline settings
+        :param readline_settings: the readline settings to restore
+        """
+        if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
+
+            # Restore what we changed in readline
+            readline.set_completer(readline_settings.completer)
+            readline.set_completer_delims(readline_settings.delims)
+
+            if rl_type == RlType.GNU:
+                readline.set_completion_display_matches_hook(None)
+                rl_basic_quote_characters.value = readline_settings.basic_quotes
+            elif rl_type == RlType.PYREADLINE:
+                # noinspection PyUnresolvedReferences
+                readline.rl.mode._display_completions = orig_pyreadline_display
+
+    def _cmdloop(self) -> None:
+        """Repeatedly issue a prompt, accept input, parse an initial prefix
+        off the received input, and dispatch to action methods, passing them
+        the remainder of the line as argument.
+
+        This serves the same role as cmd.cmdloop().
+        """
+        readline_settings = None
+
         try:
+            # Get sigint protection while we set up readline for cmd2
+            with self.sigint_protection:
+                readline_settings = self._set_up_cmd2_readline()
+
             # Run startup commands
             stop = self.runcmds_plus_hooks(self._startup_commands)
             self._startup_commands.clear()
@@ -2272,18 +2322,10 @@ class Cmd(cmd.Cmd):
                 # Run the command along with all associated pre and post hooks
                 stop = self.onecmd_plus_hooks(line)
         finally:
-            if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
-
-                # Restore what we changed in readline
-                readline.set_completer(saved_completer)
-                readline.set_completer_delims(saved_delims)
-
-                if rl_type == RlType.GNU:
-                    readline.set_completion_display_matches_hook(None)
-                    rl_basic_quote_characters.value = saved_basic_quotes
-                elif rl_type == RlType.PYREADLINE:
-                    # noinspection PyUnresolvedReferences
-                    readline.rl.mode._display_completions = orig_pyreadline_display
+            # Get sigint protection while we restore readline settings
+            with self.sigint_protection:
+                if readline_settings is not None:
+                    self._restore_readline(readline_settings)
 
     # -----  Alias sub-command functions -----
 
@@ -2890,10 +2932,10 @@ class Cmd(cmd.Cmd):
                     response, len(fulloptions)))
         return result
 
-    def _cmdenvironment(self) -> str:
-        """Get a summary report of read-only settings which the user cannot modify at runtime.
+    def _get_read_only_settings(self) -> str:
+        """Return a summary report of read-only settings which the user cannot modify at runtime.
 
-        :return: summary report of read-only settings which the user cannot modify at runtime
+        :return: The report string
         """
         read_only_settings = """
         Commands may be terminated with: {}
@@ -2924,7 +2966,7 @@ class Cmd(cmd.Cmd):
 
             # If user has requested to see all settings, also show read-only settings
             if args.all:
-                self.poutput('\nRead only settings:{}'.format(self._cmdenvironment()))
+                self.poutput('\nRead only settings:{}'.format(self._get_read_only_settings()))
         else:
             self.perror("Parameter '{}' not supported (type 'set' for list of parameters).".format(param))
 
@@ -3032,6 +3074,108 @@ class Cmd(cmd.Cmd):
         sys.displayhook = sys.__displayhook__
         sys.excepthook = sys.__excepthook__
 
+    def _set_up_py_shell_env(self, interp: InteractiveConsole) -> _SavedCmd2Env:
+        """
+        Set up interactive Python shell environment
+        :return: Class containing saved up cmd2 environment
+        """
+        cmd2_env = _SavedCmd2Env()
+
+        # Set up readline for Python shell
+        if rl_type != RlType.NONE:
+            # Save cmd2 history
+            for i in range(1, readline.get_current_history_length() + 1):
+                # noinspection PyArgumentList
+                cmd2_env.history.append(readline.get_history_item(i))
+
+            readline.clear_history()
+
+            # Restore py's history
+            for item in self._py_history:
+                readline.add_history(item)
+
+            if self.use_rawinput and self.completekey:
+                # Set up tab completion for the Python console
+                # rlcompleter relies on the default settings of the Python readline module
+                if rl_type == RlType.GNU:
+                    cmd2_env.readline_settings.basic_quotes = ctypes.cast(rl_basic_quote_characters,
+                                                                          ctypes.c_void_p).value
+                    rl_basic_quote_characters.value = orig_rl_basic_quotes
+
+                    if 'gnureadline' in sys.modules:
+                        # rlcompleter imports readline by name, so it won't use gnureadline
+                        # Force rlcompleter to use gnureadline instead so it has our settings and history
+                        if 'readline' in sys.modules:
+                            cmd2_env.readline_module = sys.modules['readline']
+
+                        sys.modules['readline'] = sys.modules['gnureadline']
+
+                cmd2_env.readline_settings.delims = readline.get_completer_delims()
+                readline.set_completer_delims(orig_rl_delims)
+
+                # rlcompleter will not need cmd2's custom display function
+                # This will be restored by cmd2 the next time complete() is called
+                if rl_type == RlType.GNU:
+                    readline.set_completion_display_matches_hook(None)
+                elif rl_type == RlType.PYREADLINE:
+                    # noinspection PyUnresolvedReferences
+                    readline.rl.mode._display_completions = orig_pyreadline_display
+
+                # Save off the current completer and set a new one in the Python console
+                # Make sure it tab completes from its locals() dictionary
+                cmd2_env.readline_settings.completer = readline.get_completer()
+                interp.runcode("from rlcompleter import Completer")
+                interp.runcode("import readline")
+                interp.runcode("readline.set_completer(Completer(locals()).complete)")
+
+        # Set up sys module for the Python console
+        self._reset_py_display()
+
+        cmd2_env.sys_stdout = sys.stdout
+        sys.stdout = self.stdout
+
+        cmd2_env.sys_stdin = sys.stdin
+        sys.stdin = self.stdin
+
+        return cmd2_env
+
+    def _restore_cmd2_env(self, cmd2_env: _SavedCmd2Env) -> None:
+        """
+        Restore cmd2 environment after exiting an interactive Python shell
+        :param cmd2_env: the environment settings to restore
+        """
+        sys.stdout = cmd2_env.sys_stdout
+        sys.stdin = cmd2_env.sys_stdin
+
+        # Set up readline for cmd2
+        if rl_type != RlType.NONE:
+            # Save py's history
+            self._py_history.clear()
+            for i in range(1, readline.get_current_history_length() + 1):
+                # noinspection PyArgumentList
+                self._py_history.append(readline.get_history_item(i))
+
+            readline.clear_history()
+
+            # Restore cmd2's history
+            for item in cmd2_env.history:
+                readline.add_history(item)
+
+            if self.use_rawinput and self.completekey:
+                # Restore cmd2's tab completion settings
+                readline.set_completer(cmd2_env.readline_settings.completer)
+                readline.set_completer_delims(cmd2_env.readline_settings.delims)
+
+                if rl_type == RlType.GNU:
+                    rl_basic_quote_characters.value = cmd2_env.readline_settings.basic_quotes
+
+                    if 'gnureadline' in sys.modules:
+                        # Restore what the readline module pointed to
+                        if cmd2_env.readline_module is None:
+                            del(sys.modules['readline'])
+                        else:
+                            sys.modules['readline'] = cmd2_env.readline_module
+
     py_description = ("Invoke Python command or shell\n"
                       "\n"
                       "Note that, when invoking a command directly from the command line, this shell\n"
@@ -3092,7 +3236,6 @@ class Cmd(cmd.Cmd):
                 del self._pystate['self']
 
             localvars = self._pystate
-            from code import InteractiveConsole
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
@@ -3113,73 +3256,22 @@ class Cmd(cmd.Cmd):
                     # We don't care about any exception that happened in the interactive console
                     pass
 
-            # If there are no args, then we will open an interactive Python console
+            # If there are no args, then we will open an interactive Python shell
             else:
-                # Set up readline for Python console
-                if rl_type != RlType.NONE:
-                    # Save cmd2 history
-                    saved_cmd2_history = []
-                    for i in range(1, readline.get_current_history_length() + 1):
-                        # noinspection PyArgumentList
-                        saved_cmd2_history.append(readline.get_history_item(i))
-
-                    readline.clear_history()
-
-                    # Restore py's history
-                    for item in self._py_history:
-                        readline.add_history(item)
-
-                    if self.use_rawinput and self.completekey:
-                        # Set up tab completion for the Python console
-                        # rlcompleter relies on the default settings of the Python readline module
-                        if rl_type == RlType.GNU:
-                            saved_basic_quotes = ctypes.cast(rl_basic_quote_characters, ctypes.c_void_p).value
-                            rl_basic_quote_characters.value = orig_rl_basic_quotes
-
-                            if 'gnureadline' in sys.modules:
-                                # rlcompleter imports readline by name, so it won't use gnureadline
-                                # Force rlcompleter to use gnureadline instead so it has our settings and history
-                                saved_readline = None
-                                if 'readline' in sys.modules:
-                                    saved_readline = sys.modules['readline']
-
-                                sys.modules['readline'] = sys.modules['gnureadline']
-
-                        saved_delims = readline.get_completer_delims()
-                        readline.set_completer_delims(orig_rl_delims)
-
-                        # rlcompleter will not need cmd2's custom display function
-                        # This will be restored by cmd2 the next time complete() is called
-                        if rl_type == RlType.GNU:
-                            readline.set_completion_display_matches_hook(None)
-                        elif rl_type == RlType.PYREADLINE:
-                            # noinspection PyUnresolvedReferences
-                            readline.rl.mode._display_completions = orig_pyreadline_display
-
-                        # Save off the current completer and set a new one in the Python console
-                        # Make sure it tab completes from its locals() dictionary
-                        saved_completer = readline.get_completer()
-                        interp.runcode("from rlcompleter import Completer")
-                        interp.runcode("import readline")
-                        interp.runcode("readline.set_completer(Completer(locals()).complete)")
-
-                # Set up sys module for the Python console
-                self._reset_py_display()
-
-                saved_sys_stdout = sys.stdout
-                sys.stdout = self.stdout
-
-                saved_sys_stdin = sys.stdin
-                sys.stdin = self.stdin
-
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                 instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
                                 'Non-Python commands can be issued with: {}("your command")\n'
                                 'Run Python code from external script files with: run("script.py")'
                                 .format(self.pyscript_name))
 
+                cmd2_env = None
+
                 # noinspection PyBroadException
                 try:
+                    # Get sigint protection while we set up the Python shell environment
+                    with self.sigint_protection:
+                        cmd2_env = self._set_up_py_shell_env(interp)
+
                     interp.interact(banner="Python {} on {}\n{}\n\n{}\n".
                                     format(sys.version, sys.platform, cprt, instructions))
                 except BaseException:
@@ -3187,37 +3279,10 @@ class Cmd(cmd.Cmd):
                     pass
 
                 finally:
-                    sys.stdout = saved_sys_stdout
-                    sys.stdin = saved_sys_stdin
-
-                    # Set up readline for cmd2
-                    if rl_type != RlType.NONE:
-                        # Save py's history
-                        self._py_history.clear()
-                        for i in range(1, readline.get_current_history_length() + 1):
-                            # noinspection PyArgumentList
-                            self._py_history.append(readline.get_history_item(i))
-
-                        readline.clear_history()
-
-                        # Restore cmd2's history
-                        for item in saved_cmd2_history:
-                            readline.add_history(item)
-
-                        if self.use_rawinput and self.completekey:
-                            # Restore cmd2's tab completion settings
-                            readline.set_completer(saved_completer)
-                            readline.set_completer_delims(saved_delims)
-
-                            if rl_type == RlType.GNU:
-                                rl_basic_quote_characters.value = saved_basic_quotes
-
-                                if 'gnureadline' in sys.modules:
-                                    # Restore what the readline module pointed to
-                                    if saved_readline is None:
-                                        del(sys.modules['readline'])
-                                    else:
-                                        sys.modules['readline'] = saved_readline
+                    # Get sigint protection while we restore cmd2 environment settings
+                    with self.sigint_protection:
+                        if cmd2_env is not None:
+                            self._restore_cmd2_env(cmd2_env)
 
         except KeyboardInterrupt:
             pass
