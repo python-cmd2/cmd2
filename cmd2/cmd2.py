@@ -1863,7 +1863,7 @@ class Cmd(cmd.Cmd):
             try:
                 self._at_continuation_prompt = True
 
-                # Save the command line up to this point
+                # Save the command line up to this point for tab completion
                 self._multiline_in_progress = line + '\n'
 
                 nextline = self._pseudo_raw_input(self.continuation_prompt)

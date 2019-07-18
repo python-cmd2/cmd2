@@ -61,7 +61,7 @@ class CompletionsExample(cmd2.Cmd):
     Example cmd2 application used to exercise tab-completion tests
     """
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        cmd2.Cmd.__init__(self, multiline_commands=['test_multiline'])
 
     def do_test_basic(self, args):
         pass
@@ -87,6 +87,12 @@ class CompletionsExample(cmd2.Cmd):
 
     def complete_test_raise_exception(self, text, line, begidx, endidx):
         raise IndexError("You are out of bounds!!")
+
+    def do_test_multiline(self, args):
+        pass
+
+    def complete_test_multiline(self, text, line, begidx, endidx):
+        return utils.basic_complete(text, line, begidx, endidx, sport_item_strs)
 
     def do_test_no_completer(self, args):
         """Completing this should result in completedefault() being called"""
@@ -128,7 +134,7 @@ def test_complete_empty_arg(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = sorted(cmd2_app.get_visible_commands())
+    expected = sorted(cmd2_app.get_visible_commands(), key=cmd2_app.default_sort_key)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
 
     assert first_match is not None and cmd2_app.completion_matches == expected
@@ -733,7 +739,8 @@ def test_add_opening_quote_basic_no_text(cmd2_app):
 
     # The whole list will be returned with no opening quotes added
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == sorted(food_item_strs)
+    assert first_match is not None and cmd2_app.completion_matches == sorted(food_item_strs,
+                                                                             key=cmd2_app.default_sort_key)
 
 def test_add_opening_quote_basic_nothing_added(cmd2_app):
     text = 'P'
@@ -750,7 +757,7 @@ def test_add_opening_quote_basic_quote_added(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = sorted(['"Ham', '"Ham Sandwich'])
+    expected = sorted(['"Ham', '"Ham Sandwich'], key=cmd2_app.default_sort_key)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
 
@@ -771,7 +778,7 @@ def test_add_opening_quote_basic_text_is_common_prefix(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected = sorted(['"Ham', '"Ham Sandwich'])
+    expected = sorted(['"Ham', '"Ham Sandwich'], key=cmd2_app.default_sort_key)
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and cmd2_app.completion_matches == expected
 
@@ -783,7 +790,8 @@ def test_add_opening_quote_delimited_no_text(cmd2_app):
 
     # The whole list will be returned with no opening quotes added
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
-    assert first_match is not None and cmd2_app.completion_matches == sorted(delimited_strs)
+    assert first_match is not None and cmd2_app.completion_matches == sorted(delimited_strs,
+                                                                             key=cmd2_app.default_sort_key)
 
 def test_add_opening_quote_delimited_nothing_added(cmd2_app):
     text = '/ho'
@@ -791,8 +799,8 @@ def test_add_opening_quote_delimited_nothing_added(cmd2_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_matches = sorted(delimited_strs)
-    expected_display = sorted(['other user', 'user'])
+    expected_matches = sorted(delimited_strs, key=cmd2_app.default_sort_key)
+    expected_display = sorted(['other user', 'user'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
@@ -806,7 +814,7 @@ def test_add_opening_quote_delimited_quote_added(cmd2_app):
     begidx = endidx - len(text)
 
     expected_common_prefix = '"/home/user/file'
-    expected_display = sorted(['file.txt', 'file space.txt'])
+    expected_display = sorted(['file.txt', 'file space.txt'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
@@ -821,7 +829,7 @@ def test_add_opening_quote_delimited_text_is_common_prefix(cmd2_app):
     begidx = endidx - len(text)
 
     expected_common_prefix = '"/home/user/file'
-    expected_display = sorted(['file.txt', 'file space.txt'])
+    expected_display = sorted(['file.txt', 'file space.txt'], key=cmd2_app.default_sort_key)
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is not None and \
@@ -861,6 +869,34 @@ def test_quote_as_command(cmd2_app):
 
     first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
     assert first_match is None and not cmd2_app.completion_matches
+
+
+def test_complete_multiline_on_single_line(cmd2_app):
+    text = ''
+    line = 'test_multiline {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = sorted(sport_item_strs, key=cmd2_app.default_sort_key)
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+
+    assert first_match is not None and cmd2_app.completion_matches == expected
+
+
+def test_complete_multiline_on_multiple_lines(cmd2_app):
+    # Set the same variables _complete_statement() sets when a user is entering data at a continuation prompt
+    cmd2_app._at_continuation_prompt = True
+    cmd2_app._multiline_in_progress = "test_multiline\n"
+
+    text = 'Ba'
+    line = '{}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    expected = sorted(['Bat', 'Basket', 'Basketball'], key=cmd2_app.default_sort_key)
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+
+    assert first_match is not None and cmd2_app.completion_matches == expected
 
 
 # Used by redirect_complete tests
