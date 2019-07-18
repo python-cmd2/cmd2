@@ -2297,12 +2297,12 @@ class Cmd(cmd.Cmd):
 
         This serves the same role as cmd.cmdloop().
         """
-        readline_settings = None
+        saved_readline_settings = None
 
         try:
             # Get sigint protection while we set up readline for cmd2
             with self.sigint_protection:
-                readline_settings = self._set_up_cmd2_readline()
+                saved_readline_settings = self._set_up_cmd2_readline()
 
             # Run startup commands
             stop = self.runcmds_plus_hooks(self._startup_commands)
@@ -2324,8 +2324,8 @@ class Cmd(cmd.Cmd):
         finally:
             # Get sigint protection while we restore readline settings
             with self.sigint_protection:
-                if readline_settings is not None:
-                    self._restore_readline(readline_settings)
+                if saved_readline_settings is not None:
+                    self._restore_readline(saved_readline_settings)
 
     # -----  Alias sub-command functions -----
 
@@ -3264,13 +3264,13 @@ class Cmd(cmd.Cmd):
                                 'Run Python code from external script files with: run("script.py")'
                                 .format(self.pyscript_name))
 
-                cmd2_env = None
+                saved_cmd2_env = None
 
                 # noinspection PyBroadException
                 try:
                     # Get sigint protection while we set up the Python shell environment
                     with self.sigint_protection:
-                        cmd2_env = self._set_up_py_shell_env(interp)
+                        saved_cmd2_env = self._set_up_py_shell_env(interp)
 
                     interp.interact(banner="Python {} on {}\n{}\n\n{}\n".
                                     format(sys.version, sys.platform, cprt, instructions))
@@ -3281,8 +3281,8 @@ class Cmd(cmd.Cmd):
                 finally:
                     # Get sigint protection while we restore cmd2 environment settings
                     with self.sigint_protection:
-                        if cmd2_env is not None:
-                            self._restore_cmd2_env(cmd2_env)
+                        if saved_cmd2_env is not None:
+                            self._restore_cmd2_env(saved_cmd2_env)
 
         except KeyboardInterrupt:
             pass
