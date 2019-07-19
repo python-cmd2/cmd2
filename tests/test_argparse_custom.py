@@ -7,6 +7,7 @@ import argparse
 import pytest
 
 import cmd2
+from cmd2 import Cmd2ArgumentParser
 from cmd2.argparse_custom import generate_range_error, INFINITY
 from .conftest import run_cmd
 
@@ -16,7 +17,7 @@ class ApCustomTestApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    range_parser = cmd2.ArgParser()
+    range_parser = Cmd2ArgumentParser()
     range_parser.add_argument('--arg0', nargs=1)
     range_parser.add_argument('--arg1', nargs=2)
     range_parser.add_argument('--arg2', nargs=(3,))
@@ -50,7 +51,7 @@ def fake_func():
     ({'choices_method': fake_func, 'completer_method': fake_func}, False),
 ])
 def test_apcustom_invalid_args(args, is_valid):
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     try:
         parser.add_argument('name', **args)
         assert is_valid
@@ -61,7 +62,7 @@ def test_apcustom_invalid_args(args, is_valid):
 
 def test_apcustom_usage():
     usage = "A custom usage statement"
-    parser = cmd2.ArgParser(usage=usage)
+    parser = Cmd2ArgumentParser(usage=usage)
     assert usage in parser.format_help()
 
 
@@ -101,40 +102,40 @@ def test_apcustom_nargs_range_validation(cust_app):
 ])
 def test_apcustom_narg_invalid_tuples(nargs_tuple):
     with pytest.raises(ValueError) as excinfo:
-        parser = cmd2.ArgParser(prog='test')
+        parser = Cmd2ArgumentParser(prog='test')
         parser.add_argument('invalid_tuple', nargs=nargs_tuple)
     assert 'Ranged values for nargs must be a tuple of 1 or 2 integers' in str(excinfo.value)
 
 
 def test_apcustom_narg_tuple_order():
     with pytest.raises(ValueError) as excinfo:
-        parser = cmd2.ArgParser(prog='test')
+        parser = Cmd2ArgumentParser(prog='test')
         parser.add_argument('invalid_tuple', nargs=(2, 1))
     assert 'Invalid nargs range. The first value must be less than the second' in str(excinfo.value)
 
 
 def test_apcustom_narg_tuple_negative():
     with pytest.raises(ValueError) as excinfo:
-        parser = cmd2.ArgParser(prog='test')
+        parser = Cmd2ArgumentParser(prog='test')
         parser.add_argument('invalid_tuple', nargs=(-1, 1))
     assert 'Negative numbers are invalid for nargs range' in str(excinfo.value)
 
 
 # noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_zero_base():
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     arg = parser.add_argument('arg', nargs=(0,))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.nargs_range is None
     assert "[arg [...]]" in parser.format_help()
 
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     arg = parser.add_argument('arg', nargs=(0, 1))
     assert arg.nargs == argparse.OPTIONAL
     assert arg.nargs_range is None
     assert "[arg]" in parser.format_help()
 
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     arg = parser.add_argument('arg', nargs=(0, 3))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.nargs_range == (0, 3)
@@ -143,13 +144,13 @@ def test_apcustom_narg_tuple_zero_base():
 
 # noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_one_base():
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     arg = parser.add_argument('arg', nargs=(1,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range is None
     assert "arg [...]" in parser.format_help()
 
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     arg = parser.add_argument('arg', nargs=(1, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range == (1, 5)
@@ -160,13 +161,13 @@ def test_apcustom_narg_tuple_one_base():
 def test_apcustom_narg_tuple_other_ranges():
 
     # Test range with no upper bound on max
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     arg = parser.add_argument('arg', nargs=(2,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range == (2, INFINITY)
 
     # Test finite range
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     arg = parser.add_argument('arg', nargs=(2, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range == (2, 5)
@@ -177,13 +178,13 @@ def test_apcustom_print_message(capsys):
     test_message = 'The test message'
 
     # Specify the file
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     parser._print_message(test_message, file=sys.stdout)
     out, err = capsys.readouterr()
     assert test_message in out
 
     # Make sure file defaults to sys.stderr
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     parser._print_message(test_message)
     out, err = capsys.readouterr()
     assert test_message in err
@@ -214,6 +215,6 @@ def test_generate_range_error():
 
 def test_apcustom_required_options():
     # Make sure a 'required arguments' section shows when a flag is marked required
-    parser = cmd2.ArgParser(prog='test')
+    parser = Cmd2ArgumentParser(prog='test')
     parser.add_argument('--required_flag', required=True)
     assert 'required arguments' in parser.format_help()
