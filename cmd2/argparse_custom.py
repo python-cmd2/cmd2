@@ -26,7 +26,7 @@ value with no upper bound, use a 1-item tuple (min,)
 
 Tab Completion:
     cmd2 uses its AutoCompleter class to enable argparse-based tab completion on all commands that use the
-    @with_argparse wrappers. Out of the box you get tab completion of commands, sub-commands, and flag names,
+    @with_argparse wrappers. Out of the box you get tab completion of commands, subcommands, and flag names,
     as well as instructive hints about the current argument that print when tab is pressed. In addition,
     you can add tab completion for each argument's values using parameters passed to add_argument().
 
@@ -646,7 +646,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
     def add_subparsers(self, **kwargs):
         """Custom override. Sets a default title if one was not given."""
         if 'title' not in kwargs:
-            kwargs['title'] = 'sub-commands'
+            kwargs['title'] = 'subcommands'
 
         return super().add_subparsers(**kwargs)
 

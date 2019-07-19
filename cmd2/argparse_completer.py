@@ -108,7 +108,7 @@ class AutoCompleter(object):
         self._flag_to_action = {}  # maps flags to the argparse action object
         self._positional_actions = []  # actions for positional arguments (by position index)
 
-        # maps action to sub-command autocompleter:
+        # maps action to subcommand autocompleter:
         #   action -> dict(sub_command -> completer)
         self._positional_completers = {}
 
@@ -264,7 +264,7 @@ class AutoCompleter(object):
                     if pos_index < len(self._positional_actions):
                         action = self._positional_actions[pos_index]
 
-                        # Are we at a sub-command? If so, forward to the matching completer
+                        # Are we at a subcommand? If so, forward to the matching completer
                         if isinstance(action, argparse._SubParsersAction):
                             sub_completers = self._positional_completers[action]
                             if token in sub_completers:
@@ -412,7 +412,7 @@ class AutoCompleter(object):
 
     def complete_command_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
-        Supports cmd2's help command in the completion of sub-command names
+        Supports cmd2's help command in the completion of subcommand names
         :param tokens: command line tokens
         :param text: the string prefix we are attempting to match (all matches must begin with it)
         :param line: the current input line with leading whitespace removed
@@ -422,7 +422,7 @@ class AutoCompleter(object):
         """
         for token in tokens[self._token_start_index:]:
             if self._positional_completers:
-                # For now argparse only allows 1 sub-command group per level
+                # For now argparse only allows 1 subcommand group per level
                 # so this will only loop once.
                 for completers in self._positional_completers.values():
                     if token in completers:
@@ -439,7 +439,7 @@ class AutoCompleter(object):
         """
         for token in tokens[self._token_start_index:]:
             if self._positional_completers:
-                # For now argparse only allows 1 sub-command group per level
+                # For now argparse only allows 1 subcommand group per level
                 # so this will only loop once.
                 for completers in self._positional_completers.values():
                     if token in completers:

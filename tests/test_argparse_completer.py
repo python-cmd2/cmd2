@@ -65,14 +65,14 @@ class AutoCompleteTester(cmd2.Cmd):
     # Top level parser for music command
     music_parser = Cmd2ArgumentParser(description='Manage music', prog='music')
 
-    # Add sub-commands to music
+    # Add subcommands to music
     music_subparsers = music_parser.add_subparsers()
 
     # music -> create
     music_create_parser = music_subparsers.add_parser('create', help='Create music')
     music_create_parser.set_defaults(func=_music_create)
 
-    # Add sub-commands to music -> create
+    # Add subcommands to music -> create
     music_create_subparsers = music_create_parser.add_subparsers()
 
     # music -> create -> jazz
@@ -88,10 +88,10 @@ class AutoCompleteTester(cmd2.Cmd):
         """Music command"""
         func = getattr(args, 'func', None)
         if func is not None:
-            # Call whatever sub-command function was selected
+            # Call whatever subcommand function was selected
             func(self, args)
         else:
-            # No sub-command was provided, so call help
+            # No subcommand was provided, so call help
             # noinspection PyTypeChecker
             self.do_help('music')
 

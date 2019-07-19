@@ -326,19 +326,19 @@ The Namespace is passed by the decorators to the ``argparse`` parsing functions
 which gives your custom code access to the state data it needs for its parsing
 logic.
 
-Sub-commands
+Subcommands
 ------------
 
-Sub-commands are supported for commands using either the ``@with_argparser`` or
+Subcommands are supported for commands using either the ``@with_argparser`` or
 ``@with_argparser_and_unknown_args`` decorator.  The syntax for supporting them
 is based on argparse sub-parsers.
 
-You may add multiple layers of sub-commands for your command. Cmd2 will
-automatically traverse and tab-complete sub-commands for all commands using
+You may add multiple layers of subcommands for your command. Cmd2 will
+automatically traverse and tab-complete subcommands for all commands using
 argparse.
 
 See the subcommands_ and tab_autocompletion_ example to learn more about how to
-use sub-commands in your ``cmd2`` application.
+use subcommands in your ``cmd2`` application.
 
 .. _subcommands: https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py
 .. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
