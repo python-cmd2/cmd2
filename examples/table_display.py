@@ -14,8 +14,10 @@ and either the colored or colorama module
 """
 from typing import Tuple
 
-import cmd2
 import tableformatter as tf
+
+import cmd2
+from cmd2 import Cmd2ArgumentParser
 
 # Configure colors for when users chooses the "-c" flag to enable color in the table output
 try:
@@ -142,14 +144,14 @@ def high_density_objs(row_obj: CityInfo) -> dict:
     return opts
 
 
-def make_table_parser() -> cmd2.ArgParser:
+def make_table_parser() -> Cmd2ArgumentParser:
     """Create a unique instance of an argparse Argument parser for processing table arguments.
 
     NOTE: The two cmd2 argparse decorators require that each parser be unique, even if they are essentially a deep copy
     of each other.  For cases like that, you can create a function to return a unique instance of a parser, which is
     what is being done here.
     """
-    table_parser = cmd2.ArgParser()
+    table_parser = Cmd2ArgumentParser()
     table_item_group = table_parser.add_mutually_exclusive_group()
     table_item_group.add_argument('-c', '--color', action='store_true', help='Enable color')
     table_item_group.add_argument('-f', '--fancy', action='store_true', help='Fancy Grid')
