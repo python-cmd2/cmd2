@@ -1,7 +1,7 @@
 # coding=utf-8
 # flake8: noqa F821
 """
-A cmd2 script that saves the help text for every command, sub-command, and topic to a file.
+A cmd2 script that saves the help text for every command, subcommand, and topic to a file.
 This is meant to be run within a cmd2 session using run_pyscript.
 """
 
@@ -14,19 +14,19 @@ ASTERISKS = "********************************************************"
 
 
 def get_sub_commands(parser: argparse.ArgumentParser) -> List[str]:
-    """Get a list of sub-commands for an ArgumentParser"""
+    """Get a list of subcommands for an ArgumentParser"""
     sub_cmds = []
 
-    # Check if this is parser has sub-commands
+    # Check if this is parser has subcommands
     if parser is not None and parser._subparsers is not None:
 
-        # Find the _SubParsersAction for the sub-commands of this parser
+        # Find the _SubParsersAction for the subcommands of this parser
         for action in parser._subparsers._actions:
             if isinstance(action, argparse._SubParsersAction):
                 for sub_cmd, sub_cmd_parser in action.choices.items():
                     sub_cmds.append(sub_cmd)
 
-                    # Look for nested sub-commands
+                    # Look for nested subcommands
                     for nested_sub_cmd in get_sub_commands(sub_cmd_parser):
                         sub_cmds.append('{} {}'.format(sub_cmd, nested_sub_cmd))
 
@@ -94,7 +94,7 @@ def main() -> None:
         add_help_to_file(item, outfile, is_command)
 
         if is_command:
-            # Add any sub-commands
+            # Add any subcommands
             for subcmd in get_sub_commands(getattr(self.cmd_func(item), 'argparser', None)):
                 full_cmd = '{} {}'.format(item, subcmd)
                 add_help_to_file(full_cmd, outfile, is_command)

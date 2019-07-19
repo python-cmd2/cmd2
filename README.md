@@ -35,9 +35,9 @@ Main Features
 - Macros, which are similar to aliases, but they can contain argument placeholders
 - Ability to run commands at startup from an initialization script
 - Settable environment parameters
-- Parsing commands with arguments using `argparse`, including support for sub-commands
+- Parsing commands with arguments using `argparse`, including support for subcommands
 - Unicode character support
-- Good tab-completion of commands, sub-commands, file system paths, and shell commands
+- Good tab-completion of commands, subcommands, file system paths, and shell commands
 - Automatic tab-completion of `argparse` flags when using one of the `cmd2` `argparse` decorators
 - Support for Python 3.5+ on Windows, macOS, and Linux
 - Trivial to provide built-in help for all commands

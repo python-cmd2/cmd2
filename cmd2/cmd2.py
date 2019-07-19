@@ -2327,7 +2327,7 @@ class Cmd(cmd.Cmd):
                 if saved_readline_settings is not None:
                     self._restore_readline(saved_readline_settings)
 
-    # -----  Alias sub-command functions -----
+    # -----  Alias subcommand functions -----
 
     def _alias_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite an alias"""
@@ -2392,7 +2392,7 @@ class Cmd(cmd.Cmd):
                     "  macro")
     alias_parser = Cmd2ArgumentParser(description=alias_description, epilog=alias_epilog, prog='alias')
 
-    # Add sub-commands to alias
+    # Add subcommands to alias
     alias_subparsers = alias_parser.add_subparsers()
 
     # alias -> create
@@ -2450,13 +2450,13 @@ class Cmd(cmd.Cmd):
         """Manage aliases"""
         func = getattr(args, 'func', None)
         if func is not None:
-            # Call whatever sub-command function was selected
+            # Call whatever subcommand function was selected
             func(self, args)
         else:
-            # No sub-command was provided, so call help
+            # No subcommand was provided, so call help
             self.do_help('alias')
 
-    # -----  Macro sub-command functions -----
+    # -----  Macro subcommand functions -----
 
     def _macro_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite a macro"""
@@ -2572,7 +2572,7 @@ class Cmd(cmd.Cmd):
                     "  alias")
     macro_parser = Cmd2ArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
 
-    # Add sub-commands to macro
+    # Add subcommands to macro
     macro_subparsers = macro_parser.add_subparsers()
 
     # macro -> create
@@ -2652,10 +2652,10 @@ class Cmd(cmd.Cmd):
         """Manage macros"""
         func = getattr(args, 'func', None)
         if func is not None:
-            # Call whatever sub-command function was selected
+            # Call whatever subcommand function was selected
             func(self, args)
         else:
-            # No sub-command was provided, so call help
+            # No subcommand was provided, so call help
             self.do_help('macro')
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
@@ -2676,7 +2676,7 @@ class Cmd(cmd.Cmd):
         if not tokens:
             return []
 
-        # Must have at least 3 args for 'help command sub-command'
+        # Must have at least 3 args for 'help command subcommand'
         if len(tokens) < 3:
             return []
 
@@ -2705,7 +2705,7 @@ class Cmd(cmd.Cmd):
     help_parser = Cmd2ArgumentParser()
     help_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to retrieve help for",
                              completer_method=complete_help_command)
-    help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="sub-command to retrieve help for",
+    help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="subcommand to retrieve help for",
                              completer_method=complete_help_subcommand)
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")

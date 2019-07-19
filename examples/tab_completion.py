@@ -14,7 +14,7 @@ sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
 
 class TabCompleteExample(cmd2.Cmd):
-    """ Example cmd2 application where we a base command which has a couple sub-commands."""
+    """ Example cmd2 application where we a base command which has a couple subcommands."""
 
     def __init__(self):
         super().__init__()
