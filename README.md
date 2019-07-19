@@ -64,7 +64,7 @@ pip install -U cmd2
 cmd2 works with Python 3.5+ on Windows, macOS, and Linux. It is pure Python code with few 3rd-party dependencies.
 
 For information on other installation options, see
-[Installation Instructions](https://cmd2.readthedocs.io/en/latest/install.html) in the cmd2
+[Installation Instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html) in the cmd2
 documentation.
 
 
@@ -108,8 +108,8 @@ Instructions for implementing each feature follow.
         - If you wish to exclude some of your custom commands from the history, append their names to the list at `Cmd.exclude_from_history`.
         - Do `help history` in any `cmd2` application for more information
 
-- Simple scripting using ASCII text files with one command + arguments per line
-    - See the [Script files](https://cmd2.readthedocs.io/en/latest/freefeatures.html#script-files) section of the `cmd2` docs for more info
+- Simple scripting using text files with one command + arguments per line
+    - See the [Command Scripts](https://cmd2.readthedocs.io/en/latest/features/scripting.html#command-scripts) section of the `cmd2` docs for more info
     - See [script.txt](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/script.txt) for a trivial example script that can be
     used in any `cmd2` application with the `run_script` command (or `@` shortcut)
 
@@ -117,7 +117,7 @@ Instructions for implementing each feature follow.
     - Run arbitrary Python scripts within your `cmd2` application with the ability to also call custom `cmd2` commands
     - No separate API for your end users to learn
         - Syntax for calling `cmd2` commands in a `run_pyscript` is essentially identical to what they would enter on the command line
-    - See the [Python](https://cmd2.readthedocs.io/en/latest/freefeatures.html#python) section of the `cmd2` docs for more info
+    - See the [Python Scripts](https://cmd2.readthedocs.io/en/latest/features/scripting.html#python-scripts) section of the `cmd2` docs for more info
     - Also see the [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) 
     example in conjunction with the [conditional.py](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py) script
 
@@ -148,7 +148,7 @@ Instructions for implementing each feature follow.
         self.stdout.write('{}\n'.format(' '.join(words)))
     ```
 
-    See https://cmd2.readthedocs.io/en/latest/argument_processing.html for more details
+    See [Argument Processing](https://cmd2.readthedocs.io/en/latest/features/argument_processing.html) in the docs for more details
     
     NOTE: `cmd2` also provides the `Cmd2ArgumentParser` customization of `argparse.ArgumentParser` for prettier formatting
     of help and error messages.
@@ -367,6 +367,8 @@ Here are a few examples of open-source projects which use `cmd2`:
     * Automatic analysis of SWF files based on some heuristics. Extensible via plugins.
 * [tomcatmanager](https://github.com/tomcatmanager/tomcatmanager)
     * A command line tool and python library for managing a tomcat server
+* [Expliot](https://gitlab.com/expliot_framework/expliot)
+    * Internet of Things (IoT) exploitation framework
 * [mptcpanalyzer](https://github.com/teto/mptcpanalyzer)
     * Tool to help analyze mptcp pcaps
 * [clanvas](https://github.com/marklalor/clanvas)

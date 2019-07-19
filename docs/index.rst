@@ -58,15 +58,6 @@ Features
    features/index
 
 
-API Reference
-=============
-
-.. toctree::
-   :maxdepth: 2
-
-   api/index
-
-
 Examples
 ========
 
@@ -74,6 +65,15 @@ Examples
    :maxdepth: 2
 
    examples/index
+
+
+API Reference
+=============
+
+.. toctree::
+   :maxdepth: 2
+
+   api/index
 
 
 Meta
