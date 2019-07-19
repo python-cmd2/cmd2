@@ -2182,8 +2182,10 @@ class Cmd(cmd.Cmd):
 
             return self.do_shell(statement.command_and_args)
         else:
+            err_msg = self.default_error.format(statement.command)
+
             # Set apply_style to False so default_error's style is not overridden
-            self.perror(self.default_error.format(statement.command), apply_style=False)
+            self.perror(err_msg, apply_style=False)
 
     def _pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -2736,8 +2738,10 @@ class Cmd(cmd.Cmd):
 
             # If there is no help information then print an error
             elif help_func is None and (func is None or not func.__doc__):
+                err_msg = self.help_error.format(args.command)
+
                 # Set apply_style to False so help_error's style is not overridden
-                self.perror(self.help_error.format(args.command), apply_style=False)
+                self.perror(err_msg, apply_style=False)
 
             # Otherwise delegate to cmd base class do_help()
             else:
