@@ -16,6 +16,7 @@ doc8 = "*"
 flake8 = "*"
 gnureadline = {version = "*",sys_platform = "== 'darwin'"}
 invoke = "*"
+ipython = "*"
 mock = {version = "*",markers = "python_version < '3.6'"}
 pyreadline = {version = "*",sys_platform = "== 'win32'"}
 pytest = "*"
