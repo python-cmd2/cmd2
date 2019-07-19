@@ -290,7 +290,7 @@ $ python examples/example.py
 ```
 
 You can type `help` to get help or `quit` to quit. If you see that, then congratulations
-– you're all set. Otherwise, refer to the cmd2 [installation instructions](https://cmd2.readthedocs.io/en/latest/install.html#installing).
+– you're all set. Otherwise, refer to the cmd2 [installation instructions](https://cmd2.readthedocs.io/en/latest/overview/installation.html).
 There also might be an error in the console of your Bash / terminal / command line
 that will help identify the problem.
 
