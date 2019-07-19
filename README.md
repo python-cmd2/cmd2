@@ -108,7 +108,7 @@ Instructions for implementing each feature follow.
         - If you wish to exclude some of your custom commands from the history, append their names to the list at `Cmd.exclude_from_history`.
         - Do `help history` in any `cmd2` application for more information
 
-- Simple scripting using ASCII text files with one command + arguments per line
+- Simple scripting using text files with one command + arguments per line
     - See the [Command Scripts](https://cmd2.readthedocs.io/en/latest/features/scripting.html#command-scripts) section of the `cmd2` docs for more info
     - See [script.txt](https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/script.txt) for a trivial example script that can be
     used in any `cmd2` application with the `run_script` command (or `@` shortcut)
