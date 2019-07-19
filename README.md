@@ -148,7 +148,7 @@ Instructions for implementing each feature follow.
         self.stdout.write('{}\n'.format(' '.join(words)))
     ```
 
-    See https://cmd2.readthedocs.io/en/latest/argument_processing.html for more details
+    See [Argument Processing](https://cmd2.readthedocs.io/en/latest/features/argument_processing.html) in the docs for more details
     
     NOTE: `cmd2` also provides the `Cmd2ArgumentParser` customization of `argparse.ArgumentParser` for prettier formatting
     of help and error messages.
