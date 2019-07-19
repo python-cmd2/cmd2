@@ -720,7 +720,7 @@ class Cmd(cmd.Cmd):
                         pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                         pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
                 else:
-                    ansi.ansi_aware_write(self.stdout, msg_str)
+                    self.poutput(msg_str, end='')
             except BrokenPipeError:
                 # This occurs if a command's output is being piped to another process and that process closes before the
                 # command is finished. If you would like your application to print a warning message, then set the
@@ -2182,8 +2182,8 @@ class Cmd(cmd.Cmd):
 
             return self.do_shell(statement.command_and_args)
         else:
-            err_msg = self.default_error.format(statement.command)
-            ansi.ansi_aware_write(sys.stderr, "{}\n".format(err_msg))
+            # Set apply_style to False so default_error's style is not overridden
+            self.perror(self.default_error.format(statement.command), apply_style=False)
 
     def _pseudo_raw_input(self, prompt: str) -> str:
         """Began life as a copy of cmd's cmdloop; like raw_input but
@@ -2730,12 +2730,14 @@ class Cmd(cmd.Cmd):
                 from .argparse_completer import AutoCompleter
                 completer = AutoCompleter(getattr(func, 'argparser'), self)
                 tokens = [args.command] + args.subcommand
-                self.poutput(completer.format_help(tokens))
+
+                # Set end to blank so the help output matches how it looks when "command -h" is used
+                self.poutput(completer.format_help(tokens), end='')
 
             # If there is no help information then print an error
             elif help_func is None and (func is None or not func.__doc__):
-                err_msg = self.help_error.format(args.command)
-                ansi.ansi_aware_write(sys.stderr, "{}\n".format(err_msg))
+                # Set apply_style to False so help_error's style is not overridden
+                self.perror(self.help_error.format(args.command), apply_style=False)
 
             # Otherwise delegate to cmd base class do_help()
             else:
@@ -4012,15 +4014,15 @@ class Cmd(cmd.Cmd):
                 self.disable_command(cmd_name, message_to_print)
 
     # noinspection PyUnusedLocal
-    @staticmethod
-    def _report_disabled_command_usage(*args, message_to_print: str, **kwargs) -> None:
+    def _report_disabled_command_usage(self, *args, message_to_print: str, **kwargs) -> None:
         """
         Report when a disabled command has been run or had help called on it
         :param args: not used
         :param message_to_print: the message reporting that the command is disabled
         :param kwargs: not used
         """
-        ansi.ansi_aware_write(sys.stderr, "{}\n".format(message_to_print))
+        # Set apply_style to False so message_to_print's style is not overridden
+        self.perror(message_to_print, apply_style=False)
 
     def cmdloop(self, intro: Optional[str] = None) -> int:
         """This is an outer wrapper around _cmdloop() which deals with extra features provided by cmd2.
