@@ -55,7 +55,7 @@
         * `pexcept` - print Exception message to sys.stderr. If debug is true, print exception traceback if one exists
     * Signature of `poutput` and `perror` significantly changed
         * Removed color parameters `color`, `err_color`, and `war_color` from `poutput` and `perror` 
-            * See the docstrings of these methods or the [cmd2 docs](https://cmd2.readthedocs.io/en/latest/unfreefeatures.html#poutput-pfeedback-perror-ppaged) for more info on applying styles to output messages
+            * See the docstrings of these methods or the [cmd2 docs](https://cmd2.readthedocs.io/en/latest/features/generating_output.html) for more info on applying styles to output messages
         * `end` argument is now keyword-only and cannot be specified positionally
         * `traceback_war` no longer exists as an argument since it isn't needed now that `perror` and `pexcept` exist
     * Moved `cmd2.Cmd.colors` to ansi.py and renamed it to `allow_ansi`. This is now an application-wide setting.
