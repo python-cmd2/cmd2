@@ -2092,8 +2092,7 @@ class Cmd(cmd.Cmd):
                 if statement.output == constants.REDIRECTION_APPEND:
                     temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False)
                     temp_file.write(get_paste_buffer())
-                    temp_name = temp_file.name
-                    new_stdout = open(temp_name, mode='a+')
+                    new_stdout = open(temp_file.name, mode='a+')
                 else:
                     new_stdout = tempfile.TemporaryFile(mode='w+')
 
