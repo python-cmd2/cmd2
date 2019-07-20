@@ -2094,12 +2094,11 @@ class Cmd(cmd.Cmd):
                     temp_file.write(get_paste_buffer())
                     temp_name = temp_file.name
                     new_stdout = open(temp_name, mode='a+')
-                    saved_state.redirecting = True
-                    sys.stdout = self.stdout = new_stdout
                 else:
                     new_stdout = tempfile.TemporaryFile(mode='w+')
-                    saved_state.redirecting = True
-                    sys.stdout = self.stdout = new_stdout
+
+                saved_state.redirecting = True
+                sys.stdout = self.stdout = new_stdout
 
         return redir_error, saved_state
 
