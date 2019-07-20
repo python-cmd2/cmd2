@@ -2089,12 +2089,17 @@ class Cmd(cmd.Cmd):
                     redir_error = True
             else:
                 # going to a paste buffer
-                new_stdout = tempfile.TemporaryFile(mode="w+")
-                saved_state.redirecting = True
-                sys.stdout = self.stdout = new_stdout
-
                 if statement.output == constants.REDIRECTION_APPEND:
-                    self.poutput(get_paste_buffer())
+                    temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False)
+                    temp_file.write(get_paste_buffer())
+                    temp_name = temp_file.name
+                    new_stdout = open(temp_name, mode='a+')
+                    saved_state.redirecting = True
+                    sys.stdout = self.stdout = new_stdout
+                else:
+                    new_stdout = tempfile.TemporaryFile(mode='w+')
+                    saved_state.redirecting = True
+                    sys.stdout = self.stdout = new_stdout
 
         return redir_error, saved_state
 
