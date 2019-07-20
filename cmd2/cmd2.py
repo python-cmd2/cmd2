@@ -2107,7 +2107,6 @@ class Cmd(cmd.Cmd):
         :param saved_state: contains information needed to restore state data
         """
         if saved_state.redirecting:
-            delete_name = None
             # If we redirected output to the clipboard
             if statement.output and not statement.output_to:
                 self.stdout.seek(0)
