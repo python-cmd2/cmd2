@@ -117,12 +117,12 @@ CMD_ATTR_HELP_CATEGORY = 'help_category'
 CMD_ATTR_ARGPARSER = 'argparser'
 
 
-def categorize(func: Union[Callable, Iterable], category: str) -> None:
+def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
     """Categorize a function.
 
     The help command output will group this function under the specified category heading
 
-    :param func: function to categorize
+    :param func: function or list of functions to categorize
     :param category: category to put it in
     """
     if isinstance(func, Iterable):
@@ -565,6 +565,8 @@ class Cmd(cmd.Cmd):
         # values are DisabledCommand objects.
         self.disabled_commands = dict()
 
+        # If any command has been categorized, then all other commands that haven't been categorized
+        # will display under this section in the help output.
         self.default_category = 'Uncategorized'
 
     # -----  Methods related to presenting output to the user -----
