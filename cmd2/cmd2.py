@@ -3345,26 +3345,26 @@ class Cmd(cmd.Cmd):
                       'Run Python code from external files with: run filename.py\n')
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
-            def load_ipy(cmd2_app: Cmd):
+            def load_ipy(cmd2_app: Cmd, bridge: PyBridge):
                 """
                 Embed an IPython shell in an environment that is restricted to only the variables in this function
-                :param cmd2_app: the instance of the cmd2 app
+                :param cmd2_app: instance of the cmd2 app
+                :param bridge: a PyscriptBridge
                 """
-                # Create a variable pointing to a PyBridge and name it using the value of py_bridge_name
-                bridge = PyBridge(cmd2_app)  # noqa: F841
+                # Create a variable pointing to bridge and name it using the value of py_bridge_name
                 exec("{} = bridge".format(cmd2_app.py_bridge_name))
 
                 # Add self variable pointing to cmd2_app, if allowed
                 if cmd2_app.locals_in_py:
                     exec("self = cmd2_app")
 
-                # Delete these names from the environment
-                del bridge
+                # Delete these names from the environment so IPython can't use them
                 del cmd2_app
+                del bridge
 
                 embed(banner1=banner, exit_msg=exit_msg)
 
-            load_ipy(self)
+            load_ipy(self, PyBridge(self))
 
     history_description = "View, run, edit, save, or clear previously entered commands"
 
