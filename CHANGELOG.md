@@ -33,6 +33,7 @@
     shortcuts dictionary into a tuple before creating `StatementParser`.
     * Renamed `Cmd.pyscript_name` to `Cmd.py_bridge_name`
     * Renamed `Cmd.pystate` to `Cmd.py_locals`
+    * Renamed `PyscriptBridge` to `PyBridge`
 
 ## 0.9.14 (June 29, 2019)
 * Enhancements
@@ -124,7 +125,7 @@
     of a `cmd2` based app, you will need to update your code to use `.history.get(1).statement.raw` instead.
     * Removed internally used `eos` command that was used to keep track of when a text script's commands ended
     * Removed `cmd2` member called `_STOP_AND_EXIT` since it was just a boolean value that should always be True
-    * Removed `cmd2` member called `_should_quit` since `PyscriptBridge` now handles this logic
+    * Removed `cmd2` member called `_should_quit` since `PyBridge` now handles this logic
     * Removed support for `cmd.cmdqueue`
     * `allow_cli_args` is now an argument to __init__ instead of a `cmd2` class member
 * **Python 3.4 EOL notice**

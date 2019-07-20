@@ -415,7 +415,7 @@ class Cmd(cmd.Cmd):
         # Keeps track of typed command history in the Python shell
         self._py_history = []
 
-        # The name by which Python and IPython environments refer to the PyscriptBridge to call app commands
+        # The name by which Python environments refer to the PyBridge to call app commands
         self.py_bridge_name = 'app'
 
         # Defines app-specific variables/functions available in Python shells and pyscripts
@@ -1704,13 +1704,13 @@ class Cmd(cmd.Cmd):
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line: str, pyscript_bridge_call: bool = False) -> bool:
+    def onecmd_plus_hooks(self, line: str, py_bridge_call: bool = False) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
         :param line: line of text read from input
-        :param pyscript_bridge_call: This should only ever be set to True by PyscriptBridge to signify the beginning
-                                     of an app() call in a pyscript. It is used to enable/disable the storage of the
-                                     command's stdout.
+        :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
+                               of an app() call from Python. It is used to enable/disable the storage of the
+                               command's stdout.
         :return: True if running of commands should stop
         """
         import datetime
@@ -1750,7 +1750,7 @@ class Cmd(cmd.Cmd):
             try:
                 # Get sigint protection while we set up redirection
                 with self.sigint_protection:
-                    if pyscript_bridge_call:
+                    if py_bridge_call:
                         # Start saving command's stdout at this point
                         self.stdout.pause_storage = False
 
@@ -1799,7 +1799,7 @@ class Cmd(cmd.Cmd):
                     if not already_redirecting:
                         self._redirecting = False
 
-                    if pyscript_bridge_call:
+                    if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
 
@@ -3204,13 +3204,13 @@ class Cmd(cmd.Cmd):
     @with_argparser(py_parser, preserve_quotes=True)
     def do_py(self, args: argparse.Namespace) -> bool:
         """Invoke Python command or shell"""
-        from .pyscript_bridge import PyscriptBridge
+        from .py_bridge import PyBridge
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err)
             return False
 
-        bridge = PyscriptBridge(self)
+        bridge = PyBridge(self)
 
         try:
             self._in_py = True
@@ -3256,7 +3256,7 @@ class Cmd(cmd.Cmd):
                 if args.remainder:
                     full_command += ' ' + ' '.join(args.remainder)
 
-                # Set cmd_echo to True so PyscriptBridge statements like: py app('help')
+                # Set cmd_echo to True so PyBridge statements like: py app('help')
                 # run at the command line will print their output.
                 bridge.cmd_echo = True
 
@@ -3339,7 +3339,7 @@ class Cmd(cmd.Cmd):
         @with_argparser(Cmd2ArgumentParser())
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
-            from .pyscript_bridge import PyscriptBridge
+            from .py_bridge import PyBridge
             banner = ('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
                       'Run Python code from external files with: run filename.py\n')
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
@@ -3349,8 +3349,8 @@ class Cmd(cmd.Cmd):
                 Embed an IPython shell in an environment that is restricted to only the variables in this function
                 :param cmd2_app: the instance of the cmd2 app
                 """
-                # Create a variable pointing to the PyscriptBridge and name it using the value of py_bridge_name
-                bridge = PyscriptBridge(cmd2_app)
+                # Create a variable pointing to a PyBridge and name it using the value of py_bridge_name
+                bridge = PyBridge(cmd2_app)
                 exec("{} = bridge".format(cmd2_app.py_bridge_name))
 
                 # Add self variable pointing to cmd2_app, if allowed

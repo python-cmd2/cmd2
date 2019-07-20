@@ -1,6 +1,6 @@
 # coding=utf-8
 """
-Bridges calls made inside of a pyscript with the Cmd2 host app while maintaining a reasonable
+Bridges calls made inside of a Python environments to the Cmd2 host app while maintaining a reasonable
 degree of isolation between the two
 """
 
@@ -53,7 +53,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
             return not self.stderr
 
 
-class PyscriptBridge(object):
+class PyBridge(object):
     """Provides a Python API wrapper for application commands."""
     def __init__(self, cmd2_app):
         self._cmd2_app = cmd2_app
@@ -70,7 +70,7 @@ class PyscriptBridge(object):
 
     def __call__(self, command: str, echo: Optional[bool] = None) -> CommandResult:
         """
-        Provide functionality to call application commands by calling PyscriptBridge
+        Provide functionality to call application commands by calling PyBridge
         ex: app('help')
         :param command: command line being run
         :param echo: if True, output will be echoed to stdout/stderr while the command runs
@@ -95,7 +95,7 @@ class PyscriptBridge(object):
             self._cmd2_app.stdout = copy_cmd_stdout
             with redirect_stdout(copy_cmd_stdout):
                 with redirect_stderr(copy_stderr):
-                    stop = self._cmd2_app.onecmd_plus_hooks(command, pyscript_bridge_call=True)
+                    stop = self._cmd2_app.onecmd_plus_hooks(command, py_bridge_call=True)
         finally:
             with self._cmd2_app.sigint_protection:
                 self._cmd2_app.stdout = copy_cmd_stdout.inner_stream
