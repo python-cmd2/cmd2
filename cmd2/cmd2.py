@@ -3351,7 +3351,7 @@ class Cmd(cmd.Cmd):
                 :param cmd2_app: the instance of the cmd2 app
                 """
                 # Create a variable pointing to a PyBridge and name it using the value of py_bridge_name
-                bridge = PyBridge(cmd2_app)
+                bridge = PyBridge(cmd2_app)  # noqa: F841
                 exec("{} = bridge".format(cmd2_app.py_bridge_name))
 
                 # Add self variable pointing to cmd2_app, if allowed
