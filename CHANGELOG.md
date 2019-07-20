@@ -4,6 +4,7 @@
     * Fixed bug where `history -v` was sometimes showing raw and expanded commands when they weren't different
     * Fixed bug where multiline commands were having leading and ending spaces stripped. This would mess up quoted
     strings that crossed multiple lines.
+    * Fixed a bug when appending to the clipboard where contents were in reverse order
 * Enhancements
     * Greatly simplified using argparse-based tab completion. The new interface is a complete overhaul that breaks
     the previous way of specifying completion and choices functions. See header of [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
