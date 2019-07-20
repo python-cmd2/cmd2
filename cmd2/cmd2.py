@@ -2109,16 +2109,23 @@ class Cmd(cmd.Cmd):
         :param saved_state: contains information needed to restore state data
         """
         if saved_state.redirecting:
+            delete_name = None
             # If we redirected output to the clipboard
             if statement.output and not statement.output_to:
                 self.stdout.seek(0)
                 write_to_paste_buffer(self.stdout.read())
+                if statement.output == constants.REDIRECTION_APPEND:
+                    delete_name = self.stdout.name
 
             try:
                 # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
             except BrokenPipeError:
                 pass
+
+            # If we appended to the clipboard, make sure to delete the tempfile
+            if delete_name is not None:
+                os.unlink(delete_name)
 
             # Restore the stdout values
             self.stdout = saved_state.saved_self_stdout
