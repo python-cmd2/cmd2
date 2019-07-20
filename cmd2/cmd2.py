@@ -559,6 +559,8 @@ class Cmd(cmd.Cmd):
         # values are DisabledCommand objects.
         self.disabled_commands = dict()
 
+        self.default_category = 'Uncategorized'
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -2797,7 +2799,7 @@ class Cmd(cmd.Cmd):
             self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
             for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
                 self._print_topics(category, cmds_cats[category], verbose)
-            self._print_topics('Other', cmds_doc, verbose)
+            self._print_topics(self.default_category, cmds_doc, verbose)
 
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
