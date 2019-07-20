@@ -2089,15 +2089,13 @@ class Cmd(cmd.Cmd):
                     redir_error = True
             else:
                 # going to a paste buffer
-                if statement.output == constants.REDIRECTION_APPEND:
-                    temp_file = tempfile.NamedTemporaryFile(mode='w', delete=False)
-                    temp_file.write(get_paste_buffer())
-                    new_stdout = open(temp_file.name, mode='a+')
-                else:
-                    new_stdout = tempfile.TemporaryFile(mode='w+')
-
+                new_stdout = tempfile.TemporaryFile(mode="w+")
                 saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
+
+                if statement.output == constants.REDIRECTION_APPEND:
+                    self.stdout.write(get_paste_buffer())
+                    self.stdout.flush()
 
         return redir_error, saved_state
 
@@ -2114,18 +2112,12 @@ class Cmd(cmd.Cmd):
             if statement.output and not statement.output_to:
                 self.stdout.seek(0)
                 write_to_paste_buffer(self.stdout.read())
-                if statement.output == constants.REDIRECTION_APPEND:
-                    delete_name = self.stdout.name
 
             try:
                 # Close the file or pipe that stdout was redirected to
                 self.stdout.close()
             except BrokenPipeError:
                 pass
-
-            # If we appended to the clipboard, make sure to delete the tempfile
-            if delete_name is not None:
-                os.unlink(delete_name)
 
             # Restore the stdout values
             self.stdout = saved_state.saved_self_stdout
