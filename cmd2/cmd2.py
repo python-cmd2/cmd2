@@ -89,10 +89,6 @@ try:
 except ImportError:  # pragma: no cover
     ipython_available = False
 
-
-# optional attribute, when tagged on a function, allows cmd2 to categorize commands
-HELP_CATEGORY = 'help_category'
-
 INTERNAL_COMMAND_EPILOG = ("Notes:\n"
                            "  This command is for internal use and is not intended to be called from the\n"
                            "  command line.")
@@ -110,6 +106,16 @@ NATURAL_SORT_KEY = utils.natural_keys
 # Used as the command name placeholder in disabled command messages.
 COMMAND_NAME = "<COMMAND_NAME>"
 
+############################################################################################################
+# The following are optional attributes added to do_* command functions
+############################################################################################################
+
+# The custom help category a command belongs to
+CMD_ATTR_HELP_CATEGORY = 'help_category'
+
+# The argparse parser for the command
+CMD_ATTR_ARGPARSER = 'argparser'
+
 
 def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """Categorize a function.
@@ -121,9 +127,9 @@ def categorize(func: Union[Callable, Iterable], category: str) -> None:
     """
     if isinstance(func, Iterable):
         for item in func:
-            setattr(item, HELP_CATEGORY, category)
+            setattr(item, CMD_ATTR_HELP_CATEGORY, category)
     else:
-        setattr(func, HELP_CATEGORY, category)
+        setattr(func, CMD_ATTR_HELP_CATEGORY, category)
 
 
 def with_category(category: str) -> Callable:
@@ -216,7 +222,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
         cmd_wrapper.__doc__ = argparser.description
 
         # Mark this function as having an argparse ArgumentParser
-        setattr(cmd_wrapper, 'argparser', argparser)
+        setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, argparser)
 
         return cmd_wrapper
 
@@ -274,7 +280,7 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
         cmd_wrapper.__doc__ = argparser.description
 
         # Mark this function as having an argparse ArgumentParser
-        setattr(cmd_wrapper, 'argparser', argparser)
+        setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, argparser)
 
         return cmd_wrapper
 
@@ -1449,12 +1455,14 @@ class Cmd(cmd.Cmd):
             compfunc = getattr(self, 'complete_' + command, None)
 
             if compfunc is None:
-                # There's no completer function, next see if the command uses argparser
+                # There's no completer function, next see if the command uses argparse
                 func = self.cmd_func(command)
-                if func and hasattr(func, 'argparser'):
+                argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+
+                if func is not None and argparser is not None:
                     import functools
                     compfunc = functools.partial(self._autocomplete_default,
-                                                 argparser=getattr(func, 'argparser'))
+                                                 argparser=argparser)
                 else:
                     compfunc = self.completedefault
 
@@ -2703,11 +2711,13 @@ class Cmd(cmd.Cmd):
         command = tokens[cmd_index]
         matches = []
 
-        # Check if this is a command with an argparse function
+        # Check if this command uses argparse
         func = self.cmd_func(command)
-        if func and hasattr(func, 'argparser'):
+        argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+
+        if func is not None and argparser is not None:
             from .argparse_completer import AutoCompleter
-            completer = AutoCompleter(getattr(func, 'argparser'), self)
+            completer = AutoCompleter(argparser, self)
             matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
 
         return matches
@@ -2734,11 +2744,12 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             func = self.cmd_func(args.command)
             help_func = getattr(self, HELP_FUNC_PREFIX + args.command, None)
+            argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
 
             # If the command function uses argparse, then use argparse's help
-            if func and hasattr(func, 'argparser'):
+            if func is not None and argparser is not None:
                 from .argparse_completer import AutoCompleter
-                completer = AutoCompleter(getattr(func, 'argparser'), self)
+                completer = AutoCompleter(argparser, self)
                 tokens = [args.command] + args.subcommand
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
@@ -2777,11 +2788,11 @@ class Cmd(cmd.Cmd):
                 help_topics.remove(command)
 
                 # Non-argparse commands can have help_functions for their documentation
-                if not hasattr(func, 'argparser'):
+                if not hasattr(func, CMD_ATTR_ARGPARSER):
                     has_help_func = True
 
-            if hasattr(func, HELP_CATEGORY):
-                category = getattr(func, HELP_CATEGORY)
+            if hasattr(func, CMD_ATTR_HELP_CATEGORY):
+                category = getattr(func, CMD_ATTR_HELP_CATEGORY)
                 cmds_cats.setdefault(category, [])
                 cmds_cats[category].append(command)
             elif func.__doc__ or has_help_func:
@@ -2834,7 +2845,7 @@ class Cmd(cmd.Cmd):
                     cmd_func = self.cmd_func(command)
 
                     # Non-argparse commands can have help_functions for their documentation
-                    if not hasattr(cmd_func, 'argparser') and command in topics:
+                    if not hasattr(cmd_func, CMD_ATTR_ARGPARSER) and command in topics:
                         help_func = getattr(self, HELP_FUNC_PREFIX + command)
                         result = io.StringIO()
 
@@ -3981,7 +3992,7 @@ class Cmd(cmd.Cmd):
         """
         for cmd_name in list(self.disabled_commands):
             func = self.disabled_commands[cmd_name].command_function
-            if hasattr(func, HELP_CATEGORY) and getattr(func, HELP_CATEGORY) == category:
+            if getattr(func, CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.enable_command(cmd_name)
 
     def disable_command(self, command: str, message_to_print: str) -> None:
@@ -4030,7 +4041,7 @@ class Cmd(cmd.Cmd):
 
         for cmd_name in all_commands:
             func = self.cmd_func(cmd_name)
-            if hasattr(func, HELP_CATEGORY) and getattr(func, HELP_CATEGORY) == category:
+            if getattr(func, CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.disable_command(cmd_name, message_to_print)
 
     # noinspection PyUnusedLocal
