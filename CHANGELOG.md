@@ -31,6 +31,8 @@
     sort, but it can be changed to a natural sort by setting the value to NATURAL_SORT_KEY.
     * `StatementParser` now expects shortcuts to be passed in as dictionary. This eliminates the step of converting the
     shortcuts dictionary into a tuple before creating `StatementParser`.
+    * Renamed `Cmd.pyscript_name` to `Cmd.py_bridge_name`
+    * Renamed `Cmd.pystate` to `Cmd.py_locals`
 
 ## 0.9.14 (June 29, 2019)
 * Enhancements

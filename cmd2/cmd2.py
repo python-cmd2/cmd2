@@ -146,12 +146,12 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            _, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
-                                                                                    statement,
-                                                                                    preserve_quotes)
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+            _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
+                                                                               statement,
+                                                                               preserve_quotes)
 
-            return func(cmd2_instance, parsed_arglist)
+            return func(cmd2_app, parsed_arglist)
 
         command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
         cmd_wrapper.__doc__ = func.__doc__
@@ -185,15 +185,15 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
-                                                                                            statement,
-                                                                                            preserve_quotes)
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
+                                                                                       statement,
+                                                                                       preserve_quotes)
 
             if ns_provider is None:
                 namespace = None
             else:
-                namespace = ns_provider(cmd2_instance)
+                namespace = ns_provider(cmd2_app)
 
             try:
                 args, unknown = argparser.parse_known_args(parsed_arglist, namespace)
@@ -201,7 +201,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
                 return
             else:
                 setattr(args, '__statement__', statement)
-                return func(cmd2_instance, args, unknown)
+                return func(cmd2_app, args, unknown)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -243,15 +243,15 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
-                                                                                            statement,
-                                                                                            preserve_quotes)
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
+                                                                                       statement,
+                                                                                       preserve_quotes)
 
             if ns_provider is None:
                 namespace = None
             else:
-                namespace = ns_provider(cmd2_instance)
+                namespace = ns_provider(cmd2_app)
 
             try:
                 args = argparser.parse_args(parsed_arglist, namespace)
@@ -259,7 +259,7 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
                 return
             else:
                 setattr(args, '__statement__', statement)
-                return func(cmd2_instance, args)
+                return func(cmd2_app, args)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -412,9 +412,14 @@ class Cmd(cmd.Cmd):
         # Command aliases and macros
         self.macros = dict()
 
-        self._pystate = {}
+        # Keeps track of typed command history in the Python shell
         self._py_history = []
-        self.pyscript_name = 'app'
+
+        # The name by which Python and IPython environments refer to the PyscriptBridge to call app commands
+        self.py_bridge_name = 'app'
+
+        # Defines app-specific variables/functions available in Python shells and pyscripts
+        self.py_locals = {}
 
         self.statement_parser = StatementParser(allow_redirection=allow_redirection,
                                                 terminators=terminators,
@@ -3231,17 +3236,17 @@ class Cmd(cmd.Cmd):
                 raise EmbeddedConsoleExit
 
             # Set up Python environment
-            self._pystate[self.pyscript_name] = bridge
-            self._pystate['run'] = py_run
-            self._pystate['quit'] = py_quit
-            self._pystate['exit'] = py_quit
+            self.py_locals[self.py_bridge_name] = bridge
+            self.py_locals['run'] = py_run
+            self.py_locals['quit'] = py_quit
+            self.py_locals['exit'] = py_quit
 
             if self.locals_in_py:
-                self._pystate['self'] = self
-            elif 'self' in self._pystate:
-                del self._pystate['self']
+                self.py_locals['self'] = self
+            elif 'self' in self.py_locals:
+                del self.py_locals['self']
 
-            localvars = self._pystate
+            localvars = self.py_locals
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
@@ -3268,7 +3273,7 @@ class Cmd(cmd.Cmd):
                 instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
                                 'Non-Python commands can be issued with: {}("your command")\n'
                                 'Run Python code from external script files with: run("script.py")'
-                                .format(self.pyscript_name))
+                                .format(self.py_bridge_name))
 
                 saved_cmd2_env = None
 
@@ -3335,22 +3340,30 @@ class Cmd(cmd.Cmd):
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
             from .pyscript_bridge import PyscriptBridge
-            bridge = PyscriptBridge(self)
-
             banner = ('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
                       'Run Python code from external files with: run filename.py\n')
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
-            if self.locals_in_py:
-                # noinspection PyUnusedLocal
-                def load_ipy(cmd2_instance, app):
-                    embed(banner1=banner, exit_msg=exit_msg)
-                load_ipy(self, bridge)
-            else:
-                # noinspection PyUnusedLocal
-                def load_ipy(app):
-                    embed(banner1=banner, exit_msg=exit_msg)
-                load_ipy(bridge)
+            def load_ipy(cmd2_app: Cmd):
+                """
+                Embed an IPython shell in an environment that is restricted to only the variables in this function
+                :param cmd2_app: the instance of the cmd2 app
+                """
+                # Create a variable pointing to the PyscriptBridge and name it using the value of py_bridge_name
+                bridge = PyscriptBridge(cmd2_app)
+                exec("{} = bridge".format(cmd2_app.py_bridge_name))
+
+                # Add self variable pointing to cmd2_app, if allowed
+                if cmd2_app.locals_in_py:
+                    exec("self = cmd2_app")
+
+                # Delete these names from the environment
+                del bridge
+                del cmd2_app
+
+                embed(banner1=banner, exit_msg=exit_msg)
+
+            load_ipy(self)
 
     history_description = "View, run, edit, save, or clear previously entered commands"
 
