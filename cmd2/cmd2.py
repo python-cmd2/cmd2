@@ -3246,6 +3246,12 @@ class Cmd(cmd.Cmd):
                 """
                 expanded_filename = os.path.expanduser(filename)
 
+                if not expanded_filename.endswith('.py'):
+                    self.pwarning("'{}' does not appear to be a Python file".format(expanded_filename))
+                    selection = self.select('Yes No', 'Continue to try to run it as a Python script? ')
+                    if selection != 'Yes':
+                        return
+
                 # cmd_echo defaults to False for scripts. The user can always toggle this value in their script.
                 py_bridge.cmd_echo = False
 
@@ -3756,9 +3762,9 @@ class Cmd(cmd.Cmd):
             self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path))
             return
 
-        if expanded_path.endswith('.py') or expanded_path.endswith('.pyc'):
+        if expanded_path.endswith('.py'):
             self.pwarning("'{}' appears to be a Python file".format(expanded_path))
-            selection = self.select('Yes No', 'Continue to try to run it as a text file script? ')
+            selection = self.select('Yes No', 'Continue to try to run it as a text script? ')
             if selection != 'Yes':
                 return
 
