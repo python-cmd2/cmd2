@@ -3226,7 +3226,7 @@ class Cmd(cmd.Cmd):
             self.perror(err)
             return False
 
-        bridge = PyBridge(self)
+        py_bridge = PyBridge(self)
 
         try:
             self._in_py = True
@@ -3239,7 +3239,7 @@ class Cmd(cmd.Cmd):
                 expanded_filename = os.path.expanduser(filename)
 
                 # cmd_echo defaults to False for scripts. The user can always toggle this value in their script.
-                bridge.cmd_echo = False
+                py_bridge.cmd_echo = False
 
                 try:
                     with open(expanded_filename) as f:
@@ -3252,7 +3252,7 @@ class Cmd(cmd.Cmd):
                 raise EmbeddedConsoleExit
 
             # Set up Python environment
-            self.py_locals[self.py_bridge_name] = bridge
+            self.py_locals[self.py_bridge_name] = py_bridge
             self.py_locals['run'] = py_run
             self.py_locals['quit'] = py_quit
             self.py_locals['exit'] = py_quit
@@ -3274,7 +3274,7 @@ class Cmd(cmd.Cmd):
 
                 # Set cmd_echo to True so PyBridge statements like: py app('help')
                 # run at the command line will print their output.
-                bridge.cmd_echo = True
+                py_bridge.cmd_echo = True
 
                 # noinspection PyBroadException
                 try:
@@ -3317,7 +3317,7 @@ class Cmd(cmd.Cmd):
         finally:
             self._in_py = False
 
-        return bridge.stop
+        return py_bridge.stop
 
     run_pyscript_parser = Cmd2ArgumentParser()
     run_pyscript_parser.add_argument('script_path', help='path to the script file', completer_method=path_complete)
@@ -3360,14 +3360,14 @@ class Cmd(cmd.Cmd):
                       'Run Python code from external files with: run filename.py\n')
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
-            def load_ipy(cmd2_app: Cmd, bridge: PyBridge):
+            def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
                 """
                 Embed an IPython shell in an environment that is restricted to only the variables in this function
                 :param cmd2_app: instance of the cmd2 app
-                :param bridge: a PyscriptBridge
+                :param py_bridge: a PyscriptBridge
                 """
-                # Create a variable pointing to bridge and name it using the value of py_bridge_name
-                exec("{} = bridge".format(cmd2_app.py_bridge_name))
+                # Create a variable pointing to py_bridge and name it using the value of py_bridge_name
+                exec("{} = py_bridge".format(cmd2_app.py_bridge_name))
 
                 # Add self variable pointing to cmd2_app, if allowed
                 if cmd2_app.locals_in_py:
@@ -3375,7 +3375,7 @@ class Cmd(cmd.Cmd):
 
                 # Delete these names from the environment so IPython can't use them
                 del cmd2_app
-                del bridge
+                del py_bridge
 
                 embed(banner1=banner, exit_msg=exit_msg)
 
