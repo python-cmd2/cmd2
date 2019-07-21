@@ -50,7 +50,7 @@ def test_run_pyscript_with_non_python_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
     out, err = run_cmd(base_app, 'run_pyscript {}'.format(filename))
-    assert "does not appear to be a Python file" in err[0]
+    assert "does not have a .py extension" in err[0]
 
 def test_run_pyscript_with_exception(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
