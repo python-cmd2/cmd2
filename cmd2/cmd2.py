@@ -1724,10 +1724,11 @@ class Cmd(cmd.Cmd):
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line: str, py_bridge_call: bool = False) -> bool:
+    def onecmd_plus_hooks(self, line: str, *, add_to_history: bool = True, py_bridge_call: bool = False) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
         :param line: line of text read from input
+        :param add_to_history: If True, then add this command to history. Defaults to True.
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
                                command's stdout.
@@ -1795,7 +1796,7 @@ class Cmd(cmd.Cmd):
                     statement = self.precmd(statement)
 
                     # go run the command function
-                    stop = self.onecmd(statement)
+                    stop = self.onecmd(statement, add_to_history=add_to_history)
 
                     # postcommand hooks
                     data = plugin.PostcommandData(stop, statement)
@@ -1852,12 +1853,13 @@ class Cmd(cmd.Cmd):
         except Exception as ex:
             self.pexcept(ex)
 
-    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]]) -> bool:
+    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *, add_to_history: bool = True) -> bool:
         """
         Used when commands are being run in an automated fashion like text scripts or history replays.
         The prompt and command line for each command will be printed if echo is True.
 
         :param cmds: commands to run
+        :param add_to_history: If True, then add these commands to history. Defaults to True.
         :return: True if running of commands should stop
         """
         for line in cmds:
@@ -1867,7 +1869,7 @@ class Cmd(cmd.Cmd):
             if self.echo:
                 self.poutput('{}{}'.format(self.prompt, line))
 
-            if self.onecmd_plus_hooks(line):
+            if self.onecmd_plus_hooks(line, add_to_history=add_to_history):
                 return True
 
         return False
@@ -2167,13 +2169,15 @@ class Cmd(cmd.Cmd):
         target = COMMAND_FUNC_PREFIX + command
         return target if callable(getattr(self, target, None)) else ''
 
-    def onecmd(self, statement: Union[Statement, str]) -> bool:
+    # noinspection PyMethodOverriding
+    def onecmd(self, statement: Union[Statement, str], *, add_to_history: bool = True) -> bool:
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes default() instead.
 
         :param statement: intended to be a Statement instance parsed command from the input stream, alternative
                           acceptance of a str is present only for backward compatibility with cmd
+        :param add_to_history: If True, then add this command to history. Defaults to True.
         :return: a flag indicating whether the interpretation of commands should stop
         """
         # For backwards compatibility with cmd, allow a str to be passed in
@@ -2183,8 +2187,9 @@ class Cmd(cmd.Cmd):
         func = self.cmd_func(statement.command)
         if func:
             # Check to see if this command should be stored in history
-            if statement.command not in self.exclude_from_history \
-                    and statement.command not in self.disabled_commands:
+            if statement.command not in self.exclude_from_history and \
+                    statement.command not in self.disabled_commands and add_to_history:
+
                 self.history.append(statement)
 
             stop = func(statement)
