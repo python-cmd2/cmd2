@@ -1,6 +1,6 @@
 # coding=utf-8
 """
-Bridges calls made inside of a Python environments to the Cmd2 host app while maintaining a reasonable
+Bridges calls made inside of a Python environment to the Cmd2 host app while maintaining a reasonable
 degree of isolation between the two
 """
 
