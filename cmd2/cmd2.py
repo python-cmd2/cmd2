@@ -2396,7 +2396,7 @@ class Cmd(cmd.Cmd):
             self.aliases.clear()
             self.poutput("All aliases deleted")
         elif not args.name:
-            self.do_help('alias delete')
+            self.perror("Either --all or alias name(s) must be specified")
         else:
             for cur_name in utils.remove_duplicates(args.name):
                 if cur_name in self.aliases:
@@ -2576,7 +2576,7 @@ class Cmd(cmd.Cmd):
             self.macros.clear()
             self.poutput("All macros deleted")
         elif not args.name:
-            self.do_help('macro delete')
+            self.perror("Either --all or macro name(s) must be specified")
         else:
             for cur_name in utils.remove_duplicates(args.name):
                 if cur_name in self.macros:

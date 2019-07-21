@@ -1617,7 +1617,7 @@ def test_alias_delete_non_existing(base_app):
 
 def test_alias_delete_no_name(base_app):
     out, err = run_cmd(base_app, 'alias delete')
-    assert "Usage: alias delete" in out[0]
+    assert "Either --all or alias name(s)" in err[0]
 
 def test_multiple_aliases(base_app):
     alias1 = 'h1'
@@ -1768,7 +1768,7 @@ def test_macro_delete_non_existing(base_app):
 
 def test_macro_delete_no_name(base_app):
     out, err = run_cmd(base_app, 'macro delete')
-    assert "Usage: macro delete" in out[0]
+    assert "Either --all or macro name(s)" in err[0]
 
 def test_multiple_macros(base_app):
     macro1 = 'h1'
