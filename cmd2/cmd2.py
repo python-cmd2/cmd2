@@ -3659,7 +3659,7 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(ansi.style_warning(warning))
+            self.perror(ansi.style_warning(warning), apply_style=False)
 
         # finally, we can write the transcript out to the file
         try:
@@ -3747,6 +3747,13 @@ class Cmd(cmd.Cmd):
         if not utils.is_text_file(expanded_path):
             self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path))
             return
+
+        if expanded_path.endswith('.py') or expanded_path.endswith('.pyc'):
+            self.perror(ansi.style_warning("'{}' appears to be a Python file".format(expanded_path)),
+                        apply_style=False)
+            selection = self.select('Yes No', 'Continue to try to run it as a text file script? ')
+            if selection != 'Yes':
+                return
 
         try:
             # Read all lines of the script
