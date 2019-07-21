@@ -652,6 +652,14 @@ class Cmd(cmd.Cmd):
             final_msg = "{}".format(msg)
         ansi.ansi_aware_write(sys.stderr, final_msg + end)
 
+    def pwarning(self, msg: Any, *, end: str = '\n') -> None:
+        """Apply the warning style to a message and print it to sys.stderr
+
+        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
+        :param end: string appended after the end of the message, default a newline
+        """
+        self.perror(ansi.style_warning(msg), end=end, apply_style=False)
+
     def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
 
@@ -3659,7 +3667,7 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(ansi.style_warning(warning), apply_style=False)
+            self.pwarning(warning)
 
         # finally, we can write the transcript out to the file
         try:
@@ -3749,8 +3757,7 @@ class Cmd(cmd.Cmd):
             return
 
         if expanded_path.endswith('.py') or expanded_path.endswith('.pyc'):
-            self.perror(ansi.style_warning("'{}' appears to be a Python file".format(expanded_path)),
-                        apply_style=False)
+            self.pwarning("'{}' appears to be a Python file".format(expanded_path))
             selection = self.select('Yes No', 'Continue to try to run it as a text file script? ')
             if selection != 'Yes':
                 return
