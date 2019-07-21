@@ -1853,6 +1853,21 @@ def test_onecmd_raw_str_quit(outsim_app):
     assert stop
     assert out == ''
 
+def test_onecmd_add_to_history(outsim_app):
+    line = "help"
+    saved_hist_len = len(outsim_app.history)
+
+    # Allow command to be added to history
+    outsim_app.onecmd(line, add_to_history=True)
+    new_hist_len = len(outsim_app.history)
+    assert new_hist_len == saved_hist_len + 1
+
+    saved_hist_len = new_hist_len
+
+    # Prevent command from being added to history
+    outsim_app.onecmd(line, add_to_history=False)
+    new_hist_len = len(outsim_app.history)
+    assert new_hist_len == saved_hist_len
 
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
