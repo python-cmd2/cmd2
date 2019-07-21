@@ -332,6 +332,9 @@ def test_run_script_with_binary_file(base_app, request):
     assert "is not an ASCII or UTF-8 encoded text file" in err[0]
 
 def test_run_script_with_python_file(base_app, request):
+    m = mock.MagicMock(name='input', return_value='2')
+    builtins.input = m
+
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'pyscript', 'stop.py')
     out, err = run_cmd(base_app, 'run_script {}'.format(filename))
