@@ -3,10 +3,17 @@
 """
 Unit/functional testing for run_pytest in cmd2
 """
+import builtins
 import os
-from cmd2 import plugin
 
+from cmd2 import plugin
 from .conftest import run_cmd
+
+# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
+try:
+    import mock
+except ImportError:
+    from unittest import mock
 
 HOOK_OUTPUT = "TEST_OUTPUT"
 
@@ -35,6 +42,15 @@ def test_run_pyscript_with_nonexist_file(base_app):
     python_script = 'does_not_exist.py'
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert "Error opening script file" in err[0]
+
+def test_run_pyscript_with_non_python_file(base_app, request):
+    m = mock.MagicMock(name='input', return_value='2')
+    builtins.input = m
+
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'scripts', 'help.txt')
+    out, err = run_cmd(base_app, 'run_pyscript {}'.format(filename))
+    assert "does not have a .py extension" in err[0]
 
 def test_run_pyscript_with_exception(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)

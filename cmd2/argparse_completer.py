@@ -7,6 +7,7 @@ See the header of argparse_custom.py for instructions on how to use these featur
 """
 
 import argparse
+import numbers
 import shutil
 from typing import List, Union
 
@@ -498,6 +499,11 @@ class AutoCompleter(object):
 
         # Since arg_choices can be any iterable type, convert to a list
         arg_choices = list(arg_choices)
+
+        # If these choices are numbers, and have not yet been sorted, then sort them now
+        if not self._cmd2_app.matches_sorted and all(isinstance(x, numbers.Number) for x in arg_choices):
+            arg_choices.sort()
+            self._cmd2_app.matches_sorted = True
 
         # Since choices can be various types like int, we must convert them to strings
         for index, choice in enumerate(arg_choices):

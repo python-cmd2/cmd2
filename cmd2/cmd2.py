@@ -89,10 +89,6 @@ try:
 except ImportError:  # pragma: no cover
     ipython_available = False
 
-
-# optional attribute, when tagged on a function, allows cmd2 to categorize commands
-HELP_CATEGORY = 'help_category'
-
 INTERNAL_COMMAND_EPILOG = ("Notes:\n"
                            "  This command is for internal use and is not intended to be called from the\n"
                            "  command line.")
@@ -110,20 +106,30 @@ NATURAL_SORT_KEY = utils.natural_keys
 # Used as the command name placeholder in disabled command messages.
 COMMAND_NAME = "<COMMAND_NAME>"
 
+############################################################################################################
+# The following are optional attributes added to do_* command functions
+############################################################################################################
 
-def categorize(func: Union[Callable, Iterable], category: str) -> None:
+# The custom help category a command belongs to
+CMD_ATTR_HELP_CATEGORY = 'help_category'
+
+# The argparse parser for the command
+CMD_ATTR_ARGPARSER = 'argparser'
+
+
+def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
     """Categorize a function.
 
     The help command output will group this function under the specified category heading
 
-    :param func: function to categorize
+    :param func: function or list of functions to categorize
     :param category: category to put it in
     """
     if isinstance(func, Iterable):
         for item in func:
-            setattr(item, HELP_CATEGORY, category)
+            setattr(item, CMD_ATTR_HELP_CATEGORY, category)
     else:
-        setattr(func, HELP_CATEGORY, category)
+        setattr(func, CMD_ATTR_HELP_CATEGORY, category)
 
 
 def with_category(category: str) -> Callable:
@@ -146,12 +152,12 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            _, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
-                                                                                    statement,
-                                                                                    preserve_quotes)
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+            _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
+                                                                               statement,
+                                                                               preserve_quotes)
 
-            return func(cmd2_instance, parsed_arglist)
+            return func(cmd2_app, parsed_arglist)
 
         command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
         cmd_wrapper.__doc__ = func.__doc__
@@ -185,15 +191,15 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
-                                                                                            statement,
-                                                                                            preserve_quotes)
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
+                                                                                       statement,
+                                                                                       preserve_quotes)
 
             if ns_provider is None:
                 namespace = None
             else:
-                namespace = ns_provider(cmd2_instance)
+                namespace = ns_provider(cmd2_app)
 
             try:
                 args, unknown = argparser.parse_known_args(parsed_arglist, namespace)
@@ -201,7 +207,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
                 return
             else:
                 setattr(args, '__statement__', statement)
-                return func(cmd2_instance, args, unknown)
+                return func(cmd2_app, args, unknown)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -216,7 +222,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
         cmd_wrapper.__doc__ = argparser.description
 
         # Mark this function as having an argparse ArgumentParser
-        setattr(cmd_wrapper, 'argparser', argparser)
+        setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, argparser)
 
         return cmd_wrapper
 
@@ -243,15 +249,15 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
     # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_instance, statement: Union[Statement, str]):
-            statement, parsed_arglist = cmd2_instance.statement_parser.get_command_arg_list(command_name,
-                                                                                            statement,
-                                                                                            preserve_quotes)
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
+                                                                                       statement,
+                                                                                       preserve_quotes)
 
             if ns_provider is None:
                 namespace = None
             else:
-                namespace = ns_provider(cmd2_instance)
+                namespace = ns_provider(cmd2_app)
 
             try:
                 args = argparser.parse_args(parsed_arglist, namespace)
@@ -259,7 +265,7 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
                 return
             else:
                 setattr(args, '__statement__', statement)
-                return func(cmd2_instance, args)
+                return func(cmd2_app, args)
 
         # argparser defaults the program name to sys.argv[0]
         # we want it to be the name of our command
@@ -274,7 +280,7 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
         cmd_wrapper.__doc__ = argparser.description
 
         # Mark this function as having an argparse ArgumentParser
-        setattr(cmd_wrapper, 'argparser', argparser)
+        setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, argparser)
 
         return cmd_wrapper
 
@@ -412,9 +418,14 @@ class Cmd(cmd.Cmd):
         # Command aliases and macros
         self.macros = dict()
 
-        self._pystate = {}
+        # Keeps track of typed command history in the Python shell
         self._py_history = []
-        self.pyscript_name = 'app'
+
+        # The name by which Python environments refer to the PyBridge to call app commands
+        self.py_bridge_name = 'app'
+
+        # Defines app-specific variables/functions available in Python shells and pyscripts
+        self.py_locals = {}
 
         self.statement_parser = StatementParser(allow_redirection=allow_redirection,
                                                 terminators=terminators,
@@ -554,6 +565,10 @@ class Cmd(cmd.Cmd):
         # values are DisabledCommand objects.
         self.disabled_commands = dict()
 
+        # If any command has been categorized, then all other commands that haven't been categorized
+        # will display under this section in the help output.
+        self.default_category = 'Uncategorized'
+
     # -----  Methods related to presenting output to the user -----
 
     @property
@@ -636,6 +651,14 @@ class Cmd(cmd.Cmd):
         else:
             final_msg = "{}".format(msg)
         ansi.ansi_aware_write(sys.stderr, final_msg + end)
+
+    def pwarning(self, msg: Any, *, end: str = '\n') -> None:
+        """Apply the warning style to a message and print it to sys.stderr
+
+        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
+        :param end: string appended after the end of the message, default a newline
+        """
+        self.perror(ansi.style_warning(msg), end=end, apply_style=False)
 
     def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
@@ -1442,12 +1465,14 @@ class Cmd(cmd.Cmd):
             compfunc = getattr(self, 'complete_' + command, None)
 
             if compfunc is None:
-                # There's no completer function, next see if the command uses argparser
+                # There's no completer function, next see if the command uses argparse
                 func = self.cmd_func(command)
-                if func and hasattr(func, 'argparser'):
+                argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+
+                if func is not None and argparser is not None:
                     import functools
                     compfunc = functools.partial(self._autocomplete_default,
-                                                 argparser=getattr(func, 'argparser'))
+                                                 argparser=argparser)
                 else:
                     compfunc = self.completedefault
 
@@ -1699,13 +1724,13 @@ class Cmd(cmd.Cmd):
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line: str, pyscript_bridge_call: bool = False) -> bool:
+    def onecmd_plus_hooks(self, line: str, py_bridge_call: bool = False) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
         :param line: line of text read from input
-        :param pyscript_bridge_call: This should only ever be set to True by PyscriptBridge to signify the beginning
-                                     of an app() call in a pyscript. It is used to enable/disable the storage of the
-                                     command's stdout.
+        :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
+                               of an app() call from Python. It is used to enable/disable the storage of the
+                               command's stdout.
         :return: True if running of commands should stop
         """
         import datetime
@@ -1745,7 +1770,7 @@ class Cmd(cmd.Cmd):
             try:
                 # Get sigint protection while we set up redirection
                 with self.sigint_protection:
-                    if pyscript_bridge_call:
+                    if py_bridge_call:
                         # Start saving command's stdout at this point
                         self.stdout.pause_storage = False
 
@@ -1794,7 +1819,7 @@ class Cmd(cmd.Cmd):
                     if not already_redirecting:
                         self._redirecting = False
 
-                    if pyscript_bridge_call:
+                    if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
 
@@ -2089,7 +2114,8 @@ class Cmd(cmd.Cmd):
                 sys.stdout = self.stdout = new_stdout
 
                 if statement.output == constants.REDIRECTION_APPEND:
-                    self.poutput(get_paste_buffer())
+                    self.stdout.write(get_paste_buffer())
+                    self.stdout.flush()
 
         return redir_error, saved_state
 
@@ -2695,11 +2721,13 @@ class Cmd(cmd.Cmd):
         command = tokens[cmd_index]
         matches = []
 
-        # Check if this is a command with an argparse function
+        # Check if this command uses argparse
         func = self.cmd_func(command)
-        if func and hasattr(func, 'argparser'):
+        argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+
+        if func is not None and argparser is not None:
             from .argparse_completer import AutoCompleter
-            completer = AutoCompleter(getattr(func, 'argparser'), self)
+            completer = AutoCompleter(argparser, self)
             matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
 
         return matches
@@ -2726,11 +2754,12 @@ class Cmd(cmd.Cmd):
             # Getting help for a specific command
             func = self.cmd_func(args.command)
             help_func = getattr(self, HELP_FUNC_PREFIX + args.command, None)
+            argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
 
             # If the command function uses argparse, then use argparse's help
-            if func and hasattr(func, 'argparser'):
+            if func is not None and argparser is not None:
                 from .argparse_completer import AutoCompleter
-                completer = AutoCompleter(getattr(func, 'argparser'), self)
+                completer = AutoCompleter(argparser, self)
                 tokens = [args.command] + args.subcommand
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
@@ -2769,11 +2798,11 @@ class Cmd(cmd.Cmd):
                 help_topics.remove(command)
 
                 # Non-argparse commands can have help_functions for their documentation
-                if not hasattr(func, 'argparser'):
+                if not hasattr(func, CMD_ATTR_ARGPARSER):
                     has_help_func = True
 
-            if hasattr(func, HELP_CATEGORY):
-                category = getattr(func, HELP_CATEGORY)
+            if hasattr(func, CMD_ATTR_HELP_CATEGORY):
+                category = getattr(func, CMD_ATTR_HELP_CATEGORY)
                 cmds_cats.setdefault(category, [])
                 cmds_cats[category].append(command)
             elif func.__doc__ or has_help_func:
@@ -2791,7 +2820,7 @@ class Cmd(cmd.Cmd):
             self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
             for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
                 self._print_topics(category, cmds_cats[category], verbose)
-            self._print_topics('Other', cmds_doc, verbose)
+            self._print_topics(self.default_category, cmds_doc, verbose)
 
         self.print_topics(self.misc_header, help_topics, 15, 80)
         self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
@@ -2826,7 +2855,7 @@ class Cmd(cmd.Cmd):
                     cmd_func = self.cmd_func(command)
 
                     # Non-argparse commands can have help_functions for their documentation
-                    if not hasattr(cmd_func, 'argparser') and command in topics:
+                    if not hasattr(cmd_func, CMD_ATTR_ARGPARSER) and command in topics:
                         help_func = getattr(self, HELP_FUNC_PREFIX + command)
                         result = io.StringIO()
 
@@ -3199,13 +3228,13 @@ class Cmd(cmd.Cmd):
     @with_argparser(py_parser, preserve_quotes=True)
     def do_py(self, args: argparse.Namespace) -> bool:
         """Invoke Python command or shell"""
-        from .pyscript_bridge import PyscriptBridge
+        from .py_bridge import PyBridge
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err)
             return False
 
-        bridge = PyscriptBridge(self)
+        py_bridge = PyBridge(self)
 
         try:
             self._in_py = True
@@ -3217,8 +3246,14 @@ class Cmd(cmd.Cmd):
                 """
                 expanded_filename = os.path.expanduser(filename)
 
+                if not expanded_filename.endswith('.py'):
+                    self.pwarning("'{}' does not have a .py extension".format(expanded_filename))
+                    selection = self.select('Yes No', 'Continue to try to run it as a Python script? ')
+                    if selection != 'Yes':
+                        return
+
                 # cmd_echo defaults to False for scripts. The user can always toggle this value in their script.
-                bridge.cmd_echo = False
+                py_bridge.cmd_echo = False
 
                 try:
                     with open(expanded_filename) as f:
@@ -3231,17 +3266,17 @@ class Cmd(cmd.Cmd):
                 raise EmbeddedConsoleExit
 
             # Set up Python environment
-            self._pystate[self.pyscript_name] = bridge
-            self._pystate['run'] = py_run
-            self._pystate['quit'] = py_quit
-            self._pystate['exit'] = py_quit
+            self.py_locals[self.py_bridge_name] = py_bridge
+            self.py_locals['run'] = py_run
+            self.py_locals['quit'] = py_quit
+            self.py_locals['exit'] = py_quit
 
             if self.locals_in_py:
-                self._pystate['self'] = self
-            elif 'self' in self._pystate:
-                del self._pystate['self']
+                self.py_locals['self'] = self
+            elif 'self' in self.py_locals:
+                del self.py_locals['self']
 
-            localvars = self._pystate
+            localvars = self.py_locals
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
@@ -3251,9 +3286,9 @@ class Cmd(cmd.Cmd):
                 if args.remainder:
                     full_command += ' ' + ' '.join(args.remainder)
 
-                # Set cmd_echo to True so PyscriptBridge statements like: py app('help')
+                # Set cmd_echo to True so PyBridge statements like: py app('help')
                 # run at the command line will print their output.
-                bridge.cmd_echo = True
+                py_bridge.cmd_echo = True
 
                 # noinspection PyBroadException
                 try:
@@ -3268,7 +3303,7 @@ class Cmd(cmd.Cmd):
                 instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
                                 'Non-Python commands can be issued with: {}("your command")\n'
                                 'Run Python code from external script files with: run("script.py")'
-                                .format(self.pyscript_name))
+                                .format(self.py_bridge_name))
 
                 saved_cmd2_env = None
 
@@ -3296,7 +3331,7 @@ class Cmd(cmd.Cmd):
         finally:
             self._in_py = False
 
-        return bridge.stop
+        return py_bridge.stop
 
     run_pyscript_parser = Cmd2ArgumentParser()
     run_pyscript_parser.add_argument('script_path', help='path to the script file', completer_method=path_complete)
@@ -3334,23 +3369,31 @@ class Cmd(cmd.Cmd):
         @with_argparser(Cmd2ArgumentParser())
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
-            from .pyscript_bridge import PyscriptBridge
-            bridge = PyscriptBridge(self)
-
+            from .py_bridge import PyBridge
             banner = ('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
                       'Run Python code from external files with: run filename.py\n')
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
-            if self.locals_in_py:
-                # noinspection PyUnusedLocal
-                def load_ipy(cmd2_instance, app):
-                    embed(banner1=banner, exit_msg=exit_msg)
-                load_ipy(self, bridge)
-            else:
-                # noinspection PyUnusedLocal
-                def load_ipy(app):
-                    embed(banner1=banner, exit_msg=exit_msg)
-                load_ipy(bridge)
+            def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
+                """
+                Embed an IPython shell in an environment that is restricted to only the variables in this function
+                :param cmd2_app: instance of the cmd2 app
+                :param py_bridge: a PyscriptBridge
+                """
+                # Create a variable pointing to py_bridge and name it using the value of py_bridge_name
+                exec("{} = py_bridge".format(cmd2_app.py_bridge_name))
+
+                # Add self variable pointing to cmd2_app, if allowed
+                if cmd2_app.locals_in_py:
+                    exec("self = cmd2_app")
+
+                # Delete these names from the environment so IPython can't use them
+                del cmd2_app
+                del py_bridge
+
+                embed(banner1=banner, exit_msg=exit_msg)
+
+            load_ipy(self, PyBridge(self))
 
     history_description = "View, run, edit, save, or clear previously entered commands"
 
@@ -3630,7 +3673,7 @@ class Cmd(cmd.Cmd):
         # Check if all commands ran
         if commands_run < len(history):
             warning = "Command {} triggered a stop and ended transcript generation early".format(commands_run)
-            self.perror(ansi.style_warning(warning))
+            self.pwarning(warning)
 
         # finally, we can write the transcript out to the file
         try:
@@ -3718,6 +3761,12 @@ class Cmd(cmd.Cmd):
         if not utils.is_text_file(expanded_path):
             self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path))
             return
+
+        if expanded_path.endswith('.py'):
+            self.pwarning("'{}' appears to be a Python file".format(expanded_path))
+            selection = self.select('Yes No', 'Continue to try to run it as a text script? ')
+            if selection != 'Yes':
+                return
 
         try:
             # Read all lines of the script
@@ -3965,7 +4014,7 @@ class Cmd(cmd.Cmd):
         """
         for cmd_name in list(self.disabled_commands):
             func = self.disabled_commands[cmd_name].command_function
-            if hasattr(func, HELP_CATEGORY) and getattr(func, HELP_CATEGORY) == category:
+            if getattr(func, CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.enable_command(cmd_name)
 
     def disable_command(self, command: str, message_to_print: str) -> None:
@@ -4014,7 +4063,7 @@ class Cmd(cmd.Cmd):
 
         for cmd_name in all_commands:
             func = self.cmd_func(cmd_name)
-            if hasattr(func, HELP_CATEGORY) and getattr(func, HELP_CATEGORY) == category:
+            if getattr(func, CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.disable_command(cmd_name, message_to_print)
 
     # noinspection PyUnusedLocal

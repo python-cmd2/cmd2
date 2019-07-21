@@ -154,12 +154,12 @@ from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
 
 from .ansi import ansi_aware_write, style_error
 
+# Used in nargs ranges to signify there is no maximum
+INFINITY = float('inf')
+
 ############################################################################################################
 # The following are names of custom argparse argument attributes added by cmd2
 ############################################################################################################
-
-# Used in nargs ranges to signify there is no maximum
-INFINITY = float('inf')
 
 # A tuple specifying nargs as a range (min, max)
 ATTR_NARGS_RANGE = 'nargs_range'

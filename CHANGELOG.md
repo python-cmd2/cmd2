@@ -4,6 +4,7 @@
     * Fixed bug where `history -v` was sometimes showing raw and expanded commands when they weren't different
     * Fixed bug where multiline commands were having leading and ending spaces stripped. This would mess up quoted
     strings that crossed multiple lines.
+    * Fixed a bug when appending to the clipboard where contents were in reverse order
 * Enhancements
     * Greatly simplified using argparse-based tab completion. The new interface is a complete overhaul that breaks
     the previous way of specifying completion and choices functions. See header of [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
@@ -31,6 +32,9 @@
     sort, but it can be changed to a natural sort by setting the value to NATURAL_SORT_KEY.
     * `StatementParser` now expects shortcuts to be passed in as dictionary. This eliminates the step of converting the
     shortcuts dictionary into a tuple before creating `StatementParser`.
+    * Renamed `Cmd.pyscript_name` to `Cmd.py_bridge_name`
+    * Renamed `Cmd.pystate` to `Cmd.py_locals`
+    * Renamed `PyscriptBridge` to `PyBridge`
 
 ## 0.9.14 (June 29, 2019)
 * Enhancements
@@ -122,7 +126,7 @@
     of a `cmd2` based app, you will need to update your code to use `.history.get(1).statement.raw` instead.
     * Removed internally used `eos` command that was used to keep track of when a text script's commands ended
     * Removed `cmd2` member called `_STOP_AND_EXIT` since it was just a boolean value that should always be True
-    * Removed `cmd2` member called `_should_quit` since `PyscriptBridge` now handles this logic
+    * Removed `cmd2` member called `_should_quit` since `PyBridge` now handles this logic
     * Removed support for `cmd.cmdqueue`
     * `allow_cli_args` is now an argument to __init__ instead of a `cmd2` class member
 * **Python 3.4 EOL notice**

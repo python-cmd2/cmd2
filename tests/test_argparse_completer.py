@@ -13,8 +13,8 @@ from cmd2 import with_argparser, Cmd2ArgumentParser, CompletionItem
 from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
-# Lists used in our tests
-static_int_choices_list = [-12, -1, -2, 0, 1, 2]
+# Lists used in our tests (there is a mix of sorted and unsorted on purpose)
+static_int_choices_list = [-1, 1, -2, 2, 0, -12]
 static_choices_list = ['static', 'choices', 'stop', 'here']
 choices_from_function = ['choices', 'function', 'chatty', 'smith']
 choices_from_method = ['choices', 'method', 'most', 'improved']
@@ -353,12 +353,14 @@ def test_autcomp_flag_completion(ac_app, command_and_args, text, completions):
     ('--function', 'ch', ['choices', 'chatty']),
     ('-m', '', choices_from_method),
     ('--method', 'm', ['method', 'most']),
-    ('-i', '', [str(i) for i in static_int_choices_list]),
+    ('-i', '', static_int_choices_list),
     ('--int', '1', ['1 ']),
-    ('--int', '-', ['-12', '-1', '-2']),
-    ('--int', '-1', ['-12', '-1'])
+    ('--int', '-', [-1, -2, -12]),
+    ('--int', '-1', [-1, -12])
 ])
 def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
+    import numbers
+
     line = 'choices {} {}'.format(flag, text)
     endidx = len(line)
     begidx = endidx - len(text)
@@ -369,7 +371,14 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
     else:
         assert first_match is None
 
-    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
+    # Numbers will be sorted in ascending order and then converted to strings by AutoCompleter
+    if all(isinstance(x, numbers.Number) for x in completions):
+        completions.sort()
+        completions = [str(x) for x in completions]
+    else:
+        completions.sort(key=ac_app.default_sort_key)
+
+    assert ac_app.completion_matches == completions
 
 
 @pytest.mark.parametrize('pos, text, completions', [
