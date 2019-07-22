@@ -81,14 +81,18 @@ Tab Completion:
             parser.add_argument('-o', '--options', completer_method=cmd2.Cmd.path_complete)
 
 
-    In all cases in which function/methods are passed you can use functools.partial() to prepopulate
-    values of the underlying function.
+    You can use functools.partial() to prepopulate values of the underlying choices and completer functions/methods.
 
         Example:
             This says to call path_complete with a preset value for its path_filter argument.
             completer_method = functools.partial(path_complete,
                                                  path_filter=lambda path: os.path.isdir(path))
             parser.add_argument('-o', '--options', choices_method=completer_method)
+
+    Of the 5 tab-completion parameters, choices is the only one where argparse validates user input against items
+    in the choices list. This is because the other 4 parameters are meant to tab complete data sets that are viewed
+    as dynamic. Therefore it is up to the user to validate if the user has typed an acceptable value for these
+    arguments.
 
 CompletionItem Class:
     This class was added to help in cases where uninformative data is being tab completed. For instance,

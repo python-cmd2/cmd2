@@ -1617,7 +1617,7 @@ def test_alias_delete_non_existing(base_app):
 
 def test_alias_delete_no_name(base_app):
     out, err = run_cmd(base_app, 'alias delete')
-    assert "Usage: alias delete" in out[0]
+    assert "Either --all or alias name(s)" in err[0]
 
 def test_multiple_aliases(base_app):
     alias1 = 'h1'
@@ -1768,7 +1768,7 @@ def test_macro_delete_non_existing(base_app):
 
 def test_macro_delete_no_name(base_app):
     out, err = run_cmd(base_app, 'macro delete')
-    assert "Usage: macro delete" in out[0]
+    assert "Either --all or macro name(s)" in err[0]
 
 def test_multiple_macros(base_app):
     macro1 = 'h1'
@@ -1853,6 +1853,21 @@ def test_onecmd_raw_str_quit(outsim_app):
     assert stop
     assert out == ''
 
+def test_onecmd_add_to_history(outsim_app):
+    line = "help"
+    saved_hist_len = len(outsim_app.history)
+
+    # Allow command to be added to history
+    outsim_app.onecmd(line, add_to_history=True)
+    new_hist_len = len(outsim_app.history)
+    assert new_hist_len == saved_hist_len + 1
+
+    saved_hist_len = new_hist_len
+
+    # Prevent command from being added to history
+    outsim_app.onecmd(line, add_to_history=False)
+    new_hist_len = len(outsim_app.history)
+    assert new_hist_len == saved_hist_len
 
 def test_get_all_commands(base_app):
     # Verify that the base app has the expected commands
