@@ -484,7 +484,7 @@ class ByteBuf(object):
 
 class ProcReader(object):
     """
-    Used to captured stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
+    Used to capture stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
     If neither are pipes, then the process will run normally and no output will be captured.
     """
     def __init__(self, proc: subprocess.Popen, stdout: Union[StdSim, TextIO],
