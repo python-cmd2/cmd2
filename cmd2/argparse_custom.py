@@ -91,7 +91,7 @@ Tab Completion:
 
     Of the 5 tab-completion parameters, choices is the only one where argparse validates user input against items
     in the choices list. This is because the other 4 parameters are meant to tab complete data sets that are viewed
-    as dynamic. Therefore it is up to the user to validate if the user has typed an acceptable value for these
+    as dynamic. Therefore it is up to the developer to validate if the user has typed an acceptable value for these
     arguments.
 
 CompletionItem Class:
