@@ -2645,7 +2645,7 @@ class Cmd(cmd.Cmd):
                            "    macro create show_results print_results -type {1} \"|\" less\n"
                            "\n"
                            "  Because macros do not resolve until after hitting Enter, tab completion\n"
-                           "  will only complete paths while entering a macro.")
+                           "  will only complete paths while typing a macro.")
 
     macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
                                                       description=macro_create_description,
