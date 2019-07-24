@@ -5,11 +5,11 @@ Cmd2 unit/functional testing
 """
 import argparse
 import builtins
-from code import InteractiveConsole
 import io
 import os
 import sys
 import tempfile
+from code import InteractiveConsole
 
 import pytest
 
@@ -21,7 +21,8 @@ except ImportError:
 
 import cmd2
 from cmd2 import ansi, clipboard, constants, utils
-from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
+from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY
+from .conftest import SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, complete_tester
 
 def CreateOutsimApp():
     c = cmd2.Cmd()
@@ -236,6 +237,7 @@ def test_base_shell(base_app, monkeypatch):
     assert out == []
     assert m.called
 
+
 def test_base_py(base_app):
     # Create a variable and make sure we can see it
     out, err = run_cmd(base_app, 'py qqq=3')
@@ -261,17 +263,6 @@ def test_base_py(base_app):
 
     out, err = run_cmd(base_app, 'py print(self)')
     assert "NameError: name 'self' is not defined" in err
-
-
-@pytest.mark.skipif(sys.platform == 'win32',
-                    reason="Unit test doesn't work on win32, but feature does")
-def test_py_run_script(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'script.py')
-    expected = 'This is a python script running ...'
-
-    out, err = run_cmd(base_app, "py run('{}')".format(python_script))
-    assert expected in out
 
 
 def test_base_error(base_app):
@@ -435,6 +426,32 @@ def test_relative_run_script(base_app, request):
 
     assert script_out == manual_out
     assert script_err == manual_err
+
+def test_relative_run_script_with_odd_file_names(base_app, monkeypatch):
+    """Test file names with various patterns"""
+    # Mock out the do_run_script call to see what args are passed to it
+    run_script_mock = mock.MagicMock(name='do_run_script')
+    monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
+
+    file_name = utils.quote_string('nothingweird.txt')
+    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
+    run_script_mock.assert_called_once_with('"nothingweird.txt"')
+    run_script_mock.reset_mock()
+
+    file_name = utils.quote_string('has   spaces.txt')
+    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
+    run_script_mock.assert_called_once_with('"has   spaces.txt"')
+    run_script_mock.reset_mock()
+
+    file_name = utils.quote_string('"is_double_quoted.txt"')
+    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
+    run_script_mock.assert_called_once_with('\'"is_double_quoted.txt"\'')
+    run_script_mock.reset_mock()
+
+    file_name = utils.quote_string("'is_single_quoted.txt'")
+    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
+    run_script_mock.assert_called_once_with('"\'is_single_quoted.txt\'"')
+    run_script_mock.reset_mock()
 
 def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
@@ -664,6 +681,36 @@ def test_edit_file(base_app, request, monkeypatch):
 
     # We think we have an editor, so should expect a Popen call
     m.assert_called_once()
+
+def test_edit_file_with_odd_file_names(base_app, monkeypatch):
+    """Test editor and file names with various patterns"""
+    # Mock out the do_shell call to see what args are passed to it
+    shell_mock = mock.MagicMock(name='do_shell')
+    monkeypatch.setattr("cmd2.Cmd.do_shell", shell_mock)
+
+    base_app.editor = 'fooedit'
+    file_name = utils.quote_string('nothingweird.py')
+    out, err = run_cmd(base_app, "edit {}".format(file_name))
+    shell_mock.assert_called_once_with('"fooedit" "nothingweird.py"')
+    shell_mock.reset_mock()
+
+    base_app.editor = 'foo edit'
+    file_name = utils.quote_string('has   spaces.py')
+    out, err = run_cmd(base_app, "edit {}".format(file_name))
+    shell_mock.assert_called_once_with('"foo edit" "has   spaces.py"')
+    shell_mock.reset_mock()
+
+    base_app.editor = '"fooedit"'
+    file_name = utils.quote_string('"is_double_quoted.py"')
+    out, err = run_cmd(base_app, "edit {}".format(file_name))
+    shell_mock.assert_called_once_with('\'"fooedit"\' \'"is_double_quoted.py"\'')
+    shell_mock.reset_mock()
+
+    base_app.editor = "'fooedit'"
+    file_name = utils.quote_string("'is_single_quoted.py'")
+    out, err = run_cmd(base_app, "edit {}".format(file_name))
+    shell_mock.assert_called_once_with('"\'fooedit\'" "\'is_single_quoted.py\'"')
+    shell_mock.reset_mock()
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
@@ -995,7 +1042,7 @@ class SelectApp(cmd2.Cmd):
     def do_procrastinate(self, arg):
         """Waste time in your manner of choice."""
         # Pass in a list of tuples for selections
-        leisure_activity = self.select([('Netflix and chill', 'Netflix'), ('Porn', 'WebSurfing')],
+        leisure_activity = self.select([('Netflix and chill', 'Netflix'), ('YouTube', 'WebSurfing')],
                                        'How would you like to procrastinate? ')
         result = 'Have fun procrasinating with {}!\n'.format(leisure_activity)
         self.stdout.write(result)
@@ -1107,7 +1154,7 @@ def test_select_list_of_tuples(select_app):
    1. Netflix
    2. WebSurfing
 Have fun procrasinating with {}!
-""".format('Porn'))
+""".format('YouTube'))
 
     # Make sure our mock was called with the expected arguments
     m.assert_called_once_with('How would you like to procrastinate? ')
@@ -1672,9 +1719,12 @@ def test_macro_create_with_alias_name(base_app):
     out, err = run_cmd(base_app, 'macro create {} help'.format(macro))
     assert "Macro cannot have the same name as an alias" in err[0]
 
-def test_macro_create_with_command_name(base_app):
-    out, err = run_cmd(base_app, 'macro create help stuff')
-    assert "Macro cannot have the same name as a command" in err[0]
+def test_macro_create_with_command_name(multiline_app):
+    out, err = run_cmd(multiline_app, 'macro create help stuff')
+    assert out == normalize("Macro 'help' created")
+
+    out, err = run_cmd(multiline_app, 'macro create orate stuff')
+    assert "Macro cannot have the same name as a multiline command" in err[0]
 
 def test_macro_create_with_args(base_app):
     # Create the macro
@@ -1793,6 +1843,36 @@ def test_nonexistent_macro(base_app):
 
     assert exception is not None
 
+def test_input_line_to_statement_expand(base_app):
+    # Enable/Disable expansion of shortcuts
+    line = '!ls'
+    statement = base_app._input_line_to_statement(line, expand=True)
+    assert statement.command == 'shell'
+
+    statement = base_app._input_line_to_statement(line, expand=False)
+    assert statement.command == '!ls'
+
+    # Enable/Disable expansion of aliases
+    run_cmd(base_app, 'alias create help macro')
+
+    line = 'help'
+    statement = base_app._input_line_to_statement(line, expand=True)
+    assert statement.command == 'macro'
+
+    statement = base_app._input_line_to_statement(line, expand=False)
+    assert statement.command == 'help'
+
+    run_cmd(base_app, 'alias delete help')
+
+    # Enable/Disable expansion of macros
+    run_cmd(base_app, 'macro create help alias')
+
+    line = 'help'
+    statement = base_app._input_line_to_statement(line, expand=True)
+    assert statement.command == 'alias'
+
+    statement = base_app._input_line_to_statement(line, expand=False)
+    assert statement.command == 'help'
 
 def test_ppaged(outsim_app):
     msg = 'testing...'
@@ -2077,16 +2157,19 @@ class DisableCommandsApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     @cmd2.with_category(category_name)
-    def do_has_help_func(self, arg):
-        self.poutput("The real has_help_func")
+    def do_has_helper_funcs(self, arg):
+        self.poutput("The real has_helper_funcs")
 
-    def help_has_help_func(self):
-        self.poutput('Help for has_help_func')
+    def help_has_helper_funcs(self):
+        self.poutput('Help for has_helper_funcs')
+
+    def complete_has_helper_funcs(self, *args):
+        return ['result']
 
     @cmd2.with_category(category_name)
-    def do_has_no_help_func(self, arg):
-        """Help for has_no_help_func"""
-        self.poutput("The real has_no_help_func")
+    def do_has_no_helper_funcs(self, arg):
+        """Help for has_no_helper_funcs"""
+        self.poutput("The real has_no_helper_funcs")
 
 
 @pytest.fixture
@@ -2096,51 +2179,92 @@ def disable_commands_app():
 
 
 def test_disable_and_enable_category(disable_commands_app):
+    ##########################################################################
     # Disable the category
+    ##########################################################################
     message_to_print = 'These commands are currently disabled'
     disable_commands_app.disable_category(disable_commands_app.category_name, message_to_print)
 
     # Make sure all the commands and help on those commands displays the message
-    out, err = run_cmd(disable_commands_app, 'has_help_func')
+    out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'help has_help_func')
+    out, err = run_cmd(disable_commands_app, 'help has_helper_funcs')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'has_no_help_func')
+    out, err = run_cmd(disable_commands_app, 'has_no_helper_funcs')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'help has_no_help_func')
+    out, err = run_cmd(disable_commands_app, 'help has_no_helper_funcs')
     assert err[0].startswith(message_to_print)
 
+    # Make sure neither function completes
+    text = ''
+    line = 'has_helper_funcs'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
+    assert first_match is None
+
+    text = ''
+    line = 'has_no_helper_funcs'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
+    assert first_match is None
+
+    # Make sure both commands are invisible
     visible_commands = disable_commands_app.get_visible_commands()
-    assert 'has_help_func' not in visible_commands
-    assert 'has_no_help_func' not in visible_commands
+    assert 'has_helper_funcs' not in visible_commands
+    assert 'has_no_helper_funcs' not in visible_commands
 
+    ##########################################################################
     # Enable the category
+    ##########################################################################
     disable_commands_app.enable_category(disable_commands_app.category_name)
 
     # Make sure all the commands and help on those commands are restored
-    out, err = run_cmd(disable_commands_app, 'has_help_func')
-    assert out[0] == "The real has_help_func"
+    out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
+    assert out[0] == "The real has_helper_funcs"
 
-    out, err = run_cmd(disable_commands_app, 'help has_help_func')
-    assert out[0] == "Help for has_help_func"
+    out, err = run_cmd(disable_commands_app, 'help has_helper_funcs')
+    assert out[0] == "Help for has_helper_funcs"
 
-    out, err = run_cmd(disable_commands_app, 'has_no_help_func')
-    assert out[0] == "The real has_no_help_func"
+    out, err = run_cmd(disable_commands_app, 'has_no_helper_funcs')
+    assert out[0] == "The real has_no_helper_funcs"
 
-    out, err = run_cmd(disable_commands_app, 'help has_no_help_func')
-    assert out[0] == "Help for has_no_help_func"
+    out, err = run_cmd(disable_commands_app, 'help has_no_helper_funcs')
+    assert out[0] == "Help for has_no_helper_funcs"
 
+    # has_helper_funcs should complete now
+    text = ''
+    line = 'has_helper_funcs'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
+    assert first_match is not None and disable_commands_app.completion_matches == ['result ']
+
+    # has_no_helper_funcs had no completer originally, so there should be no results
+    text = ''
+    line = 'has_no_helper_funcs'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
+    assert first_match is None
+
+    # Make sure both commands are visible
     visible_commands = disable_commands_app.get_visible_commands()
-    assert 'has_help_func' in visible_commands
-    assert 'has_no_help_func' in visible_commands
+    assert 'has_helper_funcs' in visible_commands
+    assert 'has_no_helper_funcs' in visible_commands
 
 def test_enable_enabled_command(disable_commands_app):
     # Test enabling a command that is not disabled
     saved_len = len(disable_commands_app.disabled_commands)
-    disable_commands_app.enable_command('has_help_func')
+    disable_commands_app.enable_command('has_helper_funcs')
 
     # The number of disabled_commands should not have changed
     assert saved_len == len(disable_commands_app.disabled_commands)
@@ -2152,7 +2276,7 @@ def test_disable_fake_command(disable_commands_app):
 def test_disable_command_twice(disable_commands_app):
     saved_len = len(disable_commands_app.disabled_commands)
     message_to_print = 'These commands are currently disabled'
-    disable_commands_app.disable_command('has_help_func', message_to_print)
+    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
     # The length of disabled_commands should have increased one
     new_len = len(disable_commands_app.disabled_commands)
@@ -2160,24 +2284,24 @@ def test_disable_command_twice(disable_commands_app):
     saved_len = new_len
 
     # Disable again and the length should not change
-    disable_commands_app.disable_command('has_help_func', message_to_print)
+    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
     new_len = len(disable_commands_app.disabled_commands)
     assert saved_len == new_len
 
 def test_disabled_command_not_in_history(disable_commands_app):
     message_to_print = 'These commands are currently disabled'
-    disable_commands_app.disable_command('has_help_func', message_to_print)
+    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
     saved_len = len(disable_commands_app.history)
-    run_cmd(disable_commands_app, 'has_help_func')
+    run_cmd(disable_commands_app, 'has_helper_funcs')
     assert saved_len == len(disable_commands_app.history)
 
 def test_disabled_message_command_name(disable_commands_app):
     message_to_print = '{} is currently disabled'.format(cmd2.cmd2.COMMAND_NAME)
-    disable_commands_app.disable_command('has_help_func', message_to_print)
+    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'has_help_func')
-    assert err[0].startswith('has_help_func is currently disabled')
+    out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
+    assert err[0].startswith('has_helper_funcs is currently disabled')
 
 
 def test_startup_script(request):

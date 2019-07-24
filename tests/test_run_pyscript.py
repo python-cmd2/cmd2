@@ -6,7 +6,7 @@ Unit/functional testing for run_pytest in cmd2
 import builtins
 import os
 
-from cmd2 import plugin
+from cmd2 import plugin, utils
 from .conftest import run_cmd
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
@@ -32,7 +32,7 @@ def test_run_pyscript(base_app, request):
 
 def test_run_pyscript_recursive_not_allowed(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'scripts', 'recursive.py')
+    python_script = os.path.join(test_dir, 'pyscript', 'recursive.py')
     expected = 'Recursively entering interactive Python consoles is not allowed.'
 
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
@@ -41,7 +41,7 @@ def test_run_pyscript_recursive_not_allowed(base_app, request):
 def test_run_pyscript_with_nonexist_file(base_app):
     python_script = 'does_not_exist.py'
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "Error opening script file" in err[0]
+    assert "Error reading script file" in err[0]
 
 def test_run_pyscript_with_non_python_file(base_app, request):
     m = mock.MagicMock(name='input', return_value='2')
@@ -52,9 +52,34 @@ def test_run_pyscript_with_non_python_file(base_app, request):
     out, err = run_cmd(base_app, 'run_pyscript {}'.format(filename))
     assert "does not have a .py extension" in err[0]
 
+def test_run_pyscript_with_odd_file_names(base_app):
+    """
+    Pass in file names with various patterns. Since these files don't exist, we will rely
+    on the error text to make sure the file names were processed correctly.
+    """
+    python_script = utils.quote_string('nothingweird.py')
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert "Error reading script file 'nothingweird.py'" in err[0]
+
+    python_script = utils.quote_string('has   spaces.py')
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert "Error reading script file 'has   spaces.py'" in err[0]
+
+    # For remaining tests, mock input to get us passed the warning about not ending in .py
+    input_mock = mock.MagicMock(name='input', return_value='1')
+    builtins.input = input_mock
+
+    python_script = utils.quote_string('"is_double_quoted.py"')
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert "Error reading script file '\"is_double_quoted.py\"'" in err[1]
+
+    python_script = utils.quote_string("'is_single_quoted.py'")
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert "Error reading script file ''is_single_quoted.py''" in err[1]
+
 def test_run_pyscript_with_exception(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'scripts', 'raises_exception.py')
+    python_script = os.path.join(test_dir, 'pyscript', 'raises_exception.py')
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert err[0].startswith('Traceback')
     assert "TypeError: unsupported operand type(s) for +: 'int' and 'str'" in err[-1]
@@ -91,7 +116,7 @@ def test_run_pyscript_stop(base_app, request):
     # Verify onecmd_plus_hooks() returns True if any commands in a pyscript return True for stop
     test_dir = os.path.dirname(request.module.__file__)
 
-    # help.py doesn't run any commands that returns True for stop
+    # help.py doesn't run any commands that return True for stop
     python_script = os.path.join(test_dir, 'pyscript', 'help.py')
     stop = base_app.onecmd_plus_hooks('run_pyscript {}'.format(python_script))
     assert not stop
@@ -100,3 +125,11 @@ def test_run_pyscript_stop(base_app, request):
     python_script = os.path.join(test_dir, 'pyscript', 'stop.py')
     stop = base_app.onecmd_plus_hooks('run_pyscript {}'.format(python_script))
     assert stop
+
+def test_run_pyscript_run(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', 'run.py')
+    expected = 'I have been run'
+
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert expected in out

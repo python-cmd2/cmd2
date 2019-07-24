@@ -25,11 +25,8 @@ def is_quoted(arg: str) -> bool:
     return len(arg) > 1 and arg[0] == arg[-1] and arg[0] in constants.QUOTES
 
 
-def quote_string_if_needed(arg: str) -> str:
-    """ Quotes a string if it contains spaces and isn't already quoted """
-    if is_quoted(arg) or ' ' not in arg:
-        return arg
-
+def quote_string(arg: str) -> str:
+    """Quote a string"""
     if '"' in arg:
         quote = "'"
     else:
@@ -38,8 +35,16 @@ def quote_string_if_needed(arg: str) -> str:
     return quote + arg + quote
 
 
+def quote_string_if_needed(arg: str) -> str:
+    """Quote a string if it contains spaces and isn't already quoted"""
+    if is_quoted(arg) or ' ' not in arg:
+        return arg
+
+    return quote_string(arg)
+
+
 def strip_quotes(arg: str) -> str:
-    """ Strip outer quotes from a string.
+    """Strip outer quotes from a string.
 
      Applies to both single and double quotes.
 

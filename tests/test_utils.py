@@ -93,13 +93,23 @@ def test_is_quoted_no():
     simple_str = "hello world"
     assert not cu.is_quoted(simple_str)
 
+def test_quote_string():
+    my_str = "Hello World"
+    assert cu.quote_string(my_str) == '"' + my_str + '"'
+
+    my_str = "'Hello World'"
+    assert cu.quote_string(my_str) == '"' + my_str + '"'
+
+    my_str = '"Hello World"'
+    assert cu.quote_string(my_str) == "'" + my_str + "'"
+
 def test_quote_string_if_needed_yes():
     my_str = "Hello World"
     assert cu.quote_string_if_needed(my_str) == '"' + my_str + '"'
     your_str = '"foo" bar'
     assert cu.quote_string_if_needed(your_str) == "'" + your_str + "'"
 
-def test_quot_string_if_needed_no():
+def test_quote_string_if_needed_no():
     my_str = "HelloWorld"
     assert cu.quote_string_if_needed(my_str) == my_str
     your_str = "'Hello World'"

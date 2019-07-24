@@ -99,6 +99,9 @@ COMMAND_FUNC_PREFIX = 'do_'
 # All help functions start with this
 HELP_FUNC_PREFIX = 'help_'
 
+# All command completer functions start with this
+COMPLETER_FUNC_PREFIX = 'complete_'
+
 # Sorting keys for strings
 ALPHABETICAL_SORT_KEY = utils.norm_fold
 NATURAL_SORT_KEY = utils.natural_keys
@@ -164,8 +167,10 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
         return cmd_wrapper
 
     if len(args) == 1 and callable(args[0]):
+        # noinspection PyTypeChecker
         return arg_decorator(args[0])
     else:
+        # noinspection PyTypeChecker
         return arg_decorator
 
 
@@ -188,7 +193,6 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
     """
     import functools
 
-    # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
@@ -226,6 +230,7 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
 
         return cmd_wrapper
 
+    # noinspection PyTypeChecker
     return arg_decorator
 
 
@@ -246,7 +251,6 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
     """
     import functools
 
-    # noinspection PyProtectedMember
     def arg_decorator(func: Callable):
         @functools.wraps(func)
         def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
@@ -284,6 +288,7 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
 
         return cmd_wrapper
 
+    # noinspection PyTypeChecker
     return arg_decorator
 
 
@@ -316,7 +321,7 @@ class EmptyStatement(Exception):
 
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
-DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function'])
+DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function', 'completer_function'])
 
 
 class Cmd(cmd.Cmd):
@@ -427,13 +432,13 @@ class Cmd(cmd.Cmd):
         # Defines app-specific variables/functions available in Python shells and pyscripts
         self.py_locals = {}
 
+        # True if running inside a Python script or interactive console, False otherwise
+        self._in_py = False
+
         self.statement_parser = StatementParser(allow_redirection=allow_redirection,
                                                 terminators=terminators,
                                                 multiline_commands=multiline_commands,
                                                 shortcuts=shortcuts)
-
-        # True if running inside a Python script or interactive console, False otherwise
-        self._in_py = False
 
         # Stores results from the last command run to enable usage of results in a Python script or interactive console
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
@@ -1459,10 +1464,14 @@ class Cmd(cmd.Cmd):
                 text = text_to_remove + text
                 begidx = actual_begidx
 
-        # Check if a valid command was entered
-        if command in self.get_all_commands():
+        # Check if a macro was entered
+        if command in self.macros:
+            compfunc = self.path_complete
+
+        # Check if a command was entered
+        elif command in self.get_all_commands():
             # Get the completer function for this command
-            compfunc = getattr(self, 'complete_' + command, None)
+            compfunc = getattr(self, COMPLETER_FUNC_PREFIX + command, None)
 
             if compfunc is None:
                 # There's no completer function, next see if the command uses argparse
@@ -1476,11 +1485,7 @@ class Cmd(cmd.Cmd):
                 else:
                     compfunc = self.completedefault
 
-        # Check if a macro was entered
-        elif command in self.macros:
-            compfunc = self.path_complete
-
-        # A valid command was not entered
+        # Not a recognized macro or command
         else:
             # Check if this command should be run as a shell command
             if self.default_to_shell and command in utils.get_exes_in_path(command):
@@ -1724,10 +1729,13 @@ class Cmd(cmd.Cmd):
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line: str, *, add_to_history: bool = True, py_bridge_call: bool = False) -> bool:
+    def onecmd_plus_hooks(self, line: str, *, expand: bool = True, add_to_history: bool = True,
+                          py_bridge_call: bool = False) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
-        :param line: line of text read from input
+        :param line: command line to run
+        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add this command to history. Defaults to True.
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
@@ -1738,7 +1746,7 @@ class Cmd(cmd.Cmd):
 
         stop = False
         try:
-            statement = self._input_line_to_statement(line)
+            statement = self._input_line_to_statement(line, expand=expand)
         except EmptyStatement:
             return self._run_cmdfinalization_hooks(stop, None)
         except ValueError as ex:
@@ -1853,12 +1861,15 @@ class Cmd(cmd.Cmd):
         except Exception as ex:
             self.pexcept(ex)
 
-    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *, add_to_history: bool = True) -> bool:
+    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *,
+                           expand: bool = True, add_to_history: bool = True) -> bool:
         """
         Used when commands are being run in an automated fashion like text scripts or history replays.
         The prompt and command line for each command will be printed if echo is True.
 
         :param cmds: commands to run
+        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add these commands to history. Defaults to True.
         :return: True if running of commands should stop
         """
@@ -1869,12 +1880,12 @@ class Cmd(cmd.Cmd):
             if self.echo:
                 self.poutput('{}{}'.format(self.prompt, line))
 
-            if self.onecmd_plus_hooks(line, add_to_history=add_to_history):
+            if self.onecmd_plus_hooks(line, expand=expand, add_to_history=add_to_history):
                 return True
 
         return False
 
-    def _complete_statement(self, line: str) -> Statement:
+    def _complete_statement(self, line: str, *, expand: bool = True) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
@@ -1883,11 +1894,13 @@ class Cmd(cmd.Cmd):
         backwards compatibility with the standard library version of cmd.
 
         :param line: the line being parsed
+        :param expand: If True, then aliases and shortcuts will be expanded.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :return: the completed Statement
         """
         while True:
             try:
-                statement = self.statement_parser.parse(line)
+                statement = self.statement_parser.parse(line, expand=expand)
                 if statement.multiline_command and statement.terminator:
                     # we have a completed multiline command, we are done
                     break
@@ -1898,7 +1911,7 @@ class Cmd(cmd.Cmd):
             except ValueError:
                 # we have unclosed quotation marks, lets parse only the command
                 # and see if it's a multiline
-                statement = self.statement_parser.parse_command_only(line)
+                statement = self.statement_parser.parse_command_only(line, expand=expand)
                 if not statement.multiline_command:
                     # not a multiline command, so raise the exception
                     raise
@@ -1935,11 +1948,13 @@ class Cmd(cmd.Cmd):
             raise EmptyStatement()
         return statement
 
-    def _input_line_to_statement(self, line: str) -> Statement:
+    def _input_line_to_statement(self, line: str, *, expand: bool = True) -> Statement:
         """
         Parse the user's input line and convert it to a Statement, ensuring that all macros are also resolved
 
         :param line: the line being parsed
+        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :return: parsed command line as a Statement
         """
         used_macros = []
@@ -1948,14 +1963,14 @@ class Cmd(cmd.Cmd):
         # Continue until all macros are resolved
         while True:
             # Make sure all input has been read and convert it to a Statement
-            statement = self._complete_statement(line)
+            statement = self._complete_statement(line, expand=expand)
 
             # Save the fully entered line if this is the first loop iteration
             if orig_line is None:
                 orig_line = statement.raw
 
             # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
-            if statement.command in self.macros.keys() and statement.command not in used_macros:
+            if expand and statement.command in self.macros.keys() and statement.command not in used_macros:
                 used_macros.append(statement.command)
                 line = self._resolve_macro(statement)
                 if line is None:
@@ -1976,8 +1991,7 @@ class Cmd(cmd.Cmd):
                                   suffix=statement.suffix,
                                   pipe_to=statement.pipe_to,
                                   output=statement.output,
-                                  output_to=statement.output_to,
-                                  )
+                                  output_to=statement.output_to)
         return statement
 
     def _resolve_macro(self, statement: Statement) -> Optional[str]:
@@ -2170,19 +2184,22 @@ class Cmd(cmd.Cmd):
         return target if callable(getattr(self, target, None)) else ''
 
     # noinspection PyMethodOverriding
-    def onecmd(self, statement: Union[Statement, str], *, add_to_history: bool = True) -> bool:
+    def onecmd(self, statement: Union[Statement, str], *,
+               expand: bool = True, add_to_history: bool = True) -> bool:
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes default() instead.
 
         :param statement: intended to be a Statement instance parsed command from the input stream, alternative
                           acceptance of a str is present only for backward compatibility with cmd
+        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add this command to history. Defaults to True.
         :return: a flag indicating whether the interpretation of commands should stop
         """
         # For backwards compatibility with cmd, allow a str to be passed in
         if not isinstance(statement, Statement):
-            statement = self._input_line_to_statement(statement)
+            statement = self._input_line_to_statement(statement, expand=expand)
 
         func = self.cmd_func(statement.command)
         if func:
@@ -2211,6 +2228,7 @@ class Cmd(cmd.Cmd):
             if 'shell' not in self.exclude_from_history:
                 self.history.append(statement)
 
+            # noinspection PyTypeChecker
             return self.do_shell(statement.command_and_args)
         else:
             err_msg = self.default_error.format(statement.command)
@@ -2486,7 +2504,7 @@ class Cmd(cmd.Cmd):
             # Call whatever subcommand function was selected
             func(self, args)
         else:
-            # No subcommand was provided, so call help
+            # noinspection PyTypeChecker
             self.do_help('alias')
 
     # -----  Macro subcommand functions -----
@@ -2500,8 +2518,8 @@ class Cmd(cmd.Cmd):
             self.perror("Invalid macro name: {}".format(errmsg))
             return
 
-        if args.name in self.get_all_commands():
-            self.perror("Macro cannot have the same name as a command")
+        if args.name in self.statement_parser.multiline_commands:
+            self.perror("Macro cannot have the same name as a multiline command")
             return
 
         if args.name in self.aliases:
@@ -2688,7 +2706,7 @@ class Cmd(cmd.Cmd):
             # Call whatever subcommand function was selected
             func(self, args)
         else:
-            # No subcommand was provided, so call help
+            # noinspection PyTypeChecker
             self.do_help('macro')
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
@@ -2737,7 +2755,8 @@ class Cmd(cmd.Cmd):
 
         return matches
 
-    help_parser = Cmd2ArgumentParser()
+    help_parser = Cmd2ArgumentParser(description="List available commands or provide "
+                                                 "detailed help for a specific command")
     help_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to retrieve help for",
                              completer_method=complete_help_command)
     help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="subcommand to retrieve help for",
@@ -2906,7 +2925,7 @@ class Cmd(cmd.Cmd):
                         command = ''
                 self.stdout.write("\n")
 
-    @with_argparser(Cmd2ArgumentParser())
+    @with_argparser(Cmd2ArgumentParser(description="List available shortcuts"))
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
         # Sort the shortcut tuples by name
@@ -2920,7 +2939,7 @@ class Cmd(cmd.Cmd):
         # Return True to stop the command loop
         return True
 
-    @with_argparser(Cmd2ArgumentParser())
+    @with_argparser(Cmd2ArgumentParser(description="Exit this application"))
     def do_quit(self, _: argparse.Namespace) -> bool:
         """Exit this application"""
         # Return True to stop the command loop
@@ -3060,7 +3079,7 @@ class Cmd(cmd.Cmd):
             if onchange_hook is not None:
                 onchange_hook(old=orig_value, new=new_value)  # pylint: disable=not-callable
 
-    shell_parser = Cmd2ArgumentParser()
+    shell_parser = Cmd2ArgumentParser(description="Execute a command as if at the OS prompt")
     shell_parser.add_argument('command', help='the command to run', completer_method=shell_cmd_complete)
     shell_parser.add_argument('command_args', nargs=argparse.REMAINDER, help='arguments to pass to command',
                               completer_method=path_complete)
@@ -3229,42 +3248,59 @@ class Cmd(cmd.Cmd):
     py_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to run")
     py_parser.add_argument('remainder', nargs=argparse.REMAINDER, help="remainder of command")
 
+    # This is a hidden flag for telling do_py to run a pyscript. It is intended only to be used by run_pyscript
+    # after it sets up sys.argv for the script being run. When this flag is present, it takes precedence over all
+    # other arguments. run_pyscript uses this method instead of "py run('file')" because file names with
+    # 2 or more consecutive spaces cause issues with our parser, which isn't meant to parse Python statements.
+    py_parser.add_argument('--pyscript', help=argparse.SUPPRESS)
+
     # Preserve quotes since we are passing these strings to Python
     @with_argparser(py_parser, preserve_quotes=True)
-    def do_py(self, args: argparse.Namespace) -> bool:
-        """Invoke Python command or shell"""
+    def do_py(self, args: argparse.Namespace) -> Optional[bool]:
+        """
+        Enter an interactive Python shell
+        :return: True if running of commands should stop
+        """
         from .py_bridge import PyBridge
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err)
-            return False
+            return
 
         py_bridge = PyBridge(self)
+        py_code_to_run = ''
+
+        # Handle case where we were called by run_pyscript
+        if args.pyscript:
+            args.pyscript = utils.strip_quotes(args.pyscript)
+
+            # Run the script - use repr formatting to escape things which
+            # need to be escaped to prevent issues on Windows
+            py_code_to_run = 'run({!r})'.format(args.pyscript)
+
+        elif args.command:
+            py_code_to_run = args.command
+            if args.remainder:
+                py_code_to_run += ' ' + ' '.join(args.remainder)
+
+            # Set cmd_echo to True so PyBridge statements like: py app('help')
+            # run at the command line will print their output.
+            py_bridge.cmd_echo = True
 
         try:
             self._in_py = True
 
-            # Support the run command even if called prior to invoking an interactive interpreter
             def py_run(filename: str):
                 """Run a Python script file in the interactive console.
-                :param filename: filename of *.py script file to run
+                :param filename: filename of script file to run
                 """
                 expanded_filename = os.path.expanduser(filename)
-
-                if not expanded_filename.endswith('.py'):
-                    self.pwarning("'{}' does not have a .py extension".format(expanded_filename))
-                    selection = self.select('Yes No', 'Continue to try to run it as a Python script? ')
-                    if selection != 'Yes':
-                        return
-
-                # cmd_echo defaults to False for scripts. The user can always toggle this value in their script.
-                py_bridge.cmd_echo = False
 
                 try:
                     with open(expanded_filename) as f:
                         interp.runcode(f.read())
                 except OSError as ex:
-                    self.pexcept("Error opening script file '{}': {}".format(expanded_filename, ex))
+                    self.pexcept("Error reading script file '{}': {}".format(expanded_filename, ex))
 
             def py_quit():
                 """Function callable from the interactive Python console to exit that environment"""
@@ -3285,24 +3321,16 @@ class Cmd(cmd.Cmd):
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
-            # Check if the user is running a Python statement on the command line
-            if args.command:
-                full_command = args.command
-                if args.remainder:
-                    full_command += ' ' + ' '.join(args.remainder)
-
-                # Set cmd_echo to True so PyBridge statements like: py app('help')
-                # run at the command line will print their output.
-                py_bridge.cmd_echo = True
-
+            # Check if we are running Python code
+            if py_code_to_run:
                 # noinspection PyBroadException
                 try:
-                    interp.runcode(full_command)
+                    interp.runcode(py_code_to_run)
                 except BaseException:
-                    # We don't care about any exception that happened in the interactive console
+                    # We don't care about any exception that happened in the Python code
                     pass
 
-            # If there are no args, then we will open an interactive Python shell
+            # Otherwise we will open an interactive Python shell
             else:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                 instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
@@ -3338,15 +3366,28 @@ class Cmd(cmd.Cmd):
 
         return py_bridge.stop
 
-    run_pyscript_parser = Cmd2ArgumentParser()
+    run_pyscript_parser = Cmd2ArgumentParser(description="Run a Python script file inside the console")
     run_pyscript_parser.add_argument('script_path', help='path to the script file', completer_method=path_complete)
     run_pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
                                      help='arguments to pass to script', completer_method=path_complete)
 
     @with_argparser(run_pyscript_parser)
-    def do_run_pyscript(self, args: argparse.Namespace) -> bool:
-        """Run a Python script file inside the console"""
-        script_path = os.path.expanduser(args.script_path)
+    def do_run_pyscript(self, args: argparse.Namespace) -> Optional[bool]:
+        """
+        Run a Python script file inside the console
+         :return: True if running of commands should stop
+        """
+        # Expand ~ before placing this path in sys.argv just as a shell would
+        args.script_path = os.path.expanduser(args.script_path)
+
+        # Add some protection against accidentally running a non-Python file. The happens when users
+        # mix up run_script and run_pyscript.
+        if not args.script_path.endswith('.py'):
+            self.pwarning("'{}' does not have a .py extension".format(args.script_path))
+            selection = self.select('Yes No', 'Continue to try to run it as a Python script? ')
+            if selection != 'Yes':
+                return
+
         py_return = False
 
         # Save current command line arguments
@@ -3354,11 +3395,10 @@ class Cmd(cmd.Cmd):
 
         try:
             # Overwrite sys.argv to allow the script to take command line arguments
-            sys.argv = [script_path] + args.script_arguments
+            sys.argv = [args.script_path] + args.script_arguments
 
-            # Run the script - use repr formatting to escape things which
-            # need to be escaped to prevent issues on Windows
-            py_return = self.do_py("run({!r})".format(script_path))
+            # noinspection PyTypeChecker
+            py_return = self.do_py('--pyscript {}'.format(utils.quote_string(args.script_path)))
 
         except KeyboardInterrupt:
             pass
@@ -3371,7 +3411,7 @@ class Cmd(cmd.Cmd):
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
-        @with_argparser(Cmd2ArgumentParser())
+        @with_argparser(Cmd2ArgumentParser(description="Enter an interactive IPython shell"))
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
             from .py_bridge import PyBridge
@@ -3513,8 +3553,14 @@ class Cmd(cmd.Cmd):
                     else:
                         fobj.write('{}\n'.format(command.raw))
             try:
-                self.do_edit(fname)
-                return self.do_run_script(fname)
+                # Handle potential edge case where the temp file needs to be quoted on the command line
+                quoted_fname = utils.quote_string(fname)
+
+                # noinspection PyTypeChecker
+                self.do_edit(quoted_fname)
+
+                # noinspection PyTypeChecker
+                self.do_run_script(quoted_fname)
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -3711,10 +3757,11 @@ class Cmd(cmd.Cmd):
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
 
-        command = utils.quote_string_if_needed(os.path.expanduser(self.editor))
+        command = utils.quote_string(os.path.expanduser(self.editor))
         if args.file_path:
-            command += " " + utils.quote_string_if_needed(os.path.expanduser(args.file_path))
+            command += " " + utils.quote_string(os.path.expanduser(args.file_path))
 
+        # noinspection PyTypeChecker
         self.do_shell(command)
 
     @property
@@ -3767,6 +3814,8 @@ class Cmd(cmd.Cmd):
             self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path))
             return
 
+        # Add some protection against accidentally running a Python file. The happens when users
+        # mix up run_script and run_pyscript.
         if expanded_path.endswith('.py'):
             self.pwarning("'{}' appears to be a Python file".format(expanded_path))
             selection = self.select('Yes No', 'Continue to try to run it as a text script? ')
@@ -3819,7 +3868,9 @@ class Cmd(cmd.Cmd):
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
-        return self.do_run_script(relative_path)
+
+        # noinspection PyTypeChecker
+        return self.do_run_script(utils.quote_string(relative_path))
 
     def _run_transcript_tests(self, transcript_paths: List[str]) -> None:
         """Runs transcript tests for provided file(s).
@@ -3858,6 +3909,7 @@ class Cmd(cmd.Cmd):
         sys.argv = [sys.argv[0]]  # the --test argument upsets unittest.main()
         testcase = TestMyAppCase()
         stream = utils.StdSim(sys.stderr)
+        # noinspection PyTypeChecker
         runner = unittest.TextTestRunner(stream=stream)
         start_time = time.time()
         test_results = runner.run(testcase)
@@ -3999,15 +4051,23 @@ class Cmd(cmd.Cmd):
             return
 
         help_func_name = HELP_FUNC_PREFIX + command
+        completer_func_name = COMPLETER_FUNC_PREFIX + command
 
-        # Restore the command and help functions to their original values
+        # Restore the command function to its original value
         dc = self.disabled_commands[command]
         setattr(self, self._cmd_func_name(command), dc.command_function)
 
+        # Restore the help function to its original value
         if dc.help_function is None:
             delattr(self, help_func_name)
         else:
             setattr(self, help_func_name, dc.help_function)
+
+        # Restore the completer function to its original value
+        if dc.completer_function is None:
+            delattr(self, completer_func_name)
+        else:
+            setattr(self, completer_func_name, dc.completer_function)
 
         # Remove the disabled command entry
         del self.disabled_commands[command]
@@ -4044,16 +4104,21 @@ class Cmd(cmd.Cmd):
             raise AttributeError("{} does not refer to a command".format(command))
 
         help_func_name = HELP_FUNC_PREFIX + command
+        completer_func_name = COMPLETER_FUNC_PREFIX + command
 
         # Add the disabled command record
         self.disabled_commands[command] = DisabledCommand(command_function=command_function,
-                                                          help_function=getattr(self, help_func_name, None))
+                                                          help_function=getattr(self, help_func_name, None),
+                                                          completer_function=getattr(self, completer_func_name, None))
 
         # Overwrite the command and help functions to print the message
         new_func = functools.partial(self._report_disabled_command_usage,
                                      message_to_print=message_to_print.replace(COMMAND_NAME, command))
         setattr(self, self._cmd_func_name(command), new_func)
         setattr(self, help_func_name, new_func)
+
+        # Set the completer to a function that returns a blank list
+        setattr(self, completer_func_name, lambda *args, **kwargs: [])
 
     def disable_category(self, category: str, message_to_print: str) -> None:
         """Disable an entire category of commands.

@@ -477,16 +477,21 @@ def test_history_edit(base_app, monkeypatch):
     # going to call it due to the mock
     base_app.editor = 'fooedit'
 
-    # Mock out the Popen call so we don't actually open an editor
-    m = mock.MagicMock(name='Popen')
-    monkeypatch.setattr("subprocess.Popen", m)
+    # Mock out the edit call so we don't actually open an editor
+    edit_mock = mock.MagicMock(name='do_edit')
+    monkeypatch.setattr("cmd2.Cmd.do_edit", edit_mock)
+
+    # Mock out the run_script call since the mocked edit won't produce a file
+    run_script_mock = mock.MagicMock(name='do_run_script')
+    monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
     # Run help command just so we have a command in history
     run_cmd(base_app, 'help')
     run_cmd(base_app, 'history -e 1')
 
-    # We have an editor, so should expect a Popen call
-    m.assert_called_once()
+    # Make sure both functions were called
+    edit_mock.assert_called_once()
+    run_script_mock.assert_called_once()
 
 def test_history_run_all_commands(base_app):
     # make sure we refuse to run all commands as a default
