@@ -3248,8 +3248,8 @@ class Cmd(cmd.Cmd):
 
     # This is a hidden flag for telling do_py to run a pyscript. It is intended only to be used by run_pyscript
     # after it sets up sys.argv for the script being run. When this flag is present, it takes precedence over all
-    # other arguments. run_pyscript uses this method instead of "py run('file')" because file names with spaces cause
-    # issues with our parser, which isn't meant to parse Python statements.
+    # other arguments. run_pyscript uses this method instead of "py run('file')" because file names with
+    # 2 or more consecutive spaces cause issues with our parser, which isn't meant to parse Python statements.
     py_parser.add_argument('--pyscript', help=argparse.SUPPRESS)
 
     # Preserve quotes since we are passing these strings to Python
@@ -3270,6 +3270,10 @@ class Cmd(cmd.Cmd):
 
         # Handle case where we were called by run_pyscript
         if args.pyscript:
+            args.pyscript = utils.strip_quotes(args.pyscript)
+
+            # Run the script - use repr formatting to escape things which
+            # need to be escaped to prevent issues on Windows
             py_code_to_run = 'run({!r})'.format(args.pyscript)
 
         elif args.command:
