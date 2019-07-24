@@ -3544,8 +3544,8 @@ class Cmd(cmd.Cmd):
                     else:
                         fobj.write('{}\n'.format(command.raw))
             try:
-                self.do_edit(fname)
-                return self.do_run_script(fname)
+                self.do_edit(utils.quote_string_if_needed(fname))
+                self.run_script(utils.quote_string_if_needed(fname))
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -3852,7 +3852,7 @@ class Cmd(cmd.Cmd):
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
-        return self.do_run_script(relative_path)
+        return self.do_run_script(utils.quote_string_if_needed(relative_path))
 
     def _run_transcript_tests(self, transcript_paths: List[str]) -> None:
         """Runs transcript tests for provided file(s).
