@@ -1988,8 +1988,7 @@ class Cmd(cmd.Cmd):
                                   suffix=statement.suffix,
                                   pipe_to=statement.pipe_to,
                                   output=statement.output,
-                                  output_to=statement.output_to,
-                                  )
+                                  output_to=statement.output_to)
         return statement
 
     def _resolve_macro(self, statement: Statement) -> Optional[str]:
@@ -2516,8 +2515,8 @@ class Cmd(cmd.Cmd):
             self.perror("Invalid macro name: {}".format(errmsg))
             return
 
-        if args.name in self.get_all_commands():
-            self.perror("Macro cannot have the same name as a command")
+        if args.name in self.statement_parser.multiline_commands:
+            self.perror("Macro cannot have the same name as a multiline command")
             return
 
         if args.name in self.aliases:

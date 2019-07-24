@@ -529,8 +529,7 @@ class StatementParser:
                               suffix=suffix,
                               pipe_to=pipe_to,
                               output=output,
-                              output_to=output_to,
-                              )
+                              output_to=output_to)
         return statement
 
     def parse_command_only(self, rawinput: str, *, expand: bool = True) -> Statement:
@@ -595,8 +594,7 @@ class StatementParser:
         statement = Statement(args,
                               raw=rawinput,
                               command=command,
-                              multiline_command=multiline_command,
-                              )
+                              multiline_command=multiline_command)
         return statement
 
     def get_command_arg_list(self, command_name: str, to_parse: Union[Statement, str],
