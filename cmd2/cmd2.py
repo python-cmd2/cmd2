@@ -1461,8 +1461,12 @@ class Cmd(cmd.Cmd):
                 text = text_to_remove + text
                 begidx = actual_begidx
 
-        # Check if a valid command was entered
-        if command in self.get_all_commands():
+        # Check if a macro was entered
+        if command in self.macros:
+            compfunc = self.path_complete
+
+        # Check if a command was entered
+        elif command in self.get_all_commands():
             # Get the completer function for this command
             compfunc = getattr(self, 'complete_' + command, None)
 
@@ -1478,11 +1482,7 @@ class Cmd(cmd.Cmd):
                 else:
                     compfunc = self.completedefault
 
-        # Check if a macro was entered
-        elif command in self.macros:
-            compfunc = self.path_complete
-
-        # A valid command was not entered
+        # Not a recognized macro or command
         else:
             # Check if this command should be run as a shell command
             if self.default_to_shell and command in utils.get_exes_in_path(command):
