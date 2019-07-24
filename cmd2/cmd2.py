@@ -3553,6 +3553,7 @@ class Cmd(cmd.Cmd):
                     else:
                         fobj.write('{}\n'.format(command.raw))
             try:
+                # Handle potential edge case where the temp file needs to be quoted on the command line
                 quoted_fname = utils.quote_string(fname)
 
                 # noinspection PyTypeChecker
