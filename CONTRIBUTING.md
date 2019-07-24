@@ -192,7 +192,7 @@ $ git push origin [name_of_your_new_branch]
 
 
 ### Setting up for cmd2 development
-For doing cmd2 development, it is recommended you create a virutal environment using Conda or Virtualenv and install the 
+For doing cmd2 development, it is recommended you create a virtual environment using Conda or Virtualenv and install the 
 package from the source.
 
 #### Create a new environment for cmd2 using Pipenv
@@ -234,7 +234,7 @@ pyenv versions
 # Install python version defined
 pyenv install 3.6.3
 ```
-With the Python version installed, you can set the virutalenv properly. 
+With the Python version installed, you can set the virtualenv properly. 
 
 ```sh
 $ cd ~/src/cmd2
