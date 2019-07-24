@@ -2752,7 +2752,8 @@ class Cmd(cmd.Cmd):
 
         return matches
 
-    help_parser = Cmd2ArgumentParser()
+    help_parser = Cmd2ArgumentParser(description="List available commands or provide "
+                                                 "detailed help for a specific command")
     help_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to retrieve help for",
                              completer_method=complete_help_command)
     help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="subcommand to retrieve help for",
@@ -2921,7 +2922,7 @@ class Cmd(cmd.Cmd):
                         command = ''
                 self.stdout.write("\n")
 
-    @with_argparser(Cmd2ArgumentParser())
+    @with_argparser(Cmd2ArgumentParser(description="List available shortcuts"))
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
         # Sort the shortcut tuples by name
@@ -2935,7 +2936,7 @@ class Cmd(cmd.Cmd):
         # Return True to stop the command loop
         return True
 
-    @with_argparser(Cmd2ArgumentParser())
+    @with_argparser(Cmd2ArgumentParser(description="Exit this application"))
     def do_quit(self, _: argparse.Namespace) -> bool:
         """Exit this application"""
         # Return True to stop the command loop
@@ -3075,7 +3076,7 @@ class Cmd(cmd.Cmd):
             if onchange_hook is not None:
                 onchange_hook(old=orig_value, new=new_value)  # pylint: disable=not-callable
 
-    shell_parser = Cmd2ArgumentParser()
+    shell_parser = Cmd2ArgumentParser(description="Execute a command as if at the OS prompt")
     shell_parser.add_argument('command', help='the command to run', completer_method=shell_cmd_complete)
     shell_parser.add_argument('command_args', nargs=argparse.REMAINDER, help='arguments to pass to command',
                               completer_method=path_complete)
@@ -3353,7 +3354,7 @@ class Cmd(cmd.Cmd):
 
         return py_bridge.stop
 
-    run_pyscript_parser = Cmd2ArgumentParser()
+    run_pyscript_parser = Cmd2ArgumentParser(description="Run a Python script file inside the console")
     run_pyscript_parser.add_argument('script_path', help='path to the script file', completer_method=path_complete)
     run_pyscript_parser.add_argument('script_arguments', nargs=argparse.REMAINDER,
                                      help='arguments to pass to script', completer_method=path_complete)
@@ -3386,7 +3387,7 @@ class Cmd(cmd.Cmd):
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
-        @with_argparser(Cmd2ArgumentParser())
+        @with_argparser(Cmd2ArgumentParser(description="Enter an interactive IPython shell"))
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
             from .py_bridge import PyBridge
