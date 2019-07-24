@@ -429,30 +429,29 @@ def test_relative_run_script(base_app, request):
 
 def test_relative_run_script_with_odd_file_names(base_app, monkeypatch):
     """Test file names with various patterns"""
-    # Mock out the do_run_script call to see what args are passed
+    # Mock out the do_run_script call to see what args are passed to it
     run_script_mock = mock.MagicMock(name='do_run_script')
     monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
     file_name = utils.quote_string('nothingweird.txt')
-    out, err = run_cmd(base_app, "run_script {}".format(file_name))
+    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
     run_script_mock.assert_called_once_with('"nothingweird.txt"')
     run_script_mock.reset_mock()
 
     file_name = utils.quote_string('has   spaces.txt')
-    out, err = run_cmd(base_app, "run_script {}".format(file_name))
+    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
     run_script_mock.assert_called_once_with('"has   spaces.txt"')
     run_script_mock.reset_mock()
 
     file_name = utils.quote_string('"is_double_quoted.txt"')
-    out, err = run_cmd(base_app, "run_script {}".format(file_name))
+    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
     run_script_mock.assert_called_once_with('\'"is_double_quoted.txt"\'')
     run_script_mock.reset_mock()
 
     file_name = utils.quote_string("'is_single_quoted.txt'")
-    out, err = run_cmd(base_app, "run_script {}".format(file_name))
+    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
     run_script_mock.assert_called_once_with('"\'is_single_quoted.txt\'"')
     run_script_mock.reset_mock()
-
 
 def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
@@ -685,7 +684,7 @@ def test_edit_file(base_app, request, monkeypatch):
 
 def test_edit_file_with_odd_file_names(base_app, monkeypatch):
     """Test editor and file names with various patterns"""
-    # Mock out the do_shell call to see what args are passed
+    # Mock out the do_shell call to see what args are passed to it
     shell_mock = mock.MagicMock(name='do_shell')
     monkeypatch.setattr("cmd2.Cmd.do_shell", shell_mock)
 
