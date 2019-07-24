@@ -11,15 +11,15 @@ class UnicodeApp(cmd2.Cmd):
 
     def __init__(self):
         super().__init__()
-        self.intro = 'Welcome to MyApp. Note the full Unicode support:  😇 💩'
+        self.intro = 'Welcome the Unicode example app. Note the full Unicode support:  😇 💩'
 
-    def do_𝛑print(self, arg):
+    def do_𝛑print(self, _):
         """This command prints 𝛑 to 5 decimal places."""
-        print("𝛑 = {0:.6}".format(math.pi))
+        self.poutput("𝛑 = {0:.6}".format(math.pi))
 
     def do_你好(self, arg):
-        """This comamnd says hello in Chinese (Mandarin)."""
-        print("你好 " + arg)
+        """This command says hello in Chinese (Mandarin)."""
+        self.poutput("你好 " + arg)
 
 
 if __name__ == '__main__':
