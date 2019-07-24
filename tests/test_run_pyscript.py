@@ -59,11 +59,11 @@ def test_run_pyscript_with_odd_file_names(base_app):
     """
     python_script = utils.quote_string('nothingweird.py')
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "No such file or directory: 'nothingweird.py'" in err[0]
+    assert "Error reading script file 'nothingweird.py'" in err[0]
 
     python_script = utils.quote_string('has   spaces.py')
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "No such file or directory: 'has   spaces.py'" in err[0]
+    assert "Error reading script file 'has   spaces.py'" in err[0]
 
     # For remaining tests, mock input to get us passed the warning about not ending in .py
     input_mock = mock.MagicMock(name='input', return_value='1')
@@ -71,11 +71,11 @@ def test_run_pyscript_with_odd_file_names(base_app):
 
     python_script = utils.quote_string('"is_double_quoted.py"')
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "No such file or directory: '\"is_double_quoted.py\"'" in err[1]
+    assert "Error reading script file '\"is_double_quoted.py\"'" in err[1]
 
     python_script = utils.quote_string("'is_single_quoted.py'")
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert 'No such file or directory: "\'is_single_quoted.py\'"' in err[1]
+    assert "Error reading script file ''is_single_quoted.py''" in err[1]
 
 def test_run_pyscript_with_exception(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
