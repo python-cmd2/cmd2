@@ -25,4 +25,3 @@ class UnicodeApp(cmd2.Cmd):
 if __name__ == '__main__':
     app = UnicodeApp()
     app.cmdloop()
-
