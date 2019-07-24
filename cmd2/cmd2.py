@@ -2226,6 +2226,7 @@ class Cmd(cmd.Cmd):
             if 'shell' not in self.exclude_from_history:
                 self.history.append(statement)
 
+            # noinspection PyTypeChecker
             return self.do_shell(statement.command_and_args)
         else:
             err_msg = self.default_error.format(statement.command)
@@ -2501,7 +2502,7 @@ class Cmd(cmd.Cmd):
             # Call whatever subcommand function was selected
             func(self, args)
         else:
-            # No subcommand was provided, so call help
+            # noinspection PyTypeChecker
             self.do_help('alias')
 
     # -----  Macro subcommand functions -----
@@ -2703,7 +2704,7 @@ class Cmd(cmd.Cmd):
             # Call whatever subcommand function was selected
             func(self, args)
         else:
-            # No subcommand was provided, so call help
+            # noinspection PyTypeChecker
             self.do_help('macro')
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
@@ -3389,6 +3390,8 @@ class Cmd(cmd.Cmd):
         try:
             # Overwrite sys.argv to allow the script to take command line arguments
             sys.argv = [args.script_path] + args.script_arguments
+
+            # noinspection PyTypeChecker
             py_return = self.do_py('--pyscript {}'.format(utils.quote_string_if_needed(args.script_path)))
 
         except KeyboardInterrupt:
@@ -3544,8 +3547,11 @@ class Cmd(cmd.Cmd):
                     else:
                         fobj.write('{}\n'.format(command.raw))
             try:
+                # noinspection PyTypeChecker
                 self.do_edit(utils.quote_string_if_needed(fname))
-                self.run_script(utils.quote_string_if_needed(fname))
+
+                # noinspection PyTypeChecker
+                self.do_run_script(utils.quote_string_if_needed(fname))
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -3746,6 +3752,7 @@ class Cmd(cmd.Cmd):
         if args.file_path:
             command += " " + utils.quote_string_if_needed(os.path.expanduser(args.file_path))
 
+        # noinspection PyTypeChecker
         self.do_shell(command)
 
     @property
@@ -3852,6 +3859,8 @@ class Cmd(cmd.Cmd):
         file_path = args.file_path
         # NOTE: Relative path is an absolute path, it is just relative to the current script directory
         relative_path = os.path.join(self._current_script_dir or '', file_path)
+
+        # noinspection PyTypeChecker
         return self.do_run_script(utils.quote_string_if_needed(relative_path))
 
     def _run_transcript_tests(self, transcript_paths: List[str]) -> None:
