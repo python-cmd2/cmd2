@@ -99,6 +99,9 @@ COMMAND_FUNC_PREFIX = 'do_'
 # All help functions start with this
 HELP_FUNC_PREFIX = 'help_'
 
+# All command completer functions start with this
+COMPLETER_FUNC_PREFIX = 'complete_'
+
 # Sorting keys for strings
 ALPHABETICAL_SORT_KEY = utils.norm_fold
 NATURAL_SORT_KEY = utils.natural_keys
@@ -318,7 +321,7 @@ class EmptyStatement(Exception):
 
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
-DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function'])
+DisabledCommand = namedtuple('DisabledCommand', ['command_function', 'help_function', 'completer_function'])
 
 
 class Cmd(cmd.Cmd):
@@ -1468,7 +1471,7 @@ class Cmd(cmd.Cmd):
         # Check if a command was entered
         elif command in self.get_all_commands():
             # Get the completer function for this command
-            compfunc = getattr(self, 'complete_' + command, None)
+            compfunc = getattr(self, COMPLETER_FUNC_PREFIX + command, None)
 
             if compfunc is None:
                 # There's no completer function, next see if the command uses argparse
@@ -4045,15 +4048,23 @@ class Cmd(cmd.Cmd):
             return
 
         help_func_name = HELP_FUNC_PREFIX + command
+        completer_func_name = COMPLETER_FUNC_PREFIX + command
 
-        # Restore the command and help functions to their original values
+        # Restore the command function to its original value
         dc = self.disabled_commands[command]
         setattr(self, self._cmd_func_name(command), dc.command_function)
 
+        # Restore the help function to its original value
         if dc.help_function is None:
             delattr(self, help_func_name)
         else:
             setattr(self, help_func_name, dc.help_function)
+
+        # Restore the completer function to its original value
+        if dc.completer_function is None:
+            delattr(self, completer_func_name)
+        else:
+            setattr(self, completer_func_name, dc.completer_function)
 
         # Remove the disabled command entry
         del self.disabled_commands[command]
@@ -4090,16 +4101,21 @@ class Cmd(cmd.Cmd):
             raise AttributeError("{} does not refer to a command".format(command))
 
         help_func_name = HELP_FUNC_PREFIX + command
+        completer_func_name = COMPLETER_FUNC_PREFIX + command
 
         # Add the disabled command record
         self.disabled_commands[command] = DisabledCommand(command_function=command_function,
-                                                          help_function=getattr(self, help_func_name, None))
+                                                          help_function=getattr(self, help_func_name, None),
+                                                          completer_function=getattr(self, completer_func_name, None))
 
         # Overwrite the command and help functions to print the message
         new_func = functools.partial(self._report_disabled_command_usage,
                                      message_to_print=message_to_print.replace(COMMAND_NAME, command))
         setattr(self, self._cmd_func_name(command), new_func)
         setattr(self, help_func_name, new_func)
+
+        # Set the completer to a function that returns a blank list
+        setattr(self, completer_func_name, lambda *args, **kwargs: [])
 
     def disable_category(self, category: str, message_to_print: str) -> None:
         """Disable an entire category of commands.

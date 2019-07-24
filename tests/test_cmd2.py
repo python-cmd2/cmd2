@@ -5,11 +5,11 @@ Cmd2 unit/functional testing
 """
 import argparse
 import builtins
-from code import InteractiveConsole
 import io
 import os
 import sys
 import tempfile
+from code import InteractiveConsole
 
 import pytest
 
@@ -21,7 +21,8 @@ except ImportError:
 
 import cmd2
 from cmd2 import ansi, clipboard, constants, utils
-from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG
+from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY
+from .conftest import SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, complete_tester
 
 def CreateOutsimApp():
     c = cmd2.Cmd()
@@ -2100,16 +2101,19 @@ class DisableCommandsApp(cmd2.Cmd):
         super().__init__(*args, **kwargs)
 
     @cmd2.with_category(category_name)
-    def do_has_help_func(self, arg):
-        self.poutput("The real has_help_func")
+    def do_has_helper_funcs(self, arg):
+        self.poutput("The real has_helper_funcs")
 
-    def help_has_help_func(self):
-        self.poutput('Help for has_help_func')
+    def help_has_helper_funcs(self):
+        self.poutput('Help for has_helper_funcs')
+
+    def complete_has_helper_funcs(self, *args):
+        return ['result']
 
     @cmd2.with_category(category_name)
-    def do_has_no_help_func(self, arg):
-        """Help for has_no_help_func"""
-        self.poutput("The real has_no_help_func")
+    def do_has_no_helper_funcs(self, arg):
+        """Help for has_no_helper_funcs"""
+        self.poutput("The real has_no_helper_funcs")
 
 
 @pytest.fixture
@@ -2119,51 +2123,92 @@ def disable_commands_app():
 
 
 def test_disable_and_enable_category(disable_commands_app):
+    ##########################################################################
     # Disable the category
+    ##########################################################################
     message_to_print = 'These commands are currently disabled'
     disable_commands_app.disable_category(disable_commands_app.category_name, message_to_print)
 
     # Make sure all the commands and help on those commands displays the message
-    out, err = run_cmd(disable_commands_app, 'has_help_func')
+    out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'help has_help_func')
+    out, err = run_cmd(disable_commands_app, 'help has_helper_funcs')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'has_no_help_func')
+    out, err = run_cmd(disable_commands_app, 'has_no_helper_funcs')
     assert err[0].startswith(message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'help has_no_help_func')
+    out, err = run_cmd(disable_commands_app, 'help has_no_helper_funcs')
     assert err[0].startswith(message_to_print)
 
+    # Make sure neither function completes
+    text = ''
+    line = 'has_helper_funcs'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
+    assert first_match is None
+
+    text = ''
+    line = 'has_no_helper_funcs'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
+    assert first_match is None
+
+    # Make sure both commands are invisible
     visible_commands = disable_commands_app.get_visible_commands()
-    assert 'has_help_func' not in visible_commands
-    assert 'has_no_help_func' not in visible_commands
+    assert 'has_helper_funcs' not in visible_commands
+    assert 'has_no_helper_funcs' not in visible_commands
 
+    ##########################################################################
     # Enable the category
+    ##########################################################################
     disable_commands_app.enable_category(disable_commands_app.category_name)
 
     # Make sure all the commands and help on those commands are restored
-    out, err = run_cmd(disable_commands_app, 'has_help_func')
-    assert out[0] == "The real has_help_func"
+    out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
+    assert out[0] == "The real has_helper_funcs"
 
-    out, err = run_cmd(disable_commands_app, 'help has_help_func')
-    assert out[0] == "Help for has_help_func"
+    out, err = run_cmd(disable_commands_app, 'help has_helper_funcs')
+    assert out[0] == "Help for has_helper_funcs"
 
-    out, err = run_cmd(disable_commands_app, 'has_no_help_func')
-    assert out[0] == "The real has_no_help_func"
+    out, err = run_cmd(disable_commands_app, 'has_no_helper_funcs')
+    assert out[0] == "The real has_no_helper_funcs"
 
-    out, err = run_cmd(disable_commands_app, 'help has_no_help_func')
-    assert out[0] == "Help for has_no_help_func"
+    out, err = run_cmd(disable_commands_app, 'help has_no_helper_funcs')
+    assert out[0] == "Help for has_no_helper_funcs"
 
+    # has_helper_funcs should complete now
+    text = ''
+    line = 'has_helper_funcs'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
+    assert first_match is not None and disable_commands_app.completion_matches == ['result ']
+
+    # has_no_helper_funcs had no completer originally, so there should be no results
+    text = ''
+    line = 'has_no_helper_funcs'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, disable_commands_app)
+    assert first_match is None
+
+    # Make sure both commands are visible
     visible_commands = disable_commands_app.get_visible_commands()
-    assert 'has_help_func' in visible_commands
-    assert 'has_no_help_func' in visible_commands
+    assert 'has_helper_funcs' in visible_commands
+    assert 'has_no_helper_funcs' in visible_commands
 
 def test_enable_enabled_command(disable_commands_app):
     # Test enabling a command that is not disabled
     saved_len = len(disable_commands_app.disabled_commands)
-    disable_commands_app.enable_command('has_help_func')
+    disable_commands_app.enable_command('has_helper_funcs')
 
     # The number of disabled_commands should not have changed
     assert saved_len == len(disable_commands_app.disabled_commands)
@@ -2175,7 +2220,7 @@ def test_disable_fake_command(disable_commands_app):
 def test_disable_command_twice(disable_commands_app):
     saved_len = len(disable_commands_app.disabled_commands)
     message_to_print = 'These commands are currently disabled'
-    disable_commands_app.disable_command('has_help_func', message_to_print)
+    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
     # The length of disabled_commands should have increased one
     new_len = len(disable_commands_app.disabled_commands)
@@ -2183,24 +2228,24 @@ def test_disable_command_twice(disable_commands_app):
     saved_len = new_len
 
     # Disable again and the length should not change
-    disable_commands_app.disable_command('has_help_func', message_to_print)
+    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
     new_len = len(disable_commands_app.disabled_commands)
     assert saved_len == new_len
 
 def test_disabled_command_not_in_history(disable_commands_app):
     message_to_print = 'These commands are currently disabled'
-    disable_commands_app.disable_command('has_help_func', message_to_print)
+    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
     saved_len = len(disable_commands_app.history)
-    run_cmd(disable_commands_app, 'has_help_func')
+    run_cmd(disable_commands_app, 'has_helper_funcs')
     assert saved_len == len(disable_commands_app.history)
 
 def test_disabled_message_command_name(disable_commands_app):
     message_to_print = '{} is currently disabled'.format(cmd2.cmd2.COMMAND_NAME)
-    disable_commands_app.disable_command('has_help_func', message_to_print)
+    disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
-    out, err = run_cmd(disable_commands_app, 'has_help_func')
-    assert err[0].startswith('has_help_func is currently disabled')
+    out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
+    assert err[0].startswith('has_helper_funcs is currently disabled')
 
 
 def test_startup_script(request):
