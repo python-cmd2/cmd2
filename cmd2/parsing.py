@@ -359,15 +359,14 @@ class StatementParser:
                 errmsg = ''
         return valid, errmsg
 
-    def tokenize(self, line: str, expand: bool = True) -> List[str]:
+    def tokenize(self, line: str, *, expand: bool = True) -> List[str]:
         """
         Lex a string into a list of tokens. Shortcuts and aliases are expanded and comments are removed
 
         :param line: the command line being lexed
         :param expand: If True, then aliases and shortcuts will be expanded.
                        Set this to False if no expansion should occur because the command name is already known.
-                       Otherwise the command could be expanded if it matched an alias name. This is for cases where
-                       a do_* method was called manually (e.g do_help('alias').
+                       Otherwise the command could be expanded if it matched an alias name.
         :return: A list of tokens
         :raises ValueError if there are unclosed quotation marks.
         """
@@ -387,7 +386,7 @@ class StatementParser:
         tokens = self._split_on_punctuation(tokens)
         return tokens
 
-    def parse(self, line: str, expand: bool = True) -> Statement:
+    def parse(self, line: str, *, expand: bool = True) -> Statement:
         """
         Tokenize the input and parse it into a Statement object, stripping
         comments, expanding aliases and shortcuts, and extracting output
@@ -396,8 +395,7 @@ class StatementParser:
         :param line: the command line being parsed
         :param expand: If True, then aliases and shortcuts will be expanded.
                        Set this to False if no expansion should occur because the command name is already known.
-                       Otherwise the command could be expanded if it matched an alias name. This is for cases where
-                       a do_* method was called manually (e.g do_help('alias').
+                       Otherwise the command could be expanded if it matched an alias name.
         :return: A parsed Statement
         :raises ValueError if there are unclosed quotation marks
         """
@@ -414,7 +412,7 @@ class StatementParser:
         arg_list = []
 
         # lex the input into a list of tokens
-        tokens = self.tokenize(line, expand)
+        tokens = self.tokenize(line, expand=expand)
 
         # of the valid terminators, find the first one to occur in the input
         terminator_pos = len(tokens) + 1
@@ -537,7 +535,7 @@ class StatementParser:
                               )
         return statement
 
-    def parse_command_only(self, rawinput: str) -> Statement:
+    def parse_command_only(self, rawinput: str, *, expand: bool = True) -> Statement:
         """Partially parse input into a Statement object.
 
         The command is identified, and shortcuts and aliases are expanded.
@@ -562,7 +560,8 @@ class StatementParser:
         whitespace.
         """
         # expand shortcuts and aliases
-        line = self._expand(rawinput)
+        if expand:
+            line = self._expand(rawinput)
 
         command = ''
         args = ''
