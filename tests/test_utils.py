@@ -99,7 +99,7 @@ def test_quote_string_if_needed_yes():
     your_str = '"foo" bar'
     assert cu.quote_string_if_needed(your_str) == "'" + your_str + "'"
 
-def test_quot_string_if_needed_no():
+def test_quote_string_if_needed_no():
     my_str = "HelloWorld"
     assert cu.quote_string_if_needed(my_str) == my_str
     your_str = "'Hello World'"

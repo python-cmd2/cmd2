@@ -3398,7 +3398,7 @@ class Cmd(cmd.Cmd):
             sys.argv = [args.script_path] + args.script_arguments
 
             # noinspection PyTypeChecker
-            py_return = self.do_py('--pyscript {}'.format(utils.quote_string_if_needed(args.script_path)))
+            py_return = self.do_py('--pyscript {}'.format(utils.quote_string(args.script_path)))
 
         except KeyboardInterrupt:
             pass
@@ -3554,10 +3554,10 @@ class Cmd(cmd.Cmd):
                         fobj.write('{}\n'.format(command.raw))
             try:
                 # noinspection PyTypeChecker
-                self.do_edit(utils.quote_string_if_needed(fname))
+                self.do_edit(utils.quote_string(fname))
 
                 # noinspection PyTypeChecker
-                self.do_run_script(utils.quote_string_if_needed(fname))
+                self.do_run_script(utils.quote_string(fname))
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -3754,9 +3754,9 @@ class Cmd(cmd.Cmd):
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
 
-        command = utils.quote_string_if_needed(os.path.expanduser(self.editor))
+        command = utils.quote_string(os.path.expanduser(self.editor))
         if args.file_path:
-            command += " " + utils.quote_string_if_needed(os.path.expanduser(args.file_path))
+            command += " " + utils.quote_string(os.path.expanduser(args.file_path))
 
         # noinspection PyTypeChecker
         self.do_shell(command)
@@ -3867,7 +3867,7 @@ class Cmd(cmd.Cmd):
         relative_path = os.path.join(self._current_script_dir or '', file_path)
 
         # noinspection PyTypeChecker
-        return self.do_run_script(utils.quote_string_if_needed(relative_path))
+        return self.do_run_script(utils.quote_string(relative_path))
 
     def _run_transcript_tests(self, transcript_paths: List[str]) -> None:
         """Runs transcript tests for provided file(s).
