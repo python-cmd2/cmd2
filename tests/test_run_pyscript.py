@@ -6,7 +6,7 @@ Unit/functional testing for run_pytest in cmd2
 import builtins
 import os
 
-from cmd2 import plugin
+from cmd2 import plugin, utils
 from .conftest import run_cmd
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
@@ -51,6 +51,27 @@ def test_run_pyscript_with_non_python_file(base_app, request):
     filename = os.path.join(test_dir, 'scripts', 'help.txt')
     out, err = run_cmd(base_app, 'run_pyscript {}'.format(filename))
     assert "does not have a .py extension" in err[0]
+
+def test_run_pyscript_with_odd_file_names(base_app):
+    """
+    Pass in file names with various patterns. Since these files don't exist, we will rely
+    on the error text to make sure the file names were processed correctly.
+    """
+    python_script = utils.quote_string('nothingweird.py')
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert "'nothingweird.py'" in err[0]
+
+    python_script = utils.quote_string('has   spaces.py')
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert "'has   spaces.py'" in err[0]
+
+    python_script = utils.quote_string('"is_double_quoted.py"')
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert "'\"is_double_quoted.py\"'" in err[0]
+
+    python_script = utils.quote_string("'is_single_quoted.py'")
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert "''is_single_quoted.py''" in err[0]
 
 def test_run_pyscript_with_exception(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)

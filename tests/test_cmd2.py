@@ -656,6 +656,36 @@ def test_edit_file(base_app, request, monkeypatch):
     # We think we have an editor, so should expect a Popen call
     m.assert_called_once()
 
+def test_edit_file_with_odd_file_names(base_app, monkeypatch):
+    """Test editor and file names with various patterns"""
+    # Mock out the do_shell call to see what args are passed
+    shell_mock = mock.MagicMock(name='do_shell')
+    monkeypatch.setattr("cmd2.Cmd.do_shell", shell_mock)
+
+    base_app.editor = 'fooedit'
+    python_script = utils.quote_string('nothingweird.py')
+    out, err = run_cmd(base_app, "edit {}".format(python_script))
+    shell_mock.assert_called_once_with('"fooedit" "nothingweird.py"')
+    shell_mock.reset_mock()
+
+    base_app.editor = 'foo edit'
+    python_script = utils.quote_string('has   spaces.py')
+    out, err = run_cmd(base_app, "edit {}".format(python_script))
+    shell_mock.assert_called_once_with('"foo edit" "has   spaces.py"')
+    shell_mock.reset_mock()
+
+    base_app.editor = '"fooedit"'
+    python_script = utils.quote_string('"is_double_quoted.py"')
+    out, err = run_cmd(base_app, "edit {}".format(python_script))
+    shell_mock.assert_called_once_with('\'"fooedit"\' \'"is_double_quoted.py"\'')
+    shell_mock.reset_mock()
+
+    base_app.editor = "'fooedit'"
+    python_script = utils.quote_string("'is_single_quoted.py'")
+    out, err = run_cmd(base_app, "edit {}".format(python_script))
+    shell_mock.assert_called_once_with('"\'fooedit\'" "\'is_single_quoted.py\'"')
+    shell_mock.reset_mock()
+
 def test_edit_file_with_spaces(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
@@ -986,7 +1016,7 @@ class SelectApp(cmd2.Cmd):
     def do_procrastinate(self, arg):
         """Waste time in your manner of choice."""
         # Pass in a list of tuples for selections
-        leisure_activity = self.select([('Netflix and chill', 'Netflix'), ('Porn', 'WebSurfing')],
+        leisure_activity = self.select([('Netflix and chill', 'Netflix'), ('YouTube', 'WebSurfing')],
                                        'How would you like to procrastinate? ')
         result = 'Have fun procrasinating with {}!\n'.format(leisure_activity)
         self.stdout.write(result)
@@ -1098,7 +1128,7 @@ def test_select_list_of_tuples(select_app):
    1. Netflix
    2. WebSurfing
 Have fun procrasinating with {}!
-""".format('Porn'))
+""".format('YouTube'))
 
     # Make sure our mock was called with the expected arguments
     m.assert_called_once_with('How would you like to procrastinate? ')

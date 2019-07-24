@@ -3553,11 +3553,13 @@ class Cmd(cmd.Cmd):
                     else:
                         fobj.write('{}\n'.format(command.raw))
             try:
-                # noinspection PyTypeChecker
-                self.do_edit(utils.quote_string(fname))
+                quoted_fname = utils.quote_string(fname)
 
                 # noinspection PyTypeChecker
-                self.do_run_script(utils.quote_string(fname))
+                self.do_edit(quoted_fname)
+
+                # noinspection PyTypeChecker
+                self.do_run_script(quoted_fname)
             finally:
                 os.remove(fname)
         elif args.output_file:
