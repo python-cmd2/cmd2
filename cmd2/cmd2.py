@@ -1732,7 +1732,7 @@ class Cmd(cmd.Cmd):
 
         :param line: command line to run
         :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command line should not be altered.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add this command to history. Defaults to True.
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
@@ -1866,7 +1866,7 @@ class Cmd(cmd.Cmd):
 
         :param cmds: commands to run
         :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command line should not be altered.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add these commands to history. Defaults to True.
         :return: True if running of commands should stop
         """
@@ -1891,8 +1891,8 @@ class Cmd(cmd.Cmd):
         backwards compatibility with the standard library version of cmd.
 
         :param line: the line being parsed
-        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command line should not be altered.
+        :param expand: If True, then aliases and shortcuts will be expanded.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :return: the completed Statement
         """
         while True:
@@ -1951,7 +1951,7 @@ class Cmd(cmd.Cmd):
 
         :param line: the line being parsed
         :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command line should not be altered.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :return: parsed command line as a Statement
         """
         used_macros = []
@@ -2191,7 +2191,7 @@ class Cmd(cmd.Cmd):
         :param statement: intended to be a Statement instance parsed command from the input stream, alternative
                           acceptance of a str is present only for backward compatibility with cmd
         :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command line should not be altered.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add this command to history. Defaults to True.
         :return: a flag indicating whether the interpretation of commands should stop
         """

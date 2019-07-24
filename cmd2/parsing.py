@@ -365,8 +365,7 @@ class StatementParser:
 
         :param line: the command line being lexed
         :param expand: If True, then aliases and shortcuts will be expanded.
-                       Set this to False if no expansion should occur because the command name is already known.
-                       Otherwise the command could be expanded if it matched an alias name.
+                       Set this to False if the command token should not be altered. Defaults to True.
         :return: A list of tokens
         :raises ValueError if there are unclosed quotation marks.
         """
@@ -394,9 +393,8 @@ class StatementParser:
 
         :param line: the command line being parsed
         :param expand: If True, then aliases and shortcuts will be expanded.
-                       Set this to False if no expansion should occur because the command name is already known.
-                       Otherwise the command could be expanded if it matched an alias name.
-        :return: A parsed Statement
+                       Set this to False if the command token should not be altered. Defaults to True.
+        :return: the created Statement
         :raises ValueError if there are unclosed quotation marks
         """
 
@@ -558,7 +556,14 @@ class StatementParser:
         Different from parse(), this method does not remove redundant whitespace
         within args. However, it does ensure args has no leading or trailing
         whitespace.
+
+        :param rawinput: the command line as entered by the user
+        :param expand: If True, then aliases and shortcuts will be expanded.
+                       Set this to False if the command token should not be altered. Defaults to True.
+        :return: the created Statement
         """
+        line = rawinput
+
         # expand shortcuts and aliases
         if expand:
             line = self._expand(rawinput)
