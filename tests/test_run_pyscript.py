@@ -32,7 +32,7 @@ def test_run_pyscript(base_app, request):
 
 def test_run_pyscript_recursive_not_allowed(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'scripts', 'recursive.py')
+    python_script = os.path.join(test_dir, 'pyscript', 'recursive.py')
     expected = 'Recursively entering interactive Python consoles is not allowed.'
 
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
@@ -41,7 +41,7 @@ def test_run_pyscript_recursive_not_allowed(base_app, request):
 def test_run_pyscript_with_nonexist_file(base_app):
     python_script = 'does_not_exist.py'
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "Error opening script file" in err[0]
+    assert "Error reading script file" in err[0]
 
 def test_run_pyscript_with_non_python_file(base_app, request):
     m = mock.MagicMock(name='input', return_value='2')
@@ -54,7 +54,7 @@ def test_run_pyscript_with_non_python_file(base_app, request):
 
 def test_run_pyscript_with_exception(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'scripts', 'raises_exception.py')
+    python_script = os.path.join(test_dir, 'pyscript', 'raises_exception.py')
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert err[0].startswith('Traceback')
     assert "TypeError: unsupported operand type(s) for +: 'int' and 'str'" in err[-1]
@@ -91,7 +91,7 @@ def test_run_pyscript_stop(base_app, request):
     # Verify onecmd_plus_hooks() returns True if any commands in a pyscript return True for stop
     test_dir = os.path.dirname(request.module.__file__)
 
-    # help.py doesn't run any commands that returns True for stop
+    # help.py doesn't run any commands that return True for stop
     python_script = os.path.join(test_dir, 'pyscript', 'help.py')
     stop = base_app.onecmd_plus_hooks('run_pyscript {}'.format(python_script))
     assert not stop
@@ -100,3 +100,11 @@ def test_run_pyscript_stop(base_app, request):
     python_script = os.path.join(test_dir, 'pyscript', 'stop.py')
     stop = base_app.onecmd_plus_hooks('run_pyscript {}'.format(python_script))
     assert stop
+
+def test_run_pyscript_run(base_app, request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', 'run.py')
+    expected = 'I have been run'
+
+    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
+    assert expected in out

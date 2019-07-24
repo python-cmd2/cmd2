@@ -236,6 +236,7 @@ def test_base_shell(base_app, monkeypatch):
     assert out == []
     assert m.called
 
+
 def test_base_py(base_app):
     # Create a variable and make sure we can see it
     out, err = run_cmd(base_app, 'py qqq=3')
@@ -261,17 +262,6 @@ def test_base_py(base_app):
 
     out, err = run_cmd(base_app, 'py print(self)')
     assert "NameError: name 'self' is not defined" in err
-
-
-@pytest.mark.skipif(sys.platform == 'win32',
-                    reason="Unit test doesn't work on win32, but feature does")
-def test_py_run_script(base_app, request):
-    test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'script.py')
-    expected = 'This is a python script running ...'
-
-    out, err = run_cmd(base_app, "py run('{}')".format(python_script))
-    assert expected in out
 
 
 def test_base_error(base_app):

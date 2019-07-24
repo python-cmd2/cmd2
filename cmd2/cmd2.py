@@ -3245,42 +3245,55 @@ class Cmd(cmd.Cmd):
     py_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to run")
     py_parser.add_argument('remainder', nargs=argparse.REMAINDER, help="remainder of command")
 
+    # This is a hidden flag for telling do_py to run a pyscript. It is intended only to be used by run_pyscript
+    # after it sets up sys.argv for the script being run. When this flag is present, it takes precedence over all
+    # other arguments. run_pyscript uses this method instead of "py run('file')" because file names with spaces cause
+    # issues with our parser, which isn't meant to parse Python statements.
+    py_parser.add_argument('--pyscript', help=argparse.SUPPRESS)
+
     # Preserve quotes since we are passing these strings to Python
     @with_argparser(py_parser, preserve_quotes=True)
-    def do_py(self, args: argparse.Namespace) -> bool:
-        """Invoke Python command or shell"""
+    def do_py(self, args: argparse.Namespace) -> Optional[bool]:
+        """
+        Enter an interactive Python shell
+        :return: True if running of commands should stop
+        """
         from .py_bridge import PyBridge
         if self._in_py:
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err)
-            return False
+            return
 
         py_bridge = PyBridge(self)
+        py_code_to_run = ''
+
+        # Handle case where we were called by run_pyscript
+        if args.pyscript:
+            py_code_to_run = 'run({!r})'.format(args.pyscript)
+
+        elif args.command:
+            py_code_to_run = args.command
+            if args.remainder:
+                py_code_to_run += ' ' + ' '.join(args.remainder)
+
+            # Set cmd_echo to True so PyBridge statements like: py app('help')
+            # run at the command line will print their output.
+            py_bridge.cmd_echo = True
 
         try:
             self._in_py = True
 
-            # Support the run command even if called prior to invoking an interactive interpreter
             def py_run(filename: str):
                 """Run a Python script file in the interactive console.
-                :param filename: filename of *.py script file to run
+                :param filename: filename of script file to run
                 """
                 expanded_filename = os.path.expanduser(filename)
-
-                if not expanded_filename.endswith('.py'):
-                    self.pwarning("'{}' does not have a .py extension".format(expanded_filename))
-                    selection = self.select('Yes No', 'Continue to try to run it as a Python script? ')
-                    if selection != 'Yes':
-                        return
-
-                # cmd_echo defaults to False for scripts. The user can always toggle this value in their script.
-                py_bridge.cmd_echo = False
 
                 try:
                     with open(expanded_filename) as f:
                         interp.runcode(f.read())
                 except OSError as ex:
-                    self.pexcept("Error opening script file '{}': {}".format(expanded_filename, ex))
+                    self.pexcept("Error reading script file '{}': {}".format(expanded_filename, ex))
 
             def py_quit():
                 """Function callable from the interactive Python console to exit that environment"""
@@ -3301,24 +3314,16 @@ class Cmd(cmd.Cmd):
             interp = InteractiveConsole(locals=localvars)
             interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
-            # Check if the user is running a Python statement on the command line
-            if args.command:
-                full_command = args.command
-                if args.remainder:
-                    full_command += ' ' + ' '.join(args.remainder)
-
-                # Set cmd_echo to True so PyBridge statements like: py app('help')
-                # run at the command line will print their output.
-                py_bridge.cmd_echo = True
-
+            # Check if we are running Python code
+            if py_code_to_run:
                 # noinspection PyBroadException
                 try:
-                    interp.runcode(full_command)
+                    interp.runcode(py_code_to_run)
                 except BaseException:
-                    # We don't care about any exception that happened in the interactive console
+                    # We don't care about any exception that happened in the Python code
                     pass
 
-            # If there are no args, then we will open an interactive Python shell
+            # Otherwise we will open an interactive Python shell
             else:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                 instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
@@ -3360,9 +3365,22 @@ class Cmd(cmd.Cmd):
                                      help='arguments to pass to script', completer_method=path_complete)
 
     @with_argparser(run_pyscript_parser)
-    def do_run_pyscript(self, args: argparse.Namespace) -> bool:
-        """Run a Python script file inside the console"""
-        script_path = os.path.expanduser(args.script_path)
+    def do_run_pyscript(self, args: argparse.Namespace) -> Optional[bool]:
+        """
+        Run a Python script file inside the console
+         :return: True if running of commands should stop
+        """
+        # Expand ~ before placing this path in sys.argv just as a shell would
+        args.script_path = os.path.expanduser(args.script_path)
+
+        # Add some protection against accidentally running a non-Python file. The happens when users
+        # mix up run_script and run_pyscript.
+        if not args.script_path.endswith('.py'):
+            self.pwarning("'{}' does not have a .py extension".format(args.script_path))
+            selection = self.select('Yes No', 'Continue to try to run it as a Python script? ')
+            if selection != 'Yes':
+                return
+
         py_return = False
 
         # Save current command line arguments
@@ -3370,11 +3388,8 @@ class Cmd(cmd.Cmd):
 
         try:
             # Overwrite sys.argv to allow the script to take command line arguments
-            sys.argv = [script_path] + args.script_arguments
-
-            # Run the script - use repr formatting to escape things which
-            # need to be escaped to prevent issues on Windows
-            py_return = self.do_py("run({!r})".format(script_path))
+            sys.argv = [args.script_path] + args.script_arguments
+            py_return = self.do_py('--pyscript {}'.format(utils.quote_string_if_needed(args.script_path)))
 
         except KeyboardInterrupt:
             pass
@@ -3783,6 +3798,8 @@ class Cmd(cmd.Cmd):
             self.perror("'{}' is not an ASCII or UTF-8 encoded text file".format(expanded_path))
             return
 
+        # Add some protection against accidentally running a Python file. The happens when users
+        # mix up run_script and run_pyscript.
         if expanded_path.endswith('.py'):
             self.pwarning("'{}' appears to be a Python file".format(expanded_path))
             selection = self.select('Yes No', 'Continue to try to run it as a text script? ')
