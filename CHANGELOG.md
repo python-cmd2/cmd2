@@ -1,4 +1,4 @@
-## 0.9.15 (July TBD, 2019)
+## 0.9.15 (July 24, 2019)
 * Bug Fixes
     * Fixed exception caused by tab completing after an invalid subcommand was entered
     * Fixed bug where `history -v` was sometimes showing raw and expanded commands when they weren't different
