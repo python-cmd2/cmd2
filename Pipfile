@@ -18,6 +18,7 @@ gnureadline = {version = "*",sys_platform = "== 'darwin'"}
 invoke = "*"
 ipython = "*"
 mock = {version = "*",markers = "python_version < '3.6'"}
+plumbum = "*"
 pyreadline = {version = "*",sys_platform = "== 'win32'"}
 pytest = "*"
 pytest-cov = "*"
@@ -25,4 +26,5 @@ pytest-mock = "*"
 sphinx = "*"
 sphinx-autobuild = "*"
 sphinx-rtd-theme = "*"
+tableformatter="*"
 twine = ">=1.11"
