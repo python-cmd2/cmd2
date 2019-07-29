@@ -638,6 +638,27 @@ def test_history_file_is_directory(capsys):
         _, err = capsys.readouterr()
         assert 'is a directory' in err
 
+def test_history_can_create_directory(mocker):
+    # Mock out atexit.register so the persistent file doesn't written when this function
+    # exists because we will be deleting the directory it needs to go to.
+    mock_register = mocker.patch('atexit.register')
+
+    # Create a temp path for us to use and let it get deleted
+    with tempfile.TemporaryDirectory() as test_dir:
+        pass
+    assert not os.path.isdir(test_dir)
+
+    # Add some subdirectories for the complete history file directory
+    hist_file_dir = os.path.join(test_dir, 'subdir1', 'subdir2')
+    hist_file = os.path.join(hist_file_dir, 'hist_file')
+
+    # Make sure cmd2 creates the history file directory
+    cmd2.Cmd(persistent_history_file=hist_file)
+    assert os.path.isdir(hist_file_dir)
+
+    # Cleanup
+    os.rmdir(hist_file_dir)
+
 def test_history_cannot_create_directory(mocker, capsys):
     mock_open = mocker.patch('os.makedirs')
     mock_open.side_effect = OSError
