@@ -638,6 +638,15 @@ def test_history_file_is_directory(capsys):
         _, err = capsys.readouterr()
         assert 'is a directory' in err
 
+def test_history_cannot_create_directory(mocker, capsys):
+    mock_open = mocker.patch('os.makedirs')
+    mock_open.side_effect = OSError
+
+    hist_file_path = os.path.join('fake_dir', 'file')
+    cmd2.Cmd(persistent_history_file=hist_file_path)
+    _, err = capsys.readouterr()
+    assert 'Error creating persistent history file directory' in err
+
 def test_history_file_permission_error(mocker, capsys):
     mock_open = mocker.patch('builtins.open')
     mock_open.side_effect = PermissionError
@@ -645,7 +654,7 @@ def test_history_file_permission_error(mocker, capsys):
     cmd2.Cmd(persistent_history_file='/tmp/doesntmatter')
     out, err = capsys.readouterr()
     assert not out
-    assert 'can not read' in err
+    assert 'Can not read' in err
 
 def test_history_file_conversion_no_truncate_on_init(hist_file, capsys):
     # make sure we don't truncate the plain text history file on init
@@ -720,4 +729,4 @@ def test_persist_history_permission_error(hist_file, mocker, capsys):
     app._persist_history()
     out, err = capsys.readouterr()
     assert not out
-    assert 'can not write' in err
+    assert 'Can not write' in err
