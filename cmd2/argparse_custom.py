@@ -346,13 +346,17 @@ def _add_argument_wrapper(self, *args,
     new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
     # Verify consistent use of arguments
-    choice_params = [new_arg.choices, choices_function, choices_method, completer_function, completer_method]
-    num_set = len(choice_params) - choice_params.count(None)
+    choices_params = [new_arg.choices, choices_function, choices_method, completer_function, completer_method]
+    num_params_set = len(choices_params) - choices_params.count(None)
 
-    if num_set > 1:
-        err_msg = ("Only one of the following may be used in an argparser argument at a time:\n"
+    if num_params_set > 1:
+        err_msg = ("Only one of the following parameters may be used at a time:\n"
                    "choices, choices_function, choices_method, completer_function, completer_method")
         raise (ValueError(err_msg))
+    elif num_params_set > 0 and new_arg.nargs == 0:
+        err_msg = ("None of the following parameters can be used for this type of action:\n"
+                   "choices, choices_function, choices_method, completer_function, completer_method")
+        raise (TypeError(err_msg))
 
     # Set the custom attributes
     setattr(new_arg, ATTR_NARGS_RANGE, nargs_range)
