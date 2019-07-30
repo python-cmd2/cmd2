@@ -3603,14 +3603,24 @@ class Cmd(cmd.Cmd):
 
         hist_file = os.path.abspath(os.path.expanduser(hist_file))
 
-        # first we try and unpickle the history file
-        history = History()
         # on Windows, trying to open a directory throws a permission
         # error, not a `IsADirectoryError`. So we'll check it ourselves.
         if os.path.isdir(hist_file):
-            msg = "persistent history file '{}' is a directory"
+            msg = "Persistent history file '{}' is a directory"
             self.perror(msg.format(hist_file))
             return
+
+        # Create the directory for the history file if it doesn't already exist
+        hist_file_dir = os.path.dirname(hist_file)
+        try:
+            os.makedirs(hist_file_dir, exist_ok=True)
+        except OSError as ex:
+            msg = "Error creating persistent history file directory '{}': {}".format(hist_file_dir, ex)
+            self.pexcept(msg)
+            return
+
+        # first we try and unpickle the history file
+        history = History()
 
         try:
             with open(hist_file, 'rb') as fobj:
@@ -3619,7 +3629,7 @@ class Cmd(cmd.Cmd):
             # If any non-operating system error occurs when attempting to unpickle, just use an empty history
             pass
         except OSError as ex:
-            msg = "can not read persistent history file '{}': {}"
+            msg = "Can not read persistent history file '{}': {}"
             self.pexcept(msg.format(hist_file, ex))
             return
 
@@ -3655,7 +3665,7 @@ class Cmd(cmd.Cmd):
             with open(self.persistent_history_file, 'wb') as fobj:
                 pickle.dump(self.history, fobj)
         except OSError as ex:
-            msg = "can not write persistent history file '{}': {}"
+            msg = "Can not write persistent history file '{}': {}"
             self.pexcept(msg.format(self.persistent_history_file, ex))
 
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
