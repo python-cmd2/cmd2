@@ -1,7 +1,8 @@
 ## 0.9.16 (TBD, 2019)
 * Enhancements
+    * Raise `TypeError` if trying to set choices/completions on argparse action that accepts no arguments
     * Create directory for the persistent history file if it does not already exist
-    
+
 ## 0.9.15 (July 24, 2019)
 * Bug Fixes
     * Fixed exception caused by tab completing after an invalid subcommand was entered

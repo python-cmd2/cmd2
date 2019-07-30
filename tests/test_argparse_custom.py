@@ -39,7 +39,7 @@ def fake_func():
     pass
 
 
-@pytest.mark.parametrize('args, is_valid', [
+@pytest.mark.parametrize('kwargs, is_valid', [
     ({'choices': []}, True),
     ({'choices_function': fake_func}, True),
     ({'choices_method': fake_func}, True),
@@ -50,14 +50,27 @@ def fake_func():
     ({'choices_method': fake_func, 'completer_function': fake_func}, False),
     ({'choices_method': fake_func, 'completer_method': fake_func}, False),
 ])
-def test_apcustom_invalid_args(args, is_valid):
+def test_apcustom_choices_params_count(kwargs, is_valid):
     parser = Cmd2ArgumentParser(prog='test')
     try:
-        parser.add_argument('name', **args)
+        parser.add_argument('name', **kwargs)
         assert is_valid
     except ValueError as ex:
         assert not is_valid
-        assert 'Only one of the following may be used' in str(ex)
+        assert 'Only one of the following parameters' in str(ex)
+
+
+@pytest.mark.parametrize('kwargs', [
+    ({'choices_function': fake_func}),
+    ({'choices_method': fake_func}),
+    ({'completer_function': fake_func}),
+    ({'completer_method': fake_func})
+])
+def test_apcustom_no_choices_when_nargs_is_0(kwargs):
+    with pytest.raises(TypeError) as excinfo:
+        parser = Cmd2ArgumentParser(prog='test')
+        parser.add_argument('name', action='store_true', **kwargs)
+    assert 'None of the following parameters can be used' in str(excinfo.value)
 
 
 def test_apcustom_usage():
