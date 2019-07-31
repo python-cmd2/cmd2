@@ -208,12 +208,11 @@ Instructions for implementing each feature follow.
 Tutorials
 ---------
 
-A few tutorials on using cmd2 exist:
-
-* Florida PyCon 2017 talk: [slides](https://docs.google.com/presentation/d/1LRmpfBt3V-pYQfgQHdczf16F3hcXmhK83tl77R6IJtE), [video](https://www.youtube.com/watch?v=6m0RdpITaeY)
-* PyCon 2010 talk by Catherine Devlin, the original author: [video](http://pyvideo.org/pycon-us-2010/pycon-2010--easy-command-line-applications-with-c.html)
-* A nice brief step-by-step tutorial: [blog](https://kushaldas.in/posts/developing-command-line-interpreters-using-python-cmd2.html)
-
+* PyOhio 2019 presentation: 
+    * [slides](https://github.com/python-cmd2/talks/blob/master/PyOhio_2019/cmd2-PyOhio_2019.pdf)
+    * [example code](https://github.com/python-cmd2/talks/tree/master/PyOhio_2019/examples)
+    * video (coming soon)
+    
 
 Example Application
 -------------------
