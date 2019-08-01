@@ -139,12 +139,26 @@ class AlerterApp(cmd2.Cmd):
         return alert_str
 
     def _generate_colored_prompt(self) -> str:
-        """Randomly generates a colored prompt
+        """
+        Randomly generates a colored prompt
         :return: the new prompt
         """
-        fg_color = random.choice(list(ansi.FG_COLORS.keys()))
-        bg_color = random.choice(list(ansi.BG_COLORS.keys()))
-        return ansi.style(self.visible_prompt.rstrip(), fg=fg_color, bg=bg_color) + ' '
+        rand_num = random.randint(1, 20)
+
+        status_color = 'reset'
+
+        if rand_num == 1:
+            status_color = 'bright_red'
+        elif rand_num == 2:
+            status_color = 'bright_yellow'
+        elif rand_num == 3:
+            status_color = 'cyan'
+        elif rand_num == 4:
+            status_color = 'bright_green'
+        elif rand_num == 5:
+            status_color = 'bright_blue'
+
+        return ansi.style(self.visible_prompt, fg=status_color)
 
     def _alerter_thread_func(self) -> None:
         """ Prints alerts and updates the prompt any time the prompt is showing """
