@@ -185,7 +185,7 @@ class Statement(str):
         """Combine command and args with a space separating them.
 
         Quoted arguments remain quoted. Output redirection and piping are
-        excluded, as are any multiline command terminators.
+        excluded, as are any command terminators.
         """
         if self.command and self.args:
             rtn = '{} {}'.format(self.command, self.args)
@@ -258,7 +258,7 @@ class StatementParser:
         * shortcuts
 
         :param allow_redirection: should redirection and pipes be allowed?
-        :param terminators: iterable containing strings which should terminate multiline commands
+        :param terminators: iterable containing strings which should terminate commands
         :param multiline_commands: iterable containing the names of commands that accept multiline input
         :param aliases: dictionary containing aliases
         :param shortcuts: dictionary containing shortcuts
