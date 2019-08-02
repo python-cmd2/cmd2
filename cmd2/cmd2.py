@@ -355,7 +355,12 @@ class Cmd(cmd.Cmd):
         :param transcript_files: allow running transcript tests when allow_cli_args is False
         :param allow_redirection: should output redirection and pipes be allowed
         :param multiline_commands: list of commands allowed to accept multi-line input
-        :param shortcuts: dictionary containing shortcuts for commands
+        :param terminators: list of characters that terminate a command. These are mainly intended for terminating
+                            multiline commands, but will also terminate single-line commands. If not supplied, then
+                            defaults to semicolon. If your app only contains single-line commands and you want
+                            terminators to be treated as literals by the parser, then set this to an empty list.
+        :param shortcuts: dictionary containing shortcuts for commands. If not supplied, then defaults to
+                          constants.DEFAULT_SHORTCUTS.
         """
         # If use_ipython is False, make sure the do_ipy() method doesn't exit
         if not use_ipython:
@@ -2451,8 +2456,8 @@ class Cmd(cmd.Cmd):
     alias_create_description = "Create or overwrite an alias"
 
     alias_create_epilog = ("Notes:\n"
-                           "  If you want to use redirection, pipes, or terminators like ';' in the value\n"
-                           "  of the alias, then quote them.\n"
+                           "  If you want to use redirection, pipes, or terminators in the value of the\n"
+                           "  alias, then quote them.\n"
                            "\n"
                            "  Since aliases are resolved during parsing, tab completion will function as\n"
                            "  it would for the actual command the alias resolves to.\n"
@@ -2657,8 +2662,8 @@ class Cmd(cmd.Cmd):
                            "\n"
                            "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
                            "\n"
-                           "  If you want to use redirection, pipes, or terminators like ';' in the value\n"
-                           "  of the macro, then quote them.\n"
+                           "  If you want to use redirection, pipes, or terminators in the value of the\n"
+                           "  macro, then quote them.\n"
                            "\n"
                            "    macro create show_results print_results -type {1} \"|\" less\n"
                            "\n"
