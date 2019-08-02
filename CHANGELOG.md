@@ -1,4 +1,7 @@
 ## 0.9.16 (TBD, 2019)
+* Bug Fixes
+    * Fixed inconsistent parsing/tab completion behavior based on the value of `allow_redirection`. This flag is
+    only meant to be a security setting that prevents redirection of stdout and should not alter parsing logic.
 * Enhancements
     * Raise `TypeError` if trying to set choices/completions on argparse action that accepts no arguments
     * Create directory for the persistent history file if it does not already exist

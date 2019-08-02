@@ -353,7 +353,8 @@ class Cmd(cmd.Cmd):
                                commands to be run or, if -t is specified, transcript files to run.
                                This should be set to False if your application parses its own arguments.
         :param transcript_files: allow running transcript tests when allow_cli_args is False
-        :param allow_redirection: should output redirection and pipes be allowed
+        :param allow_redirection: should output redirection and pipes be allowed. this is only a security setting
+                                  and does not alter parsing behavior.
         :param multiline_commands: list of commands allowed to accept multi-line input
         :param terminators: list of characters that terminate a command. These are mainly intended for terminating
                             multiline commands, but will also terminate single-line commands. If not supplied, then
@@ -376,11 +377,14 @@ class Cmd(cmd.Cmd):
         # Call super class constructor
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
-        # Attributes which should NOT be dynamically settable at runtime
+        # Attributes which should NOT be dynamically settable via the set command at runtime
+        # To prevent a user from altering these with the py/ipy commands, remove locals_in_py from the
+        # settable dictionary during your applications's __init__ method.
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
+        self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
 
-        # Attributes which ARE dynamically settable at runtime
+        # Attributes which ARE dynamically settable via the set command at runtime
         self.continuation_prompt = '> '
         self.debug = False
         self.echo = False
@@ -440,8 +444,7 @@ class Cmd(cmd.Cmd):
         # True if running inside a Python script or interactive console, False otherwise
         self._in_py = False
 
-        self.statement_parser = StatementParser(allow_redirection=allow_redirection,
-                                                terminators=terminators,
+        self.statement_parser = StatementParser(terminators=terminators,
                                                 multiline_commands=multiline_commands,
                                                 shortcuts=shortcuts)
 
@@ -615,16 +618,6 @@ class Cmd(cmd.Cmd):
     def aliases(self) -> Dict[str, str]:
         """Read-only property to access the aliases stored in the StatementParser."""
         return self.statement_parser.aliases
-
-    @property
-    def allow_redirection(self) -> bool:
-        """Getter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
-        return self.statement_parser.allow_redirection
-
-    @allow_redirection.setter
-    def allow_redirection(self, value: bool) -> None:
-        """Setter for the allow_redirection property that determines whether or not redirection of stdout is allowed."""
-        self.statement_parser.allow_redirection = value
 
     def poutput(self, msg: Any, *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
@@ -831,61 +824,56 @@ class Cmd(cmd.Cmd):
                     # Return empty lists since this means the line is malformed.
                     return [], []
 
-        if self.allow_redirection:
+        # We need to treat redirection characters (|, <, >) as word breaks when they are in unquoted strings.
+        # Go through each token and further split them on these characters. Each run of redirect characters
+        # is treated as a single token.
+        raw_tokens = []
 
-            # Since redirection is enabled, we need to treat redirection characters (|, <, >)
-            # as word breaks when they are in unquoted strings. Go through each token
-            # and further split them on these characters. Each run of redirect characters
-            # is treated as a single token.
-            raw_tokens = []
+        for cur_initial_token in initial_tokens:
 
-            for cur_initial_token in initial_tokens:
+            # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
+            if len(cur_initial_token) <= 1 or cur_initial_token[0] in constants.QUOTES:
+                raw_tokens.append(cur_initial_token)
+                continue
 
-                # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
-                if len(cur_initial_token) <= 1 or cur_initial_token[0] in constants.QUOTES:
-                    raw_tokens.append(cur_initial_token)
-                    continue
+            # Iterate over each character in this token
+            cur_index = 0
+            cur_char = cur_initial_token[cur_index]
 
-                # Iterate over each character in this token
-                cur_index = 0
-                cur_char = cur_initial_token[cur_index]
+            # Keep track of the token we are building
+            cur_raw_token = ''
 
-                # Keep track of the token we are building
+            while True:
+                if cur_char not in constants.REDIRECTION_CHARS:
+
+                    # Keep appending to cur_raw_token until we hit a redirect char
+                    while cur_char not in constants.REDIRECTION_CHARS:
+                        cur_raw_token += cur_char
+                        cur_index += 1
+                        if cur_index < len(cur_initial_token):
+                            cur_char = cur_initial_token[cur_index]
+                        else:
+                            break
+
+                else:
+                    redirect_char = cur_char
+
+                    # Keep appending to cur_raw_token until we hit something other than redirect_char
+                    while cur_char == redirect_char:
+                        cur_raw_token += cur_char
+                        cur_index += 1
+                        if cur_index < len(cur_initial_token):
+                            cur_char = cur_initial_token[cur_index]
+                        else:
+                            break
+
+                # Save the current token
+                raw_tokens.append(cur_raw_token)
                 cur_raw_token = ''
 
-                while True:
-                    if cur_char not in constants.REDIRECTION_CHARS:
-
-                        # Keep appending to cur_raw_token until we hit a redirect char
-                        while cur_char not in constants.REDIRECTION_CHARS:
-                            cur_raw_token += cur_char
-                            cur_index += 1
-                            if cur_index < len(cur_initial_token):
-                                cur_char = cur_initial_token[cur_index]
-                            else:
-                                break
-
-                    else:
-                        redirect_char = cur_char
-
-                        # Keep appending to cur_raw_token until we hit something other than redirect_char
-                        while cur_char == redirect_char:
-                            cur_raw_token += cur_char
-                            cur_index += 1
-                            if cur_index < len(cur_initial_token):
-                                cur_char = cur_initial_token[cur_index]
-                            else:
-                                break
-
-                    # Save the current token
-                    raw_tokens.append(cur_raw_token)
-                    cur_raw_token = ''
-
-                    # Check if we've viewed all characters
-                    if cur_index >= len(cur_initial_token):
-                        break
-        else:
-            raw_tokens = initial_tokens
+                # Check if we've viewed all characters
+                if cur_index >= len(cur_initial_token):
+                    break
 
         # Save the unquoted tokens
         tokens = [utils.strip_quotes(cur_token) for cur_token in raw_tokens]
@@ -1228,72 +1216,70 @@ class Cmd(cmd.Cmd):
                          this will be called if we aren't completing for redirection
         :return: a list of possible tab completions
         """
-        if self.allow_redirection:
+        # Get all tokens through the one being completed. We want the raw tokens
+        # so we can tell if redirection strings are quoted and ignore them.
+        _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
+        if not raw_tokens:
+            return []
 
-            # Get all tokens through the one being completed. We want the raw tokens
-            # so we can tell if redirection strings are quoted and ignore them.
-            _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
-            if not raw_tokens:
-                return []
+        # Must at least have the command
+        if len(raw_tokens) > 1:
 
-            # Must at least have the command
-            if len(raw_tokens) > 1:
+            # True when command line contains any redirection tokens
+            has_redirection = False
 
-                # True when command line contains any redirection tokens
-                has_redirection = False
+            # Keep track of state while examining tokens
+            in_pipe = False
+            in_file_redir = False
+            do_shell_completion = False
+            do_path_completion = False
+            prior_token = None
 
-                # Keep track of state while examining tokens
-                in_pipe = False
-                in_file_redir = False
-                do_shell_completion = False
-                do_path_completion = False
-                prior_token = None
+            for cur_token in raw_tokens:
+                # Process redirection tokens
+                if cur_token in constants.REDIRECTION_TOKENS:
+                    has_redirection = True
 
-                for cur_token in raw_tokens:
-                    # Process redirection tokens
-                    if cur_token in constants.REDIRECTION_TOKENS:
-                        has_redirection = True
-
-                        # Check if we are at a pipe
-                        if cur_token == constants.REDIRECTION_PIPE:
-                            # Do not complete bad syntax (e.g cmd | |)
-                            if prior_token == constants.REDIRECTION_PIPE:
-                                return []
-
-                            in_pipe = True
-                            in_file_redir = False
-
-                        # Otherwise this is a file redirection token
-                        else:
-                            if prior_token in constants.REDIRECTION_TOKENS or in_file_redir:
-                                # Do not complete bad syntax (e.g cmd | >) (e.g cmd > blah >)
-                                return []
-
-                            in_pipe = False
-                            in_file_redir = True
-
-                    # Not a redirection token
-                    else:
-                        do_shell_completion = False
-                        do_path_completion = False
-
+                    # Check if we are at a pipe
+                    if cur_token == constants.REDIRECTION_PIPE:
+                        # Do not complete bad syntax (e.g cmd | |)
                         if prior_token == constants.REDIRECTION_PIPE:
-                            do_shell_completion = True
-                        elif in_pipe or prior_token in (constants.REDIRECTION_OUTPUT, constants.REDIRECTION_APPEND):
-                            do_path_completion = True
+                            return []
 
-                    prior_token = cur_token
+                        in_pipe = True
+                        in_file_redir = False
 
-                if do_shell_completion:
-                    return self.shell_cmd_complete(text, line, begidx, endidx)
+                    # Otherwise this is a file redirection token
+                    else:
+                        if prior_token in constants.REDIRECTION_TOKENS or in_file_redir:
+                            # Do not complete bad syntax (e.g cmd | >) (e.g cmd > blah >)
+                            return []
 
-                elif do_path_completion:
-                    return self.path_complete(text, line, begidx, endidx)
+                        in_pipe = False
+                        in_file_redir = True
 
-                # If there were redirection strings anywhere on the command line, then we
-                # are no longer tab completing for the current command
-                elif has_redirection:
-                    return []
+                # Not a redirection token
+                else:
+                    do_shell_completion = False
+                    do_path_completion = False
+
+                    if prior_token == constants.REDIRECTION_PIPE:
+                        do_shell_completion = True
+                    elif in_pipe or prior_token in (constants.REDIRECTION_OUTPUT, constants.REDIRECTION_APPEND):
+                        do_path_completion = True
+
+                prior_token = cur_token
+
+            if do_shell_completion:
+                return self.shell_cmd_complete(text, line, begidx, endidx)
+
+            elif do_path_completion:
+                return self.path_complete(text, line, begidx, endidx)
+
+            # If there were redirection strings anywhere on the command line, then we
+            # are no longer tab completing for the current command
+            elif has_redirection:
+                return []
 
         # Call the command's completer function
         return compfunc(text, line, begidx, endidx)
@@ -2313,12 +2299,10 @@ class Cmd(cmd.Cmd):
             readline_settings.completer = readline.get_completer()
             readline.set_completer(self.complete)
 
-            # Break words on whitespace and quotes when tab completing
-            completer_delims = " \t\n" + ''.join(constants.QUOTES)
-
-            if self.allow_redirection:
-                # If redirection is allowed, then break words on those characters too
-                completer_delims += ''.join(constants.REDIRECTION_CHARS)
+            # Break words on whitespace, quotes, and redirectors when tab completing
+            completer_delims = " \t\n"
+            completer_delims += ''.join(constants.QUOTES)
+            completer_delims += ''.join(constants.REDIRECTION_CHARS)
 
             readline_settings.delims = readline.get_completer_delims()
             readline.set_completer_delims(completer_delims)

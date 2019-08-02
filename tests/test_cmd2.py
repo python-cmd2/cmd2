@@ -558,7 +558,7 @@ def test_feedback_to_output_false(base_app):
 
 def test_disallow_redirection(base_app):
     # Set allow_redirection to False
-    base_app.statement_parser.allow_redirection = False
+    base_app.allow_redirection = False
 
     filename = 'test_allow_redirect.txt'
 

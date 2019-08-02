@@ -245,7 +245,6 @@ class StatementParser:
     the expansion.
     """
     def __init__(self,
-                 allow_redirection: bool = True,
                  terminators: Optional[Iterable[str]] = None,
                  multiline_commands: Optional[Iterable[str]] = None,
                  aliases: Optional[Dict[str, str]] = None,
@@ -257,13 +256,11 @@ class StatementParser:
         * multiline commands
         * shortcuts
 
-        :param allow_redirection: should redirection and pipes be allowed?
         :param terminators: iterable containing strings which should terminate commands
         :param multiline_commands: iterable containing the names of commands that accept multiline input
         :param aliases: dictionary containing aliases
         :param shortcuts: dictionary containing shortcuts
         """
-        self.allow_redirection = allow_redirection
         if terminators is None:
             self.terminators = (constants.MULTILINE_TERMINATOR,)
         else:
@@ -690,8 +687,7 @@ class StatementParser:
         """
         punctuation = []
         punctuation.extend(self.terminators)
-        if self.allow_redirection:
-            punctuation.extend(constants.REDIRECTION_CHARS)
+        punctuation.extend(constants.REDIRECTION_CHARS)
 
         punctuated_tokens = []
 
