@@ -824,56 +824,8 @@ class Cmd(cmd.Cmd):
                     # Return empty lists since this means the line is malformed.
                     return [], []
 
-        # We need to treat redirection characters (|, <, >) as word breaks when they are in unquoted strings.
-        # Go through each token and further split them on these characters. Each run of redirect characters
-        # is treated as a single token.
-        raw_tokens = []
-
-        for cur_initial_token in initial_tokens:
-
-            # Save tokens up to 1 character in length or quoted tokens. No need to parse these.
-            if len(cur_initial_token) <= 1 or cur_initial_token[0] in constants.QUOTES:
-                raw_tokens.append(cur_initial_token)
-                continue
-
-            # Iterate over each character in this token
-            cur_index = 0
-            cur_char = cur_initial_token[cur_index]
-
-            # Keep track of the token we are building
-            cur_raw_token = ''
-
-            while True:
-                if cur_char not in constants.REDIRECTION_CHARS:
-
-                    # Keep appending to cur_raw_token until we hit a redirect char
-                    while cur_char not in constants.REDIRECTION_CHARS:
-                        cur_raw_token += cur_char
-                        cur_index += 1
-                        if cur_index < len(cur_initial_token):
-                            cur_char = cur_initial_token[cur_index]
-                        else:
-                            break
-
-                else:
-                    redirect_char = cur_char
-
-                    # Keep appending to cur_raw_token until we hit something other than redirect_char
-                    while cur_char == redirect_char:
-                        cur_raw_token += cur_char
-                        cur_index += 1
-                        if cur_index < len(cur_initial_token):
-                            cur_char = cur_initial_token[cur_index]
-                        else:
-                            break
-
-                # Save the current token
-                raw_tokens.append(cur_raw_token)
-                cur_raw_token = ''
-
-                # Check if we've viewed all characters
-                if cur_index >= len(cur_initial_token):
-                    break
+        # Further split tokens on punctuation characters
+        raw_tokens = self.statement_parser.split_on_punctuation(initial_tokens)
 
         # Save the unquoted tokens
         tokens = [utils.strip_quotes(cur_token) for cur_token in raw_tokens]
@@ -2299,10 +2251,11 @@ class Cmd(cmd.Cmd):
             readline_settings.completer = readline.get_completer()
             readline.set_completer(self.complete)
 
-            # Break words on whitespace, quotes, and redirectors when tab completing
+            # Set the readline word delimiters for completion
             completer_delims = " \t\n"
             completer_delims += ''.join(constants.QUOTES)
             completer_delims += ''.join(constants.REDIRECTION_CHARS)
+            completer_delims += ''.join(self.statement_parser.terminators)
 
             readline_settings.delims = readline.get_completer_delims()
             readline.set_completer_delims(completer_delims)
