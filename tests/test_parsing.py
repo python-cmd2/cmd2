@@ -13,7 +13,6 @@ from cmd2.parsing import StatementParser, shlex_split
 @pytest.fixture
 def parser():
     parser = StatementParser(
-        allow_redirection=True,
         terminators=[';', '&'],
         multiline_commands=['multiline'],
         aliases={'helpalias': 'help',

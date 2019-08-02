@@ -268,7 +268,6 @@ def histitem():
 def parser():
     from cmd2.parsing import StatementParser
     parser = StatementParser(
-        allow_redirection=True,
         terminators=[';', '&'],
         multiline_commands=['multiline'],
         aliases={'helpalias': 'help',
