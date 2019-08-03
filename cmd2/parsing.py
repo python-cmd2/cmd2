@@ -379,7 +379,7 @@ class StatementParser:
         tokens = shlex_split(line)
 
         # custom lexing
-        tokens = self._split_on_punctuation(tokens)
+        tokens = self.split_on_punctuation(tokens)
         return tokens
 
     def parse(self, line: str, *, expand: bool = True) -> Statement:
@@ -675,7 +675,7 @@ class StatementParser:
 
         return command, args
 
-    def _split_on_punctuation(self, tokens: List[str]) -> List[str]:
+    def split_on_punctuation(self, tokens: List[str]) -> List[str]:
         """Further splits tokens from a command line using punctuation characters
 
         Punctuation characters are treated as word breaks when they are in

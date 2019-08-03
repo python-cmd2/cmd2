@@ -689,26 +689,27 @@ def test_tokens_for_completion_unclosed_quote(cmd2_app):
     assert expected_tokens == tokens
     assert expected_raw_tokens == raw_tokens
 
-def test_tokens_for_completion_redirect(cmd2_app):
-    text = '>>file'
-    line = 'command | < {}'.format(text)
+def test_tokens_for_completion_punctuation(cmd2_app):
+    """Test that redirectors and terminators are word delimiters"""
+    text = 'file'
+    line = 'command | < ;>>{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    expected_tokens = ['command', '|', '<', '>>', 'file']
-    expected_raw_tokens = ['command', '|', '<', '>>', 'file']
+    expected_tokens = ['command', '|', '<', ';', '>>', 'file']
+    expected_raw_tokens = ['command', '|', '<', ';', '>>', 'file']
 
     tokens, raw_tokens = cmd2_app.tokens_for_completion(line, begidx, endidx)
     assert expected_tokens == tokens
     assert expected_raw_tokens == raw_tokens
 
-def test_tokens_for_completion_quoted_redirect(cmd2_app):
+def test_tokens_for_completion_quoted_punctuation(cmd2_app):
+    """Test that quoted punctuation characters are not word delimiters"""
     text = '>file'
     line = 'command "{}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    cmd2_app.statement_parser.redirection = True
     expected_tokens = ['command', '>file']
     expected_raw_tokens = ['command', '">file']
 
