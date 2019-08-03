@@ -209,10 +209,10 @@ Tutorials
 ---------
 
 * PyOhio 2019 presentation: 
+    * [video](https://www.youtube.com/watch?v=pebeWrTqIIw)
     * [slides](https://github.com/python-cmd2/talks/blob/master/PyOhio_2019/cmd2-PyOhio_2019.pdf)
     * [example code](https://github.com/python-cmd2/talks/tree/master/PyOhio_2019/examples)
-    * video (coming soon)
-    
+
 
 Example Application
 -------------------
