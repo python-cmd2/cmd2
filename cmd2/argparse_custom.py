@@ -94,6 +94,14 @@ Tab Completion:
     as dynamic. Therefore it is up to the developer to validate if the user has typed an acceptable value for these
     arguments.
 
+    The following functions exist in cases where you may want to manually add choice providing function/methods to
+    an existing argparse action. For instance, in __init__() of a custom action class.
+
+        set_choices_function(action, func)
+        set_choices_method(action, method)
+        set_completer_function(action, func)
+        set_completer_method(action, method)
+
 CompletionItem Class:
     This class was added to help in cases where uninformative data is being tab completed. For instance,
     tab completing ID numbers isn't very helpful to a user without context. Returning a list of CompletionItems
@@ -223,6 +231,9 @@ class CompletionItem(str):
         self.description = desc
 
 
+############################################################################################################
+# Class and functions related to ChoicesCallable
+############################################################################################################
 class ChoicesCallable:
     """
     Enables using a callable as the choices provider for an argparse argument.
@@ -239,6 +250,48 @@ class ChoicesCallable:
         self.is_method = is_method
         self.is_completer = is_completer
         self.to_call = to_call
+
+
+def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCallable) -> None:
+    """
+    Set the choices_callable attribute of an argparse Action
+    :param action: action being edited
+    :param choices_callable: the ChoicesCallable instance to use
+    :raises: TypeError if used on incompatible action type
+    """
+    # Verify consistent use of parameters
+    if action.choices is not None:
+        err_msg = ("None of the following parameters can be used alongside a choices parameter:\n"
+                   "choices_function, choices_method, completer_function, completer_method")
+        raise (TypeError(err_msg))
+    elif action.nargs == 0:
+        err_msg = ("None of the following parameters can be used on an action that takes no arguments:\n"
+                   "choices_function, choices_method, completer_function, completer_method")
+        raise (TypeError(err_msg))
+
+    setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
+
+
+def set_choices_function(action: argparse.Action, choices_function: Callable[[], Iterable[Any]]) -> None:
+    """Set choices_function on an argparse action"""
+    _set_choices_callable(action, ChoicesCallable(is_method=False, is_completer=False, to_call=choices_function))
+
+
+def set_choices_method(action: argparse.Action, choices_method: Callable[[Any], Iterable[Any]]) -> None:
+    """Set choices_method on an argparse action"""
+    _set_choices_callable(action, ChoicesCallable(is_method=True, is_completer=False, to_call=choices_method))
+
+
+def set_completer_function(action: argparse.Action,
+                           completer_function: Callable[[str, str, int, int], List[str]]) -> None:
+    """Set completer_function on an argparse action"""
+    _set_choices_callable(action, ChoicesCallable(is_method=False, is_completer=True, to_call=completer_function))
+
+
+def set_completer_method(action: argparse.Action,
+                         completer_method: Callable[[Any, str, str, int, int], List[str]]) -> None:
+    """Set completer_method on an argparse action"""
+    _set_choices_callable(action, ChoicesCallable(is_method=True, is_completer=True, to_call=completer_method))
 
 
 ############################################################################################################
@@ -291,7 +344,17 @@ def _add_argument_wrapper(self, *args,
           See the header of this file for more information
 
     :return: the created argument action
+    :raises ValueError on incorrect parameter usage
     """
+    # Verify consistent use of arguments
+    choices_callables = [choices_function, choices_method, completer_function, completer_method]
+    num_params_set = len(choices_callables) - choices_callables.count(None)
+
+    if num_params_set > 1:
+        err_msg = ("Only one of the following parameters may be used at a time:\n"
+                   "choices_function, choices_method, completer_function, completer_method")
+        raise (ValueError(err_msg))
+
     # Pre-process special ranged nargs
     nargs_range = None
 
@@ -345,34 +408,17 @@ def _add_argument_wrapper(self, *args,
     # Create the argument using the original add_argument function
     new_arg = orig_actions_container_add_argument(self, *args, **kwargs)
 
-    # Verify consistent use of arguments
-    choices_params = [new_arg.choices, choices_function, choices_method, completer_function, completer_method]
-    num_params_set = len(choices_params) - choices_params.count(None)
-
-    if num_params_set > 1:
-        err_msg = ("Only one of the following parameters may be used at a time:\n"
-                   "choices, choices_function, choices_method, completer_function, completer_method")
-        raise (ValueError(err_msg))
-    elif num_params_set > 0 and new_arg.nargs == 0:
-        err_msg = ("None of the following parameters can be used for this type of action:\n"
-                   "choices, choices_function, choices_method, completer_function, completer_method")
-        raise (TypeError(err_msg))
-
     # Set the custom attributes
     setattr(new_arg, ATTR_NARGS_RANGE, nargs_range)
 
     if choices_function:
-        setattr(new_arg, ATTR_CHOICES_CALLABLE,
-                ChoicesCallable(is_method=False, is_completer=False, to_call=choices_function))
+        set_choices_function(new_arg, choices_function)
     elif choices_method:
-        setattr(new_arg, ATTR_CHOICES_CALLABLE,
-                ChoicesCallable(is_method=True, is_completer=False, to_call=choices_method))
+        set_choices_method(new_arg, choices_method)
     elif completer_function:
-        setattr(new_arg, ATTR_CHOICES_CALLABLE,
-                ChoicesCallable(is_method=False, is_completer=True, to_call=completer_function))
+        set_completer_function(new_arg, completer_function)
     elif completer_method:
-        setattr(new_arg, ATTR_CHOICES_CALLABLE,
-                ChoicesCallable(is_method=True, is_completer=True, to_call=completer_method))
+        set_completer_method(new_arg, completer_method)
 
     setattr(new_arg, ATTR_SUPPRESS_TAB_HINT, suppress_tab_hint)
     setattr(new_arg, ATTR_DESCRIPTIVE_COMPLETION_HEADER, descriptive_header)

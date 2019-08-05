@@ -40,17 +40,15 @@ def fake_func():
 
 
 @pytest.mark.parametrize('kwargs, is_valid', [
-    ({'choices': []}, True),
     ({'choices_function': fake_func}, True),
     ({'choices_method': fake_func}, True),
     ({'completer_function': fake_func}, True),
     ({'completer_method': fake_func}, True),
-    ({'choices': [], 'choices_function': fake_func}, False),
-    ({'choices': [], 'choices_method': fake_func}, False),
+    ({'choices_function': fake_func, 'choices_method': fake_func}, False),
     ({'choices_method': fake_func, 'completer_function': fake_func}, False),
-    ({'choices_method': fake_func, 'completer_method': fake_func}, False),
+    ({'completer_function': fake_func, 'completer_method': fake_func}, False),
 ])
-def test_apcustom_choices_params_count(kwargs, is_valid):
+def test_apcustom_choices_callable_count(kwargs, is_valid):
     parser = Cmd2ArgumentParser(prog='test')
     try:
         parser.add_argument('name', **kwargs)
@@ -66,11 +64,24 @@ def test_apcustom_choices_params_count(kwargs, is_valid):
     ({'completer_function': fake_func}),
     ({'completer_method': fake_func})
 ])
-def test_apcustom_no_choices_when_nargs_is_0(kwargs):
+def test_apcustom_no_choices_callables_alongside_choices(kwargs):
+    with pytest.raises(TypeError) as excinfo:
+        parser = Cmd2ArgumentParser(prog='test')
+        parser.add_argument('name', choices=['my', 'choices', 'list'], **kwargs)
+    assert 'None of the following parameters can be used alongside a choices parameter' in str(excinfo.value)
+
+
+@pytest.mark.parametrize('kwargs', [
+    ({'choices_function': fake_func}),
+    ({'choices_method': fake_func}),
+    ({'completer_function': fake_func}),
+    ({'completer_method': fake_func})
+])
+def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs):
     with pytest.raises(TypeError) as excinfo:
         parser = Cmd2ArgumentParser(prog='test')
         parser.add_argument('name', action='store_true', **kwargs)
-    assert 'None of the following parameters can be used' in str(excinfo.value)
+    assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
 
 
 def test_apcustom_usage():
