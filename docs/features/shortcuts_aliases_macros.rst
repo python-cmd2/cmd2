@@ -65,6 +65,7 @@ Use ``alias delete`` to remove aliases
 
 For more details run: ``help alias delete``
 
+Note: Aliases cannot have the same name as a command or macro
 
 Macros
 ------
@@ -93,3 +94,5 @@ sessions.
 For more details on listing macros run: ``help macro list``
 
 For more details on deleting macros run: ``help macro delete``
+
+Note: Macros cannot have the same name as a command or alias
