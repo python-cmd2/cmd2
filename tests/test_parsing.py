@@ -604,17 +604,9 @@ def test_empty_statement_raises_exception():
     ('l', 'shell', 'ls -al')
 ])
 def test_parse_alias_and_shortcut_expansion(parser, line, command, args):
-    # Test first with expansion
     statement = parser.parse(line)
     assert statement.command == command
     assert statement == args
-    assert statement.args == statement
-
-    # Now allow no expansion
-    tokens = shlex_split(line)
-    statement = parser.parse(line, expand=False)
-    assert statement.command == tokens[0]
-    assert shlex_split(statement) == tokens[1:]
     assert statement.args == statement
 
 def test_parse_alias_on_multiline_command(parser):

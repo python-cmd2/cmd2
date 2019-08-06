@@ -1625,6 +1625,10 @@ def test_alias_create_invalid_name(base_app, alias_name, capsys):
     out, err = run_cmd(base_app, 'alias create {} help'.format(alias_name))
     assert "Invalid alias name" in err[0]
 
+def test_alias_create_with_command_name(base_app):
+    out, err = run_cmd(base_app, 'alias create help stuff')
+    assert "Alias cannot have the same name as a command" in err[0]
+
 def test_alias_create_with_macro_name(base_app):
     macro = "my_macro"
     run_cmd(base_app, 'macro create {} help'.format(macro))
@@ -1713,18 +1717,15 @@ def test_macro_create_invalid_name(base_app, macro_name):
     out, err = run_cmd(base_app, 'macro create {} help'.format(macro_name))
     assert "Invalid macro name" in err[0]
 
+def test_macro_create_with_command_name(base_app):
+    out, err = run_cmd(base_app, 'macro create help stuff')
+    assert "Macro cannot have the same name as a command" in err[0]
+
 def test_macro_create_with_alias_name(base_app):
     macro = "my_macro"
     run_cmd(base_app, 'alias create {} help'.format(macro))
     out, err = run_cmd(base_app, 'macro create {} help'.format(macro))
     assert "Macro cannot have the same name as an alias" in err[0]
-
-def test_macro_create_with_command_name(multiline_app):
-    out, err = run_cmd(multiline_app, 'macro create help stuff')
-    assert out == normalize("Macro 'help' created")
-
-    out, err = run_cmd(multiline_app, 'macro create orate stuff')
-    assert "Macro cannot have the same name as a multiline command" in err[0]
 
 def test_macro_create_with_args(base_app):
     # Create the macro
@@ -1842,37 +1843,6 @@ def test_nonexistent_macro(base_app):
         exception = e
 
     assert exception is not None
-
-def test_input_line_to_statement_expand(base_app):
-    # Enable/Disable expansion of shortcuts
-    line = '!ls'
-    statement = base_app._input_line_to_statement(line, expand=True)
-    assert statement.command == 'shell'
-
-    statement = base_app._input_line_to_statement(line, expand=False)
-    assert statement.command == '!ls'
-
-    # Enable/Disable expansion of aliases
-    run_cmd(base_app, 'alias create help macro')
-
-    line = 'help'
-    statement = base_app._input_line_to_statement(line, expand=True)
-    assert statement.command == 'macro'
-
-    statement = base_app._input_line_to_statement(line, expand=False)
-    assert statement.command == 'help'
-
-    run_cmd(base_app, 'alias delete help')
-
-    # Enable/Disable expansion of macros
-    run_cmd(base_app, 'macro create help alias')
-
-    line = 'help'
-    statement = base_app._input_line_to_statement(line, expand=True)
-    assert statement.command == 'alias'
-
-    statement = base_app._input_line_to_statement(line, expand=False)
-    assert statement.command == 'help'
 
 def test_ppaged(outsim_app):
     msg = 'testing...'

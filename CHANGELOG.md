@@ -8,6 +8,8 @@
     * Added `set_choices_function()`, `set_choices_method()`, `set_completer_function()`, and `set_completer_method()`
     to support cases where this functionality needs to be added to an argparse action outside of the normal
     `parser.add_argument()` call.
+* Breaking Changes
+    * Aliases and macros can no longer have the same name as a command
 
 ## 0.9.15 (July 24, 2019)
 * Bug Fixes

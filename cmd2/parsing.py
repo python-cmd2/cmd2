@@ -356,20 +356,17 @@ class StatementParser:
                 errmsg = ''
         return valid, errmsg
 
-    def tokenize(self, line: str, *, expand: bool = True) -> List[str]:
+    def tokenize(self, line: str) -> List[str]:
         """
         Lex a string into a list of tokens. Shortcuts and aliases are expanded and comments are removed
 
         :param line: the command line being lexed
-        :param expand: If True, then aliases and shortcuts will be expanded.
-                       Set this to False if the command token should not be altered. Defaults to True.
         :return: A list of tokens
         :raises ValueError if there are unclosed quotation marks.
         """
 
         # expand shortcuts and aliases
-        if expand:
-            line = self._expand(line)
+        line = self._expand(line)
 
         # check if this line is a comment
         if line.lstrip().startswith(constants.COMMENT_CHAR):
@@ -382,15 +379,13 @@ class StatementParser:
         tokens = self.split_on_punctuation(tokens)
         return tokens
 
-    def parse(self, line: str, *, expand: bool = True) -> Statement:
+    def parse(self, line: str) -> Statement:
         """
         Tokenize the input and parse it into a Statement object, stripping
         comments, expanding aliases and shortcuts, and extracting output
         redirection directives.
 
         :param line: the command line being parsed
-        :param expand: If True, then aliases and shortcuts will be expanded.
-                       Set this to False if the command token should not be altered. Defaults to True.
         :return: the created Statement
         :raises ValueError if there are unclosed quotation marks
         """
@@ -407,7 +402,7 @@ class StatementParser:
         arg_list = []
 
         # lex the input into a list of tokens
-        tokens = self.tokenize(line, expand=expand)
+        tokens = self.tokenize(line)
 
         # of the valid terminators, find the first one to occur in the input
         terminator_pos = len(tokens) + 1
@@ -529,7 +524,7 @@ class StatementParser:
                               output_to=output_to)
         return statement
 
-    def parse_command_only(self, rawinput: str, *, expand: bool = True) -> Statement:
+    def parse_command_only(self, rawinput: str) -> Statement:
         """Partially parse input into a Statement object.
 
         The command is identified, and shortcuts and aliases are expanded.
@@ -554,15 +549,12 @@ class StatementParser:
         whitespace.
 
         :param rawinput: the command line as entered by the user
-        :param expand: If True, then aliases and shortcuts will be expanded.
-                       Set this to False if the command token should not be altered. Defaults to True.
         :return: the created Statement
         """
         line = rawinput
 
         # expand shortcuts and aliases
-        if expand:
-            line = self._expand(rawinput)
+        line = self._expand(rawinput)
 
         command = ''
         args = ''
@@ -616,7 +608,7 @@ class StatementParser:
         """
         # Check if to_parse needs to be converted to a Statement
         if not isinstance(to_parse, Statement):
-            to_parse = self.parse(command_name + ' ' + to_parse, expand=False)
+            to_parse = self.parse(command_name + ' ' + to_parse)
 
         if preserve_quotes:
             return to_parse, to_parse.arg_list
