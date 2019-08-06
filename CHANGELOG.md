@@ -5,6 +5,9 @@
 * Enhancements
     * Raise `TypeError` if trying to set choices/completions on argparse action that accepts no arguments
     * Create directory for the persistent history file if it does not already exist
+    * Added `set_choices_function()`, `set_choices_method()`, `set_completer_function()`, and `set_completer_method()`
+    to support cases where this functionality needs to be added to an argparse action outside of the normal
+    `parser.add_argument()` call.
 
 ## 0.9.15 (July 24, 2019)
 * Bug Fixes
