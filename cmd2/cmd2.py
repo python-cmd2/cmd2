@@ -1672,13 +1672,10 @@ class Cmd(cmd.Cmd):
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line: str, *, expand: bool = True, add_to_history: bool = True,
-                          py_bridge_call: bool = False) -> bool:
+    def onecmd_plus_hooks(self, line: str, *, add_to_history: bool = True, py_bridge_call: bool = False) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
         :param line: command line to run
-        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add this command to history. Defaults to True.
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
@@ -1689,7 +1686,7 @@ class Cmd(cmd.Cmd):
 
         stop = False
         try:
-            statement = self._input_line_to_statement(line, expand=expand)
+            statement = self._input_line_to_statement(line)
         except EmptyStatement:
             return self._run_cmdfinalization_hooks(stop, None)
         except ValueError as ex:
@@ -1804,15 +1801,12 @@ class Cmd(cmd.Cmd):
         except Exception as ex:
             self.pexcept(ex)
 
-    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *,
-                           expand: bool = True, add_to_history: bool = True) -> bool:
+    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *, add_to_history: bool = True) -> bool:
         """
         Used when commands are being run in an automated fashion like text scripts or history replays.
         The prompt and command line for each command will be printed if echo is True.
 
         :param cmds: commands to run
-        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add these commands to history. Defaults to True.
         :return: True if running of commands should stop
         """
@@ -1823,12 +1817,12 @@ class Cmd(cmd.Cmd):
             if self.echo:
                 self.poutput('{}{}'.format(self.prompt, line))
 
-            if self.onecmd_plus_hooks(line, expand=expand, add_to_history=add_to_history):
+            if self.onecmd_plus_hooks(line, add_to_history=add_to_history):
                 return True
 
         return False
 
-    def _complete_statement(self, line: str, *, expand: bool = True) -> Statement:
+    def _complete_statement(self, line: str) -> Statement:
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
@@ -1837,13 +1831,11 @@ class Cmd(cmd.Cmd):
         backwards compatibility with the standard library version of cmd.
 
         :param line: the line being parsed
-        :param expand: If True, then aliases and shortcuts will be expanded.
-                       Set this to False if the command token should not be altered. Defaults to True.
         :return: the completed Statement
         """
         while True:
             try:
-                statement = self.statement_parser.parse(line, expand=expand)
+                statement = self.statement_parser.parse(line)
                 if statement.multiline_command and statement.terminator:
                     # we have a completed multiline command, we are done
                     break
@@ -1854,7 +1846,7 @@ class Cmd(cmd.Cmd):
             except ValueError:
                 # we have unclosed quotation marks, lets parse only the command
                 # and see if it's a multiline
-                statement = self.statement_parser.parse_command_only(line, expand=expand)
+                statement = self.statement_parser.parse_command_only(line)
                 if not statement.multiline_command:
                     # not a multiline command, so raise the exception
                     raise
@@ -1891,13 +1883,11 @@ class Cmd(cmd.Cmd):
             raise EmptyStatement()
         return statement
 
-    def _input_line_to_statement(self, line: str, *, expand: bool = True) -> Statement:
+    def _input_line_to_statement(self, line: str) -> Statement:
         """
         Parse the user's input line and convert it to a Statement, ensuring that all macros are also resolved
 
         :param line: the line being parsed
-        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command token should not be altered. Defaults to True.
         :return: parsed command line as a Statement
         """
         used_macros = []
@@ -1906,14 +1896,14 @@ class Cmd(cmd.Cmd):
         # Continue until all macros are resolved
         while True:
             # Make sure all input has been read and convert it to a Statement
-            statement = self._complete_statement(line, expand=expand)
+            statement = self._complete_statement(line)
 
             # Save the fully entered line if this is the first loop iteration
             if orig_line is None:
                 orig_line = statement.raw
 
             # Check if this command matches a macro and wasn't already processed to avoid an infinite loop
-            if expand and statement.command in self.macros.keys() and statement.command not in used_macros:
+            if statement.command in self.macros.keys() and statement.command not in used_macros:
                 used_macros.append(statement.command)
                 line = self._resolve_macro(statement)
                 if line is None:
@@ -2127,22 +2117,19 @@ class Cmd(cmd.Cmd):
         return target if callable(getattr(self, target, None)) else ''
 
     # noinspection PyMethodOverriding
-    def onecmd(self, statement: Union[Statement, str], *,
-               expand: bool = True, add_to_history: bool = True) -> bool:
+    def onecmd(self, statement: Union[Statement, str], *, add_to_history: bool = True) -> bool:
         """ This executes the actual do_* method for a command.
 
         If the command provided doesn't exist, then it executes default() instead.
 
         :param statement: intended to be a Statement instance parsed command from the input stream, alternative
                           acceptance of a str is present only for backward compatibility with cmd
-        :param expand: If True, then aliases, macros, and shortcuts will be expanded.
-                       Set this to False if the command token should not be altered. Defaults to True.
         :param add_to_history: If True, then add this command to history. Defaults to True.
         :return: a flag indicating whether the interpretation of commands should stop
         """
         # For backwards compatibility with cmd, allow a str to be passed in
         if not isinstance(statement, Statement):
-            statement = self._input_line_to_statement(statement, expand=expand)
+            statement = self._input_line_to_statement(statement)
 
         func = self.cmd_func(statement.command)
         if func:
@@ -2331,6 +2318,10 @@ class Cmd(cmd.Cmd):
             self.perror("Invalid alias name: {}".format(errmsg))
             return
 
+        if args.name in self.get_all_commands():
+            self.perror("Alias cannot have the same name as a command")
+            return
+
         if args.name in self.macros:
             self.perror("Alias cannot have the same name as a macro")
             return
@@ -2460,8 +2451,8 @@ class Cmd(cmd.Cmd):
             self.perror("Invalid macro name: {}".format(errmsg))
             return
 
-        if args.name in self.statement_parser.multiline_commands:
-            self.perror("Macro cannot have the same name as a multiline command")
+        if args.name in self.get_all_commands():
+            self.perror("Macro cannot have the same name as a command")
             return
 
         if args.name in self.aliases:
