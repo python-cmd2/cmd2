@@ -684,7 +684,7 @@ class Cmd(cmd.Cmd):
             final_msg = ansi.style_error(final_msg)
 
         if not self.debug:
-            warning = "\nTo enable full traceback, run the following command:  'set debug true'"
+            warning = "\nTo enable full traceback, run the following command: 'set debug true'"
             final_msg += ansi.style_warning(warning)
 
         # Set apply_style to False since style has already been applied
@@ -2890,6 +2890,28 @@ class Cmd(cmd.Cmd):
              | a list of tuples -> interpreted as (value, text), so
                                    that the return value can differ from
                                    the text advertised to the user """
+
+        completion_disabled = False
+        orig_completer = None
+
+        def disable_completion():
+            """Turn off completion during the select input line"""
+            nonlocal orig_completer
+            nonlocal completion_disabled
+
+            if rl_type != RlType.NONE and not completion_disabled:
+                orig_completer = readline.get_completer()
+                readline.set_completer(lambda *args, **kwargs: None)
+                completion_disabled = True
+
+        def enable_completion():
+            """Restore tab completion when select is done reading input"""
+            nonlocal completion_disabled
+
+            if rl_type != RlType.NONE and completion_disabled:
+                readline.set_completer(orig_completer)
+                completion_disabled = False
+
         local_opts = opts
         if isinstance(opts, str):
             local_opts = list(zip(opts.split(), opts.split()))
@@ -2904,15 +2926,28 @@ class Cmd(cmd.Cmd):
                     fulloptions.append((opt[0], opt[0]))
         for (idx, (_, text)) in enumerate(fulloptions):
             self.poutput('  %2d. %s' % (idx + 1, text))
+
         while True:
             safe_prompt = rl_make_safe_prompt(prompt)
-            response = input(safe_prompt)
+
+            try:
+                with self.sigint_protection:
+                    disable_completion()
+                response = input(safe_prompt)
+            except EOFError:
+                response = ''
+                self.poutput('\n', end='')
+            finally:
+                with self.sigint_protection:
+                    enable_completion()
+
+            if not response:
+                continue
 
             if rl_type != RlType.NONE:
                 hlen = readline.get_current_history_length()
-                if hlen >= 1 and response != '':
+                if hlen >= 1:
                     readline.remove_history_item(hlen - 1)
-
             try:
                 choice = int(response)
                 if choice < 1:
@@ -2922,6 +2957,7 @@ class Cmd(cmd.Cmd):
             except (ValueError, IndexError):
                 self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:".format(
                     response, len(fulloptions)))
+
         return result
 
     def _get_read_only_settings(self) -> str:
