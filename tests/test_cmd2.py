@@ -643,7 +643,7 @@ def _expected_no_editor_error():
 
     expected_text = normalize("""
 EXCEPTION of type '{}' occurred with message: 'Please use 'set editor' to specify your text editing program of choice.'
-To enable full traceback, run the following command:  'set debug true'
+To enable full traceback, run the following command: 'set debug true'
 """.format(expected_exception))
 
     return expected_text
@@ -1102,6 +1102,7 @@ def test_select_invalid_option_too_big(select_app):
     arg = 'Sauce? '
     calls = [mock.call(arg), mock.call(arg)]
     m.assert_has_calls(calls)
+    assert m.call_count == 2
 
     # And verify the expected output to stdout
     assert out == expected
@@ -1126,6 +1127,7 @@ def test_select_invalid_option_too_small(select_app):
     arg = 'Sauce? '
     calls = [mock.call(arg), mock.call(arg)]
     m.assert_has_calls(calls)
+    assert m.call_count == 2
 
     # And verify the expected output to stdout
     assert out == expected
@@ -1185,6 +1187,19 @@ Charm us with the {}...
     # And verify the expected output to stdout
     assert out == expected
 
+def test_select_eof(select_app):
+    # Ctrl-D during select causes an EOFError that just reprompts the user
+    m = mock.MagicMock(name='input', side_effect=[EOFError, 2])
+    builtins.input = m
+
+    food = 'fish'
+    out, err = run_cmd(select_app, "eat {}".format(food))
+
+    # Make sure our mock was called exactly twice with the expected arguments
+    arg = 'Sauce? '
+    calls = [mock.call(arg), mock.call(arg)]
+    m.assert_has_calls(calls)
+    assert m.call_count == 2
 
 class HelpNoDocstringApp(cmd2.Cmd):
     greet_parser = argparse.ArgumentParser()
