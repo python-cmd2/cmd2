@@ -670,6 +670,17 @@ now: True
     out, err = run_cmd(base_app, 'edit')
     assert err[0].startswith('Traceback (most recent call last):')
 
+def test_debug_not_settable(base_app):
+    # Set debug to False and make it unsettable
+    base_app.debug = False
+    del base_app.settable['debug']
+
+    # Cause an exception
+    out, err = run_cmd(base_app, 'bad "quote')
+
+    # Since debug is unsettable, the user will not be given the option to enable a full traceback
+    assert err == ['Invalid syntax: No closing quotation']
+
 def test_edit_file(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
     base_app.editor = 'fooedit'
