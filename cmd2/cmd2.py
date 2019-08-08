@@ -674,7 +674,7 @@ class Cmd(cmd.Cmd):
 
         :param msg: message or Exception to print
         :param end: string appended after the end of the message, default a newline
-        :param apply_style: If True, then ErrorStyle will be applied to the message text. Set to False in cases
+        :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
                             where the message text already has the desired style. Defaults to True.
         """
         if self.debug and sys.exc_info() != (None, None, None):
