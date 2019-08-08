@@ -689,7 +689,7 @@ class Cmd(cmd.Cmd):
         if apply_style:
             final_msg = ansi.style_error(final_msg)
 
-        if not self.debug:
+        if not self.debug and 'debug' in self.settable:
             warning = "\nTo enable full traceback, run the following command: 'set debug true'"
             final_msg += ansi.style_warning(warning)
 
