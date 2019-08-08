@@ -1,4 +1,4 @@
-## 0.9.16 (TBD, 2019)
+## 0.9.16 (August 7, 2019)
 * Bug Fixes
     * Fixed inconsistent parsing/tab completion behavior based on the value of `allow_redirection`. This flag is
     only meant to be a security setting that prevents redirection of stdout and should not alter parsing logic.
