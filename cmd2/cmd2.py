@@ -423,13 +423,14 @@ class Cmd(cmd.Cmd):
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', '_relative_load', '_relative_run_script']
 
-        # Commands to exclude from the history command
-        # initialize history
+        # Initialize history
         self._persistent_history_length = persistent_history_length
         self._initialize_history(persistent_history_file)
+
+        # Commands to exclude from the history command
         self.exclude_from_history = '''history edit eof'''.split()
 
-        # Command aliases and macros
+        # Dictionary of macro names and their values
         self.macros = dict()
 
         # Keeps track of typed command history in the Python shell
