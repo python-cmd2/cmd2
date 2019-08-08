@@ -87,6 +87,10 @@ def test_base_shortcuts(base_app):
     expected = normalize(SHORTCUTS_TXT)
     assert out == expected
 
+def test_command_starts_with_shortcut():
+    with pytest.raises(ValueError) as excinfo:
+        app = cmd2.Cmd(shortcuts={'help': 'fake'})
+    assert "Invalid command name 'help'" in str(excinfo.value)
 
 def test_base_show(base_app):
     # force editor to be 'vim' so test is repeatable across platforms

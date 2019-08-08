@@ -448,6 +448,12 @@ class Cmd(cmd.Cmd):
                                                 multiline_commands=multiline_commands,
                                                 shortcuts=shortcuts)
 
+        # Verify commands don't have invalid names (like starting with a shortcut)
+        for cur_cmd in self.get_all_commands():
+            valid, errmsg = self.statement_parser.is_valid_command(cur_cmd)
+            if not valid:
+                raise ValueError("Invalid command name {!r}: {}".format(cur_cmd, errmsg))
+
         # Stores results from the last command run to enable usage of results in a Python script or interactive console
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
         self.last_result = None
