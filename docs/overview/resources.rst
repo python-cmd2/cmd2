@@ -10,4 +10,4 @@ Project related links and other resources:
 * cmd_
 * `cmd2 project page`_
 * `project bug tracker`_
-* Florida PyCon 2017: `slides <https://docs.google.com/presentation/d/1LRmpfBt3V-pYQfgQHdczf16F3hcXmhK83tl77R6IJtE>`_, `video <https://www.youtube.com/watch?v=6m0RdpITaeY>`_
+* PyOhio 2019: `slides <https://github.com/python-cmd2/talks/blob/master/PyOhio_2019/cmd2-PyOhio_2019.pdf>`_, `video <https://www.youtube.com/watch?v=pebeWrTqIIw>`_, `examples <https://github.com/python-cmd2/talks/tree/master/PyOhio_2019/examples>`_
