@@ -318,7 +318,7 @@ def test_run_script_with_empty_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'scripts', 'empty.txt')
     out, err = run_cmd(base_app, 'run_script {}'.format(filename))
-    assert "is empty" in err[0]
+    assert not out and not err
 
 def test_run_script_with_binary_file(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)

@@ -3790,9 +3790,8 @@ class Cmd(cmd.Cmd):
             self.perror("'{}' is not a file".format(expanded_path))
             return
 
-        # Make sure the file is not empty
+        # An empty file is not an error, so just return
         if os.path.getsize(expanded_path) == 0:
-            self.perror("'{}' is empty".format(expanded_path))
             return
 
         # Make sure the file is ASCII or UTF-8 encoded text
