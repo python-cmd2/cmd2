@@ -1,3 +1,7 @@
+## 0.9.17 (TBD, 2019)
+* Enhancements
+    * No longer treating empty text scripts as an error condition
+
 ## 0.9.16 (August 7, 2019)
 * Bug Fixes
     * Fixed inconsistent parsing/tab completion behavior based on the value of `allow_redirection`. This flag is
