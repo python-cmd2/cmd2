@@ -440,7 +440,7 @@ class Cmd(cmd.Cmd):
         self.py_bridge_name = 'app'
 
         # Defines app-specific variables/functions available in Python shells and pyscripts
-        self.py_locals = {}
+        self.py_locals = dict()
 
         # True if running inside a Python script or interactive console, False otherwise
         self._in_py = False
