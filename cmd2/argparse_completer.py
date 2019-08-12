@@ -103,7 +103,6 @@ class AutoCompleter(object):
         """
         self._parser = parser
         self._cmd2_app = cmd2_app
-        self._token_start_index = token_start_index
 
         self._flags = []  # all flags in this command
         self._flag_to_action = {}  # maps flags to the argparse action object
@@ -132,17 +131,13 @@ class AutoCompleter(object):
 
                     # Create an AutoCompleter for each subcommand of this command
                     for subcmd in action.choices:
-
-                        subcmd_start = token_start_index + len(self._positional_actions)
-                        sub_completers[subcmd] = AutoCompleter(action.choices[subcmd],
-                                                               cmd2_app,
-                                                               token_start_index=subcmd_start)
+                        sub_completers[subcmd] = AutoCompleter(action.choices[subcmd], cmd2_app)
 
                     self._positional_completers[action] = sub_completers
 
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
-        if len(tokens) <= self._token_start_index:
+        if not tokens:
             return []
 
         # Count which positional argument index we're at now. Loop through all tokens on the command line so far
@@ -178,7 +173,7 @@ class AutoCompleter(object):
         #############################################################################################
         # Parse all but the last token
         #############################################################################################
-        for loop_index, token in enumerate(tokens[self._token_start_index:-1]):
+        for token_index, token in enumerate(tokens[1:-1], start=1):
 
             # If we're in a positional REMAINDER arg, force all future tokens to go to that
             if pos_arg_state is not None and pos_arg_state.is_remainder:
@@ -269,7 +264,7 @@ class AutoCompleter(object):
                         if isinstance(action, argparse._SubParsersAction):
                             sub_completers = self._positional_completers[action]
                             if token in sub_completers:
-                                return sub_completers[token].complete_command(tokens, text, line,
+                                return sub_completers[token].complete_command(tokens[token_index:], text, line,
                                                                               begidx, endidx)
                             else:
                                 # Invalid subcommand entered, so no way to complete remaining tokens
@@ -421,13 +416,14 @@ class AutoCompleter(object):
         :param endidx: the ending index of the prefix text
         :return: List of subcommand completions
         """
-        for token in tokens[self._token_start_index:]:
+        for token_index, token in enumerate(tokens[1:], start=1):
             if self._positional_completers:
                 # For now argparse only allows 1 subcommand group per level
                 # so this will only loop once.
                 for completers in self._positional_completers.values():
                     if token in completers:
-                        return completers[token].complete_command_help(tokens, text, line, begidx, endidx)
+                        return completers[token].complete_command_help(tokens[token_index:], text,
+                                                                       line, begidx, endidx)
                     else:
                         return utils.basic_complete(text, line, begidx, endidx, completers.keys())
         return []
@@ -438,13 +434,13 @@ class AutoCompleter(object):
         :param tokens: command line tokens
         :return: help text of the subcommand being queried
         """
-        for token in tokens[self._token_start_index:]:
+        for token_index, token in enumerate(tokens[1:], start=1):
             if self._positional_completers:
                 # For now argparse only allows 1 subcommand group per level
                 # so this will only loop once.
                 for completers in self._positional_completers.values():
                     if token in completers:
-                        return completers[token].format_help(tokens)
+                        return completers[token].format_help(tokens[token_index:])
         return self._parser.format_help()
 
     def _complete_for_arg(self, arg: argparse.Action,
