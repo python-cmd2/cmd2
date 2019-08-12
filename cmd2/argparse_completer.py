@@ -92,14 +92,12 @@ class AutoCompleter(object):
                 self.min = self.action.nargs
                 self.max = self.action.nargs
 
-    def __init__(self, parser: argparse.ArgumentParser, cmd2_app: cmd2.Cmd, *,
-                 token_start_index: int = 1) -> None:
+    def __init__(self, parser: argparse.ArgumentParser, cmd2_app: cmd2.Cmd) -> None:
         """
         Create an AutoCompleter
 
         :param parser: ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this AutoCompleter
-        :param token_start_index: index of the token to start parsing at
         """
         self._parser = parser
         self._cmd2_app = cmd2_app
