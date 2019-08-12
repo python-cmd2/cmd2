@@ -767,5 +767,5 @@ def test_complete_command_help_no_tokens(ac_app):
     parser = Cmd2ArgumentParser()
     ac = AutoCompleter(parser, ac_app)
 
-    completions = ac.complete_command_help(tokens=[], text='', line='', begidx=0, endidx=0)
+    completions = ac.complete_subcommand_help(tokens=[], text='', line='', begidx=0, endidx=0)
     assert not completions

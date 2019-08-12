@@ -105,10 +105,7 @@ class AutoCompleter(object):
         self._flags = []  # all flags in this command
         self._flag_to_action = {}  # maps flags to the argparse action object
         self._positional_actions = []  # actions for positional arguments (by position index)
-
-        # maps action to subcommand autocompleter:
-        #   action -> dict(sub_command -> completer)
-        self._positional_completers = {}
+        self._subcommand_action = None  # this will be set if self._parser has subcommands
 
         # Start digging through the argparse structures.
         #   _actions is the top level container of parameter definitions
@@ -123,15 +120,9 @@ class AutoCompleter(object):
             # Otherwise this is a positional parameter
             else:
                 self._positional_actions.append(action)
-
+                # Check if this action defines subcommands
                 if isinstance(action, argparse._SubParsersAction):
-                    sub_completers = {}
-
-                    # Create an AutoCompleter for each subcommand of this command
-                    for subcmd in action.choices:
-                        sub_completers[subcmd] = AutoCompleter(action.choices[subcmd], cmd2_app)
-
-                    self._positional_completers[action] = sub_completers
+                    self._subcommand_action = action
 
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
@@ -259,11 +250,10 @@ class AutoCompleter(object):
                         action = self._positional_actions[pos_index]
 
                         # Are we at a subcommand? If so, forward to the matching completer
-                        if isinstance(action, argparse._SubParsersAction):
-                            sub_completers = self._positional_completers[action]
-                            if token in sub_completers:
-                                return sub_completers[token].complete_command(tokens[token_index:], text, line,
-                                                                              begidx, endidx)
+                        if action == self._subcommand_action:
+                            if token in self._subcommand_action.choices:
+                                completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                                return completer.complete_command(tokens[token_index:], text, line, begidx, endidx)
                             else:
                                 # Invalid subcommand entered, so no way to complete remaining tokens
                                 return []
@@ -404,7 +394,7 @@ class AutoCompleter(object):
 
         return completions
 
-    def complete_command_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_subcommand_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
         Supports cmd2's help command in the completion of subcommand names
         :param tokens: command line tokens
@@ -414,31 +404,33 @@ class AutoCompleter(object):
         :param endidx: the ending index of the prefix text
         :return: List of subcommand completions
         """
-        for token_index, token in enumerate(tokens[1:], start=1):
-            if self._positional_completers:
-                # For now argparse only allows 1 subcommand group per level
-                # so this will only loop once.
-                for completers in self._positional_completers.values():
-                    if token in completers:
-                        return completers[token].complete_command_help(tokens[token_index:], text,
-                                                                       line, begidx, endidx)
-                    else:
-                        return utils.basic_complete(text, line, begidx, endidx, completers.keys())
+        # If our parser has subcommands, we must examine the tokens and check if any reference one.
+        # If so, we will let the subcommand's parser handle the rest of the tokens via another AutoCompleter.
+        if self._subcommand_action is not None:
+            for token_index, token in enumerate(tokens[1:], start=1):
+                if token in self._subcommand_action.choices:
+                    completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                    return completer.complete_subcommand_help(tokens[token_index:], text, line, begidx, endidx)
+                elif token_index == len(tokens) - 1:
+                    # Since this is the last token, we will attempt to complete it
+                    return utils.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
+
         return []
 
     def format_help(self, tokens: List[str]) -> str:
         """
-        Retrieve help text of a subcommand
+        Supports cmd2's help command in the retrieval of help text
         :param tokens: command line tokens
-        :return: help text of the subcommand being queried
+        :return: help text of the commmand being queried
         """
-        for token_index, token in enumerate(tokens[1:], start=1):
-            if self._positional_completers:
-                # For now argparse only allows 1 subcommand group per level
-                # so this will only loop once.
-                for completers in self._positional_completers.values():
-                    if token in completers:
-                        return completers[token].format_help(tokens[token_index:])
+        # If our parser has subcommands, we must examine the tokens and check if any reference one.
+        # If so, we will let the subcommand's parser handle the rest of the tokens via another AutoCompleter.
+        if self._subcommand_action is not None:
+            for token_index, token in enumerate(tokens[1:], start=1):
+                if token in self._subcommand_action.choices:
+                    completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                    return completer.format_help(tokens[token_index:])
+
         return self._parser.format_help()
 
     def _complete_for_arg(self, arg: argparse.Action,

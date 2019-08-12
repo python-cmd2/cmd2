@@ -2691,7 +2691,7 @@ class Cmd(cmd.Cmd):
         if func is not None and argparser is not None:
             from .argparse_completer import AutoCompleter
             completer = AutoCompleter(argparser, self)
-            matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
+            matches = completer.complete_subcommand_help(tokens[cmd_index:], text, line, begidx, endidx)
 
         return matches
 
