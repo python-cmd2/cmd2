@@ -119,6 +119,9 @@ CMD_ATTR_HELP_CATEGORY = 'help_category'
 # The argparse parser for the command
 CMD_ATTR_ARGPARSER = 'argparser'
 
+# Whether or not tokens are unquoted before sending to argparse
+CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
+
 
 def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
     """Categorize a function.
@@ -225,8 +228,9 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
         # Set the command's help text as argparser.description (which can be None)
         cmd_wrapper.__doc__ = argparser.description
 
-        # Mark this function as having an argparse ArgumentParser
+        # Set some custom attributes for this command
         setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, argparser)
+        setattr(cmd_wrapper, CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
 
         return cmd_wrapper
 
@@ -283,8 +287,9 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
         # Set the command's help text as argparser.description (which can be None)
         cmd_wrapper.__doc__ = argparser.description
 
-        # Mark this function as having an argparse ArgumentParser
+        # Set some custom attributes for this command
         setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, argparser)
+        setattr(cmd_wrapper, CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
 
         return cmd_wrapper
 
@@ -1431,7 +1436,8 @@ class Cmd(cmd.Cmd):
                 if func is not None and argparser is not None:
                     import functools
                     compfunc = functools.partial(self._autocomplete_default,
-                                                 argparser=argparser)
+                                                 argparser=argparser,
+                                                 preserve_quotes=getattr(func, CMD_ATTR_PRESERVE_QUOTES))
                 else:
                     compfunc = self.completedefault
 
@@ -1588,13 +1594,17 @@ class Cmd(cmd.Cmd):
             self.pexcept(e)
             return None
 
-    def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
-                              argparser: argparse.ArgumentParser) -> List[str]:
+    def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int, *,
+                              argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
         """Default completion function for argparse commands"""
         from .argparse_completer import AutoCompleter
         completer = AutoCompleter(argparser, self)
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        return completer.complete_command(tokens, text, line, begidx, endidx)
+        tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
+
+        # To have tab-completion parsing match command line parsing behavior,
+        # use preserve_quotes to determine if we parse the quoted or unquoted tokens.
+        tokens_to_parse = raw_tokens if preserve_quotes else tokens
+        return completer.complete_command(tokens_to_parse, text, line, begidx, endidx)
 
     def get_all_commands(self) -> List[str]:
         """Return a list of all commands"""
