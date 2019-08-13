@@ -143,8 +143,11 @@ class AutoCompleter(object):
         # _ArgumentState of the current flag
         flag_arg_state = None
 
+        # Non-reusable flags that we've parsed
         matched_flags = []
-        consumed_arg_values = {}  # dict(action -> [values, ...])
+
+        # Keeps track of arguments we've seen and any tokens they consumed
+        consumed_arg_values = dict()  # dict(action -> [values, ...])
 
         def consume_argument(arg_state: AutoCompleter._ArgumentState) -> None:
             """Consuming token as an argument"""
@@ -205,12 +208,19 @@ class AutoCompleter(object):
                         action = self._flag_to_action[candidates_flags[0]]
 
                 if action is not None:
-                    # Keep track of what flags have already been used
-                    # Flags with action set to append, append_const, and count can be reused
-                    if not isinstance(action, (argparse._AppendAction,
-                                               argparse._AppendConstAction,
-                                               argparse._CountAction)):
+                    if isinstance(action, (argparse._AppendAction,
+                                           argparse._AppendConstAction,
+                                           argparse._CountAction)):
+                        # Flags with action set to append, append_const, and count can be reused
+                        # Therefore don't erase any tokens already consumed for this flag
+                        consumed_arg_values.setdefault(action, [])
+                    else:
+                        # This flag is not resusable, so mark that we've seen it
                         matched_flags.extend(action.option_strings)
+
+                        # It's possible we already have consumed values for this flag if it was used
+                        # earlier in the command line. Reset them now for this use of it.
+                        consumed_arg_values[action] = []
 
                     new_arg_state = AutoCompleter._ArgumentState(action)
 
@@ -218,10 +228,6 @@ class AutoCompleter(object):
                     if new_arg_state.max > 0:
                         flag_arg_state = new_arg_state
                         skip_remaining_flags = flag_arg_state.is_remainder
-
-                        # It's possible we already have consumed values for this flag if it was used
-                        # earlier in the command line. Reset them now for this use of it.
-                        consumed_arg_values[flag_arg_state.action] = []
 
             # Check if we are consuming a flag
             elif flag_arg_state is not None:
