@@ -9,7 +9,7 @@ See the header of argparse_custom.py for instructions on how to use these featur
 import argparse
 import numbers
 import shutil
-from typing import List, Union
+from typing import Dict, List, Union
 
 from . import cmd2
 from . import utils
@@ -144,20 +144,13 @@ class AutoCompleter(object):
         flag_arg_state = None
 
         matched_flags = []
-        consumed_arg_values = {}  # dict(arg_name -> [values, ...])
+        consumed_arg_values = {}  # dict(action -> [values, ...])
 
         def consume_argument(arg_state: AutoCompleter._ArgumentState) -> None:
             """Consuming token as an argument"""
             arg_state.count += 1
-
-            # Does this complete an option item for the flag?
-            arg_choices = self._resolve_choices_for_arg(arg_state.action)
-
-            # If the current token is in the flag argument's autocomplete list,
-            # then track that we've used it already.
-            if token in arg_choices:
-                consumed_arg_values.setdefault(arg_state.action, [])
-                consumed_arg_values[arg_state.action].append(token)
+            consumed_arg_values.setdefault(arg_state.action, [])
+            consumed_arg_values[arg_state.action].append(token)
 
         #############################################################################################
         # Parse all but the last token
@@ -299,9 +292,8 @@ class AutoCompleter(object):
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            consumed = consumed_arg_values.get(flag_arg_state.action, [])
             completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
-                                                        begidx, endidx, consumed)
+                                                        begidx, endidx, consumed_arg_values)
 
             # If we have results, then return them
             if completion_results:
@@ -322,9 +314,8 @@ class AutoCompleter(object):
                 action = self._positional_actions[pos_index]
                 pos_arg_state = AutoCompleter._ArgumentState(action)
 
-            consumed = consumed_arg_values.get(pos_arg_state.action, [])
             completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
-                                                        begidx, endidx, consumed)
+                                                        begidx, endidx, consumed_arg_values)
 
             # If we have results, then return them
             if completion_results:
@@ -434,7 +425,8 @@ class AutoCompleter(object):
         return self._parser.format_help()
 
     def _complete_for_arg(self, arg: argparse.Action,
-                          text: str, line: str, begidx: int, endidx: int, used_values=()) -> List[str]:
+                          text: str, line: str, begidx: int, endidx: int,
+                          consumed_arg_values: Dict[argparse.Action, List[str]]) -> List[str]:
         """Tab completion routine for argparse arguments"""
 
         # Check the arg provides choices to the user
@@ -448,19 +440,30 @@ class AutoCompleter(object):
 
         # Check if the argument uses a specific tab completion function to provide its choices
         if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
+            args = []
             if arg_choices.is_method:
-                results = arg_choices.to_call(self._cmd2_app, text, line, begidx, endidx)
-            else:
-                results = arg_choices.to_call(text, line, begidx, endidx)
+                args.append(self._cmd2_app)
+
+            args.extend([text, line, begidx, endidx])
+
+            if arg_choices.pass_parsed_args:
+                # Convert consumed_arg_values into an argparse Namespace
+                parsed_args = argparse.Namespace()
+                for key, val in consumed_arg_values.items():
+                    setattr(parsed_args, key.dest, val)
+                args.append(parsed_args)
+
+            results = arg_choices.to_call(*args)
 
         # Otherwise use basic_complete on the choices
         else:
+            used_values = consumed_arg_values.get(arg, [])
             results = utils.basic_complete(text, line, begidx, endidx,
                                            self._resolve_choices_for_arg(arg, used_values))
 
         return self._format_completions(arg, results)
 
-    def _resolve_choices_for_arg(self, arg: argparse.Action, used_values=()) -> List[str]:
+    def _resolve_choices_for_arg(self, arg: argparse.Action, used_values: List[str]) -> List[str]:
         """Retrieve a list of choices that are available for a particular argument"""
 
         # Check the arg provides choices to the user

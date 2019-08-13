@@ -2668,49 +2668,39 @@ class Cmd(cmd.Cmd):
         strs_to_match = list(topics | visible_commands)
         return utils.basic_complete(text, line, begidx, endidx, strs_to_match)
 
-    def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int,
+                                 parsed_args: argparse.Namespace) -> List[str]:
         """Completes the subcommand argument of help"""
+
+        # Make sure we have a command whose subcommands we will complete
+        parsed_args.command = parsed_args.command[0]
+        if not parsed_args.command:
+            return []
+
+        # Check if this command uses argparse
+        func = self.cmd_func(parsed_args.command)
+        argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+        if func is None or argparser is None:
+            return []
 
         # Get all tokens through the one being completed
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-
         if not tokens:
             return []
 
-        # Must have at least 3 args for 'help command subcommand'
-        if len(tokens) < 3:
-            return []
+        # Get the index of the command
+        cmd_index = tokens.index(parsed_args.command)
 
-        # Find where the command is by skipping past any flags
-        cmd_index = 1
-        for cur_token in tokens[cmd_index:]:
-            if not cur_token.startswith('-'):
-                break
-            cmd_index += 1
-
-        if cmd_index >= len(tokens):
-            return []
-
-        command = tokens[cmd_index]
-        matches = []
-
-        # Check if this command uses argparse
-        func = self.cmd_func(command)
-        argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
-
-        if func is not None and argparser is not None:
-            from .argparse_completer import AutoCompleter
-            completer = AutoCompleter(argparser, self)
-            matches = completer.complete_subcommand_help(tokens[cmd_index:], text, line, begidx, endidx)
-
-        return matches
+        from .argparse_completer import AutoCompleter
+        completer = AutoCompleter(argparser, self)
+        return completer.complete_subcommand_help(tokens[cmd_index:], text, line, begidx, endidx)
 
     help_parser = Cmd2ArgumentParser(description="List available commands or provide "
                                                  "detailed help for a specific command")
     help_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to retrieve help for",
                              completer_method=complete_help_command)
     help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="subcommand to retrieve help for",
-                             completer_method=complete_help_subcommand)
+                             completer_method=complete_help_subcommand, pass_parsed_args=True)
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
