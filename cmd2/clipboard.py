@@ -10,7 +10,8 @@ from pyperclip import PyperclipException
 try:
     # Try getting the contents of the clipboard
     _ = pyperclip.paste()
-except PyperclipException:
+except (PyperclipException, FileNotFoundError):
+    # NOTE: FileNotFoundError is for Windows Subsystem for Linux (WSL) when Windows paths are removed from $PATH
     can_clip = False
 else:
     can_clip = True
