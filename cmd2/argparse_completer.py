@@ -424,19 +424,23 @@ class AutoCompleter(object):
 
         return self._parser.format_help()
 
-    def _complete_for_arg(self, arg: argparse.Action,
+    def _complete_for_arg(self, arg_action: argparse.Action,
                           text: str, line: str, begidx: int, endidx: int,
                           consumed_arg_values: Dict[argparse.Action, List[str]]) -> List[str]:
-        """Tab completion routine for argparse arguments"""
-
-        # Check the arg provides choices to the user
-        if arg.choices is not None:
-            arg_choices = arg.choices
+        """Tab completion routine for an argparse argument"""
+        # Check if the arg provides choices to the user
+        if arg_action.choices is not None:
+            arg_choices = arg_action.choices
         else:
-            arg_choices = getattr(arg, ATTR_CHOICES_CALLABLE, None)
+            arg_choices = getattr(arg_action, ATTR_CHOICES_CALLABLE, None)
 
         if arg_choices is None:
             return []
+
+        # Convert consumed_arg_values into an argparse Namespace
+        parsed_args = argparse.Namespace()
+        for key, val in consumed_arg_values.items():
+            setattr(parsed_args, key.dest, val)
 
         # Check if the argument uses a specific tab completion function to provide its choices
         if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
@@ -447,84 +451,66 @@ class AutoCompleter(object):
             args.extend([text, line, begidx, endidx])
 
             if arg_choices.pass_parsed_args:
-                # Convert consumed_arg_values into an argparse Namespace
-                parsed_args = argparse.Namespace()
-                for key, val in consumed_arg_values.items():
-                    setattr(parsed_args, key.dest, val)
                 args.append(parsed_args)
 
             results = arg_choices.to_call(*args)
 
         # Otherwise use basic_complete on the choices
         else:
-            used_values = consumed_arg_values.get(arg, [])
-            results = utils.basic_complete(text, line, begidx, endidx,
-                                           self._resolve_choices_for_arg(arg, used_values))
-
-        return self._format_completions(arg, results)
-
-    def _resolve_choices_for_arg(self, arg: argparse.Action, used_values: List[str]) -> List[str]:
-        """Retrieve a list of choices that are available for a particular argument"""
-
-        # Check the arg provides choices to the user
-        if arg.choices is not None:
-            arg_choices = arg.choices
-        else:
-            arg_choices = getattr(arg, ATTR_CHOICES_CALLABLE, None)
-
-        if arg_choices is None:
-            return []
-
-        # Check if arg_choices is a ChoicesCallable that generates a choice list
-        if isinstance(arg_choices, ChoicesCallable):
-            if arg_choices.is_completer:
-                # Tab completion routines are handled in other functions
-                return []
-            else:
+            # Check if the choices come from a function
+            if isinstance(arg_choices, ChoicesCallable) and not arg_choices.is_completer:
+                args = []
                 if arg_choices.is_method:
-                    arg_choices = arg_choices.to_call(self._cmd2_app)
-                else:
-                    arg_choices = arg_choices.to_call()
+                    args.append(self._cmd2_app)
+                if arg_choices.pass_parsed_args:
+                    args.append(parsed_args)
+                arg_choices = arg_choices.to_call(*args)
 
-        # Since arg_choices can be any iterable type, convert to a list
-        arg_choices = list(arg_choices)
+            # Since arg_choices can be any iterable type, convert to a list
+            arg_choices = list(arg_choices)
 
-        # If these choices are numbers, and have not yet been sorted, then sort them now
-        if not self._cmd2_app.matches_sorted and all(isinstance(x, numbers.Number) for x in arg_choices):
-            arg_choices.sort()
-            self._cmd2_app.matches_sorted = True
+            # If these choices are numbers, and have not yet been sorted, then sort them now
+            if not self._cmd2_app.matches_sorted and all(isinstance(x, numbers.Number) for x in arg_choices):
+                arg_choices.sort()
+                self._cmd2_app.matches_sorted = True
 
-        # Since choices can be various types like int, we must convert them to strings
-        for index, choice in enumerate(arg_choices):
-            if not isinstance(choice, str):
-                arg_choices[index] = str(choice)
+            # Since choices can be various types like int, we must convert them to strings
+            for index, choice in enumerate(arg_choices):
+                if not isinstance(choice, str):
+                    arg_choices[index] = str(choice)
 
-        # Filter out arguments we already used
-        return [choice for choice in arg_choices if choice not in used_values]
+            # Filter out arguments we already used
+            used_values = consumed_arg_values.get(arg_action, [])
+            arg_choices = [choice for choice in arg_choices if choice not in used_values]
+
+            # Do tab completion on the choices
+            results = utils.basic_complete(text, line, begidx, endidx, arg_choices)
+
+        return self._format_completions(arg_action, results)
 
     @staticmethod
-    def _print_arg_hint(arg: argparse.Action) -> None:
+    def _print_arg_hint(arg_action: argparse.Action) -> None:
         """Print argument hint to the terminal when tab completion results in no results"""
 
         # Check if hinting is disabled
-        suppress_hint = getattr(arg, ATTR_SUPPRESS_TAB_HINT, False)
-        if suppress_hint or arg.help == argparse.SUPPRESS or arg.dest == argparse.SUPPRESS:
+        suppress_hint = getattr(arg_action, ATTR_SUPPRESS_TAB_HINT, False)
+        if suppress_hint or arg_action.help == argparse.SUPPRESS or arg_action.dest == argparse.SUPPRESS:
             return
 
         # Check if this is a flag
-        if arg.option_strings:
-            flags = ', '.join(arg.option_strings)
-            param = ' ' + str(arg.dest).upper()
+        if arg_action.option_strings:
+            flags = ', '.join(arg_action.option_strings)
+            param = ' ' + str(arg_action.dest).upper()
             prefix = '{}{}'.format(flags, param)
 
         # Otherwise this is a positional
         else:
-            prefix = '{}'.format(str(arg.dest).upper())
+            prefix = '{}'.format(str(arg_action.dest).upper())
 
         prefix = '  {0: <{width}}    '.format(prefix, width=20)
         pref_len = len(prefix)
 
-        help_text = '' if arg.help is None else arg.help
+        help_text = '' if arg_action.help is None else arg_action.help
         help_lines = help_text.splitlines()
 
         if len(help_lines) == 1:
