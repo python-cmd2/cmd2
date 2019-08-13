@@ -2959,13 +2959,10 @@ class Cmd(cmd.Cmd):
                 choice = int(response)
                 if choice < 1:
                     raise IndexError
-                result = fulloptions[choice - 1][0]
-                break
+                return fulloptions[choice - 1][0]
             except (ValueError, IndexError):
                 self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:".format(
                     response, len(fulloptions)))
-
-        return result
 
     def _get_read_only_settings(self) -> str:
         """Return a summary report of read-only settings which the user cannot modify at runtime.
