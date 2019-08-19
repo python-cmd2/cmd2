@@ -138,7 +138,7 @@ CompletionItem Class:
     To use CompletionItems, just return them from your choices or completer functions.
 
     To avoid printing a ton of information to the screen at once when a user presses tab, there is
-    a maximum threshold for the number of CompletionItems that will be shown. It's value is defined
+    a maximum threshold for the number of CompletionItems that will be shown. Its value is defined
     in cmd2.Cmd.max_completion_items. It defaults to 50, but can be changed. If the number of completion
     suggestions exceeds this number, they will be displayed in the typical columnized format and will
     not include the description value of the CompletionItems.
