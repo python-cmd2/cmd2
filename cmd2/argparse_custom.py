@@ -44,7 +44,7 @@ Tab Completion:
         generated when the user hits tab.
 
         Example:
-            def my_choices_function):
+            def my_choices_function(**kwargs):
                 ...
                 return my_generated_list
 
@@ -56,7 +56,7 @@ Tab Completion:
         cases where the list of choices being generated relies on state data of the cmd2-based app
 
         Example:
-            def my_choices_method(self):
+            def my_choices_method(self, **kwargs):
                 ...
                 return my_generated_list
 
@@ -66,7 +66,7 @@ Tab Completion:
         function. completer_method should be used in those cases.
 
         Example:
-            def my_completer_function(text, line, begidx, endidx):
+            def my_completer_function(text, line, begidx, endidx, **kwargs):
                 ...
                 return completions
             parser.add_argument('-o', '--options', completer_function=my_completer_function)
@@ -238,21 +238,17 @@ class ChoicesCallable:
     Enables using a callable as the choices provider for an argparse argument.
     While argparse has the built-in choices attribute, it is limited to an iterable.
     """
-    def __init__(self, is_method: bool, is_completer: bool, to_call: Callable, pass_parsed_args: bool):
+    def __init__(self, is_method: bool, is_completer: bool, to_call: Callable):
         """
         Initializer
         :param is_method: True if to_call is an instance method of a cmd2 app. False if it is a function.
         :param is_completer: True if to_call is a tab completion routine which expects
                              the args: text, line, begidx, endidx
         :param to_call: the callable object that will be called to provide choices for the argument
-        :param pass_parsed_args: if True, then to_call will be passed an argparse Namespace of arguments
-                                 parsed by AutoCompleter. This is useful if the value of a particular argument
-                                 affects what data will be tab-completed.
         """
         self.is_method = is_method
         self.is_completer = is_completer
         self.to_call = to_call
-        self.pass_parsed_args = pass_parsed_args
 
 
 def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCallable) -> None:
@@ -275,28 +271,24 @@ def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCall
     setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
 
 
-def set_choices_function(action: argparse.Action, choices_function: Callable, pass_parsed_args: bool) -> None:
+def set_choices_function(action: argparse.Action, choices_function: Callable) -> None:
     """Set choices_function on an argparse action"""
-    _set_choices_callable(action, ChoicesCallable(is_method=False, is_completer=False,
-                                                  to_call=choices_function, pass_parsed_args=pass_parsed_args))
+    _set_choices_callable(action, ChoicesCallable(is_method=False, is_completer=False, to_call=choices_function))
 
 
-def set_choices_method(action: argparse.Action, choices_method: Callable, pass_parsed_args: bool) -> None:
+def set_choices_method(action: argparse.Action, choices_method: Callable) -> None:
     """Set choices_method on an argparse action"""
-    _set_choices_callable(action, ChoicesCallable(is_method=True, is_completer=False,
-                                                  to_call=choices_method, pass_parsed_args=pass_parsed_args))
+    _set_choices_callable(action, ChoicesCallable(is_method=True, is_completer=False, to_call=choices_method))
 
 
-def set_completer_function(action: argparse.Action, completer_function: Callable, pass_parsed_args: bool) -> None:
+def set_completer_function(action: argparse.Action, completer_function: Callable) -> None:
     """Set completer_function on an argparse action"""
-    _set_choices_callable(action, ChoicesCallable(is_method=False, is_completer=True,
-                                                  to_call=completer_function, pass_parsed_args=pass_parsed_args))
+    _set_choices_callable(action, ChoicesCallable(is_method=False, is_completer=True, to_call=completer_function))
 
 
-def set_completer_method(action: argparse.Action, completer_method: Callable, pass_parsed_args: bool) -> None:
+def set_completer_method(action: argparse.Action, completer_method: Callable) -> None:
     """Set completer_method on an argparse action"""
-    _set_choices_callable(action, ChoicesCallable(is_method=True, is_completer=True,
-                                                  to_call=completer_method, pass_parsed_args=pass_parsed_args))
+    _set_choices_callable(action, ChoicesCallable(is_method=True, is_completer=True, to_call=completer_method))
 
 
 ############################################################################################################
@@ -314,7 +306,6 @@ def _add_argument_wrapper(self, *args,
                           choices_method: Optional[Callable] = None,
                           completer_function: Optional[Callable] = None,
                           completer_method: Optional[Callable] = None,
-                          pass_parsed_args: bool = False,
                           suppress_tab_hint: bool = False,
                           descriptive_header: Optional[str] = None,
                           **kwargs) -> argparse.Action:
@@ -334,9 +325,6 @@ def _add_argument_wrapper(self, *args,
     :param choices_method: cmd2-app method that provides choices for this argument
     :param completer_function: tab-completion function that provides choices for this argument
     :param completer_method: cmd2-app tab-completion method that provides choices for this argument
-    :param pass_parsed_args: if True, then to_call will be passed an argparse Namespace of arguments
-                             parsed by AutoCompleter. This is useful if the value of a particular argument
-                             affects what data will be tab-completed.
     :param suppress_tab_hint: when AutoCompleter has no results to show during tab completion, it displays the current
                               argument's help text as a hint. Set this to True to suppress the hint. If this argument's
                               help text is set to argparse.SUPPRESS, then tab hints will not display regardless of the
@@ -421,13 +409,13 @@ def _add_argument_wrapper(self, *args,
     setattr(new_arg, ATTR_NARGS_RANGE, nargs_range)
 
     if choices_function:
-        set_choices_function(new_arg, choices_function, pass_parsed_args)
+        set_choices_function(new_arg, choices_function)
     elif choices_method:
-        set_choices_method(new_arg, choices_method, pass_parsed_args)
+        set_choices_method(new_arg, choices_method)
     elif completer_function:
-        set_completer_function(new_arg, completer_function, pass_parsed_args)
+        set_completer_function(new_arg, completer_function)
     elif completer_method:
-        set_completer_method(new_arg, completer_method, pass_parsed_args)
+        set_completer_method(new_arg, completer_method)
 
     setattr(new_arg, ATTR_SUPPRESS_TAB_HINT, suppress_tab_hint)
     setattr(new_arg, ATTR_DESCRIPTIVE_COMPLETION_HEADER, descriptive_header)

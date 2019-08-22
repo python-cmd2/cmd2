@@ -449,29 +449,25 @@ class AutoCompleter(object):
             setattr(parsed_args, action.dest, tokens)
         parsed_args.__parser__ = self._parser
 
+        # Arguments to completer/choices functions
+        args = []
+        kwargs = {'parsed_args': parsed_args}
+
         # Check if the argument uses a specific tab completion function to provide its choices
         if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
-            args = []
             if arg_choices.is_method:
                 args.append(self._cmd2_app)
-
             args.extend([text, line, begidx, endidx])
 
-            if arg_choices.pass_parsed_args:
-                args.append(parsed_args)
-
-            results = arg_choices.to_call(*args)
+            results = arg_choices.to_call(*args, **kwargs)
 
         # Otherwise use basic_complete on the choices
         else:
             # Check if the choices come from a function
             if isinstance(arg_choices, ChoicesCallable) and not arg_choices.is_completer:
-                args = []
                 if arg_choices.is_method:
                     args.append(self._cmd2_app)
-                if arg_choices.pass_parsed_args:
-                    args.append(parsed_args)
-                arg_choices = arg_choices.to_call(*args)
+                arg_choices = arg_choices.to_call(*args, **kwargs)
 
             # Since arg_choices can be any iterable type, convert to a list
             arg_choices = list(arg_choices)

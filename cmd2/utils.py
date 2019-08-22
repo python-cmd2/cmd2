@@ -624,7 +624,7 @@ class RedirectionSavedState(object):
 
 
 # noinspection PyUnusedLocal
-def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against: Iterable) -> List[str]:
+def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against: Iterable, **_kwargs) -> List[str]:
     """
     Basic tab completion function that matches against a list of strings without considering line contents
     or cursor position. The args required by this function are defined in the header of Pythons's cmd.py.
@@ -634,6 +634,7 @@ def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against
     :param begidx: the beginning index of the prefix text
     :param endidx: the ending index of the prefix text
     :param match_against: the strings being matched against
+    :param _kwargs: a placeholder that handles the case when AutoCompleter passes keyword args
     :return: a list of possible tab completions
     """
     return [cur_match for cur_match in match_against if cur_match.startswith(text)]

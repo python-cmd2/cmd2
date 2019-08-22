@@ -16,7 +16,7 @@ actors = ['Mark Hamill', 'Harrison Ford', 'Carrie Fisher', 'Alec Guinness', 'Pet
           'Jake Lloyd', 'Hayden Christensen', 'Christopher Lee']
 
 
-def query_actors() -> List[str]:
+def query_actors(**_kwargs) -> List[str]:
     """Simulating a function that queries and returns a completion values"""
     return actors
 
@@ -103,11 +103,11 @@ class TabCompleteExample(cmd2.Cmd):
         ]
 
     # noinspection PyMethodMayBeStatic
-    def instance_query_actors(self) -> List[str]:
+    def instance_query_actors(self, **_kwargs) -> List[str]:
         """Simulating a function that queries and returns a completion values"""
         return actors
 
-    def instance_query_movie_ids(self) -> List[str]:
+    def instance_query_movie_ids(self, **_kwargs) -> List[str]:
         """Demonstrates showing tabular hinting of tab completion information"""
         completions_with_desc = []
 
