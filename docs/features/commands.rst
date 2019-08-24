@@ -181,3 +181,11 @@ catch it and display it for you. The `debug` :ref:`setting
 `debug` is `false`, which is the default, ``cmd2`` will display the exception
 name and message. If `debug` is `true`, ``cmd2`` will display a traceback, and
 then display the exception name and message.
+
+
+Remove Built-in Commands
+------------------------
+
+See the :ref:`examples/remove_builtin_commands:Remove Built-in Commands`
+example for information on hiding or removing commands included in ``cmd2``
+which you might not want in your application.
