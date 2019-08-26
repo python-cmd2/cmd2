@@ -140,8 +140,12 @@ Exit Codes
 ``cmd2`` has basic infrastructure to support sh/ksh/csh/bash type exit codes.
 The ``cmd2.Cmd`` object sets an ``exit_code`` attribute to zero when it is
 instantiated. The value of this attribute is returned from the ``cmdloop()``
-call, so if you want to get an exit code back to the operating system shell,
-you can do so like this::
+call. Therefore, if you don't do anything with this attribute in your code,
+``cmdloop()`` will (almost) always return zero. There are a few built-in
+``cmd2`` commands which set ``exit_code`` to ``-1`` if an error occers.
+
+You can use this capability to easily return your own values to the operating
+system shell::
 
     #!/usr/bin/env python
     """A simple cmd2 application."""
@@ -183,9 +187,12 @@ name and message. If `debug` is `true`, ``cmd2`` will display a traceback, and
 then display the exception name and message.
 
 
-Remove Built-in Commands
-------------------------
+Disabling or Hiding Commands
+----------------------------
 
-See the :ref:`examples/remove_builtin_commands:Remove Built-in Commands`
-example for information on hiding or removing commands included in ``cmd2``
-which you might not want in your application.
+See :ref:`features/disable_commands:Disabling Commands` for details of how
+to:
+
+- removing commands included in ``cmd2``
+- hiding commands from the help menu
+- disabling and re-enabling commands at runtime
