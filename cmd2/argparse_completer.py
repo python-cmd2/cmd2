@@ -448,16 +448,17 @@ class AutoCompleter(object):
         if arg_choices is None:
             return []
 
-        # Set up arguments being passed to any completer/choices function
+        # If we are going to call a completer/choices function, then set up the common arguments
         args = []
         kwargs = {}
         if isinstance(arg_choices, ChoicesCallable):
             if arg_choices.is_method:
                 args.append(self._cmd2_app)
 
+            # If arg_choices.to_call accepts an argument called parsed_args, then convert
+            # consumed_arg_values into an argparse Namespace and pass it to the function
             to_call_params = inspect.signature(arg_choices.to_call).parameters
             if PARSED_ARGS in to_call_params:
-                # Convert consumed_arg_values into an argparse Namespace
                 parsed_args = argparse.Namespace()
                 for action, tokens in consumed_arg_values.items():
                     setattr(parsed_args, action.dest, tokens)
