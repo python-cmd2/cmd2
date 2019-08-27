@@ -7,6 +7,7 @@ See the header of argparse_custom.py for instructions on how to use these featur
 """
 
 import argparse
+import inspect
 import numbers
 import shutil
 from typing import Dict, List, Union
@@ -20,6 +21,10 @@ from .rl_utils import rl_force_redisplay
 
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
+
+# Name of the choice/completer function argument that, if present, will be passed a Namespace of
+# parsed command line tokens prior to the token being completed
+PARSED_ARGS = 'parsed_args'
 
 
 def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
@@ -443,30 +448,31 @@ class AutoCompleter(object):
         if arg_choices is None:
             return []
 
-        # Convert consumed_arg_values into an argparse Namespace
-        parsed_args = argparse.Namespace()
-        for action, tokens in consumed_arg_values.items():
-            setattr(parsed_args, action.dest, tokens)
-        parsed_args.__parser__ = self._parser
-
-        # Arguments to completer/choices functions
+        # Set up arguments being passed to any completer/choices function
         args = []
-        kwargs = {'parsed_args': parsed_args}
+        kwargs = {}
+        if isinstance(arg_choices, ChoicesCallable):
+            if arg_choices.is_method:
+                args.append(self._cmd2_app)
+
+            to_call_params = inspect.signature(arg_choices.to_call).parameters
+            if PARSED_ARGS in to_call_params:
+                # Convert consumed_arg_values into an argparse Namespace
+                parsed_args = argparse.Namespace()
+                for action, tokens in consumed_arg_values.items():
+                    setattr(parsed_args, action.dest, tokens)
+                parsed_args.__parser__ = self._parser
+                kwargs[PARSED_ARGS] = parsed_args
 
         # Check if the argument uses a specific tab completion function to provide its choices
         if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
-            if arg_choices.is_method:
-                args.append(self._cmd2_app)
             args.extend([text, line, begidx, endidx])
-
             results = arg_choices.to_call(*args, **kwargs)
 
         # Otherwise use basic_complete on the choices
         else:
             # Check if the choices come from a function
             if isinstance(arg_choices, ChoicesCallable) and not arg_choices.is_completer:
-                if arg_choices.is_method:
-                    args.append(self._cmd2_app)
                 arg_choices = arg_choices.to_call(*args, **kwargs)
 
             # Since arg_choices can be any iterable type, convert to a list

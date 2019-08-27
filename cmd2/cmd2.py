@@ -851,7 +851,7 @@ class Cmd(cmd.Cmd):
         return tokens, raw_tokens
 
     def delimiter_complete(self, text: str, line: str, begidx: int, endidx: int,
-                           match_against: Iterable, delimiter: str, **_kwargs) -> List[str]:
+                           match_against: Iterable, delimiter: str) -> List[str]:
         """
         Performs tab completion against a list but each match is split on a delimiter and only
         the portion of the match being tab completed is shown as the completion suggestions.
@@ -882,7 +882,6 @@ class Cmd(cmd.Cmd):
         :param endidx: the ending index of the prefix text
         :param match_against: the list being matched against
         :param delimiter: what delimits each portion of the matches (ex: paths are delimited by a slash)
-        :param _kwargs: a placeholder that handles the case when AutoCompleter passes keyword args
         :return: a list of possible tab completions
         """
         matches = utils.basic_complete(text, line, begidx, endidx, match_against)
@@ -914,7 +913,7 @@ class Cmd(cmd.Cmd):
 
     def flag_based_complete(self, text: str, line: str, begidx: int, endidx: int,
                             flag_dict: Dict[str, Union[Iterable, Callable]], *,
-                            all_else: Union[None, Iterable, Callable] = None, **_kwargs) -> List[str]:
+                            all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """Tab completes based on a particular flag preceding the token being completed.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
@@ -928,7 +927,6 @@ class Cmd(cmd.Cmd):
                           1. iterable list of strings to match against (dictionaries, lists, etc.)
                           2. function that performs tab completion (ex: path_complete)
         :param all_else: an optional parameter for tab completing any token that isn't preceded by a flag in flag_dict
-        :param _kwargs: a placeholder that handles the case when AutoCompleter passes keyword args
         :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
@@ -957,7 +955,7 @@ class Cmd(cmd.Cmd):
 
     def index_based_complete(self, text: str, line: str, begidx: int, endidx: int,
                              index_dict: Mapping[int, Union[Iterable, Callable]], *,
-                             all_else: Union[None, Iterable, Callable] = None, **_kwargs) -> List[str]:
+                             all_else: Union[None, Iterable, Callable] = None) -> List[str]:
         """Tab completes based on a fixed position in the input string.
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
@@ -971,7 +969,6 @@ class Cmd(cmd.Cmd):
                            1. iterable list of strings to match against (dictionaries, lists, etc.)
                            2. function that performs tab completion (ex: path_complete)
         :param all_else: an optional parameter for tab completing any token that isn't at an index in index_dict
-        :param _kwargs: a placeholder that handles the case when AutoCompleter passes keyword args
         :return: a list of possible tab completions
         """
         # Get all tokens through the one being completed
@@ -1002,7 +999,7 @@ class Cmd(cmd.Cmd):
 
     # noinspection PyUnusedLocal
     def path_complete(self, text: str, line: str, begidx: int, endidx: int, *,
-                      path_filter: Optional[Callable[[str], bool]] = None, **_kwargs) -> List[str]:
+                      path_filter: Optional[Callable[[str], bool]] = None) -> List[str]:
         """Performs completion of local file system paths
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
@@ -1012,7 +1009,6 @@ class Cmd(cmd.Cmd):
         :param path_filter: optional filter function that determines if a path belongs in the results
                             this function takes a path as its argument and returns True if the path should
                             be kept in the results
-        :param _kwargs: a placeholder that handles the case when AutoCompleter passes keyword args
         :return: a list of possible tab completions
         """
 
@@ -1147,7 +1143,7 @@ class Cmd(cmd.Cmd):
         return matches
 
     def shell_cmd_complete(self, text: str, line: str, begidx: int, endidx: int, *,
-                           complete_blank: bool = False, **_kwargs) -> List[str]:
+                           complete_blank: bool = False) -> List[str]:
         """Performs completion of executables either in a user's path or a given path
 
         :param text: the string prefix we are attempting to match (all matches must begin with it)
@@ -1156,7 +1152,6 @@ class Cmd(cmd.Cmd):
         :param endidx: the ending index of the prefix text
         :param complete_blank: If True, then a blank will complete all shell commands in a user's path. If False, then
                                no completion is performed. Defaults to False to match Bash shell behavior.
-        :param _kwargs: a placeholder that handles the case when AutoCompleter passes keyword args
         :return: a list of possible tab completions
         """
         # Don't tab complete anything if no shell command has been started
@@ -1632,19 +1627,19 @@ class Cmd(cmd.Cmd):
 
         return commands
 
-    def _get_alias_completion_items(self, **_kwargs) -> List[CompletionItem]:
+    def _get_alias_completion_items(self) -> List[CompletionItem]:
         """Return list of current alias names and values as CompletionItems"""
         return [CompletionItem(cur_key, self.aliases[cur_key]) for cur_key in self.aliases]
 
-    def _get_macro_completion_items(self, **_kwargs) -> List[CompletionItem]:
+    def _get_macro_completion_items(self) -> List[CompletionItem]:
         """Return list of current macro names and values as CompletionItems"""
         return [CompletionItem(cur_key, self.macros[cur_key].value) for cur_key in self.macros]
 
-    def _get_settable_completion_items(self, **_kwargs) -> List[CompletionItem]:
+    def _get_settable_completion_items(self) -> List[CompletionItem]:
         """Return list of current settable names and descriptions as CompletionItems"""
         return [CompletionItem(cur_key, self.settable[cur_key]) for cur_key in self.settable]
 
-    def _get_commands_aliases_and_macros_for_completion(self, **_kwargs) -> List[str]:
+    def _get_commands_aliases_and_macros_for_completion(self) -> List[str]:
         """Return a list of visible commands, aliases, and macros for tab completion"""
         visible_commands = set(self.get_visible_commands())
         alias_names = set(self.aliases)
@@ -2664,7 +2659,7 @@ class Cmd(cmd.Cmd):
             # noinspection PyTypeChecker
             self.do_help('macro')
 
-    def complete_help_command(self, text: str, line: str, begidx: int, endidx: int, **_kwargs) -> List[str]:
+    def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
 
         # Complete token against topics and visible commands
@@ -2673,7 +2668,7 @@ class Cmd(cmd.Cmd):
         strs_to_match = list(topics | visible_commands)
         return utils.basic_complete(text, line, begidx, endidx, strs_to_match)
 
-    def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int, *,
+    def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int,
                                  parsed_args: argparse.Namespace) -> List[str]:
         """Completes the subcommand argument of help"""
 

@@ -44,7 +44,7 @@ Tab Completion:
         generated when the user hits tab.
 
         Example:
-            def my_choices_function(**kwargs):
+            def my_choices_function():
                 ...
                 return my_generated_list
 
@@ -56,7 +56,7 @@ Tab Completion:
         cases where the list of choices being generated relies on state data of the cmd2-based app
 
         Example:
-            def my_choices_method(self, **kwargs):
+            def my_choices_method(self):
                 ...
                 return my_generated_list
 
@@ -66,7 +66,7 @@ Tab Completion:
         function. completer_method should be used in those cases.
 
         Example:
-            def my_completer_function(text, line, begidx, endidx, **kwargs):
+            def my_completer_function(text, line, begidx, endidx):
                 ...
                 return completions
             parser.add_argument('-o', '--options', completer_function=my_completer_function)

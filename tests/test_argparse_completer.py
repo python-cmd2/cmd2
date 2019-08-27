@@ -31,12 +31,12 @@ completions_from_function = ['completions', 'function', 'fairly', 'complete']
 completions_from_method = ['completions', 'method', 'missed', 'spot']
 
 
-def choices_function(**_kwargs) -> List[str]:
+def choices_function() -> List[str]:
     """Function that provides choices"""
     return choices_from_function
 
 
-def completer_function(text: str, line: str, begidx: int, endidx: int, **_kwargs) -> List[str]:
+def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[str]:
     """Tab completion function"""
     return basic_complete(text, line, begidx, endidx, completions_from_function)
 
@@ -123,11 +123,11 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to testing choices, choices_function, and choices_method parameters
     ############################################################################################################
-    def choices_method(self, **_kwargs) -> List[str]:
+    def choices_method(self) -> List[str]:
         """Method that provides choices"""
         return choices_from_method
 
-    def completion_item_method(self, **_kwargs) -> List[CompletionItem]:
+    def completion_item_method(self) -> List[CompletionItem]:
         """Choices method that returns CompletionItems"""
         items = []
         for i in range(0, 10):
@@ -164,7 +164,7 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to testing completer_function and completer_method parameters
     ############################################################################################################
-    def completer_method(self, text: str, line: str, begidx: int, endidx: int, **_kwargs) -> List[str]:
+    def completer_method(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Tab completion method"""
         return basic_complete(text, line, begidx, endidx, completions_from_method)
 
