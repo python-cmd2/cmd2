@@ -2056,7 +2056,7 @@ class Cmd(cmd.Cmd):
         elif statement.output:
             import tempfile
             if (not statement.output_to) and (not self._can_clip):
-                self.perror("Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable")
+                self.perror("Cannot redirect to paste buffer; missing 'pyperclip' and/or pyperclip dependencies")
                 redir_error = True
 
             elif statement.output_to:

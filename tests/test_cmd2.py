@@ -1332,7 +1332,7 @@ def test_clipboard_failure(base_app, capsys):
     # Make sure we got the error output
     out, err = capsys.readouterr()
     assert out == ''
-    assert "Cannot redirect to paste buffer; install 'pyperclip' and re-run to enable" in err
+    assert 'Cannot redirect to paste buffer;' in err and 'pyperclip' in err
 
 
 class CommandResultApp(cmd2.Cmd):
