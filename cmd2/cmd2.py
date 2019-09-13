@@ -2669,31 +2669,26 @@ class Cmd(cmd.Cmd):
         return utils.basic_complete(text, line, begidx, endidx, strs_to_match)
 
     def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int,
-                                 parsed_args: argparse.Namespace) -> List[str]:
+                                 arg_tokens: argparse.Namespace) -> List[str]:
         """Completes the subcommand argument of help"""
 
         # Make sure we have a command whose subcommands we will complete
-        parsed_args.command = parsed_args.command[0]
-        if not parsed_args.command:
+        command = arg_tokens.command[0]
+        if not command:
             return []
 
         # Check if this command uses argparse
-        func = self.cmd_func(parsed_args.command)
+        func = self.cmd_func(command)
         argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
         if func is None or argparser is None:
             return []
 
-        # Get all tokens through the one being completed
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        if not tokens:
-            return []
-
-        # Get the index of the command
-        cmd_index = tokens.index(parsed_args.command)
+        # Combine the command and its subcommand tokens for the AutoCompleter
+        tokens = [command] + arg_tokens.subcommand
 
         from .argparse_completer import AutoCompleter
         completer = AutoCompleter(argparser, self)
-        return completer.complete_subcommand_help(tokens[cmd_index:], text, line, begidx, endidx)
+        return completer.complete_subcommand_help(tokens, text, line, begidx, endidx)
 
     help_parser = Cmd2ArgumentParser(description="List available commands or provide "
                                                  "detailed help for a specific command")

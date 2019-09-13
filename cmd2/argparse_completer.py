@@ -23,8 +23,8 @@ from .rl_utils import rl_force_redisplay
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
 
 # Name of the choice/completer function argument that, if present, will be passed a Namespace of
-# parsed command line tokens prior to the token being completed
-PARSED_ARGS = 'parsed_args'
+# command line tokens up through the token being completed mapped to their argparse destination.
+ARG_TOKENS = 'arg_tokens'
 
 
 def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
@@ -455,15 +455,21 @@ class AutoCompleter(object):
             if arg_choices.is_method:
                 args.append(self._cmd2_app)
 
-            # If arg_choices.to_call accepts an argument called parsed_args, then convert
+            # If arg_choices.to_call accepts an argument called arg_tokens, then convert
             # consumed_arg_values into an argparse Namespace and pass it to the function
             to_call_params = inspect.signature(arg_choices.to_call).parameters
-            if PARSED_ARGS in to_call_params:
-                parsed_args = argparse.Namespace()
+            if ARG_TOKENS in to_call_params:
+                arg_tokens = argparse.Namespace()
                 for action, tokens in consumed_arg_values.items():
-                    setattr(parsed_args, action.dest, tokens)
-                parsed_args.__parser__ = self._parser
-                kwargs[PARSED_ARGS] = parsed_args
+                    setattr(arg_tokens, action.dest, tokens)
+
+                # Include the token being completed in the Namespace
+                tokens = getattr(arg_tokens, arg_action.dest, [])
+                tokens.append(text)
+                setattr(arg_tokens, arg_action.dest, tokens)
+
+                # Add the namespace to the keyword arguments for the function we are calling
+                kwargs[ARG_TOKENS] = arg_tokens
 
         # Check if the argument uses a specific tab completion function to provide its choices
         if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
