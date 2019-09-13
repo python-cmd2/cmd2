@@ -406,7 +406,7 @@ class AutoCompleter(object):
         :param endidx: the ending index of the prefix text
         :return: List of subcommand completions
         """
-        # If our parser has subcommands, we must examine the tokens and check if any reference one.
+        # If our parser has subcommands, we must examine the tokens and check if they are subcommands
         # If so, we will let the subcommand's parser handle the rest of the tokens via another AutoCompleter.
         if self._subcommand_action is not None:
             for token_index, token in enumerate(tokens[1:], start=1):
@@ -416,7 +416,8 @@ class AutoCompleter(object):
                 elif token_index == len(tokens) - 1:
                     # Since this is the last token, we will attempt to complete it
                     return utils.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
-
+                else:
+                    break
         return []
 
     def format_help(self, tokens: List[str]) -> str:
