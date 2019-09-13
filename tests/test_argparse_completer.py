@@ -286,7 +286,8 @@ def test_help(ac_app, command):
     ('music', 'creab', []),
     ('music create', '', ['jazz', 'rock']),
     ('music crea', 'jazz', []),
-    ('music create', 'foo', [])
+    ('music create', 'foo', []),
+    ('fake create', '', []),
 ])
 def test_complete_help(ac_app, command, text, completions):
     line = 'help {} {}'.format(command, text)
