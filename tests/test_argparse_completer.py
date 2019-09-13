@@ -30,6 +30,9 @@ positional_choices = ['the', 'positional', 'choices']
 completions_from_function = ['completions', 'function', 'fairly', 'complete']
 completions_from_method = ['completions', 'method', 'missed', 'spot']
 
+set_one_choices = ['this', 'is', 'set', 'one']
+set_two_choices = ['this', 'is', 'set', 'two']
+
 
 def choices_function() -> List[str]:
     """Function that provides choices"""
@@ -39,6 +42,24 @@ def choices_function() -> List[str]:
 def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[str]:
     """Tab completion function"""
     return basic_complete(text, line, begidx, endidx, completions_from_function)
+
+
+def choices_takes_namespace(arg_tokens: argparse.Namespace) -> List[str]:
+    """Choices function that receives arg_tokens from AutoCompleter"""
+    if arg_tokens.set_pos[0] == 'set1':
+        return set_one_choices
+    else:
+        return set_two_choices
+
+
+def completer_takes_namespace(text: str, line: str, begidx: int, endidx: int,
+                              arg_tokens: argparse.Namespace) -> List[str]:
+    """Completer function that receives arg_tokens from AutoCompleter"""
+    if arg_tokens.set_pos[0] == 'set1':
+        match_against = set_one_choices
+    else:
+        match_against = set_two_choices
+    return basic_complete(text, line, begidx, endidx, match_against)
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
@@ -225,6 +246,18 @@ class AutoCompleteTester(cmd2.Cmd):
 
     @with_argparser(hint_parser)
     def do_hint(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
+    # Begin code related to receiving arg_tokens
+    ############################################################################################################
+    arg_tokens_parser = Cmd2ArgumentParser()
+    arg_tokens_parser.add_argument('set_pos', help='determines what will be tab completed')
+    arg_tokens_parser.add_argument('choices_pos', choices_function=choices_takes_namespace)
+    arg_tokens_parser.add_argument('completer_pos', completer_function=completer_takes_namespace)
+
+    @with_argparser(arg_tokens_parser)
+    def do_arg_tokens(self, args: argparse.Namespace) -> None:
         pass
 
 
@@ -716,6 +749,30 @@ Hint:
   NO_HELP_POS            
 
 '''
+
+
+@pytest.mark.parametrize('command_and_args, completions', [
+    # Exercise a choices function that receives arg_tokens Namespace
+    ('arg_tokens set1', set_one_choices),
+    ('arg_tokens set2', set_two_choices),
+
+    # Exercise a completer that receives arg_tokens Namespace
+    ('arg_tokens set1 fake', set_one_choices),
+    ('arg_tokens set2 fake', set_two_choices),
+])
+def test_arg_tokens(ac_app, command_and_args, completions):
+    text = ''
+    line = '{} {}'.format(command_and_args, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
 
 
 def test_single_prefix_char():
