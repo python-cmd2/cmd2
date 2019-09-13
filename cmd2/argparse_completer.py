@@ -424,16 +424,17 @@ class AutoCompleter(object):
         """
         Supports cmd2's help command in the retrieval of help text
         :param tokens: command line tokens
-        :return: help text of the commmand being queried
+        :return: help text of the command being queried
         """
-        # If our parser has subcommands, we must examine the tokens and check if any reference one.
+        # If our parser has subcommands, we must examine the tokens and check if they are subcommands
         # If so, we will let the subcommand's parser handle the rest of the tokens via another AutoCompleter.
         if self._subcommand_action is not None:
             for token_index, token in enumerate(tokens[1:], start=1):
                 if token in self._subcommand_action.choices:
                     completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
                     return completer.format_help(tokens[token_index:])
-
+                else:
+                    break
         return self._parser.format_help()
 
     def _complete_for_arg(self, arg_action: argparse.Action,
