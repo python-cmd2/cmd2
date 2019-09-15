@@ -1596,6 +1596,10 @@ class Cmd(cmd.Cmd):
         tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         return completer.complete_command(tokens, text, line, begidx, endidx)
 
+    def get_names(self):
+        """Return an alphabetized list of names comprising the attributes of the cmd2 class instance."""
+        return dir(self)
+
     def get_all_commands(self) -> List[str]:
         """Return a list of all commands"""
         return [name[len(COMMAND_FUNC_PREFIX):] for name in self.get_names()
