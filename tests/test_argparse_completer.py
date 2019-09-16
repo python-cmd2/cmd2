@@ -223,6 +223,9 @@ class AutoCompleteTester(cmd2.Cmd):
     arg_tokens_subcmd_parser.add_argument('choices_pos', choices_function=choices_takes_arg_tokens)
     arg_tokens_subcmd_parser.add_argument('completer_pos', completer_function=completer_takes_arg_tokens)
 
+    # Used to override parent_arg in arg_tokens_parser
+    arg_tokens_subcmd_parser.add_argument('--parent_arg')
+
     @with_argparser(arg_tokens_parser)
     def do_arg_tokens(self, args: argparse.Namespace) -> None:
         pass
@@ -726,6 +729,9 @@ Hint:
 
     # Exercise a completer that receives arg_tokens dictionary
     ('arg_tokens completer subcmd fake', ['completer', 'subcmd']),
+
+    # Exercise overriding parent_arg from the subcommand
+    ('arg_tokens completer subcmd --parent_arg override fake', ['override', 'subcmd'])
 ])
 def test_arg_tokens(ac_app, command_and_args, completions):
     text = ''
