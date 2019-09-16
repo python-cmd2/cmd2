@@ -4,6 +4,7 @@
     * Fixed a bug when running a cmd2 application on Linux without Gtk libraries installed
 * Enhancements
     * No longer treating empty text scripts as an error condition
+    * Allow dynamically extending a `cmd2.Cmd` object instance with a `do_xxx` method at runtime
 
 ## 0.9.16 (August 7, 2019)
 * Bug Fixes
