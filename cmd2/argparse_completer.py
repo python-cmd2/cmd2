@@ -10,7 +10,7 @@ import argparse
 import inspect
 import numbers
 import shutil
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from . import cmd2
 from . import utils
@@ -22,8 +22,8 @@ from .rl_utils import rl_force_redisplay
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
 
-# Name of the choice/completer function argument that, if present, will be passed a Namespace of
-# command line tokens up through the token being completed mapped to their argparse destination.
+# Name of the choice/completer function argument that, if present, will be passed a dictionary of
+# command line tokens up through the token being completed mapped to their argparse destination name.
 ARG_TOKENS = 'arg_tokens'
 
 
@@ -97,15 +97,23 @@ class AutoCompleter(object):
                 self.min = self.action.nargs
                 self.max = self.action.nargs
 
-    def __init__(self, parser: argparse.ArgumentParser, cmd2_app: cmd2.Cmd) -> None:
+    def __init__(self, parser: argparse.ArgumentParser, cmd2_app: cmd2.Cmd, *,
+                 parent_tokens: Optional[Dict[str, List[str]]] = None) -> None:
         """
         Create an AutoCompleter
 
         :param parser: ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this AutoCompleter
+        :param parent_tokens: optional dictionary mapping parent parsers' arg names to their tokens
+                              this is only used by AutoCompleter when recursing on subcommand parsers
+                              Defaults to None
         """
         self._parser = parser
         self._cmd2_app = cmd2_app
+
+        if parent_tokens is None:
+            parent_tokens = dict()
+        self._parent_tokens = parent_tokens
 
         self._flags = []  # all flags in this command
         self._flag_to_action = {}  # maps flags to the argparse action object
@@ -113,7 +121,7 @@ class AutoCompleter(object):
         self._subcommand_action = None  # this will be set if self._parser has subcommands
 
         # Start digging through the argparse structures.
-        #   _actions is the top level container of parameter definitions
+        #  _actions is the top level container of parameter definitions
         for action in self._parser._actions:
             # if the parameter is flag based, it will have option_strings
             if action.option_strings:
@@ -152,13 +160,13 @@ class AutoCompleter(object):
         matched_flags = []
 
         # Keeps track of arguments we've seen and any tokens they consumed
-        consumed_arg_values = dict()  # dict(action -> tokens)
+        consumed_arg_values = dict()  # dict(arg_name -> List[tokens])
 
         def consume_argument(arg_state: AutoCompleter._ArgumentState) -> None:
             """Consuming token as an argument"""
             arg_state.count += 1
-            consumed_arg_values.setdefault(arg_state.action, [])
-            consumed_arg_values[arg_state.action].append(token)
+            consumed_arg_values.setdefault(arg_state.action.dest, [])
+            consumed_arg_values[arg_state.action.dest].append(token)
 
         #############################################################################################
         # Parse all but the last token
@@ -218,14 +226,14 @@ class AutoCompleter(object):
                                            argparse._CountAction)):
                         # Flags with action set to append, append_const, and count can be reused
                         # Therefore don't erase any tokens already consumed for this flag
-                        consumed_arg_values.setdefault(action, [])
+                        consumed_arg_values.setdefault(action.dest, [])
                     else:
                         # This flag is not resusable, so mark that we've seen it
                         matched_flags.extend(action.option_strings)
 
                         # It's possible we already have consumed values for this flag if it was used
                         # earlier in the command line. Reset them now for this use of it.
-                        consumed_arg_values[action] = []
+                        consumed_arg_values[action.dest] = []
 
                     new_arg_state = AutoCompleter._ArgumentState(action)
 
@@ -256,7 +264,15 @@ class AutoCompleter(object):
                         # Are we at a subcommand? If so, forward to the matching completer
                         if action == self._subcommand_action:
                             if token in self._subcommand_action.choices:
-                                completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                                # Merge self._parent_tokens and consumed_arg_values
+                                parent_tokens = {**self._parent_tokens, **consumed_arg_values}
+
+                                # Include the subcommand name if its destination was set
+                                if action.dest != argparse.SUPPRESS:
+                                    parent_tokens[action.dest] = [token]
+
+                                completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app,
+                                                          parent_tokens=parent_tokens)
                                 return completer.complete_command(tokens[token_index:], text, line, begidx, endidx)
                             else:
                                 # Invalid subcommand entered, so no way to complete remaining tokens
@@ -439,7 +455,7 @@ class AutoCompleter(object):
 
     def _complete_for_arg(self, arg_action: argparse.Action,
                           text: str, line: str, begidx: int, endidx: int,
-                          consumed_arg_values: Dict[argparse.Action, List[str]]) -> List[str]:
+                          consumed_arg_values: Dict[str, List[str]]) -> List[str]:
         """Tab completion routine for an argparse argument"""
         # Check if the arg provides choices to the user
         if arg_action.choices is not None:
@@ -457,18 +473,15 @@ class AutoCompleter(object):
             if arg_choices.is_method:
                 args.append(self._cmd2_app)
 
-            # If arg_choices.to_call accepts an argument called arg_tokens, then convert
-            # consumed_arg_values into an argparse Namespace and pass it to the function
+            # Check if arg_choices.to_call expects arg_tokens
             to_call_params = inspect.signature(arg_choices.to_call).parameters
             if ARG_TOKENS in to_call_params:
-                arg_tokens = argparse.Namespace()
-                for action, tokens in consumed_arg_values.items():
-                    setattr(arg_tokens, action.dest, tokens)
+                # Merge self._parent_tokens and consumed_arg_values
+                arg_tokens = {**self._parent_tokens, **consumed_arg_values}
 
-                # Include the token being completed in the Namespace
-                tokens = getattr(arg_tokens, arg_action.dest, [])
-                tokens.append(text)
-                setattr(arg_tokens, arg_action.dest, tokens)
+                # Include the token being completed
+                arg_tokens.setdefault(arg_action.dest, [])
+                arg_tokens[arg_action.dest].append(text)
 
                 # Add the namespace to the keyword arguments for the function we are calling
                 kwargs[ARG_TOKENS] = arg_tokens
@@ -498,7 +511,7 @@ class AutoCompleter(object):
                     arg_choices[index] = str(choice)
 
             # Filter out arguments we already used
-            used_values = consumed_arg_values.get(arg_action, [])
+            used_values = consumed_arg_values.get(arg_action.dest, [])
             arg_choices = [choice for choice in arg_choices if choice not in used_values]
 
             # Do tab completion on the choices

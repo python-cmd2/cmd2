@@ -4,7 +4,7 @@
     * Fixed a bug when running a cmd2 application on Linux without Gtk libraries installed
 * Enhancements
     * No longer treating empty text scripts as an error condition
-    * Choices/Completer functions can now be passed an `argparse.Namespace` that maps command-line tokens to their
+    * Choices/Completer functions can now be passed a dictionary that maps command-line tokens to their
     argparse argument. This is helpful when one argument determines what is tab completed for another argument.
     If these functions have an argument called `arg_tokens`, then AutoCompleter will automatically pass this
     Namespace to them.

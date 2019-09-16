@@ -103,17 +103,17 @@ Tab Completion:
         set_completer_method(action, method)
 
     There are times when what's being tab completed is determined by a previous argument on the command line.
-    In theses cases, Autocompleter can pass an argparse Namespace that maps the command line tokens up through the
-    one being completed to their argparse argument. To receive this Namespace, your choices/completer function
+    In theses cases, Autocompleter can pass a dictionary that maps the command line tokens up through the one
+    being completed to their argparse argument name. To receive this dictionary, your choices/completer function
     should have an argument called arg_tokens.
 
         Example:
             def my_choices_method(self, arg_tokens)
             def my_completer_method(self, text, line, begidx, endidx, arg_tokens)
 
-    All members of the arg_tokens Namespace are lists, even if a particular argument expects only 1 token. Since
+    All values of the arg_tokens dictionary are lists, even if a particular argument expects only 1 token. Since
     AutoCompleter is for tab completion, it does not convert the tokens to their actual argument types or validate
-    their values. All tokens are stored in the Namespace as the raw strings provided on the command line. It is up to
+    their values. All tokens are stored in the dictionary as the raw strings provided on the command line. It is up to
     the developer to determine if the user entered the correct argument type (e.g. int) and validate their values.
 
 CompletionItem Class:

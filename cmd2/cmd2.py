@@ -2669,11 +2669,11 @@ class Cmd(cmd.Cmd):
         return utils.basic_complete(text, line, begidx, endidx, strs_to_match)
 
     def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int,
-                                 arg_tokens: argparse.Namespace) -> List[str]:
+                                 arg_tokens: Dict[str, List[str]]) -> List[str]:
         """Completes the subcommand argument of help"""
 
         # Make sure we have a command whose subcommands we will complete
-        command = arg_tokens.command[0]
+        command = arg_tokens['command'][0]
         if not command:
             return []
 
@@ -2684,7 +2684,7 @@ class Cmd(cmd.Cmd):
             return []
 
         # Combine the command and its subcommand tokens for the AutoCompleter
-        tokens = [command] + arg_tokens.subcommand
+        tokens = [command] + arg_tokens['subcommand']
 
         from .argparse_completer import AutoCompleter
         completer = AutoCompleter(argparser, self)

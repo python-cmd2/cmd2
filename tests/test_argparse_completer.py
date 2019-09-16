@@ -44,18 +44,18 @@ def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[s
     return basic_complete(text, line, begidx, endidx, completions_from_function)
 
 
-def choices_takes_namespace(arg_tokens: argparse.Namespace) -> List[str]:
+def choices_takes_arg_tokens(arg_tokens: argparse.Namespace) -> List[str]:
     """Choices function that receives arg_tokens from AutoCompleter"""
-    if arg_tokens.set_pos[0] == 'set1':
+    if arg_tokens['set_pos'][0] == 'set1':
         return set_one_choices
     else:
         return set_two_choices
 
 
-def completer_takes_namespace(text: str, line: str, begidx: int, endidx: int,
-                              arg_tokens: argparse.Namespace) -> List[str]:
+def completer_takes_arg_tokens(text: str, line: str, begidx: int, endidx: int,
+                               arg_tokens: argparse.Namespace) -> List[str]:
     """Completer function that receives arg_tokens from AutoCompleter"""
-    if arg_tokens.set_pos[0] == 'set1':
+    if arg_tokens['set_pos'][0] == 'set1':
         match_against = set_one_choices
     else:
         match_against = set_two_choices
@@ -253,8 +253,8 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
     arg_tokens_parser = Cmd2ArgumentParser()
     arg_tokens_parser.add_argument('set_pos', help='determines what will be tab completed')
-    arg_tokens_parser.add_argument('choices_pos', choices_function=choices_takes_namespace)
-    arg_tokens_parser.add_argument('completer_pos', completer_function=completer_takes_namespace)
+    arg_tokens_parser.add_argument('choices_pos', choices_function=choices_takes_arg_tokens)
+    arg_tokens_parser.add_argument('completer_pos', completer_function=completer_takes_arg_tokens)
 
     @with_argparser(arg_tokens_parser)
     def do_arg_tokens(self, args: argparse.Namespace) -> None:
@@ -754,11 +754,11 @@ Hint:
 
 
 @pytest.mark.parametrize('command_and_args, completions', [
-    # Exercise a choices function that receives arg_tokens Namespace
+    # Exercise a choices function that receives arg_tokens dictionary
     ('arg_tokens set1', set_one_choices),
     ('arg_tokens set2', set_two_choices),
 
-    # Exercise a completer that receives arg_tokens Namespace
+    # Exercise a completer that receives arg_tokens dictionary
     ('arg_tokens set1 fake', set_one_choices),
     ('arg_tokens set2 fake', set_two_choices),
 ])
