@@ -1606,6 +1606,10 @@ class Cmd(cmd.Cmd):
         tokens_to_parse = raw_tokens if preserve_quotes else tokens
         return completer.complete_command(tokens_to_parse, text, line, begidx, endidx)
 
+    def get_names(self):
+        """Return an alphabetized list of names comprising the attributes of the cmd2 class instance."""
+        return dir(self)
+
     def get_all_commands(self) -> List[str]:
         """Return a list of all commands"""
         return [name[len(COMMAND_FUNC_PREFIX):] for name in self.get_names()
