@@ -66,11 +66,11 @@ class AutoCompleteTester(cmd2.Cmd):
     music_parser = Cmd2ArgumentParser(description='Manage music', prog='music')
 
     # Add subcommands to music
-    music_subparsers = music_parser.add_subparsers(required=True, dest='subcommand')
+    music_subparsers = music_parser.add_subparsers()
     music_create_parser = music_subparsers.add_parser('create', help='Create music')
 
     # Add subcommands to music -> create
-    music_create_subparsers = music_create_parser.add_subparsers(required=True, dest='subcommand')
+    music_create_subparsers = music_create_parser.add_subparsers()
     music_create_jazz_parser = music_create_subparsers.add_parser('jazz', help='Create jazz')
     music_create_rock_parser = music_create_subparsers.add_parser('rock', help='Create rocks')
 
@@ -217,7 +217,7 @@ class AutoCompleteTester(cmd2.Cmd):
     arg_tokens_parser.add_argument('parent_arg', help='arg from a parent parser')
 
     # Create a subcommand for to exercise receiving parent_tokens and subcommand name in arg_tokens
-    arg_tokens_subparser = arg_tokens_parser.add_subparsers(required=True, dest='subcommand')
+    arg_tokens_subparser = arg_tokens_parser.add_subparsers(dest='subcommand')
     arg_tokens_subcmd_parser = arg_tokens_subparser.add_parser('subcmd')
 
     arg_tokens_subcmd_parser.add_argument('choices_pos', choices_function=choices_takes_arg_tokens)
