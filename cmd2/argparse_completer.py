@@ -7,9 +7,10 @@ See the header of argparse_custom.py for instructions on how to use these featur
 """
 
 import argparse
+import inspect
 import numbers
 import shutil
-from typing import List, Union
+from typing import Dict, List, Optional, Union
 
 from . import cmd2
 from . import utils
@@ -20,6 +21,10 @@ from .rl_utils import rl_force_redisplay
 
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
+
+# Name of the choice/completer function argument that, if present, will be passed a dictionary of
+# command line tokens up through the token being completed mapped to their argparse destination name.
+ARG_TOKENS = 'arg_tokens'
 
 
 def _single_prefix_char(token: str, parser: argparse.ArgumentParser) -> bool:
@@ -93,28 +98,30 @@ class AutoCompleter(object):
                 self.max = self.action.nargs
 
     def __init__(self, parser: argparse.ArgumentParser, cmd2_app: cmd2.Cmd, *,
-                 token_start_index: int = 1) -> None:
+                 parent_tokens: Optional[Dict[str, List[str]]] = None) -> None:
         """
         Create an AutoCompleter
 
         :param parser: ArgumentParser instance
         :param cmd2_app: reference to the Cmd2 application that owns this AutoCompleter
-        :param token_start_index: index of the token to start parsing at
+        :param parent_tokens: optional dictionary mapping parent parsers' arg names to their tokens
+                              this is only used by AutoCompleter when recursing on subcommand parsers
+                              Defaults to None
         """
         self._parser = parser
         self._cmd2_app = cmd2_app
-        self._token_start_index = token_start_index
+
+        if parent_tokens is None:
+            parent_tokens = dict()
+        self._parent_tokens = parent_tokens
 
         self._flags = []  # all flags in this command
         self._flag_to_action = {}  # maps flags to the argparse action object
         self._positional_actions = []  # actions for positional arguments (by position index)
-
-        # maps action to subcommand autocompleter:
-        #   action -> dict(sub_command -> completer)
-        self._positional_completers = {}
+        self._subcommand_action = None  # this will be set if self._parser has subcommands
 
         # Start digging through the argparse structures.
-        #   _actions is the top level container of parameter definitions
+        #  _actions is the top level container of parameter definitions
         for action in self._parser._actions:
             # if the parameter is flag based, it will have option_strings
             if action.option_strings:
@@ -126,23 +133,13 @@ class AutoCompleter(object):
             # Otherwise this is a positional parameter
             else:
                 self._positional_actions.append(action)
-
+                # Check if this action defines subcommands
                 if isinstance(action, argparse._SubParsersAction):
-                    sub_completers = {}
-
-                    # Create an AutoCompleter for each subcommand of this command
-                    for subcmd in action.choices:
-
-                        subcmd_start = token_start_index + len(self._positional_actions)
-                        sub_completers[subcmd] = AutoCompleter(action.choices[subcmd],
-                                                               cmd2_app,
-                                                               token_start_index=subcmd_start)
-
-                    self._positional_completers[action] = sub_completers
+                    self._subcommand_action = action
 
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
-        if len(tokens) <= self._token_start_index:
+        if not tokens:
             return []
 
         # Count which positional argument index we're at now. Loop through all tokens on the command line so far
@@ -159,26 +156,22 @@ class AutoCompleter(object):
         # _ArgumentState of the current flag
         flag_arg_state = None
 
+        # Non-reusable flags that we've parsed
         matched_flags = []
-        consumed_arg_values = {}  # dict(arg_name -> [values, ...])
+
+        # Keeps track of arguments we've seen and any tokens they consumed
+        consumed_arg_values = dict()  # dict(arg_name -> List[tokens])
 
         def consume_argument(arg_state: AutoCompleter._ArgumentState) -> None:
             """Consuming token as an argument"""
             arg_state.count += 1
-
-            # Does this complete an option item for the flag?
-            arg_choices = self._resolve_choices_for_arg(arg_state.action)
-
-            # If the current token is in the flag argument's autocomplete list,
-            # then track that we've used it already.
-            if token in arg_choices:
-                consumed_arg_values.setdefault(arg_state.action, [])
-                consumed_arg_values[arg_state.action].append(token)
+            consumed_arg_values.setdefault(arg_state.action.dest, [])
+            consumed_arg_values[arg_state.action.dest].append(token)
 
         #############################################################################################
         # Parse all but the last token
         #############################################################################################
-        for loop_index, token in enumerate(tokens[self._token_start_index:-1]):
+        for token_index, token in enumerate(tokens[1:-1], start=1):
 
             # If we're in a positional REMAINDER arg, force all future tokens to go to that
             if pos_arg_state is not None and pos_arg_state.is_remainder:
@@ -228,12 +221,19 @@ class AutoCompleter(object):
                         action = self._flag_to_action[candidates_flags[0]]
 
                 if action is not None:
-                    # Keep track of what flags have already been used
-                    # Flags with action set to append, append_const, and count can be reused
-                    if not isinstance(action, (argparse._AppendAction,
-                                               argparse._AppendConstAction,
-                                               argparse._CountAction)):
+                    if isinstance(action, (argparse._AppendAction,
+                                           argparse._AppendConstAction,
+                                           argparse._CountAction)):
+                        # Flags with action set to append, append_const, and count can be reused
+                        # Therefore don't erase any tokens already consumed for this flag
+                        consumed_arg_values.setdefault(action.dest, [])
+                    else:
+                        # This flag is not resusable, so mark that we've seen it
                         matched_flags.extend(action.option_strings)
+
+                        # It's possible we already have consumed values for this flag if it was used
+                        # earlier in the command line. Reset them now for this use of it.
+                        consumed_arg_values[action.dest] = []
 
                     new_arg_state = AutoCompleter._ArgumentState(action)
 
@@ -241,10 +241,6 @@ class AutoCompleter(object):
                     if new_arg_state.max > 0:
                         flag_arg_state = new_arg_state
                         skip_remaining_flags = flag_arg_state.is_remainder
-
-                        # It's possible we already have consumed values for this flag if it was used
-                        # earlier in the command line. Reset them now for this use of it.
-                        consumed_arg_values[flag_arg_state.action] = []
 
             # Check if we are consuming a flag
             elif flag_arg_state is not None:
@@ -266,11 +262,18 @@ class AutoCompleter(object):
                         action = self._positional_actions[pos_index]
 
                         # Are we at a subcommand? If so, forward to the matching completer
-                        if isinstance(action, argparse._SubParsersAction):
-                            sub_completers = self._positional_completers[action]
-                            if token in sub_completers:
-                                return sub_completers[token].complete_command(tokens, text, line,
-                                                                              begidx, endidx)
+                        if action == self._subcommand_action:
+                            if token in self._subcommand_action.choices:
+                                # Merge self._parent_tokens and consumed_arg_values
+                                parent_tokens = {**self._parent_tokens, **consumed_arg_values}
+
+                                # Include the subcommand name if its destination was set
+                                if action.dest != argparse.SUPPRESS:
+                                    parent_tokens[action.dest] = [token]
+
+                                completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app,
+                                                          parent_tokens=parent_tokens)
+                                return completer.complete_command(tokens[token_index:], text, line, begidx, endidx)
                             else:
                                 # Invalid subcommand entered, so no way to complete remaining tokens
                                 return []
@@ -316,9 +319,8 @@ class AutoCompleter(object):
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            consumed = consumed_arg_values.get(flag_arg_state.action, [])
             completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
-                                                        begidx, endidx, consumed)
+                                                        begidx, endidx, consumed_arg_values)
 
             # If we have results, then return them
             if completion_results:
@@ -339,9 +341,8 @@ class AutoCompleter(object):
                 action = self._positional_actions[pos_index]
                 pos_arg_state = AutoCompleter._ArgumentState(action)
 
-            consumed = consumed_arg_values.get(pos_arg_state.action, [])
             completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
-                                                        begidx, endidx, consumed)
+                                                        begidx, endidx, consumed_arg_values)
 
             # If we have results, then return them
             if completion_results:
@@ -411,7 +412,7 @@ class AutoCompleter(object):
 
         return completions
 
-    def complete_command_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_subcommand_help(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """
         Supports cmd2's help command in the completion of subcommand names
         :param tokens: command line tokens
@@ -421,121 +422,126 @@ class AutoCompleter(object):
         :param endidx: the ending index of the prefix text
         :return: List of subcommand completions
         """
-        for token in tokens[self._token_start_index:]:
-            if self._positional_completers:
-                # For now argparse only allows 1 subcommand group per level
-                # so this will only loop once.
-                for completers in self._positional_completers.values():
-                    if token in completers:
-                        return completers[token].complete_command_help(tokens, text, line, begidx, endidx)
-                    else:
-                        return utils.basic_complete(text, line, begidx, endidx, completers.keys())
+        # If our parser has subcommands, we must examine the tokens and check if they are subcommands
+        # If so, we will let the subcommand's parser handle the rest of the tokens via another AutoCompleter.
+        if self._subcommand_action is not None:
+            for token_index, token in enumerate(tokens[1:], start=1):
+                if token in self._subcommand_action.choices:
+                    completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                    return completer.complete_subcommand_help(tokens[token_index:], text, line, begidx, endidx)
+                elif token_index == len(tokens) - 1:
+                    # Since this is the last token, we will attempt to complete it
+                    return utils.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
+                else:
+                    break
         return []
 
     def format_help(self, tokens: List[str]) -> str:
         """
-        Retrieve help text of a subcommand
+        Supports cmd2's help command in the retrieval of help text
         :param tokens: command line tokens
-        :return: help text of the subcommand being queried
+        :return: help text of the command being queried
         """
-        for token in tokens[self._token_start_index:]:
-            if self._positional_completers:
-                # For now argparse only allows 1 subcommand group per level
-                # so this will only loop once.
-                for completers in self._positional_completers.values():
-                    if token in completers:
-                        return completers[token].format_help(tokens)
+        # If our parser has subcommands, we must examine the tokens and check if they are subcommands
+        # If so, we will let the subcommand's parser handle the rest of the tokens via another AutoCompleter.
+        if self._subcommand_action is not None:
+            for token_index, token in enumerate(tokens[1:], start=1):
+                if token in self._subcommand_action.choices:
+                    completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                    return completer.format_help(tokens[token_index:])
+                else:
+                    break
         return self._parser.format_help()
 
-    def _complete_for_arg(self, arg: argparse.Action,
-                          text: str, line: str, begidx: int, endidx: int, used_values=()) -> List[str]:
-        """Tab completion routine for argparse arguments"""
-
-        # Check the arg provides choices to the user
-        if arg.choices is not None:
-            arg_choices = arg.choices
+    def _complete_for_arg(self, arg_action: argparse.Action,
+                          text: str, line: str, begidx: int, endidx: int,
+                          consumed_arg_values: Dict[str, List[str]]) -> List[str]:
+        """Tab completion routine for an argparse argument"""
+        # Check if the arg provides choices to the user
+        if arg_action.choices is not None:
+            arg_choices = arg_action.choices
         else:
-            arg_choices = getattr(arg, ATTR_CHOICES_CALLABLE, None)
+            arg_choices = getattr(arg_action, ATTR_CHOICES_CALLABLE, None)
 
         if arg_choices is None:
             return []
+
+        # If we are going to call a completer/choices function, then set up the common arguments
+        args = []
+        kwargs = {}
+        if isinstance(arg_choices, ChoicesCallable):
+            if arg_choices.is_method:
+                args.append(self._cmd2_app)
+
+            # Check if arg_choices.to_call expects arg_tokens
+            to_call_params = inspect.signature(arg_choices.to_call).parameters
+            if ARG_TOKENS in to_call_params:
+                # Merge self._parent_tokens and consumed_arg_values
+                arg_tokens = {**self._parent_tokens, **consumed_arg_values}
+
+                # Include the token being completed
+                arg_tokens.setdefault(arg_action.dest, [])
+                arg_tokens[arg_action.dest].append(text)
+
+                # Add the namespace to the keyword arguments for the function we are calling
+                kwargs[ARG_TOKENS] = arg_tokens
 
         # Check if the argument uses a specific tab completion function to provide its choices
         if isinstance(arg_choices, ChoicesCallable) and arg_choices.is_completer:
-            if arg_choices.is_method:
-                results = arg_choices.to_call(self._cmd2_app, text, line, begidx, endidx)
-            else:
-                results = arg_choices.to_call(text, line, begidx, endidx)
+            args.extend([text, line, begidx, endidx])
+            results = arg_choices.to_call(*args, **kwargs)
 
         # Otherwise use basic_complete on the choices
         else:
-            results = utils.basic_complete(text, line, begidx, endidx,
-                                           self._resolve_choices_for_arg(arg, used_values))
+            # Check if the choices come from a function
+            if isinstance(arg_choices, ChoicesCallable) and not arg_choices.is_completer:
+                arg_choices = arg_choices.to_call(*args, **kwargs)
 
-        return self._format_completions(arg, results)
+            # Since arg_choices can be any iterable type, convert to a list
+            arg_choices = list(arg_choices)
 
-    def _resolve_choices_for_arg(self, arg: argparse.Action, used_values=()) -> List[str]:
-        """Retrieve a list of choices that are available for a particular argument"""
+            # If these choices are numbers, and have not yet been sorted, then sort them now
+            if not self._cmd2_app.matches_sorted and all(isinstance(x, numbers.Number) for x in arg_choices):
+                arg_choices.sort()
+                self._cmd2_app.matches_sorted = True
 
-        # Check the arg provides choices to the user
-        if arg.choices is not None:
-            arg_choices = arg.choices
-        else:
-            arg_choices = getattr(arg, ATTR_CHOICES_CALLABLE, None)
+            # Since choices can be various types like int, we must convert them to strings
+            for index, choice in enumerate(arg_choices):
+                if not isinstance(choice, str):
+                    arg_choices[index] = str(choice)
 
-        if arg_choices is None:
-            return []
+            # Filter out arguments we already used
+            used_values = consumed_arg_values.get(arg_action.dest, [])
+            arg_choices = [choice for choice in arg_choices if choice not in used_values]
 
-        # Check if arg_choices is a ChoicesCallable that generates a choice list
-        if isinstance(arg_choices, ChoicesCallable):
-            if arg_choices.is_completer:
-                # Tab completion routines are handled in other functions
-                return []
-            else:
-                if arg_choices.is_method:
-                    arg_choices = arg_choices.to_call(self._cmd2_app)
-                else:
-                    arg_choices = arg_choices.to_call()
+            # Do tab completion on the choices
+            results = utils.basic_complete(text, line, begidx, endidx, arg_choices)
 
-        # Since arg_choices can be any iterable type, convert to a list
-        arg_choices = list(arg_choices)
-
-        # If these choices are numbers, and have not yet been sorted, then sort them now
-        if not self._cmd2_app.matches_sorted and all(isinstance(x, numbers.Number) for x in arg_choices):
-            arg_choices.sort()
-            self._cmd2_app.matches_sorted = True
-
-        # Since choices can be various types like int, we must convert them to strings
-        for index, choice in enumerate(arg_choices):
-            if not isinstance(choice, str):
-                arg_choices[index] = str(choice)
-
-        # Filter out arguments we already used
-        return [choice for choice in arg_choices if choice not in used_values]
+        return self._format_completions(arg_action, results)
 
     @staticmethod
-    def _print_arg_hint(arg: argparse.Action) -> None:
+    def _print_arg_hint(arg_action: argparse.Action) -> None:
         """Print argument hint to the terminal when tab completion results in no results"""
 
         # Check if hinting is disabled
-        suppress_hint = getattr(arg, ATTR_SUPPRESS_TAB_HINT, False)
-        if suppress_hint or arg.help == argparse.SUPPRESS or arg.dest == argparse.SUPPRESS:
+        suppress_hint = getattr(arg_action, ATTR_SUPPRESS_TAB_HINT, False)
+        if suppress_hint or arg_action.help == argparse.SUPPRESS or arg_action.dest == argparse.SUPPRESS:
             return
 
         # Check if this is a flag
-        if arg.option_strings:
-            flags = ', '.join(arg.option_strings)
-            param = ' ' + str(arg.dest).upper()
+        if arg_action.option_strings:
+            flags = ', '.join(arg_action.option_strings)
+            param = ' ' + str(arg_action.dest).upper()
             prefix = '{}{}'.format(flags, param)
 
         # Otherwise this is a positional
         else:
-            prefix = '{}'.format(str(arg.dest).upper())
+            prefix = '{}'.format(str(arg_action.dest).upper())
 
         prefix = '  {0: <{width}}    '.format(prefix, width=20)
         pref_len = len(prefix)
 
-        help_text = '' if arg.help is None else arg.help
+        help_text = '' if arg_action.help is None else arg_action.help
         help_lines = help_text.splitlines()
 
         if len(help_lines) == 1:
