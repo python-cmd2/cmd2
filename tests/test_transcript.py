@@ -224,13 +224,13 @@ def test_generate_transcript_stop(capsys):
     os.close(fd)
 
     # This should run all commands
-    commands = ['help', 'alias']
+    commands = ['help', 'set']
     app._generate_transcript(commands, transcript_fname)
     _, err = capsys.readouterr()
     assert err.startswith("2 commands")
 
     # Since quit returns True for stop, only the first 2 commands will run
-    commands = ['help', 'quit', 'alias']
+    commands = ['help', 'quit', 'set']
     app._generate_transcript(commands, transcript_fname)
     _, err = capsys.readouterr()
     assert err.startswith("Command 2 triggered a stop")

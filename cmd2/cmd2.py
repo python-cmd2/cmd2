@@ -2398,7 +2398,8 @@ class Cmd(cmd.Cmd):
     alias_parser = Cmd2ArgumentParser(description=alias_description, epilog=alias_epilog, prog='alias')
 
     # Add subcommands to alias
-    alias_subparsers = alias_parser.add_subparsers()
+    alias_subparsers = alias_parser.add_subparsers(dest='subcommand')
+    alias_subparsers.required = True
 
     # alias -> create
     alias_create_help = "create or overwrite an alias"
@@ -2453,13 +2454,9 @@ class Cmd(cmd.Cmd):
     @with_argparser(alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases"""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # noinspection PyTypeChecker
-            self.do_help('alias')
+        # Call whatever subcommand function was selected
+        func = getattr(args, 'func')
+        func(self, args)
 
     # -----  Macro subcommand functions -----
 
@@ -2578,7 +2575,8 @@ class Cmd(cmd.Cmd):
     macro_parser = Cmd2ArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
 
     # Add subcommands to macro
-    macro_subparsers = macro_parser.add_subparsers()
+    macro_subparsers = macro_parser.add_subparsers(dest='subcommand')
+    macro_subparsers.required = True
 
     # macro -> create
     macro_create_help = "create or overwrite a macro"
@@ -2655,13 +2653,9 @@ class Cmd(cmd.Cmd):
     @with_argparser(macro_parser, preserve_quotes=True)
     def do_macro(self, args: argparse.Namespace) -> None:
         """Manage macros"""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # noinspection PyTypeChecker
-            self.do_help('macro')
+        # Call whatever subcommand function was selected
+        func = getattr(args, 'func')
+        func(self, args)
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
@@ -2672,9 +2666,9 @@ class Cmd(cmd.Cmd):
         strs_to_match = list(topics | visible_commands)
         return utils.basic_complete(text, line, begidx, endidx, strs_to_match)
 
-    def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int,
-                                 arg_tokens: Dict[str, List[str]]) -> List[str]:
-        """Completes the subcommand argument of help"""
+    def complete_help_subcommands(self, text: str, line: str, begidx: int, endidx: int,
+                                  arg_tokens: Dict[str, List[str]]) -> List[str]:
+        """Completes the subcommands argument of help"""
 
         # Make sure we have a command whose subcommands we will complete
         command = arg_tokens['command'][0]
@@ -2688,7 +2682,7 @@ class Cmd(cmd.Cmd):
             return []
 
         # Combine the command and its subcommand tokens for the AutoCompleter
-        tokens = [command] + arg_tokens['subcommand']
+        tokens = [command] + arg_tokens['subcommands']
 
         from .argparse_completer import AutoCompleter
         completer = AutoCompleter(argparser, self)
@@ -2698,8 +2692,8 @@ class Cmd(cmd.Cmd):
                                                  "detailed help for a specific command")
     help_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to retrieve help for",
                              completer_method=complete_help_command)
-    help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="subcommand to retrieve help for",
-                             completer_method=complete_help_subcommand)
+    help_parser.add_argument('subcommands', nargs=argparse.REMAINDER, help="subcommand(s) to retrieve help for",
+                             completer_method=complete_help_subcommands)
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
@@ -2723,7 +2717,7 @@ class Cmd(cmd.Cmd):
             if func is not None and argparser is not None:
                 from .argparse_completer import AutoCompleter
                 completer = AutoCompleter(argparser, self)
-                tokens = [args.command] + args.subcommand
+                tokens = [args.command] + args.subcommands
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
                 self.poutput(completer.format_help(tokens), end='')
