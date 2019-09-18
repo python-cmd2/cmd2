@@ -41,6 +41,18 @@ def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[s
     return basic_complete(text, line, begidx, endidx, completions_from_function)
 
 
+def choices_takes_arg_tokens(arg_tokens: argparse.Namespace) -> List[str]:
+    """Choices function that receives arg_tokens from AutoCompleter"""
+    return [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
+
+
+def completer_takes_arg_tokens(text: str, line: str, begidx: int, endidx: int,
+                               arg_tokens: argparse.Namespace) -> List[str]:
+    """Completer function that receives arg_tokens from AutoCompleter"""
+    match_against = [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
+    return basic_complete(text, line, begidx, endidx, match_against)
+
+
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
 class AutoCompleteTester(cmd2.Cmd):
     """Cmd2 app that exercises AutoCompleter class"""
@@ -50,50 +62,21 @@ class AutoCompleteTester(cmd2.Cmd):
     ############################################################################################################
     # Begin code related to help and command name completion
     ############################################################################################################
-    def _music_create(self, args: argparse.Namespace) -> None:
-        """Implements the 'music create' command"""
-        self.poutput('music create')
-
-    def _music_create_jazz(self, args: argparse.Namespace) -> None:
-        """Implements the 'music create jazz' command"""
-        self.poutput('music create jazz')
-
-    def _music_create_rock(self, args: argparse.Namespace) -> None:
-        """Implements the 'music create rock' command"""
-        self.poutput('music create rock')
-
     # Top level parser for music command
     music_parser = Cmd2ArgumentParser(description='Manage music', prog='music')
 
     # Add subcommands to music
     music_subparsers = music_parser.add_subparsers()
-
-    # music -> create
     music_create_parser = music_subparsers.add_parser('create', help='Create music')
-    music_create_parser.set_defaults(func=_music_create)
 
     # Add subcommands to music -> create
     music_create_subparsers = music_create_parser.add_subparsers()
-
-    # music -> create -> jazz
     music_create_jazz_parser = music_create_subparsers.add_parser('jazz', help='Create jazz')
-    music_create_jazz_parser.set_defaults(func=_music_create_jazz)
-
-    # music -> create -> rock
     music_create_rock_parser = music_create_subparsers.add_parser('rock', help='Create rocks')
-    music_create_rock_parser.set_defaults(func=_music_create_rock)
 
     @with_argparser(music_parser)
     def do_music(self, args: argparse.Namespace) -> None:
-        """Music command"""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # No subcommand was provided, so call help
-            # noinspection PyTypeChecker
-            self.do_help('music')
+        pass
 
     ############################################################################################################
     # Begin code related to flag completion
@@ -227,6 +210,26 @@ class AutoCompleteTester(cmd2.Cmd):
     def do_hint(self, args: argparse.Namespace) -> None:
         pass
 
+    ############################################################################################################
+    # Begin code related to receiving arg_tokens
+    ############################################################################################################
+    arg_tokens_parser = Cmd2ArgumentParser()
+    arg_tokens_parser.add_argument('parent_arg', help='arg from a parent parser')
+
+    # Create a subcommand for to exercise receiving parent_tokens and subcommand name in arg_tokens
+    arg_tokens_subparser = arg_tokens_parser.add_subparsers(dest='subcommand')
+    arg_tokens_subcmd_parser = arg_tokens_subparser.add_parser('subcmd')
+
+    arg_tokens_subcmd_parser.add_argument('choices_pos', choices_function=choices_takes_arg_tokens)
+    arg_tokens_subcmd_parser.add_argument('completer_pos', completer_function=completer_takes_arg_tokens)
+
+    # Used to override parent_arg in arg_tokens_parser
+    arg_tokens_subcmd_parser.add_argument('--parent_arg')
+
+    @with_argparser(arg_tokens_parser)
+    def do_arg_tokens(self, args: argparse.Namespace) -> None:
+        pass
+
 
 @pytest.fixture
 def ac_app():
@@ -253,7 +256,9 @@ def test_help(ac_app, command):
     ('music', 'creab', []),
     ('music create', '', ['jazz', 'rock']),
     ('music crea', 'jazz', []),
-    ('music create', 'foo', [])
+    ('music create', 'foo', []),
+    ('fake create', '', []),
+    ('music fake', '', [])
 ])
 def test_complete_help(ac_app, command, text, completions):
     line = 'help {} {}'.format(command, text)
@@ -718,6 +723,31 @@ Hint:
 '''
 
 
+@pytest.mark.parametrize('command_and_args, completions', [
+    # Exercise a choices function that receives arg_tokens dictionary
+    ('arg_tokens choice subcmd', ['choice', 'subcmd']),
+
+    # Exercise a completer that receives arg_tokens dictionary
+    ('arg_tokens completer subcmd fake', ['completer', 'subcmd']),
+
+    # Exercise overriding parent_arg from the subcommand
+    ('arg_tokens completer subcmd --parent_arg override fake', ['override', 'subcmd'])
+])
+def test_arg_tokens(ac_app, command_and_args, completions):
+    text = ''
+    line = '{} {}'.format(command_and_args, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    if completions:
+        assert first_match is not None
+    else:
+        assert first_match is None
+
+    assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
+
+
 def test_single_prefix_char():
     from cmd2.argparse_completer import _single_prefix_char
     parser = Cmd2ArgumentParser(prefix_chars='-+')
@@ -767,5 +797,5 @@ def test_complete_command_help_no_tokens(ac_app):
     parser = Cmd2ArgumentParser()
     ac = AutoCompleter(parser, ac_app)
 
-    completions = ac.complete_command_help(tokens=[], text='', line='', begidx=0, endidx=0)
+    completions = ac.complete_subcommand_help(tokens=[], text='', line='', begidx=0, endidx=0)
     assert not completions

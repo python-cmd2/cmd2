@@ -1179,22 +1179,14 @@ def test_cmd2_help_subcommand_completion_with_flags_before_command(scu_app):
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
     assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
 
-def test_complete_help_subcommand_with_no_command(scu_app):
-    # No command because not enough tokens
+def test_complete_help_subcommands_with_blank_command(scu_app):
     text = ''
-    line = 'help '
+    line = 'help "" {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
 
-    assert not scu_app.complete_help_subcommand(text, line, begidx, endidx)
-
-    # No command because everything is a flag
-    text = '-v'
-    line = 'help -f -v'
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    assert not scu_app.complete_help_subcommand(text, line, begidx, endidx)
+    first_match = complete_tester(text, line, begidx, endidx, scu_app)
+    assert first_match is None and not scu_app.completion_matches
 
 
 def test_cmd2_help_subcommand_completion_nomatch_scu(scu_app):

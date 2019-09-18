@@ -119,6 +119,9 @@ CMD_ATTR_HELP_CATEGORY = 'help_category'
 # The argparse parser for the command
 CMD_ATTR_ARGPARSER = 'argparser'
 
+# Whether or not tokens are unquoted before sending to argparse
+CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
+
 
 def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
     """Categorize a function.
@@ -225,8 +228,9 @@ def with_argparser_and_unknown_args(argparser: argparse.ArgumentParser, *,
         # Set the command's help text as argparser.description (which can be None)
         cmd_wrapper.__doc__ = argparser.description
 
-        # Mark this function as having an argparse ArgumentParser
+        # Set some custom attributes for this command
         setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, argparser)
+        setattr(cmd_wrapper, CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
 
         return cmd_wrapper
 
@@ -283,8 +287,9 @@ def with_argparser(argparser: argparse.ArgumentParser, *,
         # Set the command's help text as argparser.description (which can be None)
         cmd_wrapper.__doc__ = argparser.description
 
-        # Mark this function as having an argparse ArgumentParser
+        # Set some custom attributes for this command
         setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, argparser)
+        setattr(cmd_wrapper, CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
 
         return cmd_wrapper
 
@@ -1431,7 +1436,8 @@ class Cmd(cmd.Cmd):
                 if func is not None and argparser is not None:
                     import functools
                     compfunc = functools.partial(self._autocomplete_default,
-                                                 argparser=argparser)
+                                                 argparser=argparser,
+                                                 preserve_quotes=getattr(func, CMD_ATTR_PRESERVE_QUOTES))
                 else:
                     compfunc = self.completedefault
 
@@ -1588,13 +1594,21 @@ class Cmd(cmd.Cmd):
             self.pexcept(e)
             return None
 
-    def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int,
-                              argparser: argparse.ArgumentParser) -> List[str]:
+    def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int, *,
+                              argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
         """Default completion function for argparse commands"""
         from .argparse_completer import AutoCompleter
         completer = AutoCompleter(argparser, self)
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        return completer.complete_command(tokens, text, line, begidx, endidx)
+        tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
+
+        # To have tab-completion parsing match command line parsing behavior,
+        # use preserve_quotes to determine if we parse the quoted or unquoted tokens.
+        tokens_to_parse = raw_tokens if preserve_quotes else tokens
+        return completer.complete_command(tokens_to_parse, text, line, begidx, endidx)
+
+    def get_names(self):
+        """Return an alphabetized list of names comprising the attributes of the cmd2 class instance."""
+        return dir(self)
 
     def get_all_commands(self) -> List[str]:
         """Return a list of all commands"""
@@ -2384,7 +2398,8 @@ class Cmd(cmd.Cmd):
     alias_parser = Cmd2ArgumentParser(description=alias_description, epilog=alias_epilog, prog='alias')
 
     # Add subcommands to alias
-    alias_subparsers = alias_parser.add_subparsers()
+    alias_subparsers = alias_parser.add_subparsers(dest='subcommand')
+    alias_subparsers.required = True
 
     # alias -> create
     alias_create_help = "create or overwrite an alias"
@@ -2439,13 +2454,9 @@ class Cmd(cmd.Cmd):
     @with_argparser(alias_parser, preserve_quotes=True)
     def do_alias(self, args: argparse.Namespace) -> None:
         """Manage aliases"""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # noinspection PyTypeChecker
-            self.do_help('alias')
+        # Call whatever subcommand function was selected
+        func = getattr(args, 'func')
+        func(self, args)
 
     # -----  Macro subcommand functions -----
 
@@ -2564,7 +2575,8 @@ class Cmd(cmd.Cmd):
     macro_parser = Cmd2ArgumentParser(description=macro_description, epilog=macro_epilog, prog='macro')
 
     # Add subcommands to macro
-    macro_subparsers = macro_parser.add_subparsers()
+    macro_subparsers = macro_parser.add_subparsers(dest='subcommand')
+    macro_subparsers.required = True
 
     # macro -> create
     macro_create_help = "create or overwrite a macro"
@@ -2641,13 +2653,9 @@ class Cmd(cmd.Cmd):
     @with_argparser(macro_parser, preserve_quotes=True)
     def do_macro(self, args: argparse.Namespace) -> None:
         """Manage macros"""
-        func = getattr(args, 'func', None)
-        if func is not None:
-            # Call whatever subcommand function was selected
-            func(self, args)
-        else:
-            # noinspection PyTypeChecker
-            self.do_help('macro')
+        # Call whatever subcommand function was selected
+        func = getattr(args, 'func')
+        func(self, args)
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
@@ -2658,49 +2666,34 @@ class Cmd(cmd.Cmd):
         strs_to_match = list(topics | visible_commands)
         return utils.basic_complete(text, line, begidx, endidx, strs_to_match)
 
-    def complete_help_subcommand(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
-        """Completes the subcommand argument of help"""
+    def complete_help_subcommands(self, text: str, line: str, begidx: int, endidx: int,
+                                  arg_tokens: Dict[str, List[str]]) -> List[str]:
+        """Completes the subcommands argument of help"""
 
-        # Get all tokens through the one being completed
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-
-        if not tokens:
+        # Make sure we have a command whose subcommands we will complete
+        command = arg_tokens['command'][0]
+        if not command:
             return []
-
-        # Must have at least 3 args for 'help command subcommand'
-        if len(tokens) < 3:
-            return []
-
-        # Find where the command is by skipping past any flags
-        cmd_index = 1
-        for cur_token in tokens[cmd_index:]:
-            if not cur_token.startswith('-'):
-                break
-            cmd_index += 1
-
-        if cmd_index >= len(tokens):
-            return []
-
-        command = tokens[cmd_index]
-        matches = []
 
         # Check if this command uses argparse
         func = self.cmd_func(command)
         argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+        if func is None or argparser is None:
+            return []
 
-        if func is not None and argparser is not None:
-            from .argparse_completer import AutoCompleter
-            completer = AutoCompleter(argparser, self)
-            matches = completer.complete_command_help(tokens[cmd_index:], text, line, begidx, endidx)
+        # Combine the command and its subcommand tokens for the AutoCompleter
+        tokens = [command] + arg_tokens['subcommands']
 
-        return matches
+        from .argparse_completer import AutoCompleter
+        completer = AutoCompleter(argparser, self)
+        return completer.complete_subcommand_help(tokens, text, line, begidx, endidx)
 
     help_parser = Cmd2ArgumentParser(description="List available commands or provide "
                                                  "detailed help for a specific command")
     help_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to retrieve help for",
                              completer_method=complete_help_command)
-    help_parser.add_argument('subcommand', nargs=argparse.REMAINDER, help="subcommand to retrieve help for",
-                             completer_method=complete_help_subcommand)
+    help_parser.add_argument('subcommands', nargs=argparse.REMAINDER, help="subcommand(s) to retrieve help for",
+                             completer_method=complete_help_subcommands)
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
@@ -2724,7 +2717,7 @@ class Cmd(cmd.Cmd):
             if func is not None and argparser is not None:
                 from .argparse_completer import AutoCompleter
                 completer = AutoCompleter(argparser, self)
-                tokens = [args.command] + args.subcommand
+                tokens = [args.command] + args.subcommands
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
                 self.poutput(completer.format_help(tokens), end='')
@@ -2959,13 +2952,10 @@ class Cmd(cmd.Cmd):
                 choice = int(response)
                 if choice < 1:
                     raise IndexError
-                result = fulloptions[choice - 1][0]
-                break
+                return fulloptions[choice - 1][0]
             except (ValueError, IndexError):
                 self.poutput("{!r} isn't a valid choice. Pick a number between 1 and {}:".format(
                     response, len(fulloptions)))
-
-        return result
 
     def _get_read_only_settings(self) -> str:
         """Return a summary report of read-only settings which the user cannot modify at runtime.
@@ -4121,8 +4111,7 @@ class Cmd(cmd.Cmd):
             if getattr(func, CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.disable_command(cmd_name, message_to_print)
 
-    # noinspection PyUnusedLocal
-    def _report_disabled_command_usage(self, *args, message_to_print: str, **kwargs) -> None:
+    def _report_disabled_command_usage(self, *_args, message_to_print: str, **_kwargs) -> None:
         """
         Report when a disabled command has been run or had help called on it
         :param args: not used

@@ -4,6 +4,11 @@
     * Fixed a bug when running a cmd2 application on Linux without Gtk libraries installed
 * Enhancements
     * No longer treating empty text scripts as an error condition
+    * Allow dynamically extending a `cmd2.Cmd` object instance with a `do_xxx` method at runtime
+    * Choices/Completer functions can now be passed a dictionary that maps command-line tokens to their
+    argparse argument. This is helpful when one argument determines what is tab completed for another argument.
+    If these functions have an argument called `arg_tokens`, then AutoCompleter will automatically pass this
+    dictionary to them.
 
 ## 0.9.16 (August 7, 2019)
 * Bug Fixes

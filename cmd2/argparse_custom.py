@@ -44,7 +44,7 @@ Tab Completion:
         generated when the user hits tab.
 
         Example:
-            def my_choices_function):
+            def my_choices_function():
                 ...
                 return my_generated_list
 
@@ -102,6 +102,20 @@ Tab Completion:
         set_completer_function(action, func)
         set_completer_method(action, method)
 
+    There are times when what's being tab completed is determined by a previous argument on the command line.
+    In theses cases, Autocompleter can pass a dictionary that maps the command line tokens up through the one
+    being completed to their argparse argument name. To receive this dictionary, your choices/completer function
+    should have an argument called arg_tokens.
+
+        Example:
+            def my_choices_method(self, arg_tokens)
+            def my_completer_method(self, text, line, begidx, endidx, arg_tokens)
+
+    All values of the arg_tokens dictionary are lists, even if a particular argument expects only 1 token. Since
+    AutoCompleter is for tab completion, it does not convert the tokens to their actual argument types or validate
+    their values. All tokens are stored in the dictionary as the raw strings provided on the command line. It is up to
+    the developer to determine if the user entered the correct argument type (e.g. int) and validate their values.
+
 CompletionItem Class:
     This class was added to help in cases where uninformative data is being tab completed. For instance,
     tab completing ID numbers isn't very helpful to a user without context. Returning a list of CompletionItems
@@ -138,7 +152,7 @@ CompletionItem Class:
     To use CompletionItems, just return them from your choices or completer functions.
 
     To avoid printing a ton of information to the screen at once when a user presses tab, there is
-    a maximum threshold for the number of CompletionItems that will be shown. It's value is defined
+    a maximum threshold for the number of CompletionItems that will be shown. Its value is defined
     in cmd2.Cmd.max_completion_items. It defaults to 50, but can be changed. If the number of completion
     suggestions exceeds this number, they will be displayed in the typical columnized format and will
     not include the description value of the CompletionItems.
@@ -159,10 +173,9 @@ argparse.ArgumentParser._match_argument - adds support to for nargs ranges
 import argparse
 import re
 import sys
-
 # noinspection PyUnresolvedReferences,PyProtectedMember
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
-from typing import Any, Callable, Iterable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 
 from .ansi import ansi_aware_write, style_error
 
@@ -272,24 +285,22 @@ def _set_choices_callable(action: argparse.Action, choices_callable: ChoicesCall
     setattr(action, ATTR_CHOICES_CALLABLE, choices_callable)
 
 
-def set_choices_function(action: argparse.Action, choices_function: Callable[[], Iterable[Any]]) -> None:
+def set_choices_function(action: argparse.Action, choices_function: Callable) -> None:
     """Set choices_function on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_method=False, is_completer=False, to_call=choices_function))
 
 
-def set_choices_method(action: argparse.Action, choices_method: Callable[[Any], Iterable[Any]]) -> None:
+def set_choices_method(action: argparse.Action, choices_method: Callable) -> None:
     """Set choices_method on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_method=True, is_completer=False, to_call=choices_method))
 
 
-def set_completer_function(action: argparse.Action,
-                           completer_function: Callable[[str, str, int, int], List[str]]) -> None:
+def set_completer_function(action: argparse.Action, completer_function: Callable) -> None:
     """Set completer_function on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_method=False, is_completer=True, to_call=completer_function))
 
 
-def set_completer_method(action: argparse.Action,
-                         completer_method: Callable[[Any, str, str, int, int], List[str]]) -> None:
+def set_completer_method(action: argparse.Action, completer_method: Callable) -> None:
     """Set completer_method on an argparse action"""
     _set_choices_callable(action, ChoicesCallable(is_method=True, is_completer=True, to_call=completer_method))
 
@@ -305,10 +316,10 @@ orig_actions_container_add_argument = argparse._ActionsContainer.add_argument
 
 def _add_argument_wrapper(self, *args,
                           nargs: Union[int, str, Tuple[int], Tuple[int, int], None] = None,
-                          choices_function: Optional[Callable[[], Iterable[Any]]] = None,
-                          choices_method: Optional[Callable[[Any], Iterable[Any]]] = None,
-                          completer_function: Optional[Callable[[str, str, int, int], List[str]]] = None,
-                          completer_method: Optional[Callable[[Any, str, str, int, int], List[str]]] = None,
+                          choices_function: Optional[Callable] = None,
+                          choices_method: Optional[Callable] = None,
+                          completer_function: Optional[Callable] = None,
+                          completer_method: Optional[Callable] = None,
                           suppress_tab_hint: bool = False,
                           descriptive_header: Optional[str] = None,
                           **kwargs) -> argparse.Action:
