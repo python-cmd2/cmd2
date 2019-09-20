@@ -221,6 +221,17 @@ def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
     return err_str
 
 
+class CompletionError(Exception):
+    """
+    Raised during tab-completion operations to report any sort of error you want printed by the AutoCompleter
+
+    Example use cases
+    1. Reading a database to retrieve a tab completion data set failed
+    2. A previous command line argument that determines the data set being completed is invalid
+    """
+    pass
+
+
 class CompletionItem(str):
     """
     Completion item with descriptive text attached
