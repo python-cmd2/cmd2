@@ -112,7 +112,7 @@ terminator
 For many simple commands, like the ``echo`` command above, you can ignore the
 ``Statement`` object and all of it's attributes and just use the passed value
 as a string. You might choose to use the ``argv`` attribute to do more
-sophisticated argument processing. Before you go to far down that path, you
+sophisticated argument processing. Before you go too far down that path, you
 should check out the :ref:`features/argument_processing:Argument Processing`
 functionality included with ``cmd2``.
 
@@ -120,7 +120,7 @@ functionality included with ``cmd2``.
 Return Values
 -------------
 
-Most commands should return nothing (either my omitting a ``return`` statement,
+Most commands should return nothing (either by omitting a ``return`` statement,
 or by ``return None``. This indicates that your command is finished (with or
 without errors), and that ``cmd2`` should prompt the user for more input.
 
@@ -142,7 +142,7 @@ The ``cmd2.Cmd`` object sets an ``exit_code`` attribute to zero when it is
 instantiated. The value of this attribute is returned from the ``cmdloop()``
 call. Therefore, if you don't do anything with this attribute in your code,
 ``cmdloop()`` will (almost) always return zero. There are a few built-in
-``cmd2`` commands which set ``exit_code`` to ``-1`` if an error occers.
+``cmd2`` commands which set ``exit_code`` to ``-1`` if an error occurs.
 
 You can use this capability to easily return your own values to the operating
 system shell::
@@ -157,7 +157,7 @@ system shell::
 
     def do_bail(self, line):
         """Exit the application""
-        self.poutput("fatal error, exiting")
+        self.perror("fatal error, exiting")
         self.exit_code = 2
         return true
 
@@ -178,7 +178,7 @@ the following interaction::
 Exception Handling
 ------------------
 
-You may choose you may choose to catch and handle any exceptions which occur in
+You may choose to catch and handle any exceptions which occur in
 a command method. If the command method raises an exception, ``cmd2`` will
 catch it and display it for you. The `debug` :ref:`setting
 <features/settings:Settings>` controls how the exception is displayed. If
@@ -193,6 +193,6 @@ Disabling or Hiding Commands
 See :ref:`features/disable_commands:Disabling Commands` for details of how
 to:
 
-- removing commands included in ``cmd2``
-- hiding commands from the help menu
-- disabling and re-enabling commands at runtime
+- remove commands included in ``cmd2``
+- hide commands from the help menu
+- disable and re-enable commands at runtime

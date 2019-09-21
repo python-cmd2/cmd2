@@ -4,7 +4,7 @@ Disabling Commands
 ``cmd2`` allows a developer to:
 
 - remove commands included in ``cmd2``
-- prevent commands from appearing in the help menu (hiding commands)
+- prevent commands from appearing in the help menu (hide commands)
 - disable and re-enable commands at runtime
 
 
