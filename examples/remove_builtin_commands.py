@@ -12,7 +12,7 @@ Commands can also be removed entirely by using Python's "del".
 import cmd2
 
 
-class RemoveUnusedBuiltinCommands(cmd2.Cmd):
+class RemoveBuiltinCommands(cmd2.Cmd):
     """ Example cmd2 application where we remove some unused built-in commands."""
 
     def __init__(self):
@@ -27,5 +27,5 @@ class RemoveUnusedBuiltinCommands(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
-    app = RemoveUnusedBuiltinCommands()
+    app = RemoveBuiltinCommands()
     sys.exit(app.cmdloop())
