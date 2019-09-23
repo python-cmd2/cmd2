@@ -9,7 +9,7 @@ from typing import List
 import pytest
 
 import cmd2
-from cmd2 import with_argparser, Cmd2ArgumentParser, CompletionItem
+from cmd2 import with_argparser, Cmd2ArgumentParser, CompletionError, CompletionItem
 from cmd2.utils import StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
@@ -208,6 +208,27 @@ class AutoCompleteTester(cmd2.Cmd):
 
     @with_argparser(hint_parser)
     def do_hint(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
+    # Begin code related to CompletionError
+    ############################################################################################################
+    def completer_raise_error(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        """Raises CompletionError"""
+        raise CompletionError('completer broke something')
+
+    def choice_raise_error(self) -> List[str]:
+        """Raises CompletionError"""
+        raise CompletionError('choice broke something')
+
+    comp_error_parser = Cmd2ArgumentParser()
+    comp_error_parser.add_argument('completer', help='positional arg',
+                                   completer_method=completer_raise_error)
+    comp_error_parser.add_argument('--choice', help='flag arg',
+                                   choices_method=choice_raise_error)
+
+    @with_argparser(comp_error_parser)
+    def do_raise_completion_error(self, args: argparse.Namespace) -> None:
         pass
 
     ############################################################################################################
@@ -721,6 +742,25 @@ Hint:
   NO_HELP_POS            
 
 '''
+
+
+@pytest.mark.parametrize('args, text', [
+    # Exercise a flag arg and choices function that raises a CompletionError
+    ('--choice ', 'choice'),
+
+    # Exercise a positional arg and completer that raises a CompletionError
+    ('', 'completer')
+])
+def test_completion_error(ac_app, capsys, args, text):
+    line = 'raise_completion_error {} {}'.format(args, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    out, err = capsys.readouterr()
+
+    assert first_match is None
+    assert "{} broke something".format(text) in out
 
 
 @pytest.mark.parametrize('command_and_args, completions', [
