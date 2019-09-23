@@ -15,8 +15,9 @@ from typing import Dict, List, Optional, Union
 from . import cmd2
 from . import utils
 from .ansi import ansi_safe_wcswidth, style_error
+from .argparse_custom import ATTR_CHOICES_CALLABLE, INFINITY, generate_range_error
 from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION_HEADER, ATTR_NARGS_RANGE
-from .argparse_custom import ChoicesCallable, CompletionItem, ATTR_CHOICES_CALLABLE, INFINITY, generate_range_error
+from .argparse_custom import ChoicesCallable, CompletionError, CompletionItem
 from .rl_utils import rl_force_redisplay
 
 # If no descriptive header is supplied, then this will be used instead
@@ -319,8 +320,12 @@ class AutoCompleter(object):
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
-                                                        begidx, endidx, consumed_arg_values)
+            try:
+                completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
+                                                            begidx, endidx, consumed_arg_values)
+            except CompletionError as ex:
+                self._print_completion_error(flag_arg_state.action, ex)
+                return []
 
             # If we have results, then return them
             if completion_results:
@@ -341,8 +346,12 @@ class AutoCompleter(object):
                 action = self._positional_actions[pos_index]
                 pos_arg_state = AutoCompleter._ArgumentState(action)
 
-            completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
-                                                        begidx, endidx, consumed_arg_values)
+            try:
+                completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
+                                                            begidx, endidx, consumed_arg_values)
+            except CompletionError as ex:
+                self._print_completion_error(pos_arg_state.action, ex)
+                return []
 
             # If we have results, then return them
             if completion_results:
@@ -456,7 +465,11 @@ class AutoCompleter(object):
     def _complete_for_arg(self, arg_action: argparse.Action,
                           text: str, line: str, begidx: int, endidx: int,
                           consumed_arg_values: Dict[str, List[str]]) -> List[str]:
-        """Tab completion routine for an argparse argument"""
+        """
+        Tab completion routine for an argparse argument
+        :return: list of completions
+        :raises CompletionError if the completer or choices function this calls raises one
+        """
         # Check if the arg provides choices to the user
         if arg_action.choices is not None:
             arg_choices = arg_action.choices
@@ -520,24 +533,35 @@ class AutoCompleter(object):
         return self._format_completions(arg_action, results)
 
     @staticmethod
-    def _print_arg_hint(arg_action: argparse.Action) -> None:
-        """Print argument hint to the terminal when tab completion results in no results"""
+    def _format_message_prefix(arg_action: argparse.Action) -> str:
+        """Format the arg prefix text that appears before messages printed to the user"""
+        # Check if this is a flag
+        if arg_action.option_strings:
+            flags = ', '.join(arg_action.option_strings)
+            param = ' ' + str(arg_action.dest).upper()
+            return '{}{}'.format(flags, param)
 
+        # Otherwise this is a positional
+        else:
+            return '{}'.format(str(arg_action.dest).upper())
+
+    @staticmethod
+    def _print_message(msg: str) -> None:
+        """Print a message instead of tab completions and redraw the prompt and input line"""
+        print(msg)
+        rl_force_redisplay()
+
+    def _print_arg_hint(self, arg_action: argparse.Action) -> None:
+        """
+        Print argument hint to the terminal when tab completion results in no results
+        :param arg_action: action being tab completed
+        """
         # Check if hinting is disabled
         suppress_hint = getattr(arg_action, ATTR_SUPPRESS_TAB_HINT, False)
         if suppress_hint or arg_action.help == argparse.SUPPRESS or arg_action.dest == argparse.SUPPRESS:
             return
 
-        # Check if this is a flag
-        if arg_action.option_strings:
-            flags = ', '.join(arg_action.option_strings)
-            param = ' ' + str(arg_action.dest).upper()
-            prefix = '{}{}'.format(flags, param)
-
-        # Otherwise this is a positional
-        else:
-            prefix = '{}'.format(str(arg_action.dest).upper())
-
+        prefix = self._format_message_prefix(arg_action)
         prefix = '  {0: <{width}}    '.format(prefix, width=20)
         pref_len = len(prefix)
 
@@ -545,28 +569,36 @@ class AutoCompleter(object):
         help_lines = help_text.splitlines()
 
         if len(help_lines) == 1:
-            print('\nHint:\n{}{}\n'.format(prefix, help_lines[0]))
+            self._print_message('\nHint:\n{}{}\n'.format(prefix, help_lines[0]))
         else:
             out_str = '\n{}'.format(prefix)
             out_str += '\n{0: <{width}}'.format('', width=pref_len).join(help_lines)
-            print('\nHint:' + out_str + '\n')
+            self._print_message('\nHint:' + out_str + '\n')
 
-        # Redraw prompt and input line
-        rl_force_redisplay()
-
-    @staticmethod
-    def _print_unfinished_flag_error(flag_arg_state: _ArgumentState) -> None:
-        """Print an error during tab completion when the user has not finished the current flag"""
-        flags = ', '.join(flag_arg_state.action.option_strings)
-        param = ' ' + str(flag_arg_state.action.dest).upper()
-        prefix = '{}{}'.format(flags, param)
+    def _print_unfinished_flag_error(self, flag_arg_state: _ArgumentState) -> None:
+        """
+        Print an error during tab completion when the user has not finished the current flag
+        :param flag_arg_state: information about the unfinished flag action
+        """
+        prefix = self._format_message_prefix(flag_arg_state.action)
 
         out_str = "\nError:\n"
         out_str += '  {0: <{width}}    '.format(prefix, width=20)
         out_str += generate_range_error(flag_arg_state.min, flag_arg_state.max)
 
         out_str += ' ({} entered)'.format(flag_arg_state.count)
-        print(style_error('{}\n'.format(out_str)))
+        self._print_message(style_error('{}\n'.format(out_str)))
 
-        # Redraw prompt and input line
-        rl_force_redisplay()
+    def _print_completion_error(self, arg_action: argparse.Action, completion_error: CompletionError) -> None:
+        """
+        Print a CompletionError to the user
+        :param arg_action: action being tab completed
+        :param completion_error: error that occurred
+        """
+        prefix = self._format_message_prefix(arg_action)
+
+        out_str = "\nError:\n"
+        out_str += '  {0: <{width}}    '.format(prefix, width=20)
+        out_str += str(completion_error)
+
+        self._print_message(style_error('{}\n'.format(out_str)))
