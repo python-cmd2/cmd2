@@ -626,11 +626,6 @@ class Cmd(cmd.Cmd):
         """
         return ansi.strip_ansi(self.prompt)
 
-    @property
-    def aliases(self) -> Dict[str, str]:
-        """Read-only property to access the aliases stored in the StatementParser."""
-        return self.statement_parser.aliases
-
     def poutput(self, msg: Any, *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
 
@@ -744,7 +739,7 @@ class Cmd(cmd.Cmd):
 
                 # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
                 # Also only attempt to use a pager if actually running in a real fully functional terminal
-                if functional_terminal and not self._redirecting and not self._in_py and not self._script_dir:
+                if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
                     if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower():
                         msg_str = ansi.strip_ansi(msg_str)
 
@@ -1605,6 +1600,19 @@ class Cmd(cmd.Cmd):
         # use preserve_quotes to determine if we parse the quoted or unquoted tokens.
         tokens_to_parse = raw_tokens if preserve_quotes else tokens
         return completer.complete_command(tokens_to_parse, text, line, begidx, endidx)
+
+    def in_script(self) -> bool:
+        """Return whether a text script is running"""
+        return self._current_script_dir is not None
+
+    def in_pyscript(self) -> bool:
+        """Return whether a pyscript is running"""
+        return self._in_py
+
+    @property
+    def aliases(self) -> Dict[str, str]:
+        """Read-only property to access the aliases stored in the StatementParser"""
+        return self.statement_parser.aliases
 
     def get_names(self):
         """Return an alphabetized list of names comprising the attributes of the cmd2 class instance."""
@@ -3228,7 +3236,7 @@ class Cmd(cmd.Cmd):
         :return: True if running of commands should stop
         """
         from .py_bridge import PyBridge
-        if self._in_py:
+        if self.in_pyscript():
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err)
             return

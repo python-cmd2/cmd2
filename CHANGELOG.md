@@ -10,6 +10,9 @@
     If these functions have an argument called `arg_tokens`, then AutoCompleter will automatically pass this
     dictionary to them.
     * Added CompletionError class that can be raised during argparse-based tab completion and printed to the user
+    * Added the following convenience methods
+        - `Cmd.in_script()` - return whether a text script is running
+        - `Cmd.in_pyscript()` - return whether a pyscript is running
 
 ## 0.9.16 (August 7, 2019)
 * Bug Fixes
