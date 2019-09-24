@@ -1,4 +1,4 @@
-## 0.9.17 (TBD, 2019)
+## 0.9.17 (September 23, 2019)
 * Bug Fixes
     * Fixed a bug when using WSL when all Windows paths have been removed from $PATH
     * Fixed a bug when running a cmd2 application on Linux without Gtk libraries installed
