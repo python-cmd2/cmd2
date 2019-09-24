@@ -20,7 +20,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-from cmd2 import ansi, clipboard, constants, utils
+from cmd2 import ansi, clipboard, constants, plugin, utils
 from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY
 from .conftest import SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, complete_tester
 
@@ -460,6 +460,24 @@ def test_relative_run_script_with_odd_file_names(base_app, monkeypatch):
 def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
     assert 'Error: the following arguments' in err[1]
+
+def test_in_script(request):
+    class HookApp(cmd2.Cmd):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.register_cmdfinalization_hook(self.hook)
+
+        def hook(self: cmd2.Cmd, data: plugin.CommandFinalizationData) -> plugin.CommandFinalizationData:
+            if self.in_script():
+                self.poutput("WE ARE IN SCRIPT")
+            return data
+
+    hook_app = HookApp()
+    test_dir = os.path.dirname(request.module.__file__)
+    filename = os.path.join(test_dir, 'script.txt')
+    out, err = run_cmd(hook_app, 'run_script {}'.format(filename))
+
+    assert "WE ARE IN SCRIPT" in out[-1]
 
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
