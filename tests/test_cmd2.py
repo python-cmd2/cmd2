@@ -1981,6 +1981,23 @@ def test_get_help_topics(base_app):
     custom_help = base_app.get_help_topics()
     assert len(custom_help) == 0
 
+def test_get_help_topics_hidden():
+    # Verify get_help_topics() filters out hidden commands
+    class TestApp(cmd2.Cmd):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+        def do_my_cmd(self, args):
+            pass
+
+        def help_my_cmd(self, args):
+            pass
+
+    app = TestApp()
+    assert 'my_cmd' in app.get_help_topics()
+
+    app.hidden_commands.append('my_cmd')
+    assert 'my_cmd' not in app.get_help_topics()
 
 class ReplWithExitCode(cmd2.Cmd):
     """ Example cmd2 application where we can specify an exit code when existing."""
@@ -2240,6 +2257,10 @@ def test_disable_and_enable_category(disable_commands_app):
     assert 'has_helper_funcs' not in visible_commands
     assert 'has_no_helper_funcs' not in visible_commands
 
+    # Make sure get_help_topics() filters out disabled commands
+    help_topics = disable_commands_app.get_help_topics()
+    assert 'has_helper_funcs' not in help_topics
+
     ##########################################################################
     # Enable the category
     ##########################################################################
@@ -2280,6 +2301,10 @@ def test_disable_and_enable_category(disable_commands_app):
     visible_commands = disable_commands_app.get_visible_commands()
     assert 'has_helper_funcs' in visible_commands
     assert 'has_no_helper_funcs' in visible_commands
+
+    # Make sure get_help_topics() contains our help function
+    help_topics = disable_commands_app.get_help_topics()
+    assert 'has_helper_funcs' in help_topics
 
 def test_enable_enabled_command(disable_commands_app):
     # Test enabling a command that is not disabled

@@ -1625,19 +1625,8 @@ class Cmd(cmd.Cmd):
 
     def get_visible_commands(self) -> List[str]:
         """Return a list of commands that have not been hidden or disabled"""
-        commands = self.get_all_commands()
-
-        # Remove the hidden commands
-        for name in self.hidden_commands:
-            if name in commands:
-                commands.remove(name)
-
-        # Remove the disabled commands
-        for name in self.disabled_commands:
-            if name in commands:
-                commands.remove(name)
-
-        return commands
+        return [command for command in self.get_all_commands()
+                if command not in self.hidden_commands and command not in self.disabled_commands]
 
     def _get_alias_completion_items(self) -> List[CompletionItem]:
         """Return list of current alias names and values as CompletionItems"""
@@ -1659,9 +1648,13 @@ class Cmd(cmd.Cmd):
         return list(visible_commands | alias_names | macro_names)
 
     def get_help_topics(self) -> List[str]:
-        """ Returns a list of help topics """
-        return [name[len(HELP_FUNC_PREFIX):] for name in self.get_names()
-                if name.startswith(HELP_FUNC_PREFIX) and callable(getattr(self, name))]
+        """Return a list of help topics"""
+        all_topics = [name[len(HELP_FUNC_PREFIX):] for name in self.get_names()
+                      if name.startswith(HELP_FUNC_PREFIX) and callable(getattr(self, name))]
+
+        # Filter out hidden and disabled commands
+        return [topic for topic in all_topics
+                if topic not in self.hidden_commands and topic not in self.disabled_commands]
 
     # noinspection PyUnusedLocal
     def sigint_handler(self, signum: int, frame) -> None:
