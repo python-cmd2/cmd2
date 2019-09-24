@@ -94,7 +94,7 @@ Tab Completion:
     as dynamic. Therefore it is up to the developer to validate if the user has typed an acceptable value for these
     arguments.
 
-    The following functions exist in cases where you may want to manually add choice providing function/methods to
+    The following functions exist in cases where you may want to manually a add choice-providing function/method to
     an existing argparse action. For instance, in __init__() of a custom action class.
 
         set_choices_function(action, func)
@@ -115,6 +115,13 @@ Tab Completion:
     AutoCompleter is for tab completion, it does not convert the tokens to their actual argument types or validate
     their values. All tokens are stored in the dictionary as the raw strings provided on the command line. It is up to
     the developer to determine if the user entered the correct argument type (e.g. int) and validate their values.
+
+CompletionError Class:
+    Raised during tab-completion operations to report any sort of error you want printed by the AutoCompleter
+
+    Example use cases
+    - Reading a database to retrieve a tab completion data set failed
+    - A previous command line argument that determines the data set being completed is invalid
 
 CompletionItem Class:
     This class was added to help in cases where uninformative data is being tab completed. For instance,
@@ -219,6 +226,17 @@ def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
             err_str += "s"
 
     return err_str
+
+
+class CompletionError(Exception):
+    """
+    Raised during tab-completion operations to report any sort of error you want printed by the AutoCompleter
+
+    Example use cases
+    - Reading a database to retrieve a tab completion data set failed
+    - A previous command line argument that determines the data set being completed is invalid
+    """
+    pass
 
 
 class CompletionItem(str):

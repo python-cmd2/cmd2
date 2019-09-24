@@ -341,7 +341,7 @@ class Cmd(cmd.Cmd):
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, *,
                  persistent_history_file: str = '', persistent_history_length: int = 1000,
-                 startup_script: Optional[str] = None, use_ipython: bool = False,
+                 startup_script: str = '', use_ipython: bool = False,
                  allow_cli_args: bool = True, transcript_files: Optional[List[str]] = None,
                  allow_redirection: bool = True, multiline_commands: Optional[List[str]] = None,
                  terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None) -> None:
@@ -499,7 +499,7 @@ class Cmd(cmd.Cmd):
         self._startup_commands = []
 
         # If a startup script is provided, then execute it in the startup commands
-        if startup_script is not None:
+        if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
                 self._startup_commands.append("run_script '{}'".format(startup_script))

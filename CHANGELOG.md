@@ -9,6 +9,7 @@
     argparse argument. This is helpful when one argument determines what is tab completed for another argument.
     If these functions have an argument called `arg_tokens`, then AutoCompleter will automatically pass this
     dictionary to them.
+    * Added CompletionError class that can be raised during argparse-based tab completion and printed to the user
 
 ## 0.9.16 (August 7, 2019)
 * Bug Fixes
