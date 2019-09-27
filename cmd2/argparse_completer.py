@@ -185,9 +185,16 @@ class AutoCompleter(object):
 
                     # Check if the group this action belongs to has already been completed
                     if group in completed_mutex_groups:
+
+                        # If this is the action that completed the group, then there is no error
+                        # since it's allowed to appear on the command line more than once.
+                        completer_action = completed_mutex_groups[group]
+                        if arg_action == completer_action:
+                            return True
+
                         error = style_error("\nError: argument {}: not allowed with argument {}\n".
                                             format(argparse._get_action_name(arg_action),
-                                                   argparse._get_action_name(completed_mutex_groups[group])))
+                                                   argparse._get_action_name(completer_action)))
                         self._print_message(error)
                         return False
 
