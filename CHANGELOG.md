@@ -1,7 +1,11 @@
 ## 0.9.18 (TBD, 2019)
 * Bug Fixes
     * Fixed bug introduced in 0.9.17 where help functions for hidden and disabled commands were not being filtered
-     out as help topics
+    out as help topics
+* Enhancements
+    * `AutoCompleter` now handles argparse's mutually exclusive groups. It will not tab complete flag names or positionals
+    for already completed groups. It also will print an error if you try tab completing a flag's value if the flag
+    belongs to a completed group.
 
 ## 0.9.17 (September 23, 2019)
 * Bug Fixes
