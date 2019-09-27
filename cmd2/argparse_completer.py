@@ -331,8 +331,9 @@ class AutoCompleter(object):
 
                 # Check if we have a positional to consume this token
                 if pos_arg_state is not None:
-                    if not update_mutex_groups(pos_arg_state.action):
-                        return []
+                    # No need to check for an error since we remove a completed group's positional from
+                    # remaining_positionals which means this action can't belong to a completed mutex group
+                    update_mutex_groups(pos_arg_state.action)
 
                     consume_argument(pos_arg_state)
 
