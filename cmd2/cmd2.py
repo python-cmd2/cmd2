@@ -1848,7 +1848,7 @@ class Cmd(cmd.Cmd):
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
-        self.pseudo_raw_input(). It returns a literal 'eof' if the input
+        self._pseudo_raw_input(). It returns a literal 'eof' if the input
         pipe runs out. We can't refactor it because we need to retain
         backwards compatibility with the standard library version of cmd.
 

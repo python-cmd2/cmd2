@@ -120,7 +120,6 @@ class AutoCompleter(object):
         self._flags = []                      # all flags in this command
         self._flag_to_action = {}             # maps flags to the argparse action object
         self._positional_actions = []         # actions for positional arguments (by position index)
-        self._mutually_exclusive_groups = []  # Each item is a list of actions
         self._subcommand_action = None        # this will be set if self._parser has subcommands
 
         # Start digging through the argparse structures.
@@ -139,10 +138,6 @@ class AutoCompleter(object):
                 # Check if this action defines subcommands
                 if isinstance(action, argparse._SubParsersAction):
                     self._subcommand_action = action
-
-        # Keep track of what actions are in mutually exclusive groups
-        for group in self._parser._mutually_exclusive_groups:
-            self._mutually_exclusive_groups.append(group._group_actions)
 
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
@@ -168,11 +163,51 @@ class AutoCompleter(object):
         # Keeps track of arguments we've seen and any tokens they consumed
         consumed_arg_values = dict()  # dict(arg_name -> List[tokens])
 
+        # Completed mutually exclusive groups
+        completed_mutex_groups = dict()  # dict(argparse._MutuallyExclusiveGroup -> Action which completed group)
+
         def consume_argument(arg_state: AutoCompleter._ArgumentState) -> None:
             """Consuming token as an argument"""
             arg_state.count += 1
             consumed_arg_values.setdefault(arg_state.action.dest, [])
             consumed_arg_values[arg_state.action.dest].append(token)
+
+        def update_mutex_groups(arg_action: argparse.Action) -> bool:
+            """
+            Check if an argument belongs to a mutually exclusive group and either mark that group
+            as complete or print an error if the group has already been completed
+            :param arg_action: the action of the argument
+            :return: False if the group has already been completed and there is a conflict, otherwise True
+            """
+            # Check if this action is in a mutually exclusive group
+            for group in self._parser._mutually_exclusive_groups:
+                if arg_action in group._group_actions:
+
+                    # Check if the group this action belongs to has already been completed
+                    if group in completed_mutex_groups:
+                        group_action = completed_mutex_groups[group]
+                        error = style_error("\nError: argument {}: not allowed with argument {}\n".
+                                            format(argparse._get_action_name(arg_action),
+                                                   argparse._get_action_name(group_action)))
+                        self._print_message(error)
+                        return False
+
+                    # Mark that this action completed the group
+                    completed_mutex_groups[group] = arg_action
+
+                    # Don't tab complete any of the other args in the group
+                    for group_action in group._group_actions:
+                        if group_action == arg_action:
+                            continue
+                        elif group_action in self._flag_to_action.values():
+                            matched_flags.extend(group_action.option_strings)
+                        elif group_action in remaining_positionals:
+                            remaining_positionals.remove(group_action)
+
+                    # Arg can only be in one group, so we are done
+                    break
+
+            return True
 
         #############################################################################################
         # Parse all but the last token
@@ -227,6 +262,9 @@ class AutoCompleter(object):
                         action = self._flag_to_action[candidates_flags[0]]
 
                 if action is not None:
+                    if not update_mutex_groups(action):
+                        return []
+
                     if isinstance(action, (argparse._AppendAction,
                                            argparse._AppendConstAction,
                                            argparse._CountAction)):
@@ -287,6 +325,9 @@ class AutoCompleter(object):
 
                 # Check if we have a positional to consume this token
                 if pos_arg_state is not None:
+                    if not update_mutex_groups(pos_arg_state.action):
+                        return []
+
                     consume_argument(pos_arg_state)
 
                     # No more flags are allowed if this is a REMAINDER argument
