@@ -10,6 +10,7 @@ import argparse
 import inspect
 import numbers
 import shutil
+from collections import deque
 from typing import Dict, List, Optional, Union
 
 from . import cmd2
@@ -116,13 +117,14 @@ class AutoCompleter(object):
             parent_tokens = dict()
         self._parent_tokens = parent_tokens
 
-        self._flags = []  # all flags in this command
-        self._flag_to_action = {}  # maps flags to the argparse action object
-        self._positional_actions = []  # actions for positional arguments (by position index)
-        self._subcommand_action = None  # this will be set if self._parser has subcommands
+        self._flags = []                      # all flags in this command
+        self._flag_to_action = {}             # maps flags to the argparse action object
+        self._positional_actions = []         # actions for positional arguments (by position index)
+        self._mutually_exclusive_groups = []  # Each item is a list of actions
+        self._subcommand_action = None        # this will be set if self._parser has subcommands
 
         # Start digging through the argparse structures.
-        #  _actions is the top level container of parameter definitions
+        # _actions is the top level container of parameter definitions
         for action in self._parser._actions:
             # if the parameter is flag based, it will have option_strings
             if action.option_strings:
@@ -138,14 +140,17 @@ class AutoCompleter(object):
                 if isinstance(action, argparse._SubParsersAction):
                     self._subcommand_action = action
 
+        # Keep track of what actions are in mutually exclusive groups
+        for group in self._parser._mutually_exclusive_groups:
+            self._mutually_exclusive_groups.append(group._group_actions)
+
     def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Complete the command using the argparse metadata and provided argument dictionary"""
         if not tokens:
             return []
 
-        # Count which positional argument index we're at now. Loop through all tokens on the command line so far
-        # Skip any flags or flag parameter tokens
-        next_pos_arg_index = 0
+        # Positionals args that are left to parse
+        remaining_positionals = deque(self._positional_actions)
 
         # This gets set to True when flags will no longer be processed as argparse flags
         # That can happen when -- is used or an argument with nargs=argparse.REMAINDER is used
@@ -229,7 +234,7 @@ class AutoCompleter(object):
                         # Therefore don't erase any tokens already consumed for this flag
                         consumed_arg_values.setdefault(action.dest, [])
                     else:
-                        # This flag is not resusable, so mark that we've seen it
+                        # This flag is not reusable, so mark that we've seen it
                         matched_flags.extend(action.option_strings)
 
                         # It's possible we already have consumed values for this flag if it was used
@@ -255,12 +260,9 @@ class AutoCompleter(object):
             else:
                 # If we aren't current tracking a positional, then get the next positional arg to handle this token
                 if pos_arg_state is None:
-                    pos_index = next_pos_arg_index
-                    next_pos_arg_index += 1
-
-                    # Make sure we are still have positional arguments to fill
-                    if pos_index < len(self._positional_actions):
-                        action = self._positional_actions[pos_index]
+                    # Make sure we are still have positional arguments to parse
+                    if remaining_positionals:
+                        action = remaining_positionals.popleft()
 
                         # Are we at a subcommand? If so, forward to the matching completer
                         if action == self._subcommand_action:
@@ -295,10 +297,9 @@ class AutoCompleter(object):
                     elif pos_arg_state.count >= pos_arg_state.max:
                         pos_arg_state = None
 
-                        # Check if this a case in which we've finished all positionals before one that has nargs
-                        # set to argparse.REMAINDER. At this point argparse allows no more flags to be processed.
-                        if next_pos_arg_index < len(self._positional_actions) and \
-                                self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
+                        # Check if the next positional has nargs set to argparse.REMAINDER.
+                        # At this point argparse allows no more flags to be processed.
+                        if remaining_positionals and remaining_positionals[0].nargs == argparse.REMAINDER:
                             skip_remaining_flags = True
 
         #############################################################################################
@@ -338,12 +339,11 @@ class AutoCompleter(object):
                 return []
 
         # Otherwise check if we have a positional to complete
-        elif pos_arg_state is not None or next_pos_arg_index < len(self._positional_actions):
+        elif pos_arg_state is not None or remaining_positionals:
 
             # If we aren't current tracking a positional, then get the next positional arg to handle this token
             if pos_arg_state is None:
-                pos_index = next_pos_arg_index
-                action = self._positional_actions[pos_index]
+                action = remaining_positionals.popleft()
                 pos_arg_state = AutoCompleter._ArgumentState(action)
 
             try:
