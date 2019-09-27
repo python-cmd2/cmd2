@@ -185,10 +185,9 @@ class AutoCompleter(object):
 
                     # Check if the group this action belongs to has already been completed
                     if group in completed_mutex_groups:
-                        group_action = completed_mutex_groups[group]
                         error = style_error("\nError: argument {}: not allowed with argument {}\n".
                                             format(argparse._get_action_name(arg_action),
-                                                   argparse._get_action_name(group_action)))
+                                                   argparse._get_action_name(completed_mutex_groups[group])))
                         self._print_message(error)
                         return False
 
