@@ -581,19 +581,6 @@ class AutoCompleter(object):
         return self._format_completions(arg_action, results)
 
     @staticmethod
-    def _format_message_prefix(arg_action: argparse.Action) -> str:
-        """Format the arg prefix text that appears before messages printed to the user"""
-        # Check if this is a flag
-        if arg_action.option_strings:
-            flags = ', '.join(arg_action.option_strings)
-            param = ' ' + str(arg_action.dest).upper()
-            return '{}{}'.format(flags, param)
-
-        # Otherwise this is a positional
-        else:
-            return '{}'.format(str(arg_action.dest).upper())
-
-    @staticmethod
     def _print_message(msg: str) -> None:
         """Print a message instead of tab completions and redraw the prompt and input line"""
         print(msg)
@@ -606,36 +593,27 @@ class AutoCompleter(object):
         """
         # Check if hinting is disabled
         suppress_hint = getattr(arg_action, ATTR_SUPPRESS_TAB_HINT, False)
-        if suppress_hint or arg_action.help == argparse.SUPPRESS or arg_action.dest == argparse.SUPPRESS:
+        if suppress_hint or arg_action.help == argparse.SUPPRESS:
             return
 
-        prefix = self._format_message_prefix(arg_action)
-        prefix = '  {0: <{width}}    '.format(prefix, width=20)
-        pref_len = len(prefix)
-
-        help_text = '' if arg_action.help is None else arg_action.help
-        help_lines = help_text.splitlines()
-
-        if len(help_lines) == 1:
-            self._print_message('\nHint:\n{}{}\n'.format(prefix, help_lines[0]))
-        else:
-            out_str = '\n{}'.format(prefix)
-            out_str += '\n{0: <{width}}'.format('', width=pref_len).join(help_lines)
-            self._print_message('\nHint:' + out_str + '\n')
+        # Use the parser's help formatter to print just this action's help text
+        formatter = self._parser._get_formatter()
+        formatter.start_section("Hint")
+        formatter.add_argument(arg_action)
+        formatter.end_section()
+        out_str = formatter.format_help()
+        self._print_message('\n' + out_str)
 
     def _print_unfinished_flag_error(self, flag_arg_state: _ArgumentState) -> None:
         """
         Print an error during tab completion when the user has not finished the current flag
         :param flag_arg_state: information about the unfinished flag action
         """
-        prefix = self._format_message_prefix(flag_arg_state.action)
-
-        out_str = "\nError:\n"
-        out_str += '  {0: <{width}}    '.format(prefix, width=20)
-        out_str += generate_range_error(flag_arg_state.min, flag_arg_state.max)
-
-        out_str += ' ({} entered)'.format(flag_arg_state.count)
-        self._print_message(style_error('{}\n'.format(out_str)))
+        error = "\nError: argument {}: {} ({} entered)\n".\
+            format(argparse._get_action_name(flag_arg_state.action),
+                   generate_range_error(flag_arg_state.min, flag_arg_state.max),
+                   flag_arg_state.count)
+        self._print_message(style_error('{}'.format(error)))
 
     def _print_completion_error(self, arg_action: argparse.Action, completion_error: CompletionError) -> None:
         """
@@ -643,10 +621,9 @@ class AutoCompleter(object):
         :param arg_action: action being tab completed
         :param completion_error: error that occurred
         """
-        prefix = self._format_message_prefix(arg_action)
-
-        out_str = "\nError:\n"
-        out_str += '  {0: <{width}}    '.format(prefix, width=20)
-        out_str += str(completion_error)
-
-        self._print_message(style_error('{}\n'.format(out_str)))
+        formatter = self._parser._get_formatter()
+        formatter.start_section("Error tab completing {}".format(argparse._get_action_name(arg_action)))
+        formatter.add_text(str(completion_error))
+        formatter.end_section()
+        error = style_error(formatter.format_help())
+        self._print_message('\n' + error)
