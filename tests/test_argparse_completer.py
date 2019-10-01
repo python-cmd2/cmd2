@@ -813,7 +813,7 @@ def test_arg_tokens(ac_app, command_and_args, completions):
     # Group finished by --flag. Optional positional will be skipped and last_arg will show its hint.
     ('mutex --flag flag_val', '', 'the last arg', None),
 
-    # Group finished by --flag. Other flag won't complete.
+    # Group finished by --flag. Other flag name won't complete.
     ('mutex --flag flag_val', '--oth', '', None),
 
     # Group finished by --flag. Error will display trying to complete other flag's value.
