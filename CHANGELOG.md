@@ -1,4 +1,4 @@
-## 0.9.18 (TBD, 2019)
+## 0.9.18 (October 1, 2019)
 * Bug Fixes
     * Fixed bug introduced in 0.9.17 where help functions for hidden and disabled commands were not being filtered
     out as help topics
