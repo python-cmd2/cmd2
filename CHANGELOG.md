@@ -6,6 +6,8 @@
     * `AutoCompleter` now handles argparse's mutually exclusive groups. It will not tab complete flag names or positionals
     for already completed groups. It also will print an error if you try tab completing a flag's value if the flag
     belongs to a completed group.
+    * `AutoCompleter` now uses the passed-in parser's help formatter to generate hint text. This gives help and
+    hint text for an argument consistent formatting.
 
 ## 0.9.17 (September 23, 2019)
 * Bug Fixes
