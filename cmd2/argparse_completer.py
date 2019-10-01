@@ -10,11 +10,12 @@ import argparse
 import inspect
 import numbers
 import shutil
+from collections import deque
 from typing import Dict, List, Optional, Union
 
 from . import cmd2
 from . import utils
-from .ansi import ansi_safe_wcswidth, style_error
+from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
 from .argparse_custom import ATTR_CHOICES_CALLABLE, INFINITY, generate_range_error
 from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION_HEADER, ATTR_NARGS_RANGE
 from .argparse_custom import ChoicesCallable, CompletionError, CompletionItem
@@ -116,13 +117,13 @@ class AutoCompleter(object):
             parent_tokens = dict()
         self._parent_tokens = parent_tokens
 
-        self._flags = []  # all flags in this command
-        self._flag_to_action = {}  # maps flags to the argparse action object
-        self._positional_actions = []  # actions for positional arguments (by position index)
-        self._subcommand_action = None  # this will be set if self._parser has subcommands
+        self._flags = []                      # all flags in this command
+        self._flag_to_action = {}             # maps flags to the argparse action object
+        self._positional_actions = []         # actions for positional arguments (by position index)
+        self._subcommand_action = None        # this will be set if self._parser has subcommands
 
         # Start digging through the argparse structures.
-        #  _actions is the top level container of parameter definitions
+        # _actions is the top level container of parameter definitions
         for action in self._parser._actions:
             # if the parameter is flag based, it will have option_strings
             if action.option_strings:
@@ -143,9 +144,8 @@ class AutoCompleter(object):
         if not tokens:
             return []
 
-        # Count which positional argument index we're at now. Loop through all tokens on the command line so far
-        # Skip any flags or flag parameter tokens
-        next_pos_arg_index = 0
+        # Positionals args that are left to parse
+        remaining_positionals = deque(self._positional_actions)
 
         # This gets set to True when flags will no longer be processed as argparse flags
         # That can happen when -- is used or an argument with nargs=argparse.REMAINDER is used
@@ -163,11 +163,57 @@ class AutoCompleter(object):
         # Keeps track of arguments we've seen and any tokens they consumed
         consumed_arg_values = dict()  # dict(arg_name -> List[tokens])
 
+        # Completed mutually exclusive groups
+        completed_mutex_groups = dict()  # dict(argparse._MutuallyExclusiveGroup -> Action which completed group)
+
         def consume_argument(arg_state: AutoCompleter._ArgumentState) -> None:
             """Consuming token as an argument"""
             arg_state.count += 1
             consumed_arg_values.setdefault(arg_state.action.dest, [])
             consumed_arg_values[arg_state.action.dest].append(token)
+
+        def update_mutex_groups(arg_action: argparse.Action) -> bool:
+            """
+            Check if an argument belongs to a mutually exclusive group and either mark that group
+            as complete or print an error if the group has already been completed
+            :param arg_action: the action of the argument
+            :return: False if the group has already been completed and there is a conflict, otherwise True
+            """
+            # Check if this action is in a mutually exclusive group
+            for group in self._parser._mutually_exclusive_groups:
+                if arg_action in group._group_actions:
+
+                    # Check if the group this action belongs to has already been completed
+                    if group in completed_mutex_groups:
+
+                        # If this is the action that completed the group, then there is no error
+                        # since it's allowed to appear on the command line more than once.
+                        completer_action = completed_mutex_groups[group]
+                        if arg_action == completer_action:
+                            return True
+
+                        error = style_error("\nError: argument {}: not allowed with argument {}\n".
+                                            format(argparse._get_action_name(arg_action),
+                                                   argparse._get_action_name(completer_action)))
+                        self._print_message(error)
+                        return False
+
+                    # Mark that this action completed the group
+                    completed_mutex_groups[group] = arg_action
+
+                    # Don't tab complete any of the other args in the group
+                    for group_action in group._group_actions:
+                        if group_action == arg_action:
+                            continue
+                        elif group_action in self._flag_to_action.values():
+                            matched_flags.extend(group_action.option_strings)
+                        elif group_action in remaining_positionals:
+                            remaining_positionals.remove(group_action)
+
+                    # Arg can only be in one group, so we are done
+                    break
+
+            return True
 
         #############################################################################################
         # Parse all but the last token
@@ -222,6 +268,9 @@ class AutoCompleter(object):
                         action = self._flag_to_action[candidates_flags[0]]
 
                 if action is not None:
+                    if not update_mutex_groups(action):
+                        return []
+
                     if isinstance(action, (argparse._AppendAction,
                                            argparse._AppendConstAction,
                                            argparse._CountAction)):
@@ -229,7 +278,7 @@ class AutoCompleter(object):
                         # Therefore don't erase any tokens already consumed for this flag
                         consumed_arg_values.setdefault(action.dest, [])
                     else:
-                        # This flag is not resusable, so mark that we've seen it
+                        # This flag is not reusable, so mark that we've seen it
                         matched_flags.extend(action.option_strings)
 
                         # It's possible we already have consumed values for this flag if it was used
@@ -255,12 +304,9 @@ class AutoCompleter(object):
             else:
                 # If we aren't current tracking a positional, then get the next positional arg to handle this token
                 if pos_arg_state is None:
-                    pos_index = next_pos_arg_index
-                    next_pos_arg_index += 1
-
-                    # Make sure we are still have positional arguments to fill
-                    if pos_index < len(self._positional_actions):
-                        action = self._positional_actions[pos_index]
+                    # Make sure we are still have positional arguments to parse
+                    if remaining_positionals:
+                        action = remaining_positionals.popleft()
 
                         # Are we at a subcommand? If so, forward to the matching completer
                         if action == self._subcommand_action:
@@ -285,6 +331,10 @@ class AutoCompleter(object):
 
                 # Check if we have a positional to consume this token
                 if pos_arg_state is not None:
+                    # No need to check for an error since we remove a completed group's positional from
+                    # remaining_positionals which means this action can't belong to a completed mutex group
+                    update_mutex_groups(pos_arg_state.action)
+
                     consume_argument(pos_arg_state)
 
                     # No more flags are allowed if this is a REMAINDER argument
@@ -295,10 +345,9 @@ class AutoCompleter(object):
                     elif pos_arg_state.count >= pos_arg_state.max:
                         pos_arg_state = None
 
-                        # Check if this a case in which we've finished all positionals before one that has nargs
-                        # set to argparse.REMAINDER. At this point argparse allows no more flags to be processed.
-                        if next_pos_arg_index < len(self._positional_actions) and \
-                                self._positional_actions[next_pos_arg_index].nargs == argparse.REMAINDER:
+                        # Check if the next positional has nargs set to argparse.REMAINDER.
+                        # At this point argparse allows no more flags to be processed.
+                        if remaining_positionals and remaining_positionals[0].nargs == argparse.REMAINDER:
                             skip_remaining_flags = True
 
         #############################################################################################
@@ -338,12 +387,11 @@ class AutoCompleter(object):
                 return []
 
         # Otherwise check if we have a positional to complete
-        elif pos_arg_state is not None or next_pos_arg_index < len(self._positional_actions):
+        elif pos_arg_state is not None or remaining_positionals:
 
             # If we aren't current tracking a positional, then get the next positional arg to handle this token
             if pos_arg_state is None:
-                pos_index = next_pos_arg_index
-                action = self._positional_actions[pos_index]
+                action = remaining_positionals.popleft()
                 pos_arg_state = AutoCompleter._ArgumentState(action)
 
             try:
@@ -533,22 +581,10 @@ class AutoCompleter(object):
         return self._format_completions(arg_action, results)
 
     @staticmethod
-    def _format_message_prefix(arg_action: argparse.Action) -> str:
-        """Format the arg prefix text that appears before messages printed to the user"""
-        # Check if this is a flag
-        if arg_action.option_strings:
-            flags = ', '.join(arg_action.option_strings)
-            param = ' ' + str(arg_action.dest).upper()
-            return '{}{}'.format(flags, param)
-
-        # Otherwise this is a positional
-        else:
-            return '{}'.format(str(arg_action.dest).upper())
-
-    @staticmethod
     def _print_message(msg: str) -> None:
         """Print a message instead of tab completions and redraw the prompt and input line"""
-        print(msg)
+        import sys
+        ansi_aware_write(sys.stdout, msg + '\n')
         rl_force_redisplay()
 
     def _print_arg_hint(self, arg_action: argparse.Action) -> None:
@@ -558,36 +594,27 @@ class AutoCompleter(object):
         """
         # Check if hinting is disabled
         suppress_hint = getattr(arg_action, ATTR_SUPPRESS_TAB_HINT, False)
-        if suppress_hint or arg_action.help == argparse.SUPPRESS or arg_action.dest == argparse.SUPPRESS:
+        if suppress_hint or arg_action.help == argparse.SUPPRESS:
             return
 
-        prefix = self._format_message_prefix(arg_action)
-        prefix = '  {0: <{width}}    '.format(prefix, width=20)
-        pref_len = len(prefix)
-
-        help_text = '' if arg_action.help is None else arg_action.help
-        help_lines = help_text.splitlines()
-
-        if len(help_lines) == 1:
-            self._print_message('\nHint:\n{}{}\n'.format(prefix, help_lines[0]))
-        else:
-            out_str = '\n{}'.format(prefix)
-            out_str += '\n{0: <{width}}'.format('', width=pref_len).join(help_lines)
-            self._print_message('\nHint:' + out_str + '\n')
+        # Use the parser's help formatter to print just this action's help text
+        formatter = self._parser._get_formatter()
+        formatter.start_section("Hint")
+        formatter.add_argument(arg_action)
+        formatter.end_section()
+        out_str = formatter.format_help()
+        self._print_message('\n' + out_str)
 
     def _print_unfinished_flag_error(self, flag_arg_state: _ArgumentState) -> None:
         """
         Print an error during tab completion when the user has not finished the current flag
         :param flag_arg_state: information about the unfinished flag action
         """
-        prefix = self._format_message_prefix(flag_arg_state.action)
-
-        out_str = "\nError:\n"
-        out_str += '  {0: <{width}}    '.format(prefix, width=20)
-        out_str += generate_range_error(flag_arg_state.min, flag_arg_state.max)
-
-        out_str += ' ({} entered)'.format(flag_arg_state.count)
-        self._print_message(style_error('{}\n'.format(out_str)))
+        error = "\nError: argument {}: {} ({} entered)\n".\
+            format(argparse._get_action_name(flag_arg_state.action),
+                   generate_range_error(flag_arg_state.min, flag_arg_state.max),
+                   flag_arg_state.count)
+        self._print_message(style_error('{}'.format(error)))
 
     def _print_completion_error(self, arg_action: argparse.Action, completion_error: CompletionError) -> None:
         """
@@ -595,10 +622,6 @@ class AutoCompleter(object):
         :param arg_action: action being tab completed
         :param completion_error: error that occurred
         """
-        prefix = self._format_message_prefix(arg_action)
-
-        out_str = "\nError:\n"
-        out_str += '  {0: <{width}}    '.format(prefix, width=20)
-        out_str += str(completion_error)
-
-        self._print_message(style_error('{}\n'.format(out_str)))
+        error = ("\nError tab completing {}:\n"
+                 "  {}\n".format(argparse._get_action_name(arg_action), str(completion_error)))
+        self._print_message(style_error('{}'.format(error)))

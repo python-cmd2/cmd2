@@ -67,12 +67,12 @@ class AutoCompleteTester(cmd2.Cmd):
 
     # Add subcommands to music
     music_subparsers = music_parser.add_subparsers()
-    music_create_parser = music_subparsers.add_parser('create', help='Create music')
+    music_create_parser = music_subparsers.add_parser('create', help='create music')
 
     # Add subcommands to music -> create
     music_create_subparsers = music_create_parser.add_subparsers()
-    music_create_jazz_parser = music_create_subparsers.add_parser('jazz', help='Create jazz')
-    music_create_rock_parser = music_create_subparsers.add_parser('rock', help='Create rocks')
+    music_create_jazz_parser = music_create_subparsers.add_parser('jazz', help='create jazz')
+    music_create_rock_parser = music_create_subparsers.add_parser('rock', help='create rocks')
 
     @with_argparser(music_parser)
     def do_music(self, args: argparse.Namespace) -> None:
@@ -84,10 +84,10 @@ class AutoCompleteTester(cmd2.Cmd):
 
     # Uses default flag prefix value (-)
     flag_parser = Cmd2ArgumentParser()
-    flag_parser.add_argument('-n', '--normal_flag', help='A normal flag', action='store_true')
-    flag_parser.add_argument('-a', '--append_flag', help='Append flag', action='append')
-    flag_parser.add_argument('-o', '--append_const_flag', help='Append const flag', action='append_const', const=True)
-    flag_parser.add_argument('-c', '--count_flag', help='Count flag', action='count')
+    flag_parser.add_argument('-n', '--normal_flag', help='a normal flag', action='store_true')
+    flag_parser.add_argument('-a', '--append_flag', help='append flag', action='append')
+    flag_parser.add_argument('-o', '--append_const_flag', help='append const flag', action='append_const', const=True)
+    flag_parser.add_argument('-c', '--count_flag', help='count flag', action='count')
     flag_parser.add_argument('-s', '--suppressed_flag', help=argparse.SUPPRESS, action='store_true')
     flag_parser.add_argument('-r', '--remainder_flag', nargs=argparse.REMAINDER, help='a remainder flag')
 
@@ -97,7 +97,7 @@ class AutoCompleteTester(cmd2.Cmd):
 
     # Uses non-default flag prefix value (+)
     plus_flag_parser = Cmd2ArgumentParser(prefix_chars='+')
-    plus_flag_parser.add_argument('+n', '++normal_flag', help='A normal flag', action='store_true')
+    plus_flag_parser.add_argument('+n', '++normal_flag', help='a normal flag', action='store_true')
 
     @with_argparser(plus_flag_parser)
     def do_plus_flag(self, args: argparse.Namespace) -> None:
@@ -251,6 +251,22 @@ class AutoCompleteTester(cmd2.Cmd):
     def do_arg_tokens(self, args: argparse.Namespace) -> None:
         pass
 
+    ############################################################################################################
+    # Begin code related to mutually exclusive groups
+    ############################################################################################################
+    mutex_parser = Cmd2ArgumentParser()
+
+    mutex_group = mutex_parser.add_mutually_exclusive_group(required=True)
+    mutex_group.add_argument('optional_pos', help='the optional positional', nargs=argparse.OPTIONAL)
+    mutex_group.add_argument('-f', '--flag', help='the flag arg')
+    mutex_group.add_argument('-o', '--other_flag', help='the other flag arg')
+
+    mutex_parser.add_argument('last_arg', help='the last arg')
+
+    @with_argparser(mutex_parser)
+    def do_mutex(self, args: argparse.Namespace) -> None:
+        pass
+
 
 @pytest.fixture
 def ac_app():
@@ -271,8 +287,16 @@ def test_help(ac_app, command):
     assert out1 == out2
 
 
+def test_bad_subcommand_help(ac_app):
+    # These should give the same output because the second one isn't using a
+    # real subcommand, so help will be called on the music command instead.
+    out1, err1 = run_cmd(ac_app, 'help music')
+    out2, err2 = run_cmd(ac_app, 'help music fake')
+    assert out1 == out2
+
+
 @pytest.mark.parametrize('command, text, completions', [
-    ('', 'mu', ['music ']),
+    ('', 'mus', ['music ']),
     ('music', 'cre', ['create ']),
     ('music', 'creab', []),
     ('music create', '', ['jazz', 'rock']),
@@ -654,7 +678,7 @@ def test_unfinished_flag_error(ac_app, command_and_args, text, is_error, capsys)
     complete_tester(text, line, begidx, endidx, ac_app)
 
     out, err = capsys.readouterr()
-    assert is_error == all(x in out for x in ["Error:\n", "expected"])
+    assert is_error == all(x in out for x in ["Error: argument", "expected"])
 
 
 def test_completion_items_default_header(ac_app):
@@ -707,24 +731,6 @@ def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys):
     complete_tester(text, line, begidx, endidx, ac_app)
     out, err = capsys.readouterr()
     assert has_hint == ("Hint:\n" in out)
-
-
-def test_autocomp_hint_multiple_lines(ac_app, capsys):
-    text = ''
-    line = 'hint {}'.format(text)
-    endidx = len(line)
-    begidx = endidx - len(text)
-
-    first_match = complete_tester(text, line, begidx, endidx, ac_app)
-    out, err = capsys.readouterr()
-
-    assert first_match is None
-    assert out == '''
-Hint:
-  HINT_POS                here is a hint
-                          with new lines
-
-'''
 
 
 def test_autocomp_hint_no_help_text(ac_app, capsys):
@@ -786,6 +792,45 @@ def test_arg_tokens(ac_app, command_and_args, completions):
         assert first_match is None
 
     assert ac_app.completion_matches == sorted(completions, key=ac_app.default_sort_key)
+
+
+@pytest.mark.parametrize('command_and_args, text, output_contains, first_match', [
+    # Group isn't done. Hint will show for optional positional and no completions returned
+    ('mutex', '', 'the optional positional', None),
+
+    # Group isn't done. Flag name will still complete.
+    ('mutex', '--fl', '', '--flag '),
+
+    # Group isn't done. Flag hint will show.
+    ('mutex --flag', '', 'the flag arg', None),
+
+    # Group finished by optional positional. No flag name will complete.
+    ('mutex pos_val', '--fl', '', None),
+
+    # Group finished by optional positional. Error will display trying to complete the flag's value.
+    ('mutex pos_val --flag', '', 'f/--flag: not allowed with argument optional_pos', None),
+
+    # Group finished by --flag. Optional positional will be skipped and last_arg will show its hint.
+    ('mutex --flag flag_val', '', 'the last arg', None),
+
+    # Group finished by --flag. Other flag name won't complete.
+    ('mutex --flag flag_val', '--oth', '', None),
+
+    # Group finished by --flag. Error will display trying to complete other flag's value.
+    ('mutex --flag flag_val --other', '', '-o/--other_flag: not allowed with argument -f/--flag', None),
+
+    # Group finished by --flag. That same flag can be used again so it's hint will show.
+    ('mutex --flag flag_val --flag', '', 'the flag arg', None)
+])
+def test_complete_mutex_group(ac_app, command_and_args, text, output_contains, first_match, capsys):
+    line = '{} {}'.format(command_and_args, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    assert first_match == complete_tester(text, line, begidx, endidx, ac_app)
+
+    out, err = capsys.readouterr()
+    assert output_contains in out
 
 
 def test_single_prefix_char():
