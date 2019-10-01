@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Union
 
 from . import cmd2
 from . import utils
-from .ansi import ansi_safe_wcswidth, style_error
+from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
 from .argparse_custom import ATTR_CHOICES_CALLABLE, INFINITY, generate_range_error
 from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION_HEADER, ATTR_NARGS_RANGE
 from .argparse_custom import ChoicesCallable, CompletionError, CompletionItem
@@ -583,7 +583,8 @@ class AutoCompleter(object):
     @staticmethod
     def _print_message(msg: str) -> None:
         """Print a message instead of tab completions and redraw the prompt and input line"""
-        print(msg)
+        import sys
+        ansi_aware_write(sys.stdout, msg + '\n')
         rl_force_redisplay()
 
     def _print_arg_hint(self, arg_action: argparse.Action) -> None:
@@ -621,9 +622,6 @@ class AutoCompleter(object):
         :param arg_action: action being tab completed
         :param completion_error: error that occurred
         """
-        formatter = self._parser._get_formatter()
-        formatter.start_section("Error tab completing {}".format(argparse._get_action_name(arg_action)))
-        formatter.add_text(str(completion_error))
-        formatter.end_section()
-        error = style_error(formatter.format_help())
-        self._print_message('\n' + error)
+        error = ("\nError tab completing {}:\n"
+                 "  {}\n".format(argparse._get_action_name(arg_action), str(completion_error)))
+        self._print_message(style_error('{}'.format(error)))
