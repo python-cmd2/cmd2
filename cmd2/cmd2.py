@@ -3594,7 +3594,7 @@ class Cmd(cmd.Cmd):
                 history = pickle.load(fobj)
         except (AttributeError, EOFError, FileNotFoundError, ImportError, IndexError, KeyError, ValueError,
                 pickle.UnpicklingError):
-            # If any non-operating system error occurs when attempting to unpickle, just use an empty history
+            # If any of these errors occur when attempting to unpickle, just use an empty history
             pass
         except OSError as ex:
             msg = "Can not read persistent history file '{}': {}"
