@@ -1,3 +1,7 @@
+## 0.9.19 (TBD, 2019)
+* Bug Fixes
+    * Fixed `ValueError` exception which could occur when an old format persistent history file is loaded with new `cmd2`
+
 ## 0.9.18 (October 1, 2019)
 * Bug Fixes
     * Fixed bug introduced in 0.9.17 where help functions for hidden and disabled commands were not being filtered

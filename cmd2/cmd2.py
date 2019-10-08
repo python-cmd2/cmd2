@@ -3592,8 +3592,9 @@ class Cmd(cmd.Cmd):
         try:
             with open(hist_file, 'rb') as fobj:
                 history = pickle.load(fobj)
-        except (AttributeError, EOFError, FileNotFoundError, ImportError, IndexError, KeyError, pickle.UnpicklingError):
-            # If any non-operating system error occurs when attempting to unpickle, just use an empty history
+        except (AttributeError, EOFError, FileNotFoundError, ImportError, IndexError, KeyError, ValueError,
+                pickle.UnpicklingError):
+            # If any of these errors occur when attempting to unpickle, just use an empty history
             pass
         except OSError as ex:
             msg = "Can not read persistent history file '{}': {}"
