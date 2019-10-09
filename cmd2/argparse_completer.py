@@ -10,6 +10,7 @@ import argparse
 import inspect
 import numbers
 import shutil
+import textwrap
 from collections import deque
 from typing import Dict, List, Optional, Union
 
@@ -622,6 +623,9 @@ class AutoCompleter(object):
         :param arg_action: action being tab completed
         :param completion_error: error that occurred
         """
+        # Indent all lines of completion_error
+        indented_error = textwrap.indent(str(completion_error), '  ')
+
         error = ("\nError tab completing {}:\n"
-                 "  {}\n".format(argparse._get_action_name(arg_action), str(completion_error)))
+                 "{}\n".format(argparse._get_action_name(arg_action), indented_error))
         self._print_message(style_error('{}'.format(error)))
