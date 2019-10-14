@@ -1,6 +1,8 @@
-## 0.9.19 (TBD, 2019)
+## 0.9.19 (October 14, 2019)
 * Bug Fixes
     * Fixed `ValueError` exception which could occur when an old format persistent history file is loaded with new `cmd2`
+* Enhancements
+    * Improved displaying multiline CompletionErrors by indenting all lines
 
 ## 0.9.18 (October 1, 2019)
 * Bug Fixes
