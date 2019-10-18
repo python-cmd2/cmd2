@@ -37,4 +37,4 @@ install:
   - "python -m pip install --upgrade pip wheel setuptools tox"
 
 test_script:
-- "python -m tox -e %TOX_ENV%"
+- "tox -e %TOXENV%"
