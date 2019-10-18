@@ -1,3 +1,8 @@
+## 0.9.20 (TBD, 2019)
+* Enhancements
+    * Send all startup script paths to run_script. Previously we didn't do this if the file was empty, but that
+    showed no record of the run_script command in history. 
+
 ## 0.9.19 (October 14, 2019)
 * Bug Fixes
     * Fixed `ValueError` exception which could occur when an old format persistent history file is loaded with new `cmd2`
