@@ -498,10 +498,10 @@ class Cmd(cmd.Cmd):
         # Commands that will run at the beginning of the command loop
         self._startup_commands = []
 
-        # If a startup script is provided, then execute it in the startup commands
+        # If a startup script is provided and exists, then execute it in the startup commands
         if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
-            if os.path.exists(startup_script) and os.path.getsize(startup_script) > 0:
+            if os.path.exists(startup_script):
                 self._startup_commands.append("run_script '{}'".format(startup_script))
 
         # Transcript files to run instead of interactive command loop
