@@ -4,7 +4,7 @@ build: off
 environment:
   PYTHONUNBUFFERED: 1
   matrix:
-    - PYTHON: "C:\Miniconda36-x64"
+    - PYTHON: "C:\\Miniconda36-x64"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "64"
       TOXENV: "py36"
