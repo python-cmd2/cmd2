@@ -3,11 +3,6 @@ build: off
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python35-x64"
-      PYTHON_VERSION: "3.5.x"
-      PYTHON_ARCH: "64"
-      TOXENV: "py35"
-
     - PYTHON: "C:\\Python36-x64"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "64"
@@ -37,4 +32,4 @@ install:
   - "python -m pip install --upgrade pip wheel setuptools tox"
 
 test_script:
-- "tox -e %TOXENV%"
+- "python -m tox -e %TOXENV%"
