@@ -1,27 +1,35 @@
+# AppVeyor (https://www.appveyor.com) continous integration configuration file for Windows unit tests
 build: off
 
 environment:
   PYTHONUNBUFFERED: 1
-  MINICONDA: C:\\Miniconda3-x64
   matrix:
-# Disable Python 3.5 testing on AppVeyor for now until we fix issue with mock module install for python < 3.6
-#  - PYTHON: "C:\\Python35"
-#    TOX_ENV: "py35"
+    - PYTHON: "C:\\Miniconda36-x64"
+      PYTHON_VERSION: "3.6.x"
+      PYTHON_ARCH: "64"
+      TOXENV: "py36"
 
-  - PYTHON: "C:\\Python36"
-    TOX_ENV: "py36"
-
-  - PYTHON: "C:\\Python37"
-    TOX_ENV: "py37"
+    - PYTHON: "C:\\Miniconda37-x64"
+      PYTHON_VERSION: "3.7.x"
+      PYTHON_ARCH: "64"
+      TOXENV: "py37"
 
 init:
-- "%PYTHON%/python -V"
-- mkdir C:\Users\appveyor\.conda
-- call %MINICONDA%\Scripts\activate.bat
+  - "%PYTHON%/python -V"
+  - mkdir C:\Users\appveyor\.conda
+  - call %PYTHON%\Scripts\activate.bat
 
 install:
-- "%PYTHON%/Scripts/pip install -U --user pip"
-- "%PYTHON%/Scripts/pip install -U --user setuptools tox wheel"
+  # Prepend the right Python version to the PATH of this build
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+
+  # Check that we have the expected version and architecture for Python
+  - "python --version"
+  - "python -c \"import struct; print(struct.calcsize('P') * 8)\""
+
+  # Upgrade to the latest version of pip to avoid it displaying warnings
+  # about it being out of date.
+  - "python -m pip install --upgrade pip wheel setuptools tox"
 
 test_script:
-- "%PYTHON%/python -m tox -e %TOX_ENV%"
+- "tox -e %TOXENV%"
