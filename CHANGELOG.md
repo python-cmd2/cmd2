@@ -2,6 +2,9 @@
 * Enhancements
     * Send all startup script paths to run_script. Previously we didn't do this if the file was empty, but that
     showed no record of the run_script command in history. 
+    * It is no longer necessary to set the `prog` attribute of an argparser with subcommands. cmd2 now automatically
+    sets the prog value of it and all its subparsers so that all usage statements contain the top level command name
+    and not sys.argv[0].
 
 ## 0.9.19 (October 14, 2019)
 * Bug Fixes
