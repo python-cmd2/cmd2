@@ -177,6 +177,7 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
         return arg_decorator
 
 
+# noinspection PyProtectedMember
 def set_parser_prog(parser: argparse.ArgumentParser, prog: str):
     """
     Recursively set prog attribute of a parser and all of its subparsers so that the root command
