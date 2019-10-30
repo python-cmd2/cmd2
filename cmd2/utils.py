@@ -119,21 +119,21 @@ def cast(current: Any, new: str) -> Any:
     return current
 
 
-def which(editor: str) -> Optional[str]:
-    """Find the full path of a given editor.
+def which(exe_name: str) -> Optional[str]:
+    """Find the full path of a given executable on a Linux or Mac machine
 
-    Return the full path of the given editor, or None if the editor can
-    not be found.
-
-    :param editor: filename of the editor to check, ie 'notepad.exe' or 'vi'
-    :return: a full path or None
+    :param exe_name: name of the executable to check, ie 'vi' or 'ls'
+    :return: a full path or None if exe not found
     """
+    if sys.platform.startswith('win'):
+        return None
+
     try:
-        editor_path = subprocess.check_output(['which', editor], stderr=subprocess.STDOUT).strip()
-        editor_path = editor_path.decode()
+        exe_path = subprocess.check_output(['which', exe_name], stderr=subprocess.STDOUT).strip()
+        exe_path = exe_path.decode()
     except subprocess.CalledProcessError:
-        editor_path = None
-    return editor_path
+        exe_path = None
+    return exe_path
 
 
 def is_text_file(file_path: str) -> bool:
