@@ -12,7 +12,7 @@ import cmd2
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
 # create the top-level parser for the base command
-base_parser = argparse.ArgumentParser(prog='base')
+base_parser = argparse.ArgumentParser()
 base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
 
 # create the parser for the "foo" subcommand
@@ -38,7 +38,7 @@ sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport', cho
 
 # create the top-level parser for the alternate command
 # The alternate command doesn't provide its own help flag
-base2_parser = argparse.ArgumentParser(prog='alternate', add_help=False)
+base2_parser = argparse.ArgumentParser(add_help=False)
 base2_subparsers = base2_parser.add_subparsers(title='subcommands', help='subcommand help')
 
 # create the parser for the "foo" subcommand

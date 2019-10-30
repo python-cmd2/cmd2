@@ -207,7 +207,7 @@ class SubcommandApp(cmd2.Cmd):
         self.poutput('((%s))' % args.z)
 
     # create the top-level parser for the base command
-    base_parser = argparse.ArgumentParser(prog='base')
+    base_parser = argparse.ArgumentParser()
     base_subparsers = base_parser.add_subparsers(title='subcommands', help='subcommand help')
 
     # create the parser for the "foo" subcommand
