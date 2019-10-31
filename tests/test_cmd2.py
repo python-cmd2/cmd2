@@ -20,7 +20,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-from cmd2 import ansi, clipboard, constants, plugin, utils
+from cmd2 import ansi, clipboard, constants, plugin, utils, COMMAND_NAME
 from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY
 from .conftest import SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, complete_tester
 
@@ -2342,7 +2342,7 @@ def test_disabled_command_not_in_history(disable_commands_app):
     assert saved_len == len(disable_commands_app.history)
 
 def test_disabled_message_command_name(disable_commands_app):
-    message_to_print = '{} is currently disabled'.format(cmd2.cmd2.COMMAND_NAME)
+    message_to_print = '{} is currently disabled'.format(COMMAND_NAME)
     disable_commands_app.disable_command('has_helper_funcs', message_to_print)
 
     out, err = run_cmd(disable_commands_app, 'has_helper_funcs')
