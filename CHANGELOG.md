@@ -10,6 +10,10 @@
     * It is no longer necessary to set the `prog` attribute of an argparser with subcommands. cmd2 now automatically
     sets the prog value of it and all its subparsers so that all usage statements contain the top level command name
     and not sys.argv[0].
+* Breaking changes
+    * Some constants were moved from cmd2.py to constants.py
+    * cmd2 command decorators were moved to decorators.py. If you were importing them via cmd2's __init__.py, then
+    there will be no issues.
 
 ## 0.9.19 (October 14, 2019)
 * Bug Fixes
