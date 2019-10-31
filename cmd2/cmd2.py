@@ -89,14 +89,6 @@ try:
 except ImportError:  # pragma: no cover
     ipython_available = False
 
-INTERNAL_COMMAND_EPILOG = ("Notes:\n"
-                           "  This command is for internal use and is not intended to be called from the\n"
-                           "  command line.")
-
-# Sorting keys for strings
-ALPHABETICAL_SORT_KEY = utils.norm_fold
-NATURAL_SORT_KEY = utils.natural_keys
-
 
 class _SavedReadlineSettings:
     """readline settings that are backed up when switching between readline environments"""
@@ -139,6 +131,14 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
     DEFAULT_EDITOR = utils.find_editor()
+
+    INTERNAL_COMMAND_EPILOG = ("Notes:\n"
+                               "  This command is for internal use and is not intended to be called from the\n"
+                               "  command line.")
+
+    # Sorting keys for strings
+    ALPHABETICAL_SORT_KEY = utils.norm_fold
+    NATURAL_SORT_KEY = utils.natural_keys
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, *,
                  persistent_history_file: str = '', persistent_history_length: int = 1000,
@@ -194,7 +194,7 @@ class Cmd(cmd.Cmd):
         self.continuation_prompt = '> '
         self.debug = False
         self.echo = False
-        self.editor = self.DEFAULT_EDITOR
+        self.editor = Cmd.DEFAULT_EDITOR
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.locals_in_py = False
 
@@ -330,7 +330,7 @@ class Cmd(cmd.Cmd):
         #     command and category names
         #     alias, macro, settable, and shortcut names
         #     tab completion results when self.matches_sorted is False
-        self.default_sort_key = ALPHABETICAL_SORT_KEY
+        self.default_sort_key = Cmd.ALPHABETICAL_SORT_KEY
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
