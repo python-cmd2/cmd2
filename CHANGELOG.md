@@ -5,6 +5,8 @@
 * Enhancements
     * Send all startup script paths to run_script. Previously we didn't do this if the file was empty, but that
     showed no record of the run_script command in history. 
+    * Made it easier for developers to override `edit` command by having `do_history` no longer call `do_edit`. This
+    also removes the need to exclude `edit` command from history list.
 
 ## 0.9.19 (October 14, 2019)
 * Bug Fixes
