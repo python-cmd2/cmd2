@@ -368,10 +368,10 @@ class Cmd(cmd.Cmd):
         :param shortcuts: dictionary containing shortcuts for commands. If not supplied, then defaults to
                           constants.DEFAULT_SHORTCUTS.
         """
-        # If use_ipython is False, make sure the do_ipy() method doesn't exit
+        # If use_ipython is False, make sure the ipy command isn't available in this instance
         if not use_ipython:
             try:
-                del Cmd.do_ipy
+                self.do_ipy = None
             except AttributeError:
                 pass
 

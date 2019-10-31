@@ -1,4 +1,7 @@
 ## 0.9.20 (TBD, 2019)
+* Bug Fixes
+    * Fixed bug where setting `use_ipython` to False removed ipy command from the entire `cmd2.Cmd` class instead of
+    just the instance being created
 * Enhancements
     * Send all startup script paths to run_script. Previously we didn't do this if the file was empty, but that
     showed no record of the run_script command in history. 
