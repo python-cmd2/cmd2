@@ -390,10 +390,10 @@ class Cmd(cmd.Cmd):
         :param shortcuts: dictionary containing shortcuts for commands. If not supplied, then defaults to
                           constants.DEFAULT_SHORTCUTS.
         """
-        # If use_ipython is False, make sure the do_ipy() method doesn't exit
+        # If use_ipython is False, make sure the ipy command isn't available in this instance
         if not use_ipython:
             try:
-                del Cmd.do_ipy
+                self.do_ipy = None
             except AttributeError:
                 pass
 
@@ -455,7 +455,7 @@ class Cmd(cmd.Cmd):
         self._initialize_history(persistent_history_file)
 
         # Commands to exclude from the history command
-        self.exclude_from_history = '''history edit eof'''.split()
+        self.exclude_from_history = ['eof', 'history']
 
         # Dictionary of macro names and their values
         self.macros = dict()
@@ -3542,14 +3542,9 @@ class Cmd(cmd.Cmd):
                     else:
                         fobj.write('{}\n'.format(command.raw))
             try:
-                # Handle potential edge case where the temp file needs to be quoted on the command line
-                quoted_fname = utils.quote_string(fname)
-
+                self._run_editor(fname)
                 # noinspection PyTypeChecker
-                self.do_edit(quoted_fname)
-
-                # noinspection PyTypeChecker
-                self.do_run_script(quoted_fname)
+                self.do_run_script(utils.quote_string(fname))
             finally:
                 os.remove(fname)
         elif args.output_file:
@@ -3741,7 +3736,7 @@ class Cmd(cmd.Cmd):
             msg = '{} {} saved to transcript file {!r}'
             self.pfeedback(msg.format(commands_run, plural, transcript_file))
 
-    edit_description = ("Edit a file in a text editor\n"
+    edit_description = ("Run a text editor and optionally open a file with it\n"
                         "\n"
                         "The editor used is determined by a settable parameter. To set it:\n"
                         "\n"
@@ -3749,17 +3744,25 @@ class Cmd(cmd.Cmd):
 
     edit_parser = Cmd2ArgumentParser(description=edit_description)
     edit_parser.add_argument('file_path', nargs=argparse.OPTIONAL,
-                             help="path to a file to open in editor", completer_method=path_complete)
+                             help="optional path to a file to open in editor", completer_method=path_complete)
 
     @with_argparser(edit_parser)
     def do_edit(self, args: argparse.Namespace) -> None:
-        """Edit a file in a text editor"""
+        """Run a text editor and optionally open a file with it"""
+        self._run_editor(args.file_path)
+
+    def _run_editor(self, file_path: Optional[str]) -> None:
+        """
+        Run a text editor and optionally open a file with it
+        :param file_path: optional path of the file to edit
+        :raises EnvironmentError if self.editor is not set
+        """
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
 
         command = utils.quote_string(os.path.expanduser(self.editor))
-        if args.file_path:
-            command += " " + utils.quote_string(os.path.expanduser(args.file_path))
+        if file_path:
+            command += " " + utils.quote_string(os.path.expanduser(file_path))
 
         # noinspection PyTypeChecker
         self.do_shell(command)

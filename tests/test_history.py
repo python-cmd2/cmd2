@@ -476,9 +476,9 @@ def test_history_edit(base_app, monkeypatch):
     # going to call it due to the mock
     base_app.editor = 'fooedit'
 
-    # Mock out the edit call so we don't actually open an editor
-    edit_mock = mock.MagicMock(name='do_edit')
-    monkeypatch.setattr("cmd2.Cmd.do_edit", edit_mock)
+    # Mock out the _run_editor call so we don't actually open an editor
+    edit_mock = mock.MagicMock(name='_run_editor')
+    monkeypatch.setattr("cmd2.Cmd._run_editor", edit_mock)
 
     # Mock out the run_script call since the mocked edit won't produce a file
     run_script_mock = mock.MagicMock(name='do_run_script')
@@ -590,17 +590,6 @@ def test_base_help_history(base_app):
     assert out == normalize(HELP_HISTORY)
 
 def test_exclude_from_history(base_app, monkeypatch):
-    # Set a fake editor just to make sure we have one.  We aren't
-    # really going to call it due to the mock
-    base_app.editor = 'fooedit'
-
-    # Mock out the subprocess.Popen call so we don't actually open an editor
-    m = mock.MagicMock(name='Popen')
-    monkeypatch.setattr("subprocess.Popen", m)
-
-    # Run edit command
-    run_cmd(base_app, 'edit')
-
     # Run history command
     run_cmd(base_app, 'history')
 

@@ -1,7 +1,12 @@
 ## 0.9.20 (TBD, 2019)
+* Bug Fixes
+    * Fixed bug where setting `use_ipython` to False removed ipy command from the entire `cmd2.Cmd` class instead of
+    just the instance being created
 * Enhancements
     * Send all startup script paths to run_script. Previously we didn't do this if the file was empty, but that
     showed no record of the run_script command in history. 
+    * Made it easier for developers to override `edit` command by having `do_history` no longer call `do_edit`. This
+    also removes the need to exclude `edit` command from history list.
     * It is no longer necessary to set the `prog` attribute of an argparser with subcommands. cmd2 now automatically
     sets the prog value of it and all its subparsers so that all usage statements contain the top level command name
     and not sys.argv[0].
