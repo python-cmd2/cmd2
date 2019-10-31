@@ -49,7 +49,7 @@ def fake_func():
     ({'completer_function': fake_func, 'completer_method': fake_func}, False),
 ])
 def test_apcustom_choices_callable_count(kwargs, is_valid):
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     try:
         parser.add_argument('name', **kwargs)
         assert is_valid
@@ -66,7 +66,7 @@ def test_apcustom_choices_callable_count(kwargs, is_valid):
 ])
 def test_apcustom_no_choices_callables_alongside_choices(kwargs):
     with pytest.raises(TypeError) as excinfo:
-        parser = Cmd2ArgumentParser(prog='test')
+        parser = Cmd2ArgumentParser()
         parser.add_argument('name', choices=['my', 'choices', 'list'], **kwargs)
     assert 'None of the following parameters can be used alongside a choices parameter' in str(excinfo.value)
 
@@ -79,7 +79,7 @@ def test_apcustom_no_choices_callables_alongside_choices(kwargs):
 ])
 def test_apcustom_no_choices_callables_when_nargs_is_0(kwargs):
     with pytest.raises(TypeError) as excinfo:
-        parser = Cmd2ArgumentParser(prog='test')
+        parser = Cmd2ArgumentParser()
         parser.add_argument('name', action='store_true', **kwargs)
     assert 'None of the following parameters can be used on an action that takes no arguments' in str(excinfo.value)
 
@@ -126,40 +126,40 @@ def test_apcustom_nargs_range_validation(cust_app):
 ])
 def test_apcustom_narg_invalid_tuples(nargs_tuple):
     with pytest.raises(ValueError) as excinfo:
-        parser = Cmd2ArgumentParser(prog='test')
+        parser = Cmd2ArgumentParser()
         parser.add_argument('invalid_tuple', nargs=nargs_tuple)
     assert 'Ranged values for nargs must be a tuple of 1 or 2 integers' in str(excinfo.value)
 
 
 def test_apcustom_narg_tuple_order():
     with pytest.raises(ValueError) as excinfo:
-        parser = Cmd2ArgumentParser(prog='test')
+        parser = Cmd2ArgumentParser()
         parser.add_argument('invalid_tuple', nargs=(2, 1))
     assert 'Invalid nargs range. The first value must be less than the second' in str(excinfo.value)
 
 
 def test_apcustom_narg_tuple_negative():
     with pytest.raises(ValueError) as excinfo:
-        parser = Cmd2ArgumentParser(prog='test')
+        parser = Cmd2ArgumentParser()
         parser.add_argument('invalid_tuple', nargs=(-1, 1))
     assert 'Negative numbers are invalid for nargs range' in str(excinfo.value)
 
 
 # noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_zero_base():
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0,))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.nargs_range is None
     assert "[arg [...]]" in parser.format_help()
 
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0, 1))
     assert arg.nargs == argparse.OPTIONAL
     assert arg.nargs_range is None
     assert "[arg]" in parser.format_help()
 
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(0, 3))
     assert arg.nargs == argparse.ZERO_OR_MORE
     assert arg.nargs_range == (0, 3)
@@ -168,13 +168,13 @@ def test_apcustom_narg_tuple_zero_base():
 
 # noinspection PyUnresolvedReferences
 def test_apcustom_narg_tuple_one_base():
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range is None
     assert "arg [...]" in parser.format_help()
 
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(1, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range == (1, 5)
@@ -185,13 +185,13 @@ def test_apcustom_narg_tuple_one_base():
 def test_apcustom_narg_tuple_other_ranges():
 
     # Test range with no upper bound on max
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2,))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range == (2, INFINITY)
 
     # Test finite range
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2, 5))
     assert arg.nargs == argparse.ONE_OR_MORE
     assert arg.nargs_range == (2, 5)
@@ -202,13 +202,13 @@ def test_apcustom_print_message(capsys):
     test_message = 'The test message'
 
     # Specify the file
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     parser._print_message(test_message, file=sys.stdout)
     out, err = capsys.readouterr()
     assert test_message in out
 
     # Make sure file defaults to sys.stderr
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     parser._print_message(test_message)
     out, err = capsys.readouterr()
     assert test_message in err
@@ -239,6 +239,6 @@ def test_generate_range_error():
 
 def test_apcustom_required_options():
     # Make sure a 'required arguments' section shows when a flag is marked required
-    parser = Cmd2ArgumentParser(prog='test')
+    parser = Cmd2ArgumentParser()
     parser.add_argument('--required_flag', required=True)
     assert 'required arguments' in parser.format_help()

@@ -63,7 +63,7 @@ class AutoCompleteTester(cmd2.Cmd):
     # Begin code related to help and command name completion
     ############################################################################################################
     # Top level parser for music command
-    music_parser = Cmd2ArgumentParser(description='Manage music', prog='music')
+    music_parser = Cmd2ArgumentParser(description='Manage music')
 
     # Add subcommands to music
     music_subparsers = music_parser.add_subparsers()

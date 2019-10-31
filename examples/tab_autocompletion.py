@@ -204,7 +204,7 @@ class TabCompleteExample(cmd2.Cmd):
                                   '\n    '.join(ep_list)))
                 print()
 
-    video_parser = Cmd2ArgumentParser(prog='media')
+    video_parser = Cmd2ArgumentParser()
 
     video_types_subparsers = video_parser.add_subparsers(title='Media Types', dest='type')
 
