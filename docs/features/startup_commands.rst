@@ -20,7 +20,8 @@ Commands At Invocation
 You can send commands to your app as you invoke it by including them as extra
 arguments to the program. ``cmd2`` interprets each argument as a separate
 command, so you should enclose each command in quotation marks if it is more
-than a one-word command.
+than a one-word command.  You can use either single or double quotes for this
+purpose.
 
 .. code-block:: shell
 
@@ -28,6 +29,10 @@ than a one-word command.
   hello
   Gracie
 
+You can end your commands with a **quit** command so that your ``cmd2``
+application runs like a non-interactive command-line utility (CLU).  This
+means that it can then be scripted from an external application and easily used
+in automation.
 
 .. note::
 
