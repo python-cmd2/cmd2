@@ -90,9 +90,9 @@ This will also install the required 3rd-party dependencies.
 
 .. warning::
 
-  Versions of ``cmd2`` before 0.7.0 should be considered to be of unstable
+  Versions of ``cmd2`` before 0.8.9 should be considered to be of unstable
   "beta" quality and should not be relied upon for production use.  If you
-  cannot get a version >= 0.7 from your OS repository, then we recommend
+  cannot get a version >= 0.8.9 from your OS repository, then we recommend
   installing from either pip or GitHub - see :ref:`pip_install` or
   :ref:`github`.
 

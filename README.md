@@ -102,11 +102,11 @@ Instructions for implementing each feature follow.
 
 - Searchable command history
     - Readline history using `<Ctrl>+r`, arrow keys, and other [Readline Shortcut keys](http://readline.kablamo.org/emacs.html)
-        - Readline history can be persistent between application runs via optional argument to `cmd2.Cmd` initializer
     - `cmd2` `history` command provides flexible and powerful search
-        - By design, this history does NOT persist between application runs
         - If you wish to exclude some of your custom commands from the history, append their names to the list at `Cmd.exclude_from_history`.
         - Do `help history` in any `cmd2` application for more information
+    - Both of the above types of history can be optionally persistent between application runs
+        - Via optional `persistent_history_file` argument to `cmd2.Cmd` initializer
 
 - Simple scripting using text files with one command + arguments per line
     - See the [Command Scripts](https://cmd2.readthedocs.io/en/latest/features/scripting.html#command-scripts) section of the `cmd2` docs for more info
