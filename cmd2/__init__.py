@@ -12,7 +12,8 @@ except DistributionNotFound:
 
 from .ansi import style
 from .argparse_custom import Cmd2ArgumentParser, CompletionError, CompletionItem
-from .cmd2 import Cmd, Statement, EmptyStatement, categorize
-from .cmd2 import with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category
-from .constants import DEFAULT_SHORTCUTS
+from .cmd2 import Cmd, EmptyStatement
+from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
+from .decorators import categorize, with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category
+from .parsing import Statement
 from .py_bridge import CommandResult

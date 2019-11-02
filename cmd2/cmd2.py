@@ -43,18 +43,18 @@ from collections import namedtuple
 from contextlib import redirect_stdout
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
-from . import Cmd2ArgumentParser, CompletionItem
 from . import ansi
 from . import constants
 from . import plugin
 from . import utils
+from .argparse_custom import Cmd2ArgumentParser, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
+from .decorators import with_argparser
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
-
-# Set up readline
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
 
+# Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
     rl_warning = "Readline features including tab completion have been disabled since no \n" \
                  "supported version of readline was found. To resolve this, install \n" \
@@ -88,235 +88,6 @@ try:
     from IPython import embed
 except ImportError:  # pragma: no cover
     ipython_available = False
-
-INTERNAL_COMMAND_EPILOG = ("Notes:\n"
-                           "  This command is for internal use and is not intended to be called from the\n"
-                           "  command line.")
-
-# All command functions start with this
-COMMAND_FUNC_PREFIX = 'do_'
-
-# All help functions start with this
-HELP_FUNC_PREFIX = 'help_'
-
-# All command completer functions start with this
-COMPLETER_FUNC_PREFIX = 'complete_'
-
-# Sorting keys for strings
-ALPHABETICAL_SORT_KEY = utils.norm_fold
-NATURAL_SORT_KEY = utils.natural_keys
-
-# Used as the command name placeholder in disabled command messages.
-COMMAND_NAME = "<COMMAND_NAME>"
-
-############################################################################################################
-# The following are optional attributes added to do_* command functions
-############################################################################################################
-
-# The custom help category a command belongs to
-CMD_ATTR_HELP_CATEGORY = 'help_category'
-
-# The argparse parser for the command
-CMD_ATTR_ARGPARSER = 'argparser'
-
-# Whether or not tokens are unquoted before sending to argparse
-CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
-
-
-def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
-    """Categorize a function.
-
-    The help command output will group this function under the specified category heading
-
-    :param func: function or list of functions to categorize
-    :param category: category to put it in
-    """
-    if isinstance(func, Iterable):
-        for item in func:
-            setattr(item, CMD_ATTR_HELP_CATEGORY, category)
-    else:
-        setattr(func, CMD_ATTR_HELP_CATEGORY, category)
-
-
-def with_category(category: str) -> Callable:
-    """A decorator to apply a category to a command function."""
-    def cat_decorator(func):
-        categorize(func, category)
-        return func
-    return cat_decorator
-
-
-def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
-    """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
-    typed. With this decorator, the decorated method will receive a list of arguments parsed from user input.
-
-    :param args: Single-element positional argument list containing do_* method this decorator is wrapping
-    :param preserve_quotes: if True, then argument quotes will not be stripped
-    :return: function that gets passed a list of argument strings
-    """
-    import functools
-
-    def arg_decorator(func: Callable):
-        @functools.wraps(func)
-        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
-            _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
-                                                                               statement,
-                                                                               preserve_quotes)
-
-            return func(cmd2_app, parsed_arglist)
-
-        command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
-        cmd_wrapper.__doc__ = func.__doc__
-        return cmd_wrapper
-
-    if len(args) == 1 and callable(args[0]):
-        # noinspection PyTypeChecker
-        return arg_decorator(args[0])
-    else:
-        # noinspection PyTypeChecker
-        return arg_decorator
-
-
-# noinspection PyProtectedMember
-def set_parser_prog(parser: argparse.ArgumentParser, prog: str):
-    """
-    Recursively set prog attribute of a parser and all of its subparsers so that the root command
-    is a command name and not sys.argv[0].
-    :param parser: the parser being edited
-    :param prog: value for the current parsers prog attribute
-    """
-    # Set the prog value for this parser
-    parser.prog = prog
-
-    # Set the prog value for the parser's subcommands
-    for action in parser._actions:
-        if isinstance(action, argparse._SubParsersAction):
-
-            # Set the prog value for each subcommand
-            for sub_cmd, sub_cmd_parser in action.choices.items():
-                sub_cmd_prog = parser.prog + ' ' + sub_cmd
-                set_parser_prog(sub_cmd_parser, sub_cmd_prog)
-
-            # We can break since argparse only allows 1 group of subcommands per level
-            break
-
-
-def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
-                                    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
-                                    preserve_quotes: bool = False) -> \
-        Callable[[argparse.Namespace, List], Optional[bool]]:
-    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
-    instance of argparse.ArgumentParser, but also returning unknown args as a list.
-
-    :param parser: unique instance of ArgumentParser
-    :param ns_provider: An optional function that accepts a cmd2.Cmd object as an argument and returns an
-                        argparse.Namespace. This is useful if the Namespace needs to be prepopulated with
-                        state data that affects parsing.
-    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
-    :return: function that gets passed argparse-parsed args in a Namespace and a list of unknown argument strings
-             A member called __statement__ is added to the Namespace to provide command functions access to the
-             Statement object. This can be useful if the command function needs to know the command line.
-
-    """
-    import functools
-
-    def arg_decorator(func: Callable):
-        @functools.wraps(func)
-        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
-            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
-                                                                                       statement,
-                                                                                       preserve_quotes)
-
-            if ns_provider is None:
-                namespace = None
-            else:
-                namespace = ns_provider(cmd2_app)
-
-            try:
-                args, unknown = parser.parse_known_args(parsed_arglist, namespace)
-            except SystemExit:
-                return
-            else:
-                setattr(args, '__statement__', statement)
-                return func(cmd2_app, args, unknown)
-
-        # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
-        command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
-        set_parser_prog(parser, command_name)
-
-        # If the description has not been set, then use the method docstring if one exists
-        if parser.description is None and func.__doc__:
-            parser.description = func.__doc__
-
-        # Set the command's help text as argparser.description (which can be None)
-        cmd_wrapper.__doc__ = parser.description
-
-        # Set some custom attributes for this command
-        setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, parser)
-        setattr(cmd_wrapper, CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
-
-        return cmd_wrapper
-
-    # noinspection PyTypeChecker
-    return arg_decorator
-
-
-def with_argparser(parser: argparse.ArgumentParser, *,
-                   ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
-                   preserve_quotes: bool = False) -> Callable[[argparse.Namespace], Optional[bool]]:
-    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
-    with the given instance of argparse.ArgumentParser.
-
-    :param parser: unique instance of ArgumentParser
-    :param ns_provider: An optional function that accepts a cmd2.Cmd object as an argument and returns an
-                        argparse.Namespace. This is useful if the Namespace needs to be prepopulated with
-                        state data that affects parsing.
-    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
-    :return: function that gets passed the argparse-parsed args in a Namespace
-             A member called __statement__ is added to the Namespace to provide command functions access to the
-             Statement object. This can be useful if the command function needs to know the command line.
-    """
-    import functools
-
-    def arg_decorator(func: Callable):
-        @functools.wraps(func)
-        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
-            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
-                                                                                       statement,
-                                                                                       preserve_quotes)
-
-            if ns_provider is None:
-                namespace = None
-            else:
-                namespace = ns_provider(cmd2_app)
-
-            try:
-                args = parser.parse_args(parsed_arglist, namespace)
-            except SystemExit:
-                return
-            else:
-                setattr(args, '__statement__', statement)
-                return func(cmd2_app, args)
-
-        # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
-        command_name = func.__name__[len(COMMAND_FUNC_PREFIX):]
-        set_parser_prog(parser, command_name)
-
-        # If the description has not been set, then use the method docstring if one exists
-        if parser.description is None and func.__doc__:
-            parser.description = func.__doc__
-
-        # Set the command's help text as argparser.description (which can be None)
-        cmd_wrapper.__doc__ = parser.description
-
-        # Set some custom attributes for this command
-        setattr(cmd_wrapper, CMD_ATTR_ARGPARSER, parser)
-        setattr(cmd_wrapper, CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
-
-        return cmd_wrapper
-
-    # noinspection PyTypeChecker
-    return arg_decorator
 
 
 class _SavedReadlineSettings:
@@ -360,6 +131,14 @@ class Cmd(cmd.Cmd):
     Line-oriented command interpreters are often useful for test harnesses, internal tools, and rapid prototypes.
     """
     DEFAULT_EDITOR = utils.find_editor()
+
+    INTERNAL_COMMAND_EPILOG = ("Notes:\n"
+                               "  This command is for internal use and is not intended to be called from the\n"
+                               "  command line.")
+
+    # Sorting keys for strings
+    ALPHABETICAL_SORT_KEY = utils.norm_fold
+    NATURAL_SORT_KEY = utils.natural_keys
 
     def __init__(self, completekey: str = 'tab', stdin=None, stdout=None, *,
                  persistent_history_file: str = '', persistent_history_length: int = 1000,
@@ -415,7 +194,7 @@ class Cmd(cmd.Cmd):
         self.continuation_prompt = '> '
         self.debug = False
         self.echo = False
-        self.editor = self.DEFAULT_EDITOR
+        self.editor = Cmd.DEFAULT_EDITOR
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
         self.locals_in_py = False
 
@@ -551,7 +330,7 @@ class Cmd(cmd.Cmd):
         #     command and category names
         #     alias, macro, settable, and shortcut names
         #     tab completion results when self.matches_sorted is False
-        self.default_sort_key = ALPHABETICAL_SORT_KEY
+        self.default_sort_key = Cmd.ALPHABETICAL_SORT_KEY
 
         ############################################################################################################
         # The following variables are used by tab-completion functions. They are reset each time complete() is run
@@ -1443,18 +1222,18 @@ class Cmd(cmd.Cmd):
         # Check if a command was entered
         elif command in self.get_all_commands():
             # Get the completer function for this command
-            compfunc = getattr(self, COMPLETER_FUNC_PREFIX + command, None)
+            compfunc = getattr(self, constants.COMPLETER_FUNC_PREFIX + command, None)
 
             if compfunc is None:
                 # There's no completer function, next see if the command uses argparse
                 func = self.cmd_func(command)
-                argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+                argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
 
                 if func is not None and argparser is not None:
                     import functools
                     compfunc = functools.partial(self._autocomplete_default,
                                                  argparser=argparser,
-                                                 preserve_quotes=getattr(func, CMD_ATTR_PRESERVE_QUOTES))
+                                                 preserve_quotes=getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES))
                 else:
                     compfunc = self.completedefault
 
@@ -1642,8 +1421,8 @@ class Cmd(cmd.Cmd):
 
     def get_all_commands(self) -> List[str]:
         """Return a list of all commands"""
-        return [name[len(COMMAND_FUNC_PREFIX):] for name in self.get_names()
-                if name.startswith(COMMAND_FUNC_PREFIX) and callable(getattr(self, name))]
+        return [name[len(constants.COMMAND_FUNC_PREFIX):] for name in self.get_names()
+                if name.startswith(constants.COMMAND_FUNC_PREFIX) and callable(getattr(self, name))]
 
     def get_visible_commands(self) -> List[str]:
         """Return a list of commands that have not been hidden or disabled"""
@@ -1671,8 +1450,8 @@ class Cmd(cmd.Cmd):
 
     def get_help_topics(self) -> List[str]:
         """Return a list of help topics"""
-        all_topics = [name[len(HELP_FUNC_PREFIX):] for name in self.get_names()
-                      if name.startswith(HELP_FUNC_PREFIX) and callable(getattr(self, name))]
+        all_topics = [name[len(constants.HELP_FUNC_PREFIX):] for name in self.get_names()
+                      if name.startswith(constants.HELP_FUNC_PREFIX) and callable(getattr(self, name))]
 
         # Filter out hidden and disabled commands
         return [topic for topic in all_topics
@@ -2157,7 +1936,7 @@ class Cmd(cmd.Cmd):
         :param command: command to look up method name which implements it
         :return: method name which implements the given command
         """
-        target = COMMAND_FUNC_PREFIX + command
+        target = constants.COMMAND_FUNC_PREFIX + command
         return target if callable(getattr(self, target, None)) else ''
 
     # noinspection PyMethodOverriding
@@ -2700,7 +2479,7 @@ class Cmd(cmd.Cmd):
 
         # Check if this command uses argparse
         func = self.cmd_func(command)
-        argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+        argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
         if func is None or argparser is None:
             return []
 
@@ -2733,8 +2512,8 @@ class Cmd(cmd.Cmd):
         else:
             # Getting help for a specific command
             func = self.cmd_func(args.command)
-            help_func = getattr(self, HELP_FUNC_PREFIX + args.command, None)
-            argparser = getattr(func, CMD_ATTR_ARGPARSER, None)
+            help_func = getattr(self, constants.HELP_FUNC_PREFIX + args.command, None)
+            argparser = getattr(func, constants.CMD_ATTR_ARGPARSER, None)
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
@@ -2778,11 +2557,11 @@ class Cmd(cmd.Cmd):
                 help_topics.remove(command)
 
                 # Non-argparse commands can have help_functions for their documentation
-                if not hasattr(func, CMD_ATTR_ARGPARSER):
+                if not hasattr(func, constants.CMD_ATTR_ARGPARSER):
                     has_help_func = True
 
-            if hasattr(func, CMD_ATTR_HELP_CATEGORY):
-                category = getattr(func, CMD_ATTR_HELP_CATEGORY)
+            if hasattr(func, constants.CMD_ATTR_HELP_CATEGORY):
+                category = getattr(func, constants.CMD_ATTR_HELP_CATEGORY)
                 cmds_cats.setdefault(category, [])
                 cmds_cats[category].append(command)
             elif func.__doc__ or has_help_func:
@@ -2835,8 +2614,8 @@ class Cmd(cmd.Cmd):
                     cmd_func = self.cmd_func(command)
 
                     # Non-argparse commands can have help_functions for their documentation
-                    if not hasattr(cmd_func, CMD_ATTR_ARGPARSER) and command in topics:
-                        help_func = getattr(self, HELP_FUNC_PREFIX + command)
+                    if not hasattr(cmd_func, constants.CMD_ATTR_ARGPARSER) and command in topics:
+                        help_func = getattr(self, constants.HELP_FUNC_PREFIX + command)
                         result = io.StringIO()
 
                         # try to redirect system stdout
@@ -4052,8 +3831,8 @@ class Cmd(cmd.Cmd):
         if command not in self.disabled_commands:
             return
 
-        help_func_name = HELP_FUNC_PREFIX + command
-        completer_func_name = COMPLETER_FUNC_PREFIX + command
+        help_func_name = constants.HELP_FUNC_PREFIX + command
+        completer_func_name = constants.COMPLETER_FUNC_PREFIX + command
 
         # Restore the command function to its original value
         dc = self.disabled_commands[command]
@@ -4081,7 +3860,7 @@ class Cmd(cmd.Cmd):
         """
         for cmd_name in list(self.disabled_commands):
             func = self.disabled_commands[cmd_name].command_function
-            if getattr(func, CMD_ATTR_HELP_CATEGORY, None) == category:
+            if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.enable_command(cmd_name)
 
     def disable_command(self, command: str, message_to_print: str) -> None:
@@ -4105,8 +3884,8 @@ class Cmd(cmd.Cmd):
         if command_function is None:
             raise AttributeError("{} does not refer to a command".format(command))
 
-        help_func_name = HELP_FUNC_PREFIX + command
-        completer_func_name = COMPLETER_FUNC_PREFIX + command
+        help_func_name = constants.HELP_FUNC_PREFIX + command
+        completer_func_name = constants.COMPLETER_FUNC_PREFIX + command
 
         # Add the disabled command record
         self.disabled_commands[command] = DisabledCommand(command_function=command_function,
@@ -4115,7 +3894,7 @@ class Cmd(cmd.Cmd):
 
         # Overwrite the command and help functions to print the message
         new_func = functools.partial(self._report_disabled_command_usage,
-                                     message_to_print=message_to_print.replace(COMMAND_NAME, command))
+                                     message_to_print=message_to_print.replace(constants.COMMAND_NAME, command))
         setattr(self, self._cmd_func_name(command), new_func)
         setattr(self, help_func_name, new_func)
 
@@ -4135,7 +3914,7 @@ class Cmd(cmd.Cmd):
 
         for cmd_name in all_commands:
             func = self.cmd_func(cmd_name)
-            if getattr(func, CMD_ATTR_HELP_CATEGORY, None) == category:
+            if getattr(func, constants.CMD_ATTR_HELP_CATEGORY, None) == category:
                 self.disable_command(cmd_name, message_to_print)
 
     def _report_disabled_command_usage(self, *_args, message_to_print: str, **_kwargs) -> None:

@@ -40,11 +40,11 @@ Decorators provided by cmd2 for argument processing
 ``cmd2`` provides the following decorators for assisting with parsing arguments
 passed to commands:
 
-.. automethod:: cmd2.cmd2.with_argument_list
+.. automethod:: cmd2.decorators.with_argument_list
    :noindex:
-.. automethod:: cmd2.cmd2.with_argparser
+.. automethod:: cmd2.decorators.with_argparser
    :noindex:
-.. automethod:: cmd2.cmd2.with_argparser_and_unknown_args
+.. automethod:: cmd2.decorators.with_argparser_and_unknown_args
    :noindex:
 
 All of these decorators accept an optional **preserve_quotes** argument which
