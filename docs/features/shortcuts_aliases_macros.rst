@@ -93,6 +93,16 @@ command is run. For example:
 
   my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli
 
+Similar to aliases, pipes and redirectors need to be quoted in the definition
+of a macro::
+
+    macro create lc !cat "{1}" "|" less
+
+To use the literal string ``{1}`` in your command, escape it this way:
+``{{1}}``.  Because macros do not resolve until after hitting ``<Enter>``,
+tab completion will only complete paths while typing a macro.
+
+
 For more details run: ``help macro create``
 
 The macro command has ``list`` and ``delete`` subcommands that function
