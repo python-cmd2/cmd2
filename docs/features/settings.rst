@@ -53,6 +53,7 @@ with::
     editor: vim                    # Program used by ``edit``
     feedback_to_output: False      # include nonessentials in `|`, `>` results
     locals_in_py: False            # Allow access to your application in py via self
+    max_completion_items: 50       # Maximum number of CompletionItems to display during tab completion
     prompt: (Cmd)                  # The prompt issued to solicit input
     quiet: False                   # Don't print nonessential feedback
     timing: False                  # Report execution times

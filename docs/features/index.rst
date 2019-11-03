@@ -20,6 +20,7 @@ Features
    os
    plugins
    prompt
+   redirection
    scripting
    settings
    shortcuts_aliases_macros
