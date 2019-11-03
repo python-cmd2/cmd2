@@ -1,5 +1,3 @@
-.. _decorators:
-
 Argument Processing
 ===================
 
@@ -33,6 +31,7 @@ applications.
 .. _argprint: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
 .. _decorator: https://github.com/python-cmd2/cmd2/blob/master/examples/decorator_example.py
 
+.. _decorators:
 
 Decorators provided by cmd2 for argument processing
 ---------------------------------------------------
@@ -40,11 +39,11 @@ Decorators provided by cmd2 for argument processing
 ``cmd2`` provides the following decorators for assisting with parsing arguments
 passed to commands:
 
-.. automethod:: cmd2.decorators.with_argument_list
-   :noindex:
 .. automethod:: cmd2.decorators.with_argparser
    :noindex:
 .. automethod:: cmd2.decorators.with_argparser_and_unknown_args
+   :noindex:
+.. automethod:: cmd2.decorators.with_argument_list
    :noindex:
 
 All of these decorators accept an optional **preserve_quotes** argument which
@@ -342,3 +341,20 @@ use subcommands in your ``cmd2`` application.
 
 .. _subcommands: https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py
 .. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
+
+
+Argprase Extensions
+-------------------
+
+``cmd2`` augments the standard ``argparse.nargs`` with range tuple capability:
+
+- ``nargs=(5,)`` - accept 5 or more items
+- ``nargs=(8, 12)`` - accept 8 to 12 items
+
+``cmd2`` also provides the ``Cmd2ArgumentParser`` class which inherits from
+``argparse.ArgumentParser`` and improves error and help output:
+
+.. autoclass:: cmd2.argparse_custom.Cmd2ArgumentParser
+    :members:
+
+
