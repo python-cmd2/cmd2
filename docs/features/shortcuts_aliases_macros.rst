@@ -51,6 +51,14 @@ The syntax to create an alias is: ``alias create name command [args]``.
 
   Ex: ``alias create ls !ls -lF``
 
+Redirectors and pipes should be quoted in alias definition to prevent the
+``alias create`` command from being redirected::
+
+    alias create save_results print_results ">" out.txt
+
+Tab completion recognizes an alias, and completes as if its actual value
+was on the command line.
+
 For more details run: ``help alias create``
 
 Use ``alias list`` to see all or some of your aliases. The output of this
