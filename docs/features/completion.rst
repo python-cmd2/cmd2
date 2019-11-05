@@ -69,8 +69,9 @@ CompletionItem For Providing Extra Context
 When tab-completing things like a unique ID from a database, it can often be
 beneficial to provide the user with some extra context about the item being
 completed, such as a description.  To facilitate this, ``cmd2`` defines the
-``CompletionItem`` class which can be used in combination with
-``choices_function`` or ``choices_method``.
+``CompletionItem`` class which can be returned from any of the 4 completion
+functions: ``choices_function``, ``choices_method``, ``completion_function``,
+or ``completion_method``.
 
 .. autoclass:: cmd2.argparse_custom.CompletionItem
     :members:
