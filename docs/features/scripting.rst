@@ -36,7 +36,7 @@ Command script files can be executed using the built-in ``run_script`` command
 or ``@`` shortcut. Both ASCII and UTF-8 encoded unicode text files are
 supported. The ``run_script`` command supports tab-completion of file system
 paths.  There is a variant ``_relative_run_script`` command or ``@@``
-shortcut for use within a script which uses paths relative to the first scrip.
+shortcut for use within a script which uses paths relative to the first script.
 
 
 Comments

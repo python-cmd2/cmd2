@@ -343,7 +343,7 @@ use subcommands in your ``cmd2`` application.
 .. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
 
 
-Argprase Extensions
+Argparse Extensions
 -------------------
 
 ``cmd2`` augments the standard ``argparse.nargs`` with range tuple capability:
