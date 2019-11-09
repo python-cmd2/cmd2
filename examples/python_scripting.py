@@ -22,7 +22,7 @@ from cmd2 import ansi
 
 
 class CmdLineApp(cmd2.Cmd):
-    """ Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 aps. """
+    """ Example cmd2 application to showcase conditional control flow in Python scripting within cmd2 apps."""
 
     def __init__(self):
         # Enable the optional ipy command if IPython is installed by setting use_ipython=True

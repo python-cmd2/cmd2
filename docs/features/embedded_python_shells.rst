@@ -126,10 +126,12 @@ IPython_ provides many advantages, including:
     * Get help on objects with ``?``
     * Extensible tab completion, with support by default for completion of
       python variables and keywords
+    * Good built-in ipdb_ debugger
 
 The object introspection and tab completion make IPython particularly efficient
 for debugging as well as for interactive experimentation and data analysis.
 
 .. _IPython: http://ipython.readthedocs.io
+.. _ipdb: https://pypi.org/project/ipdb/
 
 

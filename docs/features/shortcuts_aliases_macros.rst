@@ -51,6 +51,14 @@ The syntax to create an alias is: ``alias create name command [args]``.
 
   Ex: ``alias create ls !ls -lF``
 
+Redirectors and pipes should be quoted in alias definition to prevent the
+``alias create`` command from being redirected::
+
+    alias create save_results print_results ">" out.txt
+
+Tab completion recognizes an alias, and completes as if its actual value
+was on the command line.
+
 For more details run: ``help alias create``
 
 Use ``alias list`` to see all or some of your aliases. The output of this
@@ -84,6 +92,16 @@ When the macro is called, the provided arguments are resolved and the assembled
 command is run. For example:
 
   my_macro beef broccoli ---> make_dinner -meat beef -veggie broccoli
+
+Similar to aliases, pipes and redirectors need to be quoted in the definition
+of a macro::
+
+    macro create lc !cat "{1}" "|" less
+
+To use the literal string ``{1}`` in your command, escape it this way:
+``{{1}}``.  Because macros do not resolve until after hitting ``<Enter>``,
+tab completion will only complete paths while typing a macro.
+
 
 For more details run: ``help macro create``
 
