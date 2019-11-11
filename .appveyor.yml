@@ -32,4 +32,4 @@ install:
   - "python -m pip install --upgrade pip wheel setuptools tox"
 
 test_script:
-- "echo y | tox -e %TOXENV%"
+- "tox -e %TOXENV%"
