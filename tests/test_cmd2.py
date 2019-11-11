@@ -886,9 +886,6 @@ def say_app():
     app.stdout = utils.StdSim(app.stdout)
     return app
 
-@pytest.mark.skipif(sys.platform.startswith('win'),
-                    reason="This test may be causing AppVeyor to fail with message"
-                           " ERROR: got KeyboardInterrupt signal")
 def test_interrupt_quit(say_app):
     say_app.quit_on_sigint = True
 
@@ -906,9 +903,6 @@ def test_interrupt_quit(say_app):
     out = say_app.stdout.getvalue()
     assert out == 'hello\n'
 
-@pytest.mark.skipif(sys.platform.startswith('win'),
-                    reason="This test may be causing AppVeyor to fail with message"
-                           " ERROR: got KeyboardInterrupt signal")
 def test_interrupt_noquit(say_app):
     say_app.quit_on_sigint = False
 
