@@ -1607,7 +1607,7 @@ class Cmd(cmd.Cmd):
         """Run the command finalization hooks"""
 
         with self.sigint_protection:
-            if not sys.platform.startswith('win') and self.stdout.isatty():
+            if not sys.platform.startswith('win') and self.stdin.isatty():
                 # Before the next command runs, fix any terminal problems like those
                 # caused by certain binary characters having been printed to it.
                 import subprocess

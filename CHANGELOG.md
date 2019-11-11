@@ -2,6 +2,7 @@
 * Bug Fixes
     * Fixed bug where setting `use_ipython` to False removed ipy command from the entire `cmd2.Cmd` class instead of
     just the instance being created
+    * Fix bug where cmd2 ran 'stty sane' command when stdin was not a terminal
 * Enhancements
     * Send all startup script paths to run_script. Previously we didn't do this if the file was empty, but that
     showed no record of the run_script command in history. 
