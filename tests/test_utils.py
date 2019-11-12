@@ -244,6 +244,7 @@ def pr_none():
     pr = cu.ProcReader(proc, None, None)
     return pr
 
+
 @pytest.mark.skipif(sys.platform == 'linux', reason="Test doesn't work correctly on TravisCI")
 def test_proc_reader_send_sigint(pr_none):
     assert pr_none._proc.poll() is None
