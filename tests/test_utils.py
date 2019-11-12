@@ -226,10 +226,21 @@ def test_stdsim_line_buffering(base_app):
 @pytest.fixture
 def pr_none():
     import subprocess
-    command = 'ls'
+
+    # Put the new process into a separate group so signals sent to it won't interfere with this process
     if sys.platform.startswith('win'):
         command = 'dir'
-    proc = subprocess.Popen([command], shell=True)
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+        start_new_session = False
+    else:
+        command = 'ls'
+        creationflags = 0
+        start_new_session = True
+
+    proc = subprocess.Popen([command],
+                            creationflags=creationflags,
+                            start_new_session=start_new_session,
+                            shell=True)
     pr = cu.ProcReader(proc, None, None)
     return pr
 
