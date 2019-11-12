@@ -261,6 +261,7 @@ def pr_none():
 def test_proc_reader_wait(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.wait()
+
     assert pr_none._proc.poll() == 0
 
 
