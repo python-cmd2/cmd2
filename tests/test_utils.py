@@ -227,6 +227,7 @@ def test_stdsim_line_buffering(base_app):
 def pr_none():
     import subprocess
 
+    # Put the new process into a separate group so signals sent to it won't interfere with this process
     if sys.platform.startswith('win'):
         command = 'dir'
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
