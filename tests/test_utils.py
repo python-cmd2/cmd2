@@ -243,18 +243,18 @@ def pr_none():
 #         assert ret_code is not None
 #     else:
 #         assert ret_code == -signal.SIGINT
-#
-# @pytest.mark.skipif(not sys.platform.startswith('win'),
-#                     reason="Test doesn't work correctly on TravisCI and is unreliable on Azure DevOps macOS")
-# def test_proc_reader_terminate(pr_none):
-#     assert pr_none._proc.poll() is None
-#     pr_none.terminate()
-#     pr_none.wait()
-#     ret_code = pr_none._proc.poll()
-#     if sys.platform.startswith('win'):
-#         assert ret_code is not None
-#     else:
-#         assert ret_code == -signal.SIGTERM
+
+@pytest.mark.skipif(not sys.platform.startswith('win'),
+                    reason="Test doesn't work correctly on TravisCI and is unreliable on Azure DevOps macOS")
+def test_proc_reader_terminate(pr_none):
+    assert pr_none._proc.poll() is None
+    pr_none.terminate()
+    pr_none.wait()
+    ret_code = pr_none._proc.poll()
+    if sys.platform.startswith('win'):
+        assert ret_code is not None
+    else:
+        assert ret_code == -signal.SIGTERM
 
 @pytest.mark.skipif(not sys.platform.startswith('win'),
                     reason="Test doesn't work correctly on TravisCI and is unreliable on Azure DevOps macOS")
