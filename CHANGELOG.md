@@ -1,4 +1,4 @@
-## 0.9.20 (TBD, 2019)
+## 0.9.20 (November 12, 2019)
 * Bug Fixes
     * Fixed bug where setting `use_ipython` to False removed ipy command from the entire `cmd2.Cmd` class instead of
     just the instance being created
