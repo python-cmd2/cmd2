@@ -254,6 +254,7 @@ def test_proc_reader_terminate(pr_none):
     if sys.platform.startswith('win'):
         assert ret_code is not None
     else:
+        
         assert ret_code == -signal.SIGTERM
 
 @pytest.mark.skipif(not sys.platform.startswith('win'),
