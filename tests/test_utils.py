@@ -230,11 +230,11 @@ def pr_none():
     # Start a long running process so we have time to run tests on it before it finishes
     # Put the new process into a separate group so signals sent to it won't interfere with this process
     if sys.platform.startswith('win'):
-        command = 'timeout -t -1 /nobreak'
+        command = 'timeout -t 5 /nobreak'
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
         start_new_session = False
     else:
-        command = 'sleep 10'
+        command = 'sleep 5'
         creationflags = 0
         start_new_session = True
 
