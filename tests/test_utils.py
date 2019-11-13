@@ -227,24 +227,24 @@ def test_stdsim_line_buffering(base_app):
 def pr_none():
     import subprocess
 
+    # Start a long running process so we have time to run tests on it before it finishes
     # Put the new process into a separate group so signals sent to it won't interfere with this process
     if sys.platform.startswith('win'):
-        command = 'dir'
+        command = 'timeout -t 5 /nobreak'
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
         start_new_session = False
     else:
-        command = 'ls'
+        command = 'sleep 5'
         creationflags = 0
         start_new_session = True
 
-    proc = subprocess.Popen([command],
+    proc = subprocess.Popen(command,
                             creationflags=creationflags,
                             start_new_session=start_new_session,
                             shell=True)
     pr = cu.ProcReader(proc, None, None)
     return pr
 
-@pytest.mark.skipif(sys.platform == 'linux', reason="Test doesn't work correctly on TravisCI")
 def test_proc_reader_send_sigint(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.send_sigint()
@@ -255,8 +255,6 @@ def test_proc_reader_send_sigint(pr_none):
     else:
         assert ret_code == -signal.SIGINT
 
-@pytest.mark.skipif(not sys.platform.startswith('win'),
-                    reason="Test doesn't work correctly on TravisCI and is unreliable on Azure DevOps macOS")
 def test_proc_reader_terminate(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.terminate()
@@ -266,13 +264,6 @@ def test_proc_reader_terminate(pr_none):
         assert ret_code is not None
     else:
         assert ret_code == -signal.SIGTERM
-
-@pytest.mark.skipif(not sys.platform.startswith('win'),
-                    reason="Test doesn't work correctly on TravisCI and is unreliable on Azure DevOps macOS")
-def test_proc_reader_wait(pr_none):
-    assert pr_none._proc.poll() is None
-    pr_none.wait()
-    assert pr_none._proc.poll() == 0
 
 
 @pytest.fixture
