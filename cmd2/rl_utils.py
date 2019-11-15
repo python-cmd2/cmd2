@@ -28,6 +28,7 @@ class RlType(Enum):
 
 # Check what implementation of readline we are using
 rl_type = RlType.NONE
+readline_lib = None
 
 # Tells if the terminal we are running in supports vt100 control characters
 vt100_support = False
@@ -113,11 +114,19 @@ if 'pyreadline' in sys.modules:
 elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
     # We don't support libedit
     if 'libedit' not in readline.__doc__:
-        rl_type = RlType.GNU
-
         # Load the readline lib so we can access members of it
-        import ctypes
-        readline_lib = ctypes.CDLL(readline.__file__)
+        try:
+            import ctypes
+        except ImportError:
+            pass
+        else:
+            try:
+                readline_lib = ctypes.CDLL(readline.__file__)
+            except AttributeError:
+                pass
+
+    if readline_lib:
+        rl_type = RlType.GNU
 
         # Check if we are running in a terminal
         if sys.stdout.isatty():
