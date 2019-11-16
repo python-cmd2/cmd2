@@ -1993,7 +1993,7 @@ class Cmd(cmd.Cmd):
             # Set apply_style to False so default_error's style is not overridden
             self.perror(err_msg, apply_style=False)
 
-    def read_input(self, prompt: str, allow_completion: bool = False) -> str:
+    def read_input(self, prompt: str, *, allow_completion: bool = False) -> str:
         """
         Read input from appropriate stdin value. Also allows you to disable tab completion while input is being read.
 
