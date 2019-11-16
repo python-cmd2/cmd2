@@ -416,6 +416,10 @@ class Cmd(cmd.Cmd):
             self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.ANSI_TERMINAL,
                                                                               ansi.ANSI_ALWAYS, ansi.ANSI_NEVER))
 
+    def _completion_supported(self) -> bool:
+        """Return whether tab completion is supported"""
+        return self.use_rawinput and self.completekey and rl_type != RlType.NONE
+
     @property
     def visible_prompt(self) -> str:
         """Read-only property to get the visible prompt with any ANSI escape codes stripped.
@@ -1322,7 +1326,7 @@ class Cmd(cmd.Cmd):
         """
         # noinspection PyBroadException
         try:
-            if state == 0 and rl_type != RlType.NONE:
+            if state == 0:
                 self._reset_completion_defaults()
 
                 # Check if we are completing a multiline command
@@ -1649,7 +1653,7 @@ class Cmd(cmd.Cmd):
         """Keep accepting lines of input until the command is complete.
 
         There is some pretty hacky code here to handle some quirks of
-        self._pseudo_raw_input(). It returns a literal 'eof' if the input
+        self._read_command_line(). It returns a literal 'eof' if the input
         pipe runs out. We can't refactor it because we need to retain
         backwards compatibility with the standard library version of cmd.
 
@@ -1683,7 +1687,7 @@ class Cmd(cmd.Cmd):
                 # Save the command line up to this point for tab completion
                 self._multiline_in_progress = line + '\n'
 
-                nextline = self._pseudo_raw_input(self.continuation_prompt)
+                nextline = self._read_command_line(self.continuation_prompt)
                 if nextline == 'eof':
                     # they entered either a blank line, or we hit an EOF
                     # for some other reason. Turn the literal 'eof'
@@ -1989,36 +1993,60 @@ class Cmd(cmd.Cmd):
             # Set apply_style to False so default_error's style is not overridden
             self.perror(err_msg, apply_style=False)
 
-    def _pseudo_raw_input(self, prompt: str) -> str:
-        """Began life as a copy of cmd's cmdloop; like raw_input but
-
-        - accounts for changed stdin, stdout
-        - if input is a pipe (instead of a tty), look at self.echo
-          to decide whether to print the prompt and the input
+    def read_input(self, prompt: str, allow_completion: bool = False) -> str:
         """
-        if self.use_rawinput:
-            try:
-                if sys.stdin.isatty():
-                    # Wrap in try since terminal_lock may not be locked when this function is called from unit tests
-                    try:
-                        # A prompt is about to be drawn. Allow asynchronous changes to the terminal.
-                        self.terminal_lock.release()
-                    except RuntimeError:
-                        pass
+        Read input from appropriate stdin value. Also allows you to disable tab completion while input is being read.
 
+        :param prompt: prompt to display to user
+        :param allow_completion: if True, then tab completion of commands is enabled. This generally should be
+                                 set to False unless reading the command line. Defaults to False.
+        :return: the line read from stdin with all trailing new lines removed
+        :raises whatever exceptions are raised by input()
+        """
+        completion_disabled = False
+        orig_completer = None
+
+        def disable_completion():
+            """Turn off completion during the select input line"""
+            nonlocal orig_completer
+            nonlocal completion_disabled
+
+            if self._completion_supported() and not completion_disabled:
+                orig_completer = readline.get_completer()
+                readline.set_completer(lambda *args, **kwargs: None)
+                completion_disabled = True
+
+        def enable_completion():
+            """Restore tab completion when select is done reading input"""
+            nonlocal completion_disabled
+
+            if self._completion_supported() and completion_disabled:
+                readline.set_completer(orig_completer)
+                completion_disabled = False
+
+        # Check we are reading from sys.stdin
+        if self.use_rawinput:
+            if sys.stdin.isatty():
+                try:
                     # Deal with the vagaries of readline and ANSI escape codes
                     safe_prompt = rl_make_safe_prompt(prompt)
+
+                    # Check if tab completion should be disabled
+                    with self.sigint_protection:
+                        if not allow_completion:
+                            disable_completion()
                     line = input(safe_prompt)
-                else:
-                    line = input()
-                    if self.echo:
-                        sys.stdout.write('{}{}\n'.format(prompt, line))
-            except EOFError:
-                line = 'eof'
-            finally:
-                if sys.stdin.isatty():
-                    # The prompt is gone. Do not allow asynchronous changes to the terminal.
-                    self.terminal_lock.acquire()
+                finally:
+                    # Check if we need to reenable tab completion
+                    with self.sigint_protection:
+                        if not allow_completion:
+                            enable_completion()
+            else:
+                line = input()
+                if self.echo:
+                    sys.stdout.write('{}{}\n'.format(prompt, line))
+
+        # Otherwise read from self.stdin
         else:
             if self.stdin.isatty():
                 # on a tty, print the prompt first, then read the line
@@ -2041,6 +2069,28 @@ class Cmd(cmd.Cmd):
 
         return line.rstrip('\r\n')
 
+    def _read_command_line(self, prompt: str) -> str:
+        """
+        Read command line from appropriate stdin
+
+        :param prompt: prompt to display to user
+        :return: command line text of 'eof' if an EOFError was caught
+        :raises whatever exceptions are raised by input() except for EOFError
+        """
+        try:
+            # Wrap in try since terminal_lock may not be locked
+            try:
+                # Command line is about to be drawn. Allow asynchronous changes to the terminal.
+                self.terminal_lock.release()
+            except RuntimeError:
+                pass
+            return self.read_input(prompt, allow_completion=True)
+        except EOFError:
+            return 'eof'
+        finally:
+            # Command line is gone. Do not allow asynchronous changes to the terminal.
+            self.terminal_lock.acquire()
+
     def _set_up_cmd2_readline(self) -> _SavedReadlineSettings:
         """
         Set up readline with cmd2-specific settings
@@ -2048,7 +2098,7 @@ class Cmd(cmd.Cmd):
         """
         readline_settings = _SavedReadlineSettings()
 
-        if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
+        if self._completion_supported():
 
             # Set up readline for our tab completion needs
             if rl_type == RlType.GNU:
@@ -2080,7 +2130,7 @@ class Cmd(cmd.Cmd):
         Restore saved readline settings
         :param readline_settings: the readline settings to restore
         """
-        if self.use_rawinput and self.completekey and rl_type != RlType.NONE:
+        if self._completion_supported():
 
             # Restore what we changed in readline
             readline.set_completer(readline_settings.completer)
@@ -2114,7 +2164,7 @@ class Cmd(cmd.Cmd):
             while not stop:
                 # Get commands from user
                 try:
-                    line = self._pseudo_raw_input(self.prompt)
+                    line = self._read_command_line(self.prompt)
                 except KeyboardInterrupt as ex:
                     if self.quit_on_sigint:
                         raise ex
@@ -2693,27 +2743,6 @@ class Cmd(cmd.Cmd):
                                    that the return value can differ from
                                    the text advertised to the user """
 
-        completion_disabled = False
-        orig_completer = None
-
-        def disable_completion():
-            """Turn off completion during the select input line"""
-            nonlocal orig_completer
-            nonlocal completion_disabled
-
-            if rl_type != RlType.NONE and not completion_disabled:
-                orig_completer = readline.get_completer()
-                readline.set_completer(lambda *args, **kwargs: None)
-                completion_disabled = True
-
-        def enable_completion():
-            """Restore tab completion when select is done reading input"""
-            nonlocal completion_disabled
-
-            if rl_type != RlType.NONE and completion_disabled:
-                readline.set_completer(orig_completer)
-                completion_disabled = False
-
         local_opts = opts
         if isinstance(opts, str):
             local_opts = list(zip(opts.split(), opts.split()))
@@ -2730,18 +2759,14 @@ class Cmd(cmd.Cmd):
             self.poutput('  %2d. %s' % (idx + 1, text))
 
         while True:
-            safe_prompt = rl_make_safe_prompt(prompt)
-
             try:
-                with self.sigint_protection:
-                    disable_completion()
-                response = input(safe_prompt)
+                response = self.read_input(prompt)
             except EOFError:
                 response = ''
                 self.poutput('\n', end='')
-            finally:
-                with self.sigint_protection:
-                    enable_completion()
+            except KeyboardInterrupt as ex:
+                self.poutput('^C')
+                raise ex
 
             if not response:
                 continue
@@ -2921,7 +2946,7 @@ class Cmd(cmd.Cmd):
             for item in self._py_history:
                 readline.add_history(item)
 
-            if self.use_rawinput and self.completekey:
+            if self._completion_supported():
                 # Set up tab completion for the Python console
                 # rlcompleter relies on the default settings of the Python readline module
                 if rl_type == RlType.GNU:
@@ -2988,7 +3013,7 @@ class Cmd(cmd.Cmd):
             for item in cmd2_env.history:
                 readline.add_history(item)
 
-            if self.use_rawinput and self.completekey:
+            if self._completion_supported():
                 # Restore cmd2's tab completion settings
                 readline.set_completer(cmd2_env.readline_settings.completer)
                 readline.set_completer_delims(cmd2_env.readline_settings.delims)
@@ -3715,7 +3740,7 @@ class Cmd(cmd.Cmd):
 
     def async_alert(self, alert_msg: str, new_prompt: Optional[str] = None) -> None:  # pragma: no cover
         """
-        Display an important message to the user while they are at the prompt in between commands.
+        Display an important message to the user while they are at a command line prompt.
         To the user it appears as if an alert message is printed above the prompt and their current input
         text and cursor location is left alone.
 
@@ -3775,10 +3800,10 @@ class Cmd(cmd.Cmd):
 
     def async_update_prompt(self, new_prompt: str) -> None:  # pragma: no cover
         """
-        Update the prompt while the user is still typing at it. This is good for alerting the user to system
-        changes dynamically in between commands. For instance you could alter the color of the prompt to indicate
-        a system status or increase a counter to report an event. If you do alter the actual text of the prompt,
-        it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
+        Update the command line prompt while the user is still typing at it. This is good for alerting the user to
+        system changes dynamically in between commands. For instance you could alter the color of the prompt to
+        indicate a system status or increase a counter to report an event. If you do alter the actual text of the
+        prompt, it is best to keep the prompt the same width as what's on screen. Otherwise the user's input text will
         be shifted and the update will not be seamless.
 
         Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
@@ -3948,7 +3973,7 @@ class Cmd(cmd.Cmd):
         original_sigint_handler = signal.getsignal(signal.SIGINT)
         signal.signal(signal.SIGINT, self.sigint_handler)
 
-        # Grab terminal lock before the prompt has been drawn by readline
+        # Grab terminal lock before the command line prompt has been drawn by readline
         self.terminal_lock.acquire()
 
         # Always run the preloop first
