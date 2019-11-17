@@ -18,6 +18,7 @@ Features
    misc
    multiline_commands
    os
+   packaging
    plugins
    prompt
    redirection
