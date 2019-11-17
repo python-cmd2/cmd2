@@ -1996,12 +1996,11 @@ class Cmd(cmd.Cmd):
     def read_input(self, prompt: str, *, allow_completion: bool = False) -> str:
         """
         Read input from appropriate stdin value. Also allows you to disable tab completion while input is being read.
-
         :param prompt: prompt to display to user
         :param allow_completion: if True, then tab completion of commands is enabled. This generally should be
-                                 set to False unless reading the command line. Defaults to False.
+        set to False unless reading the command line. Defaults to False.
         :return: the line read from stdin with all trailing new lines removed
-        :raises whatever exceptions are raised by input()
+        :raises any exceptions raised by input() and stdin.readline()
         """
         completion_disabled = False
         orig_completer = None
