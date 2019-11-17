@@ -1232,6 +1232,17 @@ def test_select_eof(select_app, monkeypatch):
     read_input_mock.assert_has_calls(calls)
     assert read_input_mock.call_count == 2
 
+def test_select_ctrl_c(outsim_app, monkeypatch, capsys):
+    # Ctrl-C during select prints ^C and raises a KeyboardInterrupt
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=KeyboardInterrupt)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    with pytest.raises(KeyboardInterrupt):
+        outsim_app.select([('Guitar', 'Electric Guitar'), ('Drums',)], 'Instrument? ')
+
+    out = outsim_app.stdout.getvalue()
+    assert out.rstrip().endswith('^C')
+
 class HelpNoDocstringApp(cmd2.Cmd):
     greet_parser = argparse.ArgumentParser()
     greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
@@ -1503,6 +1514,13 @@ def test_read_input_rawinput_false(capsys, monkeypatch):
     out, err = capsys.readouterr()
     assert line == 'eof'
     assert not out
+
+def test_read_command_line_eof(base_app, monkeypatch):
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=EOFError)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    line = base_app._read_command_line("Prompt> ")
+    assert line == 'eof'
 
 def test_poutput_string(outsim_app):
     msg = 'This is a test'
