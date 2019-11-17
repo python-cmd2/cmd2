@@ -847,6 +847,18 @@ def test_cmdloop_without_rawinput():
     out = app.stdout.getvalue()
     assert out == expected
 
+@pytest.mark.skipif(sys.platform.startswith('win'),
+                    reason="stty sane only run on Linux/Mac")
+def test_stty_sane(base_app, monkeypatch):
+    """Make sure stty sane is run on Linux/Mac after each command if stdin is a terminal"""
+    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
+        # Mock out the subprocess.Popen call so we don't actually run stty sane
+        m = mock.MagicMock(name='Popen')
+        monkeypatch.setattr("subprocess.Popen", m)
+
+        base_app.onecmd_plus_hooks('help')
+        m.assert_called_once_with(['stty', 'sane'])
+
 class HookFailureApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
