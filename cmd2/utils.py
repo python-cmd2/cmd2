@@ -520,10 +520,11 @@ class ProcReader(object):
         """Send a SIGINT to the process similar to if <Ctrl>+C were pressed."""
         import signal
         if sys.platform.startswith('win'):
-            signal_to_send = signal.CTRL_C_EVENT
+            self._proc.send_signal(signal.CTRL_C_EVENT)
         else:
-            signal_to_send = signal.SIGINT
-        self._proc.send_signal(signal_to_send)
+            # Since cmd2 uses shell=True in its Popen calls, we need to send the SIGINT to
+            # the whole process group to make sure it propagates further than the shell
+            os.killpg(os.getpgid(self._proc.pid), signal.SIGINT)
 
     def terminate(self) -> None:
         """Terminate the process"""
