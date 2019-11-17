@@ -2031,14 +2031,14 @@ class Cmd(cmd.Cmd):
                     # Deal with the vagaries of readline and ANSI escape codes
                     safe_prompt = rl_make_safe_prompt(prompt)
 
-                    # Check if tab completion should be disabled
                     with self.sigint_protection:
+                        # Check if tab completion should be disabled
                         if not allow_completion:
                             disable_completion()
                     line = input(safe_prompt)
                 finally:
-                    # Check if we need to reenable tab completion
                     with self.sigint_protection:
+                        # Check if we need to re-enable tab completion
                         if not allow_completion:
                             enable_completion()
             else:
