@@ -1,3 +1,8 @@
+## 0.9.21 (TBD, 2019)
+* Enhancements
+    * Added `read_input()` function that is used to read from stdin. Unlike the Python built-in `input()`, it also has
+    an argument to disable tab completion while input is being entered.
+
 ## 0.9.20 (November 12, 2019)
 * Bug Fixes
     * Fixed bug where setting `use_ipython` to False removed ipy command from the entire `cmd2.Cmd` class instead of

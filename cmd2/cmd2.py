@@ -2007,7 +2007,7 @@ class Cmd(cmd.Cmd):
         orig_completer = None
 
         def disable_completion():
-            """Turn off completion during the select input line"""
+            """Turn off completion while entering input"""
             nonlocal orig_completer
             nonlocal completion_disabled
 
@@ -2017,7 +2017,7 @@ class Cmd(cmd.Cmd):
                 completion_disabled = True
 
         def enable_completion():
-            """Restore tab completion when select is done reading input"""
+            """Restore tab completion when finished entering input"""
             nonlocal completion_disabled
 
             if self._completion_supported() and completion_disabled:
