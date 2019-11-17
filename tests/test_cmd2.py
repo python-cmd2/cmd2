@@ -847,6 +847,18 @@ def test_cmdloop_without_rawinput():
     out = app.stdout.getvalue()
     assert out == expected
 
+@pytest.mark.skipif(sys.platform.startswith('win'),
+                    reason="stty sane only run on Linux/Mac")
+def test_stty_sane(base_app, monkeypatch):
+    """Make sure stty sane is run on Linux/Mac after each command if stdin is a terminal"""
+    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
+        # Mock out the subprocess.Popen call so we don't actually run stty sane
+        m = mock.MagicMock(name='Popen')
+        monkeypatch.setattr("subprocess.Popen", m)
+
+        base_app.onecmd_plus_hooks('help')
+        m.assert_called_once_with(['stty', 'sane'])
+
 class HookFailureApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1092,10 +1104,10 @@ def select_app():
     app = SelectApp()
     return app
 
-def test_select_options(select_app):
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='2')
-    builtins.input = m
+def test_select_options(select_app, monkeypatch):
+    # Mock out the read_input call so we don't actually wait for a user's response on stdin
+    read_input_mock = mock.MagicMock(name='read_input', return_value='2')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     food = 'bacon'
     out, err = run_cmd(select_app, "eat {}".format(food))
@@ -1106,17 +1118,18 @@ def test_select_options(select_app):
 """.format(food))
 
     # Make sure our mock was called with the expected arguments
-    m.assert_called_once_with('Sauce? ')
+    read_input_mock.assert_called_once_with('Sauce? ')
 
     # And verify the expected output to stdout
     assert out == expected
 
-def test_select_invalid_option_too_big(select_app):
+def test_select_invalid_option_too_big(select_app, monkeypatch):
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input')
+    read_input_mock = mock.MagicMock(name='read_input')
+
     # If side_effect is an iterable then each call to the mock will return the next value from the iterable.
-    m.side_effect = ['3', '1']  # First pass an invalid selection, then pass a valid one
-    builtins.input = m
+    read_input_mock.side_effect = ['3', '1']  # First pass an invalid selection, then pass a valid one
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     food = 'fish'
     out, err = run_cmd(select_app, "eat {}".format(food))
@@ -1130,18 +1143,19 @@ def test_select_invalid_option_too_big(select_app):
     # Make sure our mock was called exactly twice with the expected arguments
     arg = 'Sauce? '
     calls = [mock.call(arg), mock.call(arg)]
-    m.assert_has_calls(calls)
-    assert m.call_count == 2
+    read_input_mock.assert_has_calls(calls)
+    assert read_input_mock.call_count == 2
 
     # And verify the expected output to stdout
     assert out == expected
 
-def test_select_invalid_option_too_small(select_app):
+def test_select_invalid_option_too_small(select_app, monkeypatch):
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input')
+    read_input_mock = mock.MagicMock(name='read_input')
+
     # If side_effect is an iterable then each call to the mock will return the next value from the iterable.
-    m.side_effect = ['0', '1']  # First pass an invalid selection, then pass a valid one
-    builtins.input = m
+    read_input_mock.side_effect = ['0', '1']  # First pass an invalid selection, then pass a valid one
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     food = 'fish'
     out, err = run_cmd(select_app, "eat {}".format(food))
@@ -1155,16 +1169,16 @@ def test_select_invalid_option_too_small(select_app):
     # Make sure our mock was called exactly twice with the expected arguments
     arg = 'Sauce? '
     calls = [mock.call(arg), mock.call(arg)]
-    m.assert_has_calls(calls)
-    assert m.call_count == 2
+    read_input_mock.assert_has_calls(calls)
+    assert read_input_mock.call_count == 2
 
     # And verify the expected output to stdout
     assert out == expected
 
-def test_select_list_of_strings(select_app):
+def test_select_list_of_strings(select_app, monkeypatch):
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='2')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='2')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     out, err = run_cmd(select_app, "study")
     expected = normalize("""
@@ -1174,15 +1188,15 @@ Good luck learning {}!
 """.format('science'))
 
     # Make sure our mock was called with the expected arguments
-    m.assert_called_once_with('Subject? ')
+    read_input_mock.assert_called_once_with('Subject? ')
 
     # And verify the expected output to stdout
     assert out == expected
 
-def test_select_list_of_tuples(select_app):
+def test_select_list_of_tuples(select_app, monkeypatch):
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='2')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='2')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     out, err = run_cmd(select_app, "procrastinate")
     expected = normalize("""
@@ -1192,16 +1206,16 @@ Have fun procrasinating with {}!
 """.format('YouTube'))
 
     # Make sure our mock was called with the expected arguments
-    m.assert_called_once_with('How would you like to procrastinate? ')
+    read_input_mock.assert_called_once_with('How would you like to procrastinate? ')
 
     # And verify the expected output to stdout
     assert out == expected
 
 
-def test_select_uneven_list_of_tuples(select_app):
+def test_select_uneven_list_of_tuples(select_app, monkeypatch):
     # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.MagicMock(name='input', return_value='2')
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', return_value='2')
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     out, err = run_cmd(select_app, "play")
     expected = normalize("""
@@ -1211,15 +1225,15 @@ Charm us with the {}...
 """.format('Drums'))
 
     # Make sure our mock was called with the expected arguments
-    m.assert_called_once_with('Instrument? ')
+    read_input_mock.assert_called_once_with('Instrument? ')
 
     # And verify the expected output to stdout
     assert out == expected
 
-def test_select_eof(select_app):
+def test_select_eof(select_app, monkeypatch):
     # Ctrl-D during select causes an EOFError that just reprompts the user
-    m = mock.MagicMock(name='input', side_effect=[EOFError, 2])
-    builtins.input = m
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=[EOFError, 2])
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
     food = 'fish'
     out, err = run_cmd(select_app, "eat {}".format(food))
@@ -1227,8 +1241,19 @@ def test_select_eof(select_app):
     # Make sure our mock was called exactly twice with the expected arguments
     arg = 'Sauce? '
     calls = [mock.call(arg), mock.call(arg)]
-    m.assert_has_calls(calls)
-    assert m.call_count == 2
+    read_input_mock.assert_has_calls(calls)
+    assert read_input_mock.call_count == 2
+
+def test_select_ctrl_c(outsim_app, monkeypatch, capsys):
+    # Ctrl-C during select prints ^C and raises a KeyboardInterrupt
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=KeyboardInterrupt)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
+
+    with pytest.raises(KeyboardInterrupt):
+        outsim_app.select([('Guitar', 'Electric Guitar'), ('Drums',)], 'Instrument? ')
+
+    out = outsim_app.stdout.getvalue()
+    assert out.rstrip().endswith('^C')
 
 class HelpNoDocstringApp(cmd2.Cmd):
     greet_parser = argparse.ArgumentParser()
@@ -1419,131 +1444,94 @@ def test_echo(capsys):
     out, err = capsys.readouterr()
     assert out.startswith('{}{}\n'.format(app.prompt, commands[0]) + HELP_HISTORY.split()[0])
 
-def test_pseudo_raw_input_tty_rawinput_true():
-    # use context managers so original functions get put back when we are done
-    # we dont use decorators because we need m_input for the assertion
-    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
-        with mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError])) as m_input:
-            # run the cmdloop, which should pull input from our mocks
-            app = cmd2.Cmd(allow_cli_args=False)
-            app.use_rawinput = True
-            app._cmdloop()
-            # because we mocked the input() call, we won't get the prompt
-            # or the name of the command in the output, so we can't check
-            # if its there. We assume that if input got called twice, once
-            # for the 'set' command, and once for the 'quit' command,
-            # that the rest of it worked
-            assert m_input.call_count == 2
+def test_read_input_rawinput_true(capsys, monkeypatch):
+    prompt_str = 'the_prompt'
+    input_str = 'some input'
 
-def test_pseudo_raw_input_tty_rawinput_false():
-    # gin up some input like it's coming from a tty
-    fakein = io.StringIO(u'{}'.format('set\n'))
-    mtty = mock.MagicMock(name='isatty', return_value=True)
-    fakein.isatty = mtty
-    mreadline = mock.MagicMock(name='readline', wraps=fakein.readline)
-    fakein.readline = mreadline
-
-    # run the cmdloop, telling it where to get input from
-    app = cmd2.Cmd(stdin=fakein, allow_cli_args=False)
-    app.use_rawinput = False
-    app._cmdloop()
-
-    # because we mocked the readline() call, we won't get the prompt
-    # or the name of the command in the output, so we can't check
-    # if its there. We assume that if readline() got called twice, once
-    # for the 'set' command, and once for the 'quit' command,
-    # that the rest of it worked
-    assert mreadline.call_count == 2
-
-# the next helper function and two tests check for piped
-# input when use_rawinput is True.
-def piped_rawinput_true(capsys, echo, command):
-    app = cmd2.Cmd(allow_cli_args=False)
+    app = cmd2.Cmd()
     app.use_rawinput = True
-    app.echo = echo
-    # run the cmdloop, which should pull input from our mock
-    app._cmdloop()
+
+    # Mock out input() to return input_str
+    monkeypatch.setattr("builtins.input", lambda *args: input_str)
+
+    # isatty is True
+    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=True)):
+        line = app.read_input(prompt_str)
+        assert line == input_str
+
+    # isatty is False
+    with mock.patch('sys.stdin.isatty', mock.MagicMock(name='isatty', return_value=False)):
+        # echo True
+        app.echo = True
+        line = app.read_input(prompt_str)
+        out, err = capsys.readouterr()
+        assert line == input_str
+        assert out == "{}{}\n".format(prompt_str, input_str)
+
+        # echo False
+        app.echo = False
+        line = app.read_input(prompt_str)
+        out, err = capsys.readouterr()
+        assert line == input_str
+        assert not out
+
+def test_read_input_rawinput_false(capsys, monkeypatch):
+    prompt_str = 'the_prompt'
+    input_str = 'some input'
+
+    def make_app(isatty: bool, empty_input: bool = False):
+        """Make a cmd2 app with a custom stdin"""
+        app_input_str = '' if empty_input else input_str
+
+        fakein = io.StringIO('{}'.format(app_input_str))
+        fakein.isatty = mock.MagicMock(name='isatty', return_value=isatty)
+
+        new_app = cmd2.Cmd(stdin=fakein)
+        new_app.use_rawinput = False
+        return new_app
+
+    # isatty True
+    app = make_app(isatty=True)
+    line = app.read_input(prompt_str)
     out, err = capsys.readouterr()
-    return app, out
+    assert line == input_str
+    assert out == prompt_str
 
-# using the decorator puts the original input function back when this unit test returns
-@mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
-def test_pseudo_raw_input_piped_rawinput_true_echo_true(capsys):
-    command = 'set'
-    app, out = piped_rawinput_true(capsys, True, command)
-    out = out.splitlines()
-    assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1].startswith('allow_ansi:')
-
-# using the decorator puts the original input function back when this unit test returns
-@mock.patch('builtins.input', mock.MagicMock(name='input', side_effect=['set', EOFError]))
-def test_pseudo_raw_input_piped_rawinput_true_echo_false(capsys):
-    command = 'set'
-    app, out = piped_rawinput_true(capsys, False, command)
-    firstline = out.splitlines()[0]
-    assert firstline.startswith('allow_ansi:')
-    assert not '{}{}'.format(app.prompt, command) in out
-
-# the next helper function and two tests check for piped
-# input when use_rawinput=False
-def piped_rawinput_false(capsys, echo, command):
-    fakein = io.StringIO(u'{}'.format(command))
-    app = cmd2.Cmd(stdin=fakein, allow_cli_args=False)
-    app.use_rawinput = False
-    app.echo = echo
-    app._cmdloop()
+    # isatty True, empty input
+    app = make_app(isatty=True, empty_input=True)
+    line = app.read_input(prompt_str)
     out, err = capsys.readouterr()
-    return app, out
+    assert line == 'eof'
+    assert out == prompt_str
 
-def test_pseudo_raw_input_piped_rawinput_false_echo_true(capsys):
-    command = 'set'
-    app, out = piped_rawinput_false(capsys, True, command)
-    out = out.splitlines()
-    assert out[0] == '{}{}'.format(app.prompt, command)
-    assert out[1].startswith('allow_ansi:')
+    # isatty is False, echo is True
+    app = make_app(isatty=False)
+    app.echo = True
+    line = app.read_input(prompt_str)
+    out, err = capsys.readouterr()
+    assert line == input_str
+    assert out == "{}{}\n".format(prompt_str, input_str)
 
-def test_pseudo_raw_input_piped_rawinput_false_echo_false(capsys):
-    command = 'set'
-    app, out = piped_rawinput_false(capsys, False, command)
-    firstline = out.splitlines()[0]
-    assert firstline.startswith('allow_ansi:')
-    assert not '{}{}'.format(app.prompt, command) in out
+    # isatty is False, echo is False
+    app = make_app(isatty=False)
+    app.echo = False
+    line = app.read_input(prompt_str)
+    out, err = capsys.readouterr()
+    assert line == input_str
+    assert not out
 
+    # isatty is False, empty input
+    app = make_app(isatty=False, empty_input=True)
+    line = app.read_input(prompt_str)
+    out, err = capsys.readouterr()
+    assert line == 'eof'
+    assert not out
 
-# other input tests
-def test_raw_input(base_app):
-    base_app.use_raw_input = True
-    fake_input = 'quit'
+def test_read_command_line_eof(base_app, monkeypatch):
+    read_input_mock = mock.MagicMock(name='read_input', side_effect=EOFError)
+    monkeypatch.setattr("cmd2.Cmd.read_input", read_input_mock)
 
-    # Mock out the input call so we don't actually wait for a user's response on stdin
-    m = mock.Mock(name='input', return_value=fake_input)
-    builtins.input = m
-
-    line = base_app._pseudo_raw_input('(cmd2)')
-    assert line == fake_input
-
-def test_stdin_input():
-    app = cmd2.Cmd()
-    app.use_rawinput = False
-    fake_input = 'quit'
-
-    # Mock out the readline call so we don't actually read from stdin
-    m = mock.Mock(name='readline', return_value=fake_input)
-    app.stdin.readline = m
-
-    line = app._pseudo_raw_input('(cmd2)')
-    assert line == fake_input
-
-def test_empty_stdin_input():
-    app = cmd2.Cmd()
-    app.use_rawinput = False
-    fake_input = ''
-
-    # Mock out the readline call so we don't actually read from stdin
-    m = mock.Mock(name='readline', return_value=fake_input)
-    app.stdin.readline = m
-
-    line = app._pseudo_raw_input('(cmd2)')
+    line = base_app._read_command_line("Prompt> ")
     assert line == 'eof'
 
 def test_poutput_string(outsim_app):
