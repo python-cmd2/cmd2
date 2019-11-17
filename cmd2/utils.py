@@ -524,7 +524,11 @@ class ProcReader(object):
         else:
             # Since cmd2 uses shell=True in its Popen calls, we need to send the SIGINT to
             # the whole process group to make sure it propagates further than the shell
-            os.killpg(os.getpgid(self._proc.pid), signal.SIGINT)
+            try:
+                group_id = os.getpgid(self._proc.pid)
+                os.killpg(group_id, signal.SIGINT)
+            except ProcessLookupError:
+                return
 
     def terminate(self) -> None:
         """Terminate the process"""
