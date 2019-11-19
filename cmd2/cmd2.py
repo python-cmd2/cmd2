@@ -1824,24 +1824,22 @@ class Cmd(cmd.Cmd):
             subproc_stdin = io.open(read_fd, 'r')
             new_stdout = io.open(write_fd, 'w')
 
-            # Set options to not forward signals to the pipe process. If a Ctrl-C event occurs,
-            # our sigint handler will forward it only to the most recent pipe process. This makes
-            # sure pipe processes close in the right order (most recent first).
+            # Create pipe process in a separate group to isolate our signals from it. If a Ctrl-C event occurs,
+            # our sigint handler will forward it only to the most recent pipe process. This makes sure pipe
+            # processes close in the right order (most recent first).
+            kwargs = dict()
             if sys.platform == 'win32':
-                creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
-                start_new_session = False
+                kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
             else:
-                creationflags = 0
-                start_new_session = True
+                kwargs['start_new_session'] = True
 
             # For any stream that is a StdSim, we will use a pipe so we can capture its output
             proc = subprocess.Popen(statement.pipe_to,
                                     stdin=subproc_stdin,
                                     stdout=subprocess.PIPE if isinstance(self.stdout, utils.StdSim) else self.stdout,
                                     stderr=subprocess.PIPE if isinstance(sys.stderr, utils.StdSim) else sys.stderr,
-                                    creationflags=creationflags,
-                                    start_new_session=start_new_session,
-                                    shell=True)
+                                    shell=True,
+                                    **kwargs)
 
             # Popen was called with shell=True so the user can chain pipe commands and redirect their output
             # like: !ls -l | grep user | wc -l > out.txt. But this makes it difficult to know if the pipe process
