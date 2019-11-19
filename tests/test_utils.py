@@ -5,6 +5,7 @@ Unit testing for cmd2/utils.py module.
 """
 import signal
 import sys
+import time
 
 import pytest
 
@@ -228,27 +229,31 @@ def pr_none():
     import subprocess
 
     # Start a long running process so we have time to run tests on it before it finishes
-    # Put the new process into a separate group so signals sent to it won't interfere with this process
+    # Put the new process into a separate group so its signal are isolated from ours
+    kwargs = dict()
     if sys.platform.startswith('win'):
         command = 'timeout -t 5 /nobreak'
-        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
-        start_new_session = False
+        kwargs['creationflags'] = subprocess.CREATE_NEW_PROCESS_GROUP
     else:
         command = 'sleep 5'
-        creationflags = 0
-        start_new_session = True
+        kwargs['start_new_session'] = True
 
-    proc = subprocess.Popen(command,
-                            creationflags=creationflags,
-                            start_new_session=start_new_session,
-                            shell=True)
+    proc = subprocess.Popen(command, shell=True, **kwargs)
     pr = cu.ProcReader(proc, None, None)
     return pr
 
 def test_proc_reader_send_sigint(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.send_sigint()
+
+    wait_start = time.monotonic()
     pr_none.wait()
+    wait_finish = time.monotonic()
+
+    # Make sure the process exited before sleep of 5 seconds finished
+    # 3 seconds accounts for some delay but is long enough for the process to exit
+    assert wait_finish - wait_start < 3
+
     ret_code = pr_none._proc.poll()
     if sys.platform.startswith('win'):
         assert ret_code is not None
@@ -258,7 +263,15 @@ def test_proc_reader_send_sigint(pr_none):
 def test_proc_reader_terminate(pr_none):
     assert pr_none._proc.poll() is None
     pr_none.terminate()
+
+    wait_start = time.monotonic()
     pr_none.wait()
+    wait_finish = time.monotonic()
+
+    # Make sure the process exited before sleep of 5 seconds finished
+    # 3 seconds accounts for some delay but is long enough for the process to exit
+    assert wait_finish - wait_start < 3
+
     ret_code = pr_none._proc.poll()
     if sys.platform.startswith('win'):
         assert ret_code is not None

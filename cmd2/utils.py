@@ -517,10 +517,12 @@ class ProcReader(object):
             self._err_thread.start()
 
     def send_sigint(self) -> None:
-        """Send a SIGINT to the process similar to if <Ctrl>+C were pressed."""
+        """Send a SIGINT to the process similar to if <Ctrl>+C were pressed"""
         import signal
         if sys.platform.startswith('win'):
-            self._proc.send_signal(signal.CTRL_C_EVENT)
+            # cmd2 started the Windows process in a new process group. Therefore
+            # a CTRL_C_EVENT can't be sent to it. Send a CTRL_BREAK_EVENT instead.
+            self._proc.send_signal(signal.CTRL_BREAK_EVENT)
         else:
             # Since cmd2 uses shell=True in its Popen calls, we need to send the SIGINT to
             # the whole process group to make sure it propagates further than the shell
