@@ -4,6 +4,8 @@
 * Enhancements
     * Added `read_input()` function that is used to read from stdin. Unlike the Python built-in `input()`, it also has
     an argument to disable tab completion while input is being entered.
+    * Added capability to override the argument parser class used by cmd2 built-in commands. See override_parser.py
+    example for more details.
 
 ## 0.9.20 (November 12, 2019)
 * Bug Fixes
