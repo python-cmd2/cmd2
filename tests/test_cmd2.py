@@ -1882,12 +1882,56 @@ def test_nonexistent_macro(base_app):
 
     assert exception is not None
 
+def test_perror_style(base_app, capsys):
+    msg = 'testing...'
+    end = '\n'
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    base_app.perror(msg)
+    out, err = capsys.readouterr()
+    assert err == ansi.style_error(msg) + end
+
+def test_perror_no_style(base_app, capsys):
+    msg = 'testing...'
+    end = '\n'
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    base_app.perror(msg, apply_style=False)
+    out, err = capsys.readouterr()
+    assert err == msg + end
+
+def test_pwarning_style(base_app, capsys):
+    msg = 'testing...'
+    end = '\n'
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    base_app.pwarning(msg)
+    out, err = capsys.readouterr()
+    assert err == ansi.style_warning(msg) + end
+
+def test_pwarning_no_style(base_app, capsys):
+    msg = 'testing...'
+    end = '\n'
+    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    base_app.pwarning(msg, apply_style=False)
+    out, err = capsys.readouterr()
+    assert err == msg + end
+
 def test_ppaged(outsim_app):
     msg = 'testing...'
     end = '\n'
     outsim_app.ppaged(msg)
     out = outsim_app.stdout.getvalue()
     assert out == msg + end
+
+def test_ppaged_blank(outsim_app):
+    msg = ''
+    outsim_app.ppaged(msg)
+    out = outsim_app.stdout.getvalue()
+    assert not out
+
+def test_ppaged_none(outsim_app):
+    msg = None
+    outsim_app.ppaged(msg)
+    out = outsim_app.stdout.getvalue()
+    assert not out
 
 def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'

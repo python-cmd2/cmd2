@@ -467,13 +467,17 @@ class Cmd(cmd.Cmd):
             final_msg = "{}".format(msg)
         ansi.ansi_aware_write(sys.stderr, final_msg + end)
 
-    def pwarning(self, msg: Any, *, end: str = '\n') -> None:
-        """Apply the warning style to a message and print it to sys.stderr
+    def pwarning(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+        """Like perror, but applies ansi.style_warning by default
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message, default a newline
+        :param apply_style: If True, then ansi.style_warning will be applied to the message text. Set to False in cases
+                            where the message text already has the desired style. Defaults to True.
         """
-        self.perror(ansi.style_warning(msg), end=end, apply_style=False)
+        if apply_style:
+            msg = ansi.style_warning(msg)
+        self.perror(msg, end=end, apply_style=False)
 
     def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
@@ -499,7 +503,6 @@ class Cmd(cmd.Cmd):
             warning = "\nTo enable full traceback, run the following command: 'set debug true'"
             final_msg += ansi.style_warning(warning)
 
-        # Set apply_style to False since style has already been applied
         self.perror(final_msg, end=end, apply_style=False)
 
     def pfeedback(self, msg: Any, *, end: str = '\n') -> None:
