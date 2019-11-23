@@ -502,23 +502,26 @@ class Cmd(cmd.Cmd):
         # Set apply_style to False since style has already been applied
         self.perror(final_msg, end=end, apply_style=False)
 
-    def pfeedback(self, msg: str) -> None:
+    def pfeedback(self, msg: Any, *, end: str = '\n') -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
-           Inclusion in redirected output is controlled by `feedback_to_output`."""
+        Inclusion in redirected output is controlled by `feedback_to_output`.
+        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
+        :param end: string appended after the end of the message, default a newline
+        """
         if not self.quiet:
             if self.feedback_to_output:
-                self.poutput(msg)
+                self.poutput(msg, end=end)
             else:
-                ansi.ansi_aware_write(sys.stderr, "{}\n".format(msg))
+                self.perror(msg, end=end, apply_style=False)
 
-    def ppaged(self, msg: str, end: str = '\n', chop: bool = False) -> None:
+    def ppaged(self, msg: Any, *, end: str = '\n', chop: bool = False) -> None:
         """Print output using a pager if it would go off screen and stdout isn't currently being redirected.
 
         Never uses a pager inside of a script (Python or text) or when output is being redirected or piped or when
         stdout or stdin are not a fully functional terminal.
 
         :param msg: message to print to current stdout (anything convertible to a str with '{}'.format() is OK)
-        :param end: string appended after the end of the message if not already present, default a newline
+        :param end: string appended after the end of the message, default a newline
         :param chop: True -> causes lines longer than the screen width to be chopped (truncated) rather than wrapped
                               - truncated text is still accessible by scrolling with the right & left arrow keys
                               - chopping is ideal for displaying wide tabular data as is done in utilities like pgcli
@@ -528,43 +531,43 @@ class Cmd(cmd.Cmd):
         WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
         import subprocess
-        if msg is not None and msg != '':
-            try:
-                msg_str = '{}'.format(msg)
-                if not msg_str.endswith(end):
-                    msg_str += end
+        if not msg:
+            return
 
-                # Attempt to detect if we are not running within a fully functional terminal.
-                # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
-                functional_terminal = False
+        try:
+            msg_str = '{}{}'.format(msg, end)
 
-                if self.stdin.isatty() and self.stdout.isatty():
-                    if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
-                        functional_terminal = True
+            # Attempt to detect if we are not running within a fully functional terminal.
+            # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
+            functional_terminal = False
 
-                # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
-                # Also only attempt to use a pager if actually running in a real fully functional terminal
-                if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
-                    if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower():
-                        msg_str = ansi.strip_ansi(msg_str)
+            if self.stdin.isatty() and self.stdout.isatty():
+                if sys.platform.startswith('win') or os.environ.get('TERM') is not None:
+                    functional_terminal = True
 
-                    pager = self.pager
-                    if chop:
-                        pager = self.pager_chop
+            # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
+            # Also only attempt to use a pager if actually running in a real fully functional terminal
+            if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
+                if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower():
+                    msg_str = ansi.strip_ansi(msg_str)
 
-                    # Prevent KeyboardInterrupts while in the pager. The pager application will
-                    # still receive the SIGINT since it is in the same process group as us.
-                    with self.sigint_protection:
-                        pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
-                        pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
-                else:
-                    self.poutput(msg_str, end='')
-            except BrokenPipeError:
-                # This occurs if a command's output is being piped to another process and that process closes before the
-                # command is finished. If you would like your application to print a warning message, then set the
-                # broken_pipe_warning attribute to the message you want printed.`
-                if self.broken_pipe_warning:
-                    sys.stderr.write(self.broken_pipe_warning)
+                pager = self.pager
+                if chop:
+                    pager = self.pager_chop
+
+                # Prevent KeyboardInterrupts while in the pager. The pager application will
+                # still receive the SIGINT since it is in the same process group as us.
+                with self.sigint_protection:
+                    pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
+                    pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
+            else:
+                self.poutput(msg_str, end='')
+        except BrokenPipeError:
+            # This occurs if a command's output is being piped to another process and that process closes before the
+            # command is finished. If you would like your application to print a warning message, then set the
+            # broken_pipe_warning attribute to the message you want printed.`
+            if self.broken_pipe_warning:
+                sys.stderr.write(self.broken_pipe_warning)
 
     # -----  Methods related to tab completion -----
 

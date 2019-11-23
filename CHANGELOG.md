@@ -6,6 +6,11 @@
     an argument to disable tab completion while input is being entered.
     * Added capability to override the argument parser class used by cmd2 built-in commands. See override_parser.py
     example for more details.
+    * Added `end` argument to `pfeedback()` to be consistent with the other print functions like `poutput()`.
+* Breaking changes
+    * For consistency between all the print functions:
+        * Made `end` and `chop` keyword-only arguments of `ppaged()`
+        * `end` is always added to message in `ppaged()`
 
 ## 0.9.20 (November 12, 2019)
 * Bug Fixes
