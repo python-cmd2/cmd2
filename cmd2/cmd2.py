@@ -530,12 +530,15 @@ class Cmd(cmd.Cmd):
 
         WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
-        import subprocess
-        if not msg:
+        # msg can be any type, so convert to string before checking if it's blank
+        msg_str = str(msg)
+
+        # Consider None to be no data to print
+        if msg is None or msg_str == '':
             return
 
         try:
-            msg_str = '{}{}'.format(msg, end)
+            import subprocess
 
             # Attempt to detect if we are not running within a fully functional terminal.
             # Don't try to use the pager when being run by a continuous integration system like Jenkins + pexpect.
@@ -550,6 +553,7 @@ class Cmd(cmd.Cmd):
             if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
                 if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower():
                     msg_str = ansi.strip_ansi(msg_str)
+                msg_str += end
 
                 pager = self.pager
                 if chop:
@@ -561,7 +565,7 @@ class Cmd(cmd.Cmd):
                     pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                     pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
             else:
-                self.poutput(msg_str, end='')
+                self.poutput(msg_str, end=end)
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another process and that process closes before the
             # command is finished. If you would like your application to print a warning message, then set the
