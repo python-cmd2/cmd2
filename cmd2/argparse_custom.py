@@ -182,7 +182,7 @@ import re
 import sys
 # noinspection PyUnresolvedReferences,PyProtectedMember
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Type, Union
 
 from .ansi import ansi_aware_write, style_error
 
@@ -806,3 +806,13 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             if file is None:
                 file = sys.stderr
             ansi_aware_write(file, message)
+
+
+# The default ArgumentParser class for a cmd2 app
+DEFAULT_ARGUMENT_PARSER = Cmd2ArgumentParser
+
+
+def set_default_argument_parser(parser: Type[argparse.ArgumentParser]) -> None:
+    """Set the default ArgumentParser class for a cmd2 app"""
+    global DEFAULT_ARGUMENT_PARSER
+    DEFAULT_ARGUMENT_PARSER = parser
