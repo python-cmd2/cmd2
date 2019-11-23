@@ -59,7 +59,31 @@ session.
 Python Scripts
 --------------
 
+.. _arg_printer:
+   https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/arg_printer.py
+
 If you require logic flow, loops, branching, or other advanced features, you
 can write a python script which executes in the context of your ``cmd2`` app.
-This script is run using the ``run_pyscript`` command. See
-:ref:`features/embedded_python_shells:Embedded Python Shells`.
+This script is run using the ``run_pyscript`` command. A simple example of
+using ``run_pyscript`` is shown below  along with the arg_printer_ script::
+
+    (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar 'baz 23'
+    Running Python script 'arg_printer.py' which was called with 3 arguments
+    arg 1: 'foo'
+    arg 2: 'bar'
+    arg 3: 'baz 23'
+
+``run_pyscript`` supports tab-completion of file system paths, and as shown
+above it has the ability to pass command-line arguments to the scripts invoked.
+
+Python scripts executed with ``run_pyscript`` can run ``cmd2`` application
+commands by using the syntax::
+
+    app(‘command args’)
+
+where:
+
+* ``app`` is a configurable name which can be changed by setting the
+  ``py_bridge_name`` attribute of your ``cmd2.Cmd`` class instance
+* ``command`` and ``args`` are entered exactly like they would be entered on
+  the command line of your ``cmd2`` application
