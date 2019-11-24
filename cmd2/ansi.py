@@ -91,6 +91,7 @@ def ansi_safe_wcswidth(text: str) -> int:
     Wrap wcswidth to make it compatible with strings that contains ANSI escape sequences
 
     :param text: the string being measured
+    :return: the width of the string when printed to the terminal
     """
     # Strip ANSI escape sequences since they cause wcswidth to return -1
     return wcswidth(strip_ansi(text))
@@ -114,7 +115,7 @@ def fg_lookup(fg_name: str) -> str:
 
     :param fg_name: foreground color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
-    :raises ValueError if the color cannot be found
+    :raises ValueError: if the color cannot be found
     """
     try:
         ansi_escape = FG_COLORS[fg_name.lower()]
@@ -128,7 +129,7 @@ def bg_lookup(bg_name: str) -> str:
 
     :param bg_name: background color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
-    :raises ValueError if the color cannot be found
+    :raises ValueError: if the color cannot be found
     """
     try:
         ansi_escape = BG_COLORS[bg_name.lower()]
@@ -246,6 +247,6 @@ def set_title_str(title: str) -> str:
     """Get the required string, including ANSI escape codes, for setting window title for the terminal.
 
     :param title: new title for the window
-    :return string to write to sys.stderr in order to set the window title to the desired test
+    :return: string to write to sys.stderr in order to set the window title to the desired test
     """
     return colorama.ansi.set_title(title)
