@@ -11,6 +11,26 @@ Built In Settings
 ``cmd2`` has a number of built in settings, which a developer can set a default
 value, and which users can modify to change the behavior of the application.
 
+A list of all user-settable parameters, with brief comments, is viewable from
+within a running application::
+
+    (Cmd) set --long
+    allow_ansi: Terminal           # Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)
+    continuation_prompt: >         # On 2nd+ line of input
+    debug: False                   # Show full error stack on error
+    echo: False                    # Echo command issued into output
+    editor: vim                    # Program used by ``edit``
+    feedback_to_output: False      # include nonessentials in `|`, `>` results
+    locals_in_py: False            # Allow access to your application in py via self
+    max_completion_items: 50       # Maximum number of CompletionItems to display during tab completion
+    prompt: (Cmd)                  # The prompt issued to solicit input
+    quiet: False                   # Don't print nonessential feedback
+    timing: False                  # Report execution times
+
+Any of these user-settable parameters can be set while running your app with
+the ``set`` command like so::
+
+    (Cmd) set allow_ansi Never
 
 Timing
 ~~~~~~
@@ -38,31 +58,29 @@ the application generates an error.  |settable|
 
 .. _parameters:
 
-Other user-settable parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-A list of all user-settable parameters, with brief
-comments, is viewable from within a running application
-with::
+allow_ansi
+~~~~~~~~~~
 
-    (Cmd) set --long
-    allow_ansi: Terminal           # Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)
-    continuation_prompt: >         # On 2nd+ line of input
-    debug: False                   # Show full error stack on error
-    echo: False                    # Echo command issued into output
-    editor: vim                    # Program used by ``edit``
-    feedback_to_output: False      # include nonessentials in `|`, `>` results
-    locals_in_py: False            # Allow access to your application in py via self
-    max_completion_items: 50       # Maximum number of CompletionItems to display during tab completion
-    prompt: (Cmd)                  # The prompt issued to solicit input
-    quiet: False                   # Don't print nonessential feedback
-    timing: False                  # Report execution times
+The ``allow_ansi`` setting controls the behavior of ANSI escape sequences
+in output generated with any of the following methods:
 
-Any of these user-settable parameters can be set while running your app with
-the ``set`` command like so::
+- ``poutput()``
+- ``perror()``
+- ``pwarning()``
+- ``pfeedback()``
+- ``ppaged()``
 
-    set allow_ansi Never
+This setting can be one of three values:
 
+- ``Never`` - all ANSI escape sequences which instruct the terminal to colorize
+  output are stripped from the output.
+
+- ``Terminal`` - (the default value) pass through ANSI escape sequences when
+  the output is being sent to the terminal, but if the output is redirected to
+  a pipe or a file the escape sequences are stripped.
+
+- ``Always`` - ANSI escape sequences are always passed through, regardless
 
 
 Create New Settings
@@ -100,3 +118,7 @@ changes a setting, and will receive both the old value and the new value.
    now: 13
    (Cmd) sunbathe
    It's 13 C - are you a penguin?
+
+
+Hide Built-in Settings
+----------------------
