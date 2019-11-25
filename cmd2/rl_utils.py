@@ -122,7 +122,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
             readline_lib = ctypes.CDLL(readline.__file__)
         except AttributeError:
             _rl_warn_reason = ("this application is running in a non-standard Python environment in\n"
-                               "which readline is not loaded dynamically from a shared library file")
+                               "which readline is not loaded dynamically from a shared library file.")
         else:
             rl_type = RlType.GNU
             if sys.stdout.isatty():
