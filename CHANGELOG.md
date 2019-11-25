@@ -1,6 +1,9 @@
 ## 0.9.21 (TBD, 2019)
 * Bug Fixes
     * Fixed bug where pipe processes were not being stopped by Ctrl-C
+    * Added exception handling to account for non-standard Python environments in which readline is not loaded
+     dynamically from a shared library file
+    
 * Enhancements
     * Added `read_input()` function that is used to read from stdin. Unlike the Python built-in `input()`, it also has
     an argument to disable tab completion while input is being entered.

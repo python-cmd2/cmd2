@@ -32,6 +32,9 @@ rl_type = RlType.NONE
 # Tells if the terminal we are running in supports vt100 control characters
 vt100_support = False
 
+# Explanation for why readline wasn't loaded
+_rl_warn_reason = ''
+
 # The order of this check matters since importing pyreadline will also show readline in the modules list
 if 'pyreadline' in sys.modules:
     rl_type = RlType.PYREADLINE
@@ -113,15 +116,27 @@ if 'pyreadline' in sys.modules:
 elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
     # We don't support libedit
     if 'libedit' not in readline.__doc__:
-        rl_type = RlType.GNU
+        try:
+            # Load the readline lib so we can access members of it
+            import ctypes
+            readline_lib = ctypes.CDLL(readline.__file__)
+        except AttributeError:
+            _rl_warn_reason = ("this application is running in a non-standard Python environment in\n"
+                               "which readline is not loaded dynamically from a shared library file")
+        else:
+            rl_type = RlType.GNU
+            if sys.stdout.isatty():
+                vt100_support = True
 
-        # Load the readline lib so we can access members of it
-        import ctypes
-        readline_lib = ctypes.CDLL(readline.__file__)
-
-        # Check if we are running in a terminal
-        if sys.stdout.isatty():
-            vt100_support = True
+# Check if readline was loaded
+if rl_type == RlType.NONE:
+    if not _rl_warn_reason:
+        _rl_warn_reason = ("no supported version of readline was found. To resolve this, install\n"
+                           "pyreadline on Windows or gnureadline on Mac.")
+    rl_warning = ("Readline features including tab completion have been disabled because\n" +
+                  _rl_warn_reason + '\n\n')
+else:
+    rl_warning = ''
 
 
 # noinspection PyProtectedMember,PyUnresolvedReferences

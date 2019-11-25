@@ -52,13 +52,10 @@ from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
-from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt
+from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
-    rl_warning = ("Readline features including tab completion have been disabled since no\n"
-                  "supported version of readline was found. To resolve this, install pyreadline\n"
-                  "on Windows or gnureadline on Mac.\n\n")
     sys.stderr.write(ansi.style_warning(rl_warning))
 else:
     from .rl_utils import rl_force_redisplay, readline
