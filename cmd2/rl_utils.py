@@ -120,7 +120,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
             # Load the readline lib so we can access members of it
             import ctypes
             readline_lib = ctypes.CDLL(readline.__file__)
-        except AttributeError:
+        except AttributeError:  # pragma: no cover
             _rl_warn_reason = ("this application is running in a non-standard Python environment in\n"
                                "which readline is not loaded dynamically from a shared library file.")
         else:
@@ -129,7 +129,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
                 vt100_support = True
 
 # Check if readline was loaded
-if rl_type == RlType.NONE:
+if rl_type == RlType.NONE:  # pragma: no cover
     if not _rl_warn_reason:
         _rl_warn_reason = ("no supported version of readline was found. To resolve this, install\n"
                            "pyreadline on Windows or gnureadline on Mac.")
