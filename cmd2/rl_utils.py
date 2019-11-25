@@ -133,8 +133,8 @@ if rl_type == RlType.NONE:
     if not _rl_warn_reason:
         _rl_warn_reason = ("no supported version of readline was found. To resolve this, install\n"
                            "pyreadline on Windows or gnureadline on Mac.")
-    rl_warning = ("Readline features including tab completion have been disabled because\n" +
-                  _rl_warn_reason + '\n\n')
+    rl_warning = ("Readline features including tab completion have been disabled because\n"
+                  + _rl_warn_reason + '\n\n')
 else:
     rl_warning = ''
 
