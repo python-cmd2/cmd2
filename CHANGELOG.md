@@ -31,7 +31,7 @@
     and not sys.argv[0].
 * Breaking changes
     * Some constants were moved from cmd2.py to constants.py
-    * cmd2 command decorators were moved to decorators.py. If you were importing them via cmd2's __init__.py, then
+    * cmd2 command decorators were moved to decorators.py. If you were importing them via cmd2's \_\_init\_\_.py, then
     there will be no issues.
 
 ## 0.9.19 (October 14, 2019)
