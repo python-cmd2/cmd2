@@ -125,8 +125,7 @@ elif 'gnureadline' in sys.modules or 'readline' in sys.modules:
                                "which readline is not loaded dynamically from a shared library file.")
         else:
             rl_type = RlType.GNU
-            if sys.stdout.isatty():
-                vt100_support = True
+            vt100_support = sys.stdout.isatty()
 
 # Check if readline was loaded
 if rl_type == RlType.NONE:  # pragma: no cover
