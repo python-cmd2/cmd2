@@ -185,8 +185,13 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
 # These can be altered to suit an application's needs and only need to be a
 # function with the following structure: func(str) -> str
 style_success = functools.partial(style, fg='green', bold=True)
+"""Partial function supplying arguments to style() to generate bold green text"""
+
 style_warning = functools.partial(style, fg='bright_yellow')
+"""Partial function supplying arguments to ansi.style() to generate yellow text"""
+
 style_error = functools.partial(style, fg='bright_red')
+"""Partial function supplying arguments to ansi.style() to generate bright red text"""
 
 
 def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_offset: int, alert_msg: str) -> str:
