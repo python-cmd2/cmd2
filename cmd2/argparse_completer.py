@@ -14,9 +14,9 @@ import textwrap
 from collections import deque
 from typing import Dict, List, Optional, Union
 
+from . import ansi
 from . import cmd2
 from . import utils
-from .ansi import ansi_aware_write, ansi_safe_wcswidth, style_error
 from .argparse_custom import ATTR_CHOICES_CALLABLE, INFINITY, generate_range_error
 from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION_HEADER, ATTR_NARGS_RANGE
 from .argparse_custom import ChoicesCallable, CompletionError, CompletionItem
@@ -193,9 +193,9 @@ class AutoCompleter(object):
                         if arg_action == completer_action:
                             return True
 
-                        error = style_error("\nError: argument {}: not allowed with argument {}\n".
-                                            format(argparse._get_action_name(arg_action),
-                                                   argparse._get_action_name(completer_action)))
+                        error = ansi.style_error("\nError: argument {}: not allowed with argument {}\n".
+                                                 format(argparse._get_action_name(arg_action),
+                                                        argparse._get_action_name(completer_action)))
                         self._print_message(error)
                         return False
 
@@ -444,11 +444,11 @@ class AutoCompleter(object):
                 completions.sort(key=self._cmd2_app.default_sort_key)
                 self._cmd2_app.matches_sorted = True
 
-            token_width = ansi_safe_wcswidth(action.dest)
+            token_width = ansi.ansi_safe_wcswidth(action.dest)
             completions_with_desc = []
 
             for item in completions:
-                item_width = ansi_safe_wcswidth(item)
+                item_width = ansi.ansi_safe_wcswidth(item)
                 if item_width > token_width:
                     token_width = item_width
 
@@ -585,7 +585,7 @@ class AutoCompleter(object):
     def _print_message(msg: str) -> None:
         """Print a message instead of tab completions and redraw the prompt and input line"""
         import sys
-        ansi_aware_write(sys.stdout, msg + '\n')
+        ansi.ansi_aware_write(sys.stdout, msg + '\n')
         rl_force_redisplay()
 
     def _print_arg_hint(self, arg_action: argparse.Action) -> None:
@@ -615,7 +615,7 @@ class AutoCompleter(object):
             format(argparse._get_action_name(flag_arg_state.action),
                    generate_range_error(flag_arg_state.min, flag_arg_state.max),
                    flag_arg_state.count)
-        self._print_message(style_error('{}'.format(error)))
+        self._print_message(ansi.style_error('{}'.format(error)))
 
     def _print_completion_error(self, arg_action: argparse.Action, completion_error: CompletionError) -> None:
         """
@@ -628,4 +628,4 @@ class AutoCompleter(object):
 
         error = ("\nError tab completing {}:\n"
                  "{}\n".format(argparse._get_action_name(arg_action), indented_error))
-        self._print_message(style_error('{}'.format(error)))
+        self._print_message(ansi.style_error('{}'.format(error)))

@@ -1,3 +1,7 @@
+## 0.9.22 (TBD, 2019)
+* Bug Fixes
+    * Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files 
+    
 ## 0.9.21 (November 26, 2019)
 * Bug Fixes
     * Fixed bug where pipe processes were not being stopped by Ctrl-C
