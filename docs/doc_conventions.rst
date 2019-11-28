@@ -22,25 +22,60 @@ In addition:
 Naming Files
 ------------
 
-- all lower case file names
+All source files in the documentation must:
+
+- have all lower case file names
 - if the name has multiple words, separate them with an underscore
-- all documentation file names end in '.rst'
+- end in '.rst'
 
 
-Heirarchy of headings
----------------------
+Titles and Headings
+-------------------
 
-show the heirarchy of sphinx headings we use, and the conventions (underline
-only, no overline)
+reStructuredText allows flexibility in how headings are defined. You only have
+to worry about the heirarchy of headings within a single file. Sphinx magically
+handles the intra-file heirarchy on it's own. This magic means that no matter
+how you style titles and headings in the various files that comprise the
+documentation, Sphinx will render properly structured output. To ensure we have
+a similar consistency when viewing the source files, we use the following
+conventions for titles and headings:
 
-Use '=', then '-', then '~'. If your document needs more levels than that,
-break it into separate documents.
+1. When creating a heading for a section, do not use the overline and underline
+syntax. Use the underline syntax only::
 
-You only have to worry about the heirarchy of headings within a single file.
-Sphinx handles the intra-file heirarchy magically on it's own.
+  Document Title
+  ==============
 
-Use two blank lines before every heading unless it's the first heading in the
-file. Use one blank line after every heading
+2. The string of adornment characters on the line following the heading should
+be the same length as the title.
+
+3. The title of a document should use the '=' adornment character on the next
+line and only one heading of this level should appear in each file.
+
+4. Sections within a document should have their titles adorned with the '-'
+character::
+
+  Section Title
+  -------------
+
+5. Subsections within a section should have their titles adorned with the '~'
+character::
+
+  Subsection Title
+  ~~~~~~~~~~~~~~~~
+
+6. Use two blank lines before every title unless it's the first heading in the
+file. Use one blank line after every heading.
+
+7. If your document needs more than three levels of sections, break it into
+separate documents.
+
+
+Indenting
+---------
+
+In reStructuredText all indenting is significant. Use 2 spaces per indenting
+level.
 
 
 Code
@@ -85,9 +120,6 @@ and
 
 See :ref:`custom title<features/argument_processing:Help Messages>`
 
-[TODO what's the right way to link to source code? Can we make it link to the
-tag that the documentation is rendered from?]
-
 
 Autolinking
 -----------
@@ -95,6 +127,63 @@ Autolinking
 
 Referencing cmd2 API documentation
 ----------------------------------
+
+[TODO what's the right way to link to source code? Can we make it link to the
+tag that the documentation is rendered from?]
+
+It's easy to reference and create a link to the API documentation for classes,
+methods, functions, or attributes.
+
+
+Referencing Methods
+~~~~~~~~~~~~~~~~~~~
+
+To reference a method, use one of the following approaches:
+
+1. Reference the full dotted path of the method::
+
+     The :meth:`cmd2.cmd2.Cmd.poutput` method is similar to the Python built-in
+     print function.
+
+Which renders as: The :meth:`cmd2.cmd2.Cmd.poutput` method is similar to the
+Python built-in print function.
+
+2. Reference the full dotted path to the method, but only display the method
+name::
+
+     The :meth:`~cmd2.cmd2.Cmd.poutput` method is similar to the Python built-in print function.
+
+Which renders as: The :meth:`~cmd2.cmd2.Cmd.poutput` method is similar to the
+Python built-in print function.
+
+3. Reference a portion of the dotted path of the method::
+
+     The :meth:`.cmd2.Cmd.poutput` method is similar to the Python built-in print
+     function.
+
+Which renders as: The :meth:`.cmd2.Cmd.poutput` method is similar to the Python
+built-in print function.
+
+Avoid either of these approaches:
+
+1. Reference just the class name without enough dotted path::
+
+     The :meth:`.Cmd.poutput` method is similar to the Python built-in print
+     function.
+
+Because ``cmd2.Cmd`` subclasses ``cmd.Cmd`` from the standard library, this
+approach does not clarify which class it is referring to.
+
+2. Reference just a method name::
+
+     The :meth:`poutput` method is similar to the Python built-in print
+     function.
+
+While Sphinx may be smart enough to generate the correct output, the potential
+for multiple matching references is high, which causes Sphinx to generate
+warnings. The build pipeline that renders the documentation treats warnings as
+fatal errors. It's best to just be specific about what you are referencing.
+
 
 
 Info and Warning Callouts
