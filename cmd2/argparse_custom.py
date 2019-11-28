@@ -185,7 +185,7 @@ import sys
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
 from typing import Callable, Optional, Tuple, Type, Union
 
-from .ansi import ansi_aware_write, style_error
+from . import ansi
 
 # Used in nargs ranges to signify there is no maximum
 INFINITY = float('inf')
@@ -747,7 +747,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             linum += 1
 
         self.print_usage(sys.stderr)
-        formatted_message = style_error(formatted_message)
+        formatted_message = ansi.style_error(formatted_message)
         self.exit(2, '{}\n\n'.format(formatted_message))
 
     # noinspection PyProtectedMember
@@ -806,7 +806,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         if message:
             if file is None:
                 file = sys.stderr
-            ansi_aware_write(file, message)
+            ansi.ansi_aware_write(file, message)
 
 
 # The default ArgumentParser class for a cmd2 app

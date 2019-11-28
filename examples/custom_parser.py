@@ -5,7 +5,7 @@ Defines the CustomParser used with override_parser.py example
 import sys
 
 from cmd2 import Cmd2ArgumentParser, set_default_argument_parser
-from cmd2.ansi import style_warning
+from cmd2 import ansi
 
 
 # First define the parser
@@ -27,7 +27,7 @@ class CustomParser(Cmd2ArgumentParser):
             linum += 1
 
         self.print_usage(sys.stderr)
-        formatted_message = style_warning(formatted_message)
+        formatted_message = ansi.style_warning(formatted_message)
         self.exit(2, '{}\n\n'.format(formatted_message))
 
 
