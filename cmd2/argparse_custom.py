@@ -4,7 +4,8 @@ This module adds capabilities to argparse by patching a few of its functions. It
 class called Cmd2ArgumentParser which improves error and help output over normal argparse. All cmd2 code uses
 this parser and it is recommended that developers of cmd2-based apps either use it or write their own parser
 that inherits from it. This will give a consistent look-and-feel between the help/error output of built-in
-cmd2 commands and the app-specific commands.
+cmd2 commands and the app-specific commands. If you wish to override the parser used by cmd2's built-in
+commands, see override_parser.py example.
 
 Since the new capabilities are added by patching at the argparse API level, they are available whether or not
 Cmd2ArgumentParser is used. However, the help and error output of Cmd2ArgumentParser is customized to notate
@@ -184,7 +185,7 @@ import sys
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
 from typing import Callable, Optional, Tuple, Type, Union
 
-from .ansi import ansi_aware_write, style_error
+from . import ansi
 
 # Used in nargs ranges to signify there is no maximum
 INFINITY = float('inf')
@@ -746,7 +747,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             linum += 1
 
         self.print_usage(sys.stderr)
-        formatted_message = style_error(formatted_message)
+        formatted_message = ansi.style_error(formatted_message)
         self.exit(2, '{}\n\n'.format(formatted_message))
 
     # noinspection PyProtectedMember
@@ -805,7 +806,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         if message:
             if file is None:
                 file = sys.stderr
-            ansi_aware_write(file, message)
+            ansi.ansi_aware_write(file, message)
 
 
 # The default ArgumentParser class for a cmd2 app
