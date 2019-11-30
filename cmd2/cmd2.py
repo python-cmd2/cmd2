@@ -133,6 +133,9 @@ class Cmd(cmd.Cmd):
                                "  This command is for internal use and is not intended to be called from the\n"
                                "  command line.")
 
+    debug = False
+    """Set to True to display a full stack trace when exceptions occur"""
+
     # Sorting keys for strings
     ALPHABETICAL_SORT_KEY = utils.norm_fold
     NATURAL_SORT_KEY = utils.natural_keys
@@ -417,9 +420,13 @@ class Cmd(cmd.Cmd):
     def broken_pipe_warning(self) -> str:
         """Message to display if a BrokenPipeError is raised while writing output.
 
-        :meth:`~cmd2.cmd2.Cmd.poutput()` catches BrokenPipeError exceptions and
-        outputs the contents of `broken_pipe_warning`. The default value is an
-        empty string meaning the BrokenPipeError is silently swallowed.
+        The following methods catch BrokenPipeError exceptions and output this message:
+
+          - :meth:`~cmd2.cmd2.Cmd.poutput()`
+          - :meth:`~cmd2.cmd2.Cmd.ppaged()`
+
+        The default value is an empty string meaning the BrokenPipeError is
+        silently swallowed.
         """
         return self.broken_pipe_error
 
