@@ -19,6 +19,17 @@ In addition:
   documentation, and to the API reference
 
 
+Style Checker
+-------------
+
+Use `doc8 <https://pypi.org/project/doc8/>`_ to check the style of the
+documentation. This tool can be invoked using the proper options by typing:
+
+.. code-block:: shell
+
+   $ invoke doc8
+
+
 Naming Files
 ------------
 
@@ -27,6 +38,21 @@ All source files in the documentation must:
 - have all lower case file names
 - if the name has multiple words, separate them with an underscore
 - end in '.rst'
+
+
+Indenting
+---------
+
+In reStructuredText all indenting is significant. Use 2 spaces per indenting
+level.
+
+
+Wrapping
+--------
+
+Hard wrap all text so that line lengths are no greater than 79 characters. It
+makes everything easier when editing documentation, and has no impact on
+reading documentation because we render to html.
 
 
 Titles and Headings
@@ -71,36 +97,29 @@ file. Use one blank line after every heading.
 separate documents.
 
 
-Indenting
----------
+Inline Code
+-----------
 
-In reStructuredText all indenting is significant. Use 2 spaces per indenting
-level.
-
-
-Code
-----
-
-This documentation declares python as the default Sphinx domain.  Python code
-or interactive python sessions can be presented by either:
+This documentation declares ``python`` as the default Sphinx domain.  Python
+code or interactive Python sessions can be presented by either:
 
 - finishing the preceding paragraph with a ``::`` and indenting the code
 - use the ``.. code-block::`` directive
 
-If you want to show other code, like shell commands, then use ``.. code-block:
-shell``.
+If you want to show non-Python code, like shell commands, then use ``..
+code-block: shell``.
 
 
-Table of Contents and Captions
-------------------------------
-
-
-Hyperlinks
-----------
+External Hyperlinks
+-------------------
 
 If you want to use an external hyperlink target, define the target at the top
-of the page, not the bottom.
+of the page or the top of the section, not the bottom. The target definition
+should always appear before it is referenced.
 
+
+Links To Other Documentation Pages and Sections
+-----------------------------------------------
 
 We use the Sphinx `autosectionlabel
 <http://www.sphinx-doc.org/en/master/usage/extensions/autosectionlabel.html>`_
@@ -121,8 +140,8 @@ and
 See :ref:`custom title<features/argument_processing:Help Messages>`
 
 
-Referencing cmd2 API documentation
-----------------------------------
+Links to API Reference
+----------------------
 
 To reference a method or function, use one of the following approaches:
 
@@ -171,33 +190,9 @@ warnings. The build pipeline that renders the documentation treats warnings as
 fatal errors. It's best to just be specific about what you are referencing.
 
 
-
-Info and Warning Callouts
--------------------------
-
-
-Wrapping
---------
-
-Hard wrap all text so that line lengths are no greater than 79 characters. It
-makes everything easier when editing documentation, and has no impact on
-reading documentation because we render to html.
-
-
 Referencing cmd2
 -----------------
 
 Whenever you reference ``cmd2`` in the documentation, enclose it in double
 backticks. This indicates an inline literal in restructured text, and makes it
 stand out when rendered as html.
-
-Style Checker
--------------
-
-Use `doc8 <https://pypi.org/project/doc8/>`_ to check the style of the
-documentation. This tool can be invoked using the proper options by typing:
-
-.. code-block:: shell
-
-   $ invoke doc8
-
