@@ -108,7 +108,7 @@ extension. This allows you to reference any header in any document by::
 
    See :ref:`features/argument_processing:Help Messages`
 
-or ::
+or::
 
    See :ref:`custom title<features/argument_processing:Help Messages>`
 
@@ -121,24 +121,10 @@ and
 See :ref:`custom title<features/argument_processing:Help Messages>`
 
 
-Autolinking
------------
-
-
 Referencing cmd2 API documentation
 ----------------------------------
 
-[TODO what's the right way to link to source code? Can we make it link to the
-tag that the documentation is rendered from?]
-
-It's easy to reference and create a link to the API documentation for classes,
-methods, functions, or attributes.
-
-
-Referencing Methods
-~~~~~~~~~~~~~~~~~~~
-
-To reference a method, use one of the following approaches:
+To reference a method or function, use one of the following approaches:
 
 1. Reference the full dotted path of the method::
 
@@ -193,9 +179,9 @@ Info and Warning Callouts
 Wrapping
 --------
 
-Hard wrap all text with line lengths no greater than 79 characters. It makes
-everything easier when editing documentation, and has no impact on reading
-documentation because we render to html.
+Hard wrap all text so that line lengths are no greater than 79 characters. It
+makes everything easier when editing documentation, and has no impact on
+reading documentation because we render to html.
 
 
 Referencing cmd2
