@@ -5,6 +5,7 @@ Features
    :maxdepth: 1
 
    argument_processing
+   builtin_commands
    clipboard
    commands
    completion
