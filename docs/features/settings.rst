@@ -14,7 +14,6 @@ for these settings and users can modify them at runtime using the
 Builtin Settings
 -----------------
 
-
 ``cmd2`` has a number of builtin settings. These settings control the behavior
 of certain application features and :ref:`features/builtin_commands:Builtin
 Commands`. Users can use the :ref:`features/builtin_commands:set` command to
