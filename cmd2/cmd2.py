@@ -1390,7 +1390,7 @@ class Cmd(cmd.Cmd):
 
         except Exception as e:
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
-            self.perror('\n', end='')
+            self.perror()
             self.pexcept(e)
             return None
 
@@ -2760,7 +2760,7 @@ class Cmd(cmd.Cmd):
                 response = self.read_input(prompt)
             except EOFError:
                 response = ''
-                self.poutput('\n', end='')
+                self.poutput()
             except KeyboardInterrupt as ex:
                 self.poutput('^C')
                 raise ex
