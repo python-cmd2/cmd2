@@ -428,7 +428,7 @@ class Cmd(cmd.Cmd):
         """
         return ansi.strip_ansi(self.prompt)
 
-    def poutput(self, msg: Any, *, end: str = '\n') -> None:
+    def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
 
         Also handles BrokenPipeError exceptions for when a commands's output has
@@ -449,8 +449,8 @@ class Cmd(cmd.Cmd):
             if self.broken_pipe_warning:
                 sys.stderr.write(self.broken_pipe_warning)
 
-    @staticmethod
-    def perror(msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+    # noinspection PyMethodMayBeStatic
+    def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Print message to sys.stderr
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
@@ -464,7 +464,7 @@ class Cmd(cmd.Cmd):
             final_msg = "{}".format(msg)
         ansi.ansi_aware_write(sys.stderr, final_msg + end)
 
-    def pwarning(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+    def pwarning(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Like perror, but applies ansi.style_warning by default
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
@@ -476,7 +476,7 @@ class Cmd(cmd.Cmd):
             msg = ansi.style_warning(msg)
         self.perror(msg, end=end, apply_style=False)
 
-    def pexcept(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+    def pexcept(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Print Exception message to sys.stderr. If debug is true, print exception traceback if one exists.
 
         :param msg: message or Exception to print
@@ -502,7 +502,7 @@ class Cmd(cmd.Cmd):
 
         self.perror(final_msg, end=end, apply_style=False)
 
-    def pfeedback(self, msg: Any, *, end: str = '\n') -> None:
+    def pfeedback(self, msg: Any = '', *, end: str = '\n') -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
         Inclusion in redirected output is controlled by `feedback_to_output`.
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
@@ -530,13 +530,6 @@ class Cmd(cmd.Cmd):
 
         WARNING: On Windows, the text always wraps regardless of what the chop argument is set to
         """
-        # msg can be any type, so convert to string before checking if it's blank
-        msg_str = str(msg)
-
-        # Consider None to be no data to print
-        if msg is None or msg_str == '':
-            return
-
         try:
             import subprocess
 
@@ -551,9 +544,9 @@ class Cmd(cmd.Cmd):
             # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
             # Also only attempt to use a pager if actually running in a real fully functional terminal
             if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
+                msg_str = "{}{}".format(msg, end)
                 if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower():
                     msg_str = ansi.strip_ansi(msg_str)
-                msg_str += end
 
                 pager = self.pager
                 if chop:
@@ -565,7 +558,7 @@ class Cmd(cmd.Cmd):
                     pipe_proc = subprocess.Popen(pager, shell=True, stdin=subprocess.PIPE)
                     pipe_proc.communicate(msg_str.encode('utf-8', 'replace'))
             else:
-                self.poutput(msg_str, end=end)
+                self.poutput(msg, end=end)
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another process and that process closes before the
             # command is finished. If you would like your application to print a warning message, then set the

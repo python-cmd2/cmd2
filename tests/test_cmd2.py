@@ -1923,15 +1923,17 @@ def test_ppaged(outsim_app):
 
 def test_ppaged_blank(outsim_app):
     msg = ''
+    end = '\n'
     outsim_app.ppaged(msg)
     out = outsim_app.stdout.getvalue()
-    assert not out
+    assert out == msg + end
 
 def test_ppaged_none(outsim_app):
     msg = None
+    end = '\n'
     outsim_app.ppaged(msg)
     out = outsim_app.stdout.getvalue()
-    assert not out
+    assert out == str(msg) + end
 
 def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
