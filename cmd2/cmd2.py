@@ -428,7 +428,7 @@ class Cmd(cmd.Cmd):
         """
         return ansi.strip_ansi(self.prompt)
 
-    def poutput(self, msg: Any, *, end: str = '\n') -> None:
+    def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
 
         Also handles BrokenPipeError exceptions for when a commands's output has
@@ -449,8 +449,8 @@ class Cmd(cmd.Cmd):
             if self.broken_pipe_warning:
                 sys.stderr.write(self.broken_pipe_warning)
 
-    @staticmethod
-    def perror(msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+    # noinspection PyMethodMayBeStatic
+    def perror(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Print message to sys.stderr
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
@@ -464,8 +464,8 @@ class Cmd(cmd.Cmd):
             final_msg = "{}".format(msg)
         ansi.ansi_aware_write(sys.stderr, final_msg + end)
 
-    def pwarning(self, msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
-        """Like perror, but applies ansi.style_warning by default
+    def pwarning(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
+        """Wraps perror, but applies ansi.style_warning by default
 
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message, default a newline
@@ -1397,7 +1397,7 @@ class Cmd(cmd.Cmd):
 
         except Exception as e:
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
-            self.perror('\n', end='')
+            self.perror()
             self.pexcept(e)
             return None
 
@@ -2770,7 +2770,7 @@ class Cmd(cmd.Cmd):
                 response = self.read_input(prompt)
             except EOFError:
                 response = ''
-                self.poutput('\n', end='')
+                self.poutput()
             except KeyboardInterrupt as ex:
                 self.poutput('^C')
                 raise ex
