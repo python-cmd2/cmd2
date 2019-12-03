@@ -2714,7 +2714,8 @@ class Cmd(cmd.Cmd):
                         command = ''
                 self.stdout.write("\n")
 
-    @with_argparser(DEFAULT_ARGUMENT_PARSER(description="List available shortcuts"))
+    shortcuts_parser = DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
+    @with_argparser(shortcuts_parser)
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
         # Sort the shortcut tuples by name
@@ -2722,13 +2723,15 @@ class Cmd(cmd.Cmd):
         result = "\n".join('{}: {}'.format(sc[0], sc[1]) for sc in sorted_shortcuts)
         self.poutput("Shortcuts for other commands:\n{}".format(result))
 
-    @with_argparser(DEFAULT_ARGUMENT_PARSER(epilog=INTERNAL_COMMAND_EPILOG))
+    eof_parser = DEFAULT_ARGUMENT_PARSER(description="Called when <Ctrl>-D is pressed", epilog=INTERNAL_COMMAND_EPILOG)
+    @with_argparser(eof_parser)
     def do_eof(self, _: argparse.Namespace) -> bool:
         """Called when <Ctrl>-D is pressed"""
         # Return True to stop the command loop
         return True
 
-    @with_argparser(DEFAULT_ARGUMENT_PARSER(description="Exit this application"))
+    quit_parser = DEFAULT_ARGUMENT_PARSER(description="Exit this application")
+    @with_argparser(quit_parser)
     def do_quit(self, _: argparse.Namespace) -> bool:
         """Exit this application"""
         # Return True to stop the command loop
@@ -3208,7 +3211,8 @@ class Cmd(cmd.Cmd):
 
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
-        @with_argparser(DEFAULT_ARGUMENT_PARSER(description="Enter an interactive IPython shell"))
+        ipython_parser = DEFAULT_ARGUMENT_PARSER(description="Enter an interactive IPython shell")
+        @with_argparser(ipython_parser)
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
             from .py_bridge import PyBridge
