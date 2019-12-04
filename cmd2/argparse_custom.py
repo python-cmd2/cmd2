@@ -95,7 +95,7 @@ Tab Completion:
     as dynamic. Therefore it is up to the developer to validate if the user has typed an acceptable value for these
     arguments.
 
-    The following functions exist in cases where you may want to manually a add choice-providing function/method to
+    The following functions exist in cases where you may want to manually add a choice-providing function/method to
     an existing argparse action. For instance, in __init__() of a custom action class.
 
         set_choices_function(action, func)
