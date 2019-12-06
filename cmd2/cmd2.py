@@ -1874,22 +1874,26 @@ class Cmd(cmd.Cmd):
                 self.perror("Cannot redirect to paste buffer; missing 'pyperclip' and/or pyperclip dependencies")
                 redir_error = True
 
+            # Redirecting to a file
             elif statement.output_to:
-                # going to a file
-                mode = 'w'
-                # statement.output can only contain
-                # REDIRECTION_APPEND or REDIRECTION_OUTPUT
+                # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
+                else:
+                    mode = 'w'
+                mode += 't'
+
                 try:
-                    new_stdout = open(utils.strip_quotes(statement.output_to), mode)
+                    # Use line buffering
+                    new_stdout = open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1)
                     saved_state.redirecting = True
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
                     self.pexcept('Failed to redirect because - {}'.format(ex))
                     redir_error = True
+
+            # Redirecting to a paste buffer
             else:
-                # going to a paste buffer
                 new_stdout = tempfile.TemporaryFile(mode="w+")
                 saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
