@@ -1,9 +1,8 @@
 ## 0.9.22 (TBD, 2019)
 * Bug Fixes
     * Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files
-* Other
-    * Removed `bold=True` from `ansi.style_success` because it was difficult for red-greed colorblind users to
-    distinguish that color from the `ansi.style_warning` color in certain terminals.
+* Enhancements
+    * Enabled line buffering when redirecting output to a file
     
 ## 0.9.21 (November 26, 2019)
 * Bug Fixes
