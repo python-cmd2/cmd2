@@ -1881,7 +1881,6 @@ class Cmd(cmd.Cmd):
                     mode = 'a'
                 else:
                     mode = 'w'
-                mode += 't'
 
                 try:
                     # Use line buffering
