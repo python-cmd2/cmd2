@@ -184,7 +184,7 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
 # Default styles for printing strings of various types.
 # These can be altered to suit an application's needs and only need to be a
 # function with the following structure: func(str) -> str
-style_success = functools.partial(style, fg='green', bold=True)
+style_success = functools.partial(style, fg='green')
 """Partial function supplying arguments to style() to generate bold green text"""
 
 style_warning = functools.partial(style, fg='bright_yellow')

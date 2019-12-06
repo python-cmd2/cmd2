@@ -1,6 +1,9 @@
 ## 0.9.22 (TBD, 2019)
 * Bug Fixes
-    * Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files 
+    * Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files
+* Other
+    * Removed `bold=True` from `ansi.style_success` because it was difficult for red-greed colorblind users to
+    distinguish that color from the `ansi.style_warning` color in certain terminals.
     
 ## 0.9.21 (November 26, 2019)
 * Bug Fixes
@@ -488,7 +491,7 @@
     * ``cmd2`` now supports Python 3.4+
 * Known Issues
     * Some developers have noted very slow performance when importing the ``cmd2`` module. The issue
-    it intermittant, and investigation of the root cause is ongoing.
+    it intermittent, and investigation of the root cause is ongoing.
 
 ## 0.8.6 (May 27, 2018)
 * Bug Fixes
