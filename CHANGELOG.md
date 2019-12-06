@@ -249,7 +249,7 @@
     * Removed *** from beginning of error messages printed by `do_help()` and `default()`
     * Significantly refactored ``cmd.Cmd`` class so that all class attributes got converted to instance attributes, also:
         * Added ``allow_redirection``, ``terminators``, ``multiline_commands``, and ``shortcuts`` as optional arguments
-        to ``cmd2.Cmd.__init__()`
+        to ``cmd2.Cmd.__init__()``
         * A few instance attributes were moved inside ``StatementParser`` and properties were created for accessing them
     * ``self.pipe_proc`` is now called ``self.cur_pipe_proc_reader`` and is a ``ProcReader`` class.
     * Shell commands and commands being piped to while in a *pyscript* will function as if their output is going
