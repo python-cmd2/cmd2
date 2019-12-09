@@ -642,7 +642,7 @@ def align_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, 
     """
     Align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
-    supported. Each line in text will be aligned independently.
+    supported. If text has line breaks, then each line is aligned independently.
 
     There are convenience wrappers around this function: ljustify_text(), center_text(), and rjustify_text()
 
@@ -653,9 +653,8 @@ def align_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, 
                       be converted to a space.
     :param alignment: how to align the text
     :return: aligned text
-    :raises: ValueError if text or fill_char contains an unprintable character
-             TypeError if fill_char is more than one character
-
+    :raises: TypeError if fill_char is more than one character
+             ValueError if text or fill_char contains an unprintable character
     """
     import io
     import shutil
@@ -663,12 +662,12 @@ def align_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, 
     from . import ansi
 
     # Handle tabs
-    text.replace('\t', ' ' * tab_width)
+    text = text.replace('\t', ' ' * tab_width)
     if fill_char == '\t':
         fill_char = ' '
 
     if len(fill_char) != 1:
-        raise ValueError("Fill character must be exactly one character long")
+        raise TypeError("Fill character must be exactly one character long")
 
     fill_char_width = ansi.ansi_safe_wcswidth(fill_char)
     if fill_char_width == -1:
@@ -679,21 +678,20 @@ def align_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, 
     else:
         lines = ['']
 
+    if width is None:
+        width = shutil.get_terminal_size().columns
+
     text_buf = io.StringIO()
 
     for index, line in enumerate(lines):
         if index > 0:
             text_buf.write('\n')
 
-        # Use ansi_safe_wcswidth to support characters with display widths greater than 1
-        # as well as ANSI escape sequences
+        # Use ansi_safe_wcswidth to support characters with display widths
+        # greater than 1 as well as ANSI escape sequences
         line_width = ansi.ansi_safe_wcswidth(line)
         if line_width == -1:
-            # This can happen if text contains characters like newlines or tabs
             raise(ValueError("Text to align contains an unprintable character"))
-
-        if width is None:
-            width = shutil.get_terminal_size().columns
 
         # Check if line is wider than the desired final width
         if width <= line_width:
@@ -731,7 +729,7 @@ def ljustify_text(text: str, *, fill_char: str = ' ', width: Optional[int] = Non
     """
     Left justify text for display within a given width. Supports characters with display widths greater than 1.
     ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
-    supported. Each line in text will be aligned independently.
+    supported. If text has line breaks, then each line is aligned independently.
 
     :param text: text to left justify (Can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
@@ -748,7 +746,7 @@ def center_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     """
     Center text for display within a given width. Supports characters with display widths greater than 1.
     ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
-    supported. Each line in text will be aligned independently.
+    supported. If text has line breaks, then each line is aligned independently.
 
     :param text: text to center (Can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
@@ -765,7 +763,7 @@ def rjustify_text(text: str, *, fill_char: str = ' ', width: Optional[int] = Non
     """
     Right justify text for display within a given width. Supports characters with display widths greater than 1.
     ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
-    supported. Each line in text will be aligned independently.
+    supported. If text has line breaks, then each line is aligned independently.
 
     :param text: text to right justify (Can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
