@@ -13,9 +13,10 @@ from . import utils
 
 
 def shlex_split(str_to_split: str) -> List[str]:
-    """A wrapper around shlex.split() that uses cmd2's preferred arguments.
+    """
+    A wrapper around shlex.split() that uses cmd2's preferred arguments.
+    This allows other classes to easily call split() the same way StatementParser does.
 
-    This allows other classes to easily call split() the same way StatementParser does
     :param str_to_split: the string being split
     :return: A list of tokens
     """
@@ -26,8 +27,8 @@ def shlex_split(str_to_split: str) -> List[str]:
 class MacroArg:
     """
     Information used to replace or unescape arguments in a macro value when the macro is resolved
-    Normal argument syntax  : {5}
-    Escaped argument syntax: {{5}}
+    Normal argument syntax:    {5}
+    Escaped argument syntax:  {{5}}
     """
     # The starting index of this argument in the macro value
     start_index = attr.ib(validator=attr.validators.instance_of(int))

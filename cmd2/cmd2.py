@@ -3715,7 +3715,7 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(ansi.style(utils.center_text('cmd2 transcript test', pad='='), bold=True))
+        self.poutput(ansi.style(utils.center_text(' cmd2 transcript test ', fill_char='='), bold=True))
         self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
                                                                              rl_type))
         self.poutput('cwd: {}'.format(os.getcwd()))
@@ -3733,8 +3733,8 @@ class Cmd(cmd.Cmd):
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
             ansi.ansi_aware_write(sys.stderr, stream.read())
-            finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            finish_msg = ansi.style_success(utils.center_text(finish_msg, pad='='))
+            finish_msg = ' {0} transcript{1} passed in {2:.3f} seconds '.format(num_transcripts, plural, execution_time)
+            finish_msg = ansi.style_success(utils.center_text(finish_msg, fill_char='='))
             self.poutput(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users

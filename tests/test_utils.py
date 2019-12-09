@@ -293,24 +293,21 @@ def test_context_flag_exit_err(context_flag):
         context_flag.__exit__()
 
 
-def test_center_text_pad_none():
+def test_center_text_pad_equals():
     msg = 'foo'
-    centered = cu.center_text(msg, pad=None)
-    expected_center = ' ' + msg + ' '
-    assert expected_center in centered
+    fill_char = '='
+    centered = cu.center_text(msg, fill_char=fill_char)
+    assert msg in centered
+    assert centered.startswith(fill_char)
+    assert centered.endswith(fill_char)
     letters_in_centered = set(centered)
     letters_in_msg = set(msg)
     assert len(letters_in_centered) == len(letters_in_msg) + 1
 
-def test_center_text_pad_equals():
-    msg = 'foo'
-    pad = '='
-    centered = cu.center_text(msg, pad=pad)
-    expected_center = ' ' + msg + ' '
-    assert expected_center in centered
-    assert centered.startswith(pad)
-    assert centered.endswith(pad)
-    letters_in_centered = set(centered)
-    letters_in_msg = set(msg)
-    assert len(letters_in_centered) == len(letters_in_msg) + 2
 
+def test_center_text_pad_blank():
+    msg = 'foo'
+    fill_char = ''
+
+    with pytest.raises(ValueError):
+        cu.center_text(msg, fill_char=fill_char)
