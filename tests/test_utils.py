@@ -326,7 +326,7 @@ def test_align_text_blank():
     fill_char = '-'
     width = 5
     aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
-    assert aligned == text + fill_char * width
+    assert aligned == fill_char * width
 
 def test_align_text_wider_than_width():
     text = 'long'
@@ -334,6 +334,13 @@ def test_align_text_wider_than_width():
     width = 3
     aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
     assert aligned == text
+
+def test_align_text_has_unprintable():
+    text = 'foo\x02'
+    fill_char = '-'
+    width = 5
+    with pytest.raises(ValueError):
+        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
 
 def test_align_text_term_width():
     import shutil

@@ -737,6 +737,8 @@ def ljustify_text(text: str, *, fill_char: str = ' ', width: Optional[int] = Non
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
                       be converted to a space.
     :return: left-justified text
+    :raises: TypeError if fill_char is more than one character
+             ValueError if text or fill_char contains an unprintable character
     """
     return align_text(text, fill_char=fill_char, width=width,
                       tab_width=tab_width, alignment=TextAlignment.LEFT)
@@ -754,6 +756,8 @@ def center_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
                       be converted to a space.
     :return: centered text
+    :raises: TypeError if fill_char is more than one character
+             ValueError if text or fill_char contains an unprintable character
     """
     return align_text(text, fill_char=fill_char, width=width,
                       tab_width=tab_width, alignment=TextAlignment.CENTER)
@@ -771,6 +775,8 @@ def rjustify_text(text: str, *, fill_char: str = ' ', width: Optional[int] = Non
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
                       be converted to a space.
     :return: right-justified text
+    :raises: TypeError if fill_char is more than one character
+             ValueError if text or fill_char contains an unprintable character
     """
     return align_text(text, fill_char=fill_char, width=width,
                       tab_width=tab_width, alignment=TextAlignment.RIGHT)
