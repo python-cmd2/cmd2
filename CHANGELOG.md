@@ -1,4 +1,4 @@
-## 0.9.22 (TBD, 2019)
+## 0.9.22 (December 10, 2019)
 * Bug Fixes
     * Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files
 * Enhancements
