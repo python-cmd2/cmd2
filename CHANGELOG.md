@@ -1,11 +1,11 @@
-## 0.9.22 (December 10, 2019)
+## 0.9.22 (December 9, 2019)
 * Bug Fixes
     * Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files
 * Enhancements
     * Enabled line buffering when redirecting output to a file
-    * Added `ljustify_text()`, `center_text()`, and `rjustify_text()` to utils.py. All 3 of these functions support
+    * Added `align_left()`, `align_center()`, and `align_right()` to utils.py. All 3 of these functions support
     ANSI escape sequences and characters with display widths greater than 1.
-    
+
 ## 0.9.21 (November 26, 2019)
 * Bug Fixes
     * Fixed bug where pipe processes were not being stopped by Ctrl-C

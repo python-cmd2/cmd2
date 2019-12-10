@@ -637,21 +637,21 @@ class TextAlignment(Enum):
     RIGHT = 3
 
 
-def align_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4,
-               alignment: TextAlignment) -> str:
+def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
+               width: Optional[int] = None, tab_width: int = 4) -> str:
     """
     Align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
     supported. If text has line breaks, then each line is aligned independently.
 
-    There are convenience wrappers around this function: ljustify_text(), center_text(), and rjustify_text()
+    There are convenience wrappers around this function: align_left(), align_center(), and align_right()
 
-    :param text: text to align (Can contain multiple lines)
+    :param text: text to align (can contain multiple lines)
+    :param alignment: how to align the text
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
                       be converted to a space.
-    :param alignment: how to align the text
     :return: aligned text
     :raises: TypeError if fill_char is more than one character
              ValueError if text or fill_char contains an unprintable character
@@ -725,32 +725,31 @@ def align_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, 
     return text_buf.getvalue()
 
 
-def ljustify_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
+def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
     """
-    Left justify text for display within a given width. Supports characters with display widths greater than 1.
+    Left align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
     supported. If text has line breaks, then each line is aligned independently.
 
-    :param text: text to left justify (Can contain multiple lines)
+    :param text: text to left align (can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
                       be converted to a space.
-    :return: left-justified text
+    :return: left-aligned text
     :raises: TypeError if fill_char is more than one character
              ValueError if text or fill_char contains an unprintable character
     """
-    return align_text(text, fill_char=fill_char, width=width,
-                      tab_width=tab_width, alignment=TextAlignment.LEFT)
+    return align_text(text, TextAlignment.LEFT, fill_char=fill_char, width=width, tab_width=tab_width)
 
 
-def center_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
+def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
     """
     Center text for display within a given width. Supports characters with display widths greater than 1.
     ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
     supported. If text has line breaks, then each line is aligned independently.
 
-    :param text: text to center (Can contain multiple lines)
+    :param text: text to center (can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
@@ -759,24 +758,22 @@ def center_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     :raises: TypeError if fill_char is more than one character
              ValueError if text or fill_char contains an unprintable character
     """
-    return align_text(text, fill_char=fill_char, width=width,
-                      tab_width=tab_width, alignment=TextAlignment.CENTER)
+    return align_text(text, TextAlignment.CENTER, fill_char=fill_char, width=width, tab_width=tab_width)
 
 
-def rjustify_text(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
+def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
     """
-    Right justify text for display within a given width. Supports characters with display widths greater than 1.
+    Right align text for display within a given width. Supports characters with display widths greater than 1.
     ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
     supported. If text has line breaks, then each line is aligned independently.
 
-    :param text: text to right justify (Can contain multiple lines)
+    :param text: text to right align (can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
                       be converted to a space.
-    :return: right-justified text
+    :return: right-aligned text
     :raises: TypeError if fill_char is more than one character
              ValueError if text or fill_char contains an unprintable character
     """
-    return align_text(text, fill_char=fill_char, width=width,
-                      tab_width=tab_width, alignment=TextAlignment.RIGHT)
+    return align_text(text, TextAlignment.RIGHT, fill_char=fill_char, width=width, tab_width=tab_width)
