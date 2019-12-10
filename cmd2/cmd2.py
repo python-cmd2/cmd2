@@ -2718,6 +2718,7 @@ class Cmd(cmd.Cmd):
                 self.stdout.write("\n")
 
     shortcuts_parser = DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
+
     @with_argparser(shortcuts_parser)
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
@@ -2727,6 +2728,7 @@ class Cmd(cmd.Cmd):
         self.poutput("Shortcuts for other commands:\n{}".format(result))
 
     eof_parser = DEFAULT_ARGUMENT_PARSER(description="Called when <Ctrl>-D is pressed", epilog=INTERNAL_COMMAND_EPILOG)
+
     @with_argparser(eof_parser)
     def do_eof(self, _: argparse.Namespace) -> bool:
         """Called when <Ctrl>-D is pressed"""
@@ -2734,6 +2736,7 @@ class Cmd(cmd.Cmd):
         return True
 
     quit_parser = DEFAULT_ARGUMENT_PARSER(description="Exit this application")
+
     @with_argparser(quit_parser)
     def do_quit(self, _: argparse.Namespace) -> bool:
         """Exit this application"""
@@ -3215,6 +3218,7 @@ class Cmd(cmd.Cmd):
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
         ipython_parser = DEFAULT_ARGUMENT_PARSER(description="Enter an interactive IPython shell")
+
         @with_argparser(ipython_parser)
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
@@ -3223,6 +3227,7 @@ class Cmd(cmd.Cmd):
                       'Run Python code from external files with: run filename.py\n')
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
+            # noinspection PyUnusedLocal
             def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
                 """
                 Embed an IPython shell in an environment that is restricted to only the variables in this function
@@ -3715,7 +3720,7 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(ansi.style(utils.center_text('cmd2 transcript test', pad='='), bold=True))
+        self.poutput(ansi.style(utils.align_center(' cmd2 transcript test ', fill_char='='), bold=True))
         self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
                                                                              rl_type))
         self.poutput('cwd: {}'.format(os.getcwd()))
@@ -3733,8 +3738,8 @@ class Cmd(cmd.Cmd):
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
             ansi.ansi_aware_write(sys.stderr, stream.read())
-            finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            finish_msg = ansi.style_success(utils.center_text(finish_msg, pad='='))
+            finish_msg = ' {0} transcript{1} passed in {2:.3f} seconds '.format(num_transcripts, plural, execution_time)
+            finish_msg = ansi.style_success(utils.align_center(finish_msg, fill_char='='))
             self.poutput(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users
