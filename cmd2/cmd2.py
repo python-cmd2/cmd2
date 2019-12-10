@@ -3358,7 +3358,7 @@ class Cmd(cmd.Cmd):
             with os.fdopen(fd, 'w') as fobj:
                 for command in history:
                     if command.statement.multiline_command:
-                        fobj.write('{}\n'.format(command.expanded.rstrip()))
+                        fobj.write('{}\n'.format(command.expanded))
                     else:
                         fobj.write('{}\n'.format(command.raw))
             try:
@@ -3372,7 +3372,7 @@ class Cmd(cmd.Cmd):
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
                     for item in history:
                         if item.statement.multiline_command:
-                            fobj.write('{}\n'.format(item.expanded.rstrip()))
+                            fobj.write('{}\n'.format(item.expanded))
                         else:
                             fobj.write('{}\n'.format(item.raw))
                 plural = 's' if len(history) > 1 else ''
