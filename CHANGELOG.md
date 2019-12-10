@@ -4,7 +4,8 @@
 * Enhancements
     * Enabled line buffering when redirecting output to a file
     * Added `align_left()`, `align_center()`, and `align_right()` to utils.py. All 3 of these functions support
-    ANSI escape sequences and characters with display widths greater than 1.
+    ANSI escape sequences and characters with display widths greater than 1. They wrap `align_text()` which
+    is also in utils.py.
 
 ## 0.9.21 (November 26, 2019)
 * Bug Fixes

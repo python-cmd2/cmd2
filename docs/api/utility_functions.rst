@@ -9,7 +9,13 @@ Utility Functions
 
 .. autofunction:: cmd2.decorators.categorize
 
-.. autofunction:: cmd2.utils.center_text
+.. autofunction:: cmd2.utils.align_text
+
+.. autofunction:: cmd2.utils.align_left
+
+.. autofunction:: cmd2.utils.align_center
+
+.. autofunction:: cmd2.utils.align_right
 
 .. autofunction:: cmd2.utils.strip_quotes
 
