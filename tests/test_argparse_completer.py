@@ -535,11 +535,11 @@ def test_autocomp_blank_token(ac_app):
 def test_completion_items(ac_app, num_aliases, show_description):
     # Create aliases
     for i in range(0, num_aliases):
-        run_cmd(ac_app, 'alias create fake{} help'.format(i))
+        run_cmd(ac_app, 'alias create fake_alias{} help'.format(i))
 
     assert len(ac_app.aliases) == num_aliases
 
-    text = 'fake'
+    text = 'fake_alias'
     line = 'alias list {}'.format(text)
     endidx = len(line)
     begidx = endidx - len(text)
