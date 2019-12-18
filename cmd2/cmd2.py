@@ -300,7 +300,7 @@ class Cmd(cmd.Cmd):
         if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script):
-                self._startup_commands.append("run_script '{}'".format(startup_script))
+                self._startup_commands.append("run_script {}".format(utils.quote_string(startup_script)))
 
         # Transcript files to run instead of interactive command loop
         self._transcript_files = None
