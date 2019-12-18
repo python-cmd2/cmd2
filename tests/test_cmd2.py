@@ -2360,6 +2360,21 @@ def test_startup_script(request):
     assert 'alias create ls' in out[0]
 
 
+@pytest.mark.parametrize('startup_script', odd_file_names)
+def test_startup_script_with_odd_file_names(startup_script):
+    """Test file names with various patterns"""
+    # Mock os.path.exists to trick cmd2 into adding this script to its startup commands
+    saved_exists = os.path.exists
+    os.path.exists = mock.MagicMock(name='exists', return_value=True)
+
+    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
+    assert len(app._startup_commands) == 1
+    assert app._startup_commands[0] == "run_script {}".format(utils.quote_string(os.path.abspath(startup_script)))
+
+    # Restore os.path.exists
+    os.path.exists = saved_exists
+
+
 def test_transcripts_at_init():
     transcript_files = ['foo', 'bar']
     app = cmd2.Cmd(allow_cli_args=False, transcript_files=transcript_files)
