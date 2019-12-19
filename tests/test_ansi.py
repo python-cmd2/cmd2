@@ -10,11 +10,11 @@ import cmd2.ansi as ansi
 HELLO_WORLD = 'Hello, world!'
 
 
-def test_strip_ansi():
+def test_strip_style():
     base_str = HELLO_WORLD
     ansi_str = ansi.style(base_str, fg='green')
     assert base_str != ansi_str
-    assert base_str == ansi.strip_ansi(ansi_str)
+    assert base_str == ansi.strip_style(ansi_str)
 
 
 def test_ansi_safe_wcswidth():

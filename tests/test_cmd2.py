@@ -187,26 +187,26 @@ now: True
     assert out == ['quiet: True']
 
 @pytest.mark.parametrize('new_val, is_valid, expected', [
-    (ansi.ANSI_NEVER, False, ansi.ANSI_NEVER),
-    ('neVeR', False, ansi.ANSI_NEVER),
-    (ansi.ANSI_TERMINAL, False, ansi.ANSI_TERMINAL),
-    ('TeRMInal', False, ansi.ANSI_TERMINAL),
-    (ansi.ANSI_ALWAYS, False, ansi.ANSI_ALWAYS),
-    ('AlWaYs', False, ansi.ANSI_ALWAYS),
-    ('invalid', True, ansi.ANSI_TERMINAL),
+    (ansi.STYLE_NEVER, False, ansi.STYLE_NEVER),
+    ('neVeR', False, ansi.STYLE_NEVER),
+    (ansi.STYLE_TERMINAL, False, ansi.STYLE_TERMINAL),
+    ('TeRMInal', False, ansi.STYLE_TERMINAL),
+    (ansi.STYLE_ALWAYS, False, ansi.STYLE_ALWAYS),
+    ('AlWaYs', False, ansi.STYLE_ALWAYS),
+    ('invalid', True, ansi.STYLE_TERMINAL),
 ])
-def test_set_allow_ansi(base_app, new_val, is_valid, expected):
-    # Initialize allow_ansi for this test
-    ansi.allow_ansi = ansi.ANSI_TERMINAL
+def test_set_allow_style(base_app, new_val, is_valid, expected):
+    # Initialize allow_style for this test
+    ansi.allow_style = ansi.STYLE_TERMINAL
 
     # Use the set command to alter it
-    out, err = run_cmd(base_app, 'set allow_ansi {}'.format(new_val))
+    out, err = run_cmd(base_app, 'set allow_style {}'.format(new_val))
 
     # Verify the results
     assert bool(err) == is_valid
-    assert ansi.allow_ansi == expected
+    assert ansi.allow_style == expected
 
-    # Reload ansi module to reset allow_ansi to its default since it's an
+    # Reload ansi module to reset allow_style to its default since it's an
     # application-wide setting that can affect other unit tests.
     import importlib
     importlib.reload(ansi)
@@ -376,11 +376,11 @@ def test_run_script_nested_run_scripts(base_app, request):
     expected = """
 %s
 _relative_run_script precmds.txt
-set allow_ansi Always
+set allow_style Always
 help
 shortcuts
 _relative_run_script postcmds.txt
-set allow_ansi Never""" % initial_run
+set allow_style Never""" % initial_run
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
@@ -395,11 +395,11 @@ def test_runcmds_plus_hooks(base_app, request):
                                  'run_script ' + postfilepath])
     expected = """
 run_script %s
-set allow_ansi Always
+set allow_style Always
 help
 shortcuts
 run_script %s
-set allow_ansi Never""" % (prefilepath, postfilepath)
+set allow_style Never""" % (prefilepath, postfilepath)
 
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
@@ -1564,7 +1564,7 @@ def test_poutput_none(outsim_app):
 
 def test_poutput_ansi_always(outsim_app):
     msg = 'Hello World'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     colored_msg = ansi.style(msg, fg='cyan')
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
@@ -1574,7 +1574,7 @@ def test_poutput_ansi_always(outsim_app):
 
 def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
-    ansi.allow_ansi = ansi.ANSI_NEVER
+    ansi.allow_style = ansi.STYLE_NEVER
     colored_msg = ansi.style(msg, fg='cyan')
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
@@ -1885,7 +1885,7 @@ def test_nonexistent_macro(base_app):
 def test_perror_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     base_app.perror(msg)
     out, err = capsys.readouterr()
     assert err == ansi.style_error(msg) + end
@@ -1893,7 +1893,7 @@ def test_perror_style(base_app, capsys):
 def test_perror_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     base_app.perror(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
@@ -1901,7 +1901,7 @@ def test_perror_no_style(base_app, capsys):
 def test_pwarning_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     base_app.pwarning(msg)
     out, err = capsys.readouterr()
     assert err == ansi.style_warning(msg) + end
@@ -1909,7 +1909,7 @@ def test_pwarning_style(base_app, capsys):
 def test_pwarning_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     base_app.pwarning(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
@@ -1936,7 +1936,7 @@ def test_ppaged_none(outsim_app):
 def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_TERMINAL
+    ansi.allow_style = ansi.STYLE_TERMINAL
     outsim_app._redirecting = True
     outsim_app.ppaged(ansi.style(msg, fg='red'))
     out = outsim_app.stdout.getvalue()
@@ -1945,7 +1945,7 @@ def test_ppaged_strips_ansi_when_redirecting(outsim_app):
 def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     outsim_app._redirecting = True
     colored_msg = ansi.style(msg, fg='red')
     outsim_app.ppaged(colored_msg)
@@ -2112,13 +2112,13 @@ class AnsiApp(cmd2.Cmd):
 
 def test_ansi_pouterr_always_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    # if colors are on, the output should have some escape sequences in it
+    # if colors are on, the output should have some ANSI style sequences in it
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
     assert len(err) > len('oopsie\n')
@@ -2134,13 +2134,13 @@ def test_ansi_pouterr_always_tty(mocker, capsys):
 
 def test_ansi_pouterr_always_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    # if colors are on, the output should have some escape sequences in it
+    # if colors are on, the output should have some ANSI style sequences in it
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
     assert len(err) > len('oopsie\n')
@@ -2156,12 +2156,12 @@ def test_ansi_pouterr_always_notty(mocker, capsys):
 
 def test_ansi_terminal_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_TERMINAL
+    ansi.allow_style = ansi.STYLE_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
     app.onecmd_plus_hooks('echo_error oopsie')
-    # if colors are on, the output should have some escape sequences in it
+    # if colors are on, the output should have some ANSI style sequences in it
     out, err = capsys.readouterr()
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
@@ -2177,7 +2177,7 @@ def test_ansi_terminal_tty(mocker, capsys):
 
 def test_ansi_terminal_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_TERMINAL
+    ansi.allow_style = ansi.STYLE_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -2191,7 +2191,7 @@ def test_ansi_terminal_notty(mocker, capsys):
 
 def test_ansi_never_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_NEVER
+    ansi.allow_style = ansi.STYLE_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2205,7 +2205,7 @@ def test_ansi_never_tty(mocker, capsys):
 
 def test_ansi_never_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_NEVER
+    ansi.allow_style = ansi.STYLE_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 

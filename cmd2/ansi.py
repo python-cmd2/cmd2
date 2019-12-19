@@ -1,5 +1,8 @@
 # coding=utf-8
-"""Support for ANSI escape sequences which are used for things like applying style to text"""
+"""
+Support for ANSI escape sequences which are used for things like applying style to text,
+setting the window title, and asynchronous alerts.
+ """
 import functools
 import re
 from typing import Any, IO
@@ -11,16 +14,17 @@ from wcwidth import wcswidth
 # On Windows, filter ANSI escape codes out of text sent to stdout/stderr, and replace them with equivalent Win32 calls
 colorama.init(strip=False)
 
-# Values for allow_ansi setting
-ANSI_NEVER = 'Never'
-ANSI_TERMINAL = 'Terminal'
-ANSI_ALWAYS = 'Always'
+# Values for allow_style setting
+STYLE_NEVER = 'Never'
+STYLE_TERMINAL = 'Terminal'
+STYLE_ALWAYS = 'Always'
 
-# Controls when ANSI escape sequences are allowed in output
-allow_ansi = ANSI_TERMINAL
+# Controls when ANSI style style sequences are allowed in output
+allow_style = STYLE_TERMINAL
 
-# Regular expression to match ANSI escape sequences
-ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
+# Regular expression to match ANSI style sequences
+# This matches: colorama.ansi.CSI + digit(s) + m
+ANSI_STYLE_RE = re.compile(r'\033\[[0-9]+m')
 
 # Foreground color presets
 FG_COLORS = {
@@ -71,41 +75,41 @@ RESET_ALL = Style.RESET_ALL
 BRIGHT = Style.BRIGHT
 NORMAL = Style.NORMAL
 
-# ANSI escape sequences not provided by colorama
+# ANSI style sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
 UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
 
 
-def strip_ansi(text: str) -> str:
+def strip_style(text: str) -> str:
     """
-    Strip ANSI escape sequences from a string.
+    Strip ANSI style sequences from a string.
 
-    :param text: string which may contain ANSI escape sequences
-    :return: the same string with any ANSI escape sequences removed
+    :param text: string which may contain ANSI style sequences
+    :return: the same string with any ANSI style sequences removed
     """
-    return ANSI_ESCAPE_RE.sub('', text)
+    return ANSI_STYLE_RE.sub('', text)
 
 
 def ansi_safe_wcswidth(text: str) -> int:
     """
-    Wrap wcswidth to make it compatible with strings that contains ANSI escape sequences
+    Wrap wcswidth to make it compatible with strings that contains ANSI style sequences
 
     :param text: the string being measured
     """
-    # Strip ANSI escape sequences since they cause wcswidth to return -1
-    return wcswidth(strip_ansi(text))
+    # Strip ANSI style sequences since they cause wcswidth to return -1
+    return wcswidth(strip_style(text))
 
 
 def ansi_aware_write(fileobj: IO, msg: str) -> None:
     """
-    Write a string to a fileobject and strip its ANSI escape sequences if required by allow_ansi setting
+    Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting
 
     :param fileobj: the file object being written to
     :param msg: the string being written
     """
-    if allow_ansi.lower() == ANSI_NEVER.lower() or \
-            (allow_ansi.lower() == ANSI_TERMINAL.lower() and not fileobj.isatty()):
-        msg = strip_ansi(msg)
+    if allow_style.lower() == STYLE_NEVER.lower() or \
+            (allow_style.lower() == STYLE_TERMINAL.lower() and not fileobj.isatty()):
+        msg = strip_style(msg)
     fileobj.write(msg)
 
 
@@ -176,7 +180,7 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
         additions.append(UNDERLINE_ENABLE)
         removals.append(UNDERLINE_DISABLE)
 
-    # Combine the ANSI escape sequences with the text
+    # Combine the ANSI style sequences with the text
     return "".join(additions) + text + "".join(removals)
 
 

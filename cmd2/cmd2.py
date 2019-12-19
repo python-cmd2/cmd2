@@ -206,11 +206,11 @@ class Cmd(cmd.Cmd):
         # To make an attribute settable with the "do_set" command, add it to this ...
         self.settable = \
             {
-                # allow_ansi is a special case in which it's an application-wide setting defined in ansi.py
-                'allow_ansi': ('Allow ANSI escape sequences in output '
-                               '(valid values: {}, {}, {})'.format(ansi.ANSI_TERMINAL,
-                                                                   ansi.ANSI_ALWAYS,
-                                                                   ansi.ANSI_NEVER)),
+                # allow_style is a special case in which it's an application-wide setting defined in ansi.py
+                'allow_style': ('Allow ANSI style sequences in output '
+                                '(valid values: {}, {}, {})'.format(ansi.STYLE_TERMINAL,
+                                                                    ansi.STYLE_ALWAYS,
+                                                                    ansi.STYLE_NEVER)),
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
@@ -366,7 +366,7 @@ class Cmd(cmd.Cmd):
         else:
             # Here is the meaning of the various flags we are using with the less command:
             # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
-            # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
+            # -R causes ANSI "style" escape sequences to be output in raw form (i.e. colors are displayed)
             # -X disables sending the termcap initialization and deinitialization strings to the terminal
             # -F causes less to automatically exit if the entire file can be displayed on the first screen
             self.pager = 'less -RXF'
@@ -395,23 +395,23 @@ class Cmd(cmd.Cmd):
     # -----  Methods related to presenting output to the user -----
 
     @property
-    def allow_ansi(self) -> str:
-        """Read-only property needed to support do_set when it reads allow_ansi"""
-        return ansi.allow_ansi
+    def allow_style(self) -> str:
+        """Read-only property needed to support do_set when it reads allow_style"""
+        return ansi.allow_style
 
-    @allow_ansi.setter
-    def allow_ansi(self, new_val: str) -> None:
-        """Setter property needed to support do_set when it updates allow_ansi"""
+    @allow_style.setter
+    def allow_style(self, new_val: str) -> None:
+        """Setter property needed to support do_set when it updates allow_style"""
         new_val = new_val.lower()
-        if new_val == ansi.ANSI_TERMINAL.lower():
-            ansi.allow_ansi = ansi.ANSI_TERMINAL
-        elif new_val == ansi.ANSI_ALWAYS.lower():
-            ansi.allow_ansi = ansi.ANSI_ALWAYS
-        elif new_val == ansi.ANSI_NEVER.lower():
-            ansi.allow_ansi = ansi.ANSI_NEVER
+        if new_val == ansi.STYLE_TERMINAL.lower():
+            ansi.allow_style = ansi.STYLE_TERMINAL
+        elif new_val == ansi.STYLE_ALWAYS.lower():
+            ansi.allow_style = ansi.STYLE_ALWAYS
+        elif new_val == ansi.STYLE_NEVER.lower():
+            ansi.allow_style = ansi.STYLE_NEVER
         else:
-            self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.ANSI_TERMINAL,
-                                                                              ansi.ANSI_ALWAYS, ansi.ANSI_NEVER))
+            self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.STYLE_TERMINAL,
+                                                                              ansi.STYLE_ALWAYS, ansi.STYLE_NEVER))
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported"""
@@ -419,14 +419,14 @@ class Cmd(cmd.Cmd):
 
     @property
     def visible_prompt(self) -> str:
-        """Read-only property to get the visible prompt with any ANSI escape codes stripped.
+        """Read-only property to get the visible prompt with any ANSI style escape codes stripped.
 
         Used by transcript testing to make it easier and more reliable when users are doing things like coloring the
         prompt using ANSI color codes.
 
         :return: prompt stripped of any ANSI escape codes
         """
-        return ansi.strip_ansi(self.prompt)
+        return ansi.strip_style(self.prompt)
 
     def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
@@ -551,8 +551,8 @@ class Cmd(cmd.Cmd):
             # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
             # Also only attempt to use a pager if actually running in a real fully functional terminal
             if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
-                if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower():
-                    msg_str = ansi.strip_ansi(msg_str)
+                if ansi.allow_style.lower() == ansi.STYLE_NEVER.lower():
+                    msg_str = ansi.strip_style(msg_str)
                 msg_str += end
 
                 pager = self.pager

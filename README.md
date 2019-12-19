@@ -317,7 +317,7 @@ example/transcript_regex.txt:
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
-allow_ansi: Terminal
+allow_style: Terminal
 continuation_prompt: >/ /
 debug: False
 echo: False
