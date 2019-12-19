@@ -349,7 +349,7 @@ def test_align_text_term_width():
     fill_char = ' '
 
     term_width = shutil.get_terminal_size().columns
-    expected_fill = (term_width - ansi.ansi_safe_wcswidth(text)) * fill_char
+    expected_fill = (term_width - ansi.style_aware_wcswidth(text)) * fill_char
 
     aligned = cu.align_text(text, fill_char=fill_char, alignment=cu.TextAlignment.LEFT)
     assert aligned == text + expected_fill

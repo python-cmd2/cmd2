@@ -439,7 +439,7 @@ class Cmd(cmd.Cmd):
         :param end: string appended after the end of the message, default a newline
         """
         try:
-            ansi.ansi_aware_write(self.stdout, "{}{}".format(msg, end))
+            ansi.style_aware_write(self.stdout, "{}{}".format(msg, end))
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another
             # process and that process closes before the command is
@@ -462,7 +462,7 @@ class Cmd(cmd.Cmd):
             final_msg = ansi.style_error(msg)
         else:
             final_msg = "{}".format(msg)
-        ansi.ansi_aware_write(sys.stderr, final_msg + end)
+        ansi.style_aware_write(sys.stderr, final_msg + end)
 
     def pwarning(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Wraps perror, but applies ansi.style_warning by default
@@ -1096,7 +1096,7 @@ class Cmd(cmd.Cmd):
                 longest_match_length = 0
 
                 for cur_match in matches_to_display:
-                    cur_length = ansi.ansi_safe_wcswidth(cur_match)
+                    cur_length = ansi.style_aware_wcswidth(cur_match)
                     if cur_length > longest_match_length:
                         longest_match_length = cur_length
             else:
@@ -2653,7 +2653,7 @@ class Cmd(cmd.Cmd):
                 widest = 0
                 # measure the commands
                 for command in cmds:
-                    width = ansi.ansi_safe_wcswidth(command)
+                    width = ansi.style_aware_wcswidth(command)
                     if width > widest:
                         widest = width
                 # add a 4-space pad
@@ -3737,7 +3737,7 @@ class Cmd(cmd.Cmd):
         test_results = runner.run(testcase)
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
-            ansi.ansi_aware_write(sys.stderr, stream.read())
+            ansi.style_aware_write(sys.stderr, stream.read())
             finish_msg = ' {0} transcript{1} passed in {2:.3f} seconds '.format(num_transcripts, plural, execution_time)
             finish_msg = ansi.style_success(utils.align_center(finish_msg, fill_char='='))
             self.poutput(finish_msg)

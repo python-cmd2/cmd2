@@ -90,20 +90,18 @@ def strip_style(text: str) -> str:
     return ANSI_STYLE_RE.sub('', text)
 
 
-def ansi_safe_wcswidth(text: str) -> int:
+def style_aware_wcswidth(text: str) -> int:
     """
     Wrap wcswidth to make it compatible with strings that contains ANSI style sequences
-
     :param text: the string being measured
     """
     # Strip ANSI style sequences since they cause wcswidth to return -1
     return wcswidth(strip_style(text))
 
 
-def ansi_aware_write(fileobj: IO, msg: str) -> None:
+def style_aware_write(fileobj: IO, msg: str) -> None:
     """
     Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting
-
     :param fileobj: the file object being written to
     :param msg: the string being written
     """
@@ -114,8 +112,8 @@ def ansi_aware_write(fileobj: IO, msg: str) -> None:
 
 
 def fg_lookup(fg_name: str) -> str:
-    """Look up ANSI escape codes based on foreground color name.
-
+    """
+    Look up ANSI escape codes based on foreground color name.
     :param fg_name: foreground color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError if the color cannot be found
@@ -128,8 +126,8 @@ def fg_lookup(fg_name: str) -> str:
 
 
 def bg_lookup(bg_name: str) -> str:
-    """Look up ANSI escape codes based on background color name.
-
+    """
+    Look up ANSI escape codes based on background color name.
     :param bg_name: background color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError if the color cannot be found
@@ -142,8 +140,8 @@ def bg_lookup(bg_name: str) -> str:
 
 
 def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
-    """Styles a string with ANSI colors and/or styles and returns the new string.
-
+    """
+    Apply ANSI colors and/or styles to a string and return it.
     The styling is self contained which means that at the end of the string reset code(s) are issued
     to undo whatever styling was done at the beginning.
 
@@ -210,14 +208,14 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     # That will be included in the input lines calculations since that is where the cursor is.
     num_prompt_terminal_lines = 0
     for line in prompt_lines[:-1]:
-        line_width = ansi_safe_wcswidth(line)
+        line_width = style_aware_wcswidth(line)
         num_prompt_terminal_lines += int(line_width / terminal_columns) + 1
 
     # Now calculate how many terminal lines are take up by the input
     last_prompt_line = prompt_lines[-1]
-    last_prompt_line_width = ansi_safe_wcswidth(last_prompt_line)
+    last_prompt_line_width = style_aware_wcswidth(last_prompt_line)
 
-    input_width = last_prompt_line_width + ansi_safe_wcswidth(line)
+    input_width = last_prompt_line_width + style_aware_wcswidth(line)
 
     num_input_terminal_lines = int(input_width / terminal_columns) + 1
 

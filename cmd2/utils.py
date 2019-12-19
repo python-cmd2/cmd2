@@ -669,7 +669,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
     if len(fill_char) != 1:
         raise TypeError("Fill character must be exactly one character long")
 
-    fill_char_width = ansi.ansi_safe_wcswidth(fill_char)
+    fill_char_width = ansi.style_aware_wcswidth(fill_char)
     if fill_char_width == -1:
         raise (ValueError("Fill character is an unprintable character"))
 
@@ -687,9 +687,9 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
         if index > 0:
             text_buf.write('\n')
 
-        # Use ansi_safe_wcswidth to support characters with display widths
+        # Use style_aware_wcswidth to support characters with display widths
         # greater than 1 as well as ANSI style sequences
-        line_width = ansi.ansi_safe_wcswidth(line)
+        line_width = ansi.style_aware_wcswidth(line)
         if line_width == -1:
             raise(ValueError("Text to align contains an unprintable character"))
 
@@ -717,8 +717,8 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
 
         # In cases where the fill character display width didn't divide evenly into
         # the gaps being filled, pad the remainder with spaces.
-        left_fill += ' ' * (left_fill_width - ansi.ansi_safe_wcswidth(left_fill))
-        right_fill += ' ' * (right_fill_width - ansi.ansi_safe_wcswidth(right_fill))
+        left_fill += ' ' * (left_fill_width - ansi.style_aware_wcswidth(left_fill))
+        right_fill += ' ' * (right_fill_width - ansi.style_aware_wcswidth(right_fill))
 
         text_buf.write(left_fill + line + right_fill)
 

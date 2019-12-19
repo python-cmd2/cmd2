@@ -17,10 +17,10 @@ def test_strip_style():
     assert base_str == ansi.strip_style(ansi_str)
 
 
-def test_ansi_safe_wcswidth():
+def test_style_aware_wcswidth():
     base_str = HELLO_WORLD
     ansi_str = ansi.style(base_str, fg='green')
-    assert ansi.ansi_safe_wcswidth(ansi_str) != len(ansi_str)
+    assert ansi.style_aware_wcswidth(ansi_str) != len(ansi_str)
 
 
 def test_style_none():

@@ -1,6 +1,11 @@
 ## 0.9.23 (TBD, 2019)
 * Bug Fixes
     * Fixed bug where startup script containing a single quote in its file name was incorrectly quoted
+* Breaking changes
+    * Renamed the following `ansi` members for accuracy in what types of ANSI escape sequences are handled
+        * `ansi.allow_ansi` -> `ansi.allow_style`
+        * `ansi.ansi_safe_wcswidth()` -> `ansi.style_aware_wcswidth()`
+        * `ansi.ansi_aware_write()` -> `ansi.style_aware_write()`
 
 ## 0.9.22 (December 9, 2019)
 * Bug Fixes
