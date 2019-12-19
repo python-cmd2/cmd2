@@ -157,6 +157,15 @@ def base_app():
     return cmd2.Cmd()
 
 
+# These are odd file names for testing quoting of them
+odd_file_names = [
+    'nothingweird',
+    'has   spaces',
+    '"is_double_quoted"',
+    "'is_single_quoted'"
+]
+
+
 def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Optional[str]:
     """
     This is a convenience function to test cmd2.complete() since
