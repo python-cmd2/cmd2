@@ -1,3 +1,7 @@
+## 0.9.23 (TBD, 2019)
+* Bug Fixes
+    * Fixed bug where startup script containing a single quote in its file name was incorrectly quoted
+
 ## 0.9.22 (December 9, 2019)
 * Bug Fixes
     * Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files

@@ -21,8 +21,8 @@ except ImportError:
 
 import cmd2
 from cmd2 import ansi, clipboard, constants, plugin, utils, COMMAND_NAME
-from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY
-from .conftest import SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, complete_tester
+from .conftest import (run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT,
+                       SHOW_LONG, complete_tester, odd_file_names)
 
 def CreateOutsimApp():
     c = cmd2.Cmd()
@@ -431,31 +431,15 @@ def test_relative_run_script(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-def test_relative_run_script_with_odd_file_names(base_app, monkeypatch):
+@pytest.mark.parametrize('file_name', odd_file_names)
+def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatch):
     """Test file names with various patterns"""
     # Mock out the do_run_script call to see what args are passed to it
     run_script_mock = mock.MagicMock(name='do_run_script')
     monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
-    file_name = utils.quote_string('nothingweird.txt')
-    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
-    run_script_mock.assert_called_once_with('"nothingweird.txt"')
-    run_script_mock.reset_mock()
-
-    file_name = utils.quote_string('has   spaces.txt')
-    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
-    run_script_mock.assert_called_once_with('"has   spaces.txt"')
-    run_script_mock.reset_mock()
-
-    file_name = utils.quote_string('"is_double_quoted.txt"')
-    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
-    run_script_mock.assert_called_once_with('\'"is_double_quoted.txt"\'')
-    run_script_mock.reset_mock()
-
-    file_name = utils.quote_string("'is_single_quoted.txt'")
-    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
-    run_script_mock.assert_called_once_with('"\'is_single_quoted.txt\'"')
-    run_script_mock.reset_mock()
+    run_cmd(base_app, "_relative_run_script {}".format(utils.quote_string(file_name)))
+    run_script_mock.assert_called_once_with(utils.quote_string(file_name))
 
 def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
@@ -715,7 +699,8 @@ def test_edit_file(base_app, request, monkeypatch):
     # We think we have an editor, so should expect a Popen call
     m.assert_called_once()
 
-def test_edit_file_with_odd_file_names(base_app, monkeypatch):
+@pytest.mark.parametrize('file_name', odd_file_names)
+def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch):
     """Test editor and file names with various patterns"""
     # Mock out the do_shell call to see what args are passed to it
     shell_mock = mock.MagicMock(name='do_shell')
@@ -723,27 +708,8 @@ def test_edit_file_with_odd_file_names(base_app, monkeypatch):
 
     base_app.editor = 'fooedit'
     file_name = utils.quote_string('nothingweird.py')
-    out, err = run_cmd(base_app, "edit {}".format(file_name))
-    shell_mock.assert_called_once_with('"fooedit" "nothingweird.py"')
-    shell_mock.reset_mock()
-
-    base_app.editor = 'foo edit'
-    file_name = utils.quote_string('has   spaces.py')
-    out, err = run_cmd(base_app, "edit {}".format(file_name))
-    shell_mock.assert_called_once_with('"foo edit" "has   spaces.py"')
-    shell_mock.reset_mock()
-
-    base_app.editor = '"fooedit"'
-    file_name = utils.quote_string('"is_double_quoted.py"')
-    out, err = run_cmd(base_app, "edit {}".format(file_name))
-    shell_mock.assert_called_once_with('\'"fooedit"\' \'"is_double_quoted.py"\'')
-    shell_mock.reset_mock()
-
-    base_app.editor = "'fooedit'"
-    file_name = utils.quote_string("'is_single_quoted.py'")
-    out, err = run_cmd(base_app, "edit {}".format(file_name))
-    shell_mock.assert_called_once_with('"\'fooedit\'" "\'is_single_quoted.py\'"')
-    shell_mock.reset_mock()
+    run_cmd(base_app, "edit {}".format(utils.quote_string(file_name)))
+    shell_mock.assert_called_once_with('"fooedit" {}'.format(utils.quote_string(file_name)))
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
@@ -2386,12 +2352,27 @@ def test_startup_script(request):
     startup_script = os.path.join(test_dir, '.cmd2rc')
     app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
     assert len(app._startup_commands) == 1
-    assert app._startup_commands[0] == "run_script '{}'".format(startup_script)
+    assert app._startup_commands[0] == "run_script {}".format(utils.quote_string(startup_script))
     app._startup_commands.append('quit')
     app.cmdloop()
     out, err = run_cmd(app, 'alias list')
     assert len(out) > 1
     assert 'alias create ls' in out[0]
+
+
+@pytest.mark.parametrize('startup_script', odd_file_names)
+def test_startup_script_with_odd_file_names(startup_script):
+    """Test file names with various patterns"""
+    # Mock os.path.exists to trick cmd2 into adding this script to its startup commands
+    saved_exists = os.path.exists
+    os.path.exists = mock.MagicMock(name='exists', return_value=True)
+
+    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
+    assert len(app._startup_commands) == 1
+    assert app._startup_commands[0] == "run_script {}".format(utils.quote_string(os.path.abspath(startup_script)))
+
+    # Restore os.path.exists
+    os.path.exists = saved_exists
 
 
 def test_transcripts_at_init():

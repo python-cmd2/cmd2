@@ -6,8 +6,10 @@ Unit/functional testing for run_pytest in cmd2
 import builtins
 import os
 
+import pytest
+
 from cmd2 import plugin, utils
-from .conftest import run_cmd
+from .conftest import run_cmd, odd_file_names
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
 try:
@@ -52,30 +54,19 @@ def test_run_pyscript_with_non_python_file(base_app, request):
     out, err = run_cmd(base_app, 'run_pyscript {}'.format(filename))
     assert "does not have a .py extension" in err[0]
 
-def test_run_pyscript_with_odd_file_names(base_app):
+@pytest.mark.parametrize('python_script', odd_file_names)
+def test_run_pyscript_with_odd_file_names(base_app, python_script):
     """
     Pass in file names with various patterns. Since these files don't exist, we will rely
     on the error text to make sure the file names were processed correctly.
     """
-    python_script = utils.quote_string('nothingweird.py')
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "Error reading script file 'nothingweird.py'" in err[0]
-
-    python_script = utils.quote_string('has   spaces.py')
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "Error reading script file 'has   spaces.py'" in err[0]
-
-    # For remaining tests, mock input to get us passed the warning about not ending in .py
+    # Mock input to get us passed the warning about not ending in .py
     input_mock = mock.MagicMock(name='input', return_value='1')
     builtins.input = input_mock
 
-    python_script = utils.quote_string('"is_double_quoted.py"')
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "Error reading script file '\"is_double_quoted.py\"'" in err[1]
-
-    python_script = utils.quote_string("'is_single_quoted.py'")
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert "Error reading script file ''is_single_quoted.py''" in err[1]
+    out, err = run_cmd(base_app, "run_pyscript {}".format(utils.quote_string(python_script)))
+    err = ''.join(err)
+    assert "Error reading script file '{}'".format(python_script) in err
 
 def test_run_pyscript_with_exception(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
