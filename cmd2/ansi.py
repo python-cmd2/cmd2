@@ -23,8 +23,8 @@ STYLE_ALWAYS = 'Always'
 allow_style = STYLE_TERMINAL
 
 # Regular expression to match ANSI style sequences
-# This matches: colorama.ansi.CSI + digit(s) + m
-ANSI_STYLE_RE = re.compile(r'\033\[[0-9]+m')
+# This matches: colorama.ansi.CSI + 0 or more digits + m
+ANSI_STYLE_RE = re.compile(r'\033\[[0-9]*m')
 
 # Foreground color presets
 FG_COLORS = {
