@@ -1,6 +1,7 @@
 ## 0.9.23 (TBD, 2019)
 * Bug Fixes
     * Fixed bug where startup script containing a single quote in its file name was incorrectly quoted
+    * Added missing implicit dependency on `setuptools` due to build with `setuptools_scm`
 
 ## 0.9.22 (December 9, 2019)
 * Bug Fixes
