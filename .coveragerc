@@ -20,5 +20,5 @@ precision = 1
 
 
 [html]
-# (string, default “htmlcov”): where to write the HTML report files.
+# (string, default "htmlcov"): where to write the HTML report files.
 directory = htmlcov
