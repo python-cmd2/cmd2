@@ -207,7 +207,7 @@ class Cmd(cmd.Cmd):
         self.settable = \
             {
                 # allow_style is a special case in which it's an application-wide setting defined in ansi.py
-                'allow_style': ('Allow ANSI style sequences in output '
+                'allow_style': ('Allow ANSI text style sequences in output '
                                 '(valid values: {}, {}, {})'.format(ansi.STYLE_TERMINAL,
                                                                     ansi.STYLE_ALWAYS,
                                                                     ansi.STYLE_NEVER)),

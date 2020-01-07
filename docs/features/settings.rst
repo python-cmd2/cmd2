@@ -46,7 +46,7 @@ comments, is viewable from within a running application
 with::
 
     (Cmd) set --long
-    allow_style: Terminal          # Allow ANSI style sequences in output (valid values: Terminal, Always, Never)
+    allow_style: Terminal          # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
     continuation_prompt: >         # On 2nd+ line of input
     debug: False                   # Show full error stack on error
     echo: False                    # Echo command issued into output
