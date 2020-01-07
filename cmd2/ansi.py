@@ -22,9 +22,8 @@ STYLE_ALWAYS = 'Always'
 # Controls when ANSI style style sequences are allowed in output
 allow_style = STYLE_TERMINAL
 
-# Regular expression to match ANSI style sequences
-# This matches: colorama.ansi.CSI + 0 or more digits + m
-ANSI_STYLE_RE = re.compile(r'\033\[[0-9]*m')
+# Regular expression to match ANSI style sequences (including 8-bit and 24-bit colors)
+ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 
 # Foreground color presets
 FG_COLORS = {
@@ -72,8 +71,10 @@ FG_RESET = FG_COLORS['reset']
 BG_RESET = BG_COLORS['reset']
 RESET_ALL = Style.RESET_ALL
 
-BRIGHT = Style.BRIGHT
-NORMAL = Style.NORMAL
+# Text intensities
+INTENSITY_BRIGHT = Style.BRIGHT
+INTENSITY_DIM = Style.DIM
+INTENSITY_NORMAL = Style.NORMAL
 
 # ANSI style sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
@@ -139,7 +140,8 @@ def bg_lookup(bg_name: str) -> str:
     return ansi_escape
 
 
-def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
+def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False,
+          dim: bool = False, underline: bool = False) -> str:
     """
     Apply ANSI colors and/or styles to a string and return it.
     The styling is self contained which means that at the end of the string reset code(s) are issued
@@ -148,7 +150,8 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
     :param text: Any object compatible with str.format()
     :param fg: foreground color. Relies on `fg_lookup()` to retrieve ANSI escape based on name. Defaults to no color.
     :param bg: background color. Relies on `bg_lookup()` to retrieve ANSI escape based on name. Defaults to no color.
-    :param bold: apply the bold style if True. Defaults to False.
+    :param bold: apply the bold style if True. Can be combined with dim. Defaults to False.
+    :param dim: apply the dim style if True. Can be combined with bold. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
     :return: the stylized string
     """
@@ -171,8 +174,12 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
         removals.append(BG_RESET)
 
     if bold:
-        additions.append(Style.BRIGHT)
-        removals.append(Style.NORMAL)
+        additions.append(INTENSITY_BRIGHT)
+        removals.append(INTENSITY_NORMAL)
+
+    if dim:
+        additions.append(INTENSITY_DIM)
+        removals.append(INTENSITY_NORMAL)
 
     if underline:
         additions.append(UNDERLINE_ENABLE)

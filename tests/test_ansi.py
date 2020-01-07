@@ -45,8 +45,14 @@ def test_style_bg():
 
 def test_style_bold():
     base_str = HELLO_WORLD
-    ansi_str = ansi.BRIGHT + base_str + ansi.NORMAL
+    ansi_str = ansi.INTENSITY_BRIGHT + base_str + ansi.INTENSITY_NORMAL
     assert ansi.style(base_str, bold=True) == ansi_str
+
+
+def test_style_dim():
+    base_str = HELLO_WORLD
+    ansi_str = ansi.INTENSITY_DIM + base_str + ansi.INTENSITY_NORMAL
+    assert ansi.style(base_str, dim=True) == ansi_str
 
 
 def test_style_underline():
@@ -59,9 +65,12 @@ def test_style_multi():
     base_str = HELLO_WORLD
     fg_color = 'blue'
     bg_color = 'green'
-    ansi_str = ansi.FG_COLORS[fg_color] + ansi.BG_COLORS[bg_color] + ansi.BRIGHT + ansi.UNDERLINE_ENABLE + \
-               base_str + ansi.FG_RESET + ansi.BG_RESET + ansi.NORMAL + ansi.UNDERLINE_DISABLE
-    assert ansi.style(base_str, fg=fg_color, bg=bg_color, bold=True, underline=True) == ansi_str
+    ansi_str = (ansi.FG_COLORS[fg_color] + ansi.BG_COLORS[bg_color] +
+                ansi.INTENSITY_BRIGHT + ansi.INTENSITY_DIM + ansi.UNDERLINE_ENABLE +
+                base_str +
+                ansi.FG_RESET + ansi.BG_RESET +
+                ansi.INTENSITY_NORMAL + ansi.INTENSITY_NORMAL + ansi.UNDERLINE_DISABLE)
+    assert ansi.style(base_str, fg=fg_color, bg=bg_color, bold=True, dim=True, underline=True) == ansi_str
 
 
 def test_style_color_not_exist():
