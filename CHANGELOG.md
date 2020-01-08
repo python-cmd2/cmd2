@@ -2,6 +2,16 @@
 * Bug Fixes
     * Fixed bug where startup script containing a single quote in its file name was incorrectly quoted
     * Added missing implicit dependency on `setuptools` due to build with `setuptools_scm`
+* Enhancements
+    * Added dim text style support via `style()` function and `ansi.INTENSITY_DIM` setting.
+* Breaking changes
+    * Renamed the following `ansi` members for accuracy in what types of ANSI escape sequences are handled
+        * `ansi.allow_ansi` -> `ansi.allow_style`
+        * `ansi.ansi_safe_wcswidth()` -> `ansi.style_aware_wcswidth()`
+        * `ansi.ansi_aware_write()` -> `ansi.style_aware_write()`
+    * Renamed the following `ansi` members for clarification
+        * `ansi.BRIGHT` -> `ansi.INTENSITY_BRIGHT`
+        * `ansi.NORMAL` -> `ansi.INTENSITY_NORMAL`
 
 ## 0.9.22 (December 9, 2019)
 * Bug Fixes

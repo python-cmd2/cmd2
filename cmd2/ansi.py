@@ -1,5 +1,8 @@
 # coding=utf-8
-"""Support for ANSI escape sequences which are used for things like applying style to text"""
+"""
+Support for ANSI escape sequences which are used for things like applying style to text,
+setting the window title, and asynchronous alerts.
+ """
 import functools
 import re
 from typing import Any, IO
@@ -11,16 +14,16 @@ from wcwidth import wcswidth
 # On Windows, filter ANSI escape codes out of text sent to stdout/stderr, and replace them with equivalent Win32 calls
 colorama.init(strip=False)
 
-# Values for allow_ansi setting
-ANSI_NEVER = 'Never'
-ANSI_TERMINAL = 'Terminal'
-ANSI_ALWAYS = 'Always'
+# Values for allow_style setting
+STYLE_NEVER = 'Never'
+STYLE_TERMINAL = 'Terminal'
+STYLE_ALWAYS = 'Always'
 
-# Controls when ANSI escape sequences are allowed in output
-allow_ansi = ANSI_TERMINAL
+# Controls when ANSI style style sequences are allowed in output
+allow_style = STYLE_TERMINAL
 
-# Regular expression to match ANSI escape sequences
-ANSI_ESCAPE_RE = re.compile(r'\x1b[^m]*m')
+# Regular expression to match ANSI style sequences (including 8-bit and 24-bit colors)
+ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 
 # Foreground color presets
 FG_COLORS = {
@@ -68,50 +71,50 @@ FG_RESET = FG_COLORS['reset']
 BG_RESET = BG_COLORS['reset']
 RESET_ALL = Style.RESET_ALL
 
-BRIGHT = Style.BRIGHT
-NORMAL = Style.NORMAL
+# Text intensities
+INTENSITY_BRIGHT = Style.BRIGHT
+INTENSITY_DIM = Style.DIM
+INTENSITY_NORMAL = Style.NORMAL
 
-# ANSI escape sequences not provided by colorama
+# ANSI style sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
 UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
 
 
-def strip_ansi(text: str) -> str:
+def strip_style(text: str) -> str:
     """
-    Strip ANSI escape sequences from a string.
+    Strip ANSI style sequences from a string.
 
-    :param text: string which may contain ANSI escape sequences
-    :return: the same string with any ANSI escape sequences removed
+    :param text: string which may contain ANSI style sequences
+    :return: the same string with any ANSI style sequences removed
     """
-    return ANSI_ESCAPE_RE.sub('', text)
+    return ANSI_STYLE_RE.sub('', text)
 
 
-def ansi_safe_wcswidth(text: str) -> int:
+def style_aware_wcswidth(text: str) -> int:
     """
-    Wrap wcswidth to make it compatible with strings that contains ANSI escape sequences
-
+    Wrap wcswidth to make it compatible with strings that contains ANSI style sequences
     :param text: the string being measured
     """
-    # Strip ANSI escape sequences since they cause wcswidth to return -1
-    return wcswidth(strip_ansi(text))
+    # Strip ANSI style sequences since they cause wcswidth to return -1
+    return wcswidth(strip_style(text))
 
 
-def ansi_aware_write(fileobj: IO, msg: str) -> None:
+def style_aware_write(fileobj: IO, msg: str) -> None:
     """
-    Write a string to a fileobject and strip its ANSI escape sequences if required by allow_ansi setting
-
+    Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting
     :param fileobj: the file object being written to
     :param msg: the string being written
     """
-    if allow_ansi.lower() == ANSI_NEVER.lower() or \
-            (allow_ansi.lower() == ANSI_TERMINAL.lower() and not fileobj.isatty()):
-        msg = strip_ansi(msg)
+    if allow_style.lower() == STYLE_NEVER.lower() or \
+            (allow_style.lower() == STYLE_TERMINAL.lower() and not fileobj.isatty()):
+        msg = strip_style(msg)
     fileobj.write(msg)
 
 
 def fg_lookup(fg_name: str) -> str:
-    """Look up ANSI escape codes based on foreground color name.
-
+    """
+    Look up ANSI escape codes based on foreground color name.
     :param fg_name: foreground color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError if the color cannot be found
@@ -124,8 +127,8 @@ def fg_lookup(fg_name: str) -> str:
 
 
 def bg_lookup(bg_name: str) -> str:
-    """Look up ANSI escape codes based on background color name.
-
+    """
+    Look up ANSI escape codes based on background color name.
     :param bg_name: background color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError if the color cannot be found
@@ -137,16 +140,18 @@ def bg_lookup(bg_name: str) -> str:
     return ansi_escape
 
 
-def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underline: bool = False) -> str:
-    """Styles a string with ANSI colors and/or styles and returns the new string.
-
+def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False,
+          dim: bool = False, underline: bool = False) -> str:
+    """
+    Apply ANSI colors and/or styles to a string and return it.
     The styling is self contained which means that at the end of the string reset code(s) are issued
     to undo whatever styling was done at the beginning.
 
     :param text: Any object compatible with str.format()
     :param fg: foreground color. Relies on `fg_lookup()` to retrieve ANSI escape based on name. Defaults to no color.
     :param bg: background color. Relies on `bg_lookup()` to retrieve ANSI escape based on name. Defaults to no color.
-    :param bold: apply the bold style if True. Defaults to False.
+    :param bold: apply the bold style if True. Can be combined with dim. Defaults to False.
+    :param dim: apply the dim style if True. Can be combined with bold. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
     :return: the stylized string
     """
@@ -169,14 +174,18 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False, underlin
         removals.append(BG_RESET)
 
     if bold:
-        additions.append(Style.BRIGHT)
-        removals.append(Style.NORMAL)
+        additions.append(INTENSITY_BRIGHT)
+        removals.append(INTENSITY_NORMAL)
+
+    if dim:
+        additions.append(INTENSITY_DIM)
+        removals.append(INTENSITY_NORMAL)
 
     if underline:
         additions.append(UNDERLINE_ENABLE)
         removals.append(UNDERLINE_DISABLE)
 
-    # Combine the ANSI escape sequences with the text
+    # Combine the ANSI style sequences with the text
     return "".join(additions) + text + "".join(removals)
 
 
@@ -206,14 +215,14 @@ def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_off
     # That will be included in the input lines calculations since that is where the cursor is.
     num_prompt_terminal_lines = 0
     for line in prompt_lines[:-1]:
-        line_width = ansi_safe_wcswidth(line)
+        line_width = style_aware_wcswidth(line)
         num_prompt_terminal_lines += int(line_width / terminal_columns) + 1
 
     # Now calculate how many terminal lines are take up by the input
     last_prompt_line = prompt_lines[-1]
-    last_prompt_line_width = ansi_safe_wcswidth(last_prompt_line)
+    last_prompt_line_width = style_aware_wcswidth(last_prompt_line)
 
-    input_width = last_prompt_line_width + ansi_safe_wcswidth(line)
+    input_width = last_prompt_line_width + style_aware_wcswidth(line)
 
     num_input_terminal_lines = int(input_width / terminal_columns) + 1
 

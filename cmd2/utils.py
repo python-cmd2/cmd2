@@ -641,7 +641,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
                width: Optional[int] = None, tab_width: int = 4) -> str:
     """
     Align text for display within a given width. Supports characters with display widths greater than 1.
-    ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
+    ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is
     supported. If text has line breaks, then each line is aligned independently.
 
     There are convenience wrappers around this function: align_left(), align_center(), and align_right()
@@ -669,7 +669,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
     if len(fill_char) != 1:
         raise TypeError("Fill character must be exactly one character long")
 
-    fill_char_width = ansi.ansi_safe_wcswidth(fill_char)
+    fill_char_width = ansi.style_aware_wcswidth(fill_char)
     if fill_char_width == -1:
         raise (ValueError("Fill character is an unprintable character"))
 
@@ -687,9 +687,9 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
         if index > 0:
             text_buf.write('\n')
 
-        # Use ansi_safe_wcswidth to support characters with display widths
-        # greater than 1 as well as ANSI escape sequences
-        line_width = ansi.ansi_safe_wcswidth(line)
+        # Use style_aware_wcswidth to support characters with display widths
+        # greater than 1 as well as ANSI style sequences
+        line_width = ansi.style_aware_wcswidth(line)
         if line_width == -1:
             raise(ValueError("Text to align contains an unprintable character"))
 
@@ -717,8 +717,8 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
 
         # In cases where the fill character display width didn't divide evenly into
         # the gaps being filled, pad the remainder with spaces.
-        left_fill += ' ' * (left_fill_width - ansi.ansi_safe_wcswidth(left_fill))
-        right_fill += ' ' * (right_fill_width - ansi.ansi_safe_wcswidth(right_fill))
+        left_fill += ' ' * (left_fill_width - ansi.style_aware_wcswidth(left_fill))
+        right_fill += ' ' * (right_fill_width - ansi.style_aware_wcswidth(right_fill))
 
         text_buf.write(left_fill + line + right_fill)
 
@@ -728,7 +728,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
 def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
     """
     Left align text for display within a given width. Supports characters with display widths greater than 1.
-    ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
+    ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is
     supported. If text has line breaks, then each line is aligned independently.
 
     :param text: text to left align (can contain multiple lines)
@@ -746,7 +746,7 @@ def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None, 
 def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
     """
     Center text for display within a given width. Supports characters with display widths greater than 1.
-    ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
+    ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is
     supported. If text has line breaks, then each line is aligned independently.
 
     :param text: text to center (can contain multiple lines)
@@ -764,7 +764,7 @@ def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None
 def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None, tab_width: int = 4) -> str:
     """
     Right align text for display within a given width. Supports characters with display widths greater than 1.
-    ANSI escape sequences are safely ignored and do not count toward the display width. This means colored text is
+    ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is
     supported. If text has line breaks, then each line is aligned independently.
 
     :param text: text to right align (can contain multiple lines)

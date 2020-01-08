@@ -46,7 +46,7 @@ comments, is viewable from within a running application
 with::
 
     (Cmd) set --long
-    allow_ansi: Terminal           # Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)
+    allow_style: Terminal          # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
     continuation_prompt: >         # On 2nd+ line of input
     debug: False                   # Show full error stack on error
     echo: False                    # Echo command issued into output
@@ -61,7 +61,7 @@ with::
 Any of these user-settable parameters can be set while running your app with
 the ``set`` command like so::
 
-    set allow_ansi Never
+    set allow_style Never
 
 
 

@@ -4,7 +4,7 @@
 # Regexes on prompts just make the trailing space obvious
 
 (Cmd) set
-allow_ansi: /(Terminal|Always|Never)/
+allow_style: /(Terminal|Always|Never)/
 continuation_prompt: >/ /
 debug: False
 echo: False

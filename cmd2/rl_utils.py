@@ -193,7 +193,7 @@ def rl_set_prompt(prompt: str) -> None:  # pragma: no cover
 
 
 def rl_make_safe_prompt(prompt: str) -> str:  # pragma: no cover
-    """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes.
+    """Overcome bug in GNU Readline in relation to calculation of prompt length in presence of ANSI escape codes
 
     :param prompt: original prompt
     :return: prompt safe to pass to GNU Readline

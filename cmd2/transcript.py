@@ -56,13 +56,13 @@ class Cmd2TestCase(unittest.TestCase):
     def _test_transcript(self, fname: str, transcript):
         line_num = 0
         finished = False
-        line = ansi.strip_ansi(next(transcript))
+        line = ansi.strip_style(next(transcript))
         line_num += 1
         while not finished:
             # Scroll forward to where actual commands begin
             while not line.startswith(self.cmdapp.visible_prompt):
                 try:
-                    line = ansi.strip_ansi(next(transcript))
+                    line = ansi.strip_style(next(transcript))
                 except StopIteration:
                     finished = True
                     break
@@ -89,7 +89,7 @@ class Cmd2TestCase(unittest.TestCase):
             result = self.cmdapp.stdout.read()
             stop_msg = 'Command indicated application should quit, but more commands in transcript'
             # Read the expected result from transcript
-            if ansi.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
+            if ansi.strip_style(line).startswith(self.cmdapp.visible_prompt):
                 message = '\nFile {}, line {}\nCommand was:\n{}\nExpected: (nothing)\nGot:\n{}\n'.format(
                           fname, line_num, command, result)
                 self.assertTrue(not (result.strip()), message)
@@ -97,7 +97,7 @@ class Cmd2TestCase(unittest.TestCase):
                 self.assertFalse(stop, stop_msg)
                 continue
             expected = []
-            while not ansi.strip_ansi(line).startswith(self.cmdapp.visible_prompt):
+            while not ansi.strip_style(line).startswith(self.cmdapp.visible_prompt):
                 expected.append(line)
                 try:
                     line = next(transcript)
