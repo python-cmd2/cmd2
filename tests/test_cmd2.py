@@ -21,8 +21,8 @@ except ImportError:
 
 import cmd2
 from cmd2 import ansi, clipboard, constants, plugin, utils, COMMAND_NAME
-from .conftest import run_cmd, normalize, verify_help_text, HELP_HISTORY
-from .conftest import SHORTCUTS_TXT, SHOW_TXT, SHOW_LONG, complete_tester
+from .conftest import (run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT,
+                       SHOW_LONG, complete_tester, odd_file_names)
 
 def CreateOutsimApp():
     c = cmd2.Cmd()
@@ -187,26 +187,26 @@ now: True
     assert out == ['quiet: True']
 
 @pytest.mark.parametrize('new_val, is_valid, expected', [
-    (ansi.ANSI_NEVER, False, ansi.ANSI_NEVER),
-    ('neVeR', False, ansi.ANSI_NEVER),
-    (ansi.ANSI_TERMINAL, False, ansi.ANSI_TERMINAL),
-    ('TeRMInal', False, ansi.ANSI_TERMINAL),
-    (ansi.ANSI_ALWAYS, False, ansi.ANSI_ALWAYS),
-    ('AlWaYs', False, ansi.ANSI_ALWAYS),
-    ('invalid', True, ansi.ANSI_TERMINAL),
+    (ansi.STYLE_NEVER, False, ansi.STYLE_NEVER),
+    ('neVeR', False, ansi.STYLE_NEVER),
+    (ansi.STYLE_TERMINAL, False, ansi.STYLE_TERMINAL),
+    ('TeRMInal', False, ansi.STYLE_TERMINAL),
+    (ansi.STYLE_ALWAYS, False, ansi.STYLE_ALWAYS),
+    ('AlWaYs', False, ansi.STYLE_ALWAYS),
+    ('invalid', True, ansi.STYLE_TERMINAL),
 ])
-def test_set_allow_ansi(base_app, new_val, is_valid, expected):
-    # Initialize allow_ansi for this test
-    ansi.allow_ansi = ansi.ANSI_TERMINAL
+def test_set_allow_style(base_app, new_val, is_valid, expected):
+    # Initialize allow_style for this test
+    ansi.allow_style = ansi.STYLE_TERMINAL
 
     # Use the set command to alter it
-    out, err = run_cmd(base_app, 'set allow_ansi {}'.format(new_val))
+    out, err = run_cmd(base_app, 'set allow_style {}'.format(new_val))
 
     # Verify the results
     assert bool(err) == is_valid
-    assert ansi.allow_ansi == expected
+    assert ansi.allow_style == expected
 
-    # Reload ansi module to reset allow_ansi to its default since it's an
+    # Reload ansi module to reset allow_style to its default since it's an
     # application-wide setting that can affect other unit tests.
     import importlib
     importlib.reload(ansi)
@@ -376,11 +376,11 @@ def test_run_script_nested_run_scripts(base_app, request):
     expected = """
 %s
 _relative_run_script precmds.txt
-set allow_ansi Always
+set allow_style Always
 help
 shortcuts
 _relative_run_script postcmds.txt
-set allow_ansi Never""" % initial_run
+set allow_style Never""" % initial_run
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
@@ -395,11 +395,11 @@ def test_runcmds_plus_hooks(base_app, request):
                                  'run_script ' + postfilepath])
     expected = """
 run_script %s
-set allow_ansi Always
+set allow_style Always
 help
 shortcuts
 run_script %s
-set allow_ansi Never""" % (prefilepath, postfilepath)
+set allow_style Never""" % (prefilepath, postfilepath)
 
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
@@ -431,31 +431,15 @@ def test_relative_run_script(base_app, request):
     assert script_out == manual_out
     assert script_err == manual_err
 
-def test_relative_run_script_with_odd_file_names(base_app, monkeypatch):
+@pytest.mark.parametrize('file_name', odd_file_names)
+def test_relative_run_script_with_odd_file_names(base_app, file_name, monkeypatch):
     """Test file names with various patterns"""
     # Mock out the do_run_script call to see what args are passed to it
     run_script_mock = mock.MagicMock(name='do_run_script')
     monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
-    file_name = utils.quote_string('nothingweird.txt')
-    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
-    run_script_mock.assert_called_once_with('"nothingweird.txt"')
-    run_script_mock.reset_mock()
-
-    file_name = utils.quote_string('has   spaces.txt')
-    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
-    run_script_mock.assert_called_once_with('"has   spaces.txt"')
-    run_script_mock.reset_mock()
-
-    file_name = utils.quote_string('"is_double_quoted.txt"')
-    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
-    run_script_mock.assert_called_once_with('\'"is_double_quoted.txt"\'')
-    run_script_mock.reset_mock()
-
-    file_name = utils.quote_string("'is_single_quoted.txt'")
-    out, err = run_cmd(base_app, "_relative_run_script {}".format(file_name))
-    run_script_mock.assert_called_once_with('"\'is_single_quoted.txt\'"')
-    run_script_mock.reset_mock()
+    run_cmd(base_app, "_relative_run_script {}".format(utils.quote_string(file_name)))
+    run_script_mock.assert_called_once_with(utils.quote_string(file_name))
 
 def test_relative_run_script_requires_an_argument(base_app):
     out, err = run_cmd(base_app, '_relative_run_script')
@@ -715,7 +699,8 @@ def test_edit_file(base_app, request, monkeypatch):
     # We think we have an editor, so should expect a Popen call
     m.assert_called_once()
 
-def test_edit_file_with_odd_file_names(base_app, monkeypatch):
+@pytest.mark.parametrize('file_name', odd_file_names)
+def test_edit_file_with_odd_file_names(base_app, file_name, monkeypatch):
     """Test editor and file names with various patterns"""
     # Mock out the do_shell call to see what args are passed to it
     shell_mock = mock.MagicMock(name='do_shell')
@@ -723,27 +708,8 @@ def test_edit_file_with_odd_file_names(base_app, monkeypatch):
 
     base_app.editor = 'fooedit'
     file_name = utils.quote_string('nothingweird.py')
-    out, err = run_cmd(base_app, "edit {}".format(file_name))
-    shell_mock.assert_called_once_with('"fooedit" "nothingweird.py"')
-    shell_mock.reset_mock()
-
-    base_app.editor = 'foo edit'
-    file_name = utils.quote_string('has   spaces.py')
-    out, err = run_cmd(base_app, "edit {}".format(file_name))
-    shell_mock.assert_called_once_with('"foo edit" "has   spaces.py"')
-    shell_mock.reset_mock()
-
-    base_app.editor = '"fooedit"'
-    file_name = utils.quote_string('"is_double_quoted.py"')
-    out, err = run_cmd(base_app, "edit {}".format(file_name))
-    shell_mock.assert_called_once_with('\'"fooedit"\' \'"is_double_quoted.py"\'')
-    shell_mock.reset_mock()
-
-    base_app.editor = "'fooedit'"
-    file_name = utils.quote_string("'is_single_quoted.py'")
-    out, err = run_cmd(base_app, "edit {}".format(file_name))
-    shell_mock.assert_called_once_with('"\'fooedit\'" "\'is_single_quoted.py\'"')
-    shell_mock.reset_mock()
+    run_cmd(base_app, "edit {}".format(utils.quote_string(file_name)))
+    shell_mock.assert_called_once_with('"fooedit" {}'.format(utils.quote_string(file_name)))
 
 def test_edit_file_with_spaces(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
@@ -1564,7 +1530,7 @@ def test_poutput_none(outsim_app):
 
 def test_poutput_ansi_always(outsim_app):
     msg = 'Hello World'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     colored_msg = ansi.style(msg, fg='cyan')
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
@@ -1574,7 +1540,7 @@ def test_poutput_ansi_always(outsim_app):
 
 def test_poutput_ansi_never(outsim_app):
     msg = 'Hello World'
-    ansi.allow_ansi = ansi.ANSI_NEVER
+    ansi.allow_style = ansi.STYLE_NEVER
     colored_msg = ansi.style(msg, fg='cyan')
     outsim_app.poutput(colored_msg)
     out = outsim_app.stdout.getvalue()
@@ -1885,7 +1851,7 @@ def test_nonexistent_macro(base_app):
 def test_perror_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     base_app.perror(msg)
     out, err = capsys.readouterr()
     assert err == ansi.style_error(msg) + end
@@ -1893,7 +1859,7 @@ def test_perror_style(base_app, capsys):
 def test_perror_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     base_app.perror(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
@@ -1901,7 +1867,7 @@ def test_perror_no_style(base_app, capsys):
 def test_pwarning_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     base_app.pwarning(msg)
     out, err = capsys.readouterr()
     assert err == ansi.style_warning(msg) + end
@@ -1909,7 +1875,7 @@ def test_pwarning_style(base_app, capsys):
 def test_pwarning_no_style(base_app, capsys):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     base_app.pwarning(msg, apply_style=False)
     out, err = capsys.readouterr()
     assert err == msg + end
@@ -1936,7 +1902,7 @@ def test_ppaged_none(outsim_app):
 def test_ppaged_strips_ansi_when_redirecting(outsim_app):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_TERMINAL
+    ansi.allow_style = ansi.STYLE_TERMINAL
     outsim_app._redirecting = True
     outsim_app.ppaged(ansi.style(msg, fg='red'))
     out = outsim_app.stdout.getvalue()
@@ -1945,7 +1911,7 @@ def test_ppaged_strips_ansi_when_redirecting(outsim_app):
 def test_ppaged_strips_ansi_when_redirecting_if_always(outsim_app):
     msg = 'testing...'
     end = '\n'
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     outsim_app._redirecting = True
     colored_msg = ansi.style(msg, fg='red')
     outsim_app.ppaged(colored_msg)
@@ -2112,13 +2078,13 @@ class AnsiApp(cmd2.Cmd):
 
 def test_ansi_pouterr_always_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    # if colors are on, the output should have some escape sequences in it
+    # if colors are on, the output should have some ANSI style sequences in it
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
     assert len(err) > len('oopsie\n')
@@ -2134,13 +2100,13 @@ def test_ansi_pouterr_always_tty(mocker, capsys):
 
 def test_ansi_pouterr_always_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_ALWAYS
+    ansi.allow_style = ansi.STYLE_ALWAYS
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
     app.onecmd_plus_hooks('echo_error oopsie')
     out, err = capsys.readouterr()
-    # if colors are on, the output should have some escape sequences in it
+    # if colors are on, the output should have some ANSI style sequences in it
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
     assert len(err) > len('oopsie\n')
@@ -2156,12 +2122,12 @@ def test_ansi_pouterr_always_notty(mocker, capsys):
 
 def test_ansi_terminal_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_TERMINAL
+    ansi.allow_style = ansi.STYLE_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
     app.onecmd_plus_hooks('echo_error oopsie')
-    # if colors are on, the output should have some escape sequences in it
+    # if colors are on, the output should have some ANSI style sequences in it
     out, err = capsys.readouterr()
     assert len(out) > len('oopsie\n')
     assert 'oopsie' in out
@@ -2177,7 +2143,7 @@ def test_ansi_terminal_tty(mocker, capsys):
 
 def test_ansi_terminal_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_TERMINAL
+    ansi.allow_style = ansi.STYLE_TERMINAL
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -2191,7 +2157,7 @@ def test_ansi_terminal_notty(mocker, capsys):
 
 def test_ansi_never_tty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_NEVER
+    ansi.allow_style = ansi.STYLE_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=True)
     mocker.patch.object(sys.stderr, 'isatty', return_value=True)
 
@@ -2205,7 +2171,7 @@ def test_ansi_never_tty(mocker, capsys):
 
 def test_ansi_never_notty(mocker, capsys):
     app = AnsiApp()
-    ansi.allow_ansi = ansi.ANSI_NEVER
+    ansi.allow_style = ansi.STYLE_NEVER
     mocker.patch.object(app.stdout, 'isatty', return_value=False)
     mocker.patch.object(sys.stderr, 'isatty', return_value=False)
 
@@ -2386,12 +2352,27 @@ def test_startup_script(request):
     startup_script = os.path.join(test_dir, '.cmd2rc')
     app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
     assert len(app._startup_commands) == 1
-    assert app._startup_commands[0] == "run_script '{}'".format(startup_script)
+    assert app._startup_commands[0] == "run_script {}".format(utils.quote_string(startup_script))
     app._startup_commands.append('quit')
     app.cmdloop()
     out, err = run_cmd(app, 'alias list')
     assert len(out) > 1
     assert 'alias create ls' in out[0]
+
+
+@pytest.mark.parametrize('startup_script', odd_file_names)
+def test_startup_script_with_odd_file_names(startup_script):
+    """Test file names with various patterns"""
+    # Mock os.path.exists to trick cmd2 into adding this script to its startup commands
+    saved_exists = os.path.exists
+    os.path.exists = mock.MagicMock(name='exists', return_value=True)
+
+    app = cmd2.Cmd(allow_cli_args=False, startup_script=startup_script)
+    assert len(app._startup_commands) == 1
+    assert app._startup_commands[0] == "run_script {}".format(utils.quote_string(os.path.abspath(startup_script)))
+
+    # Restore os.path.exists
+    os.path.exists = saved_exists
 
 
 def test_transcripts_at_init():

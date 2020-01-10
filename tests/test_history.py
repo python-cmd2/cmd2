@@ -447,15 +447,17 @@ def test_history_with_span_index_error(base_app):
     with pytest.raises(ValueError):
         base_app.onecmd('history "hal :"')
 
-def test_history_output_file(base_app):
-    run_cmd(base_app, 'help')
-    run_cmd(base_app, 'shortcuts')
-    run_cmd(base_app, 'help history')
+def test_history_output_file():
+    app = cmd2.Cmd(multiline_commands=['alias'])
+    run_cmd(app, 'help')
+    run_cmd(app, 'shortcuts')
+    run_cmd(app, 'help history')
+    run_cmd(app, 'alias create my_alias history;')
 
     fd, fname = tempfile.mkstemp(prefix='', suffix='.txt')
     os.close(fd)
-    run_cmd(base_app, 'history -o "{}"'.format(fname))
-    expected = normalize('\n'.join(['help', 'shortcuts', 'help history']))
+    run_cmd(app, 'history -o "{}"'.format(fname))
+    expected = normalize('\n'.join(['help', 'shortcuts', 'help history', 'alias create my_alias history;']))
     with open(fname) as f:
         content = normalize(f.read())
     assert content == expected
@@ -471,10 +473,12 @@ def test_history_bad_output_file(base_app):
     assert not out
     assert "Error saving" in err[0]
 
-def test_history_edit(base_app, monkeypatch):
+def test_history_edit(monkeypatch):
+    app = cmd2.Cmd(multiline_commands=['alias'])
+
     # Set a fake editor just to make sure we have one.  We aren't really
     # going to call it due to the mock
-    base_app.editor = 'fooedit'
+    app.editor = 'fooedit'
 
     # Mock out the _run_editor call so we don't actually open an editor
     edit_mock = mock.MagicMock(name='_run_editor')
@@ -484,9 +488,11 @@ def test_history_edit(base_app, monkeypatch):
     run_script_mock = mock.MagicMock(name='do_run_script')
     monkeypatch.setattr("cmd2.Cmd.do_run_script", run_script_mock)
 
-    # Run help command just so we have a command in history
-    run_cmd(base_app, 'help')
-    run_cmd(base_app, 'history -e 1')
+    # Put commands in history
+    run_cmd(app, 'help')
+    run_cmd(app, 'alias create my_alias history;')
+
+    run_cmd(app, 'history -e 1:2')
 
     # Make sure both functions were called
     edit_mock.assert_called_once()

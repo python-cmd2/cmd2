@@ -1,10 +1,27 @@
-## 0.9.22 (TBD, 2019)
+## 0.9.23 (January 9, 2020)
+* Bug Fixes
+    * Fixed bug where startup script containing a single quote in its file name was incorrectly quoted
+    * Added missing implicit dependency on `setuptools` due to build with `setuptools_scm`
+* Enhancements
+    * Added dim text style support via `style()` function and `ansi.INTENSITY_DIM` setting.
+* Breaking changes
+    * Renamed the following `ansi` members for accuracy in what types of ANSI escape sequences are handled
+        * `ansi.allow_ansi` -> `ansi.allow_style`
+        * `ansi.ansi_safe_wcswidth()` -> `ansi.style_aware_wcswidth()`
+        * `ansi.ansi_aware_write()` -> `ansi.style_aware_write()`
+    * Renamed the following `ansi` members for clarification
+        * `ansi.BRIGHT` -> `ansi.INTENSITY_BRIGHT`
+        * `ansi.NORMAL` -> `ansi.INTENSITY_NORMAL`
+
+## 0.9.22 (December 9, 2019)
 * Bug Fixes
     * Fixed bug where a redefined `ansi.style_error` was not being used in all `cmd2` files
-* Other
-    * Removed `bold=True` from `ansi.style_success` because it was difficult for red-greed colorblind users to
-    distinguish that color from the `ansi.style_warning` color in certain terminals.
-    
+* Enhancements
+    * Enabled line buffering when redirecting output to a file
+    * Added `align_left()`, `align_center()`, and `align_right()` to utils.py. All 3 of these functions support
+    ANSI escape sequences and characters with display widths greater than 1. They wrap `align_text()` which
+    is also in utils.py.
+
 ## 0.9.21 (November 26, 2019)
 * Bug Fixes
     * Fixed bug where pipe processes were not being stopped by Ctrl-C
@@ -250,11 +267,13 @@
     * Removed *** from beginning of error messages printed by `do_help()` and `default()`
     * Significantly refactored ``cmd.Cmd`` class so that all class attributes got converted to instance attributes, also:
         * Added ``allow_redirection``, ``terminators``, ``multiline_commands``, and ``shortcuts`` as optional arguments
-        to ``cmd.Cmd.__init__()`
+        to ``cmd2.Cmd.__init__()``
         * A few instance attributes were moved inside ``StatementParser`` and properties were created for accessing them
     * ``self.pipe_proc`` is now called ``self.cur_pipe_proc_reader`` and is a ``ProcReader`` class.
     * Shell commands and commands being piped to while in a *pyscript* will function as if their output is going
     to a pipe and not a tty. This was necessary to be able to capture their output.
+    * Removed `reserved_words` class attribute due to lack of use
+    * Removed `keywords` instance attribute due to lack of use
 
 ## 0.9.11 (March 13, 2019)
 * Bug Fixes

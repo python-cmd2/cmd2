@@ -29,9 +29,9 @@ Programming Language :: Python :: Implementation :: CPython
 Topic :: Software Development :: Libraries :: Python Modules
 """.splitlines())))  # noqa: E128
 
-SETUP_REQUIRES = ['setuptools_scm']
+SETUP_REQUIRES = ['setuptools_scm >= 3.0.0']
 
-INSTALL_REQUIRES = ['pyperclip >= 1.6', 'colorama >= 0.3.7', 'attrs >= 16.3.0', 'wcwidth >= 0.1.7']
+INSTALL_REQUIRES = ['attrs >= 16.3.0', 'colorama >= 0.3.7', 'pyperclip >= 1.6', 'setuptools >= 34.4', 'wcwidth >= 0.1.7']
 
 EXTRAS_REQUIRE = {
     # Windows also requires pyreadline to ensure tab completion works
@@ -39,7 +39,7 @@ EXTRAS_REQUIRE = {
     # Extra dependencies for running unit tests
     'test': ["gnureadline; sys_platform=='darwin'",  # include gnureadline on macOS to ensure it is available in tox env
              "mock ; python_version<'3.6'",  # for python 3.5 we need the third party mock module
-             'codecov', 'pytest', 'pytest-cov', 'pytest-mock'],
+             'codecov', 'coverage', 'pytest', 'pytest-cov', 'pytest-mock'],
     # development only dependencies:  install with 'pip install -e .[dev]'
     'dev': ["mock ; python_version<'3.6'",  # for python 3.5 we need the third party mock module
             'pytest', 'codecov', 'pytest-cov', 'pytest-mock', 'tox', 'flake8',

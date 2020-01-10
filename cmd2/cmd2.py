@@ -209,11 +209,11 @@ class Cmd(cmd.Cmd):
         # To make an attribute settable with the "do_set" command, add it to this ...
         self.settable = \
             {
-                # allow_ansi is a special case in which it's an application-wide setting defined in ansi.py
-                'allow_ansi': ('Allow ANSI escape sequences in output '
-                               '(valid values: {}, {}, {})'.format(ansi.ANSI_TERMINAL,
-                                                                   ansi.ANSI_ALWAYS,
-                                                                   ansi.ANSI_NEVER)),
+                # allow_style is a special case in which it's an application-wide setting defined in ansi.py
+                'allow_style': ('Allow ANSI text style sequences in output '
+                                '(valid values: {}, {}, {})'.format(ansi.STYLE_TERMINAL,
+                                                                    ansi.STYLE_ALWAYS,
+                                                                    ansi.STYLE_NEVER)),
                 'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
@@ -309,7 +309,7 @@ class Cmd(cmd.Cmd):
         if startup_script:
             startup_script = os.path.abspath(os.path.expanduser(startup_script))
             if os.path.exists(startup_script):
-                self._startup_commands.append("run_script '{}'".format(startup_script))
+                self._startup_commands.append("run_script {}".format(utils.quote_string(startup_script)))
 
         # Transcript files to run instead of interactive command loop
         self._transcript_files = None
@@ -375,7 +375,7 @@ class Cmd(cmd.Cmd):
         else:
             # Here is the meaning of the various flags we are using with the less command:
             # -S causes lines longer than the screen width to be chopped (truncated) rather than wrapped
-            # -R causes ANSI "color" escape sequences to be output in raw form (i.e. colors are displayed)
+            # -R causes ANSI "style" escape sequences to be output in raw form (i.e. colors are displayed)
             # -X disables sending the termcap initialization and deinitialization strings to the terminal
             # -F causes less to automatically exit if the entire file can be displayed on the first screen
             self.pager = 'less -RXF'
@@ -404,23 +404,23 @@ class Cmd(cmd.Cmd):
     # -----  Methods related to presenting output to the user -----
 
     @property
-    def allow_ansi(self) -> str:
-        """Read-only property needed to support do_set when it reads allow_ansi"""
-        return ansi.allow_ansi
+    def allow_style(self) -> str:
+        """Read-only property needed to support do_set when it reads allow_style"""
+        return ansi.allow_style
 
-    @allow_ansi.setter
-    def allow_ansi(self, new_val: str) -> None:
-        """Setter property needed to support do_set when it updates allow_ansi"""
+    @allow_style.setter
+    def allow_style(self, new_val: str) -> None:
+        """Setter property needed to support do_set when it updates allow_style"""
         new_val = new_val.lower()
-        if new_val == ansi.ANSI_TERMINAL.lower():
-            ansi.allow_ansi = ansi.ANSI_TERMINAL
-        elif new_val == ansi.ANSI_ALWAYS.lower():
-            ansi.allow_ansi = ansi.ANSI_ALWAYS
-        elif new_val == ansi.ANSI_NEVER.lower():
-            ansi.allow_ansi = ansi.ANSI_NEVER
+        if new_val == ansi.STYLE_TERMINAL.lower():
+            ansi.allow_style = ansi.STYLE_TERMINAL
+        elif new_val == ansi.STYLE_ALWAYS.lower():
+            ansi.allow_style = ansi.STYLE_ALWAYS
+        elif new_val == ansi.STYLE_NEVER.lower():
+            ansi.allow_style = ansi.STYLE_NEVER
         else:
-            self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.ANSI_TERMINAL,
-                                                                              ansi.ANSI_ALWAYS, ansi.ANSI_NEVER))
+            self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.STYLE_TERMINAL,
+                                                                              ansi.STYLE_ALWAYS, ansi.STYLE_NEVER))
 
     @property
     def broken_pipe_warning(self) -> str:
@@ -446,14 +446,14 @@ class Cmd(cmd.Cmd):
 
     @property
     def visible_prompt(self) -> str:
-        """Read-only property to get the visible prompt with any ANSI escape codes stripped.
+        """Read-only property to get the visible prompt with any ANSI style escape codes stripped.
 
         Used by transcript testing to make it easier and more reliable when users are doing things like coloring the
         prompt using ANSI color codes.
 
         :return: prompt stripped of any ANSI escape codes
         """
-        return ansi.strip_ansi(self.prompt)
+        return ansi.strip_style(self.prompt)
 
     def poutput(self, msg: Any = '', *, end: str = '\n') -> None:
         """Print message to self.stdout and appends a newline by default
@@ -466,7 +466,7 @@ class Cmd(cmd.Cmd):
         :param end: string appended after the end of the message, default a newline
         """
         try:
-            ansi.ansi_aware_write(self.stdout, "{}{}".format(msg, end))
+            ansi.style_aware_write(self.stdout, "{}{}".format(msg, end))
         except BrokenPipeError:
             # This occurs if a command's output is being piped to another
             # process and that process closes before the command is
@@ -489,7 +489,7 @@ class Cmd(cmd.Cmd):
             final_msg = ansi.style_error(msg)
         else:
             final_msg = "{}".format(msg)
-        ansi.ansi_aware_write(sys.stderr, final_msg + end)
+        ansi.style_aware_write(sys.stderr, final_msg + end)
 
     def pwarning(self, msg: Any = '', *, end: str = '\n', apply_style: bool = True) -> None:
         """Wraps perror, but applies ansi.style_warning by default
@@ -578,8 +578,8 @@ class Cmd(cmd.Cmd):
             # Don't attempt to use a pager that can block if redirecting or running a script (either text or Python)
             # Also only attempt to use a pager if actually running in a real fully functional terminal
             if functional_terminal and not self._redirecting and not self.in_pyscript() and not self.in_script():
-                if ansi.allow_ansi.lower() == ansi.ANSI_NEVER.lower():
-                    msg_str = ansi.strip_ansi(msg_str)
+                if ansi.allow_style.lower() == ansi.STYLE_NEVER.lower():
+                    msg_str = ansi.strip_style(msg_str)
                 msg_str += end
 
                 pager = self.pager
@@ -1123,7 +1123,7 @@ class Cmd(cmd.Cmd):
                 longest_match_length = 0
 
                 for cur_match in matches_to_display:
-                    cur_length = ansi.ansi_safe_wcswidth(cur_match)
+                    cur_length = ansi.style_aware_wcswidth(cur_match)
                     if cur_length > longest_match_length:
                         longest_match_length = cur_length
             else:
@@ -1901,22 +1901,25 @@ class Cmd(cmd.Cmd):
                 self.perror("Cannot redirect to paste buffer; missing 'pyperclip' and/or pyperclip dependencies")
                 redir_error = True
 
+            # Redirecting to a file
             elif statement.output_to:
-                # going to a file
-                mode = 'w'
-                # statement.output can only contain
-                # REDIRECTION_APPEND or REDIRECTION_OUTPUT
+                # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
                 if statement.output == constants.REDIRECTION_APPEND:
                     mode = 'a'
+                else:
+                    mode = 'w'
+
                 try:
-                    new_stdout = open(utils.strip_quotes(statement.output_to), mode)
+                    # Use line buffering
+                    new_stdout = open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1)
                     saved_state.redirecting = True
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
                     self.pexcept('Failed to redirect because - {}'.format(ex))
                     redir_error = True
+
+            # Redirecting to a paste buffer
             else:
-                # going to a paste buffer
                 new_stdout = tempfile.TemporaryFile(mode="w+")
                 saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
@@ -2677,7 +2680,7 @@ class Cmd(cmd.Cmd):
                 widest = 0
                 # measure the commands
                 for command in cmds:
-                    width = ansi.ansi_safe_wcswidth(command)
+                    width = ansi.style_aware_wcswidth(command)
                     if width > widest:
                         widest = width
                 # add a 4-space pad
@@ -2742,6 +2745,7 @@ class Cmd(cmd.Cmd):
                 self.stdout.write("\n")
 
     shortcuts_parser = DEFAULT_ARGUMENT_PARSER(description="List available shortcuts")
+
     @with_argparser(shortcuts_parser)
     def do_shortcuts(self, _: argparse.Namespace) -> None:
         """List available shortcuts"""
@@ -2751,6 +2755,7 @@ class Cmd(cmd.Cmd):
         self.poutput("Shortcuts for other commands:\n{}".format(result))
 
     eof_parser = DEFAULT_ARGUMENT_PARSER(description="Called when <Ctrl>-D is pressed", epilog=INTERNAL_COMMAND_EPILOG)
+
     @with_argparser(eof_parser)
     def do_eof(self, _: argparse.Namespace) -> bool:
         """Called when <Ctrl>-D is pressed"""
@@ -2758,6 +2763,7 @@ class Cmd(cmd.Cmd):
         return True
 
     quit_parser = DEFAULT_ARGUMENT_PARSER(description="Exit this application")
+
     @with_argparser(quit_parser)
     def do_quit(self, _: argparse.Namespace) -> bool:
         """Exit this application"""
@@ -3239,6 +3245,7 @@ class Cmd(cmd.Cmd):
     # Only include the do_ipy() method if IPython is available on the system
     if ipython_available:  # pragma: no cover
         ipython_parser = DEFAULT_ARGUMENT_PARSER(description="Enter an interactive IPython shell")
+
         @with_argparser(ipython_parser)
         def do_ipy(self, _: argparse.Namespace) -> None:
             """Enter an interactive IPython shell"""
@@ -3247,6 +3254,7 @@ class Cmd(cmd.Cmd):
                       'Run Python code from external files with: run filename.py\n')
             exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
+            # noinspection PyUnusedLocal
             def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
                 """
                 Embed an IPython shell in an environment that is restricted to only the variables in this function
@@ -3377,7 +3385,7 @@ class Cmd(cmd.Cmd):
             with os.fdopen(fd, 'w') as fobj:
                 for command in history:
                     if command.statement.multiline_command:
-                        fobj.write('{}\n'.format(command.expanded.rstrip()))
+                        fobj.write('{}\n'.format(command.expanded))
                     else:
                         fobj.write('{}\n'.format(command.raw))
             try:
@@ -3391,7 +3399,7 @@ class Cmd(cmd.Cmd):
                 with open(os.path.expanduser(args.output_file), 'w') as fobj:
                     for item in history:
                         if item.statement.multiline_command:
-                            fobj.write('{}\n'.format(item.expanded.rstrip()))
+                            fobj.write('{}\n'.format(item.expanded))
                         else:
                             fobj.write('{}\n'.format(item.raw))
                 plural = 's' if len(history) > 1 else ''
@@ -3739,7 +3747,7 @@ class Cmd(cmd.Cmd):
         verinfo = ".".join(map(str, sys.version_info[:3]))
         num_transcripts = len(transcripts_expanded)
         plural = '' if len(transcripts_expanded) == 1 else 's'
-        self.poutput(ansi.style(utils.center_text('cmd2 transcript test', pad='='), bold=True))
+        self.poutput(ansi.style(utils.align_center(' cmd2 transcript test ', fill_char='='), bold=True))
         self.poutput('platform {} -- Python {}, cmd2-{}, readline-{}'.format(sys.platform, verinfo, cmd2.__version__,
                                                                              rl_type))
         self.poutput('cwd: {}'.format(os.getcwd()))
@@ -3756,9 +3764,9 @@ class Cmd(cmd.Cmd):
         test_results = runner.run(testcase)
         execution_time = time.time() - start_time
         if test_results.wasSuccessful():
-            ansi.ansi_aware_write(sys.stderr, stream.read())
-            finish_msg = '{0} transcript{1} passed in {2:.3f} seconds'.format(num_transcripts, plural, execution_time)
-            finish_msg = ansi.style_success(utils.center_text(finish_msg, pad='='))
+            ansi.style_aware_write(sys.stderr, stream.read())
+            finish_msg = ' {0} transcript{1} passed in {2:.3f} seconds '.format(num_transcripts, plural, execution_time)
+            finish_msg = ansi.style_success(utils.align_center(finish_msg, fill_char='='))
             self.poutput(finish_msg)
         else:
             # Strip off the initial traceback which isn't particularly useful for end users

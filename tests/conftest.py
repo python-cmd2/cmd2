@@ -88,7 +88,7 @@ SHORTCUTS_TXT = """Shortcuts for other commands:
 """
 
 # Output from the show command with default settings
-SHOW_TXT = """allow_ansi: Terminal
+SHOW_TXT = """allow_style: Terminal
 continuation_prompt: >
 debug: False
 echo: False
@@ -102,7 +102,7 @@ timing: False
 """
 
 SHOW_LONG = """
-allow_ansi: Terminal      # Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)
+allow_style: Terminal     # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
 continuation_prompt: >    # On 2nd+ line of input
 debug: False              # Show full error stack on error
 echo: False               # Echo command issued into output
@@ -155,6 +155,15 @@ def run_cmd(app, cmd):
 @fixture
 def base_app():
     return cmd2.Cmd()
+
+
+# These are odd file names for testing quoting of them
+odd_file_names = [
+    'nothingweird',
+    'has   spaces',
+    '"is_double_quoted"',
+    "'is_single_quoted'"
+]
 
 
 def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Optional[str]:

@@ -444,11 +444,11 @@ class AutoCompleter(object):
                 completions.sort(key=self._cmd2_app.default_sort_key)
                 self._cmd2_app.matches_sorted = True
 
-            token_width = ansi.ansi_safe_wcswidth(action.dest)
+            token_width = ansi.style_aware_wcswidth(action.dest)
             completions_with_desc = []
 
             for item in completions:
-                item_width = ansi.ansi_safe_wcswidth(item)
+                item_width = ansi.style_aware_wcswidth(item)
                 if item_width > token_width:
                     token_width = item_width
 
@@ -585,7 +585,7 @@ class AutoCompleter(object):
     def _print_message(msg: str) -> None:
         """Print a message instead of tab completions and redraw the prompt and input line"""
         import sys
-        ansi.ansi_aware_write(sys.stdout, msg + '\n')
+        ansi.style_aware_write(sys.stdout, msg + '\n')
         rl_force_redisplay()
 
     def _print_arg_hint(self, arg_action: argparse.Action) -> None:

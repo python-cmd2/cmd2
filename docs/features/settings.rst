@@ -20,10 +20,10 @@ Commands`. Users can use the :ref:`features/builtin_commands:set` command to
 show all settings and to modify the value of any setting.
 
 
-allow_ansi
-~~~~~~~~~~
+allow_style
+~~~~~~~~~~~
 
-The ``allow_ansi`` setting controls the behavior of ANSI escape sequences
+The ``allow_style`` setting controls the behavior of ANSI escape sequences
 in output generated with any of the following methods:
 
 - ``poutput()``

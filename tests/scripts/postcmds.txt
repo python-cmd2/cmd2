@@ -1,1 +1,1 @@
-set allow_ansi Never
+set allow_style Never

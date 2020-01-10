@@ -802,11 +802,11 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
         return formatter.format_help() + '\n'
 
     def _print_message(self, message, file=None):
-        # Override _print_message to use ansi_aware_write() since we use ANSI escape characters to support color
+        # Override _print_message to use style_aware_write() since we use ANSI escape characters to support color
         if message:
             if file is None:
                 file = sys.stderr
-            ansi.ansi_aware_write(file, message)
+            ansi.style_aware_write(file, message)
 
 
 # The default ArgumentParser class for a cmd2 app

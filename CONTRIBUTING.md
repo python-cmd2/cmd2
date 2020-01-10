@@ -51,6 +51,7 @@ The tables below list all prerequisites along with the minimum required version 
 | [attrs](https://github.com/python-attrs/attrs)      | `16.3`          |
 | [colorama](https://github.com/tartley/colorama)     | `0.3.7`         |
 | [pyperclip](https://github.com/asweigart/pyperclip) | `1.6`           |
+| [setuptools](https://pypi.org/project/setuptools/)  | `34.4`          |
 | [wcwidth](https://pypi.python.org/pypi/wcwidth)     | `0.1.7`         |
 
 

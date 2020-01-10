@@ -293,24 +293,182 @@ def test_context_flag_exit_err(context_flag):
         context_flag.__exit__()
 
 
-def test_center_text_pad_none():
-    msg = 'foo'
-    centered = cu.center_text(msg, pad=None)
-    expected_center = ' ' + msg + ' '
-    assert expected_center in centered
-    letters_in_centered = set(centered)
-    letters_in_msg = set(msg)
-    assert len(letters_in_centered) == len(letters_in_msg) + 1
+def test_align_text_fill_char_is_tab():
+    text = 'foo'
+    fill_char = '\t'
+    width = 5
+    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+    assert aligned == text + '  '
 
-def test_center_text_pad_equals():
-    msg = 'foo'
-    pad = '='
-    centered = cu.center_text(msg, pad=pad)
-    expected_center = ' ' + msg + ' '
-    assert expected_center in centered
-    assert centered.startswith(pad)
-    assert centered.endswith(pad)
-    letters_in_centered = set(centered)
-    letters_in_msg = set(msg)
-    assert len(letters_in_centered) == len(letters_in_msg) + 2
+def test_align_text_fill_char_is_too_long():
+    text = 'foo'
+    fill_char = 'fill'
+    width = 5
+    with pytest.raises(TypeError):
+        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
 
+def test_align_text_fill_char_is_unprintable():
+    text = 'foo'
+    fill_char = '\n'
+    width = 5
+    with pytest.raises(ValueError):
+        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+
+def test_align_text_has_tabs():
+    text = '\t\tfoo'
+    fill_char = '-'
+    width = 10
+    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT, tab_width=2)
+    assert aligned == '    ' + 'foo' + '---'
+
+def test_align_text_blank():
+    text = ''
+    fill_char = '-'
+    width = 5
+    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+    assert aligned == fill_char * width
+
+def test_align_text_wider_than_width():
+    text = 'long'
+    fill_char = '-'
+    width = 3
+    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+    assert aligned == text
+
+def test_align_text_has_unprintable():
+    text = 'foo\x02'
+    fill_char = '-'
+    width = 5
+    with pytest.raises(ValueError):
+        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+
+def test_align_text_term_width():
+    import shutil
+    from cmd2 import ansi
+    text = 'foo'
+    fill_char = ' '
+
+    term_width = shutil.get_terminal_size().columns
+    expected_fill = (term_width - ansi.style_aware_wcswidth(text)) * fill_char
+
+    aligned = cu.align_text(text, fill_char=fill_char, alignment=cu.TextAlignment.LEFT)
+    assert aligned == text + expected_fill
+
+def test_align_left():
+    text = 'foo'
+    fill_char = '-'
+    width = 5
+    aligned = cu.align_left(text, fill_char=fill_char, width=width)
+    assert aligned == text + fill_char + fill_char
+
+def test_align_left_multiline():
+    text = "foo\nshoes"
+    fill_char = '-'
+    width = 7
+    aligned = cu.align_left(text, fill_char=fill_char, width=width)
+    assert aligned == ('foo----\n'
+                       'shoes--')
+
+def test_align_left_wide_text():
+    text = '苹'
+    fill_char = '-'
+    width = 4
+    aligned = cu.align_left(text, fill_char=fill_char, width=width)
+    assert aligned == text + fill_char + fill_char
+
+def test_align_left_wide_fill():
+    text = 'foo'
+    fill_char = '苹'
+    width = 5
+    aligned = cu.align_left(text, fill_char=fill_char, width=width)
+    assert aligned == text + fill_char
+
+def test_align_left_wide_fill_needs_padding():
+    """Test when fill_char's display width does not divide evenly into gap"""
+    text = 'foo'
+    fill_char = '苹'
+    width = 6
+    aligned = cu.align_left(text, fill_char=fill_char, width=width)
+    assert aligned == text + fill_char + ' '
+
+def test_align_center():
+    text = 'foo'
+    fill_char = '-'
+    width = 5
+    aligned = cu.align_center(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + text + fill_char
+
+def test_align_center_multiline():
+    text = "foo\nshoes"
+    fill_char = '-'
+    width = 7
+    aligned = cu.align_center(text, fill_char=fill_char, width=width)
+    assert aligned == ('--foo--\n'
+                       '-shoes-')
+
+def test_align_center_wide_text():
+    text = '苹'
+    fill_char = '-'
+    width = 4
+    aligned = cu.align_center(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + text + fill_char
+
+def test_align_center_wide_fill():
+    text = 'foo'
+    fill_char = '苹'
+    width = 7
+    aligned = cu.align_center(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + text + fill_char
+
+def test_align_center_wide_fill_needs_right_padding():
+    """Test when fill_char's display width does not divide evenly into right gap"""
+    text = 'foo'
+    fill_char = '苹'
+    width = 8
+    aligned = cu.align_center(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + text + fill_char + ' '
+
+def test_align_center_wide_fill_needs_left_and_right_padding():
+    """Test when fill_char's display width does not divide evenly into either gap"""
+    text = 'foo'
+    fill_char = '苹'
+    width = 9
+    aligned = cu.align_center(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + ' ' + text + fill_char + ' '
+
+def test_align_right():
+    text = 'foo'
+    fill_char = '-'
+    width = 5
+    aligned = cu.align_right(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + fill_char + text
+
+def test_align_right_multiline():
+    text = "foo\nshoes"
+    fill_char = '-'
+    width = 7
+    aligned = cu.align_right(text, fill_char=fill_char, width=width)
+    assert aligned == ('----foo\n'
+                       '--shoes')
+
+def test_align_right_wide_text():
+    text = '苹'
+    fill_char = '-'
+    width = 4
+    aligned = cu.align_right(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + fill_char + text
+
+def test_align_right_wide_fill():
+    text = 'foo'
+    fill_char = '苹'
+    width = 5
+    aligned = cu.align_right(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + text
+
+def test_align_right_wide_fill_needs_padding():
+    """Test when fill_char's display width does not divide evenly into gap"""
+    text = 'foo'
+    fill_char = '苹'
+    width = 6
+    aligned = cu.align_right(text, fill_char=fill_char, width=width)
+    assert aligned == fill_char + ' ' + text
