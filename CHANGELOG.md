@@ -1,4 +1,4 @@
-## 0.9.23 (TBD, 2019)
+## 0.9.23 (January 9, 2020)
 * Bug Fixes
     * Fixed bug where startup script containing a single quote in its file name was incorrectly quoted
     * Added missing implicit dependency on `setuptools` due to build with `setuptools_scm`
