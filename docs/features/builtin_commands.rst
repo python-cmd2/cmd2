@@ -23,7 +23,7 @@ A list of all user-settable parameters, with brief comments, is viewable from
 within a running application::
 
     (Cmd) set --long
-    allow_ansi: Terminal           # Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)
+    allow_style: Terminal          # Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)
     continuation_prompt: >         # On 2nd+ line of input
     debug: False                   # Show full error stack on error
     echo: False                    # Echo command issued into output
@@ -38,7 +38,7 @@ within a running application::
 Any of these user-settable parameters can be set while running your app with
 the ``set`` command like so::
 
-    (Cmd) set allow_ansi Never
+    (Cmd) set allow_style Never
 
 
 Removing A Builtin Command
