@@ -133,9 +133,6 @@ class Cmd(cmd.Cmd):
                                "  This command is for internal use and is not intended to be called from the\n"
                                "  command line.")
 
-    debug = False
-    """Set to True to display a full stack trace when exceptions occur"""
-
     # Sorting keys for strings
     ALPHABETICAL_SORT_KEY = utils.norm_fold
     NATURAL_SORT_KEY = utils.natural_keys
@@ -298,7 +295,6 @@ class Cmd(cmd.Cmd):
 
         # The error that prints when a non-existent command is run
         self.default_error = "{} is not a recognized command, alias, or macro"
-        """The error message displayed when a non-existent command is run."""
 
         self.broken_pipe_warning = ''
 
@@ -421,24 +417,6 @@ class Cmd(cmd.Cmd):
         else:
             self.perror('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.STYLE_TERMINAL,
                                                                               ansi.STYLE_ALWAYS, ansi.STYLE_NEVER))
-
-    @property
-    def broken_pipe_warning(self) -> str:
-        """Message to display if a BrokenPipeError is raised while writing output.
-
-        The following methods catch BrokenPipeError exceptions and output this message:
-
-          - :meth:`~cmd2.cmd2.Cmd.poutput()`
-          - :meth:`~cmd2.cmd2.Cmd.ppaged()`
-
-        The default value is an empty string meaning the BrokenPipeError is
-        silently swallowed.
-        """
-        return self.broken_pipe_error
-
-    @broken_pipe_warning.setter
-    def broken_pipe_warning(self, new_val: str) -> None:
-        self.broken_pipe_error = new_val
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported"""
