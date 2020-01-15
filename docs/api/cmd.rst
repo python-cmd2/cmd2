@@ -9,3 +9,6 @@ cmd2.Cmd
       The error message displayed to the user when they request help for a
       command with no help defined.
 
+    .. attribute:: default_error
+
+      The error message displayed when a non-existent command is run.
