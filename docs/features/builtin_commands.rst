@@ -2,13 +2,17 @@ Builtin Commands
 ================
 
 Applications which subclass :class:`cmd2.cmd2.Cmd` inherit a number of commands
-which may be useful to your users.
+which may be useful to your users. Developers can
+:ref:`features/builtin_commands:Remove Builtin Commands` if they do not want
+them to be part of the application.
 
 edit
 ----
 
 This command launches an editor program and instructs it to open the given file
-name. Here's an example::
+name. Here's an example:
+
+.. code-block:: text
 
   (Cmd) edit ~/.ssh/config
 
@@ -20,7 +24,9 @@ set
 ---
 
 A list of all user-settable parameters, with brief comments, is viewable from
-within a running application::
+within a running application:
+
+.. code-block:: text
 
     (Cmd) set --long
     allow_style: Terminal          # Allow ANSI escape sequences in output (valid values: Terminal, Always, Never)
@@ -36,13 +42,34 @@ within a running application::
     timing: False                  # Report execution times
 
 Any of these user-settable parameters can be set while running your app with
-the ``set`` command like so::
+the ``set`` command like so:
+
+.. code-block:: text
 
     (Cmd) set allow_style Never
 
 
-Removing A Builtin Command
---------------------------
+shell
+-----
 
-[TODO] show how to remove a builtin command if you don't want it available to
-your users.
+Execute a command as if at the operating system shell prompt:
+
+.. code-block:: text
+
+    (Cmd) shell pwd -P
+    /usr/local/bin
+
+
+Remove Builtin Commands
+-----------------------
+
+Developers may not want to offer the commands builtin to :class:`cmd2.cmd2.Cmd`
+to users of their application. To remove a command you must delete the method
+implementing that command from the :class:`cmd2.cmd2.Cmd` object at runtime.
+For example, if you wanted to remove the :ref:`features/builtin_commands:shell`
+command from your application::
+
+    class NoShellApp(cmd2.Cmd):
+        """A simple cmd2 application."""
+
+        delattr(cmd2.Cmd, 'do_shell')
