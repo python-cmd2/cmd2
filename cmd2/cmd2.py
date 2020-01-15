@@ -222,12 +222,6 @@ class Cmd(cmd.Cmd):
                 'quiet': "Don't print nonessential feedback",
                 'timing': 'Report execution times'
             }
-        """This dictionary contains the name and description of all settings available to users.
-
-        Users use the :ref:`features/builtin_commands:set` command to view and
-        modify settings. Settings are stored in instance attributes with the
-        same name as the setting.
-        """
 
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', '_relative_load', '_relative_run_script']

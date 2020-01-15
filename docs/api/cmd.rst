@@ -12,3 +12,11 @@ cmd2.Cmd
     .. attribute:: default_error
 
       The error message displayed when a non-existent command is run.
+
+    .. attribute:: settable
+
+        This dictionary contains the name and description of all settings available to users.
+
+        Users use the :ref:`features/builtin_commands:set` command to view and
+        modify settings. Settings are stored in instance attributes with the
+        same name as the setting.
