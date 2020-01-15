@@ -94,6 +94,7 @@ def strip_style(text: str) -> str:
 def style_aware_wcswidth(text: str) -> int:
     """
     Wrap wcswidth to make it compatible with strings that contains ANSI style sequences
+
     :param text: the string being measured
     :return: the width of the string when printed to the terminal
     """
@@ -104,6 +105,7 @@ def style_aware_wcswidth(text: str) -> int:
 def style_aware_write(fileobj: IO, msg: str) -> None:
     """
     Write a string to a fileobject and strip its ANSI style sequences if required by allow_style setting
+
     :param fileobj: the file object being written to
     :param msg: the string being written
     """
@@ -116,6 +118,7 @@ def style_aware_write(fileobj: IO, msg: str) -> None:
 def fg_lookup(fg_name: str) -> str:
     """
     Look up ANSI escape codes based on foreground color name.
+
     :param fg_name: foreground color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError: if the color cannot be found
@@ -130,6 +133,7 @@ def fg_lookup(fg_name: str) -> str:
 def bg_lookup(bg_name: str) -> str:
     """
     Look up ANSI escape codes based on background color name.
+
     :param bg_name: background color name to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError: if the color cannot be found
@@ -194,13 +198,13 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False,
 # These can be altered to suit an application's needs and only need to be a
 # function with the following structure: func(str) -> str
 style_success = functools.partial(style, fg='green')
-"""Partial function supplying arguments to style() to generate bold green text"""
+"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` to generate bold green text"""
 
 style_warning = functools.partial(style, fg='bright_yellow')
-"""Partial function supplying arguments to ansi.style() to generate yellow text"""
+"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` to generate yellow text"""
 
 style_error = functools.partial(style, fg='bright_red')
-"""Partial function supplying arguments to ansi.style() to generate bright red text"""
+"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` to generate bright red text"""
 
 
 def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_offset: int, alert_msg: str) -> str:
