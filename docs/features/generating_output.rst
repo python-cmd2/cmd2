@@ -7,34 +7,34 @@ methods::
   print("Greetings, Professor Falken.", file=self.stdout)
   self.stdout.write("Shall we play a game?\n")
 
-While you could send output directly to ``sys.stdout``, ``cmd`` can be
-initialized with a ``stdin`` and ``stdout`` variables, which it stores
-as ``self.stdin`` and ``self.stdout``. By using these variables every
-time you produce output, you can trivially change where all the output
-goes by changing how you initialize your class.
+While you could send output directly to ``sys.stdout``, :mod:`cmd2.cmd2.Cmd`
+can be initialized with a ``stdin`` and ``stdout`` variables, which it stores
+as ``self.stdin`` and ``self.stdout``. By using these variables every time you
+produce output, you can trivially change where all the output goes by changing
+how you initialize your class.
 
-``cmd2`` extends this approach in a number of convenient ways. See
+:mod:`cmd2.cmd2.Cmd` extends this approach in a number of convenient ways. See
 :ref:`features/redirection:Output Redirection And Pipes` for information on how
 users can change where the output of a command is sent. In order for those
 features to work, the output you generate must be sent to ``self.stdout``. You
-can use the methods described above, and everything will work fine. ``cmd2``
-also adds a number of output related methods to ``Cmd2.Cmd`` which you may use
-to enhance the output your application produces.
+can use the methods described above, and everything will work fine.
+:mod:`cmd2.cmd2.Cmd` also includes a number of output related methods which you
+may use to enhance the output your application produces.
 
 
 Ordinary Output
 ---------------
 
-The :meth:`.cmd2.Cmd.poutput` method is similar to the Python
-`built-in print function <https://docs.python.org/3/library/functions.html#print>`_. :meth:`~cmd2.cmd2.Cmd.poutput` adds two
-conveniences.
+The :meth:`~.cmd2.Cmd.poutput` method is similar to the Python
+`built-in print function <https://docs.python.org/3/library/functions.html#print>`_. :meth:`~.cmd2.Cmd.poutput` adds two
+conveniences:
 
   1. Since users can pipe output to a shell command, it catches
   ``BrokenPipeError`` and outputs the contents of
   ``self.broken_pipe_warning`` to ``stderr``. ``self.broken_pipe_warning``
   defaults to an empty string so this method will just swallow the exception.
   If you want to show an error message, put it in
-  ``self.broken_pipe_warning`` when you initialize ``Cmd2.cmd``.
+  ``self.broken_pipe_warning`` when you initialize :mod:`.cmd2.Cmd`.
 
   2. It examines and honors the :ref:`features/settings:allow_style` setting.
   See :ref:`features/generating_output:Colored Output` below for more details.
@@ -46,75 +46,12 @@ Here's a simple command that shows this method in action::
         self.poutput(args)
 
 
-Colored Output
---------------
-The output methods in the previous section all honor the ``allow_style``
-setting, which has three possible values:
-
-Never
-    poutput(), pfeedback(), and ppaged() strip all ANSI style sequences
-    which instruct the terminal to colorize output
-
-Terminal
-    (the default value) poutput(), pfeedback(), and ppaged() do not strip any
-    ANSI style sequences when the output is a terminal, but if the output is a
-    pipe or a file the style sequences are stripped. If you want colorized
-    output you must add ANSI style sequences using either cmd2's internal ansi
-    module or another color library such as `plumbum.colors`, `colorama`, or
-    `colored`.
-
-Always
-    poutput(), pfeedback(), and ppaged() never strip ANSI style sequences,
-    regardless of the output destination
-
-Colored and otherwise styled output can be generated using the `ansi.style()`
-function:
-
-.. automethod:: cmd2.ansi.style
-   :noindex:
-
-You may want to generate output in different colors, which is typically done by
-adding `ANSI escape sequences
-<https://en.wikipedia.org/wiki/ANSI_escape_code#Colors>`_ which tell the
-terminal to change the foreground and background colors. If you want to give
-yourself a headache, you can generate these by hand. You could also use another
-Python color library like `plumbum.colors
-<https://plumbum.readthedocs.io/en/latest/colors.html>`_, `colored
-<https://gitlab.com/dslackw/colored>`_, or `colorama
-<https://github.com/tartley/colorama>`_. Colorama is unique because when it's
-running on Windows, it wraps ``stdout``, looks for ANSI escape sequences, and
-converts them into the appropriate ``win32`` calls to modify the state of the
-terminal.
-
-``cmd2`` imports and uses Colorama and provides a number of convenience methods
-for generating colorized output, measuring the screen width of colorized
-output, setting the window title in the terminal, and removing ANSI escape
-codes from a string. These functions are all documentated in
-:mod:`cmd2.ansi`.
-
-:mod:`cmd2.cmd2.Cmd` includes an :ref:`features/settings:allow_style` setting,
-which controls whether ANSI escape sequences that instruct the terminal to
-colorize output are stripped from the output. The recommended approach is to
-construct your application so that it generates colorized output, and then
-allow your users to use this setting to remove the colorization if they do not
-want it.
-
-Output generated by any of these
-methods will honor the :ref:`features/settings:allow_style` setting:
-
-- :meth:`~.cmd2.Cmd.poutput`
-- :meth:`~.cmd2.Cmd.perror`
-- :meth:`~.cmd2.Cmd.pwarning`
-- :meth:`~.cmd2.Cmd.pexcept`
-- :meth:`~.cmd2.Cmd.pfeedback`
-- :meth:`~.cmd2.Cmd.ppaged`
-
-
 Error Messages
 --------------
 
 When an error occurs in your program, you can display it on ``sys.stderr`` by
-calling the :meth:`~.cmd2.Cmd.perror` method.
+calling the :meth:`~.cmd2.Cmd.perror` method. By default this method applies
+:meth:`cmd2.ansi.style_error` to the output.
 
 
 Warning Messages
@@ -162,6 +99,42 @@ pass all of the output to be displayed in a single call to
 :meth:`~.cmd2.Cmd.ppaged`, it will be piped to an operating system appropriate
 shell command to page the output. On Windows, the output is piped to ``more``;
 on Unix-like operating systems like MacOS and Linux, it is piped to ``less``.
+
+
+Colored Output
+--------------
+
+You can add your own `ANSI escape sequences
+<https://en.wikipedia.org/wiki/ANSI_escape_code#Colors>`_ to your output which
+tell the terminal to change the foreground and background colors. If you want
+to give yourself a headache, you can generate these by hand. You could also use
+a Python color library like `plumbum.colors
+<https://plumbum.readthedocs.io/en/latest/colors.html>`_, `colored
+<https://gitlab.com/dslackw/colored>`_, or `colorama
+<https://github.com/tartley/colorama>`_. Colorama is unique because when it's
+running on Windows, it wraps ``stdout``, looks for ANSI escape sequences, and
+converts them into the appropriate ``win32`` calls to modify the state of the
+terminal.
+
+``cmd2`` imports and uses Colorama and provides a number of convenience methods
+for generating colorized output, measuring the screen width of colorized
+output, setting the window title in the terminal, and removing ANSI escape
+codes from a string. These functions are all documentated in
+:mod:`cmd2.ansi`.
+
+After adding the desired escape sequences to your output, you should use one of
+these methods to present the output to the user:
+
+- :meth:`.cmd2.Cmd.poutput`
+- :meth:`.cmd2.Cmd.perror`
+- :meth:`.cmd2.Cmd.pwarning`
+- :meth:`.cmd2.Cmd.pexcept`
+- :meth:`.cmd2.Cmd.pfeedback`
+- :meth:`.cmd2.Cmd.ppaged`
+
+These methods all honor the :ref:`features/settings:allow_style` setting, which
+users can modify to control whether these escape codes are passed through to
+the terminal or not.
 
 
 Centering Text
