@@ -137,13 +137,21 @@ users can modify to control whether these escape codes are passed through to
 the terminal or not.
 
 
-Centering Text
+Aligning Text
 --------------
 
-If you would like to generate output which is centered in the user's terminal,
-the :meth:`cmd2.utils.align_center` method can help. Pass it a string and it
-will figure out the width of the terminal and return you a new string,
-appropriately padded so it will be centered.
+If you would like to generate output which is left, center, or right aligned within a
+specified width or the terminal width, the following functions can help:
+
+- :meth:`cmd2.utils.align_left`
+- :meth:`cmd2.utils.align_center`
+- :meth:`cmd2.utils.align_right`
+
+These functions differ from Python's string justifying functions in that they support
+characters with display widths greater than 1. Additionally, ANSI style sequences are safely
+ignored and do not count toward the display width. This means colored text is supported. If
+text has line breaks, then each line is aligned independently.
+
 
 
 Columnar Output
@@ -157,5 +165,5 @@ in the output to generate colors on the terminal.
 
 The :meth:`cmd2.ansi.style_aware_wcswidth` function solves both of these
 problems. Pass it a string, and regardless of which Unicode characters and ANSI
-escape sequences it contains, it will tell you how many characters on the
+text style escape sequences it contains, it will tell you how many characters on the
 screen that string will consume when printed.
