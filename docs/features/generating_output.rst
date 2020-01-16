@@ -34,7 +34,7 @@ conveniences:
   ``self.broken_pipe_warning`` to ``stderr``. ``self.broken_pipe_warning``
   defaults to an empty string so this method will just swallow the exception.
   If you want to show an error message, put it in
-  ``self.broken_pipe_warning`` when you initialize :mod:`.cmd2.Cmd`.
+  ``self.broken_pipe_warning`` when you initialize :mod:`~cmd2.cmd2.Cmd`.
 
   2. It examines and honors the :ref:`features/settings:allow_style` setting.
   See :ref:`features/generating_output:Colored Output` below for more details.
