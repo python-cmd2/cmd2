@@ -155,9 +155,9 @@ See ``cmd2/docs/api/cmd.rst`` to see how to add documentation for an attribute.
 
 For module data members and class attributes, the ``autodoc`` extension allows
 documentation in a comment with special formatting (using a #: to start the
-comment instead of just #), or in a docstring after the definition. This project
-has standardized on the docstring after the definition approach. Do not use the
-specially formatted comment approach.
+comment instead of just #), or in a docstring after the definition. This
+project has standardized on the docstring after the definition approach. Do not
+use the specially formatted comment approach.
 
 
 Links to API Reference
