@@ -140,6 +140,20 @@ and
 See :ref:`custom title<features/argument_processing:Help Messages>`
 
 
+API Documentation
+-----------------
+
+The API documentation is mostly pulled from docstrings in the source code using
+the Sphinx `autodoc
+<https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>`_
+extension. However, Sphinx has issues generating documentation for instance
+attributes (see `cmd2 issue 821
+<https://github.com/python-cmd2/cmd2/issues/821>`_ for the full discussion). We
+have chosen to not use code as the source of instance attribute documentation.
+Instead, it is added manually to the documentation files in ``cmd2/docs/api``.
+See ``cmd2/docs/api/cmd.rst`` to see how to add documentation for an attribute.
+
+
 Links to API Reference
 ----------------------
 
