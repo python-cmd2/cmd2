@@ -70,7 +70,8 @@ echo
 ~~~~
 
 If ``True``, each command the user issues will be repeated to the screen before
-it is executed.  This is particularly useful when running scripts.
+it is executed.  This is particularly useful when running scripts. This behavior
+does not occur when a running command at the prompt.
 
 
 editor
@@ -104,7 +105,13 @@ Allow access to your application in one of the
 max_completion_items
 ~~~~~~~~~~~~~~~~~~~~
 
-The maximum number of tab-completion items to display.
+Maximum number of CompletionItems to display during tab completion. A CompletionItem
+is a special kind of tab-completion hint which displays both a value and description
+and uses one line for each hint. Tab complete the ``set`` command for an example.
+
+If the number of tab-completion hints exceeds ``max_completion_items``, then they will
+be displayed in the typical columnized format and will not include the description text
+of the CompletionItem.
 
 
 prompt
