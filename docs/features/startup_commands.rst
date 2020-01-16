@@ -5,7 +5,7 @@ Startup Commands
 after your application starts up:
 
 1. Commands at Invocation
-1. Startup Script
+2. Startup Script
 
 Commands run as part of a startup script are always run immediately after the
 application finishes initializing so they are guaranteed to run before any

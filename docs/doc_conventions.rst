@@ -19,53 +19,107 @@ In addition:
   documentation, and to the API reference
 
 
+Style Checker
+-------------
+
+Use `doc8 <https://pypi.org/project/doc8/>`_ to check the style of the
+documentation. This tool can be invoked using the proper options by typing:
+
+.. code-block:: shell
+
+   $ invoke doc8
+
+
 Naming Files
 ------------
 
-- all lower case file names
+All source files in the documentation must:
+
+- have all lower case file names
 - if the name has multiple words, separate them with an underscore
-- all documentation file names end in '.rst'
+- end in '.rst'
 
 
-Heirarchy of headings
----------------------
+Indenting
+---------
 
-show the heirarchy of sphinx headings we use, and the conventions (underline
-only, no overline)
-
-Use '=', then '-', then '~'. If your document needs more levels than that,
-break it into separate documents.
-
-You only have to worry about the heirarchy of headings within a single file.
-Sphinx handles the intra-file heirarchy magically on it's own.
-
-Use two blank lines before every heading unless it's the first heading in the
-file. Use one blank line after every heading
+In reStructuredText all indenting is significant. Use 2 spaces per indenting
+level.
 
 
-Code
-----
+Wrapping
+--------
 
-This documentation declares python as the default Sphinx domain.  Python code
-or interactive python sessions can be presented by either:
+Hard wrap all text so that line lengths are no greater than 79 characters. It
+makes everything easier when editing documentation, and has no impact on
+reading documentation because we render to html.
+
+
+Titles and Headings
+-------------------
+
+reStructuredText allows flexibility in how headings are defined. You only have
+to worry about the heirarchy of headings within a single file. Sphinx magically
+handles the intra-file heirarchy on it's own. This magic means that no matter
+how you style titles and headings in the various files that comprise the
+documentation, Sphinx will render properly structured output. To ensure we have
+a similar consistency when viewing the source files, we use the following
+conventions for titles and headings:
+
+1. When creating a heading for a section, do not use the overline and underline
+syntax. Use the underline syntax only::
+
+  Document Title
+  ==============
+
+2. The string of adornment characters on the line following the heading should
+be the same length as the title.
+
+3. The title of a document should use the '=' adornment character on the next
+line and only one heading of this level should appear in each file.
+
+4. Sections within a document should have their titles adorned with the '-'
+character::
+
+  Section Title
+  -------------
+
+5. Subsections within a section should have their titles adorned with the '~'
+character::
+
+  Subsection Title
+  ~~~~~~~~~~~~~~~~
+
+6. Use two blank lines before every title unless it's the first heading in the
+file. Use one blank line after every heading.
+
+7. If your document needs more than three levels of sections, break it into
+separate documents.
+
+
+Inline Code
+-----------
+
+This documentation declares ``python`` as the default Sphinx domain.  Python
+code or interactive Python sessions can be presented by either:
 
 - finishing the preceding paragraph with a ``::`` and indenting the code
 - use the ``.. code-block::`` directive
 
-If you want to show other code, like shell commands, then use ``.. code-block:
-shell``.
+If you want to show non-Python code, like shell commands, then use ``..
+code-block: shell``.
 
 
-Table of Contents and Captions
-------------------------------
-
-
-Hyperlinks
-----------
+External Hyperlinks
+-------------------
 
 If you want to use an external hyperlink target, define the target at the top
-of the page, not the bottom.
+of the page or the top of the section, not the bottom. The target definition
+should always appear before it is referenced.
 
+
+Links To Other Documentation Pages and Sections
+-----------------------------------------------
 
 We use the Sphinx `autosectionlabel
 <http://www.sphinx-doc.org/en/master/usage/extensions/autosectionlabel.html>`_
@@ -73,7 +127,7 @@ extension. This allows you to reference any header in any document by::
 
    See :ref:`features/argument_processing:Help Messages`
 
-or ::
+or::
 
    See :ref:`custom title<features/argument_processing:Help Messages>`
 
@@ -85,28 +139,75 @@ and
 
 See :ref:`custom title<features/argument_processing:Help Messages>`
 
-[TODO what's the right way to link to source code? Can we make it link to the
-tag that the documentation is rendered from?]
+
+API Documentation
+-----------------
+
+The API documentation is mostly pulled from docstrings in the source code using
+the Sphinx `autodoc
+<https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>`_
+extension. However, Sphinx has issues generating documentation for instance
+attributes (see `cmd2 issue 821
+<https://github.com/python-cmd2/cmd2/issues/821>`_ for the full discussion). We
+have chosen to not use code as the source of instance attribute documentation.
+Instead, it is added manually to the documentation files in ``cmd2/docs/api``.
+See ``cmd2/docs/api/cmd.rst`` to see how to add documentation for an attribute.
+
+For module data members and class attributes, the ``autodoc`` extension allows
+documentation in a comment with special formatting (using a #: to start the
+comment instead of just #), or in a docstring after the definition. This
+project has standardized on the docstring after the definition approach. Do not
+use the specially formatted comment approach.
 
 
-Autolinking
------------
+Links to API Reference
+----------------------
 
+To reference a method or function, use one of the following approaches:
 
-Referencing cmd2 API documentation
-----------------------------------
+1. Reference the full dotted path of the method::
 
+     The :meth:`cmd2.cmd2.Cmd.poutput` method is similar to the Python built-in
+     print function.
 
-Info and Warning Callouts
--------------------------
+Which renders as: The :meth:`cmd2.cmd2.Cmd.poutput` method is similar to the
+Python built-in print function.
 
+2. Reference the full dotted path to the method, but only display the method
+name::
 
-Wrapping
---------
+     The :meth:`~cmd2.cmd2.Cmd.poutput` method is similar to the Python built-in print function.
 
-Hard wrap all text with line lengths no greater than 79 characters. It makes
-everything easier when editing documentation, and has no impact on reading
-documentation because we render to html.
+Which renders as: The :meth:`~cmd2.cmd2.Cmd.poutput` method is similar to the
+Python built-in print function.
+
+3. Reference a portion of the dotted path of the method::
+
+     The :meth:`.cmd2.Cmd.poutput` method is similar to the Python built-in print
+     function.
+
+Which renders as: The :meth:`.cmd2.Cmd.poutput` method is similar to the Python
+built-in print function.
+
+Avoid either of these approaches:
+
+1. Reference just the class name without enough dotted path::
+
+     The :meth:`.Cmd.poutput` method is similar to the Python built-in print
+     function.
+
+Because ``cmd2.Cmd`` subclasses ``cmd.Cmd`` from the standard library, this
+approach does not clarify which class it is referring to.
+
+2. Reference just a method name::
+
+     The :meth:`poutput` method is similar to the Python built-in print
+     function.
+
+While Sphinx may be smart enough to generate the correct output, the potential
+for multiple matching references is high, which causes Sphinx to generate
+warnings. The build pipeline that renders the documentation treats warnings as
+fatal errors. It's best to just be specific about what you are referencing.
 
 
 Referencing cmd2
@@ -115,14 +216,3 @@ Referencing cmd2
 Whenever you reference ``cmd2`` in the documentation, enclose it in double
 backticks. This indicates an inline literal in restructured text, and makes it
 stand out when rendered as html.
-
-Style Checker
--------------
-
-Use `doc8 <https://pypi.org/project/doc8/>`_ to check the style of the
-documentation. This tool can be invoked using the proper options by typing:
-
-.. code-block:: shell
-
-   $ invoke doc8
-

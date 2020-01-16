@@ -24,9 +24,11 @@ Always
     regardless of the output destination
 """
 import argparse
+from typing import Any
 
 import cmd2
 from cmd2 import ansi
+from colorama import Fore, Back, Style
 
 
 class CmdLineApp(cmd2.Cmd):
@@ -66,9 +68,31 @@ class CmdLineApp(cmd2.Cmd):
         repetitions = args.repeat or 1
         output_str = ansi.style(' '.join(words), fg=args.fg, bg=args.bg, bold=args.bold, underline=args.underline)
 
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
             self.poutput(output_str)
+        self.perror('error message at the end')
+
+    @staticmethod
+    def perror(msg: Any, *, end: str = '\n', apply_style: bool = True) -> None:
+        """Override perror() method from `cmd2.Cmd`
+
+        Use colorama native approach for styling the text instead of `cmd2.ansi` methods
+
+        :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
+        :param end: string appended after the end of the message, default a newline
+        :param apply_style: If True, then ansi.style_error will be applied to the message text. Set to False in cases
+                            where the message text already has the desired style. Defaults to True.
+        """
+        if apply_style:
+            final_msg = "{}{}{}{}".format(Fore.RED, Back.YELLOW, msg, Style.RESET_ALL)
+        else:
+            final_msg = "{}".format(msg)
+        ansi.ansi_aware_write(sys.stderr, final_msg + end)
+
+    def do_timetravel(self, args):
+        """A command which always generates an error message, to demonstrate custom error colors"""
+        self.perror('Mr. Fusion failed to start. Could not energize flux capacitor.')
 
 
 if __name__ == '__main__':

@@ -104,7 +104,7 @@ class CmdLineApp(cmd2.Cmd):
         repetitions = args.repeat or 1
         output_str = ansi.style(' '.join(words), fg=args.fg, bg=args.bg, bold=args.bold, underline=args.underline)
 
-        for i in range(min(repetitions, self.maxrepeats)):
+        for _ in range(min(repetitions, self.maxrepeats)):
             # .poutput handles newlines, and accommodates output redirection too
             self.poutput(output_str)
 

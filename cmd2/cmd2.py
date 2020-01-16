@@ -290,7 +290,7 @@ class Cmd(cmd.Cmd):
         # The error that prints when a non-existent command is run
         self.default_error = "{} is not a recognized command, alias, or macro"
 
-        # If this string is non-empty, then this warning message will print if a broken pipe error occurs while printing
+        # If non-empty, this string will be displayed if a broken pipe error occurs
         self.broken_pipe_warning = ''
 
         # Commands that will run at the beginning of the command loop

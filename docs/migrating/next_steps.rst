@@ -15,9 +15,8 @@ For all but the simplest of commands, it's probably easier to use `argparse
 ``cmd2`` provides a ``@with_argparser()`` decorator which associates an
 ``ArgumentParser`` object with one of your commands. Using this method will:
 
-1. Pass your command a `Namespace
-<https://docs.python.org/3/library/argparse.html#argparse.Namespace>`_
-containing the arguments instead of a string of text.
+1. Pass your command a `Namespace <https://docs.python.org/3/library/argparse.html#argparse.Namespace>`_
+   containing the arguments instead of a string of text.
 
 2. Properly handle quoted string input from your users.
 
@@ -52,8 +51,8 @@ Generating Output
 -----------------
 
 If your program generates output by printing directly to ``sys.stdout``, you
-should consider switching to :meth:`cmd2.cmd2.Cmd.poutput`,
-:meth:`cmd2.cmd2.Cmd.perror`, and :meth:`cmd2.cmd2.Cmd.pfeedback`. These
+should consider switching to :meth:`~cmd2.cmd2.Cmd.poutput`,
+:meth:`~cmd2.cmd2.Cmd.perror`, and :meth:`~cmd2.cmd2.Cmd.pfeedback`. These
 methods work with several of the built in :ref:`features/settings:Settings` to
 allow the user to view or suppress feedback (i.e. progress or status output).
 They also properly handle ansi colored output according to user preference.

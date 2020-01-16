@@ -46,15 +46,16 @@ writing a :ref:`Postparsing Hook <features/hooks:Postparsing Hooks>`.
 
 Cmd.cmdqueue
 ------------
+
 In cmd_, the `Cmd.cmdqueue
 <https://docs.python.org/3/library/cmd.html#cmd.Cmd.cmdqueue>`_ attribute
-contains A list of queued input lines. The cmdqueue list is checked in
+contains a list of queued input lines. The cmdqueue list is checked in
 ``cmdloop()`` when new input is needed; if it is nonempty, its elements will be
 processed in order, as if entered at the prompt.
 
-Since version 0.9.13 ``cmd2`` has removed support for ``Cmd.cmdqueue``.
-Because ``cmd2`` supports running commands via the main ``cmdloop()``, text
-scripts, Python scripts, transcripts, and history replays, the only way to
-preserve consistent behavior across these methods was to eliminate the command
-queue. Additionally, reasoning about application behavior is much easier
-without this queue present.
+Since version 0.9.13 ``cmd2`` has removed support for ``Cmd.cmdqueue``. Because
+``cmd2`` supports running commands via the main ``cmdloop()``, text scripts,
+Python scripts, transcripts, and history replays, the only way to preserve
+consistent behavior across these methods was to eliminate the command queue.
+Additionally, reasoning about application behavior is much easier without this
+queue present.
