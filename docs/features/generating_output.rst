@@ -118,8 +118,8 @@ terminal.
 
 ``cmd2`` imports and uses Colorama and provides a number of convenience methods
 for generating colorized output, measuring the screen width of colorized
-output, setting the window title in the terminal, and removing ANSI escape
-codes from a string. These functions are all documentated in
+output, setting the window title in the terminal, and removing ANSI text style
+escape codes from a string. These functions are all documentated in
 :mod:`cmd2.ansi`.
 
 After adding the desired escape sequences to your output, you should use one of
