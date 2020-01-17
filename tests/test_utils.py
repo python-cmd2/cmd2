@@ -297,7 +297,7 @@ def test_align_text_fill_char_is_tab():
     text = 'foo'
     fill_char = '\t'
     width = 5
-    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == text + '  '
 
 def test_align_text_fill_char_is_too_long():
@@ -305,42 +305,49 @@ def test_align_text_fill_char_is_too_long():
     fill_char = 'fill'
     width = 5
     with pytest.raises(TypeError):
-        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+        cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 def test_align_text_fill_char_is_unprintable():
     text = 'foo'
     fill_char = '\n'
     width = 5
     with pytest.raises(ValueError):
-        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+        cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 def test_align_text_has_tabs():
     text = '\t\tfoo'
     fill_char = '-'
     width = 10
-    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT, tab_width=2)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, tab_width=2)
     assert aligned == '    ' + 'foo' + '---'
 
 def test_align_text_blank():
     text = ''
     fill_char = '-'
     width = 5
-    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == fill_char * width
 
 def test_align_text_wider_than_width():
-    text = 'long'
+    text = 'long text field'
     fill_char = '-'
-    width = 3
-    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+    width = 8
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == text
+
+def test_align_text_wider_than_width_truncate():
+    text = 'long text field'
+    fill_char = '-'
+    width = 8
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
+    assert aligned == 'long te' + "\N{HORIZONTAL ELLIPSIS}"
 
 def test_align_text_has_unprintable():
     text = 'foo\x02'
     fill_char = '-'
     width = 5
     with pytest.raises(ValueError):
-        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+        cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 def test_align_text_term_width():
     import shutil
@@ -351,7 +358,7 @@ def test_align_text_term_width():
     term_width = shutil.get_terminal_size().columns
     expected_fill = (term_width - ansi.style_aware_wcswidth(text)) * fill_char
 
-    aligned = cu.align_text(text, fill_char=fill_char, alignment=cu.TextAlignment.LEFT)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char)
     assert aligned == text + expected_fill
 
 def test_align_left():
