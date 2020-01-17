@@ -667,7 +667,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
     if width is None:
         width = shutil.get_terminal_size().columns
 
-    if width <= 1:
+    if width < 1:
         raise ValueError("width must be at least 1")
 
     # Handle tabs
@@ -822,7 +822,7 @@ def truncate_string(text: str, max_width: int, *, tab_width: int = 4) -> str:
     if ansi.style_aware_wcswidth(text) == -1:
         raise (ValueError("text contains an unprintable character"))
 
-    if max_width <= 1:
+    if max_width < 1:
         raise ValueError("max_width must be at least 1")
 
     if ansi.style_aware_wcswidth(text) > max_width:
