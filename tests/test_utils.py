@@ -293,34 +293,34 @@ def test_context_flag_exit_err(context_flag):
         context_flag.__exit__()
 
 
-def test_truncate_string():
-    text = 'long'
+def test_truncate_line():
+    line = 'long'
     max_width = 3
-    truncated = cu.truncate_string(text, max_width)
+    truncated = cu.truncate_line(line, max_width)
     assert truncated == 'lo\N{HORIZONTAL ELLIPSIS}'
 
-def test_truncate_string_newline_in_text():
-    text = 'fo\no'
+def test_truncate_line_with_newline():
+    line = 'fo\no'
     max_width = 2
     with pytest.raises(ValueError):
-        cu.truncate_string(text, max_width)
+        cu.truncate_line(line, max_width)
 
-def test_truncate_string_width_is_too_small():
-    text = 'foo'
+def test_truncate_line_width_is_too_small():
+    line = 'foo'
     max_width = 0
     with pytest.raises(ValueError):
-        cu.truncate_string(text, max_width)
+        cu.truncate_line(line, max_width)
 
-def test_truncate_string_wide_text():
-    text = '苹苹other'
+def test_truncate_line_wide_text():
+    line = '苹苹other'
     max_width = 6
-    truncated = cu.truncate_string(text, max_width)
+    truncated = cu.truncate_line(line, max_width)
     assert truncated == '苹苹o\N{HORIZONTAL ELLIPSIS}'
 
-def test_truncate_string_tabs():
-    text = 'has\ttab'
+def test_truncate_line_tabs():
+    line = 'has\ttab'
     max_width = 9
-    truncated = cu.truncate_string(text, max_width)
+    truncated = cu.truncate_line(line, max_width)
     assert truncated == 'has    t\N{HORIZONTAL ELLIPSIS}'
 
 def test_align_text_fill_char_is_tab():

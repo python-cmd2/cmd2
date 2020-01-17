@@ -652,8 +652,8 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
                       be converted to a space.
-    :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
-                     replaced by a '…' character. Defaults to False.
+    :param truncate: if True, then each line will be shortened to fit within the display width. The truncated
+                     portions are replaced by a '…' character. Defaults to False.
     :return: aligned text
     :raises: TypeError if fill_char is more than one character
              ValueError if text or fill_char contains an unprintable character
@@ -694,7 +694,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
             text_buf.write('\n')
 
         if truncate:
-            line = truncate_string(line, width)
+            line = truncate_line(line, width)
 
         line_width = ansi.style_aware_wcswidth(line)
         if line_width == -1:
@@ -801,36 +801,36 @@ def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
                       tab_width=tab_width, truncate=truncate)
 
 
-def truncate_string(text: str, max_width: int, *, tab_width: int = 4) -> str:
+def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     """
     Truncate a single line to fit within a given display width. Any portion of the string that is truncated
     is replaced by a '…' character. Supports characters with display widths greater than 1. ANSI style sequences are
     safely ignored and do not count toward the display width. This means colored text is supported.
 
-    :param text: text to truncate
+    :param line: text to truncate
     :param max_width: the maximum display width the resulting string is allowed to have
     :param tab_width: any tabs in the text will be replaced with this many spaces
-    :return: string that has a display width less than or equal to width
+    :return: line that has a display width less than or equal to width
     :raises: ValueError if text contains an unprintable character like a new line
              ValueError if max_width is less than 1
     """
     from . import ansi
 
     # Handle tabs
-    text = text.replace('\t', ' ' * tab_width)
+    line = line.replace('\t', ' ' * tab_width)
 
-    if ansi.style_aware_wcswidth(text) == -1:
+    if ansi.style_aware_wcswidth(line) == -1:
         raise (ValueError("text contains an unprintable character"))
 
     if max_width < 1:
         raise ValueError("max_width must be at least 1")
 
-    if ansi.style_aware_wcswidth(text) > max_width:
+    if ansi.style_aware_wcswidth(line) > max_width:
         # Remove characters until we fit. Leave room for the ellipsis.
-        text = text[:max_width - 1]
-        while ansi.style_aware_wcswidth(text) > max_width - 1:
-            text = text[:-1]
+        line = line[:max_width - 1]
+        while ansi.style_aware_wcswidth(line) > max_width - 1:
+            line = line[:-1]
 
-        text += "\N{HORIZONTAL ELLIPSIS}"
+        line += "\N{HORIZONTAL ELLIPSIS}"
 
-    return text
+    return line
