@@ -3802,6 +3802,7 @@ class Cmd(cmd.Cmd):
                                                     cursor_offset=rl_get_point(), alert_msg=alert_msg)
                 if rl_type == RlType.GNU:
                     sys.stderr.write(terminal_str)
+                    sys.stderr.flush()
                 elif rl_type == RlType.PYREADLINE:
                     # noinspection PyUnresolvedReferences
                     readline.rl.mode.console.write(terminal_str)
@@ -3854,6 +3855,7 @@ class Cmd(cmd.Cmd):
         if self.terminal_lock.acquire(blocking=False):
             try:
                 sys.stderr.write(ansi.set_title_str(title))
+                sys.stderr.flush()
             except AttributeError:
                 # Debugging in Pycharm has issues with setting terminal title
                 pass
