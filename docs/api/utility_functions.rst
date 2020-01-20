@@ -17,6 +17,8 @@ Utility Functions
 
 .. autofunction:: cmd2.utils.align_right
 
+.. autofunction:: cmd2.utils.truncate_line
+
 .. autofunction:: cmd2.utils.strip_quotes
 
 .. autofunction:: cmd2.utils.namedtuple_with_defaults

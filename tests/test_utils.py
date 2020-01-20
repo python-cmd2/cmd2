@@ -317,6 +317,13 @@ def test_truncate_line_wide_text():
     truncated = cu.truncate_line(line, max_width)
     assert truncated == '苹苹o\N{HORIZONTAL ELLIPSIS}'
 
+def test_truncate_line_split_wide_text():
+    """Test when truncation results in a string which is shorter than max_width"""
+    line = '1苹2苹'
+    max_width = 3
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == '1\N{HORIZONTAL ELLIPSIS}'
+
 def test_truncate_line_tabs():
     line = 'has\ttab'
     max_width = 9
@@ -378,6 +385,14 @@ def test_align_text_wider_than_width_truncate():
     width = 8
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
     assert aligned == 'long te\N{HORIZONTAL ELLIPSIS}'
+
+def test_align_text_wider_than_width_truncate_add_fill():
+    """Test when truncation results in a string which is shorter than width and align_text adds filler"""
+    text = '1苹2苹'
+    fill_char = '-'
+    width = 3
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
+    assert aligned == '1\N{HORIZONTAL ELLIPSIS}-'
 
 def test_align_text_has_unprintable():
     text = 'foo\x02'
