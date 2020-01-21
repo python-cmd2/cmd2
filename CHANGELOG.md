@@ -2,6 +2,9 @@
 * Enhancements
     * Flushing stderr when setting the window title and printing alerts for better responsiveness in cases where
     stderr is not unbuffered.
+    * Added function to truncate a single line to fit within a given display width. `cmd2.utils.truncate_line`
+    supports characters with display widths greater than 1 and ANSI style sequences.
+    * Added line truncation support to `cmd2.utils` text alignment functions.
 
 ## 0.9.23 (January 9, 2020)
 * Bug Fixes

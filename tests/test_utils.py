@@ -293,54 +293,113 @@ def test_context_flag_exit_err(context_flag):
         context_flag.__exit__()
 
 
+def test_truncate_line():
+    line = 'long'
+    max_width = 3
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == 'lo\N{HORIZONTAL ELLIPSIS}'
+
+def test_truncate_line_with_newline():
+    line = 'fo\no'
+    max_width = 2
+    with pytest.raises(ValueError):
+        cu.truncate_line(line, max_width)
+
+def test_truncate_line_width_is_too_small():
+    line = 'foo'
+    max_width = 0
+    with pytest.raises(ValueError):
+        cu.truncate_line(line, max_width)
+
+def test_truncate_line_wide_text():
+    line = '苹苹other'
+    max_width = 6
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == '苹苹o\N{HORIZONTAL ELLIPSIS}'
+
+def test_truncate_line_split_wide_text():
+    """Test when truncation results in a string which is shorter than max_width"""
+    line = '1苹2苹'
+    max_width = 3
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == '1\N{HORIZONTAL ELLIPSIS}'
+
+def test_truncate_line_tabs():
+    line = 'has\ttab'
+    max_width = 9
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == 'has    t\N{HORIZONTAL ELLIPSIS}'
+
 def test_align_text_fill_char_is_tab():
     text = 'foo'
     fill_char = '\t'
     width = 5
-    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == text + '  '
+
+def test_align_text_width_is_too_small():
+    text = 'foo'
+    fill_char = '-'
+    width = 0
+    with pytest.raises(ValueError):
+        cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 def test_align_text_fill_char_is_too_long():
     text = 'foo'
     fill_char = 'fill'
     width = 5
     with pytest.raises(TypeError):
-        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+        cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 def test_align_text_fill_char_is_unprintable():
     text = 'foo'
     fill_char = '\n'
     width = 5
     with pytest.raises(ValueError):
-        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+        cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 def test_align_text_has_tabs():
     text = '\t\tfoo'
     fill_char = '-'
     width = 10
-    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT, tab_width=2)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, tab_width=2)
     assert aligned == '    ' + 'foo' + '---'
 
 def test_align_text_blank():
     text = ''
     fill_char = '-'
     width = 5
-    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == fill_char * width
 
 def test_align_text_wider_than_width():
-    text = 'long'
+    text = 'long text field'
+    fill_char = '-'
+    width = 8
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
+    assert aligned == text
+
+def test_align_text_wider_than_width_truncate():
+    text = 'long text field'
+    fill_char = '-'
+    width = 8
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
+    assert aligned == 'long te\N{HORIZONTAL ELLIPSIS}'
+
+def test_align_text_wider_than_width_truncate_add_fill():
+    """Test when truncation results in a string which is shorter than width and align_text adds filler"""
+    text = '1苹2苹'
     fill_char = '-'
     width = 3
-    aligned = cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
-    assert aligned == text
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
+    assert aligned == '1\N{HORIZONTAL ELLIPSIS}-'
 
 def test_align_text_has_unprintable():
     text = 'foo\x02'
     fill_char = '-'
     width = 5
     with pytest.raises(ValueError):
-        cu.align_text(text, fill_char=fill_char, width=width, alignment=cu.TextAlignment.LEFT)
+        cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
 def test_align_text_term_width():
     import shutil
@@ -351,7 +410,7 @@ def test_align_text_term_width():
     term_width = shutil.get_terminal_size().columns
     expected_fill = (term_width - ansi.style_aware_wcswidth(text)) * fill_char
 
-    aligned = cu.align_text(text, fill_char=fill_char, alignment=cu.TextAlignment.LEFT)
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char)
     assert aligned == text + expected_fill
 
 def test_align_left():
