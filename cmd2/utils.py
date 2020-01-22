@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 import unicodedata
+import collections.abc as collections_abc
 from enum import Enum
 from typing import Any, Iterable, List, Optional, TextIO, Union
 
@@ -57,7 +58,7 @@ def strip_quotes(arg: str) -> str:
 
 
 def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
-                             default_values: collections.Iterable = ()):
+                             default_values: collections_abc.Iterable = ()):
     """
     Convenience function for defining a namedtuple with default values
 
@@ -79,7 +80,7 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
     T = collections.namedtuple(typename, field_names)
     # noinspection PyProtectedMember,PyUnresolvedReferences
     T.__new__.__defaults__ = (None,) * len(T._fields)
-    if isinstance(default_values, collections.Mapping):
+    if isinstance(default_values, collections_abc.Mapping):
         prototype = T(**default_values)
     else:
         prototype = T(*default_values)
