@@ -23,6 +23,9 @@ jobs:
       Python37:
         python.version: '3.7'
         TOXENV: 'py37'
+      Python38:
+        python.version: '3.8'
+        TOXENV: 'py38'
     # Increase the maxParallel value to simultaneously run the job for all versions in the matrix (max 10 for free open-source)
     maxParallel: 4
 

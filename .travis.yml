@@ -13,9 +13,13 @@ matrix:
           dist: xenial
           env: TOXENV=py37
         - os: linux
-          python: 3.8-dev
+          python: 3.8
           dist: xenial
           env: TOXENV=py38
+        - os: linux
+          python: 3.9-dev
+          dist: xenial
+          env: TOXENV=py39
         - os: linux
           python: 3.5
           env: TOXENV=docs
@@ -43,7 +47,7 @@ install:
 before_script:
   # stop the build if there are Python syntax errors or undefined names
   # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
-  if [[ $TOXENV == py37 ]]; then
+  if [[ $TOXENV == py38 ]]; then
     flake8 . --count --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics ;
   fi
 
