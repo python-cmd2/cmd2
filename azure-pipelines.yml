@@ -9,7 +9,7 @@ jobs:
 
   # Configure Build Environment to use Azure Pipelines to build Python project using macOS
   pool:
-    vmImage: 'macOS 10.13'  # other options 'Ubuntu 16.04', 'VS2017-Win2016'
+    vmImage: 'macOS-latest'  # 10.14 Mojave, Azure will be adding Catalina or macOS-10.15 on February 3, 2020
 
   # Run the pipeline with multiple Python versions
   strategy:
