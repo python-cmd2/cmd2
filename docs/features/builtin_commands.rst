@@ -6,8 +6,18 @@ which may be useful to your users. Developers can
 :ref:`features/builtin_commands:Remove Builtin Commands` if they do not want
 them to be part of the application.
 
+List of Builtin Commands
+------------------------
+
+alias
+~~~~~
+
+This command manages aliases via subcommands ``create``, ``delete``, and
+``list``.  See :ref:`features/shortcuts_aliases_macros:Aliases` for more
+information.
+
 edit
-----
+~~~~
 
 This command launches an editor program and instructs it to open the given file
 name. Here's an example:
@@ -19,9 +29,62 @@ name. Here's an example:
 The program to be launched is determined by the value of the
 :ref:`features/settings:editor` setting.
 
+help
+~~~~
+
+This command lists available commands or provides detailed help for a specific
+command. When called with the ``-v/--verbose`` argument, it shows a brief
+description of each command.  See :ref:`features/help:Help` for more
+information.
+
+history
+~~~~~~~
+
+This command allows you to view, run, edit, save, or clear previously entered
+commands from the history.  See :ref:`features/history:History` for more
+information.
+
+ipy
+~~~
+
+This optional opt-in command enters an interactive IPython shell.  See
+:ref:`features/embedded_python_shells:IPython (optional)` for more information.
+
+macro
+~~~~~
+
+This command manages macros via subcommands ``create``, ``delete``, and
+``list``.  A macro is similar to an alias, but it can contain argument
+placeholders.  See :ref:`features/shortcuts_aliases_macros:Macros` for more
+information.
+
+py
+~~
+
+This command invokes a Python command or shell.  See
+:ref:`features/embedded_python_shells:Embedded Python Shells` for more
+information.
+
+quit
+~~~~
+
+This command exits the ``cmd2`` application.
+
+run_pyscript
+~~~~~~~~~~~~
+
+This command runs a Python script file inside the ``cmd2`` application.
+See :ref:`features/scripting:Python Scripts` for more information.
+
+run_script
+~~~~~~~~~~
+
+This command runs commands in a script file that is encoded as either ASCII
+or UTF-8 text.  See :ref:`features/scripting:Command Scripts` for more
+information.
 
 set
----
+~~~
 
 A list of all user-settable parameters, with brief comments, is viewable from
 within a running application:
@@ -48,9 +111,10 @@ the ``set`` command like so:
 
     (Cmd) set allow_style Never
 
+See :ref:`features/settings:Settings` for more information.
 
 shell
------
+~~~~~
 
 Execute a command as if at the operating system shell prompt:
 
@@ -58,6 +122,12 @@ Execute a command as if at the operating system shell prompt:
 
     (Cmd) shell pwd -P
     /usr/local/bin
+
+shortcuts
+~~~~~~~~~
+
+This command lists available shortcuts.  See
+:ref:`features/shortcuts_aliases_macros:Shortcuts` for more information.
 
 
 Remove Builtin Commands
