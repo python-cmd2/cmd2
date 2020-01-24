@@ -1,4 +1,4 @@
-## 0.9.24 (TBD, 2020)
+## 0.9.24 (January 23, 2020)
 * Enhancements
     * Flushing stderr when setting the window title and printing alerts for better responsiveness in cases where
     stderr is not unbuffered.
