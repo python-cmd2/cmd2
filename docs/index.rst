@@ -87,4 +87,3 @@ Meta
    :caption: Meta
 
    doc_conventions
-   copyright
