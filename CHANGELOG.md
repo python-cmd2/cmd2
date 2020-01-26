@@ -1,4 +1,4 @@
-## 0.9.25 (TBD, 2020)
+## 0.9.25 (January 26, 2020)
 * Enhancements
     * Reduced what gets put in package downloadable from PyPI (removed irrelevant CI config files and such)
 
