@@ -29,7 +29,7 @@ You can also search through the command history using ``Control-r``.
 Eric Johnson hosts a nice `readline cheat sheet
 <http://readline.kablamo.org/emacs.html>`_, or you can dig into the `GNU
 Readline User Manual
-<https://tiswww.case.edu/php/chet/readline/rluserman.html>`_ for all the
+<http://man7.org/linux/man-pages/man3/readline.3.html>`_ for all the
 details, including instructions for customizing the key bindings.
 
 ``cmd2`` makes a third type of history access available with the ``history``

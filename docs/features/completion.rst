@@ -60,7 +60,7 @@ displayed to help the user.
 
 .. _arg_decorators: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_decorators.py
 .. _colors: https://github.com/python-cmd2/cmd2/blob/master/examples/colors.py
-.. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion..py
+.. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
 
 
 CompletionItem For Providing Extra Context

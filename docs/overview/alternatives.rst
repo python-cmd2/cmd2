@@ -10,8 +10,8 @@ argparse_.
 
 .. _sys: https://docs.python.org/3/library/sys.html
 .. _argparse: https://docs.python.org/3/library/argparse.html
-.. _docopt: https://pypi.python.org/pypi/docopt
-.. _click: http://click.pocoo.org
+.. _docopt: https://pypi.org/project/docopt
+.. _click: https://click.palletsprojects.com
 
 
 The curses_ module produces applications that interact via a plaintext terminal
@@ -31,7 +31,7 @@ nonetheless. Two of the most mature and full featured are:
   * `Python Prompt Toolkit`_
   * Click_
 
-.. _`Python Prompt Toolkit`: https://github.com/jonathanslenders/python-prompt-toolkit
+.. _`Python Prompt Toolkit`: https://github.com/prompt-toolkit/python-prompt-toolkit
 
 `Python Prompt Toolkit`_ is a library for building powerful interactive command
 lines and terminal applications in Python.  It provides a lot of advanced

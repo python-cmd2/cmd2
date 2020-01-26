@@ -284,14 +284,14 @@ Users can access command history using two methods:
 
 - the `readline <https://docs.python.org/3/library/readline.html>`_ library
   which provides a python interface to the `GNU readline library
-  <https://tiswww.case.edu/php/chet/readline/rltop.html>`_
+  <https://en.wikipedia.org/wiki/GNU_Readline>`_
 - the ``history`` command which is built-in to ``cmd2``
 
 From the prompt in a ``cmd2``-based application, you can press ``Control-p`` to
 move to the previously entered command, and ``Control-n`` to move to the next
 command. You can also search through the command history using ``Control-r``.
 The `GNU Readline User Manual
-<https://tiswww.case.edu/php/chet/readline/rluserman.html>`_ has all the
+<http://man7.org/linux/man-pages/man3/readline.3.html>`_ has all the
 details, including all the available commands, and instructions for customizing
 the key bindings.
 
