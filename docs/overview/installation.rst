@@ -3,9 +3,9 @@ Installation Instructions
 =========================
 
 
-.. _pip: https://pypi.python.org/pypi/pip
-.. _setuptools: https://pypi.python.org/pypi/setuptools
-.. _PyPI: https://pypi.python.org/pypi
+.. _pip: https://pypi.org/project/pip
+.. _setuptools: https://pypi.org/project/setuptools
+.. _PyPI: https://pypi.org
 
 ``cmd2`` works on Linux, macOS, and Windows. It requires Python 3.5 or
 higher, pip_, and setuptools_. If you've got all that, then you can just:
@@ -129,7 +129,7 @@ environment on a Mac, detailed in the following subsections.
 gnureadline Python module
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Install the `gnureadline <https://pypi.python.org/pypi/gnureadline>`_ Python module which is statically linked against a specific compatible version of GNU Readline:
+Install the `gnureadline <https://pypi.org/project/gnureadline>`_ Python module which is statically linked against a specific compatible version of GNU Readline:
 
 .. code-block:: shell
 

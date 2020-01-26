@@ -45,7 +45,7 @@ namespace.add_collection(namespace_clean, 'clean')
 @invoke.task
 def pytest(context):
     "Run tests and code coverage using pytest"
-    context.run("pytest --cov=cmd2 --cov-report=term --cov-report=html")
+    context.run("pytest --cov=cmd2 --cov-report=term --cov-report=html", pty=True)
 namespace.add_task(pytest)
 
 @invoke.task
@@ -98,7 +98,7 @@ SPHINX_OPTS = '-nvWT'   # Be nitpicky, verbose, and treat warnings as errors
 def docs(context, builder='html'):
     "Build documentation using sphinx"
     cmdline = 'python -msphinx -M {} {} {} {}'.format(builder, DOCS_SRCDIR, DOCS_BUILDDIR, SPHINX_OPTS)
-    context.run(cmdline)
+    context.run(cmdline, pty=True)
 namespace.add_task(docs)
 
 @invoke.task()
@@ -113,6 +113,12 @@ def docs_clean(context):
     #pylint: disable=unused-argument
     rmrf(DOCS_BUILDDIR)
 namespace_clean.add_task(docs_clean, name='docs')
+
+@invoke.task()
+def linkcheck(context):
+    """Check external links in Sphinx documentation for integrity."""
+    context.run('cd docs && make linkcheck', pty=True)
+namespace.add_task(linkcheck)
 
 @invoke.task
 def livehtml(context):
