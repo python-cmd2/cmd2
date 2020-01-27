@@ -6,7 +6,7 @@ capabilities which you may wish to utilize while initializing the app::
 
     #!/usr/bin/env python3
     # coding=utf-8
-    """A simple example cmd2 appliction demonstrating the following:
+    """A simple example cmd2 application demonstrating the following:
         1) Colorizing/stylizing output
         2) Using multiline commands
         3) Persistent history
@@ -28,14 +28,26 @@ capabilities which you may wish to utilize while initializing the app::
             super().__init__(multiline_commands=['echo'], persistent_history_file='cmd2_history.dat',
                              startup_script='scripts/startup.txt', use_ipython=True)
 
+            # Prints an intro banner once upon application startup
             self.intro = style('Welcome to cmd2!', fg='red', bg='white', bold=True)
+
+            # Show this as the prompt when asking for input
             self.prompt = 'myapp> '
+
+            # Used as prompt for multiline commands after the first line
+            self.continuation_prompt = '... '
 
             # Allow access to your application in py and ipy via self
             self.locals_in_py = True
 
             # Set the default category name
             self.default_category = 'cmd2 Built-in Commands'
+
+            # Color to output text in with echo command
+            self.foreground_color = 'cyan'
+
+            # Make echo_fg settable at runtime
+            self.settable['foreground_color'] = 'Foreground color to use with echo command'
 
         @cmd2.with_category(CUSTOM_CATEGORY)
         def do_intro(self, _):
@@ -45,7 +57,7 @@ capabilities which you may wish to utilize while initializing the app::
         @cmd2.with_category(CUSTOM_CATEGORY)
         def do_echo(self, arg):
             """Example of a multiline command"""
-            self.poutput(arg)
+            self.poutput(style(arg, fg=self.foreground_color))
 
 
     if __name__ == '__main__':
