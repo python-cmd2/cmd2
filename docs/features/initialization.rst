@@ -7,15 +7,16 @@ capabilities which you may wish to utilize while initializing the app::
     #!/usr/bin/env python3
     # coding=utf-8
     """A simple example cmd2 application demonstrating the following:
-        1) Colorizing/stylizing output
-        2) Using multiline commands
-        3) Persistent history
-        4) How to run an initialization script at startup
-        5) How to group and categorize commands when displaying them in help
-        6) Opting-in to using the ipy command to run an IPython shell
-        7) Allowing access to your application in py and ipy
-        8) Displaying an intro banner upon starting your application
-        9) Using a custom prompt
+         1) Colorizing/stylizing output
+         2) Using multiline commands
+         3) Persistent history
+         4) How to run an initialization script at startup
+         5) How to group and categorize commands when displaying them in help
+         6) Opting-in to using the ipy command to run an IPython shell
+         7) Allowing access to your application in py and ipy
+         8) Displaying an intro banner upon starting your application
+         9) Using a custom prompt
+        10) How to make custom attributes settable at runtime
     """
     import cmd2
     from cmd2 import style
