@@ -108,7 +108,10 @@ override:
   support commands that are only available during specific states of the
   application. This dictionary's keys are the command names and its values are
   DisabledCommand objects.
-- **echo**: if ``True`` echo command issued into output (Default: ``False``)
+- **echo**: if ``True``, each command the user issues will be repeated to the
+  screen before it is executed. This is particularly useful when running
+  scripts. This behavior does not occur when a running command at the prompt.
+  (Default: ``False``)
 - **editor**: text editor program to use with *edit* command (e.g. ``vim``)
 - **exclude_from_history**: commands to exclude from the *history* command
 - **exit_code**: this determines the value returned by ``cmdloop()`` when
@@ -125,14 +128,15 @@ override:
 - **locals_in_py**: if ``True`` allow access to your application in *py*
   command via ``self`` (Default: ``False``)
 - **macros**: dictionary of macro names and their values
-- **max_completion_items**: max number of items to display during tab-
-  completion (Default: 50)
+- **max_completion_items**: max number of CompletionItems to display during
+  tab-completion (Default: 50)
 - **pager**: sets the pager command used by the ``Cmd.ppaged()`` method for
   displaying wrapped output using a pager
 - **pager_chop**: sets the pager command used by the ``Cmd.ppaged()`` method
   for displaying chopped/truncated output using a pager
 - **py_bridge_name**: name by which embedded Python environments and scripts
-  refer to the ``cmd2`` application by in order to call commands
+  refer to the ``cmd2`` application by in order to call commands (Default:
+  ``app``)
 - **py_locals**: dictionary that defines specific variables/functions available
   in Python shells and scripts (provides more fine-grained control than making
   everything available with **locals_in_py**)
