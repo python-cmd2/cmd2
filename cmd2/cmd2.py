@@ -272,9 +272,6 @@ class Cmd(cmd.Cmd):
         # Otherwise it will be None. Its used to know when a pipe process can be killed and/or waited upon.
         self._cur_pipe_proc_reader = None
 
-        # Used by complete() for readline tab completion
-        self.completion_matches = []
-
         # Used to keep track of whether we are redirecting or piping output
         self._redirecting = False
 
@@ -321,45 +318,6 @@ class Cmd(cmd.Cmd):
         elif transcript_files:
             self._transcript_files = transcript_files
 
-        # The default key for sorting string results. Its default value performs a case-insensitive alphabetical sort.
-        # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
-        # cmd2 uses this key for sorting:
-        #     command and category names
-        #     alias, macro, settable, and shortcut names
-        #     tab completion results when self.matches_sorted is False
-        self.default_sort_key = Cmd.ALPHABETICAL_SORT_KEY
-
-        ############################################################################################################
-        # The following variables are used by tab-completion functions. They are reset each time complete() is run
-        # in reset_completion_defaults() and it is up to completer functions to set them before returning results.
-        ############################################################################################################
-
-        # If True and a single match is returned to complete(), then a space will be appended
-        # if the match appears at the end of the line
-        self.allow_appended_space = True
-
-        # If True and a single match is returned to complete(), then a closing quote
-        # will be added if there is an unmatched opening quote
-        self.allow_closing_quote = True
-
-        # An optional header that prints above the tab-completion suggestions
-        self.completion_header = ''
-
-        # Use this list if you are completing strings that contain a common delimiter and you only want to
-        # display the final portion of the matches as the tab-completion suggestions. The full matches
-        # still must be returned from your completer function. For an example, look at path_complete()
-        # which uses this to show only the basename of paths as the suggestions. delimiter_complete() also
-        # populates this list.
-        self.display_matches = []
-
-        # Used by functions like path_complete() and delimiter_complete() to properly
-        # quote matches that are completed in a delimited fashion
-        self.matches_delimited = False
-
-        # Set to True before returning matches to complete() in cases where matches have already been sorted.
-        # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
-        self.matches_sorted = False
-
         # Set the pager(s) for use with the ppaged() method for displaying output using a pager
         if sys.platform.startswith('win'):
             self.pager = self.pager_chop = 'more'
@@ -391,6 +349,48 @@ class Cmd(cmd.Cmd):
         # If any command has been categorized, then all other commands that haven't been categorized
         # will display under this section in the help output.
         self.default_category = 'Uncategorized'
+
+        # The default key for sorting string results. Its default value performs a case-insensitive alphabetical sort.
+        # If natural sorting is preferred, then set this to NATURAL_SORT_KEY.
+        # cmd2 uses this key for sorting:
+        #     command and category names
+        #     alias, macro, settable, and shortcut names
+        #     tab completion results when self.matches_sorted is False
+        self.default_sort_key = Cmd.ALPHABETICAL_SORT_KEY
+
+        ############################################################################################################
+        # The following variables are used by tab-completion functions. They are reset each time complete() is run
+        # in _reset_completion_defaults() and it is up to completer functions to set them before returning results.
+        ############################################################################################################
+
+        # If True and a single match is returned to complete(), then a space will be appended
+        # if the match appears at the end of the line
+        self.allow_appended_space = True
+
+        # If True and a single match is returned to complete(), then a closing quote
+        # will be added if there is an unmatched opening quote
+        self.allow_closing_quote = True
+
+        # An optional header that prints above the tab-completion suggestions
+        self.completion_header = ''
+
+        # Used by complete() for readline tab completion
+        self.completion_matches = []
+
+        # Use this list if you are completing strings that contain a common delimiter and you only want to
+        # display the final portion of the matches as the tab-completion suggestions. The full matches
+        # still must be returned from your completer function. For an example, look at path_complete()
+        # which uses this to show only the basename of paths as the suggestions. delimiter_complete() also
+        # populates this list.
+        self.display_matches = []
+
+        # Used by functions like path_complete() and delimiter_complete() to properly
+        # quote matches that are completed in a delimited fashion
+        self.matches_delimited = False
+
+        # Set to True before returning matches to complete() in cases where matches have already been sorted.
+        # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
+        self.matches_sorted = False
 
     # -----  Methods related to presenting output to the user -----
 
