@@ -12,6 +12,6 @@ if __name__ == '__main__':
     # Set "use_ipython" to True to include the ipy command if IPython is installed, which supports advanced interactive
     # debugging of your application via introspection on self.
     app = cmd2.Cmd(use_ipython=True, persistent_history_file='cmd2_history.dat')
-    app.locals_in_py = True     # Enable access to "self" within the py command
+    app.self_in_py = True     # Enable access to "self" within the py command
     app.debug = True            # Show traceback if/when an exception occurs
     sys.exit(app.cmdloop())

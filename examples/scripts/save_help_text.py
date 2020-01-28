@@ -60,7 +60,7 @@ def main() -> None:
 
     # Make sure we have access to self
     if 'self' not in globals():
-        print("Re-run this script from a cmd2 application where locals_in_py is True")
+        print("Re-run this script from a cmd2 application where self_in_py is True")
         return
 
     # Make sure the user passed in an output file

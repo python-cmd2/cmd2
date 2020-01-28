@@ -181,7 +181,7 @@ class Cmd(cmd.Cmd):
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
-        # To prevent a user from altering these with the py/ipy commands, remove locals_in_py from the
+        # To prevent a user from altering these with the py/ipy commands, remove self_in_py from the
         # settable dictionary during your applications's __init__ method.
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
@@ -221,7 +221,7 @@ class Cmd(cmd.Cmd):
         self.continuation_prompt = '> '
 
         # Allow access to your application in embedded Python shells and scripts py via self
-        self.locals_in_py = False
+        self.self_in_py = False
 
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', '_relative_load', '_relative_run_script']
@@ -3118,7 +3118,7 @@ class Cmd(cmd.Cmd):
             self.py_locals['quit'] = py_quit
             self.py_locals['exit'] = py_quit
 
-            if self.locals_in_py:
+            if self.self_in_py:
                 self.py_locals['self'] = self
             elif 'self' in self.py_locals:
                 del self.py_locals['self']
@@ -3238,7 +3238,7 @@ class Cmd(cmd.Cmd):
                 exec("{} = py_bridge".format(cmd2_app.py_bridge_name))
 
                 # Add self variable pointing to cmd2_app, if allowed
-                if cmd2_app.locals_in_py:
+                if cmd2_app.self_in_py:
                     exec("self = cmd2_app")
 
                 # Delete these names from the environment so IPython can't use them

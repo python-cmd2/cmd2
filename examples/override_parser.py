@@ -19,6 +19,6 @@ from cmd2 import cmd2
 if __name__ == '__main__':
     import sys
     app = cmd2.Cmd(use_ipython=True, persistent_history_file='cmd2_history.dat')
-    app.locals_in_py = True     # Enable access to "self" within the py command
+    app.self_in_py = True     # Enable access to "self" within the py command
     app.debug = True            # Show traceback if/when an exception occurs
     sys.exit(app.cmdloop())

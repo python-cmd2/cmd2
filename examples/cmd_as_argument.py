@@ -33,7 +33,7 @@ class CmdLineApp(cmd2.Cmd):
         # Set use_ipython to True to enable the "ipy" command which embeds and interactive IPython shell
         super().__init__(allow_cli_args=False, use_ipython=True, multiline_commands=['orate'], shortcuts=shortcuts)
 
-        self.locals_in_py = True
+        self.self_in_py = True
         self.maxrepeats = 3
         # Make maxrepeats settable at runtime
         self.settable['maxrepeats'] = 'max repetitions for speak command'

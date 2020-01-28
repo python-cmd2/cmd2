@@ -318,14 +318,11 @@ example/transcript_regex.txt:
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
 allow_style: Terminal
-continuation_prompt: >/ /
 debug: False
 echo: False
 editor: /.*?/
 feedback_to_output: False
-locals_in_py: True
 maxrepeats: 3
-prompt: (Cmd)/ /
 quiet: False
 timing: False
 ```
@@ -350,14 +347,14 @@ Open source projects using cmd2
 
 Here are a few examples of open-source projects which use `cmd2`:
 
+* [Jok3r](http://www.jok3r-framework.com)
+    * Network & Web Pentest Automation Framework
 * [CephFS Shell](http://docs.ceph.com/docs/master/cephfs/cephfs-shell/)
     * [Ceph](https://ceph.com/) is a distributed object, block, and file storage platform
 * [JSShell](https://github.com/Den1al/JSShell)
     * An interactive multi-user web JavaScript shell
 * [psiTurk](https://psiturk.org)
     * An open platform for science on Amazon Mechanical Turk
-* [Jok3r](http://www.jok3r-framework.com)
-    * Network & Web Pentest Automation Framework
 * [Poseidon](https://github.com/CyberReboot/poseidon)
     * Leverages software-defined networks (SDNs) to acquire and then feed network traffic to a number of machine learning techniques
 * [Unipacker](https://github.com/unipacker/unipacker)

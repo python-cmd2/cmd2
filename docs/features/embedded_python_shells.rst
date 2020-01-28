@@ -8,7 +8,7 @@ arguments, it enters an interactive Python session.  The session can call
 your cmd2 application while maintaining isolation.
 
 You may optionally enable full access to to your application by setting
-``locals_in_py`` to ``True``.  Enabling this flag adds ``self`` to the python
+``self_in_py`` to ``True``.  Enabling this flag adds ``self`` to the python
 session, which is a reference to your Cmd2 application. This can be useful for
 debugging your application.
 
