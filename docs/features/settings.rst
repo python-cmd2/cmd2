@@ -69,9 +69,9 @@ trace will be printed.
 echo
 ~~~~
 
-If ``True``, each command the user issues will be repeated to the screen before
-it is executed.  This is particularly useful when running scripts. This
-behavior does not occur when a running command at the prompt.
+If ``True``, each command the user issues will be repeated to the screen
+before it is executed. This is particularly useful when running scripts.
+This behavior does not occur when a running command at the prompt.
 
 
 editor
