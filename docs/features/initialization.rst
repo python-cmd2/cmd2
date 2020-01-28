@@ -87,8 +87,8 @@ The ``cmd2.Cmd`` class provides a large number of public instance attributes
 which allow developers to customize a ``cmd2`` application further beyond the
 options provided by the ``__init__()`` method.
 
-Common instance attributes to override
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Public instance attributes
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 Here are instance attributes of ``cmd2.Cmd`` which developers might wish
 override:
 
@@ -148,20 +148,3 @@ override:
   are settable at runtime using the *set* command
 - **timing**: if ``True`` display execution time for each command (Default:
   ``False``)
-
-Rare instance attributes to override
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-These instance attributes are used by built-in tab-completion functions.
-
-These instance attributes really are not intended for ``cmd2`` developers to
-override, but they are there for unusual circumstances where it may be
-necessary:
-
-- **sigint_protection**: context manager used to protect critical sections in
-  the main thread from stopping due to a KeyboardInterrupt
-- **statement_parser**: object which parses all command line arguments (it
-  would be extremely rare to use something other than the default for this)
-- **terminal_lock**: this lock should be acquired before doing any asynchronous
-  changes to the terminal to ensure the updates to the terminal don't interfere
-  with the input being typed or output being printed by a command.
