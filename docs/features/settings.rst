@@ -47,16 +47,6 @@ This setting can be one of three values:
 - ``Always`` - ANSI escape sequences are always passed through to the output
 
 
-continuation_prompt
-~~~~~~~~~~~~~~~~~~~
-
-When a user types a :ref:`Multiline Command
-<features/multiline_commands:Multiline Commands>` it may span more than one
-line of input. The prompt for the first line of input is specified by the
-:ref:`features/settings:prompt` setting. The prompt for subsequent lines of
-input is defined by this setting.
-
-
 debug
 ~~~~~
 
@@ -71,7 +61,7 @@ echo
 
 If ``True``, each command the user issues will be repeated to the screen
 before it is executed. This is particularly useful when running scripts.
-This behavior does not occur when a running command at the prompt.
+This behavior does not occur when running a command at the prompt.
 
 
 editor
@@ -95,13 +85,6 @@ feedback output will be mixed in with and indistinguishable from output
 generated with :meth:`~cmd2.cmd2.Cmd.poutput`.
 
 
-locals_in_py
-~~~~~~~~~~~~
-
-Allow access to your application in one of the
-:ref:`features/embedded_python_shells:Embedded Python Shells` via ``self``.
-
-
 max_completion_items
 ~~~~~~~~~~~~~~~~~~~~
 
@@ -113,13 +96,6 @@ command for an example.
 If the number of tab-completion hints exceeds ``max_completion_items``, then
 they will be displayed in the typical columnized format and will not include
 the description text of the CompletionItem.
-
-
-prompt
-~~~~~~
-
-This setting contains the string which should be printed as a prompt for user
-input.
 
 
 quiet
@@ -180,14 +156,13 @@ You may want to prevent a user from modifying a builtin setting. A setting
 must appear in the :attr:`cmd2.cmd2.Cmd.settable` dictionary in order for it
 to be available to the :ref:`features/builtin_commands:set` command.
 
-Let's say your program does not have any
-:ref:`features/multiline_commands:Multiline Commands`. You might want to hide
-the :ref:`features/settings:continuation_prompt` setting from your users since
-it is only applicable to multiline commands. To do so, remove it from the
+Let's say that you never want end users of your program to be able to enable
+full debug tracebacks to print out if an error occurs. You might want to hide
+the :ref:`features/settings:debug` setting. To do so, remove it from the
 :attr:`cmd2.cmd2.Cmd.settable` dictionary after you initialize your object::
 
   class MyApp(cmd2.Cmd):
 
     def __init__(self):
         super().__init__()
-        self.settable.pop('continuation_prompt')
+        self.settable.pop('debug')

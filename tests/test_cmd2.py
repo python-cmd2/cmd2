@@ -254,17 +254,13 @@ def test_base_py(base_app):
     out, err = run_cmd(base_app, 'py print("spaces" + " in this " + "command")')
     assert out[0].rstrip() == 'spaces in this command'
 
-    # Set locals_in_py to True and make sure we see self
-    out, err = run_cmd(base_app, 'set locals_in_py True')
-    assert 'now: True' in out
-
+    # Set self_in_py to True and make sure we see self
+    base_app.self_in_py = True
     out, err = run_cmd(base_app, 'py print(self)')
     assert 'cmd2.cmd2.Cmd object' in out[0]
 
-    # Set locals_in_py to False and make sure we can't see self
-    out, err = run_cmd(base_app, 'set locals_in_py False')
-    assert 'now: False' in out
-
+    # Set self_in_py to False and make sure we can't see self
+    base_app.self_in_py = False
     out, err = run_cmd(base_app, 'py print(self)')
     assert "NameError: name 'self' is not defined" in err
 

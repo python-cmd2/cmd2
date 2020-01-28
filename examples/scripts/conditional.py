@@ -8,7 +8,7 @@ To run it you should do the following:
     run_pyscript scripts/conditional.py directory_path
 
 Note: The "app" function is defined within the cmd2 embedded Python environment and in there "self" is your cmd2
-application instance. Note: self only exists in this environment if locals_in_py is True.
+application instance. Note: self only exists in this environment if self_in_py is True.
 """
 import os
 import sys

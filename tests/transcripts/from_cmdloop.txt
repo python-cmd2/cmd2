@@ -39,6 +39,6 @@ OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
 OODNIGHT, GRACIEGAY
-(Cmd) set prompt "---> "
-prompt - was: (Cmd)/ */
-now: --->/ */
+(Cmd) set debug True
+debug - was: False/ */
+now: True/ */

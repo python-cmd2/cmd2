@@ -39,7 +39,7 @@ capabilities which you may wish to utilize while initializing the app::
             self.continuation_prompt = '... '
 
             # Allow access to your application in py and ipy via self
-            self.locals_in_py = True
+            self.self_in_py = True
 
             # Set the default category name
             self.default_category = 'cmd2 Built-in Commands'
@@ -110,7 +110,7 @@ override:
   DisabledCommand objects.
 - **echo**: if ``True``, each command the user issues will be repeated to the
   screen before it is executed. This is particularly useful when running
-  scripts. This behavior does not occur when a running command at the prompt.
+  scripts. This behavior does not occur when running a command at the prompt.
   (Default: ``False``)
 - **editor**: text editor program to use with *edit* command (e.g. ``vim``)
 - **exclude_from_history**: commands to exclude from the *history* command
@@ -125,7 +125,7 @@ override:
   of results in a Python script or interactive console. Built-in commands don't
   make use of this.  It is purely there for user-defined commands and
   convenience.
-- **locals_in_py**: if ``True`` allow access to your application in *py*
+- **self_in_py**: if ``True`` allow access to your application in *py*
   command via ``self`` (Default: ``False``)
 - **macros**: dictionary of macro names and their values
 - **max_completion_items**: max number of CompletionItems to display during
@@ -139,7 +139,7 @@ override:
   ``app``)
 - **py_locals**: dictionary that defines specific variables/functions available
   in Python shells and scripts (provides more fine-grained control than making
-  everything available with **locals_in_py**)
+  everything available with **self_in_py**)
 - **quiet**: if ``True`` then completely suppress nonessential output (Default:
   ``False``)
 - **quit_on_sigint**: if ``True`` quit the main loop on interrupt instead of
