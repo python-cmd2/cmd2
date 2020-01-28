@@ -188,20 +188,17 @@ class Cmd(cmd.Cmd):
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
 
         # Attributes which ARE dynamically settable via the set command at runtime
-        self.continuation_prompt = '> '
         self.debug = False
         self.echo = False
         self.editor = Cmd.DEFAULT_EDITOR
         self.feedback_to_output = False  # Do not include nonessentials in >, | output by default (things like timing)
-        self.locals_in_py = False
+        self.quiet = False  # Do not suppress nonessential output
+        self.timing = False  # Prints elapsed time for each command
 
         # The maximum number of CompletionItems to display during tab completion. If the number of completion
         # suggestions exceeds this number, they will be displayed in the typical columnized format and will
         # not include the description value of the CompletionItems.
         self.max_completion_items = 50
-
-        self.quiet = False  # Do not suppress nonessential output
-        self.timing = False  # Prints elapsed time for each command
 
         # To make an attribute settable with the "do_set" command, add it to this ...
         self.settable = \
@@ -211,17 +208,20 @@ class Cmd(cmd.Cmd):
                                 '(valid values: {}, {}, {})'.format(ansi.STYLE_TERMINAL,
                                                                     ansi.STYLE_ALWAYS,
                                                                     ansi.STYLE_NEVER)),
-                'continuation_prompt': 'On 2nd+ line of input',
                 'debug': 'Show full error stack on error',
                 'echo': 'Echo command issued into output',
                 'editor': 'Program used by ``edit``',
                 'feedback_to_output': 'Include nonessentials in `|`, `>` results',
-                'locals_in_py': 'Allow access to your application in py via self',
                 'max_completion_items': 'Maximum number of CompletionItems to display during tab completion',
-                'prompt': 'The prompt issued to solicit input',
                 'quiet': "Don't print nonessential feedback",
                 'timing': 'Report execution times'
             }
+
+        # Use as prompt for multiline commands on the 2nd+ line of input
+        self.continuation_prompt = '> '
+
+        # Allow access to your application in embedded Python shells and scripts py via self
+        self.locals_in_py = False
 
         # Commands to exclude from the help menu and tab completion
         self.hidden_commands = ['eof', '_relative_load', '_relative_run_script']

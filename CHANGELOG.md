@@ -1,3 +1,10 @@
+## 0.9.26 (January 26, 2020)
+* Breaking changes
+    * The following public attributes of `cmd2.Cmd` are no longer settable at runtime by end users:
+        * `continuation_prompt`
+        * `locals_in_py`
+        * `prompt`
+    
 ## 0.9.25 (January 26, 2020)
 * Enhancements
     * Reduced what gets put in package downloadable from PyPI (removed irrelevant CI config files and such)

@@ -93,14 +93,11 @@ within a running application:
 
     (Cmd) set --long
     allow_style: Terminal          # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
-    continuation_prompt: >         # On 2nd+ line of input
     debug: False                   # Show full error stack on error
     echo: False                    # Echo command issued into output
     editor: vim                    # Program used by ``edit``
     feedback_to_output: False      # include nonessentials in `|`, `>` results
-    locals_in_py: False            # Allow access to your application in py via self
     max_completion_items: 50       # Maximum number of CompletionItems to display during tab completion
-    prompt: (Cmd)                  # The prompt issued to solicit input
     quiet: False                   # Don't print nonessential feedback
     timing: False                  # Report execution times
 

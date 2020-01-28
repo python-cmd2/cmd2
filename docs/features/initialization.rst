@@ -110,7 +110,7 @@ override:
   DisabledCommand objects.
 - **echo**: if ``True``, each command the user issues will be repeated to the
   screen before it is executed. This is particularly useful when running
-  scripts. This behavior does not occur when a running command at the prompt.
+  scripts. This behavior does not occur when running a command at the prompt.
   (Default: ``False``)
 - **editor**: text editor program to use with *edit* command (e.g. ``vim``)
 - **exclude_from_history**: commands to exclude from the *history* command

@@ -3,6 +3,13 @@ Prompt
 
 ``cmd2`` can issue a prompt before soliciting user input.
 
+Customizing the Prompt
+----------------------
+
+This prompt can be configured by setting the `cmd2.Cmd.prompt` instance
+attribute. This contains the string which should be printed as a prompt
+for user input.
+
 Asynchronous Feedback
 ---------------------
 
