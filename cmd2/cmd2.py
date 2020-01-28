@@ -181,8 +181,6 @@ class Cmd(cmd.Cmd):
         super().__init__(completekey=completekey, stdin=stdin, stdout=stdout)
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
-        # To prevent a user from altering these with the py/ipy commands, remove self_in_py from the
-        # settable dictionary during your applications's __init__ method.
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
         self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
