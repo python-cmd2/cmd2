@@ -108,6 +108,8 @@ override:
   support commands that are only available during specific states of the
   application. This dictionary's keys are the command names and its values are
   DisabledCommand objects.
+- **doc_header**: Set the header used for the help function's listing of
+  documented functions
 - **echo**: if ``True``, each command the user issues will be repeated to the
   screen before it is executed. This is particularly useful when running
   scripts. This behavior does not occur when running a command at the prompt.

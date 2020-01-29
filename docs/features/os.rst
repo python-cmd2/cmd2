@@ -49,8 +49,8 @@ loop::
 
     $ python examples/example.py help
 
-    Documented commands (type help <topic>):
-    ========================================
+    Documented commands (use 'help -v' for verbose/'help <topic>' for details):
+    ===========================================================================
     alias  help     macro   orate  quit          run_script  set    shortcuts
     edit   history  mumble  py     run_pyscript  say         shell  speak
 
