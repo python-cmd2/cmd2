@@ -1,7 +1,7 @@
 ## 0.9.26 (TBD, 2020)
 * Breaking changes
     * Renamed `locals_in_py` attribute of `cmd2.Cmd` to `self_in_py`
-    * The following public attributes of `cmd2.Cmd` are no longer settable at runtime by end users:
+    * The following public attributes of `cmd2.Cmd` are no longer settable at runtime by default:
         * `continuation_prompt`
         * `self_in_py`
         * `prompt`
