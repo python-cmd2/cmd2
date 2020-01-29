@@ -20,3 +20,17 @@ line of input. The prompt for the first line of input is specified by the
 ``cmd2.Cmd.prompt`` instance attribute - see
 :ref:`features/prompt:Customizing the Prompt`. The prompt for subsequent lines
 of input is defined by the ``cmd2.Cmd.continuation_prompt`` attribute.
+
+Use cases
+---------
+Multiline commands should probably be used sparingly in order to preserve a
+good user experience for your ``cmd2``-based line-oriented command interpreter
+application.
+
+However, some use cases benefit significantly from the ability to have commands
+that span more than one line. For example, you might want the ability for your
+user to type in a SQL command, which can often span lines and which are
+terminated with a semicolon.
+
+We estimate that less than 5 percent of ``cmd2`` applications use this feature.
+But it is here for those uses cases where it provides value.
