@@ -15,21 +15,6 @@ Exiting
 Mention quit, and EOF handling built into ``cmd2``.
 
 
-Shell Command
--------------
-
-``cmd2`` includes a ``shell`` command which executes it's arguments in the
-operating system shell::
-
-    (Cmd) shell ls -al
-
-If you use the default :ref:`features/shortcuts_aliases_macros:Shortcuts`
-defined in ``cmd2`` you'll get a ``!`` shortcut for ``shell``, which allows you
-to type::
-
-    (Cmd) !ls -al
-
-
 select
 ------
 
@@ -89,15 +74,6 @@ See the ``do_enable_commands()`` and ``do_disable_commands()`` functions in the
 HelpCategories_ example for a demonstration.
 
 .. _HelpCategories: https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py
-
-
-Exit code
----------
-
-The ``self.exit_code`` attribute of your ``cmd2`` application controls what
-exit code is returned from ``cmdloop()`` when it completes.  It is your job to
-make sure that this exit code gets sent to the shell when your application
-exits by calling ``sys.exit(app.cmdloop())``.
 
 
 Default to shell
