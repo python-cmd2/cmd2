@@ -1,14 +1,60 @@
 Integrating with the OS
 =======================
 
-- how to redirect output
-- executing OS commands from within ``cmd2``
-- editors
-- paging
-- exit codes
-- Automation and calling cmd2 from other CLI/CLU tools via commands at
-  invocation and quit
+How to redirect output
+----------------------
 
+See :ref:`features/redirection:Output Redirection and Pipes`
+
+Executing OS commands from within ``cmd2``
+------------------------------------------
+
+``cmd2`` includes a ``shell`` command which executes it's arguments in the
+operating system shell::
+
+    (Cmd) shell ls -al
+
+If you use the default :ref:`features/shortcuts_aliases_macros:Shortcuts`
+defined in ``cmd2`` you'll get a ``!`` shortcut for ``shell``, which allows you
+to type::
+
+    (Cmd) !ls -al
+
+
+Editors
+-------
+
+``cmd2`` includes the built-in ``edit`` command which uns a text editor and
+optionally open a file with it::
+
+    (Cmd) edit foo.txt
+
+The editor used is determined by the ``editor`` settable parameter and can
+be either a text editor such as **vim** or a graphical editor such as
+**VSCode**. To set it::
+
+    set editor <program_name>
+
+If you have the ``EDITOR`` environment variable set, then this will be the
+default value for ``editor``.  If not, then ``cmd2`` will attempt to search
+for any in a list of common editors for your operating system.
+
+Terminal pagers
+---------------
+
+Output of any command can be displayed one page at a time using the
+:meth:`~.cmd2.Cmd.ppaged` method.
+
+Alternatively, a terminal pager can be invoked directly using the ability
+to run shell commands with the ``!`` shortcut.
+
+Exit codes
+----------
+
+The ``self.exit_code`` attribute of your ``cmd2`` application controls what
+exit code is returned from ``cmdloop()`` when it completes.  It is your job to
+make sure that this exit code gets sent to the shell when your application
+exits by calling ``sys.exit(app.cmdloop())``.
 
 Invoking With Arguments
 -----------------------
@@ -84,3 +130,37 @@ your own argument parsing of the command line::
 
 Check the source code of this example, especially the ``main()`` function, to
 see the technique.
+
+Alternatively you can simply wrap the command plus arguments in quotes (either
+single or double quotes)::
+
+    $ python example/example.py "speak -p hello there"
+    ellohay heretay
+    (Cmd)
+
+Automating cmd2 apps from other CLI/CLU tools
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+While ``cmd2`` is designed to create **interactive** command-line applications
+which enter a Read-Evaluate-Print-Loop (REPL), there are a great many times
+when it would be useful to use a ``cmd2`` application as a run-and-done
+command-line utility for purposes of automation and scripting.
+
+This is easily achieved by combining the following capabilities of ``cmd2``:
+1. Ability to invoke a ``cmd2`` application with arguments
+1. Ability to set an exit code when leaving a ``cmd2`` application
+1. Ability to exit a ``cmd2`` application with the  ``quit`` command
+
+Here is a simple example which doesn't require the quit command since the
+custom ``exit`` command quits while returning an exit code::
+
+    $ python examples/exit_code.py "exit 23"
+    'examples/exit_code.py' exiting with code: 23
+    $ echo $?
+    23
+
+Here is another example using ``quit``::
+
+    $ python example/example.py "speak -p hello there" quit
+    ellohay heretay
+    $
