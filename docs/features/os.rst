@@ -20,9 +20,9 @@ to type::
 
     (Cmd) !ls -al
 
-NOTE: That ``cmd2`` provides user-friendly tab-completion throughout the
-process of running a shell command - first for the shell command name itself,
-and then for file paths in the argument section.
+NOTE: ``cmd2`` provides user-friendly tab-completion throughout the process of
+running a shell command - first for the shell command name itself, and then for
+file paths in the argument section.
 
 Editors
 -------
