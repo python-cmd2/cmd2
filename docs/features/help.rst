@@ -12,15 +12,15 @@ Categorizing Commands
 
 By default, the ``help`` command displays::
 
-  Documented commands (type help <topic>):
-  ========================================
+  Documented commands (use 'help -v' for verbose/'help <topic>' for details):
+  ===========================================================================
   alias  help     ipy    py    run_pyscript  set    shortcuts
   edit   history  macro  quit  run_script    shell
 
 If you have a large number of commands, you can optionally group your commands
 into categories. Here's the output from the example ``help_categories.py``::
 
-  Documented commands (type help <topic>):
+  Documented commands (use 'help -v' for verbose/'help <topic>' for details):
 
   Application Management
   ======================
@@ -90,7 +90,7 @@ Using the ``categorize()`` function:
 The ``help`` command also has a verbose option (``help -v`` or ``help
 --verbose``) that combines the help categories with per-command Help Messages::
 
-    Documented commands (type help <topic>):
+    Documented commands (use 'help -v' for verbose/'help <topic>' for details):
 
     Application Management
     ================================================================================
