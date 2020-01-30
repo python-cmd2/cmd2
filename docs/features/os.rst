@@ -20,12 +20,15 @@ to type::
 
     (Cmd) !ls -al
 
+NOTE: That ``cmd2`` provides user-friendly tab-completion throughout the
+process of running a shell command - first for the shell command name itself,
+and then for file paths in the argument section.
 
 Editors
 -------
 
-``cmd2`` includes the built-in ``edit`` command which uns a text editor and
-optionally open a file with it::
+``cmd2`` includes the built-in ``edit`` command which runs a text editor and
+optionally opens a file with it::
 
     (Cmd) edit foo.txt
 
@@ -46,7 +49,14 @@ Output of any command can be displayed one page at a time using the
 :meth:`~.cmd2.Cmd.ppaged` method.
 
 Alternatively, a terminal pager can be invoked directly using the ability
-to run shell commands with the ``!`` shortcut.
+to run shell commands with the ``!`` shortcut like so::
+
+    (Cmd) !less foo.txt
+
+NOTE: Once you are in a terminal pager, that program temporarily has control
+of your terminal, **NOT** ``cmd2``.  Typically you can use either the arrow
+keys or <PageUp>/<PageDown> keys to scroll around or type ``q`` to quit the
+pager and return control to your ``cmd2`` application.
 
 Exit codes
 ----------
@@ -147,9 +157,10 @@ when it would be useful to use a ``cmd2`` application as a run-and-done
 command-line utility for purposes of automation and scripting.
 
 This is easily achieved by combining the following capabilities of ``cmd2``:
-1. Ability to invoke a ``cmd2`` application with arguments
-1. Ability to set an exit code when leaving a ``cmd2`` application
-1. Ability to exit a ``cmd2`` application with the  ``quit`` command
+
+#. Ability to invoke a ``cmd2`` application with arguments
+#. Ability to set an exit code when leaving a ``cmd2`` application
+#. Ability to exit a ``cmd2`` application with the  ``quit`` command
 
 Here is a simple example which doesn't require the quit command since the
 custom ``exit`` command quits while returning an exit code::
