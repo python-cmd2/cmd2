@@ -279,6 +279,9 @@ class Cmd(cmd.Cmd):
         # The multiline command currently being typed which is used to tab complete multiline commands.
         self._multiline_in_progress = ''
 
+        # Set the header used for the help function's listing of documented functions
+        self.doc_header = "Documented commands (use 'help -v' for verbose/'help <topic>' for details):"
+
         # The error that prints when no help information can be found
         self.help_error = "No help on {}"
 
