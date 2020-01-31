@@ -93,8 +93,12 @@ def cast(current: Any, new: str) -> Any:
 
     :param current: current value for the parameter, type varies
     :param new: new value
-    :return: new value with same type as current, or the current value if there was an error casting
+    :return: new value with same type as current, or the current value if there was an error casting or original was None
     """
+    # Prevent an attempt at casting to NoneType
+    if current is None:
+        return new
+
     typ = type(current)
     orig_new = new
 

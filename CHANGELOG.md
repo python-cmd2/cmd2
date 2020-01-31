@@ -1,6 +1,7 @@
 ## 0.9.26 (TBD, 2020)
 * Enhancements
     * Changed the default help text to make `help -v` more discoverable
+    * Settable attributes with original value `None` can now be set to a string
 * Breaking changes
     * Renamed `locals_in_py` attribute of `cmd2.Cmd` to `self_in_py`
     * The following public attributes of `cmd2.Cmd` are no longer settable at runtime by default:

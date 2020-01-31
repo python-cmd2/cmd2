@@ -531,3 +531,45 @@ def test_align_right_wide_fill_needs_padding():
     width = 6
     aligned = cu.align_right(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + ' ' + text
+
+
+def test_cast():
+    # None
+    assert cu.cast(None, 'foo') == 'foo'
+
+    # Boolean
+    assert cu.cast(True, True) == True
+    assert cu.cast(True, False) == False
+    assert cu.cast(True, 0) == False
+    assert cu.cast(True, 1) == True
+    assert cu.cast(True, 'on') == True
+    assert cu.cast(True, 'off') == False
+    assert cu.cast(True, 'ON') == True
+    assert cu.cast(True, 'OFF') == False
+    assert cu.cast(True, 'y') == True
+    assert cu.cast(True, 'n') == False
+    assert cu.cast(True, 't') == True
+    assert cu.cast(True, 'f') == False
+
+    # Non-boolean same type
+    assert cu.cast(1, 5) == 5
+    assert cu.cast(3.4, 2.7) == 2.7
+    assert cu.cast('foo', 'bar') == 'bar'
+    assert cu.cast([1,2], [3,4]) == [3,4]
+
+def test_cast_problems(capsys):
+    expected = 'Problem setting parameter (now {}) to {}; incorrect type?\n'
+
+    # Boolean current, with new value not convertible to bool
+    current = True
+    new = [True, True]
+    assert cu.cast(current, new) == current
+    out, err = capsys.readouterr()
+    assert out == expected.format(current, new)
+
+    # Non-boolean current, with new value not convertible to current type
+    current = 1
+    new = 'octopus'
+    assert cu.cast(current, new) == current
+    out, err = capsys.readouterr()
+    assert out == expected.format(current, new)

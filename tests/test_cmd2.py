@@ -118,45 +118,6 @@ def test_base_show_readonly(base_app):
     assert out == expected
 
 
-def test_cast():
-    # Boolean
-    assert utils.cast(True, True) == True
-    assert utils.cast(True, False) == False
-    assert utils.cast(True, 0) == False
-    assert utils.cast(True, 1) == True
-    assert utils.cast(True, 'on') == True
-    assert utils.cast(True, 'off') == False
-    assert utils.cast(True, 'ON') == True
-    assert utils.cast(True, 'OFF') == False
-    assert utils.cast(True, 'y') == True
-    assert utils.cast(True, 'n') == False
-    assert utils.cast(True, 't') == True
-    assert utils.cast(True, 'f') == False
-
-    # Non-boolean same type
-    assert utils.cast(1, 5) == 5
-    assert utils.cast(3.4, 2.7) == 2.7
-    assert utils.cast('foo', 'bar') == 'bar'
-    assert utils.cast([1,2], [3,4]) == [3,4]
-
-def test_cast_problems(capsys):
-    expected = 'Problem setting parameter (now {}) to {}; incorrect type?\n'
-
-    # Boolean current, with new value not convertible to bool
-    current = True
-    new = [True, True]
-    assert utils.cast(current, new) == current
-    out, err = capsys.readouterr()
-    assert out == expected.format(current, new)
-
-    # Non-boolean current, with new value not convertible to current type
-    current = 1
-    new = 'octopus'
-    assert utils.cast(current, new) == current
-    out, err = capsys.readouterr()
-    assert out == expected.format(current, new)
-
-
 def test_base_set(base_app):
     out, err = run_cmd(base_app, 'set quiet True')
     expected = normalize("""
