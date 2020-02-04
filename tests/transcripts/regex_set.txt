@@ -4,10 +4,10 @@
 # Regexes on prompts just make the trailing space obvious
 
 (Cmd) set
-allow_style: /(Terminal|Always|Never)/
+allow_style: /'(Terminal|Always|Never)'/
 debug: False
 echo: False
-editor: /.*/
+editor: /'.*'/
 feedback_to_output: False
 max_completion_items: 50
 maxrepeats: 3

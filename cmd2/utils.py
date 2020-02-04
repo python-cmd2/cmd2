@@ -2,6 +2,7 @@
 """Shared utility functions"""
 
 import collections
+import collections.abc as collections_abc
 import glob
 import os
 import re
@@ -9,9 +10,8 @@ import subprocess
 import sys
 import threading
 import unicodedata
-import collections.abc as collections_abc
 from enum import Enum
-from typing import Any, Iterable, List, Optional, TextIO, Union
+from typing import Any, Callable, Iterable, List, Optional, TextIO, Union
 
 from . import constants
 
@@ -55,6 +55,61 @@ def strip_quotes(arg: str) -> str:
     if is_quoted(arg):
         arg = arg[1:-1]
     return arg
+
+
+def str_to_bool(val: str) -> bool:
+    """
+    Converts a string to a boolean based on its value
+    :param val: string being converted
+    :return: boolean value expressed in the string
+    :raises: ValueError if the string does not contain a value corresponding to a boolean value
+    """
+    if val.lower() == "true":
+        return True
+    elif val.lower() == "false":
+        return False
+    raise ValueError("must be true or false")
+
+
+class Settable:
+    """Used to configure a cmd2 instance member to be settable via the set command in the CLI"""
+    def __init__(self, name: str, val_type: Callable, description: str, *,
+                 choices: Iterable = None,
+                 choices_function: Optional[Callable] = None,
+                 choices_method: Optional[Callable] = None,
+                 completer_function: Optional[Callable] = None,
+                 completer_method: Optional[Callable] = None,
+                 onchange_cb: Callable[[str, Any, Any], Any] = None):
+        """
+        Settable Initializer
+
+        :param name: name of the instance attribute being made settable
+        :param val_type: type or callable used to cast the string value from the command line
+                         setting this to bool provides tab completion for true/false and validation using str_to_bool
+        :param description: string describing this setting
+
+        The following optional settings provide tab completion for a parameter's values. They correspond to the
+        same settings in argparse-based tab completion. A maximum of one of these should be provided.
+
+        :param choices: iterable of accepted values
+        :param choices_function: function that provides choices for this argument
+        :param choices_method: cmd2-app method that provides choices for this argument
+        :param completer_function: tab-completion function that provides choices for this argument
+        :param completer_method: cmd2-app tab-completion method that provides choices for this argument
+        """
+        if val_type == bool:
+            val_type = str_to_bool
+            choices = ['true', 'false']
+
+        self.name = name
+        self.val_type = val_type
+        self.description = description
+        self.choices = choices
+        self.choices_function = choices_function
+        self.choices_method = choices_method
+        self.completer_function = completer_function
+        self.completer_method = completer_method
+        self.onchange_cb = onchange_cb
 
 
 def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
@@ -372,7 +427,7 @@ class StdSim(object):
     def __init__(self, inner_stream, echo: bool = False,
                  encoding: str = 'utf-8', errors: str = 'replace') -> None:
         """
-        Initializer
+        StdSim Initializer
         :param inner_stream: the wrapped stream. Should be a TextIO or StdSim instance.
         :param echo: if True, then all input will be echoed to inner_stream
         :param encoding: codec for encoding/decoding strings (defaults to utf-8)

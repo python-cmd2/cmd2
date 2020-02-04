@@ -79,7 +79,7 @@ def test_base_argparse_help(base_app):
 
 def test_base_invalid_option(base_app):
     out, err = run_cmd(base_app, 'set -z')
-    assert err[0] == 'Usage: set [-h] [-a] [-l] [param] [value]'
+    assert err[0] == 'Usage: set [-h] [-l] [param] [value]'
     assert 'Error: unrecognized arguments: -z' in err[1]
 
 def test_base_shortcuts(base_app):
@@ -105,16 +105,6 @@ def test_base_show_long(base_app):
     base_app.editor = 'vim'
     out, err = run_cmd(base_app, 'set -l')
     expected = normalize(SHOW_LONG)
-    assert out == expected
-
-
-def test_base_show_readonly(base_app):
-    base_app.editor = 'vim'
-    out, err = run_cmd(base_app, 'set -a')
-    expected = normalize(SHOW_TXT + '\nRead only settings:' + """
-        Commands may be terminated with: {}
-        Output redirection and pipes allowed: {}
-""".format(base_app.statement_parser.terminators, base_app.allow_redirection))
     assert out == expected
 
 
@@ -175,16 +165,6 @@ Parameter 'qqq' not supported (type 'set' for list of parameters).
 """)
     assert err == expected
 
-def test_set_quiet(base_app):
-    out, err = run_cmd(base_app, 'set quie True')
-    expected = normalize("""
-quiet - was: False
-now: True
-""")
-    assert out == expected
-
-    out, err = run_cmd(base_app, 'set quiet')
-    assert out == ['quiet: True']
 
 @pytest.mark.parametrize('new_val, is_valid, expected', [
     (ansi.STYLE_NEVER, False, ansi.STYLE_NEVER),
@@ -214,10 +194,11 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
 class OnChangeHookApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.add_settable(utils.Settable('quiet', bool, "my description", onchange_cb=self._onchange_quiet))
 
-    def _onchange_quiet(self, old, new) -> None:
+    def _onchange_quiet(self, name, old, new) -> None:
         """Runs when quiet is changed via set command"""
-        self.poutput("You changed quiet")
+        self.poutput("You changed " + name)
 
 @pytest.fixture
 def onchange_app():
@@ -671,7 +652,7 @@ now: True
 def test_debug_not_settable(base_app):
     # Set debug to False and make it unsettable
     base_app.debug = False
-    del base_app.settable['debug']
+    del base_app.settables['debug']
 
     # Cause an exception
     out, err = run_cmd(base_app, 'bad "quote')
@@ -1583,8 +1564,8 @@ def test_get_macro_completion_items(base_app):
 def test_get_settable_completion_items(base_app):
     results = base_app._get_settable_completion_items()
     for cur_res in results:
-        assert cur_res in base_app.settable
-        assert cur_res.description == base_app.settable[cur_res]
+        assert cur_res in base_app.settables
+        assert cur_res.description == base_app.settables[cur_res].description
 
 def test_alias_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'alias')
