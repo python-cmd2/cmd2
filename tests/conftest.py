@@ -100,7 +100,7 @@ timing: False
 
 SHOW_LONG = """
 allow_style: 'Terminal'   # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
-debug: False              # Show full error stack on error
+debug: False              # Show full traceback on exception
 echo: False               # Echo command issued into output
 editor: 'vim'             # Program used by 'edit'
 feedback_to_output: False # Include nonessentials in '|', '>' results

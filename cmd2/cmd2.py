@@ -408,7 +408,7 @@ class Cmd(cmd.Cmd):
                                                         ansi.STYLE_NEVER),
                                    choices=[ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER]))
 
-        self.add_settable(Settable('debug', bool, "Show full error stack on error"))
+        self.add_settable(Settable('debug', bool, "Show full traceback on exception"))
         self.add_settable(Settable('echo', bool, "Echo command issued into output"))
         self.add_settable(Settable('editor', str, "Program used by 'edit'"))
         self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|', '>' results"))
