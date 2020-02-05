@@ -108,7 +108,7 @@ def test_base_show_long(base_app):
     assert out == expected
 
 
-def test_base_set(base_app):
+def test_set(base_app):
     out, err = run_cmd(base_app, 'set quiet True')
     expected = normalize("""
 quiet - was: False
@@ -118,6 +118,16 @@ now: True
 
     out, err = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
+
+def test_set_val_empty(base_app):
+    base_app.editor = "fake"
+    out, err = run_cmd(base_app, 'set editor ""')
+    assert base_app.editor == ''
+
+def test_set_val_is_flag(base_app):
+    base_app.editor = "fake"
+    out, err = run_cmd(base_app, 'set editor "-h"')
+    assert base_app.editor == '-h'
 
 def test_set_not_supported(base_app):
     out, err = run_cmd(base_app, 'set qqq True')

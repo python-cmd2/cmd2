@@ -2827,8 +2827,9 @@ class Cmd(cmd.Cmd):
         from .argparse_completer import AutoCompleter
         completer = AutoCompleter(settable_parser, self)
 
-        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
-        return completer.complete_command(tokens, text, line, begidx, endidx)
+        # Use raw_tokens since quotes have been preserved
+        _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
+        return completer.complete_command(raw_tokens, text, line, begidx, endidx)
 
     # When tab completing value, we recreate the set command parser with a value argument specific to
     # the settable being edited. To make this easier, define a parent parser with all the common elements.
@@ -2849,7 +2850,8 @@ class Cmd(cmd.Cmd):
     set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='new value for settable',
                             completer_method=complete_set_value, suppress_tab_hint=True)
 
-    @with_argparser(set_parser)
+    # Preserve quotes so users can pass in quoted empty strings and flags (e.g. -h) as the value
+    @with_argparser(set_parser, preserve_quotes=True)
     def do_set(self, args: argparse.Namespace) -> None:
         """Set a settable parameter or show current settings of parameters"""
         if not self.settables:
@@ -2864,6 +2866,8 @@ class Cmd(cmd.Cmd):
                 return
 
             if args.value:
+                args.value = utils.strip_quotes(args.value)
+
                 # Try to update the settable's value
                 try:
                     orig_value = getattr(self, args.param)
