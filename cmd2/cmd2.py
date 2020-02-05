@@ -399,7 +399,7 @@ class Cmd(cmd.Cmd):
 
         self.add_settable(Settable('debug', bool, "Show full error stack on error"))
         self.add_settable(Settable('echo', bool, "Echo command issued into output"))
-        self.add_settable(Settable('editor', str, "Program used by 'edit'")
+        self.add_settable(Settable('editor', str, "Program used by 'edit'"))
         self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|', '>' results"))
         self.add_settable(Settable('max_completion_items', int,
                                    "Maximum number of CompletionItems to display during tab completion"))
