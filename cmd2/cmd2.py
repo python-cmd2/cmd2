@@ -2845,7 +2845,8 @@ class Cmd(cmd.Cmd):
     def do_set(self, args: argparse.Namespace) -> None:
         """Set a settable parameter or show current settings of parameters"""
         if not self.settables:
-            self.poutput("There are no settable parameters")
+            self.pwarning("There are no settable parameters")
+            return
 
         if args.param:
             try:

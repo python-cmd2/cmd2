@@ -127,6 +127,13 @@ Parameter 'qqq' not supported (type 'set' for list of parameters).
     assert err == expected
 
 
+def test_set_no_settables(base_app):
+    base_app.settables = {}
+    out, err = run_cmd(base_app, 'set quiet True')
+    expected = normalize("There are no settable parameters")
+    assert err == expected
+
+
 @pytest.mark.parametrize('new_val, is_valid, expected', [
     (ansi.STYLE_NEVER, False, ansi.STYLE_NEVER),
     ('neVeR', False, ansi.STYLE_NEVER),

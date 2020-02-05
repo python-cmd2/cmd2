@@ -64,10 +64,11 @@ def str_to_bool(val: str) -> bool:
     :return: boolean value expressed in the string
     :raises: ValueError if the string does not contain a value corresponding to a boolean value
     """
-    if val.capitalize() == str(True):
-        return True
-    elif val.capitalize() == str(False):
-        return False
+    if isinstance(val, str):
+        if val.capitalize() == str(True):
+            return True
+        elif val.capitalize() == str(False):
+            return False
     raise ValueError("must be True or False")
 
 
