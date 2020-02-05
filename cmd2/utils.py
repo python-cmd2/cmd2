@@ -85,8 +85,10 @@ class Settable:
         Settable Initializer
 
         :param name: name of the instance attribute being made settable
-        :param val_type: type or callable used to cast the string value from the command line
-                         setting this to bool provides tab completion for true/false and validation using str_to_bool
+        :param val_type: callable used to cast the string value from the command line into its proper type and
+                         even validate its value. Setting this to bool provides tab completion for true/false and
+                         validation using str_to_bool(). The val_type function should raise an exception if it fails.
+                         This exception will be caught and printed by Cmd.do_set().
         :param description: string describing this setting
 
         The following optional settings provide tab completion for a parameter's values. They correspond to the
