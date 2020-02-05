@@ -229,7 +229,6 @@ import argparse
 import random
 import sys
 import cmd2
-from cmd2.utils import Settable
 
 class CmdLineApp(cmd2.Cmd):
     """ Example cmd2 application. """
@@ -249,7 +248,7 @@ class CmdLineApp(cmd2.Cmd):
         super().__init__(use_ipython=False, multiline_commands=['orate'], shortcuts=shortcuts)
         
         # Make maxrepeats settable at runtime
-        self.add_settable(Settable('maxrepeats', int, 'max repetitions for speak command'))
+        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
 
     speak_parser = argparse.ArgumentParser()
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')

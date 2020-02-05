@@ -150,7 +150,7 @@ changes a setting, and will receive both the old value and the new value.
 
 
 Hide Builtin Settings
-----------------------
+---------------------
 
 You may want to prevent a user from modifying a builtin setting. A setting
 must appear in the :attr:`cmd2.cmd2.Cmd.settable` dictionary in order for it
@@ -165,4 +165,4 @@ the :ref:`features/settings:debug` setting. To do so, remove it from the
 
     def __init__(self):
         super().__init__()
-        self.settable.pop('debug')
+        self.settables.pop('debug')

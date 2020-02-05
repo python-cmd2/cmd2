@@ -8,16 +8,16 @@ import cmd2
 
 class EnvironmentApp(cmd2.Cmd):
     """ Example cmd2 application. """
-
     degrees_c = 22
     sunny = False
 
     def __init__(self):
         super().__init__()
-        self.settable.update({'degrees_c': 'Temperature in Celsius'})
-        self.settable.update({'sunny': 'Is it sunny outside?'})
+        self.add_settable(cmd2.Settable('degrees_c', int, 'Temperature in Celsius'))
+        self.add_settable(cmd2.Settable('sunny', bool, 'Is it sunny outside?'))
 
     def do_sunbathe(self, arg):
+        """Attempt to sunbathe."""
         if self.degrees_c < 20:
             result = "It's {} C - are you a penguin?".format(self.degrees_c)
         elif not self.sunny:
