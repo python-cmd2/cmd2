@@ -69,18 +69,18 @@ def str_to_bool(val: str) -> bool:
             return True
         elif val.capitalize() == str(False):
             return False
-    raise ValueError("must be True or False")
+    raise ValueError("must be True or False (case-insensitive)")
 
 
 class Settable:
     """Used to configure a cmd2 instance member to be settable via the set command in the CLI"""
     def __init__(self, name: str, val_type: Callable, description: str, *,
+                 onchange_cb: Callable[[str, Any, Any], Any] = None,
                  choices: Iterable = None,
                  choices_function: Optional[Callable] = None,
                  choices_method: Optional[Callable] = None,
                  completer_function: Optional[Callable] = None,
-                 completer_method: Optional[Callable] = None,
-                 onchange_cb: Callable[[str, Any, Any], Any] = None):
+                 completer_method: Optional[Callable] = None):
         """
         Settable Initializer
 
@@ -90,6 +90,9 @@ class Settable:
                          validation using str_to_bool(). The val_type function should raise an exception if it fails.
                          This exception will be caught and printed by Cmd.do_set().
         :param description: string describing this setting
+        :param onchange_cb: optional function to call when the value of this settable is altered by the set command
+                            Callback signature:
+                                val_changed_cb(param_name: str, old_value: Any, new_value: Any) -> Any
 
         The following optional settings provide tab completion for a parameter's values. They correspond to the
         same settings in argparse-based tab completion. A maximum of one of these should be provided.
@@ -107,12 +110,12 @@ class Settable:
         self.name = name
         self.val_type = val_type
         self.description = description
+        self.onchange_cb = onchange_cb
         self.choices = choices
         self.choices_function = choices_function
         self.choices_method = choices_method
         self.completer_function = completer_function
         self.completer_method = completer_method
-        self.onchange_cb = onchange_cb
 
 
 def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],

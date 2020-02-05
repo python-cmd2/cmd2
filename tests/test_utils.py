@@ -537,11 +537,13 @@ def test_str_to_bool_true():
     assert cu.str_to_bool('true')
     assert cu.str_to_bool('True')
     assert cu.str_to_bool('TRUE')
+    assert cu.str_to_bool('tRuE')
 
 def test_str_to_bool_false():
     assert not cu.str_to_bool('false')
     assert not cu.str_to_bool('False')
     assert not cu.str_to_bool('FALSE')
+    assert not cu.str_to_bool('fAlSe')
 
 def test_str_to_bool_invalid():
     with pytest.raises(ValueError):

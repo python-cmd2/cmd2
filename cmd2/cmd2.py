@@ -388,6 +388,17 @@ class Cmd(cmd.Cmd):
         """
         self.settables[settable.name] = settable
 
+    def remove_settable(self, name: str) -> None:
+        """
+        Convenience method for removing a settable parameter from self.settables
+        :param name: name of the settable being removed
+        :raises: KeyError if the no Settable matches this name
+        """
+        try:
+            del self.settables[name]
+        except KeyError:
+            raise KeyError(name + " is not a settable parameter")
+
     def build_settables(self):
         """Populates self.add_settable with parameters that can be edited via the set command"""
         self.add_settable(Settable('allow_style', str,
