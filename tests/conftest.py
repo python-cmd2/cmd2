@@ -102,7 +102,7 @@ SHOW_LONG = """
 allow_style: 'Terminal'   # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
 debug: False              # Show full error stack on error
 echo: False               # Echo command issued into output
-editor: 'vim'             # Program used by `edit`
+editor: 'vim'             # Program used by 'edit'
 feedback_to_output: False # Include nonessentials in '|', '>' results
 max_completion_items: 50  # Maximum number of CompletionItems to display during tab completion
 quiet: False              # Don't print nonessential feedback

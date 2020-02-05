@@ -388,7 +388,7 @@ def get_exes_in_path(starts_with: str) -> List[str]:
     return list(exes_set)
 
 
-class StdSim(object):
+class StdSim:
     """
     Class to simulate behavior of sys.stdout or sys.stderr.
     Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
@@ -468,7 +468,7 @@ class StdSim(object):
             return getattr(self.inner_stream, item)
 
 
-class ByteBuf(object):
+class ByteBuf:
     """
     Used by StdSim to write binary data and stores the actual bytes written
     """
@@ -497,7 +497,7 @@ class ByteBuf(object):
                     self.std_sim_instance.flush()
 
 
-class ProcReader(object):
+class ProcReader:
     """
     Used to capture stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
     If neither are pipes, then the process will run normally and no output will be captured.
@@ -599,7 +599,7 @@ class ProcReader(object):
             pass
 
 
-class ContextFlag(object):
+class ContextFlag:
     """A context manager which is also used as a boolean flag value within the default sigint handler.
 
     Its main use is as a flag to prevent the SIGINT handler in cmd2 from raising a KeyboardInterrupt
@@ -623,7 +623,7 @@ class ContextFlag(object):
             raise ValueError("count has gone below 0")
 
 
-class RedirectionSavedState(object):
+class RedirectionSavedState:
     """Created by each command to store information about their redirection."""
 
     def __init__(self, self_stdout: Union[StdSim, TextIO], sys_stdout: Union[StdSim, TextIO],
