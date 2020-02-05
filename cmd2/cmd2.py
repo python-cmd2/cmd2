@@ -53,6 +53,7 @@ from .decorators import with_argparser
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
+from .utils import Settable
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
@@ -380,7 +381,7 @@ class Cmd(cmd.Cmd):
         # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
         self.matches_sorted = False
 
-    def add_settable(self, settable: utils.Settable) -> None:
+    def add_settable(self, settable: Settable) -> None:
         """
         Convenience method to add a settable parameter to self.settables
         :param settable: Settable object being added
@@ -389,21 +390,21 @@ class Cmd(cmd.Cmd):
 
     def build_settables(self):
         """Populates self.add_settable with parameters that can be edited via the set command"""
-        self.add_settable(utils.Settable('allow_style', str,
-                                         'Allow ANSI text style sequences in output (valid values: '
-                                         '{}, {}, {})'.format(ansi.STYLE_TERMINAL,
-                                                              ansi.STYLE_ALWAYS,
-                                                              ansi.STYLE_NEVER),
-                                         choices=[ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER]))
+        self.add_settable(Settable('allow_style', str,
+                                   'Allow ANSI text style sequences in output (valid values: '
+                                   '{}, {}, {})'.format(ansi.STYLE_TERMINAL,
+                                                        ansi.STYLE_ALWAYS,
+                                                        ansi.STYLE_NEVER),
+                                   choices=[ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER]))
 
-        self.add_settable(utils.Settable('debug', bool, "Show full error stack on error"))
-        self.add_settable(utils.Settable('echo', bool, "Echo command issued into output"))
-        self.add_settable(utils.Settable('editor', str, "Program used by `edit`"))
-        self.add_settable(utils.Settable('feedback_to_output', bool, "Include nonessentials in '|', '>' results"))
-        self.add_settable(utils.Settable('max_completion_items', int,
-                                         "Maximum number of CompletionItems to display during tab completion"))
-        self.add_settable(utils.Settable('quiet', bool, "Don't print nonessential feedback"))
-        self.add_settable(utils.Settable('timing', bool, "Report execution times"))
+        self.add_settable(Settable('debug', bool, "Show full error stack on error"))
+        self.add_settable(Settable('echo', bool, "Echo command issued into output"))
+        self.add_settable(Settable('editor', str, "Program used by 'edit'")
+        self.add_settable(Settable('feedback_to_output', bool, "Include nonessentials in '|', '>' results"))
+        self.add_settable(Settable('max_completion_items', int,
+                                   "Maximum number of CompletionItems to display during tab completion"))
+        self.add_settable(Settable('quiet', bool, "Don't print nonessential feedback"))
+        self.add_settable(Settable('timing', bool, "Report execution times"))
 
     # -----  Methods related to presenting output to the user -----
 
@@ -2814,9 +2815,9 @@ class Cmd(cmd.Cmd):
         except KeyError:
             raise CompletionError(param + " is not a settable parameter")
 
-        # Create a parser based on this settable
-        settable_parser = DEFAULT_ARGUMENT_PARSER()
-        settable_parser.add_argument(settable.name, help=settable.description,
+        # Create a parser with a value field based on this settable
+        settable_parser = DEFAULT_ARGUMENT_PARSER(parents=[Cmd.set_parser_parent])
+        settable_parser.add_argument('value', help=settable.description,
                                      choices=settable.choices,
                                      choices_function=settable.choices_function,
                                      choices_method=settable.choices_method,
@@ -2826,19 +2827,26 @@ class Cmd(cmd.Cmd):
         from .argparse_completer import AutoCompleter
         completer = AutoCompleter(settable_parser, self)
 
-        tokens = [param] + arg_tokens['value']
+        tokens, _ = self.tokens_for_completion(line, begidx, endidx)
         return completer.complete_command(tokens, text, line, begidx, endidx)
 
+    # When tab completing value, we recreate the set command parser with a value argument specific to
+    # the settable being edited. To make this easier, define a parent parser with all the common elements.
     set_description = ("Set a settable parameter or show current settings of parameters\n"
-                       "Call without arguments for a list of settable parameters with their values.")
-    set_parser = DEFAULT_ARGUMENT_PARSER(description=set_description)
-    set_parser.add_argument('-l', '--long', action='store_true', help='describe function of parameter')
-    set_parser.add_argument('param', nargs=argparse.OPTIONAL, help='parameter to set or view',
-                            choices_method=_get_settable_completion_items, descriptive_header='Description')
+                       "Call without arguments for a list of all settable parameters with their values.\n"
+                       "Call with just param to view that parameter's value.")
+    set_parser_parent = DEFAULT_ARGUMENT_PARSER(description=set_description, add_help=False)
+    set_parser_parent.add_argument('-l', '--long', action='store_true',
+                                   help='include description of parameters when viewing')
+    set_parser_parent.add_argument('param', nargs=argparse.OPTIONAL, help='parameter to set or view',
+                                   choices_method=_get_settable_completion_items, descriptive_header='Description')
+
+    # Create the parser for the set command
+    set_parser = DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
 
     # Suppress tab-completion hints for this field. The completer method is going to create an
     # AutoCompleter based on the actual parameter being completed and we only want that hint printing.
-    set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='the new value for settable',
+    set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='new value for settable',
                             completer_method=complete_set_value, suppress_tab_hint=True)
 
     @with_argparser(set_parser)
