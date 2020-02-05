@@ -415,13 +415,9 @@ class Cmd(cmd.Cmd):
     @allow_style.setter
     def allow_style(self, new_val: str) -> None:
         """Setter property needed to support do_set when it updates allow_style"""
-        new_val = new_val.lower()
-        if new_val == ansi.STYLE_TERMINAL.lower():
-            ansi.allow_style = ansi.STYLE_TERMINAL
-        elif new_val == ansi.STYLE_ALWAYS.lower():
-            ansi.allow_style = ansi.STYLE_ALWAYS
-        elif new_val == ansi.STYLE_NEVER.lower():
-            ansi.allow_style = ansi.STYLE_NEVER
+        new_val = new_val.capitalize()
+        if new_val in [ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER]:
+            ansi.allow_style = new_val
         else:
             raise ValueError('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.STYLE_TERMINAL,
                                                                                    ansi.STYLE_ALWAYS,

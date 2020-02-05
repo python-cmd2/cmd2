@@ -58,17 +58,17 @@ def strip_quotes(arg: str) -> str:
 
 
 def str_to_bool(val: str) -> bool:
-    """
-    Converts a string to a boolean based on its value
+    """Converts a string to a boolean based on its value.
+
     :param val: string being converted
     :return: boolean value expressed in the string
     :raises: ValueError if the string does not contain a value corresponding to a boolean value
     """
-    if val.lower() == "true":
+    if val.capitalize() == str(True):
         return True
-    elif val.lower() == "false":
+    elif val.capitalize() == str(False):
         return False
-    raise ValueError("must be true or false")
+    raise ValueError("must be True or False")
 
 
 class Settable:
@@ -141,38 +141,6 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
         prototype = T(*default_values)
     T.__new__.__defaults__ = tuple(prototype)
     return T
-
-
-def cast(current: Any, new: str) -> Any:
-    """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
-
-    :param current: current value for the parameter, type varies
-    :param new: new value
-    :return: new value with same type as current, or the current value if there was an error casting
-    """
-    typ = type(current)
-    orig_new = new
-
-    if typ == bool:
-        try:
-            return bool(int(new))
-        except (ValueError, TypeError):
-            pass
-        try:
-            new = new.lower()
-            if (new == 'on') or (new[0] in ('y', 't')):
-                return True
-            if (new == 'off') or (new[0] in ('n', 'f')):
-                return False
-        except AttributeError:
-            pass
-    else:
-        try:
-            return typ(new)
-        except (ValueError, TypeError):
-            pass
-    print("Problem setting parameter (now {}) to {}; incorrect type?".format(current, orig_new))
-    return current
 
 
 def which(exe_name: str) -> Optional[str]:

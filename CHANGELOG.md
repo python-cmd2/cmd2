@@ -7,6 +7,10 @@
         * `continuation_prompt`
         * `self_in_py`
         * `prompt`
+    * `self.settable` changed to `self.settables`
+        * It is now a Dict[str, Settable] instead of Dict[str, str]
+        * **set** command now supports tab-completion of values
+    * Removed `cast()` utility function
     
 ## 0.9.25 (January 26, 2020)
 * Enhancements
