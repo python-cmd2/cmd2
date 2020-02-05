@@ -23,8 +23,6 @@ Utility Functions
 
 .. autofunction:: cmd2.utils.namedtuple_with_defaults
 
-.. autofunction:: cmd2.utils.cast
-
 .. autofunction:: cmd2.utils.which
 
 .. autofunction:: cmd2.utils.is_text_file
