@@ -62,6 +62,9 @@ class CompletionsExample(cmd2.Cmd):
     """
     def __init__(self):
         cmd2.Cmd.__init__(self, multiline_commands=['test_multiline'])
+        self.foo = 'bar'
+        self.add_settable(utils.Settable('foo', str, description="a settable param",
+                                         completer_method=CompletionsExample.complete_foo_val))
 
     def do_test_basic(self, args):
         pass
@@ -97,6 +100,13 @@ class CompletionsExample(cmd2.Cmd):
     def do_test_no_completer(self, args):
         """Completing this should result in completedefault() being called"""
         pass
+
+    def complete_foo_val(self, text, line, begidx, endidx, arg_tokens):
+        """Supports unit testing cmd2.Cmd2.complete_set_val to confirm it passes all tokens in the set command"""
+        if 'param' in arg_tokens:
+            return ["SUCCESS"]
+        else:
+            return ["FAIL"]
 
     def completedefault(self, *ignored):
         """Method called to complete an input line when no command-specific
@@ -949,6 +959,27 @@ def test_redirect_complete(cmd2_app, monkeypatch, line, comp_type):
         path_complete_mock.assert_not_called()
         default_complete_mock.assert_not_called()
 
+def test_complete_set_value(cmd2_app):
+    text = ''
+    line = 'set foo {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match == "SUCCESS "
+
+def test_complete_set_value_invalid_settable(cmd2_app, capsys):
+    text = ''
+    line = 'set fake {}'.format(text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, cmd2_app)
+    assert first_match is None
+
+    out, err = capsys.readouterr()
+    assert "fake is not a settable parameter" in out
+
 @pytest.fixture
 def sc_app():
     c = SubcommandsExample()
@@ -985,7 +1016,7 @@ def test_cmd2_subcommand_completion_nomatch(sc_app):
     assert first_match is None
 
 
-def test_cmd2_help_subcommand_completion_single(sc_app):
+def test_help_subcommand_completion_single(sc_app):
     text = 'base'
     line = 'help {}'.format(text)
     endidx = len(line)
@@ -996,7 +1027,7 @@ def test_cmd2_help_subcommand_completion_single(sc_app):
     # It is at end of line, so extra space is present
     assert first_match is not None and sc_app.completion_matches == ['base ']
 
-def test_cmd2_help_subcommand_completion_multiple(sc_app):
+def test_help_subcommand_completion_multiple(sc_app):
     text = ''
     line = 'help base {}'.format(text)
     endidx = len(line)
@@ -1006,7 +1037,7 @@ def test_cmd2_help_subcommand_completion_multiple(sc_app):
     assert first_match is not None and sc_app.completion_matches == ['bar', 'foo', 'sport']
 
 
-def test_cmd2_help_subcommand_completion_nomatch(sc_app):
+def test_help_subcommand_completion_nomatch(sc_app):
     text = 'z'
     line = 'help base {}'.format(text)
     endidx = len(line)
@@ -1115,7 +1146,7 @@ def scu_app():
     return app
 
 
-def test_cmd2_subcmd_with_unknown_completion_single_end(scu_app):
+def test_subcmd_with_unknown_completion_single_end(scu_app):
     text = 'f'
     line = 'base {}'.format(text)
     endidx = len(line)
@@ -1129,7 +1160,7 @@ def test_cmd2_subcmd_with_unknown_completion_single_end(scu_app):
     assert first_match is not None and scu_app.completion_matches == ['foo ']
 
 
-def test_cmd2_subcmd_with_unknown_completion_multiple(scu_app):
+def test_subcmd_with_unknown_completion_multiple(scu_app):
     text = ''
     line = 'base {}'.format(text)
     endidx = len(line)
@@ -1139,7 +1170,7 @@ def test_cmd2_subcmd_with_unknown_completion_multiple(scu_app):
     assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
 
 
-def test_cmd2_subcmd_with_unknown_completion_nomatch(scu_app):
+def test_subcmd_with_unknown_completion_nomatch(scu_app):
     text = 'z'
     line = 'base {}'.format(text)
     endidx = len(line)
@@ -1149,7 +1180,7 @@ def test_cmd2_subcmd_with_unknown_completion_nomatch(scu_app):
     assert first_match is None
 
 
-def test_cmd2_help_subcommand_completion_single_scu(scu_app):
+def test_help_subcommand_completion_single_scu(scu_app):
     text = 'base'
     line = 'help {}'.format(text)
     endidx = len(line)
@@ -1161,7 +1192,7 @@ def test_cmd2_help_subcommand_completion_single_scu(scu_app):
     assert first_match is not None and scu_app.completion_matches == ['base ']
 
 
-def test_cmd2_help_subcommand_completion_multiple_scu(scu_app):
+def test_help_subcommand_completion_multiple_scu(scu_app):
     text = ''
     line = 'help base {}'.format(text)
     endidx = len(line)
@@ -1170,7 +1201,7 @@ def test_cmd2_help_subcommand_completion_multiple_scu(scu_app):
     first_match = complete_tester(text, line, begidx, endidx, scu_app)
     assert first_match is not None and scu_app.completion_matches == ['bar', 'foo', 'sport']
 
-def test_cmd2_help_subcommand_completion_with_flags_before_command(scu_app):
+def test_help_subcommand_completion_with_flags_before_command(scu_app):
     text = ''
     line = 'help -h -v base {}'.format(text)
     endidx = len(line)
@@ -1189,7 +1220,7 @@ def test_complete_help_subcommands_with_blank_command(scu_app):
     assert first_match is None and not scu_app.completion_matches
 
 
-def test_cmd2_help_subcommand_completion_nomatch_scu(scu_app):
+def test_help_subcommand_completion_nomatch_scu(scu_app):
     text = 'z'
     line = 'help base {}'.format(text)
     endidx = len(line)
