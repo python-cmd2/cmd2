@@ -5,7 +5,7 @@ Throughout this documentation we have focused on the **90%** use case, that is
 the use case we believe around **90+%** of our user base is looking for.  This
 focuses on ease of use and the best out-of-the-box experience where developers
 get the most functionality for the least amount of effort.  We are talking
-about running cmd2 applications with the ``cmdloop()`` method::
+about running ``cmd2`` applications with the ``cmdloop()`` method::
 
     from cmd2 import Cmd
     class App(Cmd):
@@ -78,5 +78,5 @@ with several disadvantages, including:
 
 Here is a little more info on ``runcmds_plus_hooks``:
 
-.. automethod:: cmd2.cmd2.Cmd.runcmds_plus_hooks
+.. automethod:: cmd2.Cmd.runcmds_plus_hooks
     :noindex:

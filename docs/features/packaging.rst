@@ -1,6 +1,6 @@
 
 Packaging a cmd2 application for distribution
-=============================================
+=================================================
 
 As a general-purpose tool for building interactive command-line applications,
 ``cmd2`` is designed to be used in many ways. How you distribute your ``cmd2``

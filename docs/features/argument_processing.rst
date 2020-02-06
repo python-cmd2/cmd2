@@ -31,20 +31,12 @@ applications.
 .. _argprint: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py
 .. _decorator: https://github.com/python-cmd2/cmd2/blob/master/examples/decorator_example.py
 
-.. _decorators:
-
-Decorators provided by cmd2 for argument processing
----------------------------------------------------
-
 ``cmd2`` provides the following decorators for assisting with parsing arguments
 passed to commands:
 
-.. automethod:: cmd2.decorators.with_argparser
-   :noindex:
-.. automethod:: cmd2.decorators.with_argparser_and_unknown_args
-   :noindex:
-.. automethod:: cmd2.decorators.with_argument_list
-   :noindex:
+* :func:`cmd2.decorators.with_argparser`
+* :func:`cmd2.decorators.with_argparser_and_unknown_args`
+* :func:`cmd2.decorators.with_argument_list`
 
 All of these decorators accept an optional **preserve_quotes** argument which
 defaults to ``False``. Setting this argument to ``True`` is useful for cases
@@ -52,8 +44,8 @@ where you are passing the arguments to another command which might have its own
 argument parsing.
 
 
-Using the argument parser decorator
------------------------------------
+Argument Parsing
+----------------
 
 For each command in the ``cmd2`` subclass which requires argument parsing,
 create a unique instance of ``argparse.ArgumentParser()`` which can parse the
@@ -108,8 +100,8 @@ Here's what it looks like::
 Help Messages
 -------------
 
-By default, cmd2 uses the docstring of the command method when a user asks for
-help on the command. When you use the ``@with_argparser`` decorator, the
+By default, ``cmd2`` uses the docstring of the command method when a user asks
+for help on the command. When you use the ``@with_argparser`` decorator, the
 docstring for the ``do_*`` method is used to set the description for the
 ``argparse.ArgumentParser``.
 
@@ -215,8 +207,8 @@ Which yields:
 .. _argparse: https://docs.python.org/3/library/argparse.html
 
 
-Receiving an argument list
---------------------------
+Argument List
+-------------
 
 The default behavior of ``cmd2`` is to pass the user input directly to your
 ``do_*`` methods as a string. The object passed to your method is actually a
@@ -265,7 +257,7 @@ argument list instead of a string::
             pass
 
 
-Unknown positional arguments
+Unknown Positional Arguments
 ----------------------------
 
 If you want all unknown arguments to be passed to your command as a list of
@@ -295,8 +287,8 @@ Here's what it looks like::
 
         ...
 
-Using custom argparse.Namespace
--------------------------------
+Using A Custom Namespace
+------------------------
 
 In some cases, it may be necessary to write custom ``argparse`` code that is
 dependent on state data of your application.  To support this ability while
@@ -332,7 +324,7 @@ Subcommands are supported for commands using either the ``@with_argparser`` or
 ``@with_argparser_and_unknown_args`` decorator.  The syntax for supporting them
 is based on argparse sub-parsers.
 
-You may add multiple layers of subcommands for your command. Cmd2 will
+You may add multiple layers of subcommands for your command. ``cmd2`` will
 automatically traverse and tab-complete subcommands for all commands using
 argparse.
 
