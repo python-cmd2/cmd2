@@ -2828,7 +2828,11 @@ class Cmd(cmd.Cmd):
 
         # Create a parser with a value field based on this settable
         settable_parser = DEFAULT_ARGUMENT_PARSER(parents=[Cmd.set_parser_parent])
-        settable_parser.add_argument('value', help=settable.description,
+
+        # Settables that populate choices have the values of those choices overwrite the arg name
+        # in help text and this shows in tab-completion hints. Set metavar to avoid this.
+        arg_name = 'value'
+        settable_parser.add_argument(arg_name, metavar=arg_name, help=settable.description,
                                      choices=settable.choices,
                                      choices_function=settable.choices_function,
                                      choices_method=settable.choices_method,
