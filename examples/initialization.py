@@ -14,6 +14,7 @@
 """
 import cmd2
 from cmd2 import style
+from cmd2.ansi import FG_COLORS
 
 
 class BasicApp(cmd2.Cmd):
@@ -42,7 +43,8 @@ class BasicApp(cmd2.Cmd):
         self.foreground_color = 'cyan'
 
         # Make echo_fg settable at runtime
-        self.settable['foreground_color'] = 'Foreground color to use with echo command'
+        self.add_settable(cmd2.Settable('foreground_color', str, 'Foreground color to use with echo command',
+                                        choices=FG_COLORS))
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_intro(self, _):

@@ -3,7 +3,7 @@
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
-allow_style: /(Terminal|Always|Never)/
+allow_style: '/(Terminal|Always|Never)/'
 debug: False
 echo: False
 editor: /.*?/

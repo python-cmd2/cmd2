@@ -77,7 +77,7 @@ COLUMNS = [tf.Column('City', width=11, header_halign=tf.ColumnAlignment.AlignCen
 
 # ######## Table data formatted as an iterable of python objects #########
 
-class CityInfo(object):
+class CityInfo:
     """City information container"""
     def __init__(self, city: str, province: str, country: str, continent: str, population: int, area: float):
         self.city = city

@@ -93,10 +93,10 @@ within a running application:
 
     (Cmd) set --long
     allow_style: Terminal          # Allow ANSI text style sequences in output (valid values: Terminal, Always, Never)
-    debug: False                   # Show full error stack on error
+    debug: False                   # Show full traceback on exception
     echo: False                    # Echo command issued into output
-    editor: vim                    # Program used by ``edit``
-    feedback_to_output: False      # include nonessentials in `|`, `>` results
+    editor: vim                    # Program used by 'edit'
+    feedback_to_output: False      # include nonessentials in '|', '>' results
     max_completion_items: 50       # Maximum number of CompletionItems to display during tab completion
     quiet: False                   # Don't print nonessential feedback
     timing: False                  # Report execution times

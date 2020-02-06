@@ -2,6 +2,7 @@
 """Shared utility functions"""
 
 import collections
+import collections.abc as collections_abc
 import glob
 import os
 import re
@@ -9,9 +10,8 @@ import subprocess
 import sys
 import threading
 import unicodedata
-import collections.abc as collections_abc
 from enum import Enum
-from typing import Any, Iterable, List, Optional, TextIO, Union
+from typing import Any, Callable, Iterable, List, Optional, TextIO, Union
 
 from . import constants
 
@@ -57,6 +57,78 @@ def strip_quotes(arg: str) -> str:
     return arg
 
 
+def str_to_bool(val: str) -> bool:
+    """Converts a string to a boolean based on its value.
+
+    :param val: string being converted
+    :return: boolean value expressed in the string
+    :raises: ValueError if the string does not contain a value corresponding to a boolean value
+    """
+    if isinstance(val, str):
+        if val.capitalize() == str(True):
+            return True
+        elif val.capitalize() == str(False):
+            return False
+    raise ValueError("must be True or False (case-insensitive)")
+
+
+class Settable:
+    """Used to configure a cmd2 instance member to be settable via the set command in the CLI"""
+    def __init__(self, name: str, val_type: Callable, description: str, *,
+                 onchange_cb: Callable[[str, Any, Any], Any] = None,
+                 choices: Iterable = None,
+                 choices_function: Optional[Callable] = None,
+                 choices_method: Optional[Callable] = None,
+                 completer_function: Optional[Callable] = None,
+                 completer_method: Optional[Callable] = None):
+        """
+        Settable Initializer
+
+        :param name: name of the instance attribute being made settable
+        :param val_type: callable used to cast the string value from the command line into its proper type and
+                         even validate its value. Setting this to bool provides tab completion for true/false and
+                         validation using str_to_bool(). The val_type function should raise an exception if it fails.
+                         This exception will be caught and printed by Cmd.do_set().
+        :param description: string describing this setting
+        :param onchange_cb: optional function or method to call when the value of this settable is altered
+                            by the set command. (e.g. onchange_cb=self.debug_changed)
+
+                            Cmd.do_set() passes the following 3 arguments to onchange_cb:
+                                param_name: str - name of the changed parameter
+                                old_value: Any - the value before being changed
+                                new_value: Any - the value after being changed
+
+        The following optional settings provide tab completion for a parameter's values. They correspond to the
+        same settings in argparse-based tab completion. A maximum of one of these should be provided.
+
+        :param choices: iterable of accepted values
+        :param choices_function: function that provides choices for this argument
+        :param choices_method: cmd2-app method that provides choices for this argument (See note below)
+        :param completer_function: tab-completion function that provides choices for this argument
+        :param completer_method: cmd2-app tab-completion method that provides choices
+                                 for this argument (See note below)
+
+        Note:
+        For choices_method and completer_method, do not set them to a bound method. This is because AutoCompleter
+        passes the self argument explicitly to these functions.
+
+        Therefore instead of passing something like self.path_complete, pass cmd2.Cmd.path_complete.
+        """
+        if val_type == bool:
+            val_type = str_to_bool
+            choices = ['true', 'false']
+
+        self.name = name
+        self.val_type = val_type
+        self.description = description
+        self.onchange_cb = onchange_cb
+        self.choices = choices
+        self.choices_function = choices_function
+        self.choices_method = choices_method
+        self.completer_function = completer_function
+        self.completer_method = completer_method
+
+
 def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
                              default_values: collections_abc.Iterable = ()):
     """
@@ -86,38 +158,6 @@ def namedtuple_with_defaults(typename: str, field_names: Union[str, List[str]],
         prototype = T(*default_values)
     T.__new__.__defaults__ = tuple(prototype)
     return T
-
-
-def cast(current: Any, new: str) -> Any:
-    """Tries to force a new value into the same type as the current when trying to set the value for a parameter.
-
-    :param current: current value for the parameter, type varies
-    :param new: new value
-    :return: new value with same type as current, or the current value if there was an error casting
-    """
-    typ = type(current)
-    orig_new = new
-
-    if typ == bool:
-        try:
-            return bool(int(new))
-        except (ValueError, TypeError):
-            pass
-        try:
-            new = new.lower()
-            if (new == 'on') or (new[0] in ('y', 't')):
-                return True
-            if (new == 'off') or (new[0] in ('n', 'f')):
-                return False
-        except AttributeError:
-            pass
-    else:
-        try:
-            return typ(new)
-        except (ValueError, TypeError):
-            pass
-    print("Problem setting parameter (now {}) to {}; incorrect type?".format(current, orig_new))
-    return current
 
 
 def which(exe_name: str) -> Optional[str]:
@@ -364,7 +404,7 @@ def get_exes_in_path(starts_with: str) -> List[str]:
     return list(exes_set)
 
 
-class StdSim(object):
+class StdSim:
     """
     Class to simulate behavior of sys.stdout or sys.stderr.
     Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
@@ -372,7 +412,7 @@ class StdSim(object):
     def __init__(self, inner_stream, echo: bool = False,
                  encoding: str = 'utf-8', errors: str = 'replace') -> None:
         """
-        Initializer
+        StdSim Initializer
         :param inner_stream: the wrapped stream. Should be a TextIO or StdSim instance.
         :param echo: if True, then all input will be echoed to inner_stream
         :param encoding: codec for encoding/decoding strings (defaults to utf-8)
@@ -444,7 +484,7 @@ class StdSim(object):
             return getattr(self.inner_stream, item)
 
 
-class ByteBuf(object):
+class ByteBuf:
     """
     Used by StdSim to write binary data and stores the actual bytes written
     """
@@ -473,7 +513,7 @@ class ByteBuf(object):
                     self.std_sim_instance.flush()
 
 
-class ProcReader(object):
+class ProcReader:
     """
     Used to capture stdout and stderr from a Popen process if any of those were set to subprocess.PIPE.
     If neither are pipes, then the process will run normally and no output will be captured.
@@ -575,7 +615,7 @@ class ProcReader(object):
             pass
 
 
-class ContextFlag(object):
+class ContextFlag:
     """A context manager which is also used as a boolean flag value within the default sigint handler.
 
     Its main use is as a flag to prevent the SIGINT handler in cmd2 from raising a KeyboardInterrupt
@@ -599,7 +639,7 @@ class ContextFlag(object):
             raise ValueError("count has gone below 0")
 
 
-class RedirectionSavedState(object):
+class RedirectionSavedState:
     """Created by each command to store information about their redirection."""
 
     def __init__(self, self_stdout: Union[StdSim, TextIO], sys_stdout: Union[StdSim, TextIO],
