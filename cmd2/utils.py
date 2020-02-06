@@ -90,9 +90,13 @@ class Settable:
                          validation using str_to_bool(). The val_type function should raise an exception if it fails.
                          This exception will be caught and printed by Cmd.do_set().
         :param description: string describing this setting
-        :param onchange_cb: optional function to call when the value of this settable is altered by the set command
-                            Callback signature:
-                                val_changed_cb(param_name: str, old_value: Any, new_value: Any) -> Any
+        :param onchange_cb: optional function or method to call when the value of this settable is altered
+                            by the set command. (e.g. onchange_cb=self.debug_changed)
+
+                            Cmd.do_set() passes the following 3 arguments to onchange_cb:
+                                param_name: str - name of the changed parameter
+                                old_value: Any - the value before being changed
+                                new_value: Any - the value after being changed
 
         The following optional settings provide tab completion for a parameter's values. They correspond to the
         same settings in argparse-based tab completion. A maximum of one of these should be provided.
