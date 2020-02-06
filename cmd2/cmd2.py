@@ -2279,7 +2279,7 @@ class Cmd(cmd.Cmd):
     alias_parser = DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
 
     # Add subcommands to alias
-    alias_subparsers = alias_parser.add_subparsers(dest='subcommand')
+    alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
     alias_subparsers.required = True
 
     # alias -> create
@@ -2455,7 +2455,7 @@ class Cmd(cmd.Cmd):
     macro_parser = DEFAULT_ARGUMENT_PARSER(description=macro_description, epilog=macro_epilog)
 
     # Add subcommands to macro
-    macro_subparsers = macro_parser.add_subparsers(dest='subcommand')
+    macro_subparsers = macro_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
     macro_subparsers.required = True
 
     # macro -> create

@@ -1552,7 +1552,7 @@ def test_get_settable_completion_items(base_app):
 def test_alias_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'alias')
     assert "Usage: alias [-h]" in err[0]
-    assert "Error: the following arguments are required: subcommand" in err[1]
+    assert "Error: the following arguments are required: SUBCOMMAND" in err[1]
 
 def test_alias_create(base_app):
     # Create the alias
@@ -1646,7 +1646,7 @@ def test_multiple_aliases(base_app):
 def test_macro_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'macro')
     assert "Usage: macro [-h]" in err[0]
-    assert "Error: the following arguments are required: subcommand" in err[1]
+    assert "Error: the following arguments are required: SUBCOMMAND" in err[1]
 
 def test_macro_create(base_app):
     # Create the macro
