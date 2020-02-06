@@ -120,8 +120,7 @@ reference. In your initialization code:
 
 1. Create an instance attribute with a default value.
 2. Create a :class:`.Settable` object which describes your setting.
-3. Pass the :class:`.Settable` object to
-   :meth:`cmd2.cmd2.Cmd.add_settable`.
+3. Pass the :class:`.Settable` object to :meth:`cmd2.Cmd.add_settable`.
 
 Here's an example, from
 ``examples/environment.py``:
@@ -165,8 +164,8 @@ to be available to the :ref:`features/builtin_commands:set` command.
 Let's say that you never want end users of your program to be able to enable
 full debug tracebacks to print out if an error occurs. You might want to hide
 the :ref:`features/settings:debug` setting. To do so, remove it from the
-:attr:`cmd2.Cmd.settable` dictionary after you initialize your object::
-The :meth:`~.cmd2.Cmd.remove_settable` convenience method makes this easy::
+:attr:`cmd2.Cmd.settable` dictionary after you initialize your object.
+The :meth:`cmd2.Cmd.remove_settable` convenience method makes this easy::
 
   class MyApp(cmd2.Cmd):
 
