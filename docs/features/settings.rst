@@ -165,4 +165,4 @@ the :ref:`features/settings:debug` setting. To do so, remove it from the
 
     def __init__(self):
         super().__init__()
-        self.settables.pop('debug')
+        self.remove_settable('debug')

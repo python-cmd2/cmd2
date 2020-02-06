@@ -10,7 +10,7 @@ class MyApp(cmd2.Cmd):
 
     def __init__(self):
         super().__init__()
-        self.settables.pop('debug')
+        self.remove_settable('debug')
 
 
 if __name__ == '__main__':
