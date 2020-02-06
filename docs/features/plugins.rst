@@ -82,10 +82,10 @@ example::
             super().__init__(*args, **kwargs)
             # code placed here runs after cmd2.Cmd initializes
             self.mysetting = 'somevalue'
-            self.settable.update({'mysetting': 'short help message for mysetting'})
+            self.add_settable(cmd2.Settable('mysetting', str, 'short help message for mysetting'))
 
 You can also hide settings from the user by removing them from
-``self.settable``.
+``self.settables``.
 
 Decorators
 ~~~~~~~~~~

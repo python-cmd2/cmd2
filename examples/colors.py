@@ -39,7 +39,7 @@ class CmdLineApp(cmd2.Cmd):
 
         self.maxrepeats = 3
         # Make maxrepeats settable at runtime
-        self.settable['maxrepeats'] = 'max repetitions for speak command'
+        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
 
         # Should ANSI color output be allowed
         self.allow_style = ansi.STYLE_TERMINAL

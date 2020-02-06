@@ -67,7 +67,7 @@ initializer to our class::
 
         # Make maxrepeats settable at runtime
         self.maxrepeats = 3
-        self.settable['maxrepeats'] = 'max repetitions for speak command'
+        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
 
 In that initializer, the first thing to do is to make sure we initialize
 ``cmd2``. That's what the ``super().__init__()`` line does. Then we create an
@@ -203,7 +203,7 @@ method so it looks like this::
 
         # Make maxrepeats settable at runtime
         self.maxrepeats = 3
-        self.settable['maxrepeats'] = 'max repetitions for speak command'
+        self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
 
 Shortcuts are passed to the ``cmd2`` initializer, and if you want the built-in
 shortcuts of ``cmd2`` you have to pass them. These shortcuts are defined as a

@@ -79,7 +79,7 @@ def test_base_argparse_help(base_app):
 
 def test_base_invalid_option(base_app):
     out, err = run_cmd(base_app, 'set -z')
-    assert err[0] == 'Usage: set [-h] [-a] [-l] [param] [value]'
+    assert err[0] == 'Usage: set [-h] [-l] [param] [value]'
     assert 'Error: unrecognized arguments: -z' in err[1]
 
 def test_base_shortcuts(base_app):
@@ -108,56 +108,7 @@ def test_base_show_long(base_app):
     assert out == expected
 
 
-def test_base_show_readonly(base_app):
-    base_app.editor = 'vim'
-    out, err = run_cmd(base_app, 'set -a')
-    expected = normalize(SHOW_TXT + '\nRead only settings:' + """
-        Commands may be terminated with: {}
-        Output redirection and pipes allowed: {}
-""".format(base_app.statement_parser.terminators, base_app.allow_redirection))
-    assert out == expected
-
-
-def test_cast():
-    # Boolean
-    assert utils.cast(True, True) == True
-    assert utils.cast(True, False) == False
-    assert utils.cast(True, 0) == False
-    assert utils.cast(True, 1) == True
-    assert utils.cast(True, 'on') == True
-    assert utils.cast(True, 'off') == False
-    assert utils.cast(True, 'ON') == True
-    assert utils.cast(True, 'OFF') == False
-    assert utils.cast(True, 'y') == True
-    assert utils.cast(True, 'n') == False
-    assert utils.cast(True, 't') == True
-    assert utils.cast(True, 'f') == False
-
-    # Non-boolean same type
-    assert utils.cast(1, 5) == 5
-    assert utils.cast(3.4, 2.7) == 2.7
-    assert utils.cast('foo', 'bar') == 'bar'
-    assert utils.cast([1,2], [3,4]) == [3,4]
-
-def test_cast_problems(capsys):
-    expected = 'Problem setting parameter (now {}) to {}; incorrect type?\n'
-
-    # Boolean current, with new value not convertible to bool
-    current = True
-    new = [True, True]
-    assert utils.cast(current, new) == current
-    out, err = capsys.readouterr()
-    assert out == expected.format(current, new)
-
-    # Non-boolean current, with new value not convertible to current type
-    current = 1
-    new = 'octopus'
-    assert utils.cast(current, new) == current
-    out, err = capsys.readouterr()
-    assert out == expected.format(current, new)
-
-
-def test_base_set(base_app):
+def test_set(base_app):
     out, err = run_cmd(base_app, 'set quiet True')
     expected = normalize("""
 quiet - was: False
@@ -168,6 +119,16 @@ now: True
     out, err = run_cmd(base_app, 'set quiet')
     assert out == ['quiet: True']
 
+def test_set_val_empty(base_app):
+    base_app.editor = "fake"
+    out, err = run_cmd(base_app, 'set editor ""')
+    assert base_app.editor == ''
+
+def test_set_val_is_flag(base_app):
+    base_app.editor = "fake"
+    out, err = run_cmd(base_app, 'set editor "-h"')
+    assert base_app.editor == '-h'
+
 def test_set_not_supported(base_app):
     out, err = run_cmd(base_app, 'set qqq True')
     expected = normalize("""
@@ -175,16 +136,13 @@ Parameter 'qqq' not supported (type 'set' for list of parameters).
 """)
     assert err == expected
 
-def test_set_quiet(base_app):
-    out, err = run_cmd(base_app, 'set quie True')
-    expected = normalize("""
-quiet - was: False
-now: True
-""")
-    assert out == expected
 
-    out, err = run_cmd(base_app, 'set quiet')
-    assert out == ['quiet: True']
+def test_set_no_settables(base_app):
+    base_app.settables = {}
+    out, err = run_cmd(base_app, 'set quiet True')
+    expected = normalize("There are no settable parameters")
+    assert err == expected
+
 
 @pytest.mark.parametrize('new_val, is_valid, expected', [
     (ansi.STYLE_NEVER, False, ansi.STYLE_NEVER),
@@ -214,10 +172,11 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
 class OnChangeHookApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.add_settable(utils.Settable('quiet', bool, "my description", onchange_cb=self._onchange_quiet))
 
-    def _onchange_quiet(self, old, new) -> None:
+    def _onchange_quiet(self, name, old, new) -> None:
         """Runs when quiet is changed via set command"""
-        self.poutput("You changed quiet")
+        self.poutput("You changed " + name)
 
 @pytest.fixture
 def onchange_app():
@@ -671,13 +630,17 @@ now: True
 def test_debug_not_settable(base_app):
     # Set debug to False and make it unsettable
     base_app.debug = False
-    del base_app.settable['debug']
+    base_app.remove_settable('debug')
 
     # Cause an exception
     out, err = run_cmd(base_app, 'bad "quote')
 
     # Since debug is unsettable, the user will not be given the option to enable a full traceback
     assert err == ['Invalid syntax: No closing quotation']
+
+def test_remove_settable_keyerror(base_app):
+    with pytest.raises(KeyError):
+        base_app.remove_settable('fake')
 
 def test_edit_file(base_app, request, monkeypatch):
     # Set a fake editor just to make sure we have one.  We aren't really going to call it due to the mock
@@ -1583,13 +1546,13 @@ def test_get_macro_completion_items(base_app):
 def test_get_settable_completion_items(base_app):
     results = base_app._get_settable_completion_items()
     for cur_res in results:
-        assert cur_res in base_app.settable
-        assert cur_res.description == base_app.settable[cur_res]
+        assert cur_res in base_app.settables
+        assert cur_res.description == base_app.settables[cur_res].description
 
 def test_alias_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'alias')
     assert "Usage: alias [-h]" in err[0]
-    assert "Error: the following arguments are required: subcommand" in err[1]
+    assert "Error: the following arguments are required: SUBCOMMAND" in err[1]
 
 def test_alias_create(base_app):
     # Create the alias
@@ -1683,7 +1646,7 @@ def test_multiple_aliases(base_app):
 def test_macro_no_subcommand(base_app):
     out, err = run_cmd(base_app, 'macro')
     assert "Usage: macro [-h]" in err[0]
-    assert "Error: the following arguments are required: subcommand" in err[1]
+    assert "Error: the following arguments are required: SUBCOMMAND" in err[1]
 
 def test_macro_create(base_app):
     # Create the macro

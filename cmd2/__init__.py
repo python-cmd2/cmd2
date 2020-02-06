@@ -27,3 +27,4 @@ from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
 from .decorators import categorize, with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category
 from .parsing import Statement
 from .py_bridge import CommandResult
+from .utils import Settable

@@ -64,10 +64,10 @@ def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
 
 
 # noinspection PyProtectedMember
-class AutoCompleter(object):
+class AutoCompleter:
     """Automatic command line tab completion based on argparse parameters"""
 
-    class _ArgumentState(object):
+    class _ArgumentState:
         """Keeps state of an argument being parsed"""
 
         def __init__(self, arg_action: argparse.Action) -> None:

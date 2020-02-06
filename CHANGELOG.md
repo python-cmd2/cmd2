@@ -1,13 +1,20 @@
-## 0.9.26 (TBD, 2020)
+## 1.0.0-rc1 (TBD, 2020)
 * Enhancements
     * Changed the default help text to make `help -v` more discoverable
+    * Added `add_settable()` and `remove_settable()` convenience methods to update `self.settable` dictionary
 * Breaking changes
     * Renamed `locals_in_py` attribute of `cmd2.Cmd` to `self_in_py`
     * The following public attributes of `cmd2.Cmd` are no longer settable at runtime by default:
         * `continuation_prompt`
         * `self_in_py`
         * `prompt`
-    
+    * `self.settable` changed to `self.settables`
+        * It is now a Dict[str, Settable] instead of Dict[str, str]
+        * setting onchange callbacks have a new method signature and must be added to the
+          Settable instance in order to be called
+        * **set** command now supports tab-completion of values
+    * Removed `cast()` utility function
+
 ## 0.9.25 (January 26, 2020)
 * Enhancements
     * Reduced what gets put in package downloadable from PyPI (removed irrelevant CI config files and such)
@@ -69,7 +76,7 @@
     * Fix bug where cmd2 ran 'stty sane' command when stdin was not a terminal
 * Enhancements
     * Send all startup script paths to run_script. Previously we didn't do this if the file was empty, but that
-    showed no record of the run_script command in history. 
+    showed no record of the run_script command in history.
     * Made it easier for developers to override `edit` command by having `do_history` no longer call `do_edit`. This
     also removes the need to exclude `edit` command from history list.
     * It is no longer necessary to set the `prog` attribute of an argparser with subcommands. cmd2 now automatically
@@ -138,7 +145,7 @@
 * Enhancements
     * Greatly simplified using argparse-based tab completion. The new interface is a complete overhaul that breaks
     the previous way of specifying completion and choices functions. See header of [argparse_custom.py](https://github.com/python-cmd2/cmd2/blob/master/cmd2/argparse_custom.py)
-    for more information. 
+    for more information.
     * Enabled tab completion on multiline commands
 * **Renamed Commands Notice**
     * The following commands were renamed in the last release and have been removed in this release
@@ -148,7 +155,7 @@
     * We apologize for any inconvenience, but the new names are more self-descriptive
         * Lots of end users were confused particularly about what exactly `load` should be loading
 * Breaking Changes
-    * Restored `cmd2.Cmd.statement_parser` to be a public attribute (no underscore) 
+    * Restored `cmd2.Cmd.statement_parser` to be a public attribute (no underscore)
         * Since it can be useful for creating [post-parsing hooks](https://cmd2.readthedocs.io/en/latest/features/hooks.html#postparsing-hooks)
     * Completely overhauled the interface for adding tab completion to argparse arguments. See enhancements for more details.
     * `ACArgumentParser` is now called `Cmd2ArgumentParser`
@@ -188,7 +195,7 @@
         * `perror` - print a message to sys.stderr
         * `pexcept` - print Exception message to sys.stderr. If debug is true, print exception traceback if one exists
     * Signature of `poutput` and `perror` significantly changed
-        * Removed color parameters `color`, `err_color`, and `war_color` from `poutput` and `perror` 
+        * Removed color parameters `color`, `err_color`, and `war_color` from `poutput` and `perror`
             * See the docstrings of these methods or the [cmd2 docs](https://cmd2.readthedocs.io/en/latest/features/generating_output.html) for more info on applying styles to output messages
         * `end` argument is now keyword-only and cannot be specified positionally
         * `traceback_war` no longer exists as an argument since it isn't needed now that `perror` and `pexcept` exist
@@ -198,7 +205,7 @@
         * `COLORS_NEVER` --> `ANSI_NEVER`
         * `COLORS_TERMINAL` --> `ANSI_TERMINAL`
 * **Renamed Commands Notice**
-    * The following commands have been renamed. The old names will be supported until the next release. 
+    * The following commands have been renamed. The old names will be supported until the next release.
         * `load` --> `run_script`
         * `_relative_load` --> `_relative_run_script`
         * `pyscript` --> `run_pyscript`
@@ -217,7 +224,7 @@
     * Fixed issue where `_cmdloop()` suppressed exceptions by returning from within its `finally` code
     * Fixed UnsupportedOperation on fileno error when a shell command was one of the commands run while generating
     a transcript
-    * Fixed bug where history was displaying expanded multiline commands when -x was not specified 
+    * Fixed bug where history was displaying expanded multiline commands when -x was not specified
 * Enhancements
     * **Added capability to chain pipe commands and redirect their output (e.g. !ls -l | grep user | wc -l > out.txt)**
     * `pyscript` limits a command's stdout capture to the same period that redirection does.
@@ -238,7 +245,7 @@
     * Text scripts now run immediately instead of adding their commands to `cmdqueue`. This allows easy capture of
     the entire script's output.
     * Added member to `CommandResult` called `stop` which is the return value of `onecmd_plus_hooks` after it runs
-    the given command line. 
+    the given command line.
 * Breaking changes
     * Replaced `unquote_redirection_tokens()` with `unquote_specific_tokens()`. This was to support the fix
     that allows terminators in alias and macro values.
