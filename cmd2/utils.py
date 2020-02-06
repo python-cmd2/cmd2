@@ -103,9 +103,16 @@ class Settable:
 
         :param choices: iterable of accepted values
         :param choices_function: function that provides choices for this argument
-        :param choices_method: cmd2-app method that provides choices for this argument
+        :param choices_method: cmd2-app method that provides choices for this argument (See note below)
         :param completer_function: tab-completion function that provides choices for this argument
-        :param completer_method: cmd2-app tab-completion method that provides choices for this argument
+        :param completer_method: cmd2-app tab-completion method that provides choices
+                                 for this argument (See note below)
+
+        Note:
+        For choices_method and completer_method, do not set them to a bound method. This is because AutoCompleter
+        passes the self argument explicitly to these functions.
+
+        Therefore instead of passing something like self.path_complete, pass cmd2.Cmd.path_complete.
         """
         if val_type == bool:
             val_type = str_to_bool
