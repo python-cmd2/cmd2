@@ -30,7 +30,7 @@ class EnvironmentApp(cmd2.Cmd):
             result = 'UV is bad for your skin.'
         self.poutput(result)
 
-    def _onchange_degrees_c(self, old, new):
+    def _onchange_degrees_c(self, param_name, old, new):
         # if it's over 40C, it's gotta be sunny, right?
         if new > 40:
             self.sunny = True
