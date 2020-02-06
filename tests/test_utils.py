@@ -531,3 +531,24 @@ def test_align_right_wide_fill_needs_padding():
     width = 6
     aligned = cu.align_right(text, fill_char=fill_char, width=width)
     assert aligned == fill_char + ' ' + text
+
+
+def test_str_to_bool_true():
+    assert cu.str_to_bool('true')
+    assert cu.str_to_bool('True')
+    assert cu.str_to_bool('TRUE')
+    assert cu.str_to_bool('tRuE')
+
+def test_str_to_bool_false():
+    assert not cu.str_to_bool('false')
+    assert not cu.str_to_bool('False')
+    assert not cu.str_to_bool('FALSE')
+    assert not cu.str_to_bool('fAlSe')
+
+def test_str_to_bool_invalid():
+    with pytest.raises(ValueError):
+        cu.str_to_bool('other')
+
+def test_str_to_bool_bad_input():
+    with pytest.raises(ValueError):
+        cu.str_to_bool(1)

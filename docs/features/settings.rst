@@ -3,8 +3,8 @@ Settings
 
 Settings provide a mechanism for a user to control the behavior of a ``cmd2``
 based application. A setting is stored in an instance attribute on your
-subclass of :class:`cmd2.cmd2.Cmd` and must also appear in the
-:attr:`cmd2.cmd2.Cmd.settable` dictionary. Developers may set default values
+subclass of :class:`.cmd2.Cmd` and must also appear in the
+:attr:`~.cmd2.Cmd.settable` dictionary. Developers may set default values
 for these settings and users can modify them at runtime using the
 :ref:`features/builtin_commands:set` command. Developers can
 :ref:`features/settings:Create New Settings` and can also
@@ -116,15 +116,21 @@ Create New Settings
 -------------------
 
 Your application can define user-settable parameters which your code can
-reference. First create a class attribute with the default value. Then update
-the ``settable`` dictionary with your setting name and a short description
-before you initialize the superclass. Here's an example, from
+reference. In your initialization code:
+
+1. Create an instance attribute with a default value.
+2. Create a :class:`.Settable` object which describes your setting.
+3. Pass the :class:`.Settable` object to
+   :meth:`cmd2.cmd2.Cmd.add_settable`.
+
+Here's an example, from
 ``examples/environment.py``:
 
 .. literalinclude:: ../../examples/environment.py
 
-If you want to be notified when a setting changes (as we do above), then define
-a method ``_onchange_{setting}()``. This method will be called after the user
+If you want to be notified when a setting changes (as we do above), then be
+sure to supply a method to the ``onchange_cb`` parameter of the
+`.cmd2.utils.Settable`. This method will be called after the user
 changes a setting, and will receive both the old value and the new value.
 
 .. code-block:: text
@@ -150,19 +156,20 @@ changes a setting, and will receive both the old value and the new value.
 
 
 Hide Builtin Settings
-----------------------
+---------------------
 
 You may want to prevent a user from modifying a builtin setting. A setting
-must appear in the :attr:`cmd2.cmd2.Cmd.settable` dictionary in order for it
+must appear in the :attr:`~.cmd2.Cmd.settable` dictionary in order for it
 to be available to the :ref:`features/builtin_commands:set` command.
 
 Let's say that you never want end users of your program to be able to enable
 full debug tracebacks to print out if an error occurs. You might want to hide
 the :ref:`features/settings:debug` setting. To do so, remove it from the
-:attr:`cmd2.cmd2.Cmd.settable` dictionary after you initialize your object::
+:attr:`~.cmd2.Cmd.settable` dictionary after you initialize your object.
+The :meth:`~.cmd2.Cmd.remove_settable` convenience method makes this easy::
 
   class MyApp(cmd2.Cmd):
 
     def __init__(self):
         super().__init__()
-        self.settable.pop('debug')
+        self.remove_settable('debug')

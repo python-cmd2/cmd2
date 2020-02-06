@@ -53,7 +53,7 @@ class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr
             return not self.stderr
 
 
-class PyBridge(object):
+class PyBridge:
     """Provides a Python API wrapper for application commands."""
     def __init__(self, cmd2_app):
         self._cmd2_app = cmd2_app

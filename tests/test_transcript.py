@@ -16,7 +16,7 @@ import pytest
 import cmd2
 from .conftest import run_cmd, verify_help_text
 from cmd2 import transcript
-from cmd2.utils import StdSim
+from cmd2.utils import StdSim, Settable
 
 
 class CmdLineApp(cmd2.Cmd):
@@ -31,7 +31,7 @@ class CmdLineApp(cmd2.Cmd):
         super().__init__(*args, multiline_commands=['orate'], **kwargs)
 
         # Make maxrepeats settable at runtime
-        self.settable['maxrepeats'] = 'Max number of `--repeat`s allowed'
+        self.add_settable(Settable('maxrepeats', int, 'Max number of `--repeat`s allowed'))
 
         self.intro = 'This is an intro banner ...'
 
