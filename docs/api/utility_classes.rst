@@ -1,6 +1,10 @@
 Utility Classes
 ===============
 
+.. autoclass:: cmd2.utils.Settable
+
+    .. automethod:: __init__
+
 .. autoclass:: cmd2.utils.StdSim
 
 .. autoclass:: cmd2.utils.ByteBuf
