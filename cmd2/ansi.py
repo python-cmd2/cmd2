@@ -32,14 +32,8 @@ class ColorBase(Enum):
     Base class for fg and bg classes
     This expects the child classes to define enums of: color name -> ANSI color sequence
     """
-    def __str__(self) -> str:
-        """Return ANSI color sequence instead of enum name"""
-        return self.value
-
     def __add__(self, other: Any) -> str:
         """Return self + other as string"""
-        if isinstance(other, (fg, bg)):
-            other = str(other)
         return self.value + other
 
     def __radd__(self, other: Any) -> str:
