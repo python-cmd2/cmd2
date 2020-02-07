@@ -7,6 +7,9 @@
         * `ansi.style()` `fg` argument can now either be of type `str` or `ansi.fg`
         * `ansi.style()` `bg` argument can now either be of type `str` or `ansi.bg`
         * This supports IDE auto-completion of color names
+        * The enums also support
+            * `f-strings` and `format()` calls (e.g. `"{}hello{}".format(fg.blue, fg.reset)`)
+            * string concatenation (e.g. `fg.blue + "hello" + fg.reset`)
 * Breaking changes
     * Renamed `locals_in_py` attribute of `cmd2.Cmd` to `self_in_py`
     * The following public attributes of `cmd2.Cmd` are no longer settable at runtime by default:
