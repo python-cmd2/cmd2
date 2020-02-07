@@ -30,7 +30,8 @@ ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 class ColorBase(Enum):
     """
     Base class used for defining color enums. See fg and bg classes for examples.
-    This expects the child classes to define enums of the follow structure
+
+    Child classes should define enums in the follow structure:
         key: color name (e.g. black)
         value: anything that when cast to a string returns an ANSI sequence
     """
