@@ -136,6 +136,13 @@ def test_color_str_building():
            fg.blue.value + bg.white.value + "hello" + fg.reset.value + bg.reset.value
 
 
+def test_color_nonunique_values():
+    class Matching(ansi.ColorBase):
+        magenta = ansi.fg_lookup('magenta')
+        purple = ansi.fg_lookup('magenta')
+    assert sorted(Matching.colors()) == ['magenta', 'purple']
+
+
 def test_color_enum():
     assert ansi.fg_lookup('bright_red') == ansi.fg_lookup(ansi.fg.bright_red)
     assert ansi.bg_lookup('green') == ansi.bg_lookup(ansi.bg.green)
