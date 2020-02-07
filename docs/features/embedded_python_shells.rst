@@ -5,12 +5,12 @@ The ``py`` command will run its arguments as a Python command.  Entered without
 arguments, it enters an interactive Python session.  The session can call
 "back" to your application through the name defined in ``self.pyscript_name``
 (defaults to ``app``).  This wrapper provides access to execute commands in
-your cmd2 application while maintaining isolation.
+your ``cmd2`` application while maintaining isolation.
 
 You may optionally enable full access to to your application by setting
 ``self_in_py`` to ``True``.  Enabling this flag adds ``self`` to the python
-session, which is a reference to your Cmd2 application. This can be useful for
-debugging your application.
+session, which is a reference to your ``cmd2`` application. This can be useful
+for debugging your application.
 
 The ``app`` object (or your custom name) provides access to application
 commands through raw commands.  For example, any application command call be

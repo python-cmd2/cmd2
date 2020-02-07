@@ -23,7 +23,7 @@ Presents numbered options to user, as bash ``select``.
 ``app.select`` is called from within a method (not by the user directly; it is
 ``app.select``, not ``app.do_select``).
 
-.. automethod:: cmd2.cmd2.Cmd.select
+.. automethod:: cmd2.Cmd.select
     :noindex:
 
 ::

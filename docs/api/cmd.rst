@@ -1,8 +1,10 @@
 cmd2.Cmd
 ========
 
-.. autoclass:: cmd2.cmd2.Cmd
+.. autoclass:: cmd2.Cmd
     :members:
+
+    .. automethod:: __init__
 
     .. attribute:: help_error
 

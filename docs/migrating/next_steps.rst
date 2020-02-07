@@ -51,8 +51,8 @@ Generating Output
 -----------------
 
 If your program generates output by printing directly to ``sys.stdout``, you
-should consider switching to :meth:`~cmd2.cmd2.Cmd.poutput`,
-:meth:`~cmd2.cmd2.Cmd.perror`, and :meth:`~cmd2.cmd2.Cmd.pfeedback`. These
+should consider switching to :meth:`~cmd2.Cmd.poutput`,
+:meth:`~cmd2.Cmd.perror`, and :meth:`~cmd2.Cmd.pfeedback`. These
 methods work with several of the built in :ref:`features/settings:Settings` to
 allow the user to view or suppress feedback (i.e. progress or status output).
 They also properly handle ansi colored output according to user preference.

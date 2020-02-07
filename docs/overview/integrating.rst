@@ -1,5 +1,5 @@
 Integrate cmd2 Into Your Project
-================================
+====================================
 
 Once installed, you will want to ensure that your project's dependencies
 include ``cmd2``. Make sure your ``setup.py`` includes the following::
@@ -19,7 +19,7 @@ version of ``cmd2``.
 
 
 Windows Considerations
--------------------------------
+----------------------
 
 If you would like to use :ref:`features/completion:Completion`, and you want
 your application to run on Windows, you will need to ensure you install the

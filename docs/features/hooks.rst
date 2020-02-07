@@ -1,7 +1,7 @@
 Hooks
 =====
 
-The typical way of starting a cmd2 application is as follows::
+The typical way of starting a ``cmd2`` application is as follows::
 
     import cmd2
     class App(cmd2.Cmd):
