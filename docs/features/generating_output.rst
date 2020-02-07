@@ -7,26 +7,26 @@ methods::
   print("Greetings, Professor Falken.", file=self.stdout)
   self.stdout.write("Shall we play a game?\n")
 
-While you could send output directly to ``sys.stdout``, :mod:`cmd2.cmd2.Cmd`
+While you could send output directly to ``sys.stdout``, :mod:`cmd2.Cmd`
 can be initialized with a ``stdin`` and ``stdout`` variables, which it stores
 as ``self.stdin`` and ``self.stdout``. By using these variables every time you
 produce output, you can trivially change where all the output goes by changing
 how you initialize your class.
 
-:mod:`cmd2.cmd2.Cmd` extends this approach in a number of convenient ways. See
+:mod:`cmd2.Cmd` extends this approach in a number of convenient ways. See
 :ref:`features/redirection:Output Redirection And Pipes` for information on how
 users can change where the output of a command is sent. In order for those
 features to work, the output you generate must be sent to ``self.stdout``. You
 can use the methods described above, and everything will work fine.
-:mod:`cmd2.cmd2.Cmd` also includes a number of output related methods which you
+:mod:`cmd2.Cmd` also includes a number of output related methods which you
 may use to enhance the output your application produces.
 
 
 Ordinary Output
 ---------------
 
-The :meth:`~.cmd2.Cmd.poutput` method is similar to the Python
-`built-in print function <https://docs.python.org/3/library/functions.html#print>`_. :meth:`~.cmd2.Cmd.poutput` adds two
+The :meth:`~cmd2.Cmd.poutput` method is similar to the Python
+`built-in print function <https://docs.python.org/3/library/functions.html#print>`_. :meth:`~cmd2.Cmd.poutput` adds two
 conveniences:
 
   1. Since users can pipe output to a shell command, it catches
@@ -34,7 +34,7 @@ conveniences:
   ``self.broken_pipe_warning`` to ``stderr``. ``self.broken_pipe_warning``
   defaults to an empty string so this method will just swallow the exception.
   If you want to show an error message, put it in
-  ``self.broken_pipe_warning`` when you initialize :mod:`~cmd2.cmd2.Cmd`.
+  ``self.broken_pipe_warning`` when you initialize :mod:`~cmd2.Cmd`.
 
   2. It examines and honors the :ref:`features/settings:allow_style` setting.
   See :ref:`features/generating_output:Colored Output` below for more details.

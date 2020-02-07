@@ -167,27 +167,19 @@ To reference a method or function, use one of the following approaches:
 
 1. Reference the full dotted path of the method::
 
-     The :meth:`cmd2.cmd2.Cmd.poutput` method is similar to the Python built-in
+     The :meth:`cmd2.Cmd.poutput` method is similar to the Python built-in
      print function.
 
-Which renders as: The :meth:`cmd2.cmd2.Cmd.poutput` method is similar to the
+Which renders as: The :meth:`cmd2.Cmd.poutput` method is similar to the
 Python built-in print function.
 
 2. Reference the full dotted path to the method, but only display the method
 name::
 
-     The :meth:`~cmd2.cmd2.Cmd.poutput` method is similar to the Python built-in print function.
+     The :meth:`~cmd2.Cmd.poutput` method is similar to the Python built-in print function.
 
-Which renders as: The :meth:`~cmd2.cmd2.Cmd.poutput` method is similar to the
+Which renders as: The :meth:`~cmd2.Cmd.poutput` method is similar to the
 Python built-in print function.
-
-3. Reference a portion of the dotted path of the method::
-
-     The :meth:`.cmd2.Cmd.poutput` method is similar to the Python built-in print
-     function.
-
-Which renders as: The :meth:`.cmd2.Cmd.poutput` method is similar to the Python
-built-in print function.
 
 Avoid either of these approaches:
 

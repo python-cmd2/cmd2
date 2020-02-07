@@ -4,16 +4,14 @@ History
 For Developers
 --------------
 
-- Describe how cmd2 tracks history
+- Describe how ``cmd2`` tracks history
 - how persistent history works
 - differences in history and bash shell history (we only store valid commands
   in history)
 - reference the public code structures we use to store history
 
 ``cmd2`` adds the option of making this history persistent via optional
-arguments to ``cmd2.Cmd.__init__()``:
-
-.. automethod:: cmd2.cmd2.Cmd.__init__
+arguments to :meth:`cmd2.Cmd.__init__`.
 
 
 For Users

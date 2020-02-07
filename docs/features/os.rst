@@ -149,7 +149,7 @@ single or double quotes)::
     (Cmd)
 
 Automating cmd2 apps from other CLI/CLU tools
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 While ``cmd2`` is designed to create **interactive** command-line applications
 which enter a Read-Evaluate-Print-Loop (REPL), there are a great many times

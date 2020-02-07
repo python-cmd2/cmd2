@@ -1,7 +1,7 @@
 Builtin Commands
 ================
 
-Applications which subclass :class:`cmd2.cmd2.Cmd` inherit a number of commands
+Applications which subclass :class:`cmd2.Cmd` inherit a number of commands
 which may be useful to your users. Developers can
 :ref:`features/builtin_commands:Remove Builtin Commands` if they do not want
 them to be part of the application.
@@ -130,9 +130,9 @@ This command lists available shortcuts.  See
 Remove Builtin Commands
 -----------------------
 
-Developers may not want to offer the commands builtin to :class:`cmd2.cmd2.Cmd`
+Developers may not want to offer the commands builtin to :class:`cmd2.Cmd`
 to users of their application. To remove a command you must delete the method
-implementing that command from the :class:`cmd2.cmd2.Cmd` object at runtime.
+implementing that command from the :class:`cmd2.Cmd` object at runtime.
 For example, if you wanted to remove the :ref:`features/builtin_commands:shell`
 command from your application::
 

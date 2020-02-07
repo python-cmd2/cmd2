@@ -80,7 +80,7 @@ useful as a superclass of a class you define yourself in order to inherit
 Certain things must be initialized within the ``__init__()`` method of your
 class derived from ``cmd2.Cmd``(all arguments to ``__init__()`` are optional):
 
-.. automethod:: cmd2.cmd2.Cmd.__init__
+.. automethod:: cmd2.Cmd.__init__
     :noindex:
 
 Cmd instance attributes
