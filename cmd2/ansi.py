@@ -32,13 +32,27 @@ class ColorBase(Enum):
     Base class for fg and bg classes
     This expects the child classes to define enums of: color name -> ANSI color sequence
     """
+    def __str__(self) -> str:
+        """
+        Return ANSI color sequence instead of enum name
+        This is helpful when using a ColorBase in an f-string or format() call
+        e.g. my_str = "{}hello{}".format(fg.blue, fg.reset)
+        """
+        return self.value
+
     def __add__(self, other: Any) -> str:
-        """Return self + other as string"""
-        return self.value + other
+        """
+        Support building a color string when self is the left operand
+        e.g. fg.blue + "hello"
+        """
+        return str(self) + other
 
     def __radd__(self, other: Any) -> str:
-        """Return other + self as string"""
-        return other + self.value
+        """
+        Support building a color string when self is the right operand
+        e.g. "hello" + fg.reset
+        """
+        return other + str(self)
 
     @classmethod
     def colors(cls) -> List[str]:
