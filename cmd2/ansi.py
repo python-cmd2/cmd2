@@ -26,7 +26,9 @@ allow_style = STYLE_TERMINAL
 # Regular expression to match ANSI style sequences (including 8-bit and 24-bit colors)
 ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 
+
 # Foreground colors
+# noinspection PyPep8Naming,DuplicatedCode
 @unique
 class fg(Enum):
     """Enum class for foreground colors (to support IDE autocompletion)."""
@@ -64,6 +66,7 @@ class fg(Enum):
 
 
 # Background colors
+# noinspection PyPep8Naming,DuplicatedCode
 @unique
 class bg(Enum):
     """Enum class for background colors (to support IDE autocompletion)."""
@@ -161,7 +164,7 @@ def fg_lookup(fg_name: Union[str, fg]) -> str:
     try:
         ansi_escape = fg.get_value(fg_name.lower())
     except KeyError:
-        raise ValueError('Foreground color {!r} does not exist.'.format(fg_name))
+        raise ValueError('Foreground color {!r} does not exist; must be one of: {}'.format(fg_name, fg.colors()))
     return ansi_escape
 
 
@@ -179,10 +182,11 @@ def bg_lookup(bg_name: Union[str, bg]) -> str:
     try:
         ansi_escape = bg.get_value(bg_name.lower())
     except KeyError:
-        raise ValueError('Background color {!r} does not exist.'.format(bg_name))
+        raise ValueError('Background color {!r} does not exist; must be one of: {}'.format(bg_name, bg.colors()))
     return ansi_escape
 
 
+# noinspection PyShadowingNames
 def style(text: Any, *, fg: Union[str, fg] = '', bg: Union[str, bg] = '', bold: bool = False,
           dim: bool = False, underline: bool = False) -> str:
     """
