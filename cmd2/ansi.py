@@ -30,7 +30,7 @@ ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 class ColorBase(Enum):
     """
     Base class for fg and bg classes
-    This expects the base classes to define enums of: color name -> ANSI color sequence
+    This expects the child classes to define enums of: color name -> ANSI color sequence
     """
     def __str__(self) -> str:
         """Return ANSI color sequence instead of enum name"""
