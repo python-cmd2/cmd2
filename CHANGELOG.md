@@ -1,6 +1,7 @@
 ## 1.0.0-rc1 (TBD, 2020)
 * Enhancements
     * Changed the default help text to make `help -v` more discoverable
+    * **set** command now supports tab-completion of values
     * Added `add_settable()` and `remove_settable()` convenience methods to update `self.settable` dictionary
     * Added convenience `ansi.fg` and `ansi.bg` enums of foreground and background colors
         * `ansi.style()` `fg` argument can now either be of type `str` or `ansi.fg`
@@ -16,7 +17,6 @@
         * It is now a Dict[str, Settable] instead of Dict[str, str]
         * setting onchange callbacks have a new method signature and must be added to the
           Settable instance in order to be called
-        * **set** command now supports tab-completion of values
     * Removed `cast()` utility function
     * Removed `ansi.FG_COLORS` and `ansi.BG_COLORS` dictionaries
         * Replaced with `ansi.fg` and `ansi.bg` enums providing similar but improved functionality
