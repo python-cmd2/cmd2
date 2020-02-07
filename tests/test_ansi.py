@@ -119,3 +119,17 @@ def test_async_alert_str(cols, prompt, line, cursor, msg, expected):
     alert_str = ansi.async_alert_str(terminal_columns=cols, prompt=prompt, line=line, cursor_offset=cursor,
                                      alert_msg=msg)
     assert alert_str == expected
+
+
+def test_fg_enum():
+    assert ansi.fg_lookup('bright_red') == ansi.fg_lookup(ansi.fg.bright_red)
+
+def test_fg_enum_to_str():
+    assert str(ansi.fg.black) == ansi.fg_lookup('black')
+
+def test_bg_enum():
+    assert ansi.bg_lookup('green') == ansi.bg_lookup(ansi.bg.green)
+
+def test_bg_enum_to_str():
+    assert str(ansi.bg.blue) == ansi.bg_lookup('blue')
+
