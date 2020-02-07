@@ -13,8 +13,7 @@
     10) How to make custom attributes settable at runtime
 """
 import cmd2
-from cmd2 import style
-from cmd2.ansi import FG_COLORS
+from cmd2 import style, fg, bg
 
 
 class BasicApp(cmd2.Cmd):
@@ -25,7 +24,7 @@ class BasicApp(cmd2.Cmd):
                          startup_script='scripts/startup.txt', use_ipython=True)
 
         # Prints an intro banner once upon application startup
-        self.intro = style('Welcome to cmd2!', fg='red', bg='white', bold=True)
+        self.intro = style('Welcome to cmd2!', fg=fg.red, bg=bg.white, bold=True)
 
         # Show this as the prompt when asking for input
         self.prompt = 'myapp> '
@@ -44,7 +43,7 @@ class BasicApp(cmd2.Cmd):
 
         # Make echo_fg settable at runtime
         self.add_settable(cmd2.Settable('foreground_color', str, 'Foreground color to use with echo command',
-                                        choices=FG_COLORS))
+                                        choices=fg.colors()))
 
     @cmd2.with_category(CUSTOM_CATEGORY)
     def do_intro(self, _):

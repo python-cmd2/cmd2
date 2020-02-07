@@ -6,7 +6,7 @@ setting the window title, and asynchronous alerts.
 from enum import Enum, unique
 import functools
 import re
-from typing import Any, IO, Union
+from typing import Any, IO, List, Union
 
 import colorama
 from colorama import Fore, Back, Style
@@ -26,28 +26,7 @@ allow_style = STYLE_TERMINAL
 # Regular expression to match ANSI style sequences (including 8-bit and 24-bit colors)
 ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 
-# Foreground color presets
-FG_COLORS = {
-    'black': Fore.BLACK,
-    'red': Fore.RED,
-    'green': Fore.GREEN,
-    'yellow': Fore.YELLOW,
-    'blue': Fore.BLUE,
-    'magenta': Fore.MAGENTA,
-    'cyan': Fore.CYAN,
-    'white': Fore.WHITE,
-    'bright_black': Fore.LIGHTBLACK_EX,
-    'bright_red': Fore.LIGHTRED_EX,
-    'bright_green': Fore.LIGHTGREEN_EX,
-    'bright_yellow': Fore.LIGHTYELLOW_EX,
-    'bright_blue': Fore.LIGHTBLUE_EX,
-    'bright_magenta': Fore.LIGHTMAGENTA_EX,
-    'bright_cyan': Fore.LIGHTCYAN_EX,
-    'bright_white': Fore.LIGHTWHITE_EX,
-    'reset': Fore.RESET,
-}
-
-
+# Foreground colors
 @unique
 class fg(Enum):
     """Enum class for foreground colors (to support IDE autocompletion)."""
@@ -69,33 +48,22 @@ class fg(Enum):
     bright_white = Fore.LIGHTWHITE_EX
     reset = Fore.RESET
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Make the value the string representation instead of the enum name."""
         return self.value
 
+    @staticmethod
+    def colors() -> List[str]:
+        """Return a list of color names."""
+        return [color.name for color in fg]
 
-# Background color presets
-BG_COLORS = {
-    'black': Back.BLACK,
-    'red': Back.RED,
-    'green': Back.GREEN,
-    'yellow': Back.YELLOW,
-    'blue': Back.BLUE,
-    'magenta': Back.MAGENTA,
-    'cyan': Back.CYAN,
-    'white': Back.WHITE,
-    'bright_black': Back.LIGHTBLACK_EX,
-    'bright_red': Back.LIGHTRED_EX,
-    'bright_green': Back.LIGHTGREEN_EX,
-    'bright_yellow': Back.LIGHTYELLOW_EX,
-    'bright_blue': Back.LIGHTBLUE_EX,
-    'bright_magenta': Back.LIGHTMAGENTA_EX,
-    'bright_cyan': Back.LIGHTCYAN_EX,
-    'bright_white': Back.LIGHTWHITE_EX,
-    'reset': Back.RESET,
-}
+    @staticmethod
+    def get_value(color: str) -> str:
+        """Retrieve color code by name string."""
+        return fg.__members__[color].value
 
 
+# Background colors
 @unique
 class bg(Enum):
     """Enum class for background colors (to support IDE autocompletion)."""
@@ -117,13 +85,23 @@ class bg(Enum):
     bright_white = Back.LIGHTWHITE_EX
     reset = Back.RESET
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Make the value the string representation instead of the enum name."""
         return self.value
 
+    @staticmethod
+    def colors() -> List[str]:
+        """Return a list of color names."""
+        return [color.name for color in bg]
 
-FG_RESET = FG_COLORS['reset']
-BG_RESET = BG_COLORS['reset']
+    @staticmethod
+    def get_value(color: str) -> str:
+        """Retrieve color code by name string."""
+        return bg.__members__[color].value
+
+
+FG_RESET = fg.reset.value
+BG_RESET = bg.reset.value
 RESET_ALL = Style.RESET_ALL
 
 # Text intensities
@@ -181,7 +159,7 @@ def fg_lookup(fg_name: Union[str, fg]) -> str:
         return fg_name.value
 
     try:
-        ansi_escape = FG_COLORS[fg_name.lower()]
+        ansi_escape = fg.get_value(fg_name.lower())
     except KeyError:
         raise ValueError('Foreground color {!r} does not exist.'.format(fg_name))
     return ansi_escape
@@ -199,7 +177,7 @@ def bg_lookup(bg_name: Union[str, bg]) -> str:
         return bg_name.value
 
     try:
-        ansi_escape = BG_COLORS[bg_name.lower()]
+        ansi_escape = bg.get_value(bg_name.lower())
     except KeyError:
         raise ValueError('Background color {!r} does not exist.'.format(bg_name))
     return ansi_escape
