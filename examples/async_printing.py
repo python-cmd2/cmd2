@@ -10,7 +10,7 @@ import time
 from typing import List
 
 import cmd2
-from cmd2 import ansi
+from cmd2 import style, fg
 
 ALERTS = ["Watch as this application prints alerts and updates the prompt",
           "This will only happen when the prompt is present",
@@ -145,20 +145,20 @@ class AlerterApp(cmd2.Cmd):
         """
         rand_num = random.randint(1, 20)
 
-        status_color = 'reset'
+        status_color = fg.reset
 
         if rand_num == 1:
-            status_color = 'bright_red'
+            status_color = fg.bright_red
         elif rand_num == 2:
-            status_color = 'bright_yellow'
+            status_color = fg.bright_yellow
         elif rand_num == 3:
-            status_color = 'cyan'
+            status_color = fg.cyan
         elif rand_num == 4:
-            status_color = 'bright_green'
+            status_color = fg.bright_green
         elif rand_num == 5:
-            status_color = 'bright_blue'
+            status_color = fg.bright_blue
 
-        return ansi.style(self.visible_prompt, fg=status_color)
+        return style(self.visible_prompt, fg=status_color)
 
     def _alerter_thread_func(self) -> None:
         """ Prints alerts and updates the prompt any time the prompt is showing """

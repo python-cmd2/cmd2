@@ -1,11 +1,15 @@
 ## 1.0.0-rc1 (TBD, 2020)
 * Enhancements
     * Changed the default help text to make `help -v` more discoverable
+    * **set** command now supports tab-completion of values
     * Added `add_settable()` and `remove_settable()` convenience methods to update `self.settable` dictionary
     * Added convenience `ansi.fg` and `ansi.bg` enums of foreground and background colors
         * `ansi.style()` `fg` argument can now either be of type `str` or `ansi.fg`
         * `ansi.style()` `bg` argument can now either be of type `str` or `ansi.bg`
         * This supports IDE auto-completion of color names
+        * The enums also support
+            * `f-strings` and `format()` calls (e.g. `"{}hello{}".format(fg.blue, fg.reset)`)
+            * string concatenation (e.g. `fg.blue + "hello" + fg.reset`)
 * Breaking changes
     * Renamed `locals_in_py` attribute of `cmd2.Cmd` to `self_in_py`
     * The following public attributes of `cmd2.Cmd` are no longer settable at runtime by default:
@@ -16,8 +20,9 @@
         * It is now a Dict[str, Settable] instead of Dict[str, str]
         * setting onchange callbacks have a new method signature and must be added to the
           Settable instance in order to be called
-        * **set** command now supports tab-completion of values
     * Removed `cast()` utility function
+    * Removed `ansi.FG_COLORS` and `ansi.BG_COLORS` dictionaries
+        * Replaced with `ansi.fg` and `ansi.bg` enums providing similar but improved functionality
 
 ## 0.9.25 (January 26, 2020)
 * Enhancements
