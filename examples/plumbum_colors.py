@@ -31,36 +31,37 @@ import cmd2
 from cmd2 import ansi
 from plumbum.colors import fg, bg
 
-FG_COLORS = {
-    'black': fg.Black,
-    'red': fg.DarkRedA,
-    'green': fg.MediumSpringGreen,
-    'yellow': fg.LightYellow,
-    'blue': fg.RoyalBlue1,
-    'magenta': fg.Purple,
-    'cyan': fg.SkyBlue1,
-    'white': fg.White,
-    'purple': fg.Purple,
-}
 
-BG_COLORS = {
-    'black': bg.BLACK,
-    'red': bg.DarkRedA,
-    'green': bg.MediumSpringGreen,
-    'yellow': bg.LightYellow,
-    'blue': bg.RoyalBlue1,
-    'magenta': bg.Purple,
-    'cyan': bg.SkyBlue1,
-    'white': bg.White,
-}
+class FgColors(ansi.ColorBase):
+    black = fg.Black
+    red = fg.DarkRedA
+    green = fg.MediumSpringGreen
+    yellow = fg.LightYellow
+    blue = fg.RoyalBlue1
+    magenta = fg.Purple
+    cyan = fg.SkyBlue1
+    white = fg.White
+    purple = fg.Purple
 
 
-def get_fg(fg):
-    return str(FG_COLORS[fg])
+class BgColors(ansi.ColorBase):
+    black = bg.BLACK
+    red = bg.DarkRedA
+    green = bg.MediumSpringGreen
+    yellow = bg.LightYellow
+    blue = bg.RoyalBlue1
+    magenta = bg.Purple
+    cyan = bg.SkyBlue1
+    white = bg.White
+    purple = bg.Purple
 
 
-def get_bg(bg):
-    return str(BG_COLORS[bg])
+def get_fg(name: str):
+    return str(FgColors[name])
+
+
+def get_bg(name: str):
+    return str(BgColors[name])
 
 
 ansi.fg_lookup = get_fg
@@ -84,8 +85,8 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     speak_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     speak_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    speak_parser.add_argument('-f', '--fg', choices=FG_COLORS, help='foreground color to apply to output')
-    speak_parser.add_argument('-b', '--bg', choices=BG_COLORS, help='background color to apply to output')
+    speak_parser.add_argument('-f', '--fg', choices=FgColors.colors(), help='foreground color to apply to output')
+    speak_parser.add_argument('-b', '--bg', choices=BgColors.colors(), help='background color to apply to output')
     speak_parser.add_argument('-l', '--bold', action='store_true', help='bold the output')
     speak_parser.add_argument('-u', '--underline', action='store_true', help='underline the output')
     speak_parser.add_argument('words', nargs='+', help='words to say')

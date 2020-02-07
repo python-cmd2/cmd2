@@ -3,9 +3,9 @@
 Support for ANSI escape sequences which are used for things like applying style to text,
 setting the window title, and asynchronous alerts.
  """
-from enum import Enum, unique
 import functools
 import re
+from enum import Enum
 from typing import Any, IO, List, Union
 
 import colorama
@@ -29,8 +29,10 @@ ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 
 class ColorBase(Enum):
     """
-    Base class for fg and bg classes
-    This expects the child classes to define enums of: color name -> ANSI color sequence
+    Base class used for defining color enums. See fg and bg classes for examples.
+    This expects the child classes to define enums of the follow structure
+        key: color name (e.g. black)
+        value: anything that when cast to a string returns an ANSI sequence
     """
     def __str__(self) -> str:
         """
@@ -38,7 +40,7 @@ class ColorBase(Enum):
         This is helpful when using a ColorBase in an f-string or format() call
         e.g. my_str = "{}hello{}".format(fg.blue, fg.reset)
         """
-        return self.value
+        return str(self.value)
 
     def __add__(self, other: Any) -> str:
         """
@@ -57,12 +59,12 @@ class ColorBase(Enum):
     @classmethod
     def colors(cls) -> List[str]:
         """Return a list of color names."""
-        return [color.name for color in cls]
+        # Use __members__ to ensure we get all key names, including those which are aliased
+        return [color for color in cls.__members__]
 
 
 # Foreground colors
-# noinspection PyPep8Naming,DuplicatedCode
-@unique
+# noinspection PyPep8Naming
 class fg(ColorBase):
     """Enum class for foreground colors"""
     black = Fore.BLACK
@@ -85,8 +87,7 @@ class fg(ColorBase):
 
 
 # Background colors
-# noinspection PyPep8Naming,DuplicatedCode
-@unique
+# noinspection PyPep8Naming
 class bg(ColorBase):
     """Enum class for background colors"""
     black = Back.BLACK
