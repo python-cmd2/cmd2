@@ -529,7 +529,7 @@ argparse.ArgumentParser._match_argument = _match_argument_wrapper
 ############################################################################################################
 
 
-# noinspection PyCompatibility,PyShadowingBuiltins,PyShadowingBuiltins
+# noinspection PyCompatibility,PyShadowingBuiltins
 class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
     """Custom help formatter to configure ordering of help text"""
 
