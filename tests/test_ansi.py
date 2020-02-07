@@ -32,14 +32,14 @@ def test_style_none():
 def test_style_fg():
     base_str = HELLO_WORLD
     fg_color = 'blue'
-    ansi_str = ansi.FG_COLORS[fg_color] + base_str + ansi.FG_RESET
+    ansi_str = ansi.fg.get_value(fg_color) + base_str + ansi.FG_RESET
     assert ansi.style(base_str, fg=fg_color) == ansi_str
 
 
 def test_style_bg():
     base_str = HELLO_WORLD
     bg_color = 'green'
-    ansi_str = ansi.BG_COLORS[bg_color] + base_str + ansi.BG_RESET
+    ansi_str = ansi.bg.get_value(bg_color) + base_str + ansi.BG_RESET
     assert ansi.style(base_str, bg=bg_color) == ansi_str
 
 
@@ -65,7 +65,7 @@ def test_style_multi():
     base_str = HELLO_WORLD
     fg_color = 'blue'
     bg_color = 'green'
-    ansi_str = (ansi.FG_COLORS[fg_color] + ansi.BG_COLORS[bg_color] +
+    ansi_str = (ansi.fg.get_value(fg_color) + ansi.bg.get_value(bg_color) +
                 ansi.INTENSITY_BRIGHT + ansi.INTENSITY_DIM + ansi.UNDERLINE_ENABLE +
                 base_str +
                 ansi.FG_RESET + ansi.BG_RESET +
@@ -85,7 +85,7 @@ def test_style_color_not_exist():
 
 def test_fg_lookup_exist():
     fg_color = 'green'
-    assert ansi.fg_lookup(fg_color) == ansi.FG_COLORS[fg_color]
+    assert ansi.fg_lookup(fg_color) == ansi.fg.get_value(fg_color)
 
 
 def test_fg_lookup_nonexist():
@@ -95,7 +95,7 @@ def test_fg_lookup_nonexist():
 
 def test_bg_lookup_exist():
     bg_color = 'green'
-    assert ansi.bg_lookup(bg_color) == ansi.BG_COLORS[bg_color]
+    assert ansi.bg_lookup(bg_color) == ansi.bg.get_value(bg_color)
 
 
 def test_bg_lookup_nonexist():
@@ -119,3 +119,22 @@ def test_async_alert_str(cols, prompt, line, cursor, msg, expected):
     alert_str = ansi.async_alert_str(terminal_columns=cols, prompt=prompt, line=line, cursor_offset=cursor,
                                      alert_msg=msg)
     assert alert_str == expected
+
+
+def test_fg_enum():
+    assert ansi.fg_lookup('bright_red') == ansi.fg_lookup(ansi.fg.bright_red)
+
+def test_fg_enum_to_str():
+    assert str(ansi.fg.black) == ansi.fg_lookup('black')
+
+def test_bg_enum():
+    assert ansi.bg_lookup('green') == ansi.bg_lookup(ansi.bg.green)
+
+def test_bg_enum_to_str():
+    assert str(ansi.bg.blue) == ansi.bg_lookup('blue')
+
+def test_fg_colors():
+    assert list(ansi.fg.__members__.keys()) == ansi.fg.colors()
+
+def test_bg_colors():
+    assert list(ansi.bg.__members__.keys()) == ansi.bg.colors()

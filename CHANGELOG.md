@@ -2,6 +2,10 @@
 * Enhancements
     * Changed the default help text to make `help -v` more discoverable
     * Added `add_settable()` and `remove_settable()` convenience methods to update `self.settable` dictionary
+    * Added convenience `ansi.fg` and `ansi.bg` enums of foreground and background colors
+        * `ansi.style()` `fg` argument can now either be of type `str` or `ansi.fg`
+        * `ansi.style()` `bg` argument can now either be of type `str` or `ansi.bg`
+        * This supports IDE auto-completion of color names
 * Breaking changes
     * Renamed `locals_in_py` attribute of `cmd2.Cmd` to `self_in_py`
     * The following public attributes of `cmd2.Cmd` are no longer settable at runtime by default:

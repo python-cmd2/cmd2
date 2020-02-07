@@ -9,7 +9,7 @@
     6) Shell-like capabilities
 """
 import cmd2
-from cmd2 import style
+from cmd2 import style, fg, bg
 
 
 class BasicApp(cmd2.Cmd):
@@ -19,7 +19,7 @@ class BasicApp(cmd2.Cmd):
         super().__init__(multiline_commands=['echo'], persistent_history_file='cmd2_history.dat',
                          startup_script='scripts/startup.txt', use_ipython=True)
 
-        self.intro = style('Welcome to PyOhio 2019 and cmd2!', fg='red', bg='white', bold=True) + ' 😀'
+        self.intro = style('Welcome to PyOhio 2019 and cmd2!', fg=fg.red, bg=bg.white, bold=True) + ' 😀'
 
         # Allow access to your application in py and ipy via self
         self.self_in_py = True

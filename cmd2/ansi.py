@@ -3,9 +3,10 @@
 Support for ANSI escape sequences which are used for things like applying style to text,
 setting the window title, and asynchronous alerts.
  """
+from enum import Enum, unique
 import functools
 import re
-from typing import Any, IO
+from typing import Any, IO, List, Union
 
 import colorama
 from colorama import Fore, Back, Style
@@ -25,57 +26,91 @@ allow_style = STYLE_TERMINAL
 # Regular expression to match ANSI style sequences (including 8-bit and 24-bit colors)
 ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 
-# Foreground color presets
-FG_COLORS = {
-    'black': Fore.BLACK,
-    'red': Fore.RED,
-    'green': Fore.GREEN,
-    'yellow': Fore.YELLOW,
-    'blue': Fore.BLUE,
-    'magenta': Fore.MAGENTA,
-    'cyan': Fore.CYAN,
-    'white': Fore.WHITE,
-    'bright_black': Fore.LIGHTBLACK_EX,
-    'bright_red': Fore.LIGHTRED_EX,
-    'bright_green': Fore.LIGHTGREEN_EX,
-    'bright_yellow': Fore.LIGHTYELLOW_EX,
-    'bright_blue': Fore.LIGHTBLUE_EX,
-    'bright_magenta': Fore.LIGHTMAGENTA_EX,
-    'bright_cyan': Fore.LIGHTCYAN_EX,
-    'bright_white': Fore.LIGHTWHITE_EX,
-    'reset': Fore.RESET,
-}
 
-# Background color presets
-BG_COLORS = {
-    'black': Back.BLACK,
-    'red': Back.RED,
-    'green': Back.GREEN,
-    'yellow': Back.YELLOW,
-    'blue': Back.BLUE,
-    'magenta': Back.MAGENTA,
-    'cyan': Back.CYAN,
-    'white': Back.WHITE,
-    'bright_black': Back.LIGHTBLACK_EX,
-    'bright_red': Back.LIGHTRED_EX,
-    'bright_green': Back.LIGHTGREEN_EX,
-    'bright_yellow': Back.LIGHTYELLOW_EX,
-    'bright_blue': Back.LIGHTBLUE_EX,
-    'bright_magenta': Back.LIGHTMAGENTA_EX,
-    'bright_cyan': Back.LIGHTCYAN_EX,
-    'bright_white': Back.LIGHTWHITE_EX,
-    'reset': Back.RESET,
-}
+# Foreground colors
+# noinspection PyPep8Naming,DuplicatedCode
+@unique
+class fg(Enum):
+    """Enum class for foreground colors (to support IDE autocompletion)."""
+    black = Fore.BLACK
+    red = Fore.RED
+    green = Fore.GREEN
+    yellow = Fore.YELLOW
+    blue = Fore.BLUE
+    magenta = Fore.MAGENTA
+    cyan = Fore.CYAN
+    white = Fore.WHITE
+    bright_black = Fore.LIGHTBLACK_EX
+    bright_red = Fore.LIGHTRED_EX
+    bright_green = Fore.LIGHTGREEN_EX
+    bright_yellow = Fore.LIGHTYELLOW_EX
+    bright_blue = Fore.LIGHTBLUE_EX
+    bright_magenta = Fore.LIGHTMAGENTA_EX
+    bright_cyan = Fore.LIGHTCYAN_EX
+    bright_white = Fore.LIGHTWHITE_EX
+    reset = Fore.RESET
 
-FG_RESET = FG_COLORS['reset']
-BG_RESET = BG_COLORS['reset']
+    def __str__(self) -> str:
+        """Make the value the string representation instead of the enum name."""
+        return self.value
+
+    @staticmethod
+    def colors() -> List[str]:
+        """Return a list of color names."""
+        return [color.name for color in fg]
+
+    @staticmethod
+    def get_value(name: str) -> str:
+        """Retrieve color code by name string."""
+        return fg.__members__[name].value
+
+
+# Background colors
+# noinspection PyPep8Naming,DuplicatedCode
+@unique
+class bg(Enum):
+    """Enum class for background colors (to support IDE autocompletion)."""
+    black = Back.BLACK
+    red = Back.RED
+    green = Back.GREEN
+    yellow = Back.YELLOW
+    blue = Back.BLUE
+    magenta = Back.MAGENTA
+    cyan = Back.CYAN
+    white = Back.WHITE
+    bright_black = Back.LIGHTBLACK_EX
+    bright_red = Back.LIGHTRED_EX
+    bright_green = Back.LIGHTGREEN_EX
+    bright_yellow = Back.LIGHTYELLOW_EX
+    bright_blue = Back.LIGHTBLUE_EX
+    bright_magenta = Back.LIGHTMAGENTA_EX
+    bright_cyan = Back.LIGHTCYAN_EX
+    bright_white = Back.LIGHTWHITE_EX
+    reset = Back.RESET
+
+    def __str__(self) -> str:
+        """Make the value the string representation instead of the enum name."""
+        return self.value
+
+    @staticmethod
+    def colors() -> List[str]:
+        """Return a list of color names."""
+        return [color.name for color in bg]
+
+    @staticmethod
+    def get_value(name: str) -> str:
+        """Retrieve color code by name string."""
+        return bg.__members__[name].value
+
+
+FG_RESET = fg.reset.value
+BG_RESET = bg.reset.value
 RESET_ALL = Style.RESET_ALL
 
 # Text intensities
 INTENSITY_BRIGHT = Style.BRIGHT
 INTENSITY_DIM = Style.DIM
 INTENSITY_NORMAL = Style.NORMAL
-
 # ANSI style sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
 UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
@@ -115,37 +150,44 @@ def style_aware_write(fileobj: IO, msg: str) -> None:
     fileobj.write(msg)
 
 
-def fg_lookup(fg_name: str) -> str:
+def fg_lookup(fg_name: Union[str, fg]) -> str:
     """
     Look up ANSI escape codes based on foreground color name.
 
-    :param fg_name: foreground color name to look up ANSI escape code(s) for
+    :param fg_name: foreground color name or enum to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError: if the color cannot be found
     """
+    if isinstance(fg_name, fg):
+        return fg_name.value
+
     try:
-        ansi_escape = FG_COLORS[fg_name.lower()]
+        ansi_escape = fg.get_value(fg_name.lower())
     except KeyError:
-        raise ValueError('Foreground color {!r} does not exist.'.format(fg_name))
+        raise ValueError('Foreground color {!r} does not exist; must be one of: {}'.format(fg_name, fg.colors()))
     return ansi_escape
 
 
-def bg_lookup(bg_name: str) -> str:
+def bg_lookup(bg_name: Union[str, bg]) -> str:
     """
     Look up ANSI escape codes based on background color name.
 
-    :param bg_name: background color name to look up ANSI escape code(s) for
+    :param bg_name: background color name or enum to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
     :raises ValueError: if the color cannot be found
     """
+    if isinstance(bg_name, bg):
+        return bg_name.value
+
     try:
-        ansi_escape = BG_COLORS[bg_name.lower()]
+        ansi_escape = bg.get_value(bg_name.lower())
     except KeyError:
-        raise ValueError('Background color {!r} does not exist.'.format(bg_name))
+        raise ValueError('Background color {!r} does not exist; must be one of: {}'.format(bg_name, bg.colors()))
     return ansi_escape
 
 
-def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False,
+# noinspection PyShadowingNames
+def style(text: Any, *, fg: Union[str, fg] = '', bg: Union[str, bg] = '', bold: bool = False,
           dim: bool = False, underline: bool = False) -> str:
     """
     Apply ANSI colors and/or styles to a string and return it.
@@ -153,8 +195,8 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False,
     to undo whatever styling was done at the beginning.
 
     :param text: Any object compatible with str.format()
-    :param fg: foreground color. Relies on `fg_lookup()` to retrieve ANSI escape based on name. Defaults to no color.
-    :param bg: background color. Relies on `bg_lookup()` to retrieve ANSI escape based on name. Defaults to no color.
+    :param fg: foreground color. Relies on `fg_lookup()` to retrieve ANSI escape based on name or enum. Defaults to no color.
+    :param bg: background color. Relies on `bg_lookup()` to retrieve ANSI escape based on name or enum. Defaults to no color.
     :param bold: apply the bold style if True. Can be combined with dim. Defaults to False.
     :param dim: apply the dim style if True. Can be combined with bold. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
@@ -197,13 +239,13 @@ def style(text: Any, *, fg: str = '', bg: str = '', bold: bool = False,
 # Default styles for printing strings of various types.
 # These can be altered to suit an application's needs and only need to be a
 # function with the following structure: func(str) -> str
-style_success = functools.partial(style, fg='green')
+style_success = functools.partial(style, fg=fg.green)
 """Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify success"""
 
-style_warning = functools.partial(style, fg='bright_yellow')
+style_warning = functools.partial(style, fg=fg.bright_yellow)
 """Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify a warning"""
 
-style_error = functools.partial(style, fg='bright_red')
+style_error = functools.partial(style, fg=fg.bright_red)
 """Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify an error"""
 
 
