@@ -27,11 +27,36 @@ allow_style = STYLE_TERMINAL
 ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
 
 
+class ColorBase(Enum):
+    """
+    Base class for fg and bg classes
+    This expects the base classes to define enums of: color name -> ANSI color sequence
+    """
+    def __str__(self) -> str:
+        """Return ANSI color sequence instead of enum name"""
+        return self.value
+
+    def __add__(self, other: Any) -> str:
+        """Return self + other as string"""
+        if isinstance(other, (fg, bg)):
+            other = str(other)
+        return self.value + other
+
+    def __radd__(self, other: Any) -> str:
+        """Return other + self as string"""
+        return other + self.value
+
+    @classmethod
+    def colors(cls) -> List[str]:
+        """Return a list of color names."""
+        return [color.name for color in cls]
+
+
 # Foreground colors
 # noinspection PyPep8Naming,DuplicatedCode
 @unique
-class fg(Enum):
-    """Enum class for foreground colors (to support IDE autocompletion)."""
+class fg(ColorBase):
+    """Enum class for foreground colors"""
     black = Fore.BLACK
     red = Fore.RED
     green = Fore.GREEN
@@ -50,17 +75,12 @@ class fg(Enum):
     bright_white = Fore.LIGHTWHITE_EX
     reset = Fore.RESET
 
-    @staticmethod
-    def colors() -> List[str]:
-        """Return a list of color names."""
-        return [color.name for color in fg]
-
 
 # Background colors
 # noinspection PyPep8Naming,DuplicatedCode
 @unique
-class bg(Enum):
-    """Enum class for background colors (to support IDE autocompletion)."""
+class bg(ColorBase):
+    """Enum class for background colors"""
     black = Back.BLACK
     red = Back.RED
     green = Back.GREEN
@@ -78,11 +98,6 @@ class bg(Enum):
     bright_cyan = Back.LIGHTCYAN_EX
     bright_white = Back.LIGHTWHITE_EX
     reset = Back.RESET
-
-    @staticmethod
-    def colors() -> List[str]:
-        """Return a list of color names."""
-        return [color.name for color in bg]
 
 
 FG_RESET = fg.reset.value
@@ -177,8 +192,10 @@ def style(text: Any, *, fg: Union[str, fg] = '', bg: Union[str, bg] = '', bold: 
     to undo whatever styling was done at the beginning.
 
     :param text: Any object compatible with str.format()
-    :param fg: foreground color. Relies on `fg_lookup()` to retrieve ANSI escape based on name or enum. Defaults to no color.
-    :param bg: background color. Relies on `bg_lookup()` to retrieve ANSI escape based on name or enum. Defaults to no color.
+    :param fg: foreground color. Relies on `fg_lookup()` to retrieve ANSI escape based on name or enum.
+               Defaults to no color.
+    :param bg: background color. Relies on `bg_lookup()` to retrieve ANSI escape based on name or enum.
+               Defaults to no color.
     :param bold: apply the bold style if True. Can be combined with dim. Defaults to False.
     :param dim: apply the dim style if True. Can be combined with bold. Defaults to False.
     :param underline: apply the underline style if True. Defaults to False.
