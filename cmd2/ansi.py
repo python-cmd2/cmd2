@@ -62,7 +62,7 @@ class fg(Enum):
     @staticmethod
     def get_value(name: str) -> str:
         """Retrieve color code by name string."""
-        return fg.__members__[name].value
+        return fg[name].value
 
 
 # Background colors
@@ -100,7 +100,7 @@ class bg(Enum):
     @staticmethod
     def get_value(name: str) -> str:
         """Retrieve color code by name string."""
-        return bg.__members__[name].value
+        return bg[name].value
 
 
 FG_RESET = fg.reset.value
