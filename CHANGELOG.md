@@ -18,6 +18,8 @@
           Settable instance in order to be called
         * **set** command now supports tab-completion of values
     * Removed `cast()` utility function
+    * Removed `ansi.FG_COLORS` and `ansi.BG_COLORS` dictionaries
+        * Replaced with `ansi.fg` and `ansi.bg` enums providing similar but improved functionality
 
 ## 0.9.25 (January 26, 2020)
 * Enhancements
