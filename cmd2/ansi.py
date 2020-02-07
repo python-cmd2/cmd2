@@ -50,19 +50,10 @@ class fg(Enum):
     bright_white = Fore.LIGHTWHITE_EX
     reset = Fore.RESET
 
-    def __str__(self) -> str:
-        """Make the value the string representation instead of the enum name."""
-        return self.value
-
     @staticmethod
     def colors() -> List[str]:
         """Return a list of color names."""
         return [color.name for color in fg]
-
-    @staticmethod
-    def get_value(name: str) -> str:
-        """Retrieve color code by name string."""
-        return fg[name].value
 
 
 # Background colors
@@ -88,19 +79,10 @@ class bg(Enum):
     bright_white = Back.LIGHTWHITE_EX
     reset = Back.RESET
 
-    def __str__(self) -> str:
-        """Make the value the string representation instead of the enum name."""
-        return self.value
-
     @staticmethod
     def colors() -> List[str]:
         """Return a list of color names."""
         return [color.name for color in bg]
-
-    @staticmethod
-    def get_value(name: str) -> str:
-        """Retrieve color code by name string."""
-        return bg[name].value
 
 
 FG_RESET = fg.reset.value
@@ -162,7 +144,7 @@ def fg_lookup(fg_name: Union[str, fg]) -> str:
         return fg_name.value
 
     try:
-        ansi_escape = fg.get_value(fg_name.lower())
+        ansi_escape = fg[fg_name.lower()].value
     except KeyError:
         raise ValueError('Foreground color {!r} does not exist; must be one of: {}'.format(fg_name, fg.colors()))
     return ansi_escape
@@ -180,7 +162,7 @@ def bg_lookup(bg_name: Union[str, bg]) -> str:
         return bg_name.value
 
     try:
-        ansi_escape = bg.get_value(bg_name.lower())
+        ansi_escape = bg[bg_name.lower()].value
     except KeyError:
         raise ValueError('Background color {!r} does not exist; must be one of: {}'.format(bg_name, bg.colors()))
     return ansi_escape
