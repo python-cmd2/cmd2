@@ -6,14 +6,26 @@ cmd2.Cmd
 
     .. automethod:: __init__
 
-    .. attribute:: help_error
+    .. attribute:: continuation_prompt
 
-      The error message displayed to the user when they request help for a
-      command with no help defined.
+      Use as prompt for multiline commands on the 2nd+ line of input.
+      Default: ``>``.
 
     .. attribute:: default_error
 
       The error message displayed when a non-existent command is run.
+      Default: ``{} is not a recognized command, alias, or macro``
+
+    .. attribute:: help_error
+
+      The error message displayed to the user when they request help for a
+      command with no help defined.
+      Default:  ``No help on {}``
+
+    .. attribute:: prompt
+
+      The prompt issued to solicit input.
+      Default: ``(Cmd)``.
 
     .. attribute:: settable
 
