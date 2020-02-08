@@ -17,11 +17,33 @@ colorama.init(strip=False)
 
 # Values for allow_style setting
 STYLE_NEVER = 'Never'
+"""
+Constant for ``cmd2.ansi.allow_style`` to indicate ANSI sequences
+should be removed from all output.
+"""
 STYLE_TERMINAL = 'Terminal'
+"""
+Constant for ``cmd2.ansi.allow_style`` to indicate ANSI sequences
+should be removed if the output is not going to the terminal.
+"""
 STYLE_ALWAYS = 'Always'
+"""
+Constant for ``cmd2.ansi.allow_style`` to indicate ANSI sequences
+should alwyas be output.
+"""
 
 # Controls when ANSI style style sequences are allowed in output
 allow_style = STYLE_TERMINAL
+"""When using outside of a cmd2 app, set this variable to one of:
+
+- ``STYLE_NEVER`` - remove ANSI sequences from all output
+- ``STYLE_TERMINAL`` - remove ANSI sequences if the output is not going to the terminal
+- ``STYLE_ALWAYS`` - always output ANSI sequences
+
+to control the output of ANSI sequences by methods in this module.
+
+The default is ``STYLE_TERMINAL``.
+"""
 
 # Regular expression to match ANSI style sequences (including 8-bit and 24-bit colors)
 ANSI_STYLE_RE = re.compile(r'\x1b\[[^m]*m')
@@ -32,7 +54,9 @@ class ColorBase(Enum):
     Base class used for defining color enums. See fg and bg classes for examples.
 
     Child classes should define enums in the follow structure:
+
         key: color name (e.g. black)
+
         value: anything that when cast to a string returns an ANSI sequence
     """
     def __str__(self) -> str:
@@ -111,16 +135,25 @@ class bg(ColorBase):
 
 
 FG_RESET = fg.reset.value
+"""ANSI sequence to reset the foreground attributes"""
 BG_RESET = bg.reset.value
+"""ANSI sequence to reset the terminal background attributes"""
 RESET_ALL = Style.RESET_ALL
+"""ANSI sequence to reset all terminal attributes"""
 
 # Text intensities
 INTENSITY_BRIGHT = Style.BRIGHT
+"""ANSI sequence to make the text bright"""
 INTENSITY_DIM = Style.DIM
+"""ANSI sequence to make the text dim"""
 INTENSITY_NORMAL = Style.NORMAL
+"""ANSI sequence to make the text normal"""
+
 # ANSI style sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
+"""ANSI sequence to turn on underline"""
 UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
+"""ANSI sequence to turn off underline"""
 
 
 def strip_style(text: str) -> str:
@@ -249,13 +282,22 @@ def style(text: Any, *, fg: Union[str, fg] = '', bg: Union[str, bg] = '', bold: 
 # These can be altered to suit an application's needs and only need to be a
 # function with the following structure: func(str) -> str
 style_success = functools.partial(style, fg=fg.green)
-"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify success"""
+"""
+Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors
+text green to signify success.
+"""
 
 style_warning = functools.partial(style, fg=fg.bright_yellow)
-"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify a warning"""
+"""
+Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors
+text yellow to signify a warning.
+"""
 
 style_error = functools.partial(style, fg=fg.bright_red)
-"""Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors text to signify an error"""
+"""
+Partial function supplying arguments to :meth:`cmd2.ansi.style()` which colors
+text red to signify an error.
+"""
 
 
 def async_alert_str(*, terminal_columns: int, prompt: str, line: str, cursor_offset: int, alert_msg: str) -> str:
