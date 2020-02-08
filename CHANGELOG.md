@@ -1,4 +1,4 @@
-## 1.0.0-rc1 (February 7, 2020)
+## 0.10.0 (February 7, 2020)
 * Enhancements
     * Changed the default help text to make `help -v` more discoverable
     * **set** command now supports tab-completion of values
@@ -24,8 +24,9 @@
     * Removed `ansi.FG_COLORS` and `ansi.BG_COLORS` dictionaries
         * Replaced with `ansi.fg` and `ansi.bg` enums providing similar but improved functionality
 * Notes
-    * This is a release candidate prior to the 1.0.0 release
-    * We intend no more breaking changes prior to 1.0.0, just bug fixes and documentation updates
+    * This is an alpha release leading up to the 1.0.0 release
+    * We intend no more breaking changes prior to 1.0.0
+        * Just bug fixes, documentation updates, and enhancements
 
 ## 0.9.25 (January 26, 2020)
 * Enhancements
