@@ -1,4 +1,4 @@
-## 1.0.0-rc1 (TBD, 2020)
+## 1.0.0-rc1 (February 7, 2020)
 * Enhancements
     * Changed the default help text to make `help -v` more discoverable
     * **set** command now supports tab-completion of values
@@ -23,6 +23,9 @@
     * Removed `cast()` utility function
     * Removed `ansi.FG_COLORS` and `ansi.BG_COLORS` dictionaries
         * Replaced with `ansi.fg` and `ansi.bg` enums providing similar but improved functionality
+* Notes
+    * This is a release candidate prior to the 1.0.0 release
+    * We intend no more breaking changes prior to 1.0.0, just bug fixes and documentation updates
 
 ## 0.9.25 (January 26, 2020)
 * Enhancements

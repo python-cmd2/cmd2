@@ -1,5 +1,5 @@
 # Run this transcript with "python decorator_example.py -t exampleSession.txt"
-# The regex for colors is because no color on Windows.
+# Anything between two forward slashes, /, is interpreted as a regular expression (regex).
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious
 (Cmd) set

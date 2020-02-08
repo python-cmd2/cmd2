@@ -314,10 +314,11 @@ example/transcript_regex.txt:
 
 ```text
 # Run this transcript with "python example.py -t transcript_regex.txt"
+# Anything between two forward slashes, /, is interpreted as a regular expression (regex).
 # The regex for editor will match whatever program you use.
 # regexes on prompts just make the trailing space obvious
 (Cmd) set
-allow_style: Terminal
+allow_style: '/(Terminal|Always|Never)/'
 debug: False
 echo: False
 editor: /.*?/
