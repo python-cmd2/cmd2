@@ -52,7 +52,9 @@ Occasionally there might be an unusual circumstance where providing static help
 text isn't good enough and you want to provide dynamic information in the help
 text for a command.  To meet this need, if a ``help_foo`` method is defined to
 match the ``do_foo`` method, then that method will be used to provide the help
-for command **foo**.
+for command **foo**.  This dynamic help is only supported for commands which
+do not use an ``argparse`` decorator because didn't want different output for
+``help cmd`` than for ``cmd -h``.
 
 Categorizing Commands
 ---------------------
