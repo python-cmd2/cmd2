@@ -1,5 +1,5 @@
-Decorators
-==========
+cmd2.decorators
+===============
 
 .. autofunction:: cmd2.decorators.with_argparser
 

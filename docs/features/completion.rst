@@ -36,8 +36,8 @@ similar to the following to your class which inherits from ``cmd2.Cmd``::
 Tab Completion Using Argparse Decorators
 ----------------------------------------
 
-When using one the Argparse-based :ref:`api/decorators:Decorators`, ``cmd2``
-provides automatic tab-completion of flag names.
+When using one the Argparse-based :ref:`api/decorators:cmd2.decorators`,
+``cmd2`` provides automatic tab-completion of flag names.
 
 Tab-completion of argument values can be configured by using one of five
 parameters to ``argparse.ArgumentParser.add_argument()``
