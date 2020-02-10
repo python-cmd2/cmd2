@@ -31,12 +31,22 @@ def with_category(category: str) -> Callable:
 
 
 def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
-    """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
-    typed. With this decorator, the decorated method will receive a list of arguments parsed from user input.
+    """
+    A decorator to alter the arguments passed to a ``do_*`` method. Default
+    passes a string of whatever the user typed. With this decorator, the
+    decorated method will receive a list of arguments parsed from user input.
 
-    :param args: Single-element positional argument list containing do_* method this decorator is wrapping
+    :param args: Single-element positional argument list containing do_* method
+                 this decorator is wrapping
     :param preserve_quotes: if True, then argument quotes will not be stripped
     :return: function that gets passed a list of argument strings
+
+    :Example:
+
+    >>> class MyApp(cmd2.Cmd):
+    >>>   @cmd2.with_argument_list
+    >>>   def do_echo(self, arglist):
+    >>>     self.poutput(' '.join(arglist)
     """
     import functools
 
