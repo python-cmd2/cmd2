@@ -145,13 +145,13 @@ def test_set_no_settables(base_app):
 
 
 @pytest.mark.parametrize('new_val, is_valid, expected', [
-    (ansi.STYLE_NEVER, False, ansi.STYLE_NEVER),
-    ('neVeR', False, ansi.STYLE_NEVER),
-    (ansi.STYLE_TERMINAL, False, ansi.STYLE_TERMINAL),
-    ('TeRMInal', False, ansi.STYLE_TERMINAL),
-    (ansi.STYLE_ALWAYS, False, ansi.STYLE_ALWAYS),
-    ('AlWaYs', False, ansi.STYLE_ALWAYS),
-    ('invalid', True, ansi.STYLE_TERMINAL),
+    (ansi.STYLE_NEVER, True, ansi.STYLE_NEVER),
+    ('neVeR', True, ansi.STYLE_NEVER),
+    (ansi.STYLE_TERMINAL, True, ansi.STYLE_TERMINAL),
+    ('TeRMInal', True, ansi.STYLE_TERMINAL),
+    (ansi.STYLE_ALWAYS, True, ansi.STYLE_ALWAYS),
+    ('AlWaYs', True, ansi.STYLE_ALWAYS),
+    ('invalid', False, ansi.STYLE_TERMINAL),
 ])
 def test_set_allow_style(base_app, new_val, is_valid, expected):
     # Initialize allow_style for this test
@@ -161,13 +161,16 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
     out, err = run_cmd(base_app, 'set allow_style {}'.format(new_val))
 
     # Verify the results
-    assert bool(err) == is_valid
     assert ansi.allow_style == expected
+    if is_valid:
+        assert not err
+        assert "now: {!r}".format(new_val.capitalize()) in out[1]
 
     # Reload ansi module to reset allow_style to its default since it's an
     # application-wide setting that can affect other unit tests.
     import importlib
     importlib.reload(ansi)
+
 
 class OnChangeHookApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):

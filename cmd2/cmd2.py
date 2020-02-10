@@ -431,9 +431,8 @@ class Cmd(cmd.Cmd):
         if new_val in [ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS, ansi.STYLE_NEVER]:
             ansi.allow_style = new_val
         else:
-            raise ValueError('Invalid value: {} (valid values: {}, {}, {})'.format(new_val, ansi.STYLE_TERMINAL,
-                                                                                   ansi.STYLE_ALWAYS,
-                                                                                   ansi.STYLE_NEVER))
+            raise ValueError("must be {}, {}, or {} (case-insensitive)".format(ansi.STYLE_TERMINAL, ansi.STYLE_ALWAYS,
+                                                                               ansi.STYLE_NEVER))
 
     def _completion_supported(self) -> bool:
         """Return whether tab completion is supported"""
@@ -2886,8 +2885,8 @@ class Cmd(cmd.Cmd):
                 # Try to update the settable's value
                 try:
                     orig_value = getattr(self, args.param)
-                    new_value = settable.val_type(args.value)
-                    setattr(self, args.param, new_value)
+                    setattr(self, args.param, settable.val_type(args.value))
+                    new_value = getattr(self, args.param)
                 # noinspection PyBroadException
                 except Exception as e:
                     err_msg = "Error setting {}: {}".format(args.param, e)
@@ -3814,9 +3813,6 @@ class Cmd(cmd.Cmd):
         # Sanity check that can't fail if self.terminal_lock was acquired before calling this function
         if self.terminal_lock.acquire(blocking=False):
 
-            # Figure out what prompt is displaying
-            current_prompt = self.continuation_prompt if self._at_continuation_prompt else self.prompt
-
             # Only update terminal if there are changes
             update_terminal = False
 
@@ -3835,6 +3831,8 @@ class Cmd(cmd.Cmd):
 
             if update_terminal:
                 import shutil
+
+                current_prompt = self.continuation_prompt if self._at_continuation_prompt else self.prompt
                 terminal_str = ansi.async_alert_str(terminal_columns=shutil.get_terminal_size().columns,
                                                     prompt=current_prompt, line=readline.get_line_buffer(),
                                                     cursor_offset=rl_get_point(), alert_msg=alert_msg)
@@ -3867,9 +3865,9 @@ class Cmd(cmd.Cmd):
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
                    to guarantee the prompt changes.
 
-                   If a continuation prompt is currently being displayed while entering a multiline
-                   command, the onscreen prompt will not change. However self.prompt will still be updated
-                   and display immediately after the multiline line command completes.
+                   If user is at a continuation prompt while entering a multiline command, the onscreen prompt will
+                   not change. However self.prompt will still be updated and display immediately after the multiline
+                   line command completes.
 
         :param new_prompt: what to change the prompt to
         """
