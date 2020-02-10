@@ -79,7 +79,7 @@ def test_base_argparse_help(base_app):
 
 def test_base_invalid_option(base_app):
     out, err = run_cmd(base_app, 'set -z')
-    assert err[0] == 'Usage: set [-h] [-l] [param] [value]'
+    assert err[0] == 'Usage: set [-h] [-v] [param] [value]'
     assert 'Error: unrecognized arguments: -z' in err[1]
 
 def test_base_shortcuts(base_app):
@@ -103,7 +103,7 @@ def test_base_show(base_app):
 def test_base_show_long(base_app):
     # force editor to be 'vim' so test is repeatable across platforms
     base_app.editor = 'vim'
-    out, err = run_cmd(base_app, 'set -l')
+    out, err = run_cmd(base_app, 'set -v')
     expected = normalize(SHOW_LONG)
     assert out == expected
 

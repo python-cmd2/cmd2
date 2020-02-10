@@ -2,6 +2,8 @@
 * Bug Fixes
     * Corrected issue where the actual new value was not always being printed in do_set. This occurred in cases where
       the typed value differed from what the setter had converted it to.
+* Enhancements
+    * Renamed set command's `-l/--long` flag to `-v/--verbose` for consistency with help and history commands.
 
 ## 0.10.0 (February 7, 2020)
 * Enhancements

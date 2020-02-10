@@ -2851,7 +2851,7 @@ class Cmd(cmd.Cmd):
                        "Call without arguments for a list of all settable parameters with their values.\n"
                        "Call with just param to view that parameter's value.")
     set_parser_parent = DEFAULT_ARGUMENT_PARSER(description=set_description, add_help=False)
-    set_parser_parent.add_argument('-l', '--long', action='store_true',
+    set_parser_parent.add_argument('-v', '--verbose', action='store_true',
                                    help='include description of parameters when viewing')
     set_parser_parent.add_argument('param', nargs=argparse.OPTIONAL, help='parameter to set or view',
                                    choices_method=_get_settable_completion_items, descriptive_header='Description')
@@ -2916,7 +2916,7 @@ class Cmd(cmd.Cmd):
         # Display the results
         for param in sorted(results, key=self.default_sort_key):
             result_str = results[param]
-            if args.long:
+            if args.verbose:
                 self.poutput('{} # {}'.format(utils.align_left(result_str, width=max_len),
                                               self.settables[param].description))
             else:
