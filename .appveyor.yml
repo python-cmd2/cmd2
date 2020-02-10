@@ -31,5 +31,8 @@ install:
   # about it being out of date.
   - "python -m pip install --upgrade pip wheel setuptools tox"
 
+  # Update conda stuff
+  - "conda update --all"
+
 test_script:
 - "tox -e %TOXENV%"
