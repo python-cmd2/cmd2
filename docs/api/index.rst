@@ -8,5 +8,6 @@ API Reference
    decorators
    exceptions
    ansi
+   utils
    utility_classes
    utility_functions
