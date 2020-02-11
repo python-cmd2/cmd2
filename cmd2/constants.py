@@ -14,6 +14,7 @@ COMMENT_CHAR = '#'
 MULTILINE_TERMINATOR = ';'
 
 LINE_FEED = '\n'
+HORIZONTAL_ELLIPSIS = '\N{HORIZONTAL ELLIPSIS}'
 
 DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'run_script', '@@': '_relative_run_script'}
 
