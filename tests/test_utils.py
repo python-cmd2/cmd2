@@ -368,6 +368,15 @@ def test_align_text_fill_char_is_tab():
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == text + '  '
 
+def test_align_text_fill_char_has_color():
+    from cmd2 import ansi
+
+    text = 'foo'
+    fill_char = ansi.fg.bright_yellow + '-' + ansi.fg.reset
+    width = 5
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
+    assert aligned == text + fill_char * 2
+
 def test_align_text_width_is_too_small():
     text = 'foo'
     fill_char = '-'
@@ -382,7 +391,7 @@ def test_align_text_fill_char_is_too_long():
     with pytest.raises(TypeError):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
-def test_align_text_fill_char_is_unprintable():
+def test_align_text_fill_char_is_newline():
     text = 'foo'
     fill_char = '\n'
     width = 5
