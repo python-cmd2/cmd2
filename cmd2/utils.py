@@ -11,7 +11,7 @@ import sys
 import threading
 import unicodedata
 from enum import Enum
-from typing import Any, Callable, Iterable, List, OrderedDict, Optional, TextIO, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, TextIO, Union
 
 from . import constants
 
@@ -914,7 +914,7 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     return truncated_buf.getvalue()
 
 
-def get_styles_in_text(text: str) -> OrderedDict[int, str]:
+def get_styles_in_text(text: str) -> Dict[int, str]:
     """
     Return an OrderedDict containing all ANSI style sequences found in a string
 
