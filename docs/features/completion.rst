@@ -17,7 +17,7 @@ implementing the ``do_foo`` method.  To enable path completion for the ``foo``
 command, then add a line of code similar to the following to your class which
 inherits from ``cmd2.Cmd``::
 
-    complete_foo = self.path_complete
+    complete_foo = cmd2.Cmd.path_complete
 
 This will effectively define the ``complete_foo`` readline completer method in
 your class and make it utilize the same path completion logic as the built-in
@@ -47,9 +47,9 @@ parameters to ``argparse.ArgumentParser.add_argument()``
 - ``completer_function`` / ``completer_method``
 
 See the arg_decorators_ or colors_ example for a demonstration of how to
-use the ``choices`` parameter. See the tab_autocompletion_ example for a
+use the ``choices`` parameter. See the argparse_completion_ example for a
 demonstration of how to use the ``choices_function`` and ``choices_method``
-parameters. See the arg_decorators_ or tab_autocompletion_ example for a
+parameters. See the arg_decorators_ or argparse_completion_ example for a
 demonstration of how to use the ``completer_method`` parameter.
 
 When tab-completing flags and/or argument values for a ``cmd2`` command using
@@ -60,7 +60,7 @@ displayed to help the user.
 
 .. _arg_decorators: https://github.com/python-cmd2/cmd2/blob/master/examples/arg_decorators.py
 .. _colors: https://github.com/python-cmd2/cmd2/blob/master/examples/colors.py
-.. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
+.. _argparse_completion: https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py
 
 
 CompletionItem For Providing Extra Context
@@ -76,5 +76,5 @@ or ``completion_method``.
 .. autoclass:: cmd2.argparse_custom.CompletionItem
     :members:
 
-See the tab_autocompletion_ example or the implementation of the built-in
+See the argparse_completion_ example or the implementation of the built-in
 **set** command for demonstration of how this is used.

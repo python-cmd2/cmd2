@@ -175,14 +175,14 @@ Instructions for implementing each feature follow.
         - See the [paged_output.py](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py) example for a simple use case
         - See the [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) example for a more full-featured use case
     - `flag_based_complete` helper method for tab completion based on a particular flag preceding the token being completed
-        - See the [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py) example for a demonstration of how to use this feature
+        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
     - `index_based_complete` helper method for tab completion based on a fixed position in the input string
-        - See the [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py) example for a demonstration of how to use this feature
+        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
     - `basic_complete` helper method for tab completion against a list
     - `delimiter_complete` helper method for tab completion against a list but each match is split on a delimiter 
-        - See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for a demonstration of how to use this feature
-    - `cmd2` in combination with `argparse` also provide several advanced capabilities for automatic tab-completion
-            - See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for more info
+        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
+    - `cmd2` in combination with `argparse` also provide several advanced capabilities for automatic tab completion
+        - See the [argparse_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py) example for more info
 
 - Multi-line commands
 
