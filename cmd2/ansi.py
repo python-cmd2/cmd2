@@ -118,6 +118,7 @@ RESET_ALL = Style.RESET_ALL
 INTENSITY_BRIGHT = Style.BRIGHT
 INTENSITY_DIM = Style.DIM
 INTENSITY_NORMAL = Style.NORMAL
+
 # ANSI style sequences not provided by colorama
 UNDERLINE_ENABLE = colorama.ansi.code_to_chars(4)
 UNDERLINE_DISABLE = colorama.ansi.code_to_chars(24)
