@@ -11,6 +11,8 @@ flag_based_complete() and index_based_complete() are basic methods and should on
 familiar with argparse. The recommended approach for tab completing positional tokens and flags is to use
 argparse-based completion. For an example integrating tab completion with argparse, see argparse_completion.py
 """
+import functools
+
 import cmd2
 
 # List of strings used with completion functions
