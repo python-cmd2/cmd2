@@ -44,15 +44,15 @@ class BasicCompletion(cmd2.Cmd):
         """Completion function for do_flag_based"""
         flag_dict = \
             {
-                # Tab-complete food items after -f and --food flags in command line
+                # Tab complete food items after -f and --food flags in command line
                 '-f': food_item_strs,
                 '--food': food_item_strs,
 
-                # Tab-complete sport items after -s and --sport flags in command line
+                # Tab complete sport items after -s and --sport flags in command line
                 '-s': sport_item_strs,
                 '--sport': sport_item_strs,
 
-                # Tab-complete using path_complete function after -p and --path flags in command line
+                # Tab complete using path_complete function after -p and --path flags in command line
                 '-p': self.path_complete,
                 '--path': self.path_complete,
             }
@@ -67,9 +67,9 @@ class BasicCompletion(cmd2.Cmd):
         """Completion function for do_index_based"""
         index_dict = \
             {
-                1: food_item_strs,  # Tab-complete food items at index 1 in command line
-                2: sport_item_strs,  # Tab-complete sport items at index 2 in command line
-                3: self.path_complete,  # Tab-complete using path_complete function at index 3 in command line
+                1: food_item_strs,  # Tab complete food items at index 1 in command line
+                2: sport_item_strs,  # Tab complete sport items at index 2 in command line
+                3: self.path_complete,  # Tab complete using path_complete function at index 3 in command line
             }
 
         return self.index_based_complete(text, line, begidx, endidx, index_dict=index_dict)

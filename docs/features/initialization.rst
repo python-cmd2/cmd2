@@ -133,7 +133,7 @@ override:
   command via ``self`` (Default: ``False``)
 - **macros**: dictionary of macro names and their values
 - **max_completion_items**: max number of CompletionItems to display during
-  tab-completion (Default: 50)
+  tab completion (Default: 50)
 - **pager**: sets the pager command used by the ``Cmd.ppaged()`` method for
   displaying wrapped output using a pager
 - **pager_chop**: sets the pager command used by the ``Cmd.ppaged()`` method

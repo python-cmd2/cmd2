@@ -62,8 +62,8 @@ Tab Completion:
                 return my_generated_list
 
     completer_function
-        Pass a tab-completion function that does custom completion. Since custom tab completion operations commonly
-        need to modify cmd2's instance variables related to tab-completion, it will be rare to need a completer
+        Pass a tab completion function that does custom completion. Since custom tab completion operations commonly
+        need to modify cmd2's instance variables related to tab completion, it will be rare to need a completer
         function. completer_method should be used in those cases.
 
         Example:
@@ -90,7 +90,7 @@ Tab Completion:
                                                  path_filter=lambda path: os.path.isdir(path))
             parser.add_argument('-o', '--options', choices_method=completer_method)
 
-    Of the 5 tab-completion parameters, choices is the only one where argparse validates user input against items
+    Of the 5 tab completion parameters, choices is the only one where argparse validates user input against items
     in the choices list. This is because the other 4 parameters are meant to tab complete data sets that are viewed
     as dynamic. Therefore it is up to the developer to validate if the user has typed an acceptable value for these
     arguments.
@@ -118,7 +118,7 @@ Tab Completion:
     the developer to determine if the user entered the correct argument type (e.g. int) and validate their values.
 
 CompletionError Class:
-    Raised during tab-completion operations to report any sort of error you want printed by the AutoCompleter
+    Raised during tab completion operations to report any sort of error you want printed by the AutoCompleter
 
     Example use cases
     - Reading a database to retrieve a tab completion data set failed
@@ -231,7 +231,7 @@ def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
 
 class CompletionError(Exception):
     """
-    Raised during tab-completion operations to report any sort of error you want printed by the AutoCompleter
+    Raised during tab completion operations to report any sort of error you want printed by the AutoCompleter
 
     Example use cases
     - Reading a database to retrieve a tab completion data set failed
@@ -356,8 +356,8 @@ def _add_argument_wrapper(self, *args,
     # Added args used by AutoCompleter
     :param choices_function: function that provides choices for this argument
     :param choices_method: cmd2-app method that provides choices for this argument
-    :param completer_function: tab-completion function that provides choices for this argument
-    :param completer_method: cmd2-app tab-completion method that provides choices for this argument
+    :param completer_function: tab completion function that provides choices for this argument
+    :param completer_method: cmd2-app tab completion method that provides choices for this argument
     :param suppress_tab_hint: when AutoCompleter has no results to show during tab completion, it displays the current
                               argument's help text as a hint. Set this to True to suppress the hint. If this argument's
                               help text is set to argparse.SUPPRESS, then tab hints will not display regardless of the

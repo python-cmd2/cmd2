@@ -67,7 +67,7 @@ code directory for an example of how to achieve this in your own applications.
 Using ``py`` to run scripts directly is considered deprecated.  The newer
 ``run_pyscript`` command is superior for doing this in two primary ways:
 
-- it supports tab-completion of file system paths
+- it supports tab completion of file system paths
 - it has the ability to pass command-line arguments to the scripts invoked
 
 There are no disadvantages to using ``run_pyscript`` as opposed to ``py

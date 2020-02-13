@@ -1,7 +1,7 @@
 Completion
 ==========
 
-``cmd2`` adds tab-completion of file system paths for all built-in commands
+``cmd2`` adds tab completion of file system paths for all built-in commands
 where it makes sense, including:
 
 - ``edit``
@@ -9,7 +9,7 @@ where it makes sense, including:
 - ``run_script``
 - ``shell``
 
-``cmd2`` also adds tab-completion of shell commands to the ``shell`` command.
+``cmd2`` also adds tab completion of shell commands to the ``shell`` command.
 
 Additionally, it is trivial to add identical file system path completion to
 your own custom commands.  Suppose you have defined a custom command ``foo`` by
@@ -37,9 +37,9 @@ Tab Completion Using Argparse Decorators
 ----------------------------------------
 
 When using one the Argparse-based :ref:`api/decorators:Decorators`, ``cmd2``
-provides automatic tab-completion of flag names.
+provides automatic tab completion of flag names.
 
-Tab-completion of argument values can be configured by using one of five
+Tab completion of argument values can be configured by using one of five
 parameters to ``argparse.ArgumentParser.add_argument()``
 
 - ``choices``
@@ -52,9 +52,9 @@ demonstration of how to use the ``choices_function`` and ``choices_method``
 parameters. See the arg_decorators_ or argparse_completion_ example for a
 demonstration of how to use the ``completer_method`` parameter.
 
-When tab-completing flags and/or argument values for a ``cmd2`` command using
+When tab completing flags and/or argument values for a ``cmd2`` command using
 one of these decorators, ``cmd2`` keeps track of state so that once a flag has
-already previously been provided, it won't attempt to tab-complete it again.
+already previously been provided, it won't attempt to tab complete it again.
 When no completion results exists, a hint for the current argument will be
 displayed to help the user.
 
@@ -66,7 +66,7 @@ displayed to help the user.
 CompletionItem For Providing Extra Context
 ------------------------------------------
 
-When tab-completing things like a unique ID from a database, it can often be
+When tab completing things like a unique ID from a database, it can often be
 beneficial to provide the user with some extra context about the item being
 completed, such as a description.  To facilitate this, ``cmd2`` defines the
 ``CompletionItem`` class which can be returned from any of the 4 completion

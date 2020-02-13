@@ -89,11 +89,11 @@ max_completion_items
 ~~~~~~~~~~~~~~~~~~~~
 
 Maximum number of CompletionItems to display during tab completion. A
-CompletionItem is a special kind of tab-completion hint which displays both a
+CompletionItem is a special kind of tab completion hint which displays both a
 value and description and uses one line for each hint. Tab complete the ``set``
 command for an example.
 
-If the number of tab-completion hints exceeds ``max_completion_items``, then
+If the number of tab completion hints exceeds ``max_completion_items``, then
 they will be displayed in the typical columnized format and will not include
 the description text of the CompletionItem.
 
