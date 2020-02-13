@@ -3,14 +3,14 @@
 """
 A simple example demonstrating how to enable tab completion by assigning a completer function to do_* commands.
 This also demonstrates capabilities of the following completer methods included with cmd2:
-- flag_based_complete
-- index_based_complete
 - delimiter_completer
+- flag_based_complete (see note below)
+- index_based_complete (see note below)
 
-For an example integrating tab completion with argparse, see argparse_completion.py
+flag_based_complete() and index_based_complete() are basic methods and should only be used if you are not
+familiar with argparse. The recommended approach for tab completing positional tokens and flags is to use
+argparse-based completion. For an example integrating tab completion with argparse, see argparse_completion.py
 """
-import functools
-
 import cmd2
 
 # List of strings used with completion functions
