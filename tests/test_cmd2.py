@@ -205,14 +205,17 @@ def test_base_shell(base_app, monkeypatch):
 
 
 def test_base_py(base_app):
-    # Create a variable and make sure we can see it
-    out, err = run_cmd(base_app, 'py qqq=3')
-    assert not out
+    # Make sure py can't edit Cmd.py_locals. It used to be that cmd2 was passing its py_locals
+    # dictionary to the py environment instead of a copy.
+    base_app.py_locals['test_var'] = 5
+    out, err = run_cmd(base_app, 'py del[locals()["test_var"]]')
+    assert not out and not err
+    assert base_app.py_locals['test_var'] == 5
 
-    out, err = run_cmd(base_app, 'py print(qqq)')
-    assert out[0].rstrip() == '3'
+    out, err = run_cmd(base_app, 'py print(test_var)')
+    assert out[0].rstrip() == '5'
 
-    # Add a more complex statement
+    # Try a print statement
     out, err = run_cmd(base_app, 'py print("spaces" + " in this " + "command")')
     assert out[0].rstrip() == 'spaces in this command'
 

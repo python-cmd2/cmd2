@@ -5,6 +5,7 @@
 Example demonstrating that calling run_pyscript recursively inside another Python script isn't allowed
 """
 import os
+import sys
 
 app.cmd_echo = True
 my_dir = (os.path.dirname(os.path.realpath(sys.argv[0])))
