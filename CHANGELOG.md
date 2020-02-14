@@ -11,7 +11,7 @@
     * Renamed set command's `-l/--long` flag to `-v/--verbose` for consistency with help and history commands.
     * Setting the following pyscript variables:
         * `__name__`: __main__
-        * `__file__`: script path (as typed)
+        * `__file__`: script path (as typed, ~ will be expanded)
 
 ## 0.10.0 (February 7, 2020)
 * Enhancements
