@@ -37,8 +37,8 @@ Main Features
 - Settable environment parameters
 - Parsing commands with arguments using `argparse`, including support for subcommands
 - Unicode character support
-- Good tab-completion of commands, subcommands, file system paths, and shell commands
-- Automatic tab-completion of `argparse` flags when using one of the `cmd2` `argparse` decorators
+- Good tab completion of commands, subcommands, file system paths, and shell commands
+- Automatic tab completion of `argparse` flags when using one of the `cmd2` `argparse` decorators
 - Support for Python 3.5+ on Windows, macOS, and Linux
 - Trivial to provide built-in help for all commands
 - Built-in regression testing framework for your applications (transcript-based testing)
@@ -96,7 +96,7 @@ Instructions for implementing each feature follow.
     - By default the docstring for your **do_foo** method is the help for the **foo** command
         - NOTE: This doesn't apply if you use one of the `argparse` decorators mentioned below
     - Can provide more custom help by creating a **help_foo** method (except when using `argparse` decorators)
-    - Can provide custom tab-completion for the **foo** command by creating a **complete_foo** method
+    - Can provide custom tab completion for the **foo** command by creating a **complete_foo** method
     - Easy to upgrade an existing `cmd` app to `cmd2`
     - Run your `cmd2` app using the built-in REPL by executing the **cmdloop** method
 
@@ -164,25 +164,25 @@ Instructions for implementing each feature follow.
     - Option to display long output using a pager with ``cmd2.Cmd.ppaged()``
     - Optionally specify a startup script that end users can use to customize their environment
 
-- Top-notch tab-completion capabilities which are easy to use but very powerful
+- Top-notch tab completion capabilities which are easy to use but very powerful
     - For a command **foo** implement a **complete_foo** method to provide custom tab completion for that command
         - But the helper methods within `cmd2` discussed below mean you would rarely have to implement this from scratch
-    - Commands which use one of the `argparse` decorators have automatic tab-completion of `argparse` flags
+    - Commands which use one of the `argparse` decorators have automatic tab completion of `argparse` flags
         - And also provide help hints for values associated with these flags
         - Experiment with the [argprint.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) example
         using the **oprint** and **pprint** commands to get a feel for how this works
-    - `path_complete` helper method provides flexible tab-completion of file system paths
+    - `path_complete` helper method provides flexible tab completion of file system paths
         - See the [paged_output.py](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py) example for a simple use case
         - See the [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) example for a more full-featured use case
     - `flag_based_complete` helper method for tab completion based on a particular flag preceding the token being completed
-        - See the [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py) example for a demonstration of how to use this feature
+        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
     - `index_based_complete` helper method for tab completion based on a fixed position in the input string
-        - See the [tab_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_completion.py) example for a demonstration of how to use this feature
+        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
     - `basic_complete` helper method for tab completion against a list
     - `delimiter_complete` helper method for tab completion against a list but each match is split on a delimiter 
-        - See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for a demonstration of how to use this feature
-    - `cmd2` in combination with `argparse` also provide several advanced capabilities for automatic tab-completion
-            - See the [tab_autocompletion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py) example for more info
+        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
+    - `cmd2` in combination with `argparse` also provide several advanced capabilities for automatic tab completion
+        - See the [argparse_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py) example for more info
 
 - Multi-line commands
 

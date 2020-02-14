@@ -9,7 +9,7 @@
 ## 0.10.0 (February 7, 2020)
 * Enhancements
     * Changed the default help text to make `help -v` more discoverable
-    * **set** command now supports tab-completion of values
+    * **set** command now supports tab completion of values
     * Added `add_settable()` and `remove_settable()` convenience methods to update `self.settable` dictionary
     * Added convenience `ansi.fg` and `ansi.bg` enums of foreground and background colors
         * `ansi.style()` `fg` argument can now either be of type `str` or `ansi.fg`
@@ -185,7 +185,7 @@
     `delimiter_complete`, `flag_based_complete`, `index_based_complete`, `path_complete`, `shell_cmd_complete`
     * Renamed history option from `--output-file` to `--output_file`
     * Renamed `matches_sort_key` to `default_sort_key`. This value determines the default sort ordering of string
-    results like alias, command, category, macro, settable, and shortcut names. Unsorted tab-completion results
+    results like alias, command, category, macro, settable, and shortcut names. Unsorted tab completion results
     also are sorted with this key. Its default value (ALPHABETICAL_SORT_KEY) performs a case-insensitive alphabetical
     sort, but it can be changed to a natural sort by setting the value to NATURAL_SORT_KEY.
     * `StatementParser` now expects shortcuts to be passed in as dictionary. This eliminates the step of converting the
@@ -434,7 +434,7 @@
     * ``ACHelpFormatter`` now inherits from ``argparse.RawTextHelpFormatter`` to make it easier
     for formatting help/description text
     * Aliases are now sorted alphabetically
-    * The **set** command now tab-completes settable parameter names
+    * The **set** command now tab completes settable parameter names
     * Added ``async_alert``, ``async_update_prompt``, and ``set_window_title`` functions
         * These allow you to provide feedback to the user in an asychronous fashion, meaning alerts can
         display when the user is still entering text at the prompt. See [async_printing.py](https://github.com/python-cmd2/cmd2/blob/master/examples/async_printing.py)
@@ -468,7 +468,7 @@
     * Improved implementation of lifecycle hooks to support a plugin
       framework, see ``docs/hooks.rst`` for details.
     * New dependency on ``attrs`` third party module
-    * Added ``matches_sorted`` member to support custom sorting of tab-completion matches
+    * Added ``matches_sorted`` member to support custom sorting of tab completion matches
     * Added [tab_autocomp_dynamic.py](https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocomp_dynamic.py) example
         * Demonstrates updating the argparse object during init instead of during class construction
 * Deprecations
@@ -498,7 +498,7 @@
 * Bug Fixes
     * Fixed issue where piping and redirecting did not work correctly with paths that had spaces
 * Enhancements
-    * Added ability to print a header above tab-completion suggestions using `completion_header` member
+    * Added ability to print a header above tab completion suggestions using `completion_header` member
     * Added ``pager`` and ``pager_chop`` attributes to the ``cmd2.Cmd`` class
         * ``pager`` defaults to **less -RXF** on POSIX and **more** on Windows
         * ``pager_chop`` defaults to **less -SRXF** on POSIX and **more** on Windows
@@ -570,7 +570,7 @@
     * Fixed ``AttributeError`` on Windows when running a ``select`` command cause by **pyreadline** not implementing ``remove_history_item``
 * Enhancements
     * Added warning about **libedit** variant of **readline** not being supported on macOS
-    * Added tab-completion of alias names in value field of **alias** command
+    * Added tab completion of alias names in value field of **alias** command
     * Enhanced the ``py`` console in the following ways
         * Added tab completion of Python identifiers instead of **cmd2** commands
         * Separated the ``py`` console history from the **cmd2** history
@@ -628,7 +628,7 @@
 ## 0.8.2 (March 21, 2018)
 
 * Bug Fixes
-    * Fixed a bug in tab-completion of command names within sub-menus
+    * Fixed a bug in tab completion of command names within sub-menus
     * Fixed a bug when using persistent readline history in Python 2.7
     * Fixed a bug where the ``AddSubmenu`` decorator didn't work with a default value for ``shared_attributes``
     * Added a check to ``ppaged()`` to only use a pager when running in a real fully functional terminal
@@ -685,7 +685,7 @@
         and [arg_print.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) examples
     * Added support for Argparse subcommands when using the **with_argument_parser** or **with_argparser_and_unknown_args** decorators
         * See [subcommands.py](https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py) for an example of how to use subcommands
-        * Tab-completion of subcommand names is automatically supported
+        * Tab completion of subcommand names is automatically supported
     * The **__relative_load** command is now hidden from the help menu by default
         * This command is not intended to be called from the command line, only from within scripts
     * The **set** command now has an additional **-a/--all** option to also display read-only settings
@@ -712,7 +712,7 @@
     * Fixed a couple broken examples
 * Enhancements
     * Improved documentation for modifying shortcuts (command aliases)
-    * Made ``pyreadline`` a dependency on Windows to ensure tab-completion works
+    * Made ``pyreadline`` a dependency on Windows to ensure tab completion works
 * Other changes
     * Abandoned official support for Python 3.3.  It should still work, just don't have an easy way to test it anymore.
 
@@ -750,7 +750,7 @@
     * Fixed some pyperclip clipboard interaction bugs on Linux
     * Fixed some timing bugs when running unit tests in parallel by using monkeypatch
 * Enhancements
-    * Enhanced tab-completion of cmd2 command names to support case-insensitive completion
+    * Enhanced tab completion of cmd2 command names to support case-insensitive completion
     * Added an example showing how to remove unused commands
     * Improved how transcript testing handles prompts with ANSI escape codes by stripping them
     * Greatly improved implementation for how command output gets piped to a shell command
@@ -766,7 +766,7 @@
 * Enhancements
     * Organized all attributes used to configure the ParserManager into a single location
     * Set the default value of `abbrev` to `False` (which controls whether or not abbreviated commands are allowed)
-        * With good tab-completion of command names, using abbreviated commands isn't particularly useful
+        * With good tab completion of command names, using abbreviated commands isn't particularly useful
         * And it can create complications if you are't careful
     * Improved implementation of `load` to use command queue instead of nested inner loop
 
@@ -778,7 +778,7 @@
     * Ability to pipe ``cmd2`` command output to a shell command is now more reliable, particularly on Windows
     * Fixed a bug in ``pyscript`` command on Windows related to ``\`` being interpreted as an escape
 * Enhancements
-    * Ensure that path and shell command tab-completion results are alphabetically sorted
+    * Ensure that path and shell command tab completion results are alphabetically sorted
     * Removed feature for load command to load scripts from URLS
         * It didn't work, there were no unit tests, and it felt out of place
     * Removed presence of a default file name and default file extension
@@ -801,8 +801,8 @@
 * Enhancements
     * Added the ability to exclude commands from the help menu (**eof** included by default)
     * Redundant **list** command removed and features merged into **history** command
-    * Added **pyscript** command which supports tab-completion and running Python scripts with arguments
-    * Improved tab-completion of file system paths, command names, and shell commands
+    * Added **pyscript** command which supports tab completion and running Python scripts with arguments
+    * Improved tab completion of file system paths, command names, and shell commands
         * Thanks to Kevin Van Brunt for all of the help with debugging and testing this
     * Changed default value of USE_ARG_LIST to True - this affects the beavhior of all **@options** commands
         * **WARNING**: This breaks backwards compatibility, to restore backwards compatibility, add this to the

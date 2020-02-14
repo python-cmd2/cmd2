@@ -34,7 +34,7 @@ Running Command Scripts
 
 Command script files can be executed using the built-in ``run_script`` command
 or ``@`` shortcut. Both ASCII and UTF-8 encoded unicode text files are
-supported. The ``run_script`` command supports tab-completion of file system
+supported. The ``run_script`` command supports tab completion of file system
 paths.  There is a variant ``_relative_run_script`` command or ``@@``
 shortcut for use within a script which uses paths relative to the first script.
 
@@ -73,7 +73,7 @@ using ``run_pyscript`` is shown below  along with the arg_printer_ script::
     arg 2: 'bar'
     arg 3: 'baz 23'
 
-``run_pyscript`` supports tab-completion of file system paths, and as shown
+``run_pyscript`` supports tab completion of file system paths, and as shown
 above it has the ability to pass command-line arguments to the scripts invoked.
 
 Python scripts executed with ``run_pyscript`` can run ``cmd2`` application

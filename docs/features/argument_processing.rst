@@ -325,14 +325,13 @@ Subcommands are supported for commands using either the ``@with_argparser`` or
 is based on argparse sub-parsers.
 
 You may add multiple layers of subcommands for your command. ``cmd2`` will
-automatically traverse and tab-complete subcommands for all commands using
+automatically traverse and tab complete subcommands for all commands using
 argparse.
 
-See the subcommands_ and tab_autocompletion_ example to learn more about how to
+See the subcommands_ example to learn more about how to
 use subcommands in your ``cmd2`` application.
 
 .. _subcommands: https://github.com/python-cmd2/cmd2/blob/master/examples/subcommands.py
-.. _tab_autocompletion: https://github.com/python-cmd2/cmd2/blob/master/examples/tab_autocompletion.py
 
 
 Argparse Extensions

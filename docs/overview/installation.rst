@@ -119,7 +119,7 @@ macOS Considerations
 --------------------
 
 macOS comes with the `libedit <http://thrysoee.dk/editline/>`_ library which is
-similar, but not identical, to GNU Readline. Tab-completion for ``cmd2``
+similar, but not identical, to GNU Readline. Tab completion for ``cmd2``
 applications is only tested against GNU Readline.
 
 There are several ways GNU Readline can be installed within a Python

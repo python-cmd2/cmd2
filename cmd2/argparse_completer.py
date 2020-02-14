@@ -444,7 +444,9 @@ class AutoCompleter:
                 completions.sort(key=self._cmd2_app.default_sort_key)
                 self._cmd2_app.matches_sorted = True
 
-            token_width = ansi.style_aware_wcswidth(action.dest)
+            # If a metavar was defined, use that instead of the dest field
+            destination = action.metavar if action.metavar else action.dest
+            token_width = ansi.style_aware_wcswidth(destination)
             completions_with_desc = []
 
             for item in completions:
@@ -463,7 +465,7 @@ class AutoCompleter:
             desc_header = getattr(action, ATTR_DESCRIPTIVE_COMPLETION_HEADER, None)
             if desc_header is None:
                 desc_header = DEFAULT_DESCRIPTIVE_HEADER
-            header = '\n{: <{token_width}}{}'.format(action.dest.upper(), desc_header, token_width=token_width + 2)
+            header = '\n{: <{token_width}}{}'.format(destination.upper(), desc_header, token_width=token_width + 2)
 
             self._cmd2_app.completion_header = header
             self._cmd2_app.display_matches = completions_with_desc

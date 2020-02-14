@@ -87,6 +87,7 @@ class CmdLineApp(cmd2.Cmd):
 
     # Enable tab completion for cd command
     def complete_cd(self, text, line, begidx, endidx):
+        # Tab complete only directories
         return self.path_complete(text, line, begidx, endidx, path_filter=os.path.isdir)
 
     dir_parser = argparse.ArgumentParser()

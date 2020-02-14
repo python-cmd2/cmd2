@@ -1,9 +1,9 @@
 # coding=utf-8
 # flake8: noqa E302
 """
-Unit/functional testing for readline tab-completion functions in the cmd2.py module.
+Unit/functional testing for readline tab completion functions in the cmd2.py module.
 
-These are primarily tests related to readline completer functions which handle tab-completion of cmd2/cmd commands,
+These are primarily tests related to readline completer functions which handle tab completion of cmd2/cmd commands,
 file system paths, and shell commands.
 """
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
@@ -39,11 +39,11 @@ delimited_strs = \
 # Dictionary used with flag based completion functions
 flag_dict = \
     {
-        # Tab-complete food items after -f and --food flag in command line
+        # Tab complete food items after -f and --food flag in command line
         '-f': food_item_strs,
         '--food': food_item_strs,
 
-        # Tab-complete sport items after -s and --sport flag in command line
+        # Tab complete sport items after -s and --sport flag in command line
         '-s': sport_item_strs,
         '--sport': sport_item_strs,
     }
@@ -51,14 +51,14 @@ flag_dict = \
 # Dictionary used with index based completion functions
 index_dict = \
     {
-        1: food_item_strs,            # Tab-complete food items at index 1 in command line
-        2: sport_item_strs,           # Tab-complete sport items at index 2 in command line
+        1: food_item_strs,            # Tab complete food items at index 1 in command line
+        2: sport_item_strs,           # Tab complete sport items at index 2 in command line
     }
 
 
 class CompletionsExample(cmd2.Cmd):
     """
-    Example cmd2 application used to exercise tab-completion tests
+    Example cmd2 application used to exercise tab completion tests
     """
     def __init__(self):
         cmd2.Cmd.__init__(self, multiline_commands=['test_multiline'])
