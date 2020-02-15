@@ -2,7 +2,10 @@
 * Bug Fixes
     * Corrected issue where the actual new value was not always being printed in do_set. This occurred in cases where
       the typed value differed from what the setter had converted it to.
-    * Fixed bug where ANSI style sequences were not correctly handled in `utils.truncate_line()`. 
+    * Fixed bug where ANSI style sequences were not correctly handled in `utils.truncate_line()`.
+* Changes
+    * `categorize()` moved from `decorators.py` to `utils.py`. It is imported by the package `__init__.py`
+      and therefore is not likely to cause issues for users of the library.
 * Enhancements
     * Renamed set command's `-l/--long` flag to `-v/--verbose` for consistency with help and history commands.
 

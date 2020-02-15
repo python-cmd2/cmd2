@@ -404,6 +404,21 @@ def get_exes_in_path(starts_with: str) -> List[str]:
     return list(exes_set)
 
 
+def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
+    """Categorize a function.
+
+    The help command output will group this function under the specified category heading
+
+    :param func: function or list of functions to categorize
+    :param category: category to put it in
+    """
+    if isinstance(func, Iterable):
+        for item in func:
+            setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
+    else:
+        setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
+
+
 class StdSim:
     """
     Class to simulate behavior of sys.stdout or sys.stderr.

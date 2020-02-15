@@ -24,7 +24,7 @@ if cmd2_parser_module is not None:
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER
 from .cmd2 import Cmd, EmptyStatement
 from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
-from .decorators import categorize, with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category
+from .decorators import with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category
 from .parsing import Statement
 from .py_bridge import CommandResult
-from .utils import Settable
+from .utils import Settable, categorize
