@@ -8,6 +8,11 @@ cmd2.parsing
 
       The name of the command after shortcuts and macros have been expanded
 
+    .. attribute:: multiline_command
+
+      If the command is a multi-line command, the name of the command will be
+      in this attribute. Otherwise, it will be an empty string.
+
     .. attribute:: args
 
       The arguments to the command as a string with spaces between the words,
