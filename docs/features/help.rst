@@ -1,11 +1,60 @@
 Help
 ====
 
-use the categorize() function to create help categories
+From our experience, end users rarely read documentation no matter how high-
+quality or useful that documentation might be.  So it is important that you
+provide good built-in help within your application.  Fortunately, ``cmd2``
+makes this easy.
 
-Use ``help_method()`` to custom roll your own help messages.
+Getting Help
+------------
 
-See :ref:`features/argument_processing:Help Messages`
+``cmd2`` makes it easy for end users of ``cmd2`` applications to get help via
+the built-in ``help`` command.  The ``help`` command by itself displays a list
+of the commands available:
+
+.. code-block:: text
+
+    (Cmd) help
+
+    Documented commands (use 'help -v' for verbose/'help <topic>' for details):
+    ===========================================================================
+    alias  help     ipy    py    run_pyscript  set    shortcuts
+    edit   history  macro  quit  run_script    shell
+
+The ``help`` command can also be used to provide detailed help for a specific
+command:
+
+.. code-block:: text
+
+    (Cmd) help quit
+    Usage: quit [-h]
+
+    Exit this application
+
+    optional arguments:
+      -h, --help  show this help message and exit
+
+Providing Help
+--------------
+
+``cmd2`` makes it easy for developers of ``cmd2`` applications to provide this
+help.  By default, the help for a command is the docstring for the ``do_*``
+method defining the command - e.g. for a command **foo**, that command is
+implementd by defining the ``do_foo`` method and the docstring for that method
+is the help.
+
+For commands which use one of the ``argparse`` decorators to parse arguments,
+help is provided by ``argparse``. See
+:ref:`features/argument_processing:Help Messages` for more information.
+
+Occasionally there might be an unusual circumstance where providing static help
+text isn't good enough and you want to provide dynamic information in the help
+text for a command.  To meet this need, if a ``help_foo`` method is defined to
+match the ``do_foo`` method, then that method will be used to provide the help
+for command **foo**.  This dynamic help is only supported for commands which
+do not use an ``argparse`` decorator because didn't want different output for
+``help cmd`` than for ``cmd -h``.
 
 Categorizing Commands
 ---------------------
@@ -124,18 +173,21 @@ The ``help`` command also has a verbose option (``help -v`` or ``help
 
     Other
     ================================================================================
-    alias               Define or display aliases
+    alias               Manage aliases
     config              Config command
-    edit                Edit a file in a text editor
-    help                List available commands with "help" or detailed help with "help cmd"
-    history             usage: history [-h] [-r | -e | -s | -o FILE | -t TRANSCRIPT] [arg]
-    py                  Invoke python command, shell, or script
+    edit                Run a text editor and optionally open a file with it
+    help                List available commands or provide detailed help for a specific command
+    history             View, run, edit, save, or clear previously entered commands
+    macro               Manage macros
+    py                  Invoke Python command or shell
     quit                Exits this application
     run_pyscript        Runs a python script file inside the console
     run_script          Runs commands in script file that is encoded as either ASCII or UTF-8 text
-    set                 usage: set [-h] [-a] [-l] [settable [settable ...]]
+    set                 Set a settable parameter or show current settings of parameters
     shell               Execute a command as if at the OS prompt
-    shortcuts           Lists shortcuts available
-    unalias             Unsets aliases
+    shortcuts           List available shortcuts
     version             Version command
 
+When called with the ``-v`` flag for verbose help, the one-line description for
+each command is provided by the first line of the docstring for that command's
+associated ``do_*`` method.

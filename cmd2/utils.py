@@ -11,7 +11,7 @@ import sys
 import threading
 import unicodedata
 from enum import Enum
-from typing import Any, Callable, Iterable, List, Optional, TextIO, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, TextIO, Union
 
 from . import constants
 
@@ -682,8 +682,8 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
                width: Optional[int] = None, tab_width: int = 4, truncate: bool = False) -> str:
     """
     Align text for display within a given width. Supports characters with display widths greater than 1.
-    ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is
-    supported. If text has line breaks, then each line is aligned independently.
+    ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
+    independently.
 
     There are convenience wrappers around this function: align_left(), align_center(), and align_right()
 
@@ -696,7 +696,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
     :param truncate: if True, then each line will be shortened to fit within the display width. The truncated
                      portions are replaced by a '…' character. Defaults to False.
     :return: aligned text
-    :raises: TypeError if fill_char is more than one character
+    :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
              ValueError if text or fill_char contains an unprintable character
              ValueError if width is less than 1
     """
@@ -716,7 +716,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
     if fill_char == '\t':
         fill_char = ' '
 
-    if len(fill_char) != 1:
+    if len(ansi.strip_style(fill_char)) != 1:
         raise TypeError("Fill character must be exactly one character long")
 
     fill_char_width = ansi.style_aware_wcswidth(fill_char)
@@ -777,8 +777,8 @@ def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
                tab_width: int = 4, truncate: bool = False) -> str:
     """
     Left align text for display within a given width. Supports characters with display widths greater than 1.
-    ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is
-    supported. If text has line breaks, then each line is aligned independently.
+    ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
+    independently.
 
     :param text: text to left align (can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
@@ -788,7 +788,7 @@ def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: left-aligned text
-    :raises: TypeError if fill_char is more than one character
+    :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
              ValueError if text or fill_char contains an unprintable character
              ValueError if width is less than 1
     """
@@ -800,8 +800,8 @@ def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None
                  tab_width: int = 4, truncate: bool = False) -> str:
     """
     Center text for display within a given width. Supports characters with display widths greater than 1.
-    ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is
-    supported. If text has line breaks, then each line is aligned independently.
+    ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
+    independently.
 
     :param text: text to center (can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
@@ -811,7 +811,7 @@ def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: centered text
-    :raises: TypeError if fill_char is more than one character
+    :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
              ValueError if text or fill_char contains an unprintable character
              ValueError if width is less than 1
     """
@@ -823,8 +823,8 @@ def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
                 tab_width: int = 4, truncate: bool = False) -> str:
     """
     Right align text for display within a given width. Supports characters with display widths greater than 1.
-    ANSI style sequences are safely ignored and do not count toward the display width. This means colored text is
-    supported. If text has line breaks, then each line is aligned independently.
+    ANSI style sequences do not count toward the display width. If text has line breaks, then each line is aligned
+    independently.
 
     :param text: text to right align (can contain multiple lines)
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
@@ -834,7 +834,7 @@ def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: right-aligned text
-    :raises: TypeError if fill_char is more than one character
+    :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
              ValueError if text or fill_char contains an unprintable character
              ValueError if width is less than 1
     """
@@ -845,8 +845,15 @@ def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
 def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     """
     Truncate a single line to fit within a given display width. Any portion of the string that is truncated
-    is replaced by a '…' character. Supports characters with display widths greater than 1. ANSI style sequences are
-    safely ignored and do not count toward the display width. This means colored text is supported.
+    is replaced by a '…' character. Supports characters with display widths greater than 1. ANSI style sequences
+    do not count toward the display width.
+
+    If there are ANSI style sequences in the string after where truncation occurs, this function will append them
+    to the returned string.
+
+    This is done to prevent issues caused in cases like: truncate_string(fg.blue + hello + fg.reset, 3)
+    In this case, "hello" would be truncated before fg.reset resets the color from blue. Appending the remaining style
+    sequences makes sure the style is in the same state had the entire string been printed.
 
     :param line: text to truncate
     :param max_width: the maximum display width the resulting string is allowed to have
@@ -855,6 +862,7 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     :raises: ValueError if text contains an unprintable character like a new line
              ValueError if max_width is less than 1
     """
+    import io
     from . import ansi
 
     # Handle tabs
@@ -866,12 +874,68 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     if max_width < 1:
         raise ValueError("max_width must be at least 1")
 
-    if ansi.style_aware_wcswidth(line) > max_width:
-        # Remove characters until we fit. Leave room for the ellipsis.
-        line = line[:max_width - 1]
-        while ansi.style_aware_wcswidth(line) > max_width - 1:
-            line = line[:-1]
+    if ansi.style_aware_wcswidth(line) <= max_width:
+        return line
 
-        line += "\N{HORIZONTAL ELLIPSIS}"
+    # Find all style sequences in the line
+    styles = get_styles_in_text(line)
 
-    return line
+    # Add characters one by one and preserve all style sequences
+    done = False
+    index = 0
+    total_width = 0
+    truncated_buf = io.StringIO()
+
+    while not done:
+        # Check if a style sequence is at this index. These don't count toward display width.
+        if index in styles:
+            truncated_buf.write(styles[index])
+            style_len = len(styles[index])
+            styles.pop(index)
+            index += style_len
+            continue
+
+        char = line[index]
+        char_width = ansi.style_aware_wcswidth(char)
+
+        # This char will make the text too wide, add the ellipsis instead
+        if char_width + total_width >= max_width:
+            char = constants.HORIZONTAL_ELLIPSIS
+            char_width = ansi.style_aware_wcswidth(char)
+            done = True
+
+        total_width += char_width
+        truncated_buf.write(char)
+        index += 1
+
+    # Append remaining style sequences from original string
+    truncated_buf.write(''.join(styles.values()))
+
+    return truncated_buf.getvalue()
+
+
+def get_styles_in_text(text: str) -> Dict[int, str]:
+    """
+    Return an OrderedDict containing all ANSI style sequences found in a string
+
+    The structure of the dictionary is:
+        key: index where sequences begins
+        value: ANSI style sequence found at index in text
+
+    Keys are in ascending order
+
+    :param text: text to search for style sequences
+    """
+    from . import ansi
+
+    start = 0
+    styles = collections.OrderedDict()
+
+    while True:
+        match = ansi.ANSI_STYLE_RE.search(text, start)
+        if match is None:
+            break
+        styles[match.start()] = match.group()
+        start += len(match.group())
+
+    return styles

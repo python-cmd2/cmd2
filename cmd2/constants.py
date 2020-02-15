@@ -15,6 +15,9 @@ MULTILINE_TERMINATOR = ';'
 
 LINE_FEED = '\n'
 
+# One character ellipsis
+HORIZONTAL_ELLIPSIS = '…'
+
 DEFAULT_SHORTCUTS = {'?': 'help', '!': 'shell', '@': 'run_script', '@@': '_relative_run_script'}
 
 # Used as the command name placeholder in disabled command messages.

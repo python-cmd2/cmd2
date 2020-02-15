@@ -10,6 +10,7 @@ import time
 import pytest
 
 import cmd2.utils as cu
+from cmd2.constants import HORIZONTAL_ELLIPSIS
 
 HELLO_WORLD = 'Hello, world!'
 
@@ -297,7 +298,13 @@ def test_truncate_line():
     line = 'long'
     max_width = 3
     truncated = cu.truncate_line(line, max_width)
-    assert truncated == 'lo\N{HORIZONTAL ELLIPSIS}'
+    assert truncated == 'lo' + HORIZONTAL_ELLIPSIS
+
+def test_truncate_line_already_fits():
+    line = 'long'
+    max_width = 4
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == line
 
 def test_truncate_line_with_newline():
     line = 'fo\no'
@@ -315,20 +322,44 @@ def test_truncate_line_wide_text():
     line = '苹苹other'
     max_width = 6
     truncated = cu.truncate_line(line, max_width)
-    assert truncated == '苹苹o\N{HORIZONTAL ELLIPSIS}'
+    assert truncated == '苹苹o' + HORIZONTAL_ELLIPSIS
 
 def test_truncate_line_split_wide_text():
     """Test when truncation results in a string which is shorter than max_width"""
     line = '1苹2苹'
     max_width = 3
     truncated = cu.truncate_line(line, max_width)
-    assert truncated == '1\N{HORIZONTAL ELLIPSIS}'
+    assert truncated == '1' + HORIZONTAL_ELLIPSIS
 
 def test_truncate_line_tabs():
     line = 'has\ttab'
     max_width = 9
     truncated = cu.truncate_line(line, max_width)
-    assert truncated == 'has    t\N{HORIZONTAL ELLIPSIS}'
+    assert truncated == 'has    t' + HORIZONTAL_ELLIPSIS
+
+def test_truncate_with_style():
+    from cmd2 import ansi
+
+    before_style = ansi.fg.blue + ansi.UNDERLINE_ENABLE
+    after_style = ansi.fg.reset + ansi.UNDERLINE_DISABLE
+
+    # Style only before truncated text
+    line = before_style + 'long'
+    max_width = 3
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == before_style + 'lo' + HORIZONTAL_ELLIPSIS
+
+    # Style before and after truncated text
+    line = before_style + 'long' + after_style
+    max_width = 3
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == before_style + 'lo' + HORIZONTAL_ELLIPSIS + after_style
+
+    # Style only after truncated text
+    line = 'long' + after_style
+    max_width = 3
+    truncated = cu.truncate_line(line, max_width)
+    assert truncated == 'lo' + HORIZONTAL_ELLIPSIS + after_style
 
 def test_align_text_fill_char_is_tab():
     text = 'foo'
@@ -336,6 +367,15 @@ def test_align_text_fill_char_is_tab():
     width = 5
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == text + '  '
+
+def test_align_text_fill_char_has_color():
+    from cmd2 import ansi
+
+    text = 'foo'
+    fill_char = ansi.fg.bright_yellow + '-' + ansi.fg.reset
+    width = 5
+    aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
+    assert aligned == text + fill_char * 2
 
 def test_align_text_width_is_too_small():
     text = 'foo'
@@ -351,7 +391,7 @@ def test_align_text_fill_char_is_too_long():
     with pytest.raises(TypeError):
         cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
 
-def test_align_text_fill_char_is_unprintable():
+def test_align_text_fill_char_is_newline():
     text = 'foo'
     fill_char = '\n'
     width = 5
@@ -384,7 +424,7 @@ def test_align_text_wider_than_width_truncate():
     fill_char = '-'
     width = 8
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
-    assert aligned == 'long te\N{HORIZONTAL ELLIPSIS}'
+    assert aligned == 'long te' + HORIZONTAL_ELLIPSIS
 
 def test_align_text_wider_than_width_truncate_add_fill():
     """Test when truncation results in a string which is shorter than width and align_text adds filler"""
@@ -392,7 +432,7 @@ def test_align_text_wider_than_width_truncate_add_fill():
     fill_char = '-'
     width = 3
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width, truncate=True)
-    assert aligned == '1\N{HORIZONTAL ELLIPSIS}-'
+    assert aligned == '1' + HORIZONTAL_ELLIPSIS + fill_char
 
 def test_align_text_has_unprintable():
     text = 'foo\x02'

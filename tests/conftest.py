@@ -185,7 +185,7 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Opti
     def get_endidx():
         return endidx
 
-    # Run the readline tab-completion function with readline mocks in place
+    # Run the readline tab completion function with readline mocks in place
     with mock.patch.object(readline, 'get_line_buffer', get_line):
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
