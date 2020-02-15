@@ -10,5 +10,3 @@ API Reference
    exceptions
    ansi
    utils
-   utility_classes
-   utility_functions
