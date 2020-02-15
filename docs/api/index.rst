@@ -5,6 +5,7 @@ API Reference
    :maxdepth: 1
 
    cmd
+   parsing
    decorators
    exceptions
    ansi
