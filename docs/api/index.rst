@@ -10,3 +10,4 @@ API Reference
    exceptions
    ansi
    utils
+   constants
