@@ -42,20 +42,20 @@ def completer_function(text: str, line: str, begidx: int, endidx: int) -> List[s
 
 
 def choices_takes_arg_tokens(arg_tokens: argparse.Namespace) -> List[str]:
-    """Choices function that receives arg_tokens from AutoCompleter"""
+    """Choices function that receives arg_tokens from ArgparseCompleter"""
     return [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
 
 
 def completer_takes_arg_tokens(text: str, line: str, begidx: int, endidx: int,
                                arg_tokens: argparse.Namespace) -> List[str]:
-    """Completer function that receives arg_tokens from AutoCompleter"""
+    """Completer function that receives arg_tokens from ArgparseCompleter"""
     match_against = [arg_tokens['parent_arg'][0], arg_tokens['subcommand'][0]]
     return basic_complete(text, line, begidx, endidx, match_against)
 
 
 # noinspection PyMethodMayBeStatic,PyUnusedLocal
 class AutoCompleteTester(cmd2.Cmd):
-    """Cmd2 app that exercises AutoCompleter class"""
+    """Cmd2 app that exercises ArgparseCompleter class"""
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -421,7 +421,7 @@ def test_autocomp_flag_choices_completion(ac_app, flag, text, completions):
     else:
         assert first_match is None
 
-    # Numbers will be sorted in ascending order and then converted to strings by AutoCompleter
+    # Numbers will be sorted in ascending order and then converted to strings by ArgparseCompleter
     if all(isinstance(x, numbers.Number) for x in completions):
         completions.sort()
         completions = [str(x) for x in completions]
@@ -496,8 +496,8 @@ def test_autocomp_positional_completers(ac_app, pos, text, completions):
 
 
 def test_autocomp_blank_token(ac_app):
-    """Force a blank token to make sure AutoCompleter consumes them like argparse does"""
-    from cmd2.argparse_completer import AutoCompleter
+    """Force a blank token to make sure ArgparseCompleter consumes them like argparse does"""
+    from cmd2.argparse_completer import ArgparseCompleter
 
     blank = ''
 
@@ -507,7 +507,7 @@ def test_autocomp_blank_token(ac_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    completer = AutoCompleter(ac_app.completer_parser, ac_app)
+    completer = ArgparseCompleter(ac_app.completer_parser, ac_app)
     tokens = ['completer', '-f', blank, text]
     completions = completer.complete_command(tokens, text, line, begidx, endidx)
     assert completions == completions_from_function
@@ -518,7 +518,7 @@ def test_autocomp_blank_token(ac_app):
     endidx = len(line)
     begidx = endidx - len(text)
 
-    completer = AutoCompleter(ac_app.completer_parser, ac_app)
+    completer = ArgparseCompleter(ac_app.completer_parser, ac_app)
     tokens = ['completer', blank, text]
     completions = completer.complete_command(tokens, text, line, begidx, endidx)
     assert completions == completions_from_method
@@ -867,20 +867,20 @@ def test_looks_like_flag():
 
 
 def test_complete_command_no_tokens(ac_app):
-    from cmd2.argparse_completer import AutoCompleter
+    from cmd2.argparse_completer import ArgparseCompleter
 
     parser = Cmd2ArgumentParser()
-    ac = AutoCompleter(parser, ac_app)
+    ac = ArgparseCompleter(parser, ac_app)
 
     completions = ac.complete_command(tokens=[], text='', line='', begidx=0, endidx=0)
     assert not completions
 
 
 def test_complete_command_help_no_tokens(ac_app):
-    from cmd2.argparse_completer import AutoCompleter
+    from cmd2.argparse_completer import ArgparseCompleter
 
     parser = Cmd2ArgumentParser()
-    ac = AutoCompleter(parser, ac_app)
+    ac = ArgparseCompleter(parser, ac_app)
 
     completions = ac.complete_subcommand_help(tokens=[], text='', line='', begidx=0, endidx=0)
     assert not completions

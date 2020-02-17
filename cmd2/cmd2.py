@@ -1425,8 +1425,8 @@ class Cmd(cmd.Cmd):
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int, *,
                               argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
         """Default completion function for argparse commands"""
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(argparser, self)
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(argparser, self)
         tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
         # To have tab-completion parsing match command line parsing behavior,
@@ -2560,11 +2560,11 @@ class Cmd(cmd.Cmd):
         if func is None or argparser is None:
             return []
 
-        # Combine the command and its subcommand tokens for the AutoCompleter
+        # Combine the command and its subcommand tokens for the ArgparseCompleter
         tokens = [command] + arg_tokens['subcommands']
 
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(argparser, self)
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(argparser, self)
         return completer.complete_subcommand_help(tokens, text, line, begidx, endidx)
 
     help_parser = DEFAULT_ARGUMENT_PARSER(description="List available commands or provide "
@@ -2576,7 +2576,7 @@ class Cmd(cmd.Cmd):
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
-    # Get rid of cmd's complete_help() functions so AutoCompleter will complete the help command
+    # Get rid of cmd's complete_help() functions so ArgparseCompleter will complete the help command
     if getattr(cmd.Cmd, 'complete_help', None) is not None:
         delattr(cmd.Cmd, 'complete_help')
 
@@ -2594,8 +2594,8 @@ class Cmd(cmd.Cmd):
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
-                from .argparse_completer import AutoCompleter
-                completer = AutoCompleter(argparser, self)
+                from .argparse_completer import ArgparseCompleter
+                completer = ArgparseCompleter(argparser, self)
                 tokens = [args.command] + args.subcommands
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
@@ -2838,8 +2838,8 @@ class Cmd(cmd.Cmd):
                                      completer_function=settable.completer_function,
                                      completer_method=settable.completer_method)
 
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(settable_parser, self)
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(settable_parser, self)
 
         # Use raw_tokens since quotes have been preserved
         _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
@@ -2860,7 +2860,7 @@ class Cmd(cmd.Cmd):
     set_parser = DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
 
     # Suppress tab-completion hints for this field. The completer method is going to create an
-    # AutoCompleter based on the actual parameter being completed and we only want that hint printing.
+    # ArgparseCompleter based on the actual parameter being completed and we only want that hint printing.
     set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='new value for settable',
                             completer_method=complete_set_value, suppress_tab_hint=True)
 

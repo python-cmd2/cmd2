@@ -26,7 +26,7 @@ value with no upper bound, use a 1-item tuple (min,)
         parser.add_argument('-f', nargs=(3, 5))
 
 Tab Completion:
-    cmd2 uses its AutoCompleter class to enable argparse-based tab completion on all commands that use the
+    cmd2 uses its ArgparseCompleter class to enable argparse-based tab completion on all commands that use the
     @with_argparse wrappers. Out of the box you get tab completion of commands, subcommands, and flag names,
     as well as instructive hints about the current argument that print when tab is pressed. In addition,
     you can add tab completion for each argument's values using parameters passed to add_argument().
@@ -53,7 +53,7 @@ Tab Completion:
 
     choices_method
         This is exactly like choices_function, but the function needs to be an instance method of a cmd2-based class.
-        When AutoCompleter calls the method, it will pass the app instance as the self argument. This is good in
+        When ArgparseCompleter calls the method, it will pass the app instance as the self argument. This is good in
         cases where the list of choices being generated relies on state data of the cmd2-based app
 
         Example:
@@ -74,7 +74,7 @@ Tab Completion:
 
     completer_method
         This is exactly like completer_function, but the function needs to be an instance method of a cmd2-based class.
-        When AutoCompleter calls the method, it will pass the app instance as the self argument. cmd2 provides
+        When ArgparseCompleter calls the method, it will pass the app instance as the self argument. cmd2 provides
         a few completer methods for convenience (e.g., path_complete, delimiter_complete)
 
         Example:
@@ -113,12 +113,12 @@ Tab Completion:
             def my_completer_method(self, text, line, begidx, endidx, arg_tokens)
 
     All values of the arg_tokens dictionary are lists, even if a particular argument expects only 1 token. Since
-    AutoCompleter is for tab completion, it does not convert the tokens to their actual argument types or validate
+    ArgparseCompleter is for tab completion, it does not convert the tokens to their actual argument types or validate
     their values. All tokens are stored in the dictionary as the raw strings provided on the command line. It is up to
     the developer to determine if the user entered the correct argument type (e.g. int) and validate their values.
 
 CompletionError Class:
-    Raised during tab completion operations to report any sort of error you want printed by the AutoCompleter
+    Raised during tab completion operations to report any sort of error you want printed by the ArgparseCompleter
 
     Example use cases
     - Reading a database to retrieve a tab completion data set failed
@@ -127,7 +127,7 @@ CompletionError Class:
 CompletionItem Class:
     This class was added to help in cases where uninformative data is being tab completed. For instance,
     tab completing ID numbers isn't very helpful to a user without context. Returning a list of CompletionItems
-    instead of a regular string for completion results will signal the AutoCompleter to output the completion
+    instead of a regular string for completion results will signal the ArgparseCompleter to output the completion
     results in a table of completion tokens with descriptions instead of just a table of tokens.
 
     Instead of this:
@@ -231,7 +231,7 @@ def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
 
 class CompletionError(Exception):
     """
-    Raised during tab completion operations to report any sort of error you want printed by the AutoCompleter
+    Raised during tab completion operations to report any sort of error you want printed by the ArgparseCompleter
 
     Example use cases
     - Reading a database to retrieve a tab completion data set failed
@@ -353,15 +353,15 @@ def _add_argument_wrapper(self, *args,
     :param nargs: extends argparse nargs functionality by allowing tuples which specify a range (min, max)
                   to specify a max value with no upper bound, use a 1-item tuple (min,)
 
-    # Added args used by AutoCompleter
+    # Added args used by ArgparseCompleter
     :param choices_function: function that provides choices for this argument
     :param choices_method: cmd2-app method that provides choices for this argument
     :param completer_function: tab completion function that provides choices for this argument
     :param completer_method: cmd2-app tab completion method that provides choices for this argument
-    :param suppress_tab_hint: when AutoCompleter has no results to show during tab completion, it displays the current
-                              argument's help text as a hint. Set this to True to suppress the hint. If this argument's
-                              help text is set to argparse.SUPPRESS, then tab hints will not display regardless of the
-                              value passed for suppress_tab_hint. Defaults to False.
+    :param suppress_tab_hint: when ArgparseCompleter has no results to show during tab completion, it displays the
+                              current argument's help text as a hint. Set this to True to suppress the hint. If this
+                              argument's help text is set to argparse.SUPPRESS, then tab hints will not display
+                              regardless of the value passed for suppress_tab_hint. Defaults to False.
     :param descriptive_header: if the provided choices are CompletionItems, then this header will display
                                during tab completion. Defaults to None.
 

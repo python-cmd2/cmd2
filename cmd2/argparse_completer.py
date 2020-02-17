@@ -2,7 +2,7 @@
 # flake8: noqa C901
 # NOTE: Ignoring flake8 cyclomatic complexity in this file
 """
-This module defines the AutoCompleter class which provides argparse-based tab completion to cmd2 apps.
+This module defines the ArgparseCompleter class which provides argparse-based tab completion to cmd2 apps.
 See the header of argparse_custom.py for instructions on how to use these features.
 """
 
@@ -64,7 +64,7 @@ def _looks_like_flag(token: str, parser: argparse.ArgumentParser) -> bool:
 
 
 # noinspection PyProtectedMember
-class AutoCompleter:
+class ArgparseCompleter:
     """Automatic command line tab completion based on argparse parameters"""
 
     class _ArgumentState:
@@ -103,12 +103,12 @@ class AutoCompleter:
     def __init__(self, parser: argparse.ArgumentParser, cmd2_app: cmd2.Cmd, *,
                  parent_tokens: Optional[Dict[str, List[str]]] = None) -> None:
         """
-        Create an AutoCompleter
+        Create an ArgparseCompleter
 
         :param parser: ArgumentParser instance
-        :param cmd2_app: reference to the Cmd2 application that owns this AutoCompleter
+        :param cmd2_app: reference to the Cmd2 application that owns this ArgparseCompleter
         :param parent_tokens: optional dictionary mapping parent parsers' arg names to their tokens
-                              this is only used by AutoCompleter when recursing on subcommand parsers
+                              This is only used by ArgparseCompleter when recursing on subcommand parsers
                               Defaults to None
         """
         self._parser = parser
@@ -167,7 +167,7 @@ class AutoCompleter:
         # Completed mutually exclusive groups
         completed_mutex_groups = dict()  # dict(argparse._MutuallyExclusiveGroup -> Action which completed group)
 
-        def consume_argument(arg_state: AutoCompleter._ArgumentState) -> None:
+        def consume_argument(arg_state: ArgparseCompleter._ArgumentState) -> None:
             """Consuming token as an argument"""
             arg_state.count += 1
             consumed_arg_values.setdefault(arg_state.action.dest, [])
@@ -286,7 +286,7 @@ class AutoCompleter:
                         # earlier in the command line. Reset them now for this use of it.
                         consumed_arg_values[action.dest] = []
 
-                    new_arg_state = AutoCompleter._ArgumentState(action)
+                    new_arg_state = ArgparseCompleter._ArgumentState(action)
 
                     # Keep track of this flag if it can receive arguments
                     if new_arg_state.max > 0:
@@ -319,8 +319,8 @@ class AutoCompleter:
                                 if action.dest != argparse.SUPPRESS:
                                     parent_tokens[action.dest] = [token]
 
-                                completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app,
-                                                          parent_tokens=parent_tokens)
+                                completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app,
+                                                              parent_tokens=parent_tokens)
                                 return completer.complete_command(tokens[token_index:], text, line, begidx, endidx)
                             else:
                                 # Invalid subcommand entered, so no way to complete remaining tokens
@@ -328,7 +328,7 @@ class AutoCompleter:
 
                         # Otherwise keep track of the argument
                         else:
-                            pos_arg_state = AutoCompleter._ArgumentState(action)
+                            pos_arg_state = ArgparseCompleter._ArgumentState(action)
 
                 # Check if we have a positional to consume this token
                 if pos_arg_state is not None:
@@ -393,7 +393,7 @@ class AutoCompleter:
             # If we aren't current tracking a positional, then get the next positional arg to handle this token
             if pos_arg_state is None:
                 action = remaining_positionals.popleft()
-                pos_arg_state = AutoCompleter._ArgumentState(action)
+                pos_arg_state = ArgparseCompleter._ArgumentState(action)
 
             try:
                 completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
@@ -483,11 +483,11 @@ class AutoCompleter:
         :return: List of subcommand completions
         """
         # If our parser has subcommands, we must examine the tokens and check if they are subcommands
-        # If so, we will let the subcommand's parser handle the rest of the tokens via another AutoCompleter.
+        # If so, we will let the subcommand's parser handle the rest of the tokens via another ArgparseCompleter.
         if self._subcommand_action is not None:
             for token_index, token in enumerate(tokens[1:], start=1):
                 if token in self._subcommand_action.choices:
-                    completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                    completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app)
                     return completer.complete_subcommand_help(tokens[token_index:], text, line, begidx, endidx)
                 elif token_index == len(tokens) - 1:
                     # Since this is the last token, we will attempt to complete it
@@ -503,11 +503,11 @@ class AutoCompleter:
         :return: help text of the command being queried
         """
         # If our parser has subcommands, we must examine the tokens and check if they are subcommands
-        # If so, we will let the subcommand's parser handle the rest of the tokens via another AutoCompleter.
+        # If so, we will let the subcommand's parser handle the rest of the tokens via another ArgparseCompleter.
         if self._subcommand_action is not None:
             for token_index, token in enumerate(tokens[1:], start=1):
                 if token in self._subcommand_action.choices:
-                    completer = AutoCompleter(self._subcommand_action.choices[token], self._cmd2_app)
+                    completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app)
                     return completer.format_help(tokens[token_index:])
                 else:
                     break

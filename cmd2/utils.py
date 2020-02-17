@@ -109,8 +109,8 @@ class Settable:
                                  for this argument (See note below)
 
         Note:
-        For choices_method and completer_method, do not set them to a bound method. This is because AutoCompleter
-        passes the self argument explicitly to these functions.
+        For choices_method and completer_method, do not set them to a bound method. This is because
+        ArgparseCompleter passes the self argument explicitly to these functions.
 
         Therefore instead of passing something like self.path_complete, pass cmd2.Cmd.path_complete.
         """

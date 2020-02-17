@@ -15,6 +15,7 @@
     * Only tab complete after redirection tokens if redirection is allowed
 * Other
     * Removed undocumented `py run` command since it was replaced by `run_pyscript` a while ago
+    * Renamed `AutoCompleter` to `ArgparseCompleter` for clarity
 
 ## 0.10.0 (February 7, 2020)
 * Enhancements
