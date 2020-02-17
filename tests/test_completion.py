@@ -902,11 +902,6 @@ class RedirCompType(enum.Enum):
     DEFAULT = 3,
     NONE = 4
 
-    """   
-    fake > > 
-    fake | grep > file 
-    fake | grep > file > 
-    """
 
 @pytest.mark.parametrize('line, comp_type', [
     ('fake', RedirCompType.DEFAULT),
@@ -933,31 +928,40 @@ class RedirCompType(enum.Enum):
     ('fake > file >>', RedirCompType.NONE),
 ])
 def test_redirect_complete(cmd2_app, monkeypatch, line, comp_type):
-    shell_cmd_complete_mock = mock.MagicMock(name='shell_cmd_complete')
-    monkeypatch.setattr("cmd2.Cmd.shell_cmd_complete", shell_cmd_complete_mock)
+    # Test both cases of allow_redirection
+    cmd2_app.allow_redirection = True
+    for count in range(2):
+        shell_cmd_complete_mock = mock.MagicMock(name='shell_cmd_complete')
+        monkeypatch.setattr("cmd2.Cmd.shell_cmd_complete", shell_cmd_complete_mock)
 
-    path_complete_mock = mock.MagicMock(name='path_complete')
-    monkeypatch.setattr("cmd2.Cmd.path_complete", path_complete_mock)
+        path_complete_mock = mock.MagicMock(name='path_complete')
+        monkeypatch.setattr("cmd2.Cmd.path_complete", path_complete_mock)
 
-    default_complete_mock = mock.MagicMock(name='fake_completer')
+        default_complete_mock = mock.MagicMock(name='fake_completer')
 
-    text = ''
-    line = '{} {}'.format(line, text)
-    endidx = len(line)
-    begidx = endidx - len(text)
+        text = ''
+        line = '{} {}'.format(line, text)
+        endidx = len(line)
+        begidx = endidx - len(text)
 
-    cmd2_app._redirect_complete(text, line, begidx, endidx, default_complete_mock)
+        cmd2_app._redirect_complete(text, line, begidx, endidx, default_complete_mock)
 
-    if comp_type == RedirCompType.SHELL_CMD:
-        shell_cmd_complete_mock.assert_called_once()
-    elif comp_type == RedirCompType.PATH:
-        path_complete_mock.assert_called_once()
-    elif comp_type == RedirCompType.DEFAULT:
-        default_complete_mock.assert_called_once()
-    else:
-        shell_cmd_complete_mock.assert_not_called()
-        path_complete_mock.assert_not_called()
-        default_complete_mock.assert_not_called()
+        if comp_type == RedirCompType.SHELL_CMD:
+            shell_cmd_complete_mock.assert_called_once()
+        elif comp_type == RedirCompType.PATH:
+            path_complete_mock.assert_called_once()
+        elif comp_type == RedirCompType.DEFAULT:
+            default_complete_mock.assert_called_once()
+        else:
+            shell_cmd_complete_mock.assert_not_called()
+            path_complete_mock.assert_not_called()
+            default_complete_mock.assert_not_called()
+
+        # Do the next test with allow_redirection as False
+        cmd2_app.allow_redirection = False
+        if comp_type != RedirCompType.DEFAULT:
+            comp_type = RedirCompType.NONE
+
 
 def test_complete_set_value(cmd2_app):
     text = ''
