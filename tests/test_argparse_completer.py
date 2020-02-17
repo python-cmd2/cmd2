@@ -699,7 +699,7 @@ def test_completion_items_default_header(ac_app):
     ('hint', '', True),
     ('hint --flag', '', True),
     ('hint --suppressed_help', '', False),
-    ('hint --suppressed_hint', '--', False),
+    ('hint --suppressed_hint', '', False),
 
     # Hint because flag does not have enough values to be considered finished
     ('nargs --one_or_more', '-', True),
@@ -730,7 +730,10 @@ def test_autocomp_hint(ac_app, command_and_args, text, has_hint, capsys):
 
     complete_tester(text, line, begidx, endidx, ac_app)
     out, err = capsys.readouterr()
-    assert has_hint == ("Hint:\n" in out)
+    if has_hint:
+        assert "Hint:\n" in out
+    else:
+        assert not out
 
 
 def test_autocomp_hint_no_help_text(ac_app, capsys):
