@@ -3093,8 +3093,7 @@ class Cmd(cmd.Cmd):
 
     # This is a hidden flag for telling do_py to run a pyscript. It is intended only to be used by run_pyscript
     # after it sets up sys.argv for the script being run. When this flag is present, it takes precedence over all
-    # other arguments. run_pyscript uses this method instead of "py run('file')" because file names with
-    # 2 or more consecutive spaces cause issues with our parser, which isn't meant to parse Python statements.
+    # other arguments.
     py_parser.add_argument('--pyscript', help=argparse.SUPPRESS)
 
     # Preserve quotes since we are passing these strings to Python
@@ -3104,65 +3103,68 @@ class Cmd(cmd.Cmd):
         Enter an interactive Python shell
         :return: True if running of commands should stop
         """
+        def py_quit():
+            """Function callable from the interactive Python console to exit that environment"""
+            raise EmbeddedConsoleExit
+
         from .py_bridge import PyBridge
+        py_bridge = PyBridge(self)
+        saved_sys_path = None
+
         if self.in_pyscript():
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err)
             return
 
-        py_bridge = PyBridge(self)
-        py_code_to_run = ''
-
-        # Handle case where we were called by run_pyscript
-        if args.pyscript:
-            args.pyscript = utils.strip_quotes(args.pyscript)
-
-            # Run the script - use repr formatting to escape things which
-            # need to be escaped to prevent issues on Windows
-            py_code_to_run = 'run({!r})'.format(args.pyscript)
-
-        elif args.command:
-            py_code_to_run = args.command
-            if args.remainder:
-                py_code_to_run += ' ' + ' '.join(args.remainder)
-
-            # Set cmd_echo to True so PyBridge statements like: py app('help')
-            # run at the command line will print their output.
-            py_bridge.cmd_echo = True
-
         try:
             self._in_py = True
+            py_code_to_run = ''
 
-            def py_run(filename: str):
-                """Run a Python script file in the interactive console.
-                :param filename: filename of script file to run
-                """
-                expanded_filename = os.path.expanduser(filename)
+            # Use self.py_locals as the locals() dictionary in the Python environment we are creating, but make
+            # a copy to prevent pyscripts from editing it. (e.g. locals().clear()). Only make a shallow copy since
+            # it's OK for py_locals to contain objects which are editable in a pyscript.
+            localvars = dict(self.py_locals)
+            localvars[self.py_bridge_name] = py_bridge
+            localvars['quit'] = py_quit
+            localvars['exit'] = py_quit
+
+            if self.self_in_py:
+                localvars['self'] = self
+
+            # Handle case where we were called by run_pyscript
+            if args.pyscript:
+                # Read the script file
+                expanded_filename = os.path.expanduser(utils.strip_quotes(args.pyscript))
 
                 try:
                     with open(expanded_filename) as f:
-                        interp.runcode(f.read())
+                        py_code_to_run = f.read()
                 except OSError as ex:
                     self.pexcept("Error reading script file '{}': {}".format(expanded_filename, ex))
+                    return
 
-            def py_quit():
-                """Function callable from the interactive Python console to exit that environment"""
-                raise EmbeddedConsoleExit
+                localvars['__name__'] = '__main__'
+                localvars['__file__'] = expanded_filename
 
-            # Set up Python environment
-            self.py_locals[self.py_bridge_name] = py_bridge
-            self.py_locals['run'] = py_run
-            self.py_locals['quit'] = py_quit
-            self.py_locals['exit'] = py_quit
+                # Place the script's directory at sys.path[0] just as Python does when executing a script
+                saved_sys_path = list(sys.path)
+                sys.path.insert(0, os.path.dirname(os.path.abspath(expanded_filename)))
 
-            if self.self_in_py:
-                self.py_locals['self'] = self
-            elif 'self' in self.py_locals:
-                del self.py_locals['self']
+            else:
+                # This is the default name chosen by InteractiveConsole when no locals are passed in
+                localvars['__name__'] = '__console__'
 
-            localvars = self.py_locals
+                if args.command:
+                    py_code_to_run = args.command
+                    if args.remainder:
+                        py_code_to_run += ' ' + ' '.join(args.remainder)
+
+                    # Set cmd_echo to True so PyBridge statements like: py app('help')
+                    # run at the command line will print their output.
+                    py_bridge.cmd_echo = True
+
+            # Create the Python interpreter
             interp = InteractiveConsole(locals=localvars)
-            interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
             # Check if we are running Python code
             if py_code_to_run:
@@ -3177,8 +3179,7 @@ class Cmd(cmd.Cmd):
             else:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                 instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
-                                'Non-Python commands can be issued with: {}("your command")\n'
-                                'Run Python code from external script files with: run("script.py")'
+                                'Non-Python commands can be issued with: {}("your command")'
                                 .format(self.py_bridge_name))
 
                 saved_cmd2_env = None
@@ -3205,7 +3206,10 @@ class Cmd(cmd.Cmd):
             pass
 
         finally:
-            self._in_py = False
+            with self.sigint_protection:
+                if saved_sys_path is not None:
+                    sys.path = saved_sys_path
+                self._in_py = False
 
         return py_bridge.stop
 

@@ -117,10 +117,9 @@ def test_run_pyscript_stop(base_app, request):
     stop = base_app.onecmd_plus_hooks('run_pyscript {}'.format(python_script))
     assert stop
 
-def test_run_pyscript_run(base_app, request):
+def test_run_pyscript_environment(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
-    python_script = os.path.join(test_dir, 'pyscript', 'run.py')
-    expected = 'I have been run'
+    python_script = os.path.join(test_dir, 'pyscript', 'environment.py')
+    out, err = run_cmd(base_app, 'run_pyscript {}'.format(python_script))
 
-    out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
-    assert expected in out
+    assert out[0] == "PASSED"

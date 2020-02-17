@@ -3,8 +3,17 @@
     * Corrected issue where the actual new value was not always being printed in do_set. This occurred in cases where
       the typed value differed from what the setter had converted it to.
     * Fixed bug where ANSI style sequences were not correctly handled in `utils.truncate_line()`. 
+    * Fixed bug where pyscripts could edit `cmd2.Cmd.py_locals` dictionary.
+    * Fixed bug where cmd2 set sys.path[0] for a pyscript to cmd2's working directory instead of the 
+    script file's directory.
+    * Fixed bug where sys.path was not being restored after a pyscript ran.
 * Enhancements
     * Renamed set command's `-l/--long` flag to `-v/--verbose` for consistency with help and history commands.
+    * Setting the following pyscript variables:
+        * `__name__`: __main__
+        * `__file__`: script path (as typed, ~ will be expanded)
+* Other
+    * Removed undocumented `py run` command since it was replaced by `run_pyscript` a while ago
 
 ## 0.10.0 (February 7, 2020)
 * Enhancements
