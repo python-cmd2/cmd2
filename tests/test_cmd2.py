@@ -206,7 +206,7 @@ def test_base_shell(base_app, monkeypatch):
 
 def test_base_py(base_app):
     # Make sure py can't edit Cmd.py_locals. It used to be that cmd2 was passing its py_locals
-    # dictionary to the py environment instead of a copy.
+    # dictionary to the py environment instead of a shallow copy.
     base_app.py_locals['test_var'] = 5
     out, err = run_cmd(base_app, 'py del[locals()["test_var"]]')
     assert not out and not err
@@ -214,6 +214,13 @@ def test_base_py(base_app):
 
     out, err = run_cmd(base_app, 'py print(test_var)')
     assert out[0].rstrip() == '5'
+
+    # Place an editable object in py_locals. Since we make a shallow copy of py_locals,
+    # this object should be editable from the py environment.
+    base_app.py_locals['my_list'] = []
+    out, err = run_cmd(base_app, 'py my_list.append(2)')
+    assert not out and not err
+    assert base_app.py_locals['my_list'][0] == 2
 
     # Try a print statement
     out, err = run_cmd(base_app, 'py print("spaces" + " in this " + "command")')

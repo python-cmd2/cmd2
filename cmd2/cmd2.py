@@ -3120,7 +3120,9 @@ class Cmd(cmd.Cmd):
             self._in_py = True
             py_code_to_run = ''
 
-            # Locals for the Python environment we are creating
+            # Use self.py_locals as the locals() dictionary in the Python environment we are creating, but make
+            # a copy to prevent pyscripts from editing it. (e.g. locals().clear()). Only make a shallow copy since
+            # it's OK for py_locals to contain objects which are editable in a pyscript.
             localvars = dict(self.py_locals)
             localvars[self.py_bridge_name] = py_bridge
             localvars['quit'] = py_quit

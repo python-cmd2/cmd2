@@ -12,6 +12,8 @@
     * Setting the following pyscript variables:
         * `__name__`: __main__
         * `__file__`: script path (as typed, ~ will be expanded)
+* Other
+    * Removed undocumented `py run` command since it was replaced by `run_pyscript` a while ago
 
 ## 0.10.0 (February 7, 2020)
 * Enhancements
