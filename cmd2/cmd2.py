@@ -1050,8 +1050,8 @@ class Cmd(cmd.Cmd):
                         in_pipe = False
                         in_file_redir = True
 
-                # Not a redirection token
-                else:
+                # Only tab complete after redirection tokens if redirection is allowed
+                elif self.allow_redirection:
                     do_shell_completion = False
                     do_path_completion = False
 
