@@ -117,13 +117,6 @@ Tab Completion:
     their values. All tokens are stored in the dictionary as the raw strings provided on the command line. It is up to
     the developer to determine if the user entered the correct argument type (e.g. int) and validate their values.
 
-CompletionError Class:
-    Raised during tab completion operations to report any sort of error you want printed by the ArgparseCompleter
-
-    Example use cases
-    - Reading a database to retrieve a tab completion data set failed
-    - A previous command line argument that determines the data set being completed is invalid
-
 CompletionItem Class:
     This class was added to help in cases where uninformative data is being tab completed. For instance,
     tab completing ID numbers isn't very helpful to a user without context. Returning a list of CompletionItems
@@ -227,17 +220,6 @@ def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
             err_str += "s"
 
     return err_str
-
-
-class CompletionError(Exception):
-    """
-    Raised during tab completion operations to report any sort of error you want printed by the ArgparseCompleter
-
-    Example use cases
-    - Reading a database to retrieve a tab completion data set failed
-    - A previous command line argument that determines the data set being completed is invalid
-    """
-    pass
 
 
 class CompletionItem(str):

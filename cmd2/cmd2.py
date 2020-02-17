@@ -47,13 +47,13 @@ from . import ansi
 from . import constants
 from . import plugin
 from . import utils
-from .argparse_custom import CompletionError, CompletionItem, DEFAULT_ARGUMENT_PARSER
+from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
-from .utils import Settable
+from .utils import CompletionError, Settable
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
@@ -1416,6 +1416,12 @@ class Cmd(cmd.Cmd):
             except IndexError:
                 return None
 
+        except CompletionError as e:
+            err_str = str(e)
+            if err_str:
+                ansi.style_aware_write(sys.stdout, err_str + '\n')
+                rl_force_redisplay()
+            return None
         except Exception as e:
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
             self.perror()

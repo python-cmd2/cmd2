@@ -72,6 +72,17 @@ def str_to_bool(val: str) -> bool:
     raise ValueError("must be True or False (case-insensitive)")
 
 
+class CompletionError(Exception):
+    """
+    Raised during tab completion operations to report any sort of error you want printed by the ArgparseCompleter
+
+    Example use cases
+    - Reading a database to retrieve a tab completion data set failed
+    - A previous command line argument that determines the data set being completed is invalid
+    """
+    pass
+
+
 class Settable:
     """Used to configure a cmd2 instance member to be settable via the set command in the CLI"""
     def __init__(self, name: str, val_type: Callable, description: str, *,

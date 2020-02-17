@@ -9,8 +9,8 @@ from typing import List
 import pytest
 
 import cmd2
-from cmd2 import with_argparser, Cmd2ArgumentParser, CompletionError, CompletionItem
-from cmd2.utils import StdSim, basic_complete
+from cmd2 import with_argparser, Cmd2ArgumentParser, CompletionItem
+from cmd2.utils import CompletionError, StdSim, basic_complete
 from .conftest import run_cmd, complete_tester
 
 # Lists used in our tests (there is a mix of sorted and unsorted on purpose)
