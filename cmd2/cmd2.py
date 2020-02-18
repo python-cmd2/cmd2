@@ -1429,6 +1429,7 @@ class Cmd(cmd.Cmd):
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
             self.perror()
             self.pexcept(e)
+            rl_force_redisplay()
             return None
 
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int, *,
