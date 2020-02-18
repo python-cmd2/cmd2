@@ -231,7 +231,7 @@ class ArgparseCompleter:
                         if arg_action == completer_action:
                             return
 
-                        error = ("Error: argument {}: not allowed with argument {}\n".
+                        error = ("Error: argument {}: not allowed with argument {}".
                                  format(argparse._get_action_name(arg_action),
                                         argparse._get_action_name(completer_action)))
                         raise CompletionError(error)
