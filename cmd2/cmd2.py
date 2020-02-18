@@ -1417,8 +1417,8 @@ class Cmd(cmd.Cmd):
                 return None
 
         except CompletionError as ex:
-            err_str = str(ex)
             # Don't print error and redraw the prompt unless the error has length
+            err_str = str(ex)
             if err_str:
                 if ex.apply_style:
                     err_str = ansi.style_error(err_str)
