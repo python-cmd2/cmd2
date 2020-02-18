@@ -95,8 +95,13 @@ class _ArgumentState:
             self.max = self.action.nargs
 
 
+class _ArgparseCompletionError(CompletionError):
+    """CompletionError specific to argparse-based tab completion"""
+    pass
+
+
 # noinspection PyProtectedMember
-class _ActionCompletionError(CompletionError):
+class _ActionCompletionError(_ArgparseCompletionError):
     def __init__(self, arg_action: argparse.Action, completion_error: CompletionError) -> None:
         """
         Adds action-specific information to a CompletionError. These are raised when
@@ -107,19 +112,19 @@ class _ActionCompletionError(CompletionError):
         # Indent all lines of completion_error
         indented_error = textwrap.indent(str(completion_error), '  ')
 
-        error = ("\nError tab completing {}:\n"
-                 "{}\n".format(argparse._get_action_name(arg_action), indented_error))
+        error = ("Error tab completing {}:\n"
+                 "{}".format(argparse._get_action_name(arg_action), indented_error))
         super().__init__(ansi.style_error(error))
 
 
 # noinspection PyProtectedMember
-class _UnfinishedFlagError(CompletionError):
+class _UnfinishedFlagError(_ArgparseCompletionError):
     def __init__(self, flag_arg_state: _ArgumentState) -> None:
         """
         CompletionError which occurs when the user has not finished the current flag
         :param flag_arg_state: information about the unfinished flag action
         """
-        error = "\nError: argument {}: {} ({} entered)\n".\
+        error = "Error: argument {}: {} ({} entered)".\
             format(argparse._get_action_name(flag_arg_state.action),
                    generate_range_error(flag_arg_state.min, flag_arg_state.max),
                    flag_arg_state.count)
@@ -127,7 +132,7 @@ class _UnfinishedFlagError(CompletionError):
 
 
 # noinspection PyProtectedMember
-class _NoResultsError(CompletionError):
+class _NoResultsError(_ArgparseCompletionError):
     def __init__(self, parser: argparse.ArgumentParser, arg_action: argparse.Action) -> None:
         """
         CompletionError which occurs when there are no results. If hinting is allowed, then its message will
@@ -145,7 +150,7 @@ class _NoResultsError(CompletionError):
             formatter.start_section("Hint")
             formatter.add_argument(arg_action)
             formatter.end_section()
-            hint_str = '\n' + formatter.format_help()
+            hint_str = formatter.format_help()
         super().__init__(hint_str)
 
 
@@ -416,6 +421,8 @@ class ArgparseCompleter:
             try:
                 completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
                                                             begidx, endidx, consumed_arg_values)
+            except _ArgparseCompletionError as ex:
+                raise ex
             except CompletionError as ex:
                 raise _ActionCompletionError(flag_arg_state.action, ex)
 
@@ -439,6 +446,8 @@ class ArgparseCompleter:
             try:
                 completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
                                                             begidx, endidx, consumed_arg_values)
+            except _ArgparseCompletionError as ex:
+                raise ex
             except CompletionError as ex:
                 raise _ActionCompletionError(pos_arg_state.action, ex)
 

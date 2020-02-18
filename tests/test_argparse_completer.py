@@ -30,6 +30,8 @@ positional_choices = ['the', 'positional', 'choices']
 completions_from_function = ['completions', 'function', 'fairly', 'complete']
 completions_from_method = ['completions', 'method', 'missed', 'spot']
 
+AP_COMP_ERROR_TEXT = "SHOULD ONLY BE THIS TEXT"
+
 
 def choices_function() -> List[str]:
     """Function that provides choices"""
@@ -53,7 +55,7 @@ def completer_takes_arg_tokens(text: str, line: str, begidx: int, endidx: int,
     return basic_complete(text, line, begidx, endidx, match_against)
 
 
-# noinspection PyMethodMayBeStatic,PyUnusedLocal
+# noinspection PyMethodMayBeStatic,PyUnusedLocal,PyProtectedMember
 class AutoCompleteTester(cmd2.Cmd):
     """Cmd2 app that exercises ArgparseCompleter class"""
     def __init__(self, *args, **kwargs):
@@ -181,6 +183,7 @@ class AutoCompleteTester(cmd2.Cmd):
                               choices=one_or_more_choices)
     nargs_parser.add_argument("--optional", help="a flag with an optional value", nargs=argparse.OPTIONAL,
                               choices=optional_choices)
+    # noinspection PyTypeChecker
     nargs_parser.add_argument("--range", help="a flag with nargs range", nargs=(1, 2),
                               choices=range_choices)
     nargs_parser.add_argument("--remainder", help="a flag wanting remaining", nargs=argparse.REMAINDER,
@@ -229,6 +232,24 @@ class AutoCompleteTester(cmd2.Cmd):
 
     @with_argparser(comp_error_parser)
     def do_raise_completion_error(self, args: argparse.Namespace) -> None:
+        pass
+
+    ############################################################################################################
+    # Begin code related to _ArgparseCompletionError
+    ############################################################################################################
+    def raise_argparse_completion_error(self):
+        """Raises ArgparseCompletionError to make sure it gets raised as is"""
+        from cmd2.argparse_completer import _ArgparseCompletionError
+        raise _ArgparseCompletionError(AP_COMP_ERROR_TEXT)
+
+    ap_comp_error_parser = Cmd2ArgumentParser()
+    ap_comp_error_parser.add_argument('pos_ap_comp_err', help='pos ap completion error',
+                                      choices_method=raise_argparse_completion_error)
+    ap_comp_error_parser.add_argument('--flag_ap_comp_err', help='flag ap completion error',
+                                      choices_method=raise_argparse_completion_error)
+
+    @with_argparser(ap_comp_error_parser)
+    def do_raise_ap_completion_error(self, args: argparse.Namespace) -> None:
         pass
 
     ############################################################################################################
@@ -770,6 +791,25 @@ def test_completion_error(ac_app, capsys, args, text):
 
     assert first_match is None
     assert "{} broke something".format(text) in out
+
+
+@pytest.mark.parametrize('arg', [
+    # Exercise positional arg that raises _ArgparseCompletionError
+    '',
+
+    # Exercise flag arg that raises _ArgparseCompletionError
+    '--flag_ap_comp_err'
+])
+def test_argparse_completion_error(ac_app, capsys, arg):
+    text = ''
+    line = 'raise_ap_completion_error {} {}'.format(arg, text)
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, ac_app)
+    assert first_match is None
+    out, err = capsys.readouterr()
+    assert out.strip() == AP_COMP_ERROR_TEXT
 
 
 @pytest.mark.parametrize('command_and_args, completions', [

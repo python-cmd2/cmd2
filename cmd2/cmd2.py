@@ -1420,7 +1420,7 @@ class Cmd(cmd.Cmd):
             err_str = str(e)
             if err_str:
                 # Don't print error and redraw the prompt unless the error has length
-                ansi.style_aware_write(sys.stdout, err_str + '\n')
+                ansi.style_aware_write(sys.stdout, '\n' + err_str + '\n')
                 rl_force_redisplay()
             return None
         except Exception as e:
