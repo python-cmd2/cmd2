@@ -16,7 +16,6 @@ import functools
 from typing import List
 
 import cmd2
-from cmd2 import ansi
 
 # List of strings used with completion functions
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
@@ -99,7 +98,7 @@ class BasicCompletion(cmd2.Cmd):
             - Reading a database to retrieve a tab completion data set failed
             - A previous command line argument that determines the data set being completed is invalid
         """
-        raise cmd2.CompletionError(ansi.style_error("This is how a CompletionError behaves"))
+        raise cmd2.CompletionError("This is how a CompletionError behaves")
 
 
 if __name__ == '__main__':

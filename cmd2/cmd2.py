@@ -1416,10 +1416,12 @@ class Cmd(cmd.Cmd):
             except IndexError:
                 return None
 
-        except CompletionError as e:
-            err_str = str(e)
+        except CompletionError as ex:
+            err_str = str(ex)
+            # Don't print error and redraw the prompt unless the error has length
             if err_str:
-                # Don't print error and redraw the prompt unless the error has length
+                if ex.apply_style:
+                    err_str = ansi.style_error(err_str)
                 ansi.style_aware_write(sys.stdout, '\n' + err_str + '\n')
                 rl_force_redisplay()
             return None

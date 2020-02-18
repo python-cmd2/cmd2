@@ -10,7 +10,6 @@ import argparse
 import inspect
 import numbers
 import shutil
-import textwrap
 from collections import deque
 from typing import Dict, List, Optional, Union
 
@@ -95,30 +94,8 @@ class _ArgumentState:
             self.max = self.action.nargs
 
 
-class _ArgparseCompletionError(CompletionError):
-    """CompletionError specific to argparse-based tab completion"""
-    pass
-
-
 # noinspection PyProtectedMember
-class _ActionCompletionError(_ArgparseCompletionError):
-    def __init__(self, arg_action: argparse.Action, completion_error: CompletionError) -> None:
-        """
-        Adds action-specific information to a CompletionError. These are raised when
-        non-argparse related errors occur during tab completion.
-        :param arg_action: action being tab completed
-        :param completion_error: error that occurred
-        """
-        # Indent all lines of completion_error
-        indented_error = textwrap.indent(str(completion_error), '  ')
-
-        error = ("Error tab completing {}:\n"
-                 "{}".format(argparse._get_action_name(arg_action), indented_error))
-        super().__init__(ansi.style_error(error))
-
-
-# noinspection PyProtectedMember
-class _UnfinishedFlagError(_ArgparseCompletionError):
+class _UnfinishedFlagError(CompletionError):
     def __init__(self, flag_arg_state: _ArgumentState) -> None:
         """
         CompletionError which occurs when the user has not finished the current flag
@@ -128,11 +105,11 @@ class _UnfinishedFlagError(_ArgparseCompletionError):
             format(argparse._get_action_name(flag_arg_state.action),
                    generate_range_error(flag_arg_state.min, flag_arg_state.max),
                    flag_arg_state.count)
-        super().__init__(ansi.style_error(error))
+        super().__init__(error)
 
 
 # noinspection PyProtectedMember
-class _NoResultsError(_ArgparseCompletionError):
+class _NoResultsError(CompletionError):
     def __init__(self, parser: argparse.ArgumentParser, arg_action: argparse.Action) -> None:
         """
         CompletionError which occurs when there are no results. If hinting is allowed, then its message will
@@ -151,7 +128,8 @@ class _NoResultsError(_ArgparseCompletionError):
             formatter.add_argument(arg_action)
             formatter.end_section()
             hint_str = formatter.format_help()
-        super().__init__(hint_str)
+        # Set apply_style to False because we don't want hints to look like errors
+        super().__init__(hint_str, apply_style=False)
 
 
 # noinspection PyProtectedMember
@@ -253,9 +231,9 @@ class ArgparseCompleter:
                         if arg_action == completer_action:
                             return
 
-                        error = ansi.style_error("\nError: argument {}: not allowed with argument {}\n".
-                                                 format(argparse._get_action_name(arg_action),
-                                                        argparse._get_action_name(completer_action)))
+                        error = ("Error: argument {}: not allowed with argument {}\n".
+                                 format(argparse._get_action_name(arg_action),
+                                        argparse._get_action_name(completer_action)))
                         raise CompletionError(error)
 
                     # Mark that this action completed the group
@@ -418,13 +396,8 @@ class ArgparseCompleter:
 
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
-            try:
-                completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
-                                                            begidx, endidx, consumed_arg_values)
-            except _ArgparseCompletionError as ex:
-                raise ex
-            except CompletionError as ex:
-                raise _ActionCompletionError(flag_arg_state.action, ex)
+            completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
+                                                        begidx, endidx, consumed_arg_values)
 
             # If we have results, then return them
             if completion_results:
@@ -443,13 +416,8 @@ class ArgparseCompleter:
                 action = remaining_positionals.popleft()
                 pos_arg_state = _ArgumentState(action)
 
-            try:
-                completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
-                                                            begidx, endidx, consumed_arg_values)
-            except _ArgparseCompletionError as ex:
-                raise ex
-            except CompletionError as ex:
-                raise _ActionCompletionError(pos_arg_state.action, ex)
+            completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
+                                                        begidx, endidx, consumed_arg_values)
 
             # If we have results, then return them
             if completion_results:
