@@ -50,6 +50,7 @@ from . import utils
 from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
+from .exceptions import EmbeddedConsoleExit, EmptyStatement
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
@@ -104,16 +105,6 @@ class _SavedCmd2Env:
         self.history = []
         self.sys_stdout = None
         self.sys_stdin = None
-
-
-class EmbeddedConsoleExit(SystemExit):
-    """Custom exception class for use with the py command."""
-    pass
-
-
-class EmptyStatement(Exception):
-    """Custom exception class for handling behavior when the user just presses <Enter>."""
-    pass
 
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled

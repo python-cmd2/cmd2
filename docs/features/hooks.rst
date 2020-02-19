@@ -102,12 +102,7 @@ called each time it was registered.
 Postparsing, precommand, and postcommand hook methods share some common ways to
 influence the command processing loop.
 
-If a hook raises a ``cmd2.EmptyStatement`` exception:
-- no more hooks (except command finalization hooks) of any kind will be called
-- if the command has not yet been executed, it will not be executed
-- no error message will be displayed to the user
-
-If a hook raises any other exception:
+If a hook raises an exception:
 - no more hooks (except command finalization hooks) of any kind will be called
 - if the command has not yet been executed, it will not be executed
 - the exception message will be displayed for the user.
