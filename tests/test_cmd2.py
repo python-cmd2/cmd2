@@ -20,7 +20,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-from cmd2 import ansi, clipboard, constants, plugin, utils, COMMAND_NAME
+from cmd2 import ansi, clipboard, constants, exceptions, plugin, utils, COMMAND_NAME
 from .conftest import (run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT,
                        SHOW_LONG, complete_tester, odd_file_names)
 
@@ -1258,7 +1258,7 @@ def multiline_app():
     return app
 
 def test_multiline_complete_empty_statement_raises_exception(multiline_app):
-    with pytest.raises(cmd2.EmptyStatement):
+    with pytest.raises(exceptions.EmptyStatement):
         multiline_app._complete_statement('')
 
 def test_multiline_complete_statement_without_terminator(multiline_app):

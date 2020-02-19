@@ -14,7 +14,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-from cmd2 import plugin
+from cmd2 import exceptions, plugin
 
 
 class Plugin:
@@ -81,7 +81,7 @@ class Plugin:
     def postparse_hook_emptystatement(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """A postparsing hook with raises an EmptyStatement exception"""
         self.called_postparsing += 1
-        raise cmd2.EmptyStatement
+        raise exceptions.EmptyStatement
 
     def postparse_hook_exception(self, data: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         """A postparsing hook which raises an exception"""
@@ -126,7 +126,7 @@ class Plugin:
     def precmd_hook_emptystatement(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
         """A precommand hook which raises an EmptyStatement exception"""
         self.called_precmd += 1
-        raise cmd2.EmptyStatement
+        raise exceptions.EmptyStatement
 
     def precmd_hook_exception(self, data: plugin.PrecommandData) -> plugin.PrecommandData:
         """A precommand hook which raises an exception"""

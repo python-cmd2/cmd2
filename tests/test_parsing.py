@@ -7,7 +7,7 @@ import attr
 import pytest
 
 import cmd2
-from cmd2 import constants, utils
+from cmd2 import constants, exceptions, utils
 from cmd2.parsing import StatementParser, shlex_split
 
 @pytest.fixture
@@ -588,10 +588,10 @@ def test_parse_unclosed_quotes(parser):
 
 def test_empty_statement_raises_exception():
     app = cmd2.Cmd()
-    with pytest.raises(cmd2.EmptyStatement):
+    with pytest.raises(exceptions.EmptyStatement):
         app._complete_statement('')
 
-    with pytest.raises(cmd2.EmptyStatement):
+    with pytest.raises(exceptions.EmptyStatement):
         app._complete_statement(' ')
 
 @pytest.mark.parametrize('line,command,args', [

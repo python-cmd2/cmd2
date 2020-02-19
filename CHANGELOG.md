@@ -1,4 +1,4 @@
-## 0.10.1 (TBD)
+## 0.10.1 (February TBD, 2020)
 * Bug Fixes
     * Corrected issue where the actual new value was not always being printed in do_set. This occurred in cases where
       the typed value differed from what the setter had converted it to.
@@ -19,6 +19,7 @@
 * Other
     * Removed undocumented `py run` command since it was replaced by `run_pyscript` a while ago
     * Renamed `AutoCompleter` to `ArgparseCompleter` for clarity
+    * Custom `EmptyStatement` exception is no longer part of the documented public API
 
 ## 0.10.0 (February 7, 2020)
 * Enhancements
