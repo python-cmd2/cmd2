@@ -13,8 +13,12 @@
         * `__name__`: __main__
         * `__file__`: script path (as typed, ~ will be expanded)
     * Only tab complete after redirection tokens if redirection is allowed
+    * Made `CompletionError` exception available to non-argparse tab completion
+    * Added `apply_style` to `CompletionError` initializer. It defaults to True, but can be set to False if
+    you don't want the error text to have `ansi.style_error()` applied to it when printed.
 * Other
     * Removed undocumented `py run` command since it was replaced by `run_pyscript` a while ago
+    * Renamed `AutoCompleter` to `ArgparseCompleter` for clarity
 
 ## 0.10.0 (February 7, 2020)
 * Enhancements

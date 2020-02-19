@@ -47,13 +47,13 @@ from . import ansi
 from . import constants
 from . import plugin
 from . import utils
-from .argparse_custom import CompletionError, CompletionItem, DEFAULT_ARGUMENT_PARSER
+from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
-from .utils import Settable
+from .utils import CompletionError, Settable
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
@@ -1416,17 +1416,27 @@ class Cmd(cmd.Cmd):
             except IndexError:
                 return None
 
+        except CompletionError as ex:
+            # Don't print error and redraw the prompt unless the error has length
+            err_str = str(ex)
+            if err_str:
+                if ex.apply_style:
+                    err_str = ansi.style_error(err_str)
+                ansi.style_aware_write(sys.stdout, '\n' + err_str + '\n')
+                rl_force_redisplay()
+            return None
         except Exception as e:
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
             self.perror()
             self.pexcept(e)
+            rl_force_redisplay()
             return None
 
     def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int, *,
                               argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
         """Default completion function for argparse commands"""
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(argparser, self)
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(argparser, self)
         tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
         # To have tab-completion parsing match command line parsing behavior,
@@ -2560,11 +2570,11 @@ class Cmd(cmd.Cmd):
         if func is None or argparser is None:
             return []
 
-        # Combine the command and its subcommand tokens for the AutoCompleter
+        # Combine the command and its subcommand tokens for the ArgparseCompleter
         tokens = [command] + arg_tokens['subcommands']
 
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(argparser, self)
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(argparser, self)
         return completer.complete_subcommand_help(tokens, text, line, begidx, endidx)
 
     help_parser = DEFAULT_ARGUMENT_PARSER(description="List available commands or provide "
@@ -2576,7 +2586,7 @@ class Cmd(cmd.Cmd):
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
-    # Get rid of cmd's complete_help() functions so AutoCompleter will complete the help command
+    # Get rid of cmd's complete_help() functions so ArgparseCompleter will complete the help command
     if getattr(cmd.Cmd, 'complete_help', None) is not None:
         delattr(cmd.Cmd, 'complete_help')
 
@@ -2594,8 +2604,8 @@ class Cmd(cmd.Cmd):
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
-                from .argparse_completer import AutoCompleter
-                completer = AutoCompleter(argparser, self)
+                from .argparse_completer import ArgparseCompleter
+                completer = ArgparseCompleter(argparser, self)
                 tokens = [args.command] + args.subcommands
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
@@ -2838,8 +2848,8 @@ class Cmd(cmd.Cmd):
                                      completer_function=settable.completer_function,
                                      completer_method=settable.completer_method)
 
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(settable_parser, self)
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(settable_parser, self)
 
         # Use raw_tokens since quotes have been preserved
         _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
@@ -2860,7 +2870,7 @@ class Cmd(cmd.Cmd):
     set_parser = DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
 
     # Suppress tab-completion hints for this field. The completer method is going to create an
-    # AutoCompleter based on the actual parameter being completed and we only want that hint printing.
+    # ArgparseCompleter based on the actual parameter being completed and we only want that hint printing.
     set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='new value for settable',
                             completer_method=complete_set_value, suppress_tab_hint=True)
 
