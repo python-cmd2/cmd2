@@ -1254,7 +1254,7 @@ class Cmd(cmd.Cmd):
 
                 if func is not None and argparser is not None:
                     import functools
-                    compfunc = functools.partial(self._autocomplete_default,
+                    compfunc = functools.partial(self._complete_argparse_command,
                                                  argparser=argparser,
                                                  preserve_quotes=getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES))
                 else:
@@ -1423,9 +1423,9 @@ class Cmd(cmd.Cmd):
             rl_force_redisplay()
             return None
 
-    def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int, *,
-                              argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
-        """Default completion function for argparse commands"""
+    def _complete_argparse_command(self, text: str, line: str, begidx: int, endidx: int, *,
+                                   argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
+        """Completion function for argparse commands"""
         from .argparse_completer import ArgparseCompleter
         completer = ArgparseCompleter(argparser, self)
         tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
