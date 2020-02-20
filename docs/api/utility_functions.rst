@@ -7,7 +7,7 @@ Utility Functions
 
 .. autofunction:: cmd2.utils.strip_quotes
 
-.. autofunction:: cmd2.decorators.categorize
+.. autofunction:: cmd2.utils.categorize
 
 .. autofunction:: cmd2.utils.align_text
 

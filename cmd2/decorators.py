@@ -1,30 +1,16 @@
 # coding=utf-8
 """Decorators for cmd2 commands"""
 import argparse
-from typing import Callable, Iterable, List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 from . import constants
 from .parsing import Statement
 
 
-def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
-    """Categorize a function.
-
-    The help command output will group this function under the specified category heading
-
-    :param func: function or list of functions to categorize
-    :param category: category to put it in
-    """
-    if isinstance(func, Iterable):
-        for item in func:
-            setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
-    else:
-        setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
-
-
 def with_category(category: str) -> Callable:
     """A decorator to apply a category to a command function."""
     def cat_decorator(func):
+        from .utils import categorize
         categorize(func, category)
         return func
     return cat_decorator
@@ -62,7 +48,7 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
 
 
 # noinspection PyProtectedMember
-def set_parser_prog(parser: argparse.ArgumentParser, prog: str):
+def _set_parser_prog(parser: argparse.ArgumentParser, prog: str):
     """
     Recursively set prog attribute of a parser and all of its subparsers so that the root command
     is a command name and not sys.argv[0].
@@ -79,7 +65,7 @@ def set_parser_prog(parser: argparse.ArgumentParser, prog: str):
             # Set the prog value for each subcommand
             for sub_cmd, sub_cmd_parser in action.choices.items():
                 sub_cmd_prog = parser.prog + ' ' + sub_cmd
-                set_parser_prog(sub_cmd_parser, sub_cmd_prog)
+                _set_parser_prog(sub_cmd_parser, sub_cmd_prog)
 
             # We can break since argparse only allows 1 group of subcommands per level
             break
@@ -126,7 +112,7 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
 
         # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
-        set_parser_prog(parser, command_name)
+        _set_parser_prog(parser, command_name)
 
         # If the description has not been set, then use the method docstring if one exists
         if parser.description is None and func.__doc__:
@@ -184,7 +170,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
 
         # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
-        set_parser_prog(parser, command_name)
+        _set_parser_prog(parser, command_name)
 
         # If the description has not been set, then use the method docstring if one exists
         if parser.description is None and func.__doc__:

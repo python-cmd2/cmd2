@@ -964,3 +964,18 @@ def get_styles_in_text(text: str) -> Dict[int, str]:
         start += len(match.group())
 
     return styles
+
+
+def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
+    """Categorize a function.
+
+    The help command output will group this function under the specified category heading
+
+    :param func: function or list of functions to categorize
+    :param category: category to put it in
+    """
+    if isinstance(func, Iterable):
+        for item in func:
+            setattr(item, constants.CMD_ATTR_HELP_CATEGORY, category)
+    else:
+        setattr(func, constants.CMD_ATTR_HELP_CATEGORY, category)
