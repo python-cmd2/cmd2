@@ -129,8 +129,8 @@ class Settable:
         :param choices: iterable of accepted values
         :param choices_function: function that provides choices for this argument
         :param choices_method: cmd2-app method that provides choices for this argument (See note below)
-        :param completer_function: tab-completion function that provides choices for this argument
-        :param completer_method: cmd2-app tab-completion method that provides choices
+        :param completer_function: tab completion function that provides choices for this argument
+        :param completer_method: cmd2-app tab completion method that provides choices
                                  for this argument (See note below)
 
         Note:
