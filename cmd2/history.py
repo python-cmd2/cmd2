@@ -15,7 +15,7 @@ from .parsing import Statement
 
 @attr.s(frozen=True)
 class HistoryItem():
-    """Class used to represent one command in the History list"""
+    """Class used to represent one command in the history list"""
     _listformat = ' {:>4}  {}'
     _ex_listformat = ' {:>4}x {}'
 
@@ -28,16 +28,23 @@ class HistoryItem():
 
     @property
     def raw(self) -> str:
-        """Return the raw input from the user for this item"""
+        """The raw input from the user for this item.
+
+        Proxy property for ``self.statement.raw``
+        """
         return self.statement.raw
 
     @property
     def expanded(self) -> str:
-        """Return the command as run which includes shortcuts and aliases resolved plus any changes made in hooks"""
+        """Return the command as run which includes shortcuts and aliases resolved
+        plus any changes made in hooks
+
+        Proxy property for ``self.statement.expanded_command_line``
+        """
         return self.statement.expanded_command_line
 
     def pr(self, script=False, expanded=False, verbose=False) -> str:
-        """Represent a HistoryItem in a pretty fashion suitable for printing.
+        """Represent this item in a pretty fashion suitable for printing.
 
         If you pass verbose=True, script and expanded will be ignored
 
@@ -72,15 +79,17 @@ class HistoryItem():
 
 
 class History(list):
-    """A list of HistoryItems that knows how to respond to user requests.
+    """A list of :class:`~cmd2.history.HistoryItem` objects with additional methods
+    for searching and managing the list.
 
-    Here are some key methods:
+    :class:`~cmd2.Cmd` instantiates this class into the :data:`~cmd2.Cmd.history`
+    attribute, and adds commands to it as a user enters them.
 
-    select() - parse user input and return a list of relevant history items
-    str_search() - return a list of history items which contain the given string
-    regex_search() - return a list of history items which match a given regex
-    get() - return a single element of the list, using 1 based indexing
-    span() - given a 1-based slice, return the appropriate list of history items
+    See :ref:`features/history:History` for information about the built-in command
+    which allows users to view, search, run, and save previously entered commands.
+
+    Developers interested in accessing previously entered commands can use this
+    class to gain access to the historical record.
     """
     def __init__(self, seq=()) -> None:
         super().__init__(seq)
@@ -99,9 +108,10 @@ class History(list):
         return result
 
     def append(self, new: Statement) -> None:
-        """Append a HistoryItem to end of the History list.
+        """Append a new statement to the end of the History list.
 
-        :param new: command line to convert to HistoryItem and add to the end of the History list
+        :param new: Statement object which will be composed into a HistoryItem
+                    and added to the end of the list
         """
         history_item = HistoryItem(new, len(self) + 1)
         super().append(history_item)
@@ -115,7 +125,7 @@ class History(list):
         """Get item from the History list using 1-based indexing.
 
         :param index: optional item to get (index as either integer or string)
-        :return: a single HistoryItem
+        :return: a single :class:`~cmd2.history.HistoryItem`
         """
         index = int(index)
         if index == 0:
@@ -171,8 +181,8 @@ class History(list):
 
         Different from native python indexing and slicing of arrays, this method
         uses 1-based array numbering. Users who are not programmers can't grok
-        0 based numbering. Programmers can usually grok either. Which reminds me,
-        there are only two hard problems in programming:
+        zero based numbering. Programmers can sometimes grok zero based numbering.
+        Which reminds me, there are only two hard problems in programming:
 
         - naming
         - cache invalidation

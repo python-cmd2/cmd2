@@ -7,6 +7,7 @@ API Reference
    cmd
    parsing
    decorators
+   history
    ansi
    utils
    constants
