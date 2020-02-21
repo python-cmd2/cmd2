@@ -2859,11 +2859,8 @@ class Cmd(cmd.Cmd):
 
     # Create the parser for the set command
     set_parser = DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
-
-    # Suppress tab-completion hints for this field. The completer method is going to create an
-    # ArgparseCompleter based on the actual parameter being completed and we only want that hint printing.
     set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='new value for settable',
-                            completer_method=complete_set_value, suppress_tab_hint=True)
+                            completer_method=complete_set_value)
 
     # Preserve quotes so users can pass in quoted empty strings and flags (e.g. -h) as the value
     @with_argparser(set_parser, preserve_quotes=True)
