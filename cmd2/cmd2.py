@@ -339,7 +339,7 @@ class Cmd(cmd.Cmd):
         self.default_sort_key = Cmd.ALPHABETICAL_SORT_KEY
 
         ############################################################################################################
-        # The following variables are used by tab-completion functions. They are reset each time complete() is run
+        # The following variables are used by tab completion functions. They are reset each time complete() is run
         # in _reset_completion_defaults() and it is up to completer functions to set them before returning results.
         ############################################################################################################
 
@@ -351,14 +351,14 @@ class Cmd(cmd.Cmd):
         # will be added if there is an unmatched opening quote
         self.allow_closing_quote = True
 
-        # An optional header that prints above the tab-completion suggestions
+        # An optional header that prints above the tab completion suggestions
         self.completion_header = ''
 
         # Used by complete() for readline tab completion
         self.completion_matches = []
 
         # Use this list if you are completing strings that contain a common delimiter and you only want to
-        # display the final portion of the matches as the tab-completion suggestions. The full matches
+        # display the final portion of the matches as the tab completion suggestions. The full matches
         # still must be returned from your completer function. For an example, look at path_complete()
         # which uses this to show only the basename of paths as the suggestions. delimiter_complete() also
         # populates this list.
@@ -939,7 +939,7 @@ class Cmd(cmd.Cmd):
         # Build display_matches and add a slash to directories
         for index, cur_match in enumerate(matches):
 
-            # Display only the basename of this path in the tab-completion suggestions
+            # Display only the basename of this path in the tab completion suggestions
             self.display_matches.append(os.path.basename(cur_match))
 
             # Add a separator after directories if the next character isn't already a separator
@@ -1430,7 +1430,7 @@ class Cmd(cmd.Cmd):
         completer = ArgparseCompleter(argparser, self)
         tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
-        # To have tab-completion parsing match command line parsing behavior,
+        # To have tab completion parsing match command line parsing behavior,
         # use preserve_quotes to determine if we parse the quoted or unquoted tokens.
         tokens_to_parse = raw_tokens if preserve_quotes else tokens
         return completer.complete_command(tokens_to_parse, text, line, begidx, endidx)
@@ -2830,7 +2830,7 @@ class Cmd(cmd.Cmd):
         settable_parser = DEFAULT_ARGUMENT_PARSER(parents=[Cmd.set_parser_parent])
 
         # Settables with choices list the values of those choices instead of the arg name
-        # in help text and this shows in tab-completion hints. Set metavar to avoid this.
+        # in help text and this shows in tab completion hints. Set metavar to avoid this.
         arg_name = 'value'
         settable_parser.add_argument(arg_name, metavar=arg_name, help=settable.description,
                                      choices=settable.choices,
@@ -2859,11 +2859,8 @@ class Cmd(cmd.Cmd):
 
     # Create the parser for the set command
     set_parser = DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
-
-    # Suppress tab-completion hints for this field. The completer method is going to create an
-    # ArgparseCompleter based on the actual parameter being completed and we only want that hint printing.
     set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='new value for settable',
-                            completer_method=complete_set_value, suppress_tab_hint=True)
+                            completer_method=complete_set_value)
 
     # Preserve quotes so users can pass in quoted empty strings and flags (e.g. -h) as the value
     @with_argparser(set_parser, preserve_quotes=True)
