@@ -19,6 +19,9 @@ def with_category(category: str) -> Callable:
     >>>   @cmd2.with_category('Text Functions')
     >>>   def do_echo(self, args)
     >>>     self.poutput(args)
+
+    For an alternative approach to categorizing commands using a function, see
+    :func:`~cmd2.utils.categorize`
     """
     def cat_decorator(func):
         from .utils import categorize

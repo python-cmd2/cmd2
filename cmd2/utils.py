@@ -969,10 +969,22 @@ def get_styles_in_text(text: str) -> Dict[int, str]:
 def categorize(func: Union[Callable, Iterable[Callable]], category: str) -> None:
     """Categorize a function.
 
-    The help command output will group this function under the specified category heading
+    The help command output will group the passed function under the
+    specified category heading
 
     :param func: function or list of functions to categorize
     :param category: category to put it in
+
+    :Example:
+
+    >>> class MyApp(cmd2.Cmd):
+    >>>   def do_echo(self, arglist):
+    >>>     self.poutput(' '.join(arglist)
+    >>>
+    >>>   utils.categorize(do_echo, "Text Processing")
+
+    For an alternative approach to categorizing commands using a decorator, see
+    :func:`~cmd2.decorators.with_category`
     """
     if isinstance(func, Iterable):
         for item in func:
