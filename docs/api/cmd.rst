@@ -42,3 +42,8 @@ cmd2.Cmd
 
         This attribute is an instance of :class:`cmd2.history.History`, and
         each command is an instance of :class:`cmd2.history.HistoryItem`.
+
+    .. attribute:: statement_parser
+
+        An instance of :class:`cmd2.parsing.StatementParser` initialized and
+        configured appropriately for parsing user input.

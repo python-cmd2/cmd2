@@ -136,35 +136,37 @@ To define and register a postparsing hook, do the following::
             # is available as params.statement
             return params
 
-``register_postparsing_hook()`` checks the method signature of the passed
-callable, and raises a ``TypeError`` if it has the wrong number of parameters.
-It will also raise a ``TypeError`` if the passed parameter and return value are
-not annotated as ``PostparsingData``.
+:meth:`~cmd2.Cmd.register_postparsing_hook` checks the method signature of the
+passed callable, and raises a ``TypeError`` if it has the wrong number of
+parameters. It will also raise a ``TypeError`` if the passed parameter and
+return value are not annotated as ``PostparsingData``.
 
-The hook method will be passed one parameter, a ``PostparsingData`` object
-which we will refer to as ``params``. ``params`` contains two attributes.
-``params.statement`` is a ``Statement`` object which describes the parsed
-user input. There are many useful attributes in the ``Statement``
+The hook method will be passed one parameter, a
+:class:`~cmd2.plugin.PostparsingData` object which we will refer to as
+``params``. ``params`` contains two attributes. ``params.statement`` is a
+:class:`~cmd2.Statement` object which describes the parsed user input.
+There are many useful attributes in the :class:`~cmd2.Statement`
 object, including ``.raw`` which contains exactly what the user typed.
 ``params.stop`` is set to ``False`` by default.
 
-The hook method must return a ``PostparsingData`` object, and it is very
-convenient to just return the object passed into the hook method. The hook
-method may modify the attributes of the object to influece the behavior of
-the application. If ``params.stop`` is set to true, a fatal failure is
-triggered prior to execution of the command, and the application exits.
+The hook method must return a :class:`cmd2.plugin.PostparsingData` object, and
+it is very convenient to just return the object passed into the hook method.
+The hook method may modify the attributes of the object to influece the
+behavior of the application. If ``params.stop`` is set to true, a fatal failure
+is triggered prior to execution of the command, and the application exits.
 
-To modify the user input, you create a new ``Statement`` object and return it
-in ``params.statement``. Don't try and directly modify the contents of a
-``Statement`` object, there be dragons. Instead, use the various attributes in
-a ``Statement`` object to construct a new string, and then parse that string to
-create a new ``Statement`` object.
+To modify the user input, you create a new :class:`~cmd2.Statement` object and
+return it in ``params.statement``. Don't try and directly modify the contents
+of a :class:`~cmd2.Statement` object, there be dragons. Instead, use the
+various attributes in a :class:`~cmd2.Statement` object to construct a new
+string, and then parse that string to create a new :class:`~cmd2.Statement`
+object.
 
-``cmd2.Cmd()`` uses an instance of ``cmd2.StatementParser`` to parse user
-input. This instance has been configured with the proper command terminators,
-multiline commands, and other parsing related settings. This instance is
-available as the ``self.statement_parser`` attribute. Here's a simple example
-which shows the proper technique::
+:class:`cmd2.Cmd` uses an instance of :class:`~cmd2.parsing.StatementParser` to
+parse user input. This instance has been configured with the proper command
+terminators, multiline commands, and other parsing related settings. This
+instance is available as the :data:`~cmd2.Cmd.statement_parser` attribute.
+Here's a simple example which shows the proper technique::
 
     def myhookmethod(self, params: cmd2.plugin.PostparsingData) -> cmd2.plugin.PostparsingData:
         if not '|' in params.statement.raw:
@@ -172,10 +174,11 @@ which shows the proper technique::
             params.statement = self.statement_parser.parse(newinput)
         return params
 
-If a postparsing hook returns a ``PostparsingData`` object with the ``stop``
-attribute set to ``True``:
+If a postparsing hook returns a :class:`~cmd2.plugin.PostparsingData` object
+with the :data:`~cmd2.plugin.PostparsingData.stop` attribute set to ``True``:
 
-- no more hooks of any kind (except command finalization hooks) will be called
+- no more hooks of any kind (except
+  :ref:`features/hooks:Command Finalization Hooks`) will be called
 - the command will not be executed
 - no error message will be displayed to the user
 - the application will exit
@@ -189,7 +192,7 @@ terminate. If your hook needs to be able to exit the application, you should
 implement it as a postparsing hook.
 
 Once output is redirected and the timer started, all the hooks registered with
-``register_precmd_hook()`` are called. Here's how to do it::
+:meth:`~cmd2.Cmd.register_precmd_hook` are called. Here's how to do it::
 
     class App(cmd2.Cmd):
         def __init__(self, *args, *kwargs):
@@ -201,23 +204,23 @@ Once output is redirected and the timer started, all the hooks registered with
             # is available as data.statement
             return data
 
-``register_precmd_hook()`` checks the method signature of the passed callable,
-and raises a ``TypeError`` if it has the wrong number of parameters. It will
-also raise a ``TypeError`` if the parameters and return value are not annotated
-as ``PrecommandData``.
+:meth:`~cmd2.Cmd.register_precmd_hook` checks the method signature of the
+passed callable, and raises a ``TypeError`` if it has the wrong number of
+parameters. It will also raise a ``TypeError`` if the parameters and return
+value are not annotated as ``PrecommandData``.
 
-You may choose to modify the user input by creating a new ``Statement`` with
-different properties (see above). If you do so, assign your new ``Statement``
-object to ``data.statement``.
+You may choose to modify the user input by creating a new
+:class:`~cmd2.Statement` with different properties (see above). If you do so,
+assign your new :class:`~cmd2.Statement` object to ``data.statement``.
 
-The precommand hook must return a ``PrecommandData`` object. You don't have to
-create this object from scratch, you can just return the one passed into the
-hook.
+The precommand hook must return a :class:`~cmd2.plugin.PrecommandData` object.
+You don't have to create this object from scratch, you can just return the one
+passed into the hook.
 
 After all registered precommand hooks have been called,
-``self.precmd(statement)`` will be called. To retain full backward
-compatibility with ``cmd.Cmd``, this method is passed a ``Statement``, not a
-``PrecommandData`` object.
+:meth:`~cmd2.Cmd.precmd` will be called. To retain full backward compatibility
+with ``cmd.Cmd``, this method is passed a :class:`~cmd2.Statement`, not a
+:class:`~cmd2.plugin.PrecommandData` object.
 
 
 Postcommand Hooks
@@ -238,27 +241,29 @@ Here's how to define and register a postcommand hook::
         def myhookmethod(self, data: cmd2.plugin.PostcommandData) -> cmd2.plugin.PostcommandData:
             return data
 
-Your hook will be passed a ``PostcommandData`` object, which has a
-``statement`` attribute that describes the command which was executed. If your
-postcommand hook method gets called, you are guaranteed that the command method
-was called, and that it didn't raise an exception.
+Your hook will be passed a :class:`~cmd2.plugin.PostcommandData` object, which
+has a :data:`~cmd2.plugin.PostcommandData.statement` attribute that describes
+the command which was executed. If your postcommand hook method gets called,
+you are guaranteed that the command method was called, and that it didn't raise
+an exception.
 
 If any postcommand hook raises an exception, the exception will be displayed to
 the user, and no further postcommand hook methods will be called. Command
 finalization hooks, if any, will be called.
 
 After all registered postcommand hooks have been called,
-``self.postcmd(statement)`` will be called to retain full backward
-compatibility with ``cmd.Cmd``.
+``self.postcmd`` will be called to retain full backward compatibility
+with ``cmd.Cmd``.
 
-If any postcommand hook (registered or ``self.postcmd()``) returns a
-``PostcommandData`` object with the stop attribute set to ``True``, subsequent
-postcommand hooks will still be called, as will the command finalization hooks,
-but once those hooks have all been called, the application will terminate.
-Likewise, if ``self.postcmd()`` returns ``True``, the command finalization
-hooks will be called before the application terminates.
+If any postcommand hook (registered or ``self.postcmd``) returns a
+:class:`~cmd2.plugin.PostcommandData` object with the stop attribute set to
+``True``, subsequent postcommand hooks will still be called, as will the
+command finalization hooks, but once those hooks have all been called, the
+application will terminate. Likewise, if :``self.postcmd`` returns
+``True``, the command finalization hooks will be called before the application
+terminates.
 
-Any postcommand hook can change the value of the ``stop`` parameter before
+Any postcommand hook can change the value of the ``stop`` attribute before
 returning it, and the modified value will be passed to the next postcommand
 hook. The value returned by the final postcommand hook will be passed to the
 command finalization hooks, which may further modify the value. If your hook
@@ -279,20 +284,24 @@ command finalization hook::
             super().__init__(*args, **kwargs)
             self.register_cmdfinalization_hook(self.myhookmethod)
 
-        def myhookmethod(self, stop, statement):
+        def myhookmethod(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
             return stop
 
-Command Finalization hooks must check whether the statement object is ``None``.
-There are certain circumstances where these hooks may be called before the
-statement has been parsed, so you can't always rely on having a statement.
+Command Finalization hooks must check whether the
+:data:`~cmd2.plugin.CommandFinalizationData.statement` attribute of the passed
+:class:`~cmd2.plugin.CommandFinalizationData` object contains a value. There
+are certain circumstances where these hooks may be called before the user input
+has been parsed, so you can't always rely on having a
+:data:`~cmd2.plugin.CommandFinalizationData.statement`.
 
 If any prior postparsing or precommand hook has requested the application to
-terminate, the value of the ``stop`` parameter passed to the first command
-finalization hook will be ``True``. Any command finalization hook can change
-the value of the ``stop`` parameter before returning it, and the modified value
-will be passed to the next command finalization hook. The value returned by the
-final command finalization hook will determine whether the application
-terminates or not.
+terminate, the value of the :data:`~cmd2.plugin.CommandFinalizationData.stop`
+attribute passed to the first command finalization hook will be ``True``. Any
+command finalization hook can change the value of the
+:data:`~cmd2.plugin.CommandFinalizationData.stop` attribute before returning
+it, and the modified value will be passed to the next command finalization
+hook. The value returned by the final command finalization hook will determine
+whether the application terminates or not.
 
 This approach to command finalization hooks can be powerful, but it can also
 cause problems. If your hook blindly returns ``False``, a prior hook's requst

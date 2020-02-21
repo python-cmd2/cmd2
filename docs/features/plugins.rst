@@ -55,6 +55,7 @@ This is required for two reasons:
   If you mixin the plugin after ``cmd2.Cmd``, the python method resolution
   order will call ``cmd2.Cmd`` methods before it calls those in your plugin.
 
+
 Add commands
 ~~~~~~~~~~~~
 
@@ -69,6 +70,7 @@ that you would in a ``cmd2.Cmd`` app::
 You have all the same capabilities within the plugin that you do inside a
 ``cmd2.Cmd`` app, including argument parsing via decorators and custom help
 methods.
+
 
 Add (or hide) settings
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -87,11 +89,13 @@ example::
 You can also hide settings from the user by removing them from
 ``self.settables``.
 
+
 Decorators
 ~~~~~~~~~~
 
 Your plugin can provide a decorator which users of your plugin can use to
 wrap functionality around their own commands.
+
 
 Override methods
 ~~~~~~~~~~~~~~~~
@@ -104,13 +108,15 @@ will have the overridden method called.
 
 Hooks are a much better approach.
 
+
 Hooks
 ~~~~~
 
-Plugins can register hooks, which are called by ``cmd2.Cmd`` during various
-points in the application and command processing lifecycle. Plugins should
-not override any of the deprecated hook methods, instead they should register
-their hooks as described in the :ref:`features/hooks:Hooks` section.
+Plugins can register hook methods, which are called by :class:`~cmd2.Cmd`
+during various points in the application and command processing lifecycle.
+Plugins should not override any of the deprecated hook methods, instead they
+should register their hooks as described in the :ref:`features/hooks:Hooks`
+section.
 
 You should name your hooks so that they begin with the name of your plugin.
 Hook methods get mixed into the ``cmd2`` application and this naming
@@ -152,6 +158,4 @@ available.
 Examples
 --------
 
-.. _cmd2_plugin_template: https://github.com/python-cmd2/cmd2-plugin-template
-
-See cmd2_plugin_template_ for more info.
+See `<https://github.com/python-cmd2/cmd2-plugin-template>`_ for more info.

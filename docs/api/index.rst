@@ -10,4 +10,5 @@ API Reference
    history
    ansi
    utils
+   plugin
    constants
