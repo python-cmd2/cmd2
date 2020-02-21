@@ -7,7 +7,6 @@ API Reference
    cmd
    parsing
    decorators
-   exceptions
    ansi
    utils
    constants

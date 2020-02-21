@@ -1,13 +1,29 @@
-## 0.10.1 (TBD)
+## 0.10.1 (February 19, 2020)
 * Bug Fixes
     * Corrected issue where the actual new value was not always being printed in do_set. This occurred in cases where
       the typed value differed from what the setter had converted it to.
-    * Fixed bug where ANSI style sequences were not correctly handled in `utils.truncate_line()`.
-* Changes
-    * `categorize()` moved from `decorators.py` to `utils.py`. It is imported by the package `__init__.py`
-      and therefore is not likely to cause issues for users of the library.
+    * Fixed bug where ANSI style sequences were not correctly handled in `utils.truncate_line()`. 
+    * Fixed bug where pyscripts could edit `cmd2.Cmd.py_locals` dictionary.
+    * Fixed bug where cmd2 set `sys.path[0]` for a pyscript to cmd2's working directory instead of the 
+    script file's directory.
+    * Fixed bug where `sys.path` was not being restored after a pyscript ran.
 * Enhancements
     * Renamed set command's `-l/--long` flag to `-v/--verbose` for consistency with help and history commands.
+    * Setting the following pyscript variables:
+        * `__name__`: __main__
+        * `__file__`: script path (as typed, ~ will be expanded)
+    * Only tab complete after redirection tokens if redirection is allowed
+    * Made `CompletionError` exception available to non-argparse tab completion
+    * Added `apply_style` to `CompletionError` initializer. It defaults to True, but can be set to False if
+    you don't want the error text to have `ansi.style_error()` applied to it when printed.
+* Other
+    * Removed undocumented `py run` command since it was replaced by `run_pyscript` a while ago
+    * Renamed `AutoCompleter` to `ArgparseCompleter` for clarity
+    * Custom `EmptyStatement` exception is no longer part of the documented public API
+* Notes
+    * This is a beta release leading up to the 1.0.0 release
+    * We intend no more breaking changes prior to 1.0.0
+        * Just bug fixes, documentation updates, and enhancements
 
 ## 0.10.0 (February 7, 2020)
 * Enhancements

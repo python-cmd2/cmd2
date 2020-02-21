@@ -5,7 +5,6 @@ from typing import Callable, List, Optional, Union
 
 from . import constants
 from .parsing import Statement
-from .utils import categorize
 
 
 def with_category(category: str) -> Callable:
@@ -22,6 +21,7 @@ def with_category(category: str) -> Callable:
     >>>     self.poutput(args)
     """
     def cat_decorator(func):
+        from .utils import categorize
         categorize(func, category)
         return func
     return cat_decorator

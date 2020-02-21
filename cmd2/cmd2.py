@@ -47,13 +47,14 @@ from . import ansi
 from . import constants
 from . import plugin
 from . import utils
-from .argparse_custom import CompletionError, CompletionItem, DEFAULT_ARGUMENT_PARSER
+from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
+from .exceptions import EmbeddedConsoleExit, EmptyStatement
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
-from .utils import Settable
+from .utils import CompletionError, Settable
 
 # Set up readline
 if rl_type == RlType.NONE:  # pragma: no cover
@@ -104,16 +105,6 @@ class _SavedCmd2Env:
         self.history = []
         self.sys_stdout = None
         self.sys_stdin = None
-
-
-class EmbeddedConsoleExit(SystemExit):
-    """Custom exception class for use with the py command."""
-    pass
-
-
-class EmptyStatement(Exception):
-    """Custom exception class for handling behavior when the user just presses <Enter>."""
-    pass
 
 
 # Contains data about a disabled command which is used to restore its original functions when the command is enabled
@@ -1050,8 +1041,8 @@ class Cmd(cmd.Cmd):
                         in_pipe = False
                         in_file_redir = True
 
-                # Not a redirection token
-                else:
+                # Only tab complete after redirection tokens if redirection is allowed
+                elif self.allow_redirection:
                     do_shell_completion = False
                     do_path_completion = False
 
@@ -1263,7 +1254,7 @@ class Cmd(cmd.Cmd):
 
                 if func is not None and argparser is not None:
                     import functools
-                    compfunc = functools.partial(self._autocomplete_default,
+                    compfunc = functools.partial(self._complete_argparse_command,
                                                  argparser=argparser,
                                                  preserve_quotes=getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES))
                 else:
@@ -1416,17 +1407,27 @@ class Cmd(cmd.Cmd):
             except IndexError:
                 return None
 
+        except CompletionError as ex:
+            # Don't print error and redraw the prompt unless the error has length
+            err_str = str(ex)
+            if err_str:
+                if ex.apply_style:
+                    err_str = ansi.style_error(err_str)
+                ansi.style_aware_write(sys.stdout, '\n' + err_str + '\n')
+                rl_force_redisplay()
+            return None
         except Exception as e:
             # Insert a newline so the exception doesn't print in the middle of the command line being tab completed
             self.perror()
             self.pexcept(e)
+            rl_force_redisplay()
             return None
 
-    def _autocomplete_default(self, text: str, line: str, begidx: int, endidx: int, *,
-                              argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
-        """Default completion function for argparse commands"""
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(argparser, self)
+    def _complete_argparse_command(self, text: str, line: str, begidx: int, endidx: int, *,
+                                   argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
+        """Completion function for argparse commands"""
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(argparser, self)
         tokens, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
 
         # To have tab-completion parsing match command line parsing behavior,
@@ -2560,11 +2561,11 @@ class Cmd(cmd.Cmd):
         if func is None or argparser is None:
             return []
 
-        # Combine the command and its subcommand tokens for the AutoCompleter
+        # Combine the command and its subcommand tokens for the ArgparseCompleter
         tokens = [command] + arg_tokens['subcommands']
 
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(argparser, self)
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(argparser, self)
         return completer.complete_subcommand_help(tokens, text, line, begidx, endidx)
 
     help_parser = DEFAULT_ARGUMENT_PARSER(description="List available commands or provide "
@@ -2576,7 +2577,7 @@ class Cmd(cmd.Cmd):
     help_parser.add_argument('-v', '--verbose', action='store_true',
                              help="print a list of all commands with descriptions of each")
 
-    # Get rid of cmd's complete_help() functions so AutoCompleter will complete the help command
+    # Get rid of cmd's complete_help() functions so ArgparseCompleter will complete the help command
     if getattr(cmd.Cmd, 'complete_help', None) is not None:
         delattr(cmd.Cmd, 'complete_help')
 
@@ -2594,8 +2595,8 @@ class Cmd(cmd.Cmd):
 
             # If the command function uses argparse, then use argparse's help
             if func is not None and argparser is not None:
-                from .argparse_completer import AutoCompleter
-                completer = AutoCompleter(argparser, self)
+                from .argparse_completer import ArgparseCompleter
+                completer = ArgparseCompleter(argparser, self)
                 tokens = [args.command] + args.subcommands
 
                 # Set end to blank so the help output matches how it looks when "command -h" is used
@@ -2838,8 +2839,8 @@ class Cmd(cmd.Cmd):
                                      completer_function=settable.completer_function,
                                      completer_method=settable.completer_method)
 
-        from .argparse_completer import AutoCompleter
-        completer = AutoCompleter(settable_parser, self)
+        from .argparse_completer import ArgparseCompleter
+        completer = ArgparseCompleter(settable_parser, self)
 
         # Use raw_tokens since quotes have been preserved
         _, raw_tokens = self.tokens_for_completion(line, begidx, endidx)
@@ -2860,7 +2861,7 @@ class Cmd(cmd.Cmd):
     set_parser = DEFAULT_ARGUMENT_PARSER(parents=[set_parser_parent])
 
     # Suppress tab-completion hints for this field. The completer method is going to create an
-    # AutoCompleter based on the actual parameter being completed and we only want that hint printing.
+    # ArgparseCompleter based on the actual parameter being completed and we only want that hint printing.
     set_parser.add_argument('value', nargs=argparse.OPTIONAL, help='new value for settable',
                             completer_method=complete_set_value, suppress_tab_hint=True)
 
@@ -3093,8 +3094,7 @@ class Cmd(cmd.Cmd):
 
     # This is a hidden flag for telling do_py to run a pyscript. It is intended only to be used by run_pyscript
     # after it sets up sys.argv for the script being run. When this flag is present, it takes precedence over all
-    # other arguments. run_pyscript uses this method instead of "py run('file')" because file names with
-    # 2 or more consecutive spaces cause issues with our parser, which isn't meant to parse Python statements.
+    # other arguments.
     py_parser.add_argument('--pyscript', help=argparse.SUPPRESS)
 
     # Preserve quotes since we are passing these strings to Python
@@ -3104,65 +3104,69 @@ class Cmd(cmd.Cmd):
         Enter an interactive Python shell
         :return: True if running of commands should stop
         """
+        def py_quit():
+            """Function callable from the interactive Python console to exit that environment"""
+            raise EmbeddedConsoleExit
+
         from .py_bridge import PyBridge
+        py_bridge = PyBridge(self)
+        saved_sys_path = None
+
         if self.in_pyscript():
             err = "Recursively entering interactive Python consoles is not allowed."
             self.perror(err)
             return
 
-        py_bridge = PyBridge(self)
-        py_code_to_run = ''
-
-        # Handle case where we were called by run_pyscript
-        if args.pyscript:
-            args.pyscript = utils.strip_quotes(args.pyscript)
-
-            # Run the script - use repr formatting to escape things which
-            # need to be escaped to prevent issues on Windows
-            py_code_to_run = 'run({!r})'.format(args.pyscript)
-
-        elif args.command:
-            py_code_to_run = args.command
-            if args.remainder:
-                py_code_to_run += ' ' + ' '.join(args.remainder)
-
-            # Set cmd_echo to True so PyBridge statements like: py app('help')
-            # run at the command line will print their output.
-            py_bridge.cmd_echo = True
-
         try:
             self._in_py = True
+            py_code_to_run = ''
 
-            def py_run(filename: str):
-                """Run a Python script file in the interactive console.
-                :param filename: filename of script file to run
-                """
-                expanded_filename = os.path.expanduser(filename)
+            # Make a copy of self.py_locals for the locals dictionary in the Python environment we are creating.
+            # This is to prevent pyscripts from editing it. (e.g. locals().clear()). It also ensures a pyscript's
+            # environment won't be filled with data from a previously run pyscript. Only make a shallow copy since
+            # it's OK for py_locals to contain objects which are editable in a pyscript.
+            localvars = dict(self.py_locals)
+            localvars[self.py_bridge_name] = py_bridge
+            localvars['quit'] = py_quit
+            localvars['exit'] = py_quit
+
+            if self.self_in_py:
+                localvars['self'] = self
+
+            # Handle case where we were called by run_pyscript
+            if args.pyscript:
+                # Read the script file
+                expanded_filename = os.path.expanduser(utils.strip_quotes(args.pyscript))
 
                 try:
                     with open(expanded_filename) as f:
-                        interp.runcode(f.read())
+                        py_code_to_run = f.read()
                 except OSError as ex:
                     self.pexcept("Error reading script file '{}': {}".format(expanded_filename, ex))
+                    return
 
-            def py_quit():
-                """Function callable from the interactive Python console to exit that environment"""
-                raise EmbeddedConsoleExit
+                localvars['__name__'] = '__main__'
+                localvars['__file__'] = expanded_filename
 
-            # Set up Python environment
-            self.py_locals[self.py_bridge_name] = py_bridge
-            self.py_locals['run'] = py_run
-            self.py_locals['quit'] = py_quit
-            self.py_locals['exit'] = py_quit
+                # Place the script's directory at sys.path[0] just as Python does when executing a script
+                saved_sys_path = list(sys.path)
+                sys.path.insert(0, os.path.dirname(os.path.abspath(expanded_filename)))
 
-            if self.self_in_py:
-                self.py_locals['self'] = self
-            elif 'self' in self.py_locals:
-                del self.py_locals['self']
+            else:
+                # This is the default name chosen by InteractiveConsole when no locals are passed in
+                localvars['__name__'] = '__console__'
 
-            localvars = self.py_locals
+                if args.command:
+                    py_code_to_run = args.command
+                    if args.remainder:
+                        py_code_to_run += ' ' + ' '.join(args.remainder)
+
+                    # Set cmd_echo to True so PyBridge statements like: py app('help')
+                    # run at the command line will print their output.
+                    py_bridge.cmd_echo = True
+
+            # Create the Python interpreter
             interp = InteractiveConsole(locals=localvars)
-            interp.runcode('import sys, os;sys.path.insert(0, os.getcwd())')
 
             # Check if we are running Python code
             if py_code_to_run:
@@ -3177,8 +3181,7 @@ class Cmd(cmd.Cmd):
             else:
                 cprt = 'Type "help", "copyright", "credits" or "license" for more information.'
                 instructions = ('End with `Ctrl-D` (Unix) / `Ctrl-Z` (Windows), `quit()`, `exit()`.\n'
-                                'Non-Python commands can be issued with: {}("your command")\n'
-                                'Run Python code from external script files with: run("script.py")'
+                                'Non-Python commands can be issued with: {}("your command")'
                                 .format(self.py_bridge_name))
 
                 saved_cmd2_env = None
@@ -3205,7 +3208,10 @@ class Cmd(cmd.Cmd):
             pass
 
         finally:
-            self._in_py = False
+            with self.sigint_protection:
+                if saved_sys_path is not None:
+                    sys.path = saved_sys_path
+                self._in_py = False
 
         return py_bridge.stop
 
