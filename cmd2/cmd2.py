@@ -1508,12 +1508,53 @@ class Cmd(cmd.Cmd):
             raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def precmd(self, statement: Statement) -> Statement:
-        """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
+        """Hook method executed just before the command is executed by
+        :meth:`~cmd2.Cmd.onecmd` and after adding it to history.
 
         :param statement: subclass of str which also contains the parsed input
         :return: a potentially modified version of the input Statement object
+
+        See :meth:`~cmd2.Cmd.register_postparsing_hook` and
+        :meth:`~cmd2.Cmd.register_precmd_hook` for more robust ways
+        to run hooks before the command is executed. See
+        :ref:`features/hooks:Postparsing Hooks` and
+        :ref:`features/hooks:Precommand Hooks` for more information.
         """
         return statement
+
+    def postcmd(self, stop: bool, statement: Statement) -> bool:
+        """Hook method executed just after a command is executed by
+        :meth:`~cmd2.Cmd.onecmd`.
+
+        :param stop: return `True` to request the command loop terminate
+        :param statement: subclass of str which also contains the parsed input
+
+        See :meth:`~cmd2.Cmd.register_postcmd_hook` and :meth:`~cmd2.Cmd.register_cmdfinalization_hook` for more robust ways
+        to run hooks after the command is executed. See
+        :ref:`features/hooks:Postcommand Hooks` and
+        :ref:`features/hooks:Command Finalization Hooks` for more information.
+        """
+        return stop
+
+    def preloop(self):
+        """Hook method executed once when the :meth:`~.cmd2.Cmd.cmdloop()`
+        method is called.
+
+        See :meth:`~cmd2.Cmd.register_preloop_hook` for a more robust way
+        to run hooks before the command loop begins. See
+        :ref:`features/hooks:Application Lifecycle Hooks` for more information.
+        """
+        pass
+
+    def postloop(self):
+        """Hook method executed once when the :meth:`~.cmd2.Cmd.cmdloop()`
+        method is about to return.
+
+        See :meth:`~cmd2.Cmd.register_postloop_hook` for a more robust way
+        to run hooks after the command loop completes. See
+        :ref:`features/hooks:Application Lifecycle Hooks` for more information.
+        """
+        pass
 
     def parseline(self, line: str) -> Tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.
