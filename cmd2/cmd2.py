@@ -144,19 +144,27 @@ class Cmd(cmd.Cmd):
         :param persistent_history_length: max number of history items to write to the persistent history file
         :param startup_script: file path to a script to execute at startup
         :param use_ipython: should the "ipy" command be included for an embedded IPython shell
-        :param allow_cli_args: if True, then cmd2 will process command line arguments as either
-                               commands to be run or, if -t is specified, transcript files to run.
-                               This should be set to False if your application parses its own arguments.
-        :param transcript_files: allow running transcript tests when allow_cli_args is False
-        :param allow_redirection: should output redirection and pipes be allowed. this is only a security setting
-                                  and does not alter parsing behavior.
+        :param allow_cli_args: if ``True``, then :meth:`cmd2.Cmd.__init__` will process command
+                               line arguments as either commands to be run or, if ``-t`` or ``--test`` are given, transcript files to run. This should be
+                               set to ``False`` if your application parses its own command line
+                               arguments.
+        :param transcript_files: pass a list of transcript files to be run on initialization.
+                                 This allows running transcript tests when ``allow_cli_args``
+                                 is ``False``. If ``allow_cli_args`` is ``True`` this parameter
+                                 is ignored.
+        :param allow_redirection: If ``False``, prevent output redirection and piping to shell
+                                  commands. This parameter prevents redirection and piping, but
+                                  does not alter parsing behavior. A user can still type
+                                  redirection and piping tokens, and they will be parsed as such
+                                  but they won't do anything.
         :param multiline_commands: list of commands allowed to accept multi-line input
         :param terminators: list of characters that terminate a command. These are mainly intended for terminating
                             multiline commands, but will also terminate single-line commands. If not supplied, then
                             defaults to semicolon. If your app only contains single-line commands and you want
                             terminators to be treated as literals by the parser, then set this to an empty list.
         :param shortcuts: dictionary containing shortcuts for commands. If not supplied, then defaults to
-                          constants.DEFAULT_SHORTCUTS.
+                          constants.DEFAULT_SHORTCUTS. If you do not want any shortcuts, pass
+                          an empty dictionary.
         """
         # If use_ipython is False, make sure the ipy command isn't available in this instance
         if not use_ipython:
@@ -374,16 +382,18 @@ class Cmd(cmd.Cmd):
 
     def add_settable(self, settable: Settable) -> None:
         """
-        Convenience method to add a settable parameter to self.settables
+        Convenience method to add a settable parameter to ``self.settables``
+
         :param settable: Settable object being added
         """
         self.settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
         """
-        Convenience method for removing a settable parameter from self.settables
+        Convenience method for removing a settable parameter from ``self.settables``
+
         :param name: name of the settable being removed
-        :raises: KeyError if the no Settable matches this name
+        :raises: KeyError if the Settable matches this name
         """
         try:
             del self.settables[name]

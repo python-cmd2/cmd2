@@ -19,7 +19,11 @@ command processing loop.
 Application Lifecycle Hooks
 ---------------------------
 
-You can register methods to be called at the beginning of the command loop::
+You can run a script on initialization by passing the script filename in the
+``startup_script`` parameter of :meth:`cmd2.Cmd.__init__`.
+
+You can also register methods to be called at the beginning of the command
+loop::
 
     class App(cmd2.Cmd):
         def __init__(self, *args, *kwargs):
@@ -29,8 +33,9 @@ You can register methods to be called at the beginning of the command loop::
         def myhookmethod(self):
             self.poutput("before the loop begins")
 
-To retain backwards compatibility with `cmd.Cmd`, after all registered preloop
-hooks have been called, the ``preloop()`` method is called.
+To retain backwards compatibility with ``cmd.Cmd``, after all registered
+preloop hooks have been called, the :meth:`~cmd2.Cmd.preloop` method is
+called.
 
 A similar approach allows you to register functions to be called after the
 command loop has finished::
@@ -43,54 +48,68 @@ command loop has finished::
         def myhookmethod(self):
             self.poutput("before the loop begins")
 
-To retain backwards compatibility with `cmd.Cmd`, after all registered postloop
-hooks have been called, the ``postloop()`` method is called.
+To retain backwards compatibility with ``cmd.Cmd``, after all registered
+postloop hooks have been called, the :meth:`~cmd2.Cmd.postloop` method is
+called.
 
 Preloop and postloop hook methods are not passed any parameters and any return
 value is ignored.
+
+The approach of registering hooks instead of overriding methods allows multiple
+hooks to be called before the command loop begins or ends. Plugin authors
+should review :ref:`features/plugins:Hooks` for best practices writing hooks.
 
 
 Application Lifecycle Attributes
 --------------------------------
 
-There are numerous attributes of and arguments to ``cmd2.Cmd`` which have a
-significant effect on the application behavior upon entering or during the main
-loop.  A partial list of some of the more important ones is presented here:
+There are numerous attributes on :class:`cmd2.Cmd` which affect application
+behavior upon entering or during the command loop:
 
-- **intro**: *str* - if provided this serves as the intro banner printed once
-  at start of application, after ``preloop`` runs
-- **allow_cli_args**: *bool* - if True (default), then searches for -t or
-  --test at command line to invoke transcript testing mode instead of a normal
-  main loop and also processes any commands provided as arguments on the
-  command line just prior to entering the main loop
-- **echo**: *bool* - if True, then the command line entered is echoed to the
-  screen (most useful when running scripts)
-- **prompt**: *str* - sets the prompt which is displayed, can be dynamically
-  changed based on application state and/or command results
+- :data:`~cmd2.Cmd.intro` - if provided this serves as the intro banner printed
+  once at start of application, after :meth:`~cmd2.Cmd.preloop` is called.
+- :data:`~cmd2.Cmd.prompt` - see :ref:`features/prompt:Prompt` for more
+  information.
+- :data:`~cmd2.Cmd.continuation_prompt` - The prompt issued to solicit input
+  for the 2nd and subsequent lines of a
+  :ref:`multiline command <features/multiline_commands:Multiline Commands>`
+- :data:`~cmd2.Cmd.echo` - if ``True`` write the prompt and the command into
+  the output stream.
+
+In addition, several arguments to :meth:`cmd2.Cmd.__init__` also affect
+the command loop behavior:
+
+- ``allow_cli_args`` - allows commands to be specified on the operating system
+  command line which are executed before the command processing loop begins.
+- ``transcript_files`` - see :ref:`features/transcripts:Transcripts` for more
+  information
+- ``startup_script`` - run a script on initialization. See
+  :ref:`features/scripting:Scripting` for more information.
 
 
 Command Processing Loop
 -----------------------
 
-When you call `.cmdloop()`, the following sequence of events are repeated until
-the application exits:
+When you call :meth:`cmd2.Cmd.cmdloop`, the following sequence of events are
+repeated until the application exits:
 
 #. Output the prompt
 #. Accept user input
-#. Parse user input into `Statement` object
-#. Call methods registered with `register_postparsing_hook()`
+#. Parse user input into a :class:`~cmd2.Statement` object
+#. Call methods registered with :meth:`~cmd2.Cmd.register_postparsing_hook()`
 #. Redirect output, if user asked for it and it's allowed
 #. Start timer
-#. Call methods registered with `register_precmd_hook()`
-#. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
-#. Add statement to history
+#. Call methods registered with :meth:`~cmd2.Cmd.register_precmd_hook`
+#. Call :meth:`~cmd2.Cmd.precmd` - for backwards compatibility with ``cmd.Cmd``
+#. Add statement to :ref:`features/history:History`
 #. Call `do_command` method
-#. Call methods registered with `register_postcmd_hook()`
-#. Call `postcmd(stop, statement)` - for backwards compatibility with
+#. Call methods registered with :meth:`~cmd2.Cmd.register_postcmd_hook()`
+#. Call :meth:`~cmd2.Cmd.postcmd` - for backwards compatibility with
    ``cmd.Cmd``
 #. Stop timer and display the elapsed time
 #. Stop redirecting output if it was redirected
-#. Call methods registered with `register_cmdfinalization_hook()`
+#. Call methods registered with
+   :meth:`~cmd2.Cmd.register_cmdfinalization_hook()`
 
 By registering hook methods, steps 4, 8, 12, and 16 allow you to run code
 during, and control the flow of the command processing loop. Be aware that
@@ -103,6 +122,7 @@ Postparsing, precommand, and postcommand hook methods share some common ways to
 influence the command processing loop.
 
 If a hook raises an exception:
+
 - no more hooks (except command finalization hooks) of any kind will be called
 - if the command has not yet been executed, it will not be executed
 - the exception message will be displayed for the user.
