@@ -1,127 +1,150 @@
 # coding=utf-8
 """
-This module adds capabilities to argparse by patching a few of its functions. It also defines a parser
-class called Cmd2ArgumentParser which improves error and help output over normal argparse. All cmd2 code uses
-this parser and it is recommended that developers of cmd2-based apps either use it or write their own parser
-that inherits from it. This will give a consistent look-and-feel between the help/error output of built-in
-cmd2 commands and the app-specific commands. If you wish to override the parser used by cmd2's built-in
-commands, see override_parser.py example.
+This module adds capabilities to argparse by patching a few of its functions.
+It also defines a parser class called Cmd2ArgumentParser which improves error
+and help output over normal argparse. All cmd2 code uses this parser and it is
+recommended that developers of cmd2-based apps either use it or write their own
+parser that inherits from it. This will give a consistent look-and-feel between
+the help/error output of built-in cmd2 commands and the app-specific commands.
+If you wish to override the parser used by cmd2's built-in commands, see
+override_parser.py example.
 
-Since the new capabilities are added by patching at the argparse API level, they are available whether or not
-Cmd2ArgumentParser is used. However, the help and error output of Cmd2ArgumentParser is customized to notate
-nargs ranges whereas any other parser class won't be as explicit in their output.
-
-############################################################################################################
-# Added capabilities
-############################################################################################################
-
-Extends argparse nargs functionality by allowing tuples which specify a range (min, max). To specify a max
-value with no upper bound, use a 1-item tuple (min,)
-
-    Example:
-        # -f argument expects at least 3 values
-        parser.add_argument('-f', nargs=(3,))
-
-        # -f argument expects 3 to 5 values
-        parser.add_argument('-f', nargs=(3, 5))
-
-Tab Completion:
-    cmd2 uses its ArgparseCompleter class to enable argparse-based tab completion on all commands that use the
-    @with_argparse wrappers. Out of the box you get tab completion of commands, subcommands, and flag names,
-    as well as instructive hints about the current argument that print when tab is pressed. In addition,
-    you can add tab completion for each argument's values using parameters passed to add_argument().
-
-    Below are the 5 add_argument() parameters for enabling tab completion of an argument's value. Only one
-    can be used at a time.
-
-    choices
-        Pass a list of values to the choices parameter.
-        Example:
-            parser.add_argument('-o', '--options', choices=['An Option', 'SomeOtherOption'])
-            parser.add_argument('-o', '--options', choices=my_list)
-
-    choices_function
-        Pass a function that returns choices. This is good in cases where the choice list is dynamically
-        generated when the user hits tab.
-
-        Example:
-            def my_choices_function():
-                ...
-                return my_generated_list
-
-            parser.add_argument('-o', '--options', choices_function=my_choices_function)
-
-    choices_method
-        This is exactly like choices_function, but the function needs to be an instance method of a cmd2-based class.
-        When ArgparseCompleter calls the method, it will pass the app instance as the self argument. This is good in
-        cases where the list of choices being generated relies on state data of the cmd2-based app
-
-        Example:
-            def my_choices_method(self):
-                ...
-                return my_generated_list
-
-    completer_function
-        Pass a tab completion function that does custom completion. Since custom tab completion operations commonly
-        need to modify cmd2's instance variables related to tab completion, it will be rare to need a completer
-        function. completer_method should be used in those cases.
-
-        Example:
-            def my_completer_function(text, line, begidx, endidx):
-                ...
-                return completions
-            parser.add_argument('-o', '--options', completer_function=my_completer_function)
-
-    completer_method
-        This is exactly like completer_function, but the function needs to be an instance method of a cmd2-based class.
-        When ArgparseCompleter calls the method, it will pass the app instance as the self argument. cmd2 provides
-        a few completer methods for convenience (e.g., path_complete, delimiter_complete)
-
-        Example:
-            This adds file-path completion to an argument
-            parser.add_argument('-o', '--options', completer_method=cmd2.Cmd.path_complete)
+Since the new capabilities are added by patching at the argparse API level,
+they are available whether or not Cmd2ArgumentParser is used. However, the help
+and error output of Cmd2ArgumentParser is customized to notate nargs ranges
+whereas any other parser class won't be as explicit in their output.
 
 
-    You can use functools.partial() to prepopulate values of the underlying choices and completer functions/methods.
+**Added capabilities**
 
-        Example:
-            This says to call path_complete with a preset value for its path_filter argument.
-            completer_method = functools.partial(path_complete,
-                                                 path_filter=lambda path: os.path.isdir(path))
-            parser.add_argument('-o', '--options', choices_method=completer_method)
+Extends argparse nargs functionality by allowing tuples which specify a range
+(min, max). To specify a max value with no upper bound, use a 1-item tuple
+(min,)
 
-    Of the 5 tab completion parameters, choices is the only one where argparse validates user input against items
-    in the choices list. This is because the other 4 parameters are meant to tab complete data sets that are viewed
-    as dynamic. Therefore it is up to the developer to validate if the user has typed an acceptable value for these
-    arguments.
+Example::
 
-    The following functions exist in cases where you may want to manually add a choice-providing function/method to
-    an existing argparse action. For instance, in __init__() of a custom action class.
+    # -f argument expects at least 3 values
+    parser.add_argument('-f', nargs=(3,))
 
-        set_choices_function(action, func)
-        set_choices_method(action, method)
-        set_completer_function(action, func)
-        set_completer_method(action, method)
+    # -f argument expects 3 to 5 values
+    parser.add_argument('-f', nargs=(3, 5))
 
-    There are times when what's being tab completed is determined by a previous argument on the command line.
-    In theses cases, Autocompleter can pass a dictionary that maps the command line tokens up through the one
-    being completed to their argparse argument name. To receive this dictionary, your choices/completer function
-    should have an argument called arg_tokens.
 
-        Example:
-            def my_choices_method(self, arg_tokens)
-            def my_completer_method(self, text, line, begidx, endidx, arg_tokens)
+**Tab Completion**
 
-    All values of the arg_tokens dictionary are lists, even if a particular argument expects only 1 token. Since
-    ArgparseCompleter is for tab completion, it does not convert the tokens to their actual argument types or validate
-    their values. All tokens are stored in the dictionary as the raw strings provided on the command line. It is up to
-    the developer to determine if the user entered the correct argument type (e.g. int) and validate their values.
+cmd2 uses its ArgparseCompleter class to enable argparse-based tab completion
+on all commands that use the @with_argparse wrappers. Out of the box you get
+tab completion of commands, subcommands, and flag names, as well as instructive
+hints about the current argument that print when tab is pressed. In addition,
+you can add tab completion for each argument's values using parameters passed
+to add_argument().
 
-CompletionItem Class:
-    This class was added to help in cases where uninformative data is being tab completed. For instance,
-    tab completing ID numbers isn't very helpful to a user without context. Returning a list of CompletionItems
-    instead of a regular string for completion results will signal the ArgparseCompleter to output the completion
-    results in a table of completion tokens with descriptions instead of just a table of tokens.
+Below are the 5 add_argument() parameters for enabling tab completion of an
+argument's value. Only one can be used at a time.
+
+``choices`` - pass a list of values to the choices parameter.
+
+    Example::
+
+        parser.add_argument('-o', '--options', choices=['An Option', 'SomeOtherOption'])
+        parser.add_argument('-o', '--options', choices=my_list)
+
+``choices_function`` - pass a function that returns choices. This is good in
+cases where the choice list is dynamically generated when the user hits tab.
+
+    Example::
+
+        def my_choices_function():
+            ...
+            return my_generated_list
+
+        parser.add_argument('-o', '--options', choices_function=my_choices_function)
+
+``choices_method`` - this is exactly like choices_function, but the function
+needs to be an instance method of a cmd2-based class. When ArgparseCompleter
+calls the method, it will pass the app instance as the self argument. This is
+good in cases where the list of choices being generated relies on state data of
+the cmd2-based app
+
+    Example::
+
+        def my_choices_method(self):
+            ...
+            return my_generated_list
+
+``completer_function`` - pass a tab completion function that does custom
+completion. Since custom tab completion operations commonly need to modify
+cmd2's instance variables related to tab completion, it will be rare to need a
+completer function. completer_method should be used in those cases.
+
+    Example::
+
+        def my_completer_function(text, line, begidx, endidx):
+            ...
+            return completions
+        parser.add_argument('-o', '--options', completer_function=my_completer_function)
+
+``completer_method`` - this is exactly like completer_function, but the
+function needs to be an instance method of a cmd2-based class. When
+ArgparseCompleter calls the method, it will pass the app instance as the self
+argument. cmd2 provides a few completer methods for convenience (e.g.,
+path_complete, delimiter_complete)
+
+    Example::
+
+        # this adds file-path completion to an argument
+        parser.add_argument('-o', '--options', completer_method=cmd2.Cmd.path_complete)
+
+
+    You can use functools.partial() to prepopulate values of the underlying
+    choices and completer functions/methods.
+
+    Example::
+
+        # this says to call path_complete with a preset value for its path_filter argument.
+        completer_method = functools.partial(path_complete,
+                                             path_filter=lambda path: os.path.isdir(path))
+        parser.add_argument('-o', '--options', choices_method=completer_method)
+
+Of the 5 tab completion parameters, choices is the only one where argparse
+validates user input against items in the choices list. This is because the
+other 4 parameters are meant to tab complete data sets that are viewed as
+dynamic. Therefore it is up to the developer to validate if the user has typed
+an acceptable value for these arguments.
+
+The following functions exist in cases where you may want to manually add a
+choice-providing function/method to an existing argparse action. For instance,
+in __init__() of a custom action class.
+
+    - set_choices_function(action, func)
+    - set_choices_method(action, method)
+    - set_completer_function(action, func)
+    - set_completer_method(action, method)
+
+There are times when what's being tab completed is determined by a previous
+argument on the command line. In theses cases, Autocompleter can pass a
+dictionary that maps the command line tokens up through the one being completed
+to their argparse argument name. To receive this dictionary, your
+choices/completer function should have an argument called arg_tokens.
+
+    Example::
+
+        def my_choices_method(self, arg_tokens)
+        def my_completer_method(self, text, line, begidx, endidx, arg_tokens)
+
+All values of the arg_tokens dictionary are lists, even if a particular
+argument expects only 1 token. Since ArgparseCompleter is for tab completion,
+it does not convert the tokens to their actual argument types or validate their
+values. All tokens are stored in the dictionary as the raw strings provided on
+the command line. It is up to the developer to determine if the user entered
+the correct argument type (e.g. int) and validate their values.
+
+CompletionItem Class - This class was added to help in cases where
+uninformative data is being tab completed. For instance, tab completing ID
+numbers isn't very helpful to a user without context. Returning a list of
+CompletionItems instead of a regular string for completion results will signal
+the ArgparseCompleter to output the completion results in a table of completion
+tokens with descriptions instead of just a table of tokens::
 
     Instead of this:
         1     2     3
@@ -133,42 +156,50 @@ CompletionItem Class:
         3           Yet another item
 
 
-    The left-most column is the actual value being tab completed and its header is that value's name.
-    The right column header is defined using the descriptive_header parameter of add_argument(). The right
-    column values come from the CompletionItem.description value.
+The left-most column is the actual value being tab completed and its header is
+that value's name. The right column header is defined using the
+descriptive_header parameter of add_argument(). The right column values come
+from the CompletionItem.description value.
 
-    Example:
-        token = 1
-        token_description = "My Item"
-        completion_item = CompletionItem(token, token_description)
+Example::
 
-    Since descriptive_header and CompletionItem.description are just strings, you can format them in
-    such a way to have multiple columns.
+    token = 1
+    token_description = "My Item"
+    completion_item = CompletionItem(token, token_description)
+
+Since descriptive_header and CompletionItem.description are just strings, you
+can format them in such a way to have multiple columns::
 
     ITEM_ID     Item Name            Checked Out    Due Date
     1           My item              True           02/02/2022
     2           Another item         False
     3           Yet another item     False
 
-    To use CompletionItems, just return them from your choices or completer functions.
+To use CompletionItems, just return them from your choices or completer
+functions.
 
-    To avoid printing a ton of information to the screen at once when a user presses tab, there is
-    a maximum threshold for the number of CompletionItems that will be shown. Its value is defined
-    in cmd2.Cmd.max_completion_items. It defaults to 50, but can be changed. If the number of completion
-    suggestions exceeds this number, they will be displayed in the typical columnized format and will
-    not include the description value of the CompletionItems.
+To avoid printing a ton of information to the screen at once when a user
+presses tab, there is a maximum threshold for the number of CompletionItems
+that will be shown. Its value is defined in cmd2.Cmd.max_completion_items. It
+defaults to 50, but can be changed. If the number of completion suggestions
+exceeds this number, they will be displayed in the typical columnized format
+and will not include the description value of the CompletionItems.
 
-############################################################################################################
-# Patched argparse functions:
-###########################################################################################################
-argparse._ActionsContainer.add_argument - adds arguments related to tab completion and enables nargs range parsing
-                                          See _add_argument_wrapper for more details on these argument
+
+**Patched argparse functions**
+
+argparse._ActionsContainer.add_argument - adds arguments related to tab
+                                          completion and enables nargs range
+                                          parsing See _add_argument_wrapper for
+                                          more details on these argument
 
 argparse.ArgumentParser._get_nargs_pattern - adds support to for nargs ranges
-                                             See _get_nargs_pattern_wrapper for more details
+                                             See _get_nargs_pattern_wrapper for
+                                             more details
 
-argparse.ArgumentParser._match_argument - adds support to for nargs ranges
-                                          See _match_argument_wrapper for more details
+argparse.ArgumentParser._match_argument - adds support to for nargs ranges See
+                                          _match_argument_wrapper for more
+                                          details
 """
 
 import argparse

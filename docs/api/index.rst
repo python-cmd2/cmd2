@@ -8,6 +8,8 @@ API Reference
    parsing
    decorators
    history
+   argparse_completer
+   argparse_custom
    ansi
    utils
    plugin
