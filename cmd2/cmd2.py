@@ -135,17 +135,20 @@ class Cmd(cmd.Cmd):
                  allow_cli_args: bool = True, transcript_files: Optional[List[str]] = None,
                  allow_redirection: bool = True, multiline_commands: Optional[List[str]] = None,
                  terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None) -> None:
-        """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
+        """An easy but powerful framework for writing line-oriented command
+        interpreters. Extends Python's cmd package.
 
         :param completekey: readline name of a completion key, default to Tab
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
         :param persistent_history_file: file path to load a persistent cmd2 command history from
-        :param persistent_history_length: max number of history items to write to the persistent history file
+        :param persistent_history_length: max number of history items to write
+                                          to the persistent history file
         :param startup_script: file path to a script to execute at startup
         :param use_ipython: should the "ipy" command be included for an embedded IPython shell
         :param allow_cli_args: if ``True``, then :meth:`cmd2.Cmd.__init__` will process command
-                               line arguments as either commands to be run or, if ``-t`` or ``--test`` are given, transcript files to run. This should be
+                               line arguments as either commands to be run or, if ``-t`` or
+                               ``--test`` are given, transcript files to run. This should be
                                set to ``False`` if your application parses its own command line
                                arguments.
         :param transcript_files: pass a list of transcript files to be run on initialization.
@@ -158,13 +161,15 @@ class Cmd(cmd.Cmd):
                                   redirection and piping tokens, and they will be parsed as such
                                   but they won't do anything.
         :param multiline_commands: list of commands allowed to accept multi-line input
-        :param terminators: list of characters that terminate a command. These are mainly intended for terminating
-                            multiline commands, but will also terminate single-line commands. If not supplied, then
-                            defaults to semicolon. If your app only contains single-line commands and you want
-                            terminators to be treated as literals by the parser, then set this to an empty list.
-        :param shortcuts: dictionary containing shortcuts for commands. If not supplied, then defaults to
-                          constants.DEFAULT_SHORTCUTS. If you do not want any shortcuts, pass
-                          an empty dictionary.
+        :param terminators: list of characters that terminate a command. These are mainly
+                            intended for terminating multiline commands, but will also
+                            terminate single-line commands. If not supplied, the default
+                            is a semicolon. If your app only contains single-line commands
+                            and you want terminators to be treated as literals by the parser,
+                            then set this to an empty list.
+        :param shortcuts: dictionary containing shortcuts for commands. If not supplied,
+                          then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
+                          any shortcuts, pass an empty dictionary.
         """
         # If use_ipython is False, make sure the ipy command isn't available in this instance
         if not use_ipython:
