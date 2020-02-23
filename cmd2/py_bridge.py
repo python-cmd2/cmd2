@@ -1,7 +1,7 @@
 # coding=utf-8
 """
-Bridges calls made inside of a Python environment to the Cmd2 host app while maintaining a reasonable
-degree of isolation between the two
+Bridges calls made inside of a Python environment to the Cmd2 host app
+while maintaining a reasonable degree of isolation between the two.
 """
 
 import sys
@@ -14,32 +14,38 @@ from .utils import namedtuple_with_defaults, StdSim
 class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr', 'stop', 'data'])):
     """Encapsulates the results from a cmd2 app command
 
-    Named tuple attributes
-    ----------------------
-    stdout: str - output captured from stdout while this command is executing
-    stderr: str - output captured from stderr while this command is executing. None if no error captured.
-    stop: bool - return value of onecmd_plus_hooks after it runs the given command line.
-    data - possible data populated by the command.
+    :stdout: str - output captured from stdout while this command is executing
+    :stderr: str - output captured from stderr while this command is executing
+             None if no error captured.
+    :stop: bool - return value of onecmd_plus_hooks after it runs the given
+           command line.
+    :data: possible data populated by the command.
 
-    Any combination of these fields can be used when developing a scripting API for a given command.
-    By default stdout, stderr, and stop will be captured for you. If there is additional command specific data,
-    then write that to cmd2's last_result member. That becomes the data member of this tuple.
+    Any combination of these fields can be used when developing a scripting API
+    for a given command. By default stdout, stderr, and stop will be captured
+    for you. If there is additional command specific data, then write that to
+    cmd2's last_result member. That becomes the data member of this tuple.
 
-    In some cases, the data member may contain everything needed for a command and storing stdout
-    and stderr might just be a duplication of data that wastes memory. In that case, the StdSim can
-    be told not to store output with its pause_storage member. While this member is True, any output
-    sent to StdSim won't be saved in its buffer.
+    In some cases, the data member may contain everything needed for a command
+    and storing stdout and stderr might just be a duplication of data that
+    wastes memory. In that case, the StdSim can be told not to store output
+    with its pause_storage member. While this member is True, any output sent
+    to StdSim won't be saved in its buffer.
 
-    The code would look like this:
+    The code would look like this::
+
         if isinstance(self.stdout, StdSim):
             self.stdout.pause_storage = True
 
         if isinstance(sys.stderr, StdSim):
             sys.stderr.pause_storage = True
 
-    See StdSim class in utils.py for more information
+    See :class:`~cmd2.utils.StdSim` for more information.
 
-    NOTE: Named tuples are immutable.  So the contents are there for access, not for modification.
+    .. note::
+
+       Named tuples are immutable. The contents are there for access,
+       not for modification.
     """
     def __bool__(self) -> bool:
         """Returns True if the command succeeded, otherwise False"""

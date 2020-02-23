@@ -13,4 +13,5 @@ API Reference
    ansi
    utils
    plugin
+   py_bridge
    constants
