@@ -24,13 +24,20 @@ else:
 original_dir = os.getcwd()
 
 # Try to change to the specified directory
-app('cd {}'.format(directory))
+result = app('cd {}'.format(directory))
 
 # Conditionally do something based on the results of the last command
-if self.last_result:
+if result:
+    print(f"STDOUT: {result.stdout}\n")
+    print(f"STDERR: {result.stderr}\n")
+
     print('\nContents of directory {!r}:'.format(directory))
-    app('dir -l')
-    print('{}\n'.format(self.last_result.data))
+    result = app('dir -l')
+
+    print(f"STDOUT: {result.stdout}\n")
+    print(f"STDERR: {result.stderr}\n")
+
+    print('{}\n'.format(result.data))
 
     # Change back to where we were
     print('Changing back to original directory: {!r}'.format(original_dir))
@@ -38,3 +45,6 @@ if self.last_result:
 else:
     # cd command failed, print a warning
     print('Failed to change directory to {!r}'.format(directory))
+
+    print(f"STDOUT: {result.stdout}\n")
+    print(f"STDERR: {result.stderr}\n")
