@@ -10,8 +10,11 @@ include ``cmd2``. Make sure your ``setup.py`` includes the following::
 
 The ``cmd2`` project uses `Semantic Versioning <https://semver.org>`_, which
 means that any incompatible API changes will be release with a new major
-version number. We recommend that you follow the advice given by the Python
-Packaging User Guide related to `install_requires
+version number. The public API is documented in the :ref:`api/index:API
+Reference`.
+
+We recommend that you follow the advice given by the Python Packaging User
+Guide related to `install_requires
 <https://packaging.python.org/discussions/install-requires-vs-requirements/>`_.
 By setting an upper bound on the allowed version, you can ensure that your
 project does not inadvertently get installed with an incompatible future

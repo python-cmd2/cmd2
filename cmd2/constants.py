@@ -1,6 +1,10 @@
 #
 # coding=utf-8
-"""Constants and definitions"""
+"""This module contains constants used throughout ``cmd2``."""
+
+# Unless documented in https://cmd2.readthedocs.io/en/latest/api/index.html
+# nothing here should be considered part of the public API of this module
+
 
 # Used for command parsing, output redirection, tab completion and word
 # breaks. Do not change.
@@ -32,9 +36,9 @@ HELP_FUNC_PREFIX = 'help_'
 # All command completer functions start with this
 COMPLETER_FUNC_PREFIX = 'complete_'
 
-############################################################################################################
+##############################################################################
 # The following are optional attributes added to do_* command functions
-############################################################################################################
+##############################################################################
 
 # The custom help category a command belongs to
 CMD_ATTR_HELP_CATEGORY = 'help_category'

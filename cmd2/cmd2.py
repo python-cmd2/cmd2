@@ -135,28 +135,41 @@ class Cmd(cmd.Cmd):
                  allow_cli_args: bool = True, transcript_files: Optional[List[str]] = None,
                  allow_redirection: bool = True, multiline_commands: Optional[List[str]] = None,
                  terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None) -> None:
-        """An easy but powerful framework for writing line-oriented command interpreters, extends Python's cmd package.
+        """An easy but powerful framework for writing line-oriented command
+        interpreters. Extends Python's cmd package.
 
         :param completekey: readline name of a completion key, default to Tab
         :param stdin: alternate input file object, if not specified, sys.stdin is used
         :param stdout: alternate output file object, if not specified, sys.stdout is used
         :param persistent_history_file: file path to load a persistent cmd2 command history from
-        :param persistent_history_length: max number of history items to write to the persistent history file
+        :param persistent_history_length: max number of history items to write
+                                          to the persistent history file
         :param startup_script: file path to a script to execute at startup
         :param use_ipython: should the "ipy" command be included for an embedded IPython shell
-        :param allow_cli_args: if True, then cmd2 will process command line arguments as either
-                               commands to be run or, if -t is specified, transcript files to run.
-                               This should be set to False if your application parses its own arguments.
-        :param transcript_files: allow running transcript tests when allow_cli_args is False
-        :param allow_redirection: should output redirection and pipes be allowed. this is only a security setting
-                                  and does not alter parsing behavior.
+        :param allow_cli_args: if ``True``, then :meth:`cmd2.Cmd.__init__` will process command
+                               line arguments as either commands to be run or, if ``-t`` or
+                               ``--test`` are given, transcript files to run. This should be
+                               set to ``False`` if your application parses its own command line
+                               arguments.
+        :param transcript_files: pass a list of transcript files to be run on initialization.
+                                 This allows running transcript tests when ``allow_cli_args``
+                                 is ``False``. If ``allow_cli_args`` is ``True`` this parameter
+                                 is ignored.
+        :param allow_redirection: If ``False``, prevent output redirection and piping to shell
+                                  commands. This parameter prevents redirection and piping, but
+                                  does not alter parsing behavior. A user can still type
+                                  redirection and piping tokens, and they will be parsed as such
+                                  but they won't do anything.
         :param multiline_commands: list of commands allowed to accept multi-line input
-        :param terminators: list of characters that terminate a command. These are mainly intended for terminating
-                            multiline commands, but will also terminate single-line commands. If not supplied, then
-                            defaults to semicolon. If your app only contains single-line commands and you want
-                            terminators to be treated as literals by the parser, then set this to an empty list.
-        :param shortcuts: dictionary containing shortcuts for commands. If not supplied, then defaults to
-                          constants.DEFAULT_SHORTCUTS.
+        :param terminators: list of characters that terminate a command. These are mainly
+                            intended for terminating multiline commands, but will also
+                            terminate single-line commands. If not supplied, the default
+                            is a semicolon. If your app only contains single-line commands
+                            and you want terminators to be treated as literals by the parser,
+                            then set this to an empty list.
+        :param shortcuts: dictionary containing shortcuts for commands. If not supplied,
+                          then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
+                          any shortcuts, pass an empty dictionary.
         """
         # If use_ipython is False, make sure the ipy command isn't available in this instance
         if not use_ipython:
@@ -192,7 +205,7 @@ class Cmd(cmd.Cmd):
 
         # A dictionary mapping settable names to their Settable instance
         self.settables = dict()
-        self.build_settables()
+        self._build_settables()
 
         # Use as prompt for multiline commands on the 2nd+ line of input
         self.continuation_prompt = '> '
@@ -374,24 +387,26 @@ class Cmd(cmd.Cmd):
 
     def add_settable(self, settable: Settable) -> None:
         """
-        Convenience method to add a settable parameter to self.settables
+        Convenience method to add a settable parameter to ``self.settables``
+
         :param settable: Settable object being added
         """
         self.settables[settable.name] = settable
 
     def remove_settable(self, name: str) -> None:
         """
-        Convenience method for removing a settable parameter from self.settables
+        Convenience method for removing a settable parameter from ``self.settables``
+
         :param name: name of the settable being removed
-        :raises: KeyError if the no Settable matches this name
+        :raises: KeyError if the Settable matches this name
         """
         try:
             del self.settables[name]
         except KeyError:
             raise KeyError(name + " is not a settable parameter")
 
-    def build_settables(self):
-        """Populates self.add_settable with parameters that can be edited via the set command"""
+    def _build_settables(self):
+        """Construct the default settings"""
         self.add_settable(Settable('allow_style', str,
                                    'Allow ANSI text style sequences in output (valid values: '
                                    '{}, {}, {})'.format(ansi.STYLE_TERMINAL,
@@ -1508,12 +1523,53 @@ class Cmd(cmd.Cmd):
             raise KeyboardInterrupt("Got a keyboard interrupt")
 
     def precmd(self, statement: Statement) -> Statement:
-        """Hook method executed just before the command is processed by ``onecmd()`` and after adding it to the history.
+        """Hook method executed just before the command is executed by
+        :meth:`~cmd2.Cmd.onecmd` and after adding it to history.
 
         :param statement: subclass of str which also contains the parsed input
         :return: a potentially modified version of the input Statement object
+
+        See :meth:`~cmd2.Cmd.register_postparsing_hook` and
+        :meth:`~cmd2.Cmd.register_precmd_hook` for more robust ways
+        to run hooks before the command is executed. See
+        :ref:`features/hooks:Postparsing Hooks` and
+        :ref:`features/hooks:Precommand Hooks` for more information.
         """
         return statement
+
+    def postcmd(self, stop: bool, statement: Statement) -> bool:
+        """Hook method executed just after a command is executed by
+        :meth:`~cmd2.Cmd.onecmd`.
+
+        :param stop: return `True` to request the command loop terminate
+        :param statement: subclass of str which also contains the parsed input
+
+        See :meth:`~cmd2.Cmd.register_postcmd_hook` and :meth:`~cmd2.Cmd.register_cmdfinalization_hook` for more robust ways
+        to run hooks after the command is executed. See
+        :ref:`features/hooks:Postcommand Hooks` and
+        :ref:`features/hooks:Command Finalization Hooks` for more information.
+        """
+        return stop
+
+    def preloop(self):
+        """Hook method executed once when the :meth:`~.cmd2.Cmd.cmdloop()`
+        method is called.
+
+        See :meth:`~cmd2.Cmd.register_preloop_hook` for a more robust way
+        to run hooks before the command loop begins. See
+        :ref:`features/hooks:Application Lifecycle Hooks` for more information.
+        """
+        pass
+
+    def postloop(self):
+        """Hook method executed once when the :meth:`~.cmd2.Cmd.cmdloop()`
+        method is about to return.
+
+        See :meth:`~cmd2.Cmd.register_postloop_hook` for a more robust way
+        to run hooks after the command loop completes. See
+        :ref:`features/hooks:Application Lifecycle Hooks` for more information.
+        """
+        pass
 
     def parseline(self, line: str) -> Tuple[str, str, str]:
         """Parse the line into a command name and a string containing the arguments.
