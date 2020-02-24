@@ -201,6 +201,9 @@ for multiple matching references is high, which causes Sphinx to generate
 warnings. The build pipeline that renders the documentation treats warnings as
 fatal errors. It's best to just be specific about what you are referencing.
 
+See `<https://github.com/python-cmd2/cmd2/issues/821>`_ for the discussion of
+how we determined this approach.
+
 
 Referencing cmd2
 -----------------

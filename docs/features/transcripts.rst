@@ -185,9 +185,10 @@ output matches the expected result from the transcript.
 
 .. note::
 
-   If you have set ``allow_cli_args`` to False in order to disable parsing of
-   command line arguments at invocation, then the use of ``-t`` or ``--test`` to
-   run transcript testing is automatically disabled. In this case, you can
+   If you have passed an ``allow_cli_args`` parameter containing `False` to
+   :meth:`cmd2.Cmd.__init__` in order to disable parsing of command line
+   arguments at invocation, then the use of ``-t`` or ``--test`` to run
+   transcript testing is automatically disabled. In this case, you can
    alternatively provide a value for the optional ``transcript_files`` when
    constructing the instance of your ``cmd2.Cmd`` derived class in order to
    cause a transcript test to run::

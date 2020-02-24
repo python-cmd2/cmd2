@@ -8,7 +8,21 @@ from .parsing import Statement
 
 
 def with_category(category: str) -> Callable:
-    """A decorator to apply a category to a command function."""
+    """A decorator to apply a category to a ``do_*`` command method.
+
+    :param category: the name of the category in which this command should
+                     be grouped when displaying the list of commands.
+
+    :Example:
+
+    >>> class MyApp(cmd2.Cmd):
+    >>>   @cmd2.with_category('Text Functions')
+    >>>   def do_echo(self, args)
+    >>>     self.poutput(args)
+
+    For an alternative approach to categorizing commands using a function, see
+    :func:`~cmd2.utils.categorize`
+    """
     def cat_decorator(func):
         from .utils import categorize
         categorize(func, category)
@@ -17,12 +31,22 @@ def with_category(category: str) -> Callable:
 
 
 def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> Callable[[List], Optional[bool]]:
-    """A decorator to alter the arguments passed to a do_* cmd2 method. Default passes a string of whatever the user
-    typed. With this decorator, the decorated method will receive a list of arguments parsed from user input.
+    """
+    A decorator to alter the arguments passed to a ``do_*`` method. Default
+    passes a string of whatever the user typed. With this decorator, the
+    decorated method will receive a list of arguments parsed from user input.
 
-    :param args: Single-element positional argument list containing do_* method this decorator is wrapping
-    :param preserve_quotes: if True, then argument quotes will not be stripped
+    :param args: Single-element positional argument list containing ``do_*`` method
+                 this decorator is wrapping
+    :param preserve_quotes: if ``True``, then argument quotes will not be stripped
     :return: function that gets passed a list of argument strings
+
+    :Example:
+
+    >>> class MyApp(cmd2.Cmd):
+    >>>   @cmd2.with_argument_list
+    >>>   def do_echo(self, arglist):
+    >>>     self.poutput(' '.join(arglist)
     """
     import functools
 
@@ -75,18 +99,19 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
                                     ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
                                     preserve_quotes: bool = False) -> \
         Callable[[argparse.Namespace, List], Optional[bool]]:
-    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments with the given
-    instance of argparse.ArgumentParser, but also returning unknown args as a list.
+    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing
+    arguments with the given instance of argparse.ArgumentParser, but also returning
+    unknown args as a list.
 
     :param parser: unique instance of ArgumentParser
-    :param ns_provider: An optional function that accepts a cmd2.Cmd object as an argument and returns an
-                        argparse.Namespace. This is useful if the Namespace needs to be prepopulated with
-                        state data that affects parsing.
-    :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
-    :return: function that gets passed argparse-parsed args in a Namespace and a list of unknown argument strings
-             A member called __statement__ is added to the Namespace to provide command functions access to the
-             Statement object. This can be useful if the command function needs to know the command line.
-
+    :param ns_provider: An optional function that accepts a cmd2.Cmd object as an argument
+                        and returns an argparse.Namespace. This is useful if the Namespace
+                        needs to be prepopulated with state data that affects parsing.
+    :param preserve_quotes: if ``True``, then arguments passed to argparse maintain their quotes
+    :return: function that gets passed argparse-parsed args in a ``Namespace`` and a list
+             of unknown argument strings. A member called ``__statement__`` is added to the
+             ``Namespace`` to provide command functions access to the :class:`cmd2.Statement`
+             object. This can be useful if the command function needs to know the command line.
     """
     import functools
 

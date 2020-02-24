@@ -342,10 +342,8 @@ Argparse Extensions
 - ``nargs=(5,)`` - accept 5 or more items
 - ``nargs=(8, 12)`` - accept 8 to 12 items
 
-``cmd2`` also provides the ``Cmd2ArgumentParser`` class which inherits from
-``argparse.ArgumentParser`` and improves error and help output:
-
-.. autoclass:: cmd2.argparse_custom.Cmd2ArgumentParser
-    :members:
+``cmd2`` also provides the :class:`cmd2.argparse_custom.Cmd2ArgumentParser`
+class which inherits from ``argparse.ArgumentParser`` and improves error and
+help output.
 
 

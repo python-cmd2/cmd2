@@ -36,8 +36,8 @@ similar to the following to your class which inherits from ``cmd2.Cmd``::
 Tab Completion Using Argparse Decorators
 ----------------------------------------
 
-When using one the Argparse-based :ref:`api/decorators:Decorators`, ``cmd2``
-provides automatic tab completion of flag names.
+When using one the Argparse-based :ref:`api/decorators:cmd2.decorators`,
+``cmd2`` provides automatic tab completion of flag names.
 
 Tab completion of argument values can be configured by using one of five
 parameters to ``argparse.ArgumentParser.add_argument()``
@@ -69,12 +69,9 @@ CompletionItem For Providing Extra Context
 When tab completing things like a unique ID from a database, it can often be
 beneficial to provide the user with some extra context about the item being
 completed, such as a description.  To facilitate this, ``cmd2`` defines the
-``CompletionItem`` class which can be returned from any of the 4 completion
-functions: ``choices_function``, ``choices_method``, ``completion_function``,
-or ``completion_method``.
-
-.. autoclass:: cmd2.argparse_custom.CompletionItem
-    :members:
+:class:`cmd2.argparse_custom.CompletionItem` class which can be returned from
+any of the 4 completion functions: ``choices_function``, ``choices_method``,
+``completion_function``, or ``completion_method``.
 
 See the argparse_completion_ example or the implementation of the built-in
 **set** command for demonstration of how this is used.

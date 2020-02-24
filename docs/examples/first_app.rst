@@ -40,15 +40,16 @@ First we need to create a new ``cmd2`` application. Create a new file
         sys.exit(c.cmdloop())
 
 We have a new class ``FirstApp`` which is a subclass of
-:ref:`api/cmd:cmd2.Cmd`. When we tell python to run our file like this:
+:class:`cmd2.Cmd`. When we tell python to run our file like this:
 
 .. code-block:: shell
 
    $ python first_app.py
 
-it creates an instance of our class, and calls the ``cmdloop()`` method. This
-method accepts user input and runs commands based on that input. Because we
-subclassed ``cmd2.Cmd``, our new app already has a bunch of features built in.
+it creates an instance of our class, and calls the :meth:`~cmd2.Cmd.cmdloop`
+method. This method accepts user input and runs commands based on that input.
+Because we subclassed :class:`cmd2.Cmd`, our new app already has a bunch of
+features built in.
 
 Congratulations, you have a working ``cmd2`` app. You can run it, and then type
 ``quit`` to exit.
@@ -70,11 +71,10 @@ initializer to our class::
         self.add_settable(cmd2.Settable('maxrepeats', int, 'max repetitions for speak command'))
 
 In that initializer, the first thing to do is to make sure we initialize
-``cmd2``. That's what the ``super().__init__()`` line does. Then we create an
-attribute to hold our setting, and then add a description of our setting to the
-``settable`` dictionary. If our attribute name isn't in ``settable``, then it
-won't be treated as a setting. Now if you run the script, and enter the ``set``
-command to see the settings, like this:
+``cmd2``. That's what the ``super().__init__()`` line does. Next create an
+attribute to hold the setting. Finally, call the :meth:`~cmd2.Cmd.add_settable`
+method with a new instance of a :meth:`~cmd2.utils.Settable` class. Now if you
+run the script, and enter the ``set`` command to see the settings, like this:
 
 .. code-block:: shell
 
@@ -131,8 +131,8 @@ There is also a new method called ``do_speak()``. In both cmd_ and ``cmd2``,
 methods that start with ``do_`` become new commands, so by defining this method
 we have created a command called ``speak``.
 
-Note the ``@cmd2.with_argparser`` decorator on the ``do_speak()`` method. This
-decorator does 3 useful things for us:
+Note the :func:`~cmd2.decorators.with_argparser` decorator on the
+``do_speak()`` method. This decorator does 3 useful things for us:
 
 1. It tells ``cmd2`` to process all input for the ``speak`` command using the
    argparser we defined. If the user input doesn't meet the requirements
@@ -159,8 +159,9 @@ benefits:
 2. Gracefully handles ``BrokenPipeWarning`` exceptions for redirected output
 3. Makes the output show up in a :ref:`transcript
    <features/transcripts:Transcripts>`
-4. Honors the setting to strip embedded ansi sequences (typically used for
-   background and foreground colors)
+4. Honors the setting to :ref:`strip embedded ansi sequences
+   <features/settings:allow_style>` (typically used for background and
+   foreground colors)
 
 Go run the script again, and try out the ``speak`` command. Try typing ``help
 speak``, and you will see a lovely usage message describing the various options
