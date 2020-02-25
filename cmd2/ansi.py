@@ -32,7 +32,7 @@ Constant for ``cmd2.ansi.allow_style`` to indicate ANSI style sequences should
 always be output.
 """
 
-# Controls when ANSI style style sequences are allowed in output
+# Controls when ANSI style sequences are allowed in output
 allow_style = STYLE_TERMINAL
 """When using outside of a cmd2 app, set this variable to one of:
 
