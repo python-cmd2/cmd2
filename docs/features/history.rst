@@ -268,4 +268,3 @@ If the entered command had no expansion, it is displayed as usual. However, if
 there is some change as the result of expanding macros and aliases, then the
 entered command is displayed with the number, and the expanded command is
 displayed with the number followed by an ``x``.
-
