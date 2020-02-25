@@ -42,12 +42,6 @@ Tab Completion
 .. autoclass:: cmd2.utils.CompletionError
     :members:
 
-.. autofunction:: cmd2.utils.remove_duplicates
-
-.. autofunction:: cmd2.utils.alphabetical_sort
-
-.. autofunction:: cmd2.utils.natural_sort
-
 .. autofunction:: cmd2.utils.basic_complete
 
 
@@ -76,3 +70,9 @@ Miscellaneous
 .. autofunction:: cmd2.utils.namedtuple_with_defaults
 
 .. autofunction:: cmd2.utils.categorize
+
+.. autofunction:: cmd2.utils.remove_duplicates
+
+.. autofunction:: cmd2.utils.alphabetical_sort
+
+.. autofunction:: cmd2.utils.natural_sort
