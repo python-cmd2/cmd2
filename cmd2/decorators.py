@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Decorators for cmd2 commands"""
+"""Decorators for ``cmd2`` commands"""
 import argparse
 from typing import Callable, List, Optional, Union
 
@@ -44,9 +44,9 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
     :Example:
 
     >>> class MyApp(cmd2.Cmd):
-    >>>   @cmd2.with_argument_list
-    >>>   def do_echo(self, arglist):
-    >>>     self.poutput(' '.join(arglist)
+    >>>     @cmd2.with_argument_list
+    >>>     def do_echo(self, arglist):
+    >>>         self.poutput(' '.join(arglist)
     """
     import functools
 
@@ -112,6 +112,20 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
              of unknown argument strings. A member called ``__statement__`` is added to the
              ``Namespace`` to provide command functions access to the :class:`cmd2.Statement`
              object. This can be useful if the command function needs to know the command line.
+
+    :Example:
+
+    >>> parser = argparse.ArgumentParser()
+    >>> parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    >>> parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    >>>
+    >>> class MyApp(cmd2.Cmd):
+    >>>     @cmd2.with_argparser_and_unknown_args(parser)
+    >>>     def do_argprint(self, args, unknown):
+    >>>         "Print the options and argument list this options command was called with."
+    >>>         self.poutput('args: {!r}'.format(args))
+    >>>         self.poutput('unknowns: {}'.format(unknown))
     """
     import functools
 
@@ -170,6 +184,20 @@ def with_argparser(parser: argparse.ArgumentParser, *,
     :return: function that gets passed the argparse-parsed args in a Namespace
              A member called __statement__ is added to the Namespace to provide command functions access to the
              Statement object. This can be useful if the command function needs to know the command line.
+
+    :Example:
+
+    >>> parser = argparse.ArgumentParser()
+    >>> parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    >>> parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    >>> parser.add_argument('words', nargs='+', help='words to print')
+    >>>
+    >>> class MyApp(cmd2.Cmd):
+    >>>     @cmd2.with_argparser(parser, preserve_quotes=True)
+    >>>     def do_argprint(self, args):
+    >>>         "Print the options and argument list this options command was called with."
+    >>>         self.poutput('args: {!r}'.format(args))
     """
     import functools
 

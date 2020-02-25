@@ -4,14 +4,46 @@ History
 For Developers
 --------------
 
-- Describe how ``cmd2`` tracks history
-- how persistent history works
-- differences in history and bash shell history (we only store valid commands
-  in history)
-- reference the public code structures we use to store history
+The ``cmd`` module from the Python standard library includes ``readline``
+history.
+
+:class:`cmd2.Cmd` offers the same ``readline`` capabilities, but also maintains
+it's own data structures for the history of all commands entered by the user.
+When the class is initialized, it creates an instance of the
+:class:`cmd2.history.History` class (which is a subclass of ``list``) as
+:data:`cmd2.Cmd.history`.
+
+Each time a command is executed (this gets
+complex, see :ref:`features/hooks:Command Processing Loop` for exactly when)
+the parsed :class:`cmd2.Statement` is appended to :data:`cmd2.Cmd.history`.
 
 ``cmd2`` adds the option of making this history persistent via optional
-arguments to :meth:`cmd2.Cmd.__init__`.
+arguments to :meth:`cmd2.Cmd.__init__`. If you pass a filename in the
+``persistent_history_file`` argument, the contents of :data:`cmd2.Cmd.history`
+will be pickled into that history file. We chose to use pickle instead of plain
+text so that we can save the results of parsing all the commands.
+
+.. note::
+
+    ``readline`` saves everything you type, whether it is a valid command or
+    not. ``cmd2`` only saves input to internal history if the command parses
+    successfully and is a valid command. This design choice was intentional,
+    because the contents of history can be saved to a file as a script, or can
+    be re-run. Not saving invalid input reduces unintentional errors when doing
+    so.
+
+    However, this design choice causes an inconsistency between the
+    ``readline`` history and the ``cmd2`` history when you enter an invalid
+    command: it is saved to the ``readline`` history, but not to the ``cmd2``
+    history.
+
+The :data:`cmd2.Cmd.history` attribute, the :class:`cmd2.history.History`
+class, and the :class:`cmd2.history.HistoryItem` class are all part of the
+public API for :class:`cmd2.Cmd`. You could use these classes to implement
+write your own ``history`` command (see below for documentation on how the
+included ``history`` command works). If you don't like pickled history, you
+could implement your own mechanism for saving and loading history from a plain
+text file.
 
 
 For Users
@@ -236,4 +268,3 @@ If the entered command had no expansion, it is displayed as usual. However, if
 there is some change as the result of expanding macros and aliases, then the
 entered command is displayed with the number, and the expanded command is
 displayed with the number followed by an ``x``.
-

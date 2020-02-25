@@ -18,29 +18,29 @@ colorama.init(strip=False)
 # Values for allow_style setting
 STYLE_NEVER = 'Never'
 """
-Constant for ``cmd2.ansi.allow_style`` to indicate ANSI sequences
-should be removed from all output.
+Constant for ``cmd2.ansi.allow_style`` to indicate ANSI style sequences should
+be removed from all output.
 """
 STYLE_TERMINAL = 'Terminal'
 """
-Constant for ``cmd2.ansi.allow_style`` to indicate ANSI sequences
+Constant for ``cmd2.ansi.allow_style`` to indicate ANSI style sequences
 should be removed if the output is not going to the terminal.
 """
 STYLE_ALWAYS = 'Always'
 """
-Constant for ``cmd2.ansi.allow_style`` to indicate ANSI sequences
-should alwyas be output.
+Constant for ``cmd2.ansi.allow_style`` to indicate ANSI style sequences should
+always be output.
 """
 
-# Controls when ANSI style style sequences are allowed in output
+# Controls when ANSI style sequences are allowed in output
 allow_style = STYLE_TERMINAL
 """When using outside of a cmd2 app, set this variable to one of:
 
-- ``STYLE_NEVER`` - remove ANSI sequences from all output
-- ``STYLE_TERMINAL`` - remove ANSI sequences if the output is not going to the terminal
-- ``STYLE_ALWAYS`` - always output ANSI sequences
+- ``STYLE_NEVER`` - remove ANSI style sequences from all output
+- ``STYLE_TERMINAL`` - remove ANSI style sequences if the output is not going to the terminal
+- ``STYLE_ALWAYS`` - always output ANSI style sequences
 
-to control the output of ANSI sequences by methods in this module.
+to control the output of ANSI style sequences by methods in this module.
 
 The default is ``STYLE_TERMINAL``.
 """

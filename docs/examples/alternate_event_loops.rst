@@ -46,26 +46,27 @@ the main loop for the program by using code like the following::
 
         app.postloop()
 
-The **runcmds_plus_hooks()** method is a convenience method to run multiple
-commands via **onecmd_plus_hooks()**.
+The :meth:`~cmd2.Cmd.runcmds_plus_hooks()` method runs multiple commands via
+:meth:`~cmd2.Cmd.onecmd_plus_hooks`.
 
-The **onecmd_plus_hooks()** method will do the following to execute a single
-``cmd2`` command in a normal fashion:
+The :meth:`~cmd2.Cmd.onecmd_plus_hooks()` method will do the following to
+execute a single command in a normal fashion:
 
-#. Parse user input into `Statement` object
-#. Call methods registered with `register_postparsing_hook()`
+#. Parse user input into a :class:`~cmd2.Statement` object
+#. Call methods registered with :meth:`~cmd2.Cmd.register_postparsing_hook()`
 #. Redirect output, if user asked for it and it's allowed
 #. Start timer
-#. Call methods registered with `register_precmd_hook()`
-#. Call `precmd()` - for backwards compatibility with ``cmd.Cmd``
-#. Add statement to history
+#. Call methods registered with :meth:`~cmd2.Cmd.register_precmd_hook`
+#. Call :meth:`~cmd2.Cmd.precmd` - for backwards compatibility with ``cmd.Cmd``
+#. Add statement to :ref:`features/history:History`
 #. Call `do_command` method
-#. Call methods registered with `register_postcmd_hook()`
-#. Call `postcmd(stop, statement)` - for backwards compatibility with
+#. Call methods registered with :meth:`~cmd2.Cmd.register_postcmd_hook()`
+#. Call :meth:`~cmd2.Cmd.postcmd` - for backwards compatibility with
    ``cmd.Cmd``
 #. Stop timer and display the elapsed time
 #. Stop redirecting output if it was redirected
-#. Call methods registered with `register_cmdfinalization_hook()`
+#. Call methods registered with
+   :meth:`~cmd2.Cmd.register_cmdfinalization_hook()`
 
 Running in this fashion enables the ability to integrate with an external event
 loop.  However, how to integrate with any specific event loop is beyond the
@@ -75,8 +76,3 @@ with several disadvantages, including:
 * Requires the developer to write more code
 * Does not support transcript testing
 * Does not allow commands at invocation via command-line arguments
-
-Here is a little more info on ``runcmds_plus_hooks``:
-
-.. automethod:: cmd2.Cmd.runcmds_plus_hooks
-    :noindex:

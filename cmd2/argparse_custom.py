@@ -92,7 +92,7 @@ path_complete, delimiter_complete)
 
     Example::
 
-        # this adds file-path completion to an argument
+        # This adds file-path completion to an argument
         parser.add_argument('-o', '--options', completer_method=cmd2.Cmd.path_complete)
 
 
@@ -101,7 +101,7 @@ path_complete, delimiter_complete)
 
     Example::
 
-        # this says to call path_complete with a preset value for its path_filter argument.
+        # This says to call path_complete with a preset value for its path_filter argument
         completer_method = functools.partial(path_complete,
                                              path_filter=lambda path: os.path.isdir(path))
         parser.add_argument('-o', '--options', choices_method=completer_method)

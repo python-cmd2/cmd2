@@ -159,6 +159,21 @@ comment instead of just #), or in a docstring after the definition. This
 project has standardized on the docstring after the definition approach. Do not
 use the specially formatted comment approach.
 
+When using the Sphix ``autoclass`` directive, it must be preceded by two blank
+lines like so:
+
+.. code-block:: rst
+
+    Classes for storing the history of previously entered commands.
+
+
+    .. autoclass:: cmd2.history.History
+        :members:
+
+
+    .. autoclass:: cmd2.history.HistoryItem
+        :members:
+
 
 Links to API Reference
 ----------------------

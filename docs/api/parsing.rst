@@ -1,6 +1,15 @@
 cmd2.parsing
 ===============
 
+Classes for parsing and storing user input.
+
+
+.. autoclass:: cmd2.parsing.StatementParser
+    :members:
+
+    .. automethod:: __init__
+
+
 .. autoclass:: cmd2.Statement
     :members:
 
@@ -67,9 +76,3 @@ cmd2.parsing
 
       If output was redirected by the user, this contains the requested destination with
       quotes preserved.
-
-
-.. autoclass:: cmd2.parsing.StatementParser
-    :members:
-
-    .. automethod:: __init__
