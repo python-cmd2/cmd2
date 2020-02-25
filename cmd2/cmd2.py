@@ -2014,7 +2014,14 @@ class Cmd(cmd.Cmd):
     def cmd_func(self, command: str) -> Optional[Callable]:
         """
         Get the function for a command
+
         :param command: the name of the command
+
+        :Example:
+
+        >>> helpfunc = self.cmd_func('help')
+
+        helpfunc now contains a reference to the ``do_help`` method
         """
         func_name = self._cmd_func_name(command)
         if func_name:
