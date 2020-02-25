@@ -52,7 +52,7 @@ cmd2.Cmd
         A record of previously entered commands.
 
         This attribute is an instance of :class:`cmd2.history.History`, and
-        each command is an instance of :class:`cmd2.history.HistoryItem`.
+        each command is an instance of :class:`cmd2.Statement`.
 
     .. attribute:: statement_parser
 
