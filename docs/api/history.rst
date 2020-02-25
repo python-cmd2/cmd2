@@ -1,6 +1,9 @@
 cmd2.history
 ===============
 
+Classes for storing the history of previously entered commands.
+
+
 .. autoclass:: cmd2.history.History
     :members:
 

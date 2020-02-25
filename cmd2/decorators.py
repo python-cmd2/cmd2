@@ -1,5 +1,5 @@
 # coding=utf-8
-"""Decorators for cmd2 commands"""
+"""Decorators for ``cmd2`` commands"""
 import argparse
 from typing import Callable, List, Optional, Union
 
