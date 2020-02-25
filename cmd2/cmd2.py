@@ -406,7 +406,7 @@ class Cmd(cmd.Cmd):
             raise KeyError(name + " is not a settable parameter")
 
     def _build_settables(self):
-        """Construct the default settings"""
+        """Add default settables"""
         self.add_settable(Settable('allow_style', str,
                                    'Allow ANSI text style sequences in output (valid values: '
                                    '{}, {}, {})'.format(ansi.STYLE_TERMINAL,
