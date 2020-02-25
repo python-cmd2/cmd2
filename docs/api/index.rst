@@ -12,7 +12,7 @@ If a release of this library changes any of the items documented here, the
 version number will be incremented according to the `Semantic Version
 Specification <https://semver.org>`_.
 
-This documentation is for version |version| of ``cmd2``.
+This documentation is for ``cmd2`` version |version|.
 
 .. toctree::
    :maxdepth: 1
