@@ -29,12 +29,11 @@ class CmdLineApp(cmd2.Cmd):
         super().__init__(use_ipython=True)
         self._set_prompt()
         self.intro = 'Happy 𝛑 Day.  Note the full Unicode support:  😇 💩'
-        self.self_in_py = True
 
     def _set_prompt(self):
         """Set prompt so it displays the current working directory."""
         self.cwd = os.getcwd()
-        self.prompt = ansi.style('{!r} $ '.format(self.cwd), fg='cyan')
+        self.prompt = ansi.style(f'{self.cwd} $ ', fg='cyan')
 
     def postcmd(self, stop: bool, line: str) -> bool:
         """Hook method executed just after a command dispatch is finished.
@@ -57,33 +56,31 @@ class CmdLineApp(cmd2.Cmd):
         if not arglist or len(arglist) != 1:
             self.perror("cd requires exactly 1 argument:")
             self.do_help('cd')
-            self.last_result = cmd2.CommandResult('', 'Bad arguments')
+            self.last_result = 'Bad arguments'
             return
 
         # Convert relative paths to absolute paths
         path = os.path.abspath(os.path.expanduser(arglist[0]))
 
         # Make sure the directory exists, is a directory, and we have read access
-        out = ''
         err = None
         data = None
         if not os.path.isdir(path):
-            err = '{!r} is not a directory'.format(path)
+            err = f'{path} is not a directory'
         elif not os.access(path, os.R_OK):
-            err = 'You do not have read access to {!r}'.format(path)
+            err = f'You do not have read access to {path}'
         else:
             try:
                 os.chdir(path)
             except Exception as ex:
-                err = '{}'.format(ex)
+                err = f'{ex}'
             else:
-                out = 'Successfully changed directory to {!r}\n'.format(path)
-                self.stdout.write(out)
+                self.poutput(f'Successfully changed directory to {path}')
                 data = path
 
         if err:
             self.perror(err)
-        self.last_result = cmd2.CommandResult(out, err, data)
+        self.last_result = data
 
     # Enable tab completion for cd command
     def complete_cd(self, text, line, begidx, endidx):
@@ -100,20 +97,17 @@ class CmdLineApp(cmd2.Cmd):
         if unknown:
             self.perror("dir does not take any positional arguments:")
             self.do_help('dir')
-            self.last_result = cmd2.CommandResult('', 'Bad arguments')
+            self.last_result = 'Bad arguments'
             return
 
         # Get the contents as a list
         contents = os.listdir(self.cwd)
 
-        fmt = '{} '
-        if args.long:
-            fmt = '{}\n'
         for f in contents:
-            self.stdout.write(fmt.format(f))
-        self.stdout.write('\n')
+            self.poutput(f'{f}')
+        self.poutput('')
 
-        self.last_result = cmd2.CommandResult(data=contents)
+        self.last_result = contents
 
 
 if __name__ == '__main__':
