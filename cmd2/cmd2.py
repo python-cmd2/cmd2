@@ -205,7 +205,7 @@ class Cmd(cmd.Cmd):
 
         # A dictionary mapping settable names to their Settable instance
         self.settables = dict()
-        self._build_settables()
+        self.build_settables()
 
         # Use as prompt for multiline commands on the 2nd+ line of input
         self.continuation_prompt = '> '
@@ -405,8 +405,8 @@ class Cmd(cmd.Cmd):
         except KeyError:
             raise KeyError(name + " is not a settable parameter")
 
-    def _build_settables(self):
-        """Add default settables"""
+    def build_settables(self):
+        """Create the dictionary of user-settable parameters"""
         self.add_settable(Settable('allow_style', str,
                                    'Allow ANSI text style sequences in output (valid values: '
                                    '{}, {}, {})'.format(ansi.STYLE_TERMINAL,

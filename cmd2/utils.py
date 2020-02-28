@@ -685,7 +685,7 @@ class RedirectionSavedState:
 def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against: Iterable) -> List[str]:
     """
     Basic tab completion function that matches against a list of strings without considering line contents
-    or cursor position. The args required by this function are defined in the header of Pythons's cmd.py.
+    or cursor position. The args required by this function are defined in the header of Python's cmd.py.
 
     :param text: the string prefix we are attempting to match (all matches must begin with it)
     :param line: the current input line with leading whitespace removed
