@@ -93,3 +93,12 @@ where:
   :data:`cmd2.Cmd.py_bridge_name` attribute
 * ``command`` and ``args`` are entered exactly like they would be entered by
   a user of your application.
+
+.. _python_scripting:
+   https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py
+
+.. _conditional:
+   https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py
+
+See python_scripting_ example and associated conditional_ script for more
+information.
