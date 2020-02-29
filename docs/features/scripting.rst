@@ -21,9 +21,10 @@ Creating Command Scripts
 Command scripts can be created in several ways:
 
 - creating a text file using any method of your choice
-- using the built-in ``edit`` command to create or edit an existing text file
-- saving previously entered commands to a script file using ``history -s``. See
-  :ref:`features/history:History` for more details.
+- using the built-in :ref:`features/builtin_commands:edit` command to
+  create or edit an existing text file
+- saving previously entered commands to a script file using
+  :ref:`history -s <features/history:For Users>`
 
 If you create create a text file from scratch, just include one command per
 line, exactly as you would type it inside a ``cmd2`` application.
@@ -32,11 +33,15 @@ line, exactly as you would type it inside a ``cmd2`` application.
 Running Command Scripts
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-Command script files can be executed using the built-in ``run_script`` command
-or ``@`` shortcut. Both ASCII and UTF-8 encoded unicode text files are
-supported. The ``run_script`` command supports tab completion of file system
-paths.  There is a variant ``_relative_run_script`` command or ``@@``
-shortcut for use within a script which uses paths relative to the first script.
+Command script files can be executed using the built-in
+:ref:`features/builtin_commands:run_script` command or the ``@`` shortcut (if
+your application is using the default shortcuts). Both ASCII and UTF-8 encoded
+unicode text files are supported. The
+:ref:`features/builtin_commands:run_script` command supports tab completion of
+file system paths.  There is a variant
+:ref:`features/builtin_commands:_relative_run_script` command or ``@@``
+shortcut (if using the default shortcuts) for use within a script which uses
+paths relative to the first script.
 
 
 Comments
@@ -64,8 +69,8 @@ Python Scripts
 
 If you require logic flow, loops, branching, or other advanced features, you
 can write a python script which executes in the context of your ``cmd2`` app.
-This script is run using the ``run_pyscript`` command. A simple example of
-using ``run_pyscript`` is shown below  along with the arg_printer_ script::
+This script is run using the :ref:`features/builtin_commands:run_pyscript`
+command. Here's a simple example that uses the arg_printer_ script::
 
     (Cmd) run_pyscript examples/scripts/arg_printer.py foo bar 'baz 23'
     Running Python script 'arg_printer.py' which was called with 3 arguments
@@ -73,17 +78,27 @@ using ``run_pyscript`` is shown below  along with the arg_printer_ script::
     arg 2: 'bar'
     arg 3: 'baz 23'
 
-``run_pyscript`` supports tab completion of file system paths, and as shown
-above it has the ability to pass command-line arguments to the scripts invoked.
+:ref:`features/builtin_commands:run_pyscript` supports tab completion of file
+system paths, and as shown above it has the ability to pass command-line
+arguments to the scripts invoked.
 
-Python scripts executed with ``run_pyscript`` can run ``cmd2`` application
-commands by using the syntax::
+Python scripts executed with :ref:`features/builtin_commands:run_pyscript` can
+run ``cmd2`` application commands by using the syntax::
 
     app(‘command args’)
 
 where:
 
 * ``app`` is a configurable name which can be changed by setting the
-  ``py_bridge_name`` attribute of your ``cmd2.Cmd`` class instance
-* ``command`` and ``args`` are entered exactly like they would be entered on
-  the command line of your ``cmd2`` application
+  :data:`cmd2.Cmd.py_bridge_name` attribute
+* ``command`` and ``args`` are entered exactly like they would be entered by
+  a user of your application.
+
+.. _python_scripting:
+   https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py
+
+.. _conditional:
+   https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py
+
+See python_scripting_ example and associated conditional_ script for more
+information.

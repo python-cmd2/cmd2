@@ -63,3 +63,9 @@ cmd2.Cmd
 
         Set an introduction message which is displayed to the user before
         the :ref:`features/hooks:Command Processing Loop` begins.
+
+    .. attribute:: py_bridge_name
+
+        The symbol name which :ref:`features/scripting:Python Scripts` run
+        using the :ref:`features/builtin_commands:run_pyscript` command can use
+        to reference the parent ``cmd2`` application.

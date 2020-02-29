@@ -83,6 +83,15 @@ This command runs commands in a script file that is encoded as either ASCII
 or UTF-8 text.  See :ref:`features/scripting:Command Scripts` for more
 information.
 
+_relative_run_script
+~~~~~~~~~~~~~~~~~~~~
+
+This command is hidden from the help that's visible to end users. It runs a
+script like :ref:`features/builtin_commands:run_script` but does so using a
+path relative to the script that is currently executing. This is useful when
+you have scripts that run other scripts. See :ref:`features/scripting:Running
+Command Scripts` for more information.
+
 set
 ~~~
 
