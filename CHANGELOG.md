@@ -1,3 +1,11 @@
+## 1.0.0 (March 1, 2020)
+* Enhancements
+    * The documentation at [cmd2.rftd.io](https://cmd2.readthedocs.io) received a major overhaul
+* Other
+    * Moved [categorize](https://cmd2.readthedocs.io/en/latest/api/utils.html#miscellaneous) utility function from **decorators** module to **utils** module
+* Notes
+    * Now that the 1.0 release is out, `cmd2` intends to follow [Semantic Versioning](https://semver.org)
+
 ## 0.10.1 (February 19, 2020)
 * Bug Fixes
     * Corrected issue where the actual new value was not always being printed in do_set. This occurred in cases where
