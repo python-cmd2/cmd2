@@ -50,7 +50,7 @@ from . import utils
 from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
-from .exceptions import EmbeddedConsoleExit, EmptyStatement
+from .exceptions import CmdLineError, EmbeddedConsoleExit, EmptyStatement
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
@@ -1599,12 +1599,11 @@ class Cmd(cmd.Cmd):
         stop = False
         try:
             statement = self._input_line_to_statement(line)
-        except EmptyStatement:
+        except (EmptyStatement, ValueError) as ex:
+            if isinstance(ex, ValueError):
+                # Since shlex.split() failed on syntax, let user know what's going on
+                self.perror("Invalid syntax: {}".format(ex))
             return self._run_cmdfinalization_hooks(stop, None)
-        except ValueError as ex:
-            # If shlex.split failed on syntax, let user know what's going on
-            self.pexcept("Invalid syntax: {}".format(ex))
-            return stop
 
         # now that we have a statement, run it with all the hooks
         try:
@@ -1684,8 +1683,8 @@ class Cmd(cmd.Cmd):
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
 
-        except EmptyStatement:
-            # don't do anything, but do allow command finalization hooks to run
+        except (CmdLineError, EmptyStatement):
+            # Don't do anything, but do allow command finalization hooks to run
             pass
         except Exception as ex:
             self.pexcept(ex)
