@@ -50,7 +50,7 @@ from . import utils
 from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
-from .exceptions import CmdLineError, EmbeddedConsoleExit, EmptyStatement
+from .exceptions import Cmd2ArgparseException, EmbeddedConsoleExit, EmptyStatement
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
@@ -1683,7 +1683,7 @@ class Cmd(cmd.Cmd):
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
 
-        except (CmdLineError, EmptyStatement):
+        except (Cmd2ArgparseException, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
         except Exception as ex:

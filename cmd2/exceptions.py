@@ -2,8 +2,8 @@
 """Custom exceptions for cmd2.  These are NOT part of the public API and are intended for internal use only."""
 
 
-class CmdLineError(Exception):
-    """Custom class for when an error occurred parsing the command line"""
+class Cmd2ArgparseException(Exception):
+    """Custom exception class for when an argparse-decorated command has an error parsing its arguments"""
     pass
 
 
