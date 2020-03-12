@@ -10,6 +10,7 @@ import attr
 
 from . import constants
 from . import utils
+from .exceptions import Cmd2ShlexError
 
 
 def shlex_split(str_to_split: str) -> List[str]:
@@ -330,7 +331,7 @@ class StatementParser:
 
         :param line: the command line being lexed
         :return: A list of tokens
-        :raises ValueError: if there are unclosed quotation marks
+        :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
         """
 
         # expand shortcuts and aliases
@@ -341,7 +342,10 @@ class StatementParser:
             return []
 
         # split on whitespace
-        tokens = shlex_split(line)
+        try:
+            tokens = shlex_split(line)
+        except ValueError as ex:
+            raise Cmd2ShlexError(ex)
 
         # custom lexing
         tokens = self.split_on_punctuation(tokens)
@@ -355,7 +359,7 @@ class StatementParser:
 
         :param line: the command line being parsed
         :return: a new :class:`~cmd2.Statement` object
-        :raises ValueError: if there are unclosed quotation marks
+        :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
         """
 
         # handle the special case/hardcoded terminator of a blank line
@@ -518,8 +522,6 @@ class StatementParser:
         :param rawinput: the command line as entered by the user
         :return: a new :class:`~cmd2.Statement` object
         """
-        line = rawinput
-
         # expand shortcuts and aliases
         line = self._expand(rawinput)
 

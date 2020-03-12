@@ -4,7 +4,7 @@ import argparse
 from typing import Callable, List, Optional, Union
 
 from . import constants
-from .exceptions import Cmd2ArgparseException
+from .exceptions import Cmd2ArgparseError
 from .parsing import Statement
 
 
@@ -145,7 +145,7 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
             try:
                 args, unknown = parser.parse_known_args(parsed_arglist, namespace)
             except SystemExit:
-                raise Cmd2ArgparseException
+                raise Cmd2ArgparseError
             else:
                 setattr(args, '__statement__', statement)
                 return func(cmd2_app, args, unknown)
@@ -217,7 +217,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
             try:
                 args = parser.parse_args(parsed_arglist, namespace)
             except SystemExit:
-                raise Cmd2ArgparseException
+                raise Cmd2ArgparseError
             else:
                 setattr(args, '__statement__', statement)
                 return func(cmd2_app, args)
