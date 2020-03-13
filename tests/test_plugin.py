@@ -849,7 +849,7 @@ def test_cmdfinalization_hook_exception(capsys):
 
 def test_cmd2_argparse_exception(capsys):
     """
-    Verify Cmd2ArgparseExceptions raised after calling a command prevent postcmd events from
+    Verify Cmd2ArgparseErrors raised after calling a command prevent postcmd events from
     running but do not affect cmdfinalization events
     """
     app = PluggedApp()
