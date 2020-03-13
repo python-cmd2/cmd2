@@ -1,4 +1,4 @@
-## 1.0.1 (TBD, 2020)
+## 1.0.1 (March 13, 2020)
 * Bug Fixes
     * Fixed issue where postcmd hooks were running after an `argparse` exception in a command.
 
