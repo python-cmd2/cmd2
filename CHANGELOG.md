@@ -1,3 +1,7 @@
+## 1.0.1 (TBD, 2020)
+* Bug Fixes
+    * Fixed issue where postcmd hooks were running after an `argparse` exception in a command.
+
 ## 1.0.0 (March 1, 2020)
 * Enhancements
     * The documentation at [cmd2.rftd.io](https://cmd2.readthedocs.io) received a major overhaul

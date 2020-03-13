@@ -96,7 +96,7 @@ def test_tokenize(parser, line, tokens):
     assert tokens_to_test == tokens
 
 def test_tokenize_unclosed_quotes(parser):
-    with pytest.raises(ValueError):
+    with pytest.raises(exceptions.Cmd2ShlexError):
         _ = parser.tokenize('command with "unclosed quotes')
 
 @pytest.mark.parametrize('tokens,command,args', [
@@ -583,7 +583,7 @@ def test_parse_redirect_to_unicode_filename(parser):
     assert statement.output_to == 'café'
 
 def test_parse_unclosed_quotes(parser):
-    with pytest.raises(ValueError):
+    with pytest.raises(exceptions.Cmd2ShlexError):
         _ = parser.tokenize("command with 'unclosed quotes")
 
 def test_empty_statement_raises_exception():

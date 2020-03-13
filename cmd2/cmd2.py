@@ -50,7 +50,7 @@ from . import utils
 from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
-from .exceptions import EmbeddedConsoleExit, EmptyStatement
+from .exceptions import Cmd2ArgparseError, Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
@@ -1599,12 +1599,10 @@ class Cmd(cmd.Cmd):
         stop = False
         try:
             statement = self._input_line_to_statement(line)
-        except EmptyStatement:
+        except (EmptyStatement, Cmd2ShlexError) as ex:
+            if isinstance(ex, Cmd2ShlexError):
+                self.perror("Invalid syntax: {}".format(ex))
             return self._run_cmdfinalization_hooks(stop, None)
-        except ValueError as ex:
-            # If shlex.split failed on syntax, let user know what's going on
-            self.pexcept("Invalid syntax: {}".format(ex))
-            return stop
 
         # now that we have a statement, run it with all the hooks
         try:
@@ -1684,8 +1682,8 @@ class Cmd(cmd.Cmd):
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
 
-        except EmptyStatement:
-            # don't do anything, but do allow command finalization hooks to run
+        except (Cmd2ArgparseError, EmptyStatement):
+            # Don't do anything, but do allow command finalization hooks to run
             pass
         except Exception as ex:
             self.pexcept(ex)
@@ -1744,6 +1742,8 @@ class Cmd(cmd.Cmd):
 
         :param line: the line being parsed
         :return: the completed Statement
+        :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
+                 EmptyStatement when the resulting Statement is blank
         """
         while True:
             try:
@@ -1755,7 +1755,7 @@ class Cmd(cmd.Cmd):
                     # it's not a multiline command, but we parsed it ok
                     # so we are done
                     break
-            except ValueError:
+            except Cmd2ShlexError:
                 # we have unclosed quotation marks, lets parse only the command
                 # and see if it's a multiline
                 statement = self.statement_parser.parse_command_only(line)
@@ -1792,7 +1792,7 @@ class Cmd(cmd.Cmd):
                 self._at_continuation_prompt = False
 
         if not statement.command:
-            raise EmptyStatement()
+            raise EmptyStatement
         return statement
 
     def _input_line_to_statement(self, line: str) -> Statement:
@@ -1801,6 +1801,8 @@ class Cmd(cmd.Cmd):
 
         :param line: the line being parsed
         :return: parsed command line as a Statement
+        :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
+                 EmptyStatement when the resulting Statement is blank
         """
         used_macros = []
         orig_line = None
@@ -1819,7 +1821,7 @@ class Cmd(cmd.Cmd):
                 used_macros.append(statement.command)
                 line = self._resolve_macro(statement)
                 if line is None:
-                    raise EmptyStatement()
+                    raise EmptyStatement
             else:
                 break
 
