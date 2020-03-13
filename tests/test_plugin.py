@@ -3,6 +3,7 @@
 """
 Test plugin infrastructure and hooks.
 """
+import argparse
 import sys
 
 import pytest
@@ -14,7 +15,7 @@ except ImportError:
     from unittest import mock
 
 import cmd2
-from cmd2 import exceptions, plugin
+from cmd2 import exceptions, plugin, Cmd2ArgumentParser, with_argparser
 
 
 class Plugin:
@@ -253,6 +254,14 @@ class PluggedApp(Plugin, cmd2.Cmd):
     def do_say(self, statement):
         """Repeat back the arguments"""
         self.poutput(statement)
+
+    parser = Cmd2ArgumentParser(description="Test parser")
+    parser.add_argument("my_arg", help="some help text")
+
+    @with_argparser(parser)
+    def do_argparse_cmd(self, namespace: argparse.Namespace):
+        """Repeat back the arguments"""
+        self.poutput(namespace.__statement__)
 
 ###
 #
@@ -835,4 +844,32 @@ def test_cmdfinalization_hook_exception(capsys):
     assert not stop
     assert out == 'hello\n'
     assert err
+    assert app.called_cmdfinalization == 1
+
+
+def test_cmd2_argparse_exception(capsys):
+    """
+    Verify Cmd2ArgparseExceptions raised after calling a command prevent postcmd events from
+    running but do not affect cmdfinalization events
+    """
+    app = PluggedApp()
+    app.register_postcmd_hook(app.postcmd_hook)
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook)
+
+    # First generate no exception and make sure postcmd_hook, postcmd, and cmdfinalization_hook run
+    app.onecmd_plus_hooks('argparse_cmd arg_val')
+    out, err = capsys.readouterr()
+    assert out == 'arg_val\n'
+    assert not err
+    assert app.called_postcmd == 2
+    assert app.called_cmdfinalization == 1
+
+    app.reset_counters()
+
+    # Next cause an argparse exception and verify no postcmd stuff runs but cmdfinalization_hook still does
+    app.onecmd_plus_hooks('argparse_cmd')
+    out, err = capsys.readouterr()
+    assert not out
+    assert "Error: the following arguments are required: my_arg" in err
+    assert app.called_postcmd == 0
     assert app.called_cmdfinalization == 1
