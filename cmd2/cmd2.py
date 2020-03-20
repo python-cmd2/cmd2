@@ -3015,6 +3015,9 @@ class Cmd(cmd.Cmd):
             proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
             proc_reader.wait()
 
+            # Save the return code of the application for use in a pyscript
+            self.last_result = proc.returncode
+
     @staticmethod
     def _reset_py_display() -> None:
         """

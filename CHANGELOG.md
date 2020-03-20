@@ -1,3 +1,7 @@
+## 1.0.2 (TBD, 2020)
+* Enhancements
+    * `do_shell()` now saves the return code of the command it runs in `self.last_result` for use in pyscripts
+
 ## 1.0.1 (March 13, 2020)
 * Bug Fixes
     * Fixed issue where postcmd hooks were running after an `argparse` exception in a command.
