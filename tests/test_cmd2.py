@@ -203,6 +203,10 @@ def test_base_shell(base_app, monkeypatch):
     assert out == []
     assert m.called
 
+def test_shell_last_result(base_app):
+    base_app.last_result = None
+    run_cmd(base_app, 'shell fake')
+    assert base_app.last_result is not None
 
 def test_base_py(base_app):
     # Make sure py can't edit Cmd.py_locals. It used to be that cmd2 was passing its py_locals
