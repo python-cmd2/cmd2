@@ -81,6 +81,9 @@ class CmdLineApp(cmd2.Cmd):
         """Do nothing and output nothing"""
         pass
 
+    def do_keyboard_interrupt(self, _):
+        raise KeyboardInterrupt('Interrupting this command')
+
 
 def test_commands_at_invocation():
     testargs = ["prog", "say hello", "say Gracie", "quit"]
@@ -234,6 +237,12 @@ def test_generate_transcript_stop(capsys):
     app._generate_transcript(commands, transcript_fname)
     _, err = capsys.readouterr()
     assert err.startswith("Command 2 triggered a stop")
+
+    # keyboard_interrupt command should stop the loop and not run the third command
+    commands = ['help', 'keyboard_interrupt', 'set']
+    app._generate_transcript(commands, transcript_fname)
+    _, err = capsys.readouterr()
+    assert err.startswith("Interrupting this command\nCommand 2 triggered a stop")
 
 
 @pytest.mark.parametrize('expected, transformed', [
