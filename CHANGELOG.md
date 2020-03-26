@@ -1,7 +1,8 @@
 ## 1.0.2 (TBD, 2020)
+* Bug Fixes
+    * Ctrl-C now stops a running text script instead of just the current script command
 * Enhancements
     * `do_shell()` now saves the return code of the command it runs in `self.last_result` for use in pyscripts
-    * Ctrl-C now stops a running text script instead of just the current script command
 
 ## 1.0.1 (March 13, 2020)
 * Bug Fixes
