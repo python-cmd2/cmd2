@@ -3256,7 +3256,7 @@ class Cmd(cmd.Cmd):
                 try:
                     interp.runcode(py_code_to_run)
                 except BaseException:
-                    # We don't care about any exceptions that happened in the Python code
+                    # We don't care about any exception that happened in the Python code
                     pass
 
             # Otherwise we will open an interactive Python shell
