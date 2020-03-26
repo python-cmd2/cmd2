@@ -104,10 +104,10 @@ method be called.
 Quit on SIGINT
 --------------
 
-On many shells, SIGINT (most often triggered by the user pressing Ctrl+C) only
-cancels the current line, not the entire command loop. By default, a ``cmd2``
-application will quit on receiving this signal. However, if ``quit_on_sigint``
-is set to ``False``, then the current line will simply be cancelled.
+On many shells, SIGINT (most often triggered by the user pressing Ctrl+C)
+while at the prompt only cancels the current line, not the entire command
+loop. By default, a ``cmd2`` application matches this behavior. However, if
+``quit_on_sigint`` is set to ``True``, the command loop will quit instead.
 
 ::
 

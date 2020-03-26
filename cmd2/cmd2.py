@@ -187,7 +187,7 @@ class Cmd(cmd.Cmd):
 
         # Attributes which should NOT be dynamically settable via the set command at runtime
         self.default_to_shell = False  # Attempt to run unrecognized commands as shell commands
-        self.quit_on_sigint = False  # Quit the loop on interrupt instead of just resetting prompt
+        self.quit_on_sigint = False  # Ctrl-C at the prompt will quit the program instead of just resetting prompt
         self.allow_redirection = allow_redirection  # Security setting to prevent redirection of stdout
 
         # Attributes which ARE dynamically settable via the set command at runtime
@@ -1584,11 +1584,15 @@ class Cmd(cmd.Cmd):
         statement = self.statement_parser.parse_command_only(line)
         return statement.command, statement.args, statement.command_and_args
 
-    def onecmd_plus_hooks(self, line: str, *, add_to_history: bool = True, py_bridge_call: bool = False) -> bool:
+    def onecmd_plus_hooks(self, line: str, *, add_to_history: bool = True,
+                          raise_keyboard_interrupt: bool = False, py_bridge_call: bool = False) -> bool:
         """Top-level function called by cmdloop() to handle parsing a line and running the command and all of its hooks.
 
         :param line: command line to run
         :param add_to_history: If True, then add this command to history. Defaults to True.
+        :param raise_keyboard_interrupt: if True, then KeyboardInterrupt exceptions will be raised. This is used when
+                                         running commands in a loop to be able to stop the whole loop and not just
+                                         the current command. Defaults to False.
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
                                command's stdout.
@@ -1681,14 +1685,18 @@ class Cmd(cmd.Cmd):
                     if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
-
+        except KeyboardInterrupt as e:
+            if raise_keyboard_interrupt:
+                raise e
         except (Cmd2ArgparseError, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
         except Exception as ex:
             self.pexcept(ex)
         finally:
-            return self._run_cmdfinalization_hooks(stop, statement)
+            stop = self._run_cmdfinalization_hooks(stop, statement)
+
+        return stop
 
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
@@ -1711,13 +1719,16 @@ class Cmd(cmd.Cmd):
         except Exception as ex:
             self.pexcept(ex)
 
-    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *, add_to_history: bool = True) -> bool:
+    def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *, add_to_history: bool = True,
+                           stop_on_keyboard_interrupt: bool = True) -> bool:
         """
         Used when commands are being run in an automated fashion like text scripts or history replays.
         The prompt and command line for each command will be printed if echo is True.
 
         :param cmds: commands to run
         :param add_to_history: If True, then add these commands to history. Defaults to True.
+        :param stop_on_keyboard_interrupt: stop command loop if Ctrl-C is pressed instead of just
+                                           moving to the next command. Defaults to True.
         :return: True if running of commands should stop
         """
         for line in cmds:
@@ -1727,8 +1738,14 @@ class Cmd(cmd.Cmd):
             if self.echo:
                 self.poutput('{}{}'.format(self.prompt, line))
 
-            if self.onecmd_plus_hooks(line, add_to_history=add_to_history):
-                return True
+            try:
+                if self.onecmd_plus_hooks(line, add_to_history=add_to_history,
+                                          raise_keyboard_interrupt=stop_on_keyboard_interrupt):
+                    return True
+            except KeyboardInterrupt as e:
+                if stop_on_keyboard_interrupt:
+                    self.perror(e)
+                    break
 
         return False
 
@@ -3238,8 +3255,10 @@ class Cmd(cmd.Cmd):
                 # noinspection PyBroadException
                 try:
                     interp.runcode(py_code_to_run)
+                except KeyboardInterrupt as e:
+                    raise e
                 except BaseException:
-                    # We don't care about any exception that happened in the Python code
+                    # We don't care about any other exceptions that happened in the Python code
                     pass
 
             # Otherwise we will open an interactive Python shell
@@ -3268,9 +3287,6 @@ class Cmd(cmd.Cmd):
                     with self.sigint_protection:
                         if saved_cmd2_env is not None:
                             self._restore_cmd2_env(saved_cmd2_env)
-
-        except KeyboardInterrupt:
-            pass
 
         finally:
             with self.sigint_protection:
@@ -3302,8 +3318,6 @@ class Cmd(cmd.Cmd):
             if selection != 'Yes':
                 return
 
-        py_return = False
-
         # Save current command line arguments
         orig_args = sys.argv
 
@@ -3313,9 +3327,6 @@ class Cmd(cmd.Cmd):
 
             # noinspection PyTypeChecker
             py_return = self.do_py('--pyscript {}'.format(utils.quote_string(args.script_path)))
-
-        except KeyboardInterrupt:
-            pass
 
         finally:
             # Restore command line arguments to original state
@@ -3629,7 +3640,12 @@ class Cmd(cmd.Cmd):
                 self.stdout = utils.StdSim(self.stdout)
 
                 # then run the command and let the output go into our buffer
-                stop = self.onecmd_plus_hooks(history_item)
+                try:
+                    stop = self.onecmd_plus_hooks(history_item, raise_keyboard_interrupt=True)
+                except KeyboardInterrupt as e:
+                    self.perror(e)
+                    stop = True
+
                 commands_run += 1
 
                 # add the regex-escaped output to the transcript
