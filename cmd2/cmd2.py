@@ -1685,9 +1685,9 @@ class Cmd(cmd.Cmd):
                     if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt as ex:
             if raise_keyboard_interrupt:
-                raise e
+                raise ex
         except (Cmd2ArgparseError, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
@@ -3255,10 +3255,8 @@ class Cmd(cmd.Cmd):
                 # noinspection PyBroadException
                 try:
                     interp.runcode(py_code_to_run)
-                except KeyboardInterrupt as e:
-                    raise e
                 except BaseException:
-                    # We don't care about any other exceptions that happened in the Python code
+                    # We don't care about any exceptions that happened in the Python code
                     pass
 
             # Otherwise we will open an interactive Python shell
