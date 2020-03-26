@@ -376,6 +376,28 @@ set allow_style Never""" % (prefilepath, postfilepath)
     out, err = run_cmd(base_app, 'history -s')
     assert out == normalize(expected)
 
+def test_runcmds_plus_hooks_ctrl_c(base_app, capsys):
+    """Test Ctrl-C while in runcmds_plus_hooks"""
+    import types
+
+    def do_keyboard_interrupt(self, _):
+        raise KeyboardInterrupt('Interrupting this command')
+    setattr(base_app, 'do_keyboard_interrupt', types.MethodType(do_keyboard_interrupt, base_app))
+
+    # Default behavior is to stop command loop on Ctrl-C
+    base_app.history.clear()
+    base_app.runcmds_plus_hooks(['help', 'keyboard_interrupt', 'shortcuts'])
+    out, err = capsys.readouterr()
+    assert err.startswith("Interrupting this command")
+    assert len(base_app.history) == 2
+
+    # Ctrl-C should not stop command loop in this case
+    base_app.history.clear()
+    base_app.runcmds_plus_hooks(['help', 'keyboard_interrupt', 'shortcuts'], stop_on_keyboard_interrupt=False)
+    out, err = capsys.readouterr()
+    assert not err
+    assert len(base_app.history) == 3
+
 def test_relative_run_script(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     filename = os.path.join(test_dir, 'script.txt')
