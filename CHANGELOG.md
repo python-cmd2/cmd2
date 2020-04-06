@@ -1,4 +1,4 @@
-## 1.0.2 (TBD, 2020)
+## 1.0.2 (April 06, 2020)
 * Bug Fixes
     * Ctrl-C now stops a running text script instead of just the current script command
 * Enhancements
