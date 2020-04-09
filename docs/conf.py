@@ -169,3 +169,16 @@ intersphinx_mapping = {'http://docs.python.org/': None}
 autodoc_default_options = {
     'member-order': 'bysource'
 }
+
+# Ignore nitpicky warnings from autodoc which are occurring for very new versions of Sphinx and autodoc
+# They seem to be happening because autodoc is now trying to add hyperlinks to docs for typehint classes
+nitpick_ignore = [
+    ('py:class', 'Callable[[None], None]'),
+    ('py:class', 'cmd2.cmd2.Cmd'),
+    ('py:class', 'cmd2.parsing.Statement'),
+    ('py:class', 'IO'),
+    ('py:class', 'None'),
+    ('py:class', 'Optional[Callable[[...], argparse.Namespace]]'),
+    ('py:class', 'TextIO'),
+    ('py:class', 'Union[None, Iterable, Callable]'),
+]
