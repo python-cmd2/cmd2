@@ -347,3 +347,38 @@ class which inherits from ``argparse.ArgumentParser`` and improves error and
 help output.
 
 
+Decorator Order
+---------------
+
+If you are using custom decorators in combination with either
+``@cmd2.with_argparser`` or ``@cmd2.with_argparser_and_unknown_args``, then the
+order of your custom decorator(s) relative to the ``cmd2`` decorator matters
+when it comes to runtime behavior and ``argparse`` errors.  There is nothing
+``cmd2``-specific here, this is just a side-effect of how decorators work in
+Python.  To learn more about how decorators work, see decorator_primer_.
+
+If you want your custom decorator's  runtime behavior to occur in the case of
+an ``argparse`` error, then that decorator needs to go **after** the
+``argparse`` one, e.g.::
+
+    @cmd2.with_argparser(foo_parser)
+    @my_decorator
+    def do_foo(self, args: argparse.Namespace) -> None:
+        """foo docs"""
+        pass
+
+However, if you do NOT want the customer decorator runtime behavior to occur
+even in the case of an `argparse` error, then that decorator needs to go
+**before** the ``arpgarse`` one, e.g.::
+
+    @my_decorator
+    @cmd2.with_argparser(bar_parser)
+    def do_bar(self, args: argparse.Namespace) -> None:
+        """bar docs"""
+        pass
+
+The help_categories_ example demonstrates both above cases in a concrete
+fashion.
+
+.. _decorator_primer: https://realpython.com/primer-on-python-decorators
+.. _help_categories: https://github.com/python-cmd2/cmd2/blob/master/examples/help_categories.py

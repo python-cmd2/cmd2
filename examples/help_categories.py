@@ -2,16 +2,27 @@
 # coding=utf-8
 """
 A sample application for tagging categories on commands.
-"""
 
-import argparse
+It also demonstrates the effects of decorator order when it comes to argparse errors occurring.
+"""
+import functools
 
 import cmd2
 from cmd2 import COMMAND_NAME
 
 
+def my_decorator(f):
+    @functools.wraps(f)
+    def wrapper(*args, **kwds):
+        print('Calling decorated function')
+        return f(*args, **kwds)
+    return wrapper
+
+
 class HelpCategories(cmd2.Cmd):
     """ Example cmd2 application. """
+
+    START_TIMES = ['now', 'later', 'sometime', 'whenever']
 
     # Command categories
     CMD_CAT_CONNECTING = 'Connecting'
@@ -42,6 +53,11 @@ class HelpCategories(cmd2.Cmd):
         """Deploy command"""
         self.poutput('Deploy')
 
+    start_parser = cmd2.DEFAULT_ARGUMENT_PARSER(description='Start', epilog='my_decorator runs even with argparse errors')
+    start_parser.add_argument('when', choices=START_TIMES, help='Specify when to start')
+
+    @my_decorator
+    @cmd2.with_argparser(start_parser)
     def do_start(self, _):
         """Start command"""
         self.poutput('Start')
@@ -54,13 +70,13 @@ class HelpCategories(cmd2.Cmd):
         """Redeploy command"""
         self.poutput('Redeploy')
 
-    restart_parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    restart_parser.add_argument('when', default='now',
-                                choices=['now', 'later', 'sometime', 'whenever'],
-                                help='Specify when to restart')
+    restart_parser = cmd2.DEFAULT_ARGUMENT_PARSER(description='Restart',
+                                                  epilog='my_decorator does not run when argparse errors')
+    restart_parser.add_argument('when', choices=START_TIMES, help='Specify when to restart')
 
     @cmd2.with_argparser(restart_parser)
     @cmd2.with_category(CMD_CAT_APP_MGMT)
+    @my_decorator
     def do_restart(self, _):
         """Restart command"""
         self.poutput('Restart')
@@ -158,5 +174,6 @@ class HelpCategories(cmd2.Cmd):
 
 if __name__ == '__main__':
     import sys
+
     c = HelpCategories()
     sys.exit(c.cmdloop())
