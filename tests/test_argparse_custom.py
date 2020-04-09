@@ -7,8 +7,8 @@ import argparse
 import pytest
 
 import cmd2
-from cmd2 import Cmd2ArgumentParser
-from cmd2.argparse_custom import generate_range_error, INFINITY
+from cmd2 import Cmd2ArgumentParser, constants
+from cmd2.argparse_custom import generate_range_error
 from .conftest import run_cmd
 
 
@@ -188,7 +188,7 @@ def test_apcustom_narg_tuple_other_ranges():
     parser = Cmd2ArgumentParser()
     arg = parser.add_argument('arg', nargs=(2,))
     assert arg.nargs == argparse.ONE_OR_MORE
-    assert arg.nargs_range == (2, INFINITY)
+    assert arg.nargs_range == (2, constants.INFINITY)
 
     # Test finite range
     parser = Cmd2ArgumentParser()
@@ -216,10 +216,10 @@ def test_apcustom_print_message(capsys):
 
 def test_generate_range_error():
     # max is INFINITY
-    err_str = generate_range_error(1, INFINITY)
+    err_str = generate_range_error(1, constants.INFINITY)
     assert err_str == "expected at least 1 argument"
 
-    err_str = generate_range_error(2, INFINITY)
+    err_str = generate_range_error(2, constants.INFINITY)
     assert err_str == "expected at least 2 arguments"
 
     # min and max are equal

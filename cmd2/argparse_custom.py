@@ -209,10 +209,7 @@ import sys
 from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
 from typing import Callable, Optional, Tuple, Type, Union
 
-from . import ansi
-
-# Used in nargs ranges to signify there is no maximum
-INFINITY = float('inf')
+from . import ansi, constants
 
 ############################################################################################################
 # The following are names of custom argparse argument attributes added by cmd2
@@ -236,7 +233,7 @@ def generate_range_error(range_min: int, range_max: Union[int, float]) -> str:
     """Generate an error message when the the number of arguments provided is not within the expected range"""
     err_str = "expected "
 
-    if range_max == INFINITY:
+    if range_max == constants.INFINITY:
         err_str += "at least {} argument".format(range_min)
 
         if range_min != 1:
@@ -407,11 +404,11 @@ def _add_argument_wrapper(self, *args,
 
             # Handle 1-item tuple by setting max to INFINITY
             if len(nargs) == 1:
-                nargs = (nargs[0], INFINITY)
+                nargs = (nargs[0], constants.INFINITY)
 
             # Validate nargs tuple
             if len(nargs) != 2 or not isinstance(nargs[0], int) or \
-                    not (isinstance(nargs[1], int) or nargs[1] == INFINITY):
+                    not (isinstance(nargs[1], int) or nargs[1] == constants.INFINITY):
                 raise ValueError('Ranged values for nargs must be a tuple of 1 or 2 integers')
             if nargs[0] >= nargs[1]:
                 raise ValueError('Invalid nargs range. The first value must be less than the second')
@@ -432,10 +429,10 @@ def _add_argument_wrapper(self, *args,
                     nargs_range = None
                 else:
                     nargs_adjusted = argparse.ZERO_OR_MORE
-                    if range_max == INFINITY:
+                    if range_max == constants.INFINITY:
                         # No range needed since (0, INFINITY) is just argparse.ZERO_OR_MORE
                         nargs_range = None
-            elif range_min == 1 and range_max == INFINITY:
+            elif range_min == 1 and range_max == constants.INFINITY:
                 nargs_adjusted = argparse.ONE_OR_MORE
 
                 # No range needed since (1, INFINITY) is just argparse.ONE_OR_MORE
@@ -487,7 +484,7 @@ def _get_nargs_pattern_wrapper(self, action) -> str:
     # Wrapper around ArgumentParser._get_nargs_pattern behavior to support nargs ranges
     nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
     if nargs_range is not None:
-        if nargs_range[1] == INFINITY:
+        if nargs_range[1] == constants.INFINITY:
             range_max = ''
         else:
             range_max = nargs_range[1]
@@ -712,7 +709,7 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         nargs_range = getattr(action, ATTR_NARGS_RANGE, None)
 
         if nargs_range is not None:
-            if nargs_range[1] == INFINITY:
+            if nargs_range[1] == constants.INFINITY:
                 range_str = '{}+'.format(nargs_range[0])
             else:
                 range_str = '{}..{}'.format(nargs_range[0], nargs_range[1])

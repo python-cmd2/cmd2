@@ -5,6 +5,7 @@
 # Unless documented in https://cmd2.readthedocs.io/en/latest/api/index.html
 # nothing here should be considered part of the public API of this module
 
+INFINITY = float('inf')
 
 # Used for command parsing, output redirection, tab completion and word
 # breaks. Do not change.
