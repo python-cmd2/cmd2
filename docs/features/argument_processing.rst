@@ -357,7 +357,7 @@ when it comes to runtime behavior and ``argparse`` errors.  There is nothing
 ``cmd2``-specific here, this is just a side-effect of how decorators work in
 Python.  To learn more about how decorators work, see decorator_primer_.
 
-If you want your custom decorator's  runtime behavior to occur in the case of
+If you want your custom decorator's runtime behavior to occur in the case of
 an ``argparse`` error, then that decorator needs to go **after** the
 ``argparse`` one, e.g.::
 
