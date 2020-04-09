@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # coding=utf-8
 """Variant on standard library's cmd with extra features.
 
