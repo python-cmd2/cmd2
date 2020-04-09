@@ -367,7 +367,7 @@ an ``argparse`` error, then that decorator needs to go **after** the
         """foo docs"""
         pass
 
-However, if you do NOT want the customer decorator runtime behavior to occur
+However, if you do NOT want the custom decorator runtime behavior to occur
 even in the case of an `argparse` error, then that decorator needs to go
 **before** the ``arpgarse`` one, e.g.::
 
