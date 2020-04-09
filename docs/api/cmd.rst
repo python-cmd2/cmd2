@@ -6,11 +6,6 @@ cmd2.Cmd
 
     .. automethod:: __init__
 
-    .. attribute:: continuation_prompt
-
-      Use as prompt for multiline commands on the 2nd+ line of input.
-      Default: ``>``.
-
     .. attribute:: default_error
 
       The error message displayed when a non-existent command is run.
@@ -31,6 +26,7 @@ cmd2.Cmd
 
       The prompt issued to solicit input for the 2nd and subsequent lines
       of a :ref:`multiline command <features/multiline_commands:Multiline Commands>`
+      Default: ``>``.
 
     .. attribute:: echo
 
