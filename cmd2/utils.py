@@ -434,7 +434,7 @@ class StdSim:
     Class to simulate behavior of sys.stdout or sys.stderr.
     Stores contents in internal buffer and optionally echos to the inner stream it is simulating.
     """
-    def __init__(self, inner_stream, echo: bool = False,
+    def __init__(self, inner_stream, *, echo: bool = False,
                  encoding: str = 'utf-8', errors: str = 'replace') -> None:
         """
         StdSim Initializer
