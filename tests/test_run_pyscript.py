@@ -91,7 +91,6 @@ def test_run_pyscript_dir(base_app, request):
     python_script = os.path.join(test_dir, 'pyscript', 'pyscript_dir.py')
 
     out, err = run_cmd(base_app, 'run_pyscript {}'.format(python_script))
-    assert out
     assert out[0] == "['cmd_echo']"
 
 def test_run_pyscript_stdout_capture(base_app, request):
@@ -123,3 +122,11 @@ def test_run_pyscript_environment(base_app, request):
     out, err = run_cmd(base_app, 'run_pyscript {}'.format(python_script))
 
     assert out[0] == "PASSED"
+
+def test_run_pyscript_echp(base_app,  request):
+    test_dir = os.path.dirname(request.module.__file__)
+    python_script = os.path.join(test_dir, 'pyscript', 'echo.py')
+    out, err = run_cmd(base_app, 'run_pyscript {}'.format(python_script))
+
+    # Only the edit help text should have been echoed to pytest's stdout
+    assert out[0] == "Usage: edit [-h] [file_path]"
