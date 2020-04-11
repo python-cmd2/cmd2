@@ -123,7 +123,7 @@ def test_run_pyscript_environment(base_app, request):
 
     assert out[0] == "PASSED"
 
-def test_run_pyscript_echp(base_app,  request):
+def test_run_pyscript_app_echo(base_app,  request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'echo.py')
     out, err = run_cmd(base_app, 'run_pyscript {}'.format(python_script))
