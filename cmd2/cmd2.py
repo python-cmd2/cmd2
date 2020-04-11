@@ -1600,21 +1600,19 @@ class Cmd(cmd.Cmd):
         import datetime
 
         stop = False
-        try:
-            statement = self._input_line_to_statement(line)
-        except (EmptyStatement, Cmd2ShlexError) as ex:
-            if isinstance(ex, Cmd2ShlexError):
-                self.perror("Invalid syntax: {}".format(ex))
-            return self._run_cmdfinalization_hooks(stop, None)
+        statement = None
 
-        # now that we have a statement, run it with all the hooks
         try:
+            # Convert the line into a Statement
+            statement = self._input_line_to_statement(line)
+
             # call the postparsing hooks
             data = plugin.PostparsingData(False, statement)
             for func in self._postparsing_hooks:
                 data = func(data)
                 if data.stop:
                     break
+
             # unpack the data object
             statement = data.statement
             stop = data.stop
@@ -1690,6 +1688,8 @@ class Cmd(cmd.Cmd):
         except (Cmd2ArgparseError, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
+        except Cmd2ShlexError as ex:
+            self.perror("Invalid syntax: {}".format(ex))
         except Exception as ex:
             self.pexcept(ex)
         finally:
