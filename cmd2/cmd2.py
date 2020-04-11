@@ -213,7 +213,7 @@ class Cmd(cmd.Cmd):
         self.self_in_py = False
 
         # Commands to exclude from the help menu and tab completion
-        self.hidden_commands = ['eof', '_relative_load', '_relative_run_script']
+        self.hidden_commands = ['eof', '_relative_run_script']
 
         # Initialize history
         self._persistent_history_length = persistent_history_length
@@ -258,7 +258,7 @@ class Cmd(cmd.Cmd):
         self.sigint_protection = utils.ContextFlag()
 
         # If the current command created a process to pipe to, then this will be a ProcReader object.
-        # Otherwise it will be None. Its used to know when a pipe process can be killed and/or waited upon.
+        # Otherwise it will be None. It's used to know when a pipe process can be killed and/or waited upon.
         self._cur_pipe_proc_reader = None
 
         # Used to keep track of whether we are redirecting or piping output
@@ -3904,7 +3904,7 @@ class Cmd(cmd.Cmd):
                 alert_msg += '\n'
                 update_terminal = True
 
-            # Set the prompt if its changed
+            # Set the prompt if it's changed
             if new_prompt is not None and new_prompt != self.prompt:
                 self.prompt = new_prompt
 

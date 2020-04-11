@@ -74,25 +74,26 @@ class PyBridge:
         attributes.insert(0, 'cmd_echo')
         return attributes
 
-    def __call__(self, command: str, echo: Optional[bool] = None) -> CommandResult:
+    def __call__(self, command: str, *, echo: Optional[bool] = None) -> CommandResult:
         """
         Provide functionality to call application commands by calling PyBridge
         ex: app('help')
         :param command: command line being run
-        :param echo: if True, output will be echoed to stdout/stderr while the command runs
-                     this temporarily overrides the value of self.cmd_echo
+        :param echo: If provided, this temporarily overrides the value of self.cmd_echo while the
+                     command runs. If True, output will be echoed to stdout/stderr. (Defaults to None)
+
         """
         if echo is None:
             echo = self.cmd_echo
 
         # This will be used to capture _cmd2_app.stdout and sys.stdout
-        copy_cmd_stdout = StdSim(self._cmd2_app.stdout, echo)
+        copy_cmd_stdout = StdSim(self._cmd2_app.stdout, echo=echo)
 
         # Pause the storing of stdout until onecmd_plus_hooks enables it
         copy_cmd_stdout.pause_storage = True
 
         # This will be used to capture sys.stderr
-        copy_stderr = StdSim(sys.stderr, echo)
+        copy_stderr = StdSim(sys.stderr, echo=echo)
 
         self._cmd2_app.last_result = None
 
