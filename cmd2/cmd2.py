@@ -213,7 +213,7 @@ class Cmd(cmd.Cmd):
         self.self_in_py = False
 
         # Commands to exclude from the help menu and tab completion
-        self.hidden_commands = ['eof', '_relative_load', '_relative_run_script']
+        self.hidden_commands = ['eof', '_relative_run_script']
 
         # Initialize history
         self._persistent_history_length = persistent_history_length
