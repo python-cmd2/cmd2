@@ -24,3 +24,8 @@ class EmbeddedConsoleExit(SystemExit):
 class EmptyStatement(Exception):
     """Custom exception class for handling behavior when the user just presses <Enter>."""
     pass
+
+
+class RedirectionError(Exception):
+    """Custom exception class for when redirecting or piping output fails"""
+    pass

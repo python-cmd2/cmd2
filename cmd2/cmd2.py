@@ -49,7 +49,7 @@ from . import utils
 from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
-from .exceptions import Cmd2ArgparseError, Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement
+from .exceptions import Cmd2ArgparseError, Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError
 from .history import History, HistoryItem
 from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
 from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
@@ -1634,42 +1634,40 @@ class Cmd(cmd.Cmd):
                         # Start saving command's stdout at this point
                         self.stdout.pause_storage = False
 
-                    redir_error, saved_state = self._redirect_output(statement)
+                    saved_state = self._redirect_output(statement)
                     self._cur_pipe_proc_reader = saved_state.pipe_proc_reader
 
-                # Do not continue if an error occurred while trying to redirect
-                if not redir_error:
-                    # See if we need to update self._redirecting
-                    if not already_redirecting:
-                        self._redirecting = saved_state.redirecting
+                # See if we need to update self._redirecting
+                if not already_redirecting:
+                    self._redirecting = saved_state.redirecting
 
-                    timestart = datetime.datetime.now()
+                timestart = datetime.datetime.now()
 
-                    # precommand hooks
-                    data = plugin.PrecommandData(statement)
-                    for func in self._precmd_hooks:
-                        data = func(data)
-                    statement = data.statement
+                # precommand hooks
+                data = plugin.PrecommandData(statement)
+                for func in self._precmd_hooks:
+                    data = func(data)
+                statement = data.statement
 
-                    # call precmd() for compatibility with cmd.Cmd
-                    statement = self.precmd(statement)
+                # call precmd() for compatibility with cmd.Cmd
+                statement = self.precmd(statement)
 
-                    # go run the command function
-                    stop = self.onecmd(statement, add_to_history=add_to_history)
+                # go run the command function
+                stop = self.onecmd(statement, add_to_history=add_to_history)
 
-                    # postcommand hooks
-                    data = plugin.PostcommandData(stop, statement)
-                    for func in self._postcmd_hooks:
-                        data = func(data)
+                # postcommand hooks
+                data = plugin.PostcommandData(stop, statement)
+                for func in self._postcmd_hooks:
+                    data = func(data)
 
-                    # retrieve the final value of stop, ignoring any statement modification from the hooks
-                    stop = data.stop
+                # retrieve the final value of stop, ignoring any statement modification from the hooks
+                stop = data.stop
 
-                    # call postcmd() for compatibility with cmd.Cmd
-                    stop = self.postcmd(stop, statement)
+                # call postcmd() for compatibility with cmd.Cmd
+                stop = self.postcmd(stop, statement)
 
-                    if self.timing:
-                        self.pfeedback('Elapsed: {}'.format(datetime.datetime.now() - timestart))
+                if self.timing:
+                    self.pfeedback('Elapsed: {}'.format(datetime.datetime.now() - timestart))
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
@@ -1690,6 +1688,8 @@ class Cmd(cmd.Cmd):
             pass
         except Cmd2ShlexError as ex:
             self.perror("Invalid syntax: {}".format(ex))
+        except RedirectionError as ex:
+            self.perror(ex)
         except Exception as ex:
             self.pexcept(ex)
         finally:
@@ -1902,22 +1902,21 @@ class Cmd(cmd.Cmd):
         # Restore any terminator, suffix, redirection, etc.
         return resolved + statement.post_command
 
-    def _redirect_output(self, statement: Statement) -> Tuple[bool, utils.RedirectionSavedState]:
+    def _redirect_output(self, statement: Statement) -> utils.RedirectionSavedState:
         """Handles output redirection for >, >>, and |.
 
         :param statement: a parsed statement from the user
         :return: A bool telling if an error occurred and a utils.RedirectionSavedState object
+        :raises RedirectionError if an error occurs trying to pipe or redirect
         """
         import io
         import subprocess
-
-        redir_error = False
 
         # Initialize the saved state
         saved_state = utils.RedirectionSavedState(self.stdout, sys.stdout, self._cur_pipe_proc_reader)
 
         if not self.allow_redirection:
-            return redir_error, saved_state
+            return saved_state
 
         if statement.pipe_to:
             # Create a pipe with read and write sides
@@ -1955,10 +1954,9 @@ class Cmd(cmd.Cmd):
 
             # Check if the pipe process already exited
             if proc.returncode is not None:
-                self.perror('Pipe process exited with code {} before command could run'.format(proc.returncode))
                 subproc_stdin.close()
                 new_stdout.close()
-                redir_error = True
+                raise RedirectionError('Pipe process exited with code {} before command could run'.format(proc.returncode))
             else:
                 saved_state.redirecting = True
                 saved_state.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
@@ -1967,8 +1965,7 @@ class Cmd(cmd.Cmd):
         elif statement.output:
             import tempfile
             if (not statement.output_to) and (not self._can_clip):
-                self.perror("Cannot redirect to paste buffer; missing 'pyperclip' and/or pyperclip dependencies")
-                redir_error = True
+                raise RedirectionError("Cannot redirect to paste buffer; missing 'pyperclip' and/or pyperclip dependencies")
 
             # Redirecting to a file
             elif statement.output_to:
@@ -1984,8 +1981,7 @@ class Cmd(cmd.Cmd):
                     saved_state.redirecting = True
                     sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
-                    self.pexcept('Failed to redirect because - {}'.format(ex))
-                    redir_error = True
+                    raise RedirectionError('Failed to redirect because - {}'.format(ex))
 
             # Redirecting to a paste buffer
             else:
@@ -1997,7 +1993,7 @@ class Cmd(cmd.Cmd):
                     self.stdout.write(get_paste_buffer())
                     self.stdout.flush()
 
-        return redir_error, saved_state
+        return saved_state
 
     def _restore_output(self, statement: Statement, saved_state: utils.RedirectionSavedState) -> None:
         """Handles restoring state after output redirection as well as

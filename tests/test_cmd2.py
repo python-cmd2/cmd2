@@ -482,20 +482,11 @@ def test_output_redirection(base_app):
 def test_output_redirection_to_nonexistent_directory(base_app):
     filename = '~/fakedir/this_does_not_exist.txt'
 
-    # Verify that writing to a file in a non-existent directory doesn't work
-    run_cmd(base_app, 'help > {}'.format(filename))
-    with pytest.raises(FileNotFoundError):
-        with open(filename) as f:
-            content = f.read()
-        verify_help_text(base_app, content)
+    out, err = run_cmd(base_app, 'help > {}'.format(filename))
+    assert 'Failed to redirect' in err[0]
 
-    # Verify that appending to a file also works
-    run_cmd(base_app, 'help history >> {}'.format(filename))
-    with pytest.raises(FileNotFoundError):
-        with open(filename) as f:
-            appended_content = f.read()
-        verify_help_text(base_app, appended_content)
-        assert len(appended_content) > len(content)
+    out, err = run_cmd(base_app, 'help >> {}'.format(filename))
+    assert 'Failed to redirect' in err[0]
 
 def test_output_redirection_to_too_long_filename(base_app):
     filename = '~/sdkfhksdjfhkjdshfkjsdhfkjsdhfkjdshfkjdshfkjshdfkhdsfkjhewfuihewiufhweiufhiweufhiuewhiuewhfiuwehfia' \
@@ -504,20 +495,11 @@ def test_output_redirection_to_too_long_filename(base_app):
                'fheiufhieuwhfewiuhfeiufhiuewfhiuewheiwuhfiuewhfiuewhfeiuwfhewiufhiuewhiuewhfeiuwhfiuwehfuiwehfiuehie' \
                'whfieuwfhieufhiuewhfeiuwfhiuefhueiwhfw'
 
-    # Verify that writing to a file in a non-existent directory doesn't work
-    run_cmd(base_app, 'help > {}'.format(filename))
-    with pytest.raises(OSError):
-        with open(filename) as f:
-            content = f.read()
-        verify_help_text(base_app, content)
+    out, err = run_cmd(base_app, 'help > {}'.format(filename))
+    assert 'Failed to redirect' in err[0]
 
-    # Verify that appending to a file also works
-    run_cmd(base_app, 'help history >> {}'.format(filename))
-    with pytest.raises(OSError):
-        with open(filename) as f:
-            appended_content = f.read()
-        verify_help_text(base_app, content)
-        assert len(appended_content) > len(content)
+    out, err = run_cmd(base_app, 'help >> {}'.format(filename))
+    assert 'Failed to redirect' in err[0]
 
 
 def test_feedback_to_output_true(base_app):
