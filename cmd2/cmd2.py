@@ -1621,11 +1621,8 @@ class Cmd(cmd.Cmd):
                 # we need to run the finalization hooks
                 raise EmptyStatement
 
-            # Keep track of whether or not we were already _redirecting before this command
-            already_redirecting = self._redirecting
-
             # This will be a utils.RedirectionSavedState object for the command
-            saved_state = None
+            redir_saved_state = None
 
             try:
                 # Get sigint protection while we set up redirection
@@ -1634,12 +1631,7 @@ class Cmd(cmd.Cmd):
                         # Start saving command's stdout at this point
                         self.stdout.pause_storage = False
 
-                    saved_state = self._redirect_output(statement)
-                    self._cur_pipe_proc_reader = saved_state.pipe_proc_reader
-
-                # See if we need to update self._redirecting
-                if not already_redirecting:
-                    self._redirecting = saved_state.redirecting
+                    redir_saved_state = self._redirect_output(statement)
 
                 timestart = datetime.datetime.now()
 
@@ -1671,11 +1663,8 @@ class Cmd(cmd.Cmd):
             finally:
                 # Get sigint protection while we restore stuff
                 with self.sigint_protection:
-                    if saved_state is not None:
-                        self._restore_output(statement, saved_state)
-
-                    if not already_redirecting:
-                        self._redirecting = False
+                    if redir_saved_state is not None:
+                        self._restore_output(statement, redir_saved_state)
 
                     if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
@@ -1903,7 +1892,7 @@ class Cmd(cmd.Cmd):
         return resolved + statement.post_command
 
     def _redirect_output(self, statement: Statement) -> utils.RedirectionSavedState:
-        """Handles output redirection for >, >>, and |.
+        """Set up a command's output redirection for >, >>, and |.
 
         :param statement: a parsed statement from the user
         :return: A bool telling if an error occurred and a utils.RedirectionSavedState object
@@ -1912,13 +1901,18 @@ class Cmd(cmd.Cmd):
         import io
         import subprocess
 
-        # Initialize the saved state
-        saved_state = utils.RedirectionSavedState(self.stdout, sys.stdout, self._cur_pipe_proc_reader)
+        # Initialize the redirection saved state
+        redir_saved_state = utils.RedirectionSavedState(self.stdout, sys.stdout,
+                                                        self._cur_pipe_proc_reader, self._redirecting)
+
+        # The ProcReader for this command
+        cmd_pipe_proc_reader = None
 
         if not self.allow_redirection:
-            return saved_state
+            # Don't return since we set some state variables at the end of the function
+            pass
 
-        if statement.pipe_to:
+        elif statement.pipe_to:
             # Create a pipe with read and write sides
             read_fd, write_fd = os.pipe()
 
@@ -1958,8 +1952,8 @@ class Cmd(cmd.Cmd):
                 new_stdout.close()
                 raise RedirectionError('Pipe process exited with code {} before command could run'.format(proc.returncode))
             else:
-                saved_state.redirecting = True
-                saved_state.pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
+                redir_saved_state.redirecting = True
+                cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
                 sys.stdout = self.stdout = new_stdout
 
         elif statement.output:
@@ -1970,39 +1964,43 @@ class Cmd(cmd.Cmd):
             # Redirecting to a file
             elif statement.output_to:
                 # statement.output can only contain REDIRECTION_APPEND or REDIRECTION_OUTPUT
-                if statement.output == constants.REDIRECTION_APPEND:
-                    mode = 'a'
-                else:
-                    mode = 'w'
-
+                mode = 'a' if statement.output == constants.REDIRECTION_APPEND else 'w'
                 try:
                     # Use line buffering
                     new_stdout = open(utils.strip_quotes(statement.output_to), mode=mode, buffering=1)
-                    saved_state.redirecting = True
-                    sys.stdout = self.stdout = new_stdout
                 except OSError as ex:
                     raise RedirectionError('Failed to redirect because - {}'.format(ex))
 
+                redir_saved_state.redirecting = True
+                sys.stdout = self.stdout = new_stdout
+
             # Redirecting to a paste buffer
             else:
-                new_stdout = tempfile.TemporaryFile(mode="w+")
-                saved_state.redirecting = True
+                try:
+                    new_stdout = tempfile.TemporaryFile(mode="w+")
+                except OSError as ex:
+                    raise RedirectionError('Failed to redirect because - {}'.format(ex))
+
+                redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
 
                 if statement.output == constants.REDIRECTION_APPEND:
                     self.stdout.write(get_paste_buffer())
                     self.stdout.flush()
 
-        return saved_state
+        # These are updated regardless of whether the command redirected
+        self._cur_pipe_proc_reader = cmd_pipe_proc_reader
+        self._redirecting = redir_saved_state.redirecting
 
-    def _restore_output(self, statement: Statement, saved_state: utils.RedirectionSavedState) -> None:
-        """Handles restoring state after output redirection as well as
-        the actual pipe operation if present.
+        return redir_saved_state
+
+    def _restore_output(self, statement: Statement, saved_redir_state: utils.RedirectionSavedState) -> None:
+        """Handles restoring state after output redirection
 
         :param statement: Statement object which contains the parsed input from the user
-        :param saved_state: contains information needed to restore state data
+        :param saved_redir_state: contains information needed to restore state data
         """
-        if saved_state.redirecting:
+        if saved_redir_state.redirecting:
             # If we redirected output to the clipboard
             if statement.output and not statement.output_to:
                 self.stdout.seek(0)
@@ -2015,15 +2013,16 @@ class Cmd(cmd.Cmd):
                 pass
 
             # Restore the stdout values
-            self.stdout = saved_state.saved_self_stdout
-            sys.stdout = saved_state.saved_sys_stdout
+            self.stdout = saved_redir_state.saved_self_stdout
+            sys.stdout = saved_redir_state.saved_sys_stdout
 
             # Check if we need to wait for the process being piped to
             if self._cur_pipe_proc_reader is not None:
                 self._cur_pipe_proc_reader.wait()
 
-        # Restore _cur_pipe_proc_reader. This always is done, regardless of whether this command redirected.
-        self._cur_pipe_proc_reader = saved_state.saved_pipe_proc_reader
+        # These are restored regardless of whether the command redirected
+        self._cur_pipe_proc_reader = saved_redir_state.saved_pipe_proc_reader
+        self._redirecting = saved_redir_state.saved_redirecting
 
     def cmd_func(self, command: str) -> Optional[Callable]:
         """
