@@ -1976,11 +1976,7 @@ class Cmd(cmd.Cmd):
 
             # Redirecting to a paste buffer
             else:
-                try:
-                    new_stdout = tempfile.TemporaryFile(mode="w+")
-                except OSError as ex:
-                    raise RedirectionError('Failed to redirect because - {}'.format(ex))
-
+                new_stdout = tempfile.TemporaryFile(mode="w+")
                 redir_saved_state.redirecting = True
                 sys.stdout = self.stdout = new_stdout
 
