@@ -665,20 +665,26 @@ class ContextFlag:
 
 
 class RedirectionSavedState:
-    """Created by each command to store information about their redirection."""
-
+    """Created by each command to store information required to restore state after redirection"""
     def __init__(self, self_stdout: Union[StdSim, TextIO], sys_stdout: Union[StdSim, TextIO],
-                 pipe_proc_reader: Optional[ProcReader]) -> None:
-        # Used to restore values after the command ends
-        self.saved_self_stdout = self_stdout
-        self.saved_sys_stdout = sys_stdout
-        self.saved_pipe_proc_reader = pipe_proc_reader
-
-        # Tells if the command is redirecting
+                 pipe_proc_reader: Optional[ProcReader], saved_redirecting: bool) -> None:
+        """
+        RedirectionSavedState initializer
+        :param self_stdout: saved value of Cmd.stdout
+        :param sys_stdout: saved value of sys.stdout
+        :param pipe_proc_reader: saved value of Cmd._cur_pipe_proc_reader
+        :param saved_redirecting: saved value of Cmd._redirecting
+        """
+        # Tells if command is redirecting
         self.redirecting = False
 
-        # If the command created a process to pipe to, then then is its reader
-        self.pipe_proc_reader = None
+        # Used to restore values after redirection ends
+        self.saved_self_stdout = self_stdout
+        self.saved_sys_stdout = sys_stdout
+
+        # Used to restore values after command ends regardless of whether the command redirected
+        self.saved_pipe_proc_reader = pipe_proc_reader
+        self.saved_redirecting = saved_redirecting
 
 
 # noinspection PyUnusedLocal
