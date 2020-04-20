@@ -24,7 +24,7 @@ bold_yellow = functools.partial(ansi.style, fg=ansi.fg.bright_yellow, bold=True)
 blue = functools.partial(ansi.style, fg=ansi.fg.bright_blue)
 green = functools.partial(ansi.style, fg=ansi.fg.green)
 
-# Table Columns
+# Table Columns (width does not account for any borders or padding which may be added)
 columns: List[Column] = list()
 columns.append(Column("Name", width=20))
 columns.append(Column("Address", width=38))
