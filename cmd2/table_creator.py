@@ -53,8 +53,8 @@ class Column:
         :param data_vert_align: vertical alignment of data cells (defaults to top)
         :param max_data_lines: maximum lines allowed in a data cell. If line count exceeds this, then the final
                                line displayed will be truncated with an ellipsis. (defaults to INFINITY)
-        :raises ValueError if width is less than 1
-                ValueError if max_data_lines is less than 1
+        :raises: ValueError if width is less than 1
+                 ValueError if max_data_lines is less than 1
         """
         self.header = header
 
@@ -181,6 +181,7 @@ class TableCreator:
         def add_word(word_to_add: str, is_last_word: bool):
             """
             Called from loop to add a word to the wrapped text
+
             :param word_to_add: the word being added
             :param is_last_word: True if this is the last word of the total text being wrapped
             """
@@ -367,10 +368,10 @@ class TableCreator:
         :param post_line: string to print after each line of a row. This can be used for padding after the last cell's text
                           and a right row border. (Defaults to blank)
         :return: row string
-        :raises ValueError if data isn't the same length as self.cols
-                TypeError if fill_char is more than one character (not including ANSI style sequences)
-                ValueError if fill_char, pre_line, inter_cell, or post_line contains an unprintable
-                character like a newline
+        :raises: ValueError if data isn't the same length as self.cols
+                 TypeError if fill_char is more than one character (not including ANSI style sequences)
+                 ValueError if fill_char, pre_line, inter_cell, or post_line contains an unprintable
+                 character like a newline
         """
         class Cell:
             """Inner class which represents a table cell"""
@@ -533,7 +534,7 @@ class SimpleTable(TableCreator):
                            each column in the row.
         :param include_header: If True, then a header will be included at top of table. (Defaults to True)
         :param row_spacing: A number 0 or greater specifying how many blank lines to place between each row (Defaults to 1)
-        :raises ValueError if row_spacing is less than 0
+        :raises: ValueError if row_spacing is less than 0
         """
         if row_spacing < 0:
             raise ValueError("Row spacing cannot be less than 0")
@@ -571,7 +572,7 @@ class BorderedTable(TableCreator):
                                appearance. Turning off column borders results in a unified appearance between
                                a row's cells. (Defaults to True)
         :param padding: number of spaces between text and left/right borders of cell
-        :raises ValueError if padding is less than 0
+        :raises: ValueError if padding is less than 0
         """
         super().__init__(cols, tab_width=tab_width)
         self.empty_data = [EMPTY for _ in self.cols]
@@ -725,7 +726,7 @@ class AlternatingTable(BorderedTable):
         :param padding: number of spaces between text and left/right borders of cell
         :param bg_odd: optional background color for odd numbered rows (defaults to None)
         :param bg_even: optional background color for even numbered rows (defaults to gray)
-        :raises ValueError if padding is less than 0
+        :raises: ValueError if padding is less than 0
         """
         super().__init__(cols, tab_width=tab_width, column_borders=column_borders, padding=padding)
         self.row_num = 1
@@ -737,7 +738,7 @@ class AlternatingTable(BorderedTable):
         Convert data to text and apply background color to it based on what row is being generated
 
         :param data: data being colored
-        :return converted data
+        :return: converted data
         """
         if self.row_num % 2 == 0 and self.bg_even is not None:
             return self.bg_even(data)
@@ -778,6 +779,7 @@ class AlternatingTable(BorderedTable):
     def generate_table(self, table_data: Sequence[Sequence[Any]], *, include_header: bool = True) -> str:
         """
         Generate a table from a data set
+
         :param table_data: Data with an entry for each data row of the table. Each entry should have data for
                            each column in the row.
         :param include_header: If True, then a header will be included at top of table. (Defaults to True)
