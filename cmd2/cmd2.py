@@ -3191,8 +3191,7 @@ class Cmd(cmd.Cmd):
         saved_sys_path = None
 
         if self.in_pyscript():
-            err = "Recursively entering interactive Python shells is not allowed."
-            self.perror(err)
+            self.perror("Recursively entering interactive Python shells is not allowed")
             return
 
         try:
@@ -3367,8 +3366,7 @@ class Cmd(cmd.Cmd):
                       exit_msg='Leaving IPython, back to {}'.format(sys.argv[0]))
 
             if self.in_pyscript():
-                err = "Recursively entering interactive Python shells is not allowed."
-                self.perror(err)
+                self.perror("Recursively entering interactive Python shells is not allowed")
                 return
 
             try:
