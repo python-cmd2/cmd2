@@ -1,7 +1,7 @@
 # coding=utf-8
 """Decorators for ``cmd2`` commands"""
 import argparse
-from typing import Callable, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from . import constants
 from .exceptions import Cmd2ArgparseError
@@ -53,12 +53,20 @@ def with_argument_list(*args: List[Callable], preserve_quotes: bool = False) -> 
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str], **kwargs: Dict[str, Any]) -> Optional[bool]:
+            """
+            Command function wrapper which translates command line into an argument list and calls actual command function
+
+            :param cmd2_app: CLI instance passed as self parameter to command function
+            :param statement: command line string or already generated Statement
+            :param kwargs: any keyword arguments being passed to command function
+            :return: return value of command function
+            """
             _, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
                                                                                statement,
                                                                                preserve_quotes)
 
-            return func(cmd2_app, parsed_arglist)
+            return func(cmd2_app, parsed_arglist, **kwargs)
 
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
         cmd_wrapper.__doc__ = func.__doc__
@@ -132,7 +140,17 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str], **kwargs: Dict[str, Any]) -> Optional[bool]:
+            """
+            Command function wrapper which translates command line into argparse Namespace and calls actual
+            command function
+
+            :param cmd2_app: CLI instance passed as self parameter to command function
+            :param statement: command line string or already generated Statement
+            :param kwargs: any keyword arguments being passed to command function
+            :return: return value of command function
+            :raises: Cmd2ArgparseError if argparse has error parsing command line
+            """
             statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
                                                                                        statement,
                                                                                        preserve_quotes)
@@ -148,7 +166,7 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
                 raise Cmd2ArgparseError
             else:
                 setattr(args, '__statement__', statement)
-                return func(cmd2_app, args, unknown)
+                return func(cmd2_app, args, unknown, **kwargs)
 
         # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
@@ -204,7 +222,17 @@ def with_argparser(parser: argparse.ArgumentParser, *,
 
     def arg_decorator(func: Callable):
         @functools.wraps(func)
-        def cmd_wrapper(cmd2_app, statement: Union[Statement, str]):
+        def cmd_wrapper(cmd2_app, statement: Union[Statement, str], **kwargs: Dict[str, Any]) -> Optional[bool]:
+            """
+            Command function wrapper which translates command line into argparse Namespace and calls actual
+            command function
+
+            :param cmd2_app: CLI instance passed as self parameter to command function
+            :param statement: command line string or already generated Statement
+            :param kwargs: any keyword arguments being passed to command function
+            :return: return value of command function
+            :raises: Cmd2ArgparseError if argparse has error parsing command line
+            """
             statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
                                                                                        statement,
                                                                                        preserve_quotes)
@@ -220,7 +248,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
                 raise Cmd2ArgparseError
             else:
                 setattr(args, '__statement__', statement)
-                return func(cmd2_app, args)
+                return func(cmd2_app, args, **kwargs)
 
         # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
         command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
