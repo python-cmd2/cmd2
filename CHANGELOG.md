@@ -1,3 +1,10 @@
+## 1.0.3 (TBD, 2020)
+* Enhancements
+    * Made `ipy` consistent with `py` in the following ways
+        * `ipy` returns whether any of the commands run in it returned True to stop command loop
+        * `Cmd.in_pyscript()` returns True while in `ipy`.
+        * Starting `ipy` when `Cmd.in_pyscript()` is already True is not allowed.  
+    
 ## 1.0.2 (April 06, 2020)
 * Bug Fixes
     * Ctrl-C now stops a running text script instead of just the current `run_script` command

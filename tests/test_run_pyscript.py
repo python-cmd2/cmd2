@@ -35,7 +35,7 @@ def test_run_pyscript(base_app, request):
 def test_run_pyscript_recursive_not_allowed(base_app, request):
     test_dir = os.path.dirname(request.module.__file__)
     python_script = os.path.join(test_dir, 'pyscript', 'recursive.py')
-    expected = 'Recursively entering interactive Python consoles is not allowed.'
+    expected = 'Recursively entering interactive Python shells is not allowed'
 
     out, err = run_cmd(base_app, "run_pyscript {}".format(python_script))
     assert err[0] == expected

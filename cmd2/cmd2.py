@@ -531,6 +531,7 @@ class Cmd(cmd.Cmd):
     def pfeedback(self, msg: Any, *, end: str = '\n') -> None:
         """For printing nonessential feedback.  Can be silenced with `quiet`.
         Inclusion in redirected output is controlled by `feedback_to_output`.
+
         :param msg: message to print (anything convertible to a str with '{}'.format() is OK)
         :param end: string appended after the end of the message, default a newline
         """
@@ -1896,7 +1897,7 @@ class Cmd(cmd.Cmd):
 
         :param statement: a parsed statement from the user
         :return: A bool telling if an error occurred and a utils.RedirectionSavedState object
-        :raises RedirectionError if an error occurs trying to pipe or redirect
+        :raises: RedirectionError if an error occurs trying to pipe or redirect
         """
         import io
         import subprocess
@@ -2098,11 +2099,12 @@ class Cmd(cmd.Cmd):
     def read_input(self, prompt: str, *, allow_completion: bool = False) -> str:
         """
         Read input from appropriate stdin value. Also allows you to disable tab completion while input is being read.
+
         :param prompt: prompt to display to user
         :param allow_completion: if True, then tab completion of commands is enabled. This generally should be
-        set to False unless reading the command line. Defaults to False.
+                                 set to False unless reading the command line. Defaults to False.
         :return: the line read from stdin with all trailing new lines removed
-        :raises any exceptions raised by input() and stdin.readline()
+        :raises: any exceptions raised by input() and stdin.readline()
         """
         completion_disabled = False
         orig_completer = None
@@ -2176,7 +2178,7 @@ class Cmd(cmd.Cmd):
 
         :param prompt: prompt to display to user
         :return: command line text of 'eof' if an EOFError was caught
-        :raises whatever exceptions are raised by input() except for EOFError
+        :raises: whatever exceptions are raised by input() except for EOFError
         """
         try:
             # Wrap in try since terminal_lock may not be locked
@@ -2195,6 +2197,7 @@ class Cmd(cmd.Cmd):
     def _set_up_cmd2_readline(self) -> _SavedReadlineSettings:
         """
         Set up readline with cmd2-specific settings
+
         :return: Class containing saved readline settings
         """
         readline_settings = _SavedReadlineSettings()
@@ -2229,6 +2232,7 @@ class Cmd(cmd.Cmd):
     def _restore_readline(self, readline_settings: _SavedReadlineSettings):
         """
         Restore saved readline settings
+
         :param readline_settings: the readline settings to restore
         """
         if self._completion_supported():
@@ -3117,6 +3121,7 @@ class Cmd(cmd.Cmd):
     def _restore_cmd2_env(self, cmd2_env: _SavedCmd2Env) -> None:
         """
         Restore cmd2 environment after exiting an interactive Python shell
+
         :param cmd2_env: the environment settings to restore
         """
         sys.stdout = cmd2_env.sys_stdout
@@ -3174,6 +3179,7 @@ class Cmd(cmd.Cmd):
     def do_py(self, args: argparse.Namespace) -> Optional[bool]:
         """
         Enter an interactive Python shell
+
         :return: True if running of commands should stop
         """
         def py_quit():
@@ -3185,8 +3191,7 @@ class Cmd(cmd.Cmd):
         saved_sys_path = None
 
         if self.in_pyscript():
-            err = "Recursively entering interactive Python consoles is not allowed."
-            self.perror(err)
+            self.perror("Recursively entering interactive Python shells is not allowed")
             return
 
         try:
@@ -3293,7 +3298,8 @@ class Cmd(cmd.Cmd):
     def do_run_pyscript(self, args: argparse.Namespace) -> Optional[bool]:
         """
         Run a Python script file inside the console
-         :return: True if running of commands should stop
+
+        :return: True if running of commands should stop
         """
         # Expand ~ before placing this path in sys.argv just as a shell would
         args.script_path = os.path.expanduser(args.script_path)
@@ -3327,19 +3333,21 @@ class Cmd(cmd.Cmd):
         ipython_parser = DEFAULT_ARGUMENT_PARSER(description="Enter an interactive IPython shell")
 
         @with_argparser(ipython_parser)
-        def do_ipy(self, _: argparse.Namespace) -> None:
-            """Enter an interactive IPython shell"""
+        def do_ipy(self, _: argparse.Namespace) -> Optional[bool]:
+            """
+            Enter an interactive IPython shell
+
+            :return: True if running of commands should stop
+            """
             from .py_bridge import PyBridge
-            banner = ('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
-                      'Run Python code from external files with: run filename.py\n')
-            exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
             # noinspection PyUnusedLocal
             def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
                 """
                 Embed an IPython shell in an environment that is restricted to only the variables in this function
+
                 :param cmd2_app: instance of the cmd2 app
-                :param py_bridge: a PyscriptBridge
+                :param py_bridge: a PyBridge
                 """
                 # Create a variable pointing to py_bridge and name it using the value of py_bridge_name
                 exec("{} = py_bridge".format(cmd2_app.py_bridge_name))
@@ -3352,9 +3360,22 @@ class Cmd(cmd.Cmd):
                 del cmd2_app
                 del py_bridge
 
-                embed(banner1=banner, exit_msg=exit_msg)
+                # Start ipy shell
+                embed(banner1=('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
+                               'Run Python code from external files with: run filename.py\n'),
+                      exit_msg='Leaving IPython, back to {}'.format(sys.argv[0]))
 
-            load_ipy(self, PyBridge(self))
+            if self.in_pyscript():
+                self.perror("Recursively entering interactive Python shells is not allowed")
+                return
+
+            try:
+                self._in_py = True
+                new_py_bridge = PyBridge(self)
+                load_ipy(self, new_py_bridge)
+                return new_py_bridge.stop
+            finally:
+                self._in_py = False
 
     history_description = "View, run, edit, save, or clear previously entered commands"
 
@@ -3396,6 +3417,7 @@ class Cmd(cmd.Cmd):
     def do_history(self, args: argparse.Namespace) -> Optional[bool]:
         """
         View, run, edit, save, or clear previously entered commands
+
         :return: True if running of commands should stop
         """
 
@@ -3568,7 +3590,7 @@ class Cmd(cmd.Cmd):
         atexit.register(self._persist_history)
 
     def _persist_history(self):
-        """write history out to the history file"""
+        """Write history out to the history file"""
         if not self.persistent_history_file:
             return
 
@@ -3581,9 +3603,7 @@ class Cmd(cmd.Cmd):
             self.pexcept(msg.format(self.persistent_history_file, ex))
 
     def _generate_transcript(self, history: List[Union[HistoryItem, str]], transcript_file: str) -> None:
-        """
-        Generate a transcript file from a given history of commands
-        """
+        """Generate a transcript file from a given history of commands"""
         # Validate the transcript file path to make sure directory exists and write access is available
         transcript_path = os.path.abspath(os.path.expanduser(transcript_file))
         transcript_dir = os.path.dirname(transcript_path)
@@ -3686,8 +3706,9 @@ class Cmd(cmd.Cmd):
     def _run_editor(self, file_path: Optional[str]) -> None:
         """
         Run a text editor and optionally open a file with it
+
         :param file_path: optional path of the file to edit
-        :raises EnvironmentError if self.editor is not set
+        :raises: EnvironmentError if self.editor is not set
         """
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")
@@ -3797,6 +3818,7 @@ class Cmd(cmd.Cmd):
     def do__relative_run_script(self, args: argparse.Namespace) -> Optional[bool]:
         """
         Run commands in script file that is encoded as either ASCII or UTF-8 text
+
         :return: True if running of commands should stop
         """
         file_path = args.file_path
@@ -3979,6 +4001,7 @@ class Cmd(cmd.Cmd):
     def enable_command(self, command: str) -> None:
         """
         Enable a command by restoring its functions
+
         :param command: the command being enabled
         """
         # If the commands is already enabled, then return
@@ -4010,6 +4033,7 @@ class Cmd(cmd.Cmd):
     def enable_category(self, category: str) -> None:
         """
         Enable an entire category of commands
+
         :param category: the category to enable
         """
         for cmd_name in list(self.disabled_commands):
@@ -4020,6 +4044,7 @@ class Cmd(cmd.Cmd):
     def disable_command(self, command: str, message_to_print: str) -> None:
         """
         Disable a command and overwrite its functions
+
         :param command: the command being disabled
         :param message_to_print: what to print when this command is run or help is called on it while disabled
 
@@ -4074,6 +4099,7 @@ class Cmd(cmd.Cmd):
     def _report_disabled_command_usage(self, *_args, message_to_print: str, **_kwargs) -> None:
         """
         Report when a disabled command has been run or had help called on it
+
         :param args: not used
         :param message_to_print: the message reporting that the command is disabled
         :param kwargs: not used

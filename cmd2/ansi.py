@@ -196,7 +196,7 @@ def fg_lookup(fg_name: Union[str, fg]) -> str:
 
     :param fg_name: foreground color name or enum to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
-    :raises ValueError: if the color cannot be found
+    :raises: ValueError: if the color cannot be found
     """
     if isinstance(fg_name, fg):
         return fg_name.value
@@ -214,7 +214,7 @@ def bg_lookup(bg_name: Union[str, bg]) -> str:
 
     :param bg_name: background color name or enum to look up ANSI escape code(s) for
     :return: ANSI escape code(s) associated with this color
-    :raises ValueError: if the color cannot be found
+    :raises: ValueError: if the color cannot be found
     """
     if isinstance(bg_name, bg):
         return bg_name.value
