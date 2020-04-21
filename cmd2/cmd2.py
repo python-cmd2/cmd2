@@ -2104,7 +2104,7 @@ class Cmd(cmd.Cmd):
         :param allow_completion: if True, then tab completion of commands is enabled. This generally should be
                                  set to False unless reading the command line. Defaults to False.
         :return: the line read from stdin with all trailing new lines removed
-        :raises any exceptions raised by input() and stdin.readline()
+        :raises: any exceptions raised by input() and stdin.readline()
         """
         completion_disabled = False
         orig_completer = None
