@@ -3191,7 +3191,7 @@ class Cmd(cmd.Cmd):
         saved_sys_path = None
 
         if self.in_pyscript():
-            err = "Recursively entering interactive Python consoles is not allowed."
+            err = "Recursively entering interactive Python shells is not allowed."
             self.perror(err)
             return
 
@@ -3341,9 +3341,6 @@ class Cmd(cmd.Cmd):
             :return: True if running of commands should stop
             """
             from .py_bridge import PyBridge
-            banner = ('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
-                      'Run Python code from external files with: run filename.py\n')
-            exit_msg = 'Leaving IPython, back to {}'.format(sys.argv[0])
 
             # noinspection PyUnusedLocal
             def load_ipy(cmd2_app: Cmd, py_bridge: PyBridge):
@@ -3364,11 +3361,23 @@ class Cmd(cmd.Cmd):
                 del cmd2_app
                 del py_bridge
 
-                embed(banner1=banner, exit_msg=exit_msg)
+                # Start ipy shell
+                embed(banner1=('Entering an embedded IPython shell. Type quit or <Ctrl>-d to exit.\n'
+                               'Run Python code from external files with: run filename.py\n'),
+                      exit_msg='Leaving IPython, back to {}'.format(sys.argv[0]))
 
-            new_py_bridge = PyBridge(self)
-            load_ipy(self, new_py_bridge)
-            return new_py_bridge.stop
+            if self.in_pyscript():
+                err = "Recursively entering interactive Python shells is not allowed."
+                self.perror(err)
+                return
+
+            try:
+                self._in_py = True
+                new_py_bridge = PyBridge(self)
+                load_ipy(self, new_py_bridge)
+                return new_py_bridge.stop
+            finally:
+                self._in_py = False
 
     history_description = "View, run, edit, save, or clear previously entered commands"
 
