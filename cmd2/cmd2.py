@@ -3169,17 +3169,16 @@ class Cmd(cmd.Cmd):
     py_parser.add_argument('command', nargs=argparse.OPTIONAL, help="command to run")
     py_parser.add_argument('remainder', nargs=argparse.REMAINDER, help="remainder of command")
 
-    # This is a hidden flag for telling do_py to run a pyscript. It is intended only to be used by run_pyscript
-    # after it sets up sys.argv for the script being run. When this flag is present, it takes precedence over all
-    # other arguments.
-    py_parser.add_argument('--pyscript', help=argparse.SUPPRESS)
-
     # Preserve quotes since we are passing these strings to Python
     @with_argparser(py_parser, preserve_quotes=True)
-    def do_py(self, args: argparse.Namespace) -> Optional[bool]:
+    def do_py(self, args: argparse.Namespace, *, pyscript: Optional[str] = None) -> Optional[bool]:
         """
         Enter an interactive Python shell
 
+        :param args: Namespace of args on the command line
+        :param pyscript: optional path to a pyscript file to run. This is intended only to be used by run_pyscript
+                         after it sets up sys.argv for the script. If populated, this takes precedence over all
+                         other arguments. (Defaults to None)
         :return: True if running of commands should stop
         """
         def py_quit():
@@ -3211,9 +3210,9 @@ class Cmd(cmd.Cmd):
                 localvars['self'] = self
 
             # Handle case where we were called by run_pyscript
-            if args.pyscript:
+            if pyscript is not None:
                 # Read the script file
-                expanded_filename = os.path.expanduser(utils.strip_quotes(args.pyscript))
+                expanded_filename = os.path.expanduser(pyscript)
 
                 try:
                     with open(expanded_filename) as f:
@@ -3320,7 +3319,7 @@ class Cmd(cmd.Cmd):
             sys.argv = [args.script_path] + args.script_arguments
 
             # noinspection PyTypeChecker
-            py_return = self.do_py('--pyscript {}'.format(utils.quote_string(args.script_path)))
+            py_return = self.do_py('', pyscript=args.script_path)
 
         finally:
             # Restore command line arguments to original state
