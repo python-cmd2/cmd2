@@ -1897,7 +1897,7 @@ class Cmd(cmd.Cmd):
 
         :param statement: a parsed statement from the user
         :return: A bool telling if an error occurred and a utils.RedirectionSavedState object
-        :raises RedirectionError if an error occurs trying to pipe or redirect
+        :raises: RedirectionError if an error occurs trying to pipe or redirect
         """
         import io
         import subprocess
@@ -2178,7 +2178,7 @@ class Cmd(cmd.Cmd):
 
         :param prompt: prompt to display to user
         :return: command line text of 'eof' if an EOFError was caught
-        :raises whatever exceptions are raised by input() except for EOFError
+        :raises: whatever exceptions are raised by input() except for EOFError
         """
         try:
             # Wrap in try since terminal_lock may not be locked
@@ -3701,7 +3701,7 @@ class Cmd(cmd.Cmd):
         Run a text editor and optionally open a file with it
 
         :param file_path: optional path of the file to edit
-        :raises EnvironmentError if self.editor is not set
+        :raises: EnvironmentError if self.editor is not set
         """
         if not self.editor:
             raise EnvironmentError("Please use 'set editor' to specify your text editing program of choice.")

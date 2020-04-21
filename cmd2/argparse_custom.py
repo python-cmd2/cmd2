@@ -387,7 +387,7 @@ def _add_argument_wrapper(self, *args,
           See the header of this file for more information
 
     :return: the created argument action
-    :raises ValueError on incorrect parameter usage
+    :raises: ValueError on incorrect parameter usage
     """
     # Verify consistent use of arguments
     choices_callables = [choices_function, choices_method, completer_function, completer_method]
