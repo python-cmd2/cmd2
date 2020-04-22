@@ -84,14 +84,16 @@ class Column:
 class TableCreator:
     """
     Base table creation class. This class handles ANSI style sequences and characters with display widths greater than 1
-    when performing width calculations. It was designed with the ability to build tables 1 row at a time. This helps
+    when performing width calculations. It was designed with the ability to build tables one row at a time. This helps
     when you have large data sets that you don't want to hold in memory or when you receive portions of the data set
     incrementally.
 
-    TableCreator has 1 public method: generate_row()
+    TableCreator has one public method: generate_row()
+
     This function and the Column class provide all features needed to build tables with headers, borders, colors,
     horizontal and vertical alignment, and wrapped text. However, it's generally easier to inherit from this class and
-    implement a more granular API rather than use TableCreator directly. There are examples of this defined after this class.
+    implement a more granular API rather than use TableCreator directly. There are ready-to-use examples of this
+    defined after this class.
     """
     def __init__(self, cols: Sequence[Column], *, tab_width: int = 4) -> None:
         """
