@@ -50,6 +50,7 @@ Text Alignment
 
 .. autoclass:: cmd2.utils.TextAlignment
     :members:
+    :undoc-members:
 
 .. autofunction:: cmd2.utils.align_text
 

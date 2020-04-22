@@ -1748,7 +1748,7 @@ class Cmd(cmd.Cmd):
         :param line: the line being parsed
         :return: the completed Statement
         :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
-                 EmptyStatement when the resulting Statement is blank
+        :raises: EmptyStatement when the resulting Statement is blank
         """
         while True:
             try:
@@ -1807,7 +1807,7 @@ class Cmd(cmd.Cmd):
         :param line: the line being parsed
         :return: parsed command line as a Statement
         :raises: Cmd2ShlexError if a shlex error occurs (e.g. No closing quotation)
-                 EmptyStatement when the resulting Statement is blank
+        :raises: EmptyStatement when the resulting Statement is blank
         """
         used_macros = []
         orig_line = None

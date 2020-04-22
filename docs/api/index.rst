@@ -28,6 +28,7 @@ This documentation is for ``cmd2`` version |version|.
    history
    plugin
    py_bridge
+   table_creator
    constants
 
 **Modules**

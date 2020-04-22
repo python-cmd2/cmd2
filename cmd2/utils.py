@@ -704,6 +704,7 @@ def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against
 
 
 class TextAlignment(Enum):
+    """Horizontal text alignment"""
     LEFT = 1
     CENTER = 2
     RIGHT = 3
@@ -728,8 +729,8 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
                      portions are replaced by a '…' character. Defaults to False.
     :return: aligned text
     :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-             ValueError if text or fill_char contains an unprintable character
-             ValueError if width is less than 1
+    :raises: ValueError if text or fill_char contains an unprintable character
+    :raises: ValueError if width is less than 1
     """
     import io
     import shutil
@@ -858,8 +859,8 @@ def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
                      replaced by a '…' character. Defaults to False.
     :return: left-aligned text
     :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-             ValueError if text or fill_char contains an unprintable character
-             ValueError if width is less than 1
+    :raises: ValueError if text or fill_char contains an unprintable character
+    :raises: ValueError if width is less than 1
     """
     return align_text(text, TextAlignment.LEFT, fill_char=fill_char, width=width,
                       tab_width=tab_width, truncate=truncate)
@@ -881,8 +882,8 @@ def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None
                      replaced by a '…' character. Defaults to False.
     :return: centered text
     :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-             ValueError if text or fill_char contains an unprintable character
-             ValueError if width is less than 1
+    :raises: ValueError if text or fill_char contains an unprintable character
+    :raises: ValueError if width is less than 1
     """
     return align_text(text, TextAlignment.CENTER, fill_char=fill_char, width=width,
                       tab_width=tab_width, truncate=truncate)
@@ -904,8 +905,8 @@ def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
                      replaced by a '…' character. Defaults to False.
     :return: right-aligned text
     :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-             ValueError if text or fill_char contains an unprintable character
-             ValueError if width is less than 1
+    :raises: ValueError if text or fill_char contains an unprintable character
+    :raises: ValueError if width is less than 1
     """
     return align_text(text, TextAlignment.RIGHT, fill_char=fill_char, width=width,
                       tab_width=tab_width, truncate=truncate)
@@ -930,7 +931,7 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
     :param tab_width: any tabs in the text will be replaced with this many spaces
     :return: line that has a display width less than or equal to width
     :raises: ValueError if text contains an unprintable character like a newline
-             ValueError if max_width is less than 1
+    :raises: ValueError if max_width is less than 1
     """
     import io
     from . import ansi

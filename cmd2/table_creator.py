@@ -21,12 +21,14 @@ SPACE = ' '
 
 
 class HorizontalAlignment(Enum):
+    """Horizontal alignment of text in a cell"""
     LEFT = 1
     CENTER = 2
     RIGHT = 3
 
 
 class VerticalAlignment(Enum):
+    """Vertical alignment of text in a cell"""
     TOP = 1
     MIDDLE = 2
     BOTTOM = 3
@@ -54,7 +56,7 @@ class Column:
         :param max_data_lines: maximum lines allowed in a data cell. If line count exceeds this, then the final
                                line displayed will be truncated with an ellipsis. (defaults to INFINITY)
         :raises: ValueError if width is less than 1
-                 ValueError if max_data_lines is less than 1
+        :raises: ValueError if max_data_lines is less than 1
         """
         self.header = header
 
@@ -369,8 +371,8 @@ class TableCreator:
                           and a right row border. (Defaults to blank)
         :return: row string
         :raises: ValueError if data isn't the same length as self.cols
-                 TypeError if fill_char is more than one character (not including ANSI style sequences)
-                 ValueError if fill_char, pre_line, inter_cell, or post_line contains an unprintable
+        :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
+        :raises: ValueError if fill_char, pre_line, inter_cell, or post_line contains an unprintable
                  character like a newline
         """
         class Cell:
