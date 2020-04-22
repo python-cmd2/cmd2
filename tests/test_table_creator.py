@@ -332,6 +332,22 @@ def test_bordered_table():
                      '║ Col 1 Row 2     │ Col 2 Row 2     ║\n'
                      '╚═════════════════╧═════════════════╝\n')
 
+    # Non-default padding
+    bt = BorderedTable([column_1, column_2], padding=2)
+    table = bt.generate_table(row_data)
+    assert table == ('╔═══════════════════╤═══════════════════╗\n'
+                     '║  Col 1            │  Col 2            ║\n'
+                     '╠═══════════════════╪═══════════════════╣\n'
+                     '║  Col 1 Row 1      │  Col 2 Row 1      ║\n'
+                     '╟───────────────────┼───────────────────╢\n'
+                     '║  Col 1 Row 2      │  Col 2 Row 2      ║\n'
+                     '╚═══════════════════╧═══════════════════╝\n')
+
+    # Invalid padding
+    with pytest.raises(ValueError) as excinfo:
+        BorderedTable([column_1, column_2], padding=-1)
+    assert "Padding cannot be less than 0" in str(excinfo.value)
+
 
 def test_alternating_table():
     column_1 = Column("Col 1", width=15)
@@ -378,3 +394,18 @@ def test_alternating_table():
                      '║ Col 1 Row 1     │ Col 2 Row 1     ║\n'
                      '\x1b[100m║ \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m │ \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m ║\x1b[49m\n'
                      '╚═════════════════╧═════════════════╝\n')
+
+    # Non-default padding
+    at = AlternatingTable([column_1, column_2], padding=2)
+    table = at.generate_table(row_data)
+    assert table == ('╔═══════════════════╤═══════════════════╗\n'
+                     '║  Col 1            │  Col 2            ║\n'
+                     '╠═══════════════════╪═══════════════════╣\n'
+                     '║  Col 1 Row 1      │  Col 2 Row 1      ║\n'
+                     '\x1b[100m║  \x1b[49m\x1b[0m\x1b[100mCol 1 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  │  \x1b[49m\x1b[0m\x1b[100mCol 2 Row 2\x1b[49m\x1b[0m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[100m \x1b[49m\x1b[0m\x1b[100m  ║\x1b[49m\n'
+                     '╚═══════════════════╧═══════════════════╝\n')
+
+    # Invalid padding
+    with pytest.raises(ValueError) as excinfo:
+        AlternatingTable([column_1, column_2], padding=-1)
+    assert "Padding cannot be less than 0" in str(excinfo.value)
