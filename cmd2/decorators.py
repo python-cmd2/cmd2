@@ -87,7 +87,7 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str):
     is a command name and not sys.argv[0].
 
     :param parser: the parser being edited
-    :param prog: value for the current parsers prog attribute
+    :param prog: new value for the parser's prog attribute
     """
     # Set the prog value for this parser
     parser.prog = prog
@@ -95,6 +95,10 @@ def _set_parser_prog(parser: argparse.ArgumentParser, prog: str):
     # Set the prog value for the parser's subcommands
     for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
+            # Set the _SubParsersAction's _prog_prefix value. That way if its add_parser() method is called later,
+            # the correct prog value will be set on the parser being added.
+            action._prog_prefix = parser.prog
+
             # The keys of action.choices are subcommand names as well as subcommand aliases. The aliases point to the
             # same parser as the actual subcommand. We want to avoid placing an alias into a parser's prog value.
             # Unfortunately there is nothing about an action.choices entry which tells us it's an alias. In most cases

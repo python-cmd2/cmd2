@@ -333,7 +333,14 @@ def test_subcommand_help(subcommand_app):
     assert out[1] == ''
     assert out[2] == 'positional arguments:'
 
-
 def test_subcommand_invalid_help(subcommand_app):
     out, err = run_cmd(subcommand_app, 'help base baz')
     assert out[0].startswith('usage: base')
+
+def test_add_another_subcommand(subcommand_app):
+    """
+    This tests makes sure _set_parser_prog() sets _prog_prefix on every _SubParsersAction so that all future calls
+    to add_parser() write the correct prog value to the parser being added.
+    """
+    new_parser = subcommand_app.base_subparsers.add_parser('new_sub', help="stuff")
+    assert new_parser.prog == "base new_sub"
