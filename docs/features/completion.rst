@@ -34,7 +34,42 @@ similar to the following to your class which inherits from :class:`cmd2.Cmd`::
     complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.path.isdir)
 
 
-Raising exceptions during completion
+Included Tab Completion Functions
+---------------------------------
+``cmd2`` provides the following tab completion functions
+
+- :attr:`cmd2.utils.basic_complete` - helper method for tab completion against
+  a list
+- :attr:`cmd2.Cmd.path_complete` - helper method provides flexible tab
+  completion of file system paths
+
+        - See the paged_output_ example for a simple use case
+        - See the python_scripting_ example for a more full-featured use case
+
+- :attr:`cmd2.Cmd.delimiter_complete` - helper method for tab completion
+  against a list but each match is split on a delimiter
+
+        - See the basic_completion_ example for a demonstration of how to use
+          this feature
+
+- :attr:`cmd2.Cmd.flag_based_complete` - helper method for tab completion based
+  on a particular flag preceding the token being completed
+- :attr:`cmd2.Cmd.index_based_complete` - helper method for tab completion
+  based on a fixed position in the input string
+
+    - See the basic_completion_ example for a demonstration of how to use these
+      features
+    - ``flag_based_complete()`` and ``index_based_complete()`` are basic
+      methods and should only be used if you are not familiar with argparse.
+      The recommended approach for tab completing positional tokens and flags
+      is to use argparse-based_ completion.
+
+.. _paged_output: https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py
+.. _python_scripting: https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py
+.. _basic_completion: https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py
+
+
+Raising Exceptions During Completion
 ------------------------------------
 There are times when tab completion fails and a message needs to be reported to
 the user. These include the following example cases:
@@ -52,10 +87,12 @@ member called ``apply_style``. Set this False if the error style should not be
 applied. For instance, ``ArgparseCompleter`` sets it to False when displaying
 completion hints.
 
-Tab Completion Using Argparse Decorators
+.. _argparse-based:
+
+Tab Completion Using argparse Decorators
 ----------------------------------------
 
-When using one the Argparse-based :ref:`api/decorators:cmd2.decorators`,
+When using one the argparse-based :ref:`api/decorators:cmd2.decorators`,
 ``cmd2`` provides automatic tab completion of flag names.
 
 Tab completion of argument values can be configured by using one of five
