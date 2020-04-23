@@ -34,6 +34,24 @@ similar to the following to your class which inherits from :class:`cmd2.Cmd`::
     complete_bar = functools.partialmethod(cmd2.Cmd.path_complete, path_filter=os.path.isdir)
 
 
+Raising exceptions during completion
+------------------------------------
+There are times when tab completion fails and a message needs to be reported to
+the user. These include the following example cases:
+
+- Reading a database to retrieve a tab completion data set failed
+- A previous command line argument that determines the data set being completed
+  is invalid
+- Tab completion hints
+
+``cmd2`` provides the :class:`cmd2.utils.CompletionError` exception class for
+this capability. If an error occurs in which it is more desirable to display
+a message than a stack trace, then raise a ``CompletionError``. By default, the
+message displays in red like an error. However, ``CompletionError`` has a
+member called ``apply_style``. Set this False if the error style should not be
+applied. For instance, ``ArgparseCompleter`` sets it to False when displaying
+completion hints.
+
 Tab Completion Using Argparse Decorators
 ----------------------------------------
 
