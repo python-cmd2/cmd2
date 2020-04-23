@@ -135,4 +135,5 @@ See the argparse_completion_ example or the implementation of the built-in
 For More Information
 --------------------
 
-See :mod:`cmd2.argparse_custom` for more details.
+See :mod:`cmd2.argparse_custom` for a more detailed discussion of argparse
+completion.
