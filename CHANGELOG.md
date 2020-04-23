@@ -1,4 +1,6 @@
 ## 1.0.3 (TBD, 2020)
+* Bug Fixes
+    * Fixed issue where subcommand usage text could contain a subcommand alias instead of the actual name
 * Enhancements
     * Made `ipy` consistent with `py` in the following ways
         * `ipy` returns whether any of the commands run in it returned True to stop command loop
