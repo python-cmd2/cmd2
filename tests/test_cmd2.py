@@ -1224,16 +1224,11 @@ optional arguments:
 @pytest.mark.skipif(sys.platform.startswith('win'),
                     reason="utils.which function only used on Mac and Linux")
 def test_which_editor_good():
-    import platform
-    editor = 'vi'
+    editor = cmd2.Cmd.DEFAULT_EDITOR
     path = utils.which(editor)
 
-    if 'azure' in platform.release().lower():
-        # vi doesn't exist on VSTS Hosted Linux agents
-        assert not path
-    else:
-        # Assert that the vi editor was found because it should exist on all Mac and Linux systems
-        assert path
+    # Assert that the editor was found because some editor should exist on all Mac and Linux systems
+    assert path
 
 @pytest.mark.skipif(sys.platform.startswith('win'),
                     reason="utils.which function only used on Mac and Linux")
