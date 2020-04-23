@@ -4,7 +4,7 @@
 A simple example demonstrating how to enable tab completion by assigning a completer function to do_* commands.
 This also demonstrates capabilities of the following completer features included with cmd2:
 - CompletionError exceptions
-- delimiter_completer()
+- delimiter_complete()
 - flag_based_complete() (see note below)
 - index_based_complete() (see note below)
 

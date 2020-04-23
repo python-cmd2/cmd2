@@ -171,16 +171,18 @@ Instructions for implementing each feature follow.
         - And also provide help hints for values associated with these flags
         - Experiment with the [argprint.py](https://github.com/python-cmd2/cmd2/blob/master/examples/arg_print.py) example
         using the **oprint** and **pprint** commands to get a feel for how this works
+    - `basic_complete` helper method for tab completion against a list
     - `path_complete` helper method provides flexible tab completion of file system paths
         - See the [paged_output.py](https://github.com/python-cmd2/cmd2/blob/master/examples/paged_output.py) example for a simple use case
         - See the [python_scripting.py](https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py) example for a more full-featured use case
-    - `flag_based_complete` helper method for tab completion based on a particular flag preceding the token being completed
-        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
-    - `index_based_complete` helper method for tab completion based on a fixed position in the input string
-        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
-    - `basic_complete` helper method for tab completion against a list
     - `delimiter_complete` helper method for tab completion against a list but each match is split on a delimiter 
         - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use this feature
+    - `flag_based_complete` helper method for tab completion based on a particular flag preceding the token being completed
+    - `index_based_complete` helper method for tab completion based on a fixed position in the input string
+        - See the [basic_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/basic_completion.py) example for a demonstration of how to use these features
+        - `flag_based_complete()` and `index_based_complete()` are basic methods and should only be used if you are not
+        familiar with argparse. The recommended approach for tab completing positional tokens and flags is to use
+        argparse-based completion
     - `cmd2` in combination with `argparse` also provide several advanced capabilities for automatic tab completion
         - See the [argparse_completion.py](https://github.com/python-cmd2/cmd2/blob/master/examples/argparse_completion.py) example for more info
 

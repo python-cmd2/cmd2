@@ -74,12 +74,12 @@ def str_to_bool(val: str) -> bool:
 
 class CompletionError(Exception):
     """
-    Raised during tab completion operations to report any sort of error you want printed by the ArgparseCompleter
-    This can also be used just to display a message, even if it's not an error. ArgparseCompleter raises
-    CompletionErrors to display tab completion hints and sets apply_style to False so hints aren't colored
-    like error text.
+    Raised during tab completion operations to report any sort of error you want printed. This can also be used
+    just to display a message, even if it's not an error. For instance, ArgparseCompleter raises CompletionErrors
+    to display tab completion hints and sets apply_style to False so hints aren't colored like error text.
 
     Example use cases
+
     - Reading a database to retrieve a tab completion data set failed
     - A previous command line argument that determines the data set being completed is invalid
     - Tab completion hints
