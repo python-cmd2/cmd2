@@ -28,6 +28,7 @@ This documentation is for ``cmd2`` version |version|.
    history
    plugin
    py_bridge
+   table_creator
    constants
 
 **Modules**
@@ -50,4 +51,5 @@ This documentation is for ``cmd2`` version |version|.
 - :ref:`api/plugin:cmd2.plugin` - data classes for hook methods
 - :ref:`api/py_bridge:cmd2.py_bridge` - classes for bridging calls from the
   embedded python environment to the host app
+- :ref:`api/table_creator:cmd2.table_creator` - table creation module
 - :ref:`api/constants:cmd2.constants` - just like it says on the tin

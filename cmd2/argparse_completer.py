@@ -13,9 +13,8 @@ import shutil
 from collections import deque
 from typing import Dict, List, Optional, Union
 
-from . import ansi
-from . import cmd2
-from .argparse_custom import ATTR_CHOICES_CALLABLE, INFINITY, generate_range_error
+from . import ansi, cmd2, constants
+from .argparse_custom import ATTR_CHOICES_CALLABLE, generate_range_error
 from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION_HEADER, ATTR_NARGS_RANGE
 from .argparse_custom import ChoicesCallable, CompletionItem
 from .utils import basic_complete, CompletionError
@@ -85,10 +84,10 @@ class _ArgumentState:
             self.max = 1
         elif self.action.nargs == argparse.ZERO_OR_MORE or self.action.nargs == argparse.REMAINDER:
             self.min = 0
-            self.max = INFINITY
+            self.max = constants.INFINITY
         elif self.action.nargs == argparse.ONE_OR_MORE:
             self.min = 1
-            self.max = INFINITY
+            self.max = constants.INFINITY
         else:
             self.min = self.action.nargs
             self.max = self.action.nargs

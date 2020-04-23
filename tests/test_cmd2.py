@@ -166,10 +166,8 @@ def test_set_allow_style(base_app, new_val, is_valid, expected):
         assert not err
         assert "now: {!r}".format(new_val.capitalize()) in out[1]
 
-    # Reload ansi module to reset allow_style to its default since it's an
-    # application-wide setting that can affect other unit tests.
-    import importlib
-    importlib.reload(ansi)
+    # Reset allow_style to its default since it's an application-wide setting that can affect other unit tests
+    ansi.allow_style = ansi.STYLE_TERMINAL
 
 
 class OnChangeHookApp(cmd2.Cmd):

@@ -6,6 +6,12 @@
         * Starting `ipy` when `Cmd.in_pyscript()` is already True is not allowed.
     * `with_argument_list`, `with_argparser`, and `with_argparser_and_unknown_args` wrappers now pass
       `kwargs` through to their wrapped command function.
+    * Added `table_creator` module for creating richly formatted tables. This module is in beta and subject
+      to change.
+        * See [table_creation](https://cmd2.readthedocs.io/en/latest/features/table_creation.html)
+          documentation for an overview.
+        * See [table_creation.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_creation.py)
+          for an example.
     
 ## 1.0.2 (April 06, 2020)
 * Bug Fixes

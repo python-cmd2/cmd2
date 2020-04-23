@@ -368,14 +368,49 @@ def test_align_text_fill_char_is_tab():
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
     assert aligned == text + '  '
 
-def test_align_text_fill_char_has_color():
+def test_align_text_with_style():
     from cmd2 import ansi
 
-    text = 'foo'
-    fill_char = ansi.fg.bright_yellow + '-' + ansi.fg.reset
-    width = 5
+    # Single line with only left fill
+    text = ansi.style('line1', fg=ansi.fg.bright_blue)
+    fill_char = ansi.style('-', fg=ansi.fg.bright_yellow)
+    width = 6
+
+    aligned = cu.align_text(text, cu.TextAlignment.RIGHT, fill_char=fill_char, width=width)
+
+    left_fill = ansi.RESET_ALL + fill_char + ansi.RESET_ALL
+    right_fill = ansi.RESET_ALL
+    line_1_text = ansi.fg.bright_blue + 'line1' + ansi.FG_RESET
+
+    assert aligned == (left_fill + line_1_text + right_fill)
+
+    # Single line with only right fill
+    text = ansi.style('line1', fg=ansi.fg.bright_blue)
+    fill_char = ansi.style('-', fg=ansi.fg.bright_yellow)
+    width = 6
+
     aligned = cu.align_text(text, cu.TextAlignment.LEFT, fill_char=fill_char, width=width)
-    assert aligned == text + fill_char * 2
+
+    left_fill = ansi.RESET_ALL
+    right_fill = ansi.RESET_ALL + fill_char + ansi.RESET_ALL
+    line_1_text = ansi.fg.bright_blue + 'line1' + ansi.FG_RESET
+
+    assert aligned == (left_fill + line_1_text + right_fill)
+
+    # Multiple lines to show that style is preserved across all lines. Also has left and right fill.
+    text = ansi.style('line1\nline2', fg=ansi.fg.bright_blue)
+    fill_char = ansi.style('-', fg=ansi.fg.bright_yellow)
+    width = 7
+
+    aligned = cu.align_text(text, cu.TextAlignment.CENTER, fill_char=fill_char, width=width)
+
+    left_fill = ansi.RESET_ALL + fill_char + ansi.RESET_ALL
+    right_fill = ansi.RESET_ALL + fill_char + ansi.RESET_ALL
+    line_1_text = ansi.fg.bright_blue + 'line1'
+    line_2_text = ansi.fg.bright_blue + 'line2' + ansi.FG_RESET
+
+    assert aligned == (left_fill + line_1_text + right_fill + '\n' +
+                       left_fill + line_2_text + right_fill)
 
 def test_align_text_width_is_too_small():
     text = 'foo'

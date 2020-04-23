@@ -27,4 +27,5 @@ Features
    settings
    shortcuts_aliases_macros
    startup_commands
+   table_creation
    transcripts

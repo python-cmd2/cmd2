@@ -704,6 +704,7 @@ def basic_complete(text: str, line: str, begidx: int, endidx: int, match_against
 
 
 class TextAlignment(Enum):
+    """Horizontal text alignment"""
     LEFT = 1
     CENTER = 2
     RIGHT = 3
@@ -723,13 +724,13 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
-                      be converted to a space.
+                      be converted to one space.
     :param truncate: if True, then each line will be shortened to fit within the display width. The truncated
                      portions are replaced by a '…' character. Defaults to False.
     :return: aligned text
     :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-             ValueError if text or fill_char contains an unprintable character
-             ValueError if width is less than 1
+    :raises: ValueError if text or fill_char contains an unprintable character
+    :raises: ValueError if width is less than 1
     """
     import io
     import shutil
@@ -744,8 +745,7 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
 
     # Handle tabs
     text = text.replace('\t', ' ' * tab_width)
-    if fill_char == '\t':
-        fill_char = ' '
+    fill_char = fill_char.replace('\t', ' ')
 
     if len(ansi.strip_style(fill_char)) != 1:
         raise TypeError("Fill character must be exactly one character long")
@@ -761,6 +761,28 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
 
     text_buf = io.StringIO()
 
+    # ANSI style sequences that may affect future lines will be cancelled by the fill_char's style.
+    # To avoid this, we save the state of a line's style so we can restore it when beginning the next line.
+    # This also allows the lines to be used independently and still have their style. TableCreator does this.
+    aggregate_styles = ''
+
+    # Save the ANSI style sequences in fill_char
+    fill_char_styles = get_styles_in_text(fill_char)
+
+    # Create a space with the same style as fill_char for cases in which
+    # fill_char does not divide evenly into the gap.
+    styled_space = ''
+    char_index = 0
+    while char_index < len(fill_char):
+        if char_index in fill_char_styles:
+            # Preserve this style in styled_space
+            styled_space += fill_char_styles[char_index]
+            char_index += len(fill_char_styles[char_index])
+        else:
+            # We've reached the visible fill_char. Replace it with a space.
+            styled_space += ' '
+            char_index += 1
+
     for index, line in enumerate(lines):
         if index > 0:
             text_buf.write('\n')
@@ -772,13 +794,16 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
         if line_width == -1:
             raise(ValueError("Text to align contains an unprintable character"))
 
-        elif line_width >= width:
-            # No need to add fill characters
-            text_buf.write(line)
-            continue
+        # Get the styles in this line
+        line_styles = get_styles_in_text(line)
 
         # Calculate how wide each side of filling needs to be
-        total_fill_width = width - line_width
+        if line_width >= width:
+            # Don't return here even though the line needs no fill chars.
+            # There may be styles sequences to restore.
+            total_fill_width = 0
+        else:
+            total_fill_width = width - line_width
 
         if alignment == TextAlignment.LEFT:
             left_fill_width = 0
@@ -795,11 +820,25 @@ def align_text(text: str, alignment: TextAlignment, *, fill_char: str = ' ',
         right_fill = (right_fill_width // fill_char_width) * fill_char
 
         # In cases where the fill character display width didn't divide evenly into
-        # the gaps being filled, pad the remainder with spaces.
-        left_fill += ' ' * (left_fill_width - ansi.style_aware_wcswidth(left_fill))
-        right_fill += ' ' * (right_fill_width - ansi.style_aware_wcswidth(right_fill))
+        # the gap being filled, pad the remainder with styled_space.
+        left_fill += styled_space * (left_fill_width - ansi.style_aware_wcswidth(left_fill))
+        right_fill += styled_space * (right_fill_width - ansi.style_aware_wcswidth(right_fill))
 
-        text_buf.write(left_fill + line + right_fill)
+        # Don't allow styles in fill_char and text to affect one another
+        if fill_char_styles or aggregate_styles or line_styles:
+            if left_fill:
+                left_fill = ansi.RESET_ALL + left_fill
+            left_fill += ansi.RESET_ALL
+
+            if right_fill:
+                right_fill = ansi.RESET_ALL + right_fill
+            right_fill += ansi.RESET_ALL
+
+        # Write the line and restore any styles from previous lines
+        text_buf.write(left_fill + aggregate_styles + line + right_fill)
+
+        # Update the aggregate with styles in this line
+        aggregate_styles += ''.join(line_styles.values())
 
     return text_buf.getvalue()
 
@@ -815,13 +854,13 @@ def align_left(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
-                      be converted to a space.
+                      be converted to one space.
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: left-aligned text
     :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-             ValueError if text or fill_char contains an unprintable character
-             ValueError if width is less than 1
+    :raises: ValueError if text or fill_char contains an unprintable character
+    :raises: ValueError if width is less than 1
     """
     return align_text(text, TextAlignment.LEFT, fill_char=fill_char, width=width,
                       tab_width=tab_width, truncate=truncate)
@@ -838,13 +877,13 @@ def align_center(text: str, *, fill_char: str = ' ', width: Optional[int] = None
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
-                      be converted to a space.
+                      be converted to one space.
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: centered text
     :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-             ValueError if text or fill_char contains an unprintable character
-             ValueError if width is less than 1
+    :raises: ValueError if text or fill_char contains an unprintable character
+    :raises: ValueError if width is less than 1
     """
     return align_text(text, TextAlignment.CENTER, fill_char=fill_char, width=width,
                       tab_width=tab_width, truncate=truncate)
@@ -861,13 +900,13 @@ def align_right(text: str, *, fill_char: str = ' ', width: Optional[int] = None,
     :param fill_char: character that fills the alignment gap. Defaults to space. (Cannot be a line breaking character)
     :param width: display width of the aligned text. Defaults to width of the terminal.
     :param tab_width: any tabs in the text will be replaced with this many spaces. if fill_char is a tab, then it will
-                      be converted to a space.
+                      be converted to one space.
     :param truncate: if True, then text will be shortened to fit within the display width. The truncated portion is
                      replaced by a '…' character. Defaults to False.
     :return: right-aligned text
     :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
-             ValueError if text or fill_char contains an unprintable character
-             ValueError if width is less than 1
+    :raises: ValueError if text or fill_char contains an unprintable character
+    :raises: ValueError if width is less than 1
     """
     return align_text(text, TextAlignment.RIGHT, fill_char=fill_char, width=width,
                       tab_width=tab_width, truncate=truncate)
@@ -884,14 +923,15 @@ def truncate_line(line: str, max_width: int, *, tab_width: int = 4) -> str:
 
     This is done to prevent issues caused in cases like: truncate_string(fg.blue + hello + fg.reset, 3)
     In this case, "hello" would be truncated before fg.reset resets the color from blue. Appending the remaining style
-    sequences makes sure the style is in the same state had the entire string been printed.
+    sequences makes sure the style is in the same state had the entire string been printed. align_text() relies on this
+    behavior when preserving style over multiple lines.
 
     :param line: text to truncate
     :param max_width: the maximum display width the resulting string is allowed to have
     :param tab_width: any tabs in the text will be replaced with this many spaces
     :return: line that has a display width less than or equal to width
-    :raises: ValueError if text contains an unprintable character like a new line
-             ValueError if max_width is less than 1
+    :raises: ValueError if text contains an unprintable character like a newline
+    :raises: ValueError if max_width is less than 1
     """
     import io
     from . import ansi
