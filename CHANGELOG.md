@@ -3,7 +3,9 @@
     * Made `ipy` consistent with `py` in the following ways
         * `ipy` returns whether any of the commands run in it returned True to stop command loop
         * `Cmd.in_pyscript()` returns True while in `ipy`.
-        * Starting `ipy` when `Cmd.in_pyscript()` is already True is not allowed.  
+        * Starting `ipy` when `Cmd.in_pyscript()` is already True is not allowed.
+    * `with_argument_list`, `with_argparser`, and `with_argparser_and_unknown_args` wrappers now pass
+      `kwargs` through to their wrapped command function.
     
 ## 1.0.2 (April 06, 2020)
 * Bug Fixes

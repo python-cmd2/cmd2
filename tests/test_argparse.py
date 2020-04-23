@@ -4,11 +4,11 @@
 Cmd2 testing for argument parsing
 """
 import argparse
+from typing import Optional
+
 import pytest
 
 import cmd2
-from cmd2.utils import StdSim
-
 from .conftest import run_cmd
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
@@ -41,7 +41,7 @@ class ArgparseApp(cmd2.Cmd):
     say_parser.add_argument('words', nargs='+', help='words to say')
 
     @cmd2.with_argparser(say_parser)
-    def do_say(self, args):
+    def do_say(self, args, *, keyword_arg: Optional[str] = None):
         """Repeat what you tell me to."""
         words = []
         for word in args.words:
@@ -57,6 +57,9 @@ class ArgparseApp(cmd2.Cmd):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
 
+        if keyword_arg is not None:
+            print(keyword_arg)
+
     tag_parser = argparse.ArgumentParser(description='create a html tag')
     tag_parser.add_argument('tag', help='tag')
     tag_parser.add_argument('content', nargs='+', help='content to surround with tag')
@@ -71,11 +74,14 @@ class ArgparseApp(cmd2.Cmd):
         self.stdout.write('{}'.format(args.custom_stuff))
 
     @cmd2.with_argument_list
-    def do_arglist(self, arglist):
+    def do_arglist(self, arglist, *, keyword_arg: Optional[str] = None):
         if isinstance(arglist, list):
             self.stdout.write('True')
         else:
             self.stdout.write('False')
+
+        if keyword_arg is not None:
+            print(keyword_arg)
 
     @cmd2.with_argument_list(preserve_quotes=True)
     def do_preservelist(self, arglist):
@@ -86,7 +92,7 @@ class ArgparseApp(cmd2.Cmd):
     known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     known_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     @cmd2.with_argparser_and_unknown_args(known_parser)
-    def do_speak(self, args, extra):
+    def do_speak(self, args, extra, *, keyword_arg: Optional[str] = None):
         """Repeat what you tell me to."""
         words = []
         for word in extra:
@@ -101,6 +107,9 @@ class ArgparseApp(cmd2.Cmd):
         for i in range(min(repetitions, self.maxrepeats)):
             self.stdout.write(' '.join(words))
             self.stdout.write('\n')
+
+        if keyword_arg is not None:
+            print(keyword_arg)
 
     @cmd2.with_argparser_and_unknown_args(argparse.ArgumentParser(), preserve_quotes=True)
     def do_test_argparse_with_list_quotes(self, args, extra):
@@ -128,6 +137,12 @@ def test_argparse_basic_command(argparse_app):
 def test_argparse_remove_quotes(argparse_app):
     out, err = run_cmd(argparse_app, 'say "hello there"')
     assert out == ['hello there']
+
+def test_argparser_kwargs(argparse_app, capsys):
+    """Test with_argparser wrapper passes through kwargs to command function"""
+    argparse_app.do_say('word', keyword_arg="foo")
+    out, err = capsys.readouterr()
+    assert out == "foo\n"
 
 def test_argparse_preserve_quotes(argparse_app):
     out, err = run_cmd(argparse_app, 'tag mytag "hello"')
@@ -161,6 +176,12 @@ def test_argparser_correct_args_with_quotes_and_midline_options(argparse_app):
     out, err = run_cmd(argparse_app, "speak 'This  is a' -s test of the emergency broadcast system!")
     assert out == ['THIS  IS A TEST OF THE EMERGENCY BROADCAST SYSTEM!']
 
+def test_argparser_and_unknown_args_kwargs(argparse_app, capsys):
+    """Test with_argparser_and_unknown_args wrapper passes through kwargs to command function"""
+    argparse_app.do_speak('', keyword_arg="foo")
+    out, err = capsys.readouterr()
+    assert out == "foo\n"
+
 def test_argparse_quoted_arguments_multiple(argparse_app):
     out, err = run_cmd(argparse_app, 'say "hello  there" "rick & morty"')
     assert out == ['hello  there rick & morty']
@@ -185,6 +206,12 @@ def test_argparse_prog(argparse_app):
 def test_arglist(argparse_app):
     out, err = run_cmd(argparse_app, 'arglist "we  should" get these')
     assert out[0] == 'True'
+
+def test_arglist_kwargs(argparse_app, capsys):
+    """Test with_argument_list wrapper passes through kwargs to command function"""
+    argparse_app.do_arglist('arg', keyword_arg="foo")
+    out, err = capsys.readouterr()
+    assert out == "foo\n"
 
 def test_preservelist(argparse_app):
     out, err = run_cmd(argparse_app, 'preservelist foo "bar baz"')
