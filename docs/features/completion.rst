@@ -71,8 +71,8 @@ Included Tab Completion Functions
 
 Raising Exceptions During Completion
 ------------------------------------
-There are times when tab completion fails and a message needs to be reported to
-the user. These include the following example cases:
+There are times when an error occurs while tab completing and a message needs
+to be reported to the user. These include the following example cases:
 
 - Reading a database to retrieve a tab completion data set failed
 - A previous command line argument that determines the data set being completed
