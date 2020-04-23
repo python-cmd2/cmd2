@@ -222,7 +222,7 @@ pipenv shell
 #### Create a new environment for cmd2 using Conda
 ```sh
 $ conda create -n cmd2_py36 python=3.6
-$ conda activate cmd2
+$ conda activate cmd2_py36
 ```
 
 #### Create a new environment for cmd using Virtualenv
