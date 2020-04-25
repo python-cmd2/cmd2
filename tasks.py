@@ -15,6 +15,7 @@ import sys
 
 import invoke
 
+
 # shared function
 def rmrf(items, verbose=True):
     "Silently remove a list of directories or files"

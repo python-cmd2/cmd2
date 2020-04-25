@@ -3,9 +3,8 @@
 """
 A sample application for cmd which can be used to show how to migrate to cmd2.
 """
-import random
-
 import cmd
+import random
 
 
 class CmdLineApp(cmd.Cmd):

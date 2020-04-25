@@ -65,7 +65,7 @@ The tables below list all prerequisites along with the minimum required version 
 #### Additional prerequisites to build cmd2 documentation
 | Prerequisite                                | Minimum Version |
 | ------------------------------------------- | --------------- |
-| [sphinx](http://www.sphinx-doc.org)         | `1.4.9`         |
+| [sphinx](http://www.sphinx-doc.org)         | `2.0.0`         |
 | [sphinx-rtd-theme](https://github.com/snide/sphinx_rtd_theme) | `0.1.9` |
 
 #### Optional prerequisites for enhanced unit test features
@@ -211,7 +211,7 @@ pipenv install --dev
 To create a new virtualenv, using a specific version of Python you have installed (and on your PATH), use the 
 --python VERSION flag, like so:
 ```sh
-pipenv install --dev --python 3.7
+pipenv install --dev --python 3.8
 ```
 
 Then you can enter that virtual environment with:
@@ -221,8 +221,8 @@ pipenv shell
 
 #### Create a new environment for cmd2 using Conda
 ```sh
-$ conda create -n cmd2_py36 python=3.6
-$ conda activate cmd2_py36
+$ conda create -n cmd2_py37 python=3.7
+$ conda activate cmd2_py37
 ```
 
 #### Create a new environment for cmd using Virtualenv
@@ -233,13 +233,13 @@ We recommend that you use [pyenv](https://github.com/pyenv/pyenv) to manage your
 pyenv versions
 
 # Install python version defined
-pyenv install 3.6.3
+pyenv install 3.8.2
 ```
 With the Python version installed, you can set the virtualenv properly. 
 
 ```sh
 $ cd ~/src/cmd2
-$ virtualenv -p $(pyenv root)/versions/3.6.3/ cmd_py36 
+$ virtualenv -p $(pyenv root)/versions/3.8.2/ cmd_py38 
 $ source ~/src/cmd2/bin/activate
 ```
 
@@ -543,6 +543,33 @@ We recommend using [Visual Studio Code](https://code.visualstudio.com) with the 
 excellent support for debugging console applications.
 
 [PyCharm](https://www.jetbrains.com/pycharm/) is also quite good and has very nice [code inspection](https://www.jetbrains.com/help/pycharm/code-inspection.html) capabilities.
+
+## Branching Strategy and Semantic Versioning
+
+Starting with version 1.0.0, `cmd2` has adopted [Semantic Versioning](https://semver.org).
+
+### Semantic Versioning Summary
+Given a version number `MAJOR`.`MINOR`.`PATCH`, increment the:
+
+- `MAJOR` version when you make incompatible API changes,
+- `MINOR` version when you add functionality in a backwards compatible manner, and
+- `PATCH` version when you make backwards compatible bug fixes.
+
+### Branching Strategy
+
+We use the **master** branch for the upcoming `PATCH` release - i.e. if the current version
+of `cmd2` is 1.0.2, then the **master** branch contains code which is planned for release
+in 1.0.3.
+
+If work needs to be done for a `MAJOR` or `MINOR` release when we anticipate there will be
+a `PATCH` release in-between, then a branch should be created named for the appropriate version
+number for the work, e.g. if the current release of `cmd2` is 1.0.2 and a backwards-incompatible
+change needs to be committed for an upcoming `MAJOR` release, then this work should be committed
+to a **2.0.0** branch until such a time as we are ready to release version 2.0.0.
+
+Following this strategy, releases are always done from the **master** branch and `MAJOR` or `MINOR`
+branches are merged to **master** immediately prior to doing a release.  Once merged to **master**, the
+other branches can be deleted.  All releases are tagged so that they can be reproduced if necessary.
 
 ## Publishing a new release
 

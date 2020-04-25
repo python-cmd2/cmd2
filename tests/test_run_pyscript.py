@@ -9,7 +9,8 @@ import os
 import pytest
 
 from cmd2 import plugin, utils
-from .conftest import run_cmd, odd_file_names
+
+from .conftest import odd_file_names, run_cmd
 
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
 try:

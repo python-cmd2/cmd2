@@ -2,6 +2,7 @@
 # Tests that cmd2 populates __name__, __file__, and sets sys.path[0] to our directory
 import os
 import sys
+
 app.cmd_echo = True
 
 if __name__ != '__main__':

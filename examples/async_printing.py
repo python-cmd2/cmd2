@@ -10,7 +10,7 @@ import time
 from typing import List
 
 import cmd2
-from cmd2 import style, fg
+from cmd2 import fg, style
 
 ALERTS = ["Watch as this application prints alerts and updates the prompt",
           "This will only happen when the prompt is present",

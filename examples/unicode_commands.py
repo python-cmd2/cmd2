@@ -3,6 +3,7 @@
 """A simple example demonstrating support for unicode command names.
 """
 import math
+
 import cmd2
 
 

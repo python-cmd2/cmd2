@@ -4,6 +4,7 @@
 Setuptools setup file, used to install or test 'cmd2'
 """
 import codecs
+
 from setuptools import setup
 
 DESCRIPTION = "cmd2 - quickly build feature-rich and user-friendly interactive command line applications in Python"

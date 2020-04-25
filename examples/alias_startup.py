@@ -5,6 +5,7 @@
     2) How to run an initialization script at startup
 """
 import os
+
 import cmd2
 
 

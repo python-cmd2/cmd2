@@ -42,17 +42,14 @@ from collections import namedtuple
 from contextlib import redirect_stdout
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
-from . import ansi
-from . import constants
-from . import plugin
-from . import utils
-from .argparse_custom import CompletionItem, DEFAULT_ARGUMENT_PARSER
+from . import ansi, constants, plugin, utils
+from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
 from .exceptions import Cmd2ArgparseError, Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError
 from .history import History, HistoryItem
-from .parsing import StatementParser, Statement, Macro, MacroArg, shlex_split
-from .rl_utils import rl_type, RlType, rl_get_point, rl_set_prompt, vt100_support, rl_make_safe_prompt, rl_warning
+from .parsing import Macro, MacroArg, Statement, StatementParser, shlex_split
+from .rl_utils import RlType, rl_get_point, rl_make_safe_prompt, rl_set_prompt, rl_type, rl_warning, vt100_support
 from .utils import CompletionError, Settable
 
 # Set up readline

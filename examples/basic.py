@@ -9,7 +9,7 @@
     6) Shell-like capabilities
 """
 import cmd2
-from cmd2 import style, fg, bg
+from cmd2 import bg, fg, style
 
 
 class BasicApp(cmd2.Cmd):

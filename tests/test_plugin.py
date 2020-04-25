@@ -8,14 +8,15 @@ import sys
 
 import pytest
 
+import cmd2
+from cmd2 import Cmd2ArgumentParser, exceptions, plugin, with_argparser
+
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
 try:
     import mock
 except ImportError:
     from unittest import mock
 
-import cmd2
-from cmd2 import exceptions, plugin, Cmd2ArgumentParser, with_argparser
 
 
 class Plugin:

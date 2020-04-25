@@ -9,6 +9,7 @@ import pytest
 import cmd2
 from cmd2 import Cmd2ArgumentParser, constants
 from cmd2.argparse_custom import generate_range_error
+
 from .conftest import run_cmd
 
 
