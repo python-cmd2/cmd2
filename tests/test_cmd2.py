@@ -13,16 +13,27 @@ from code import InteractiveConsole
 
 import pytest
 
+import cmd2
+from cmd2 import COMMAND_NAME, ansi, clipboard, constants, exceptions, plugin, utils
+
+from .conftest import (
+    HELP_HISTORY,
+    SHORTCUTS_TXT,
+    SHOW_LONG,
+    SHOW_TXT,
+    complete_tester,
+    normalize,
+    odd_file_names,
+    run_cmd,
+    verify_help_text,
+)
+
 # Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
 try:
     import mock
 except ImportError:
     from unittest import mock
 
-import cmd2
-from cmd2 import ansi, clipboard, constants, exceptions, plugin, utils, COMMAND_NAME
-from .conftest import (run_cmd, normalize, verify_help_text, HELP_HISTORY, SHORTCUTS_TXT, SHOW_TXT,
-                       SHOW_LONG, complete_tester, odd_file_names)
 
 def CreateOutsimApp():
     c = cmd2.Cmd()

@@ -18,6 +18,7 @@ flake8 = "*"
 gnureadline = {version = "*",sys_platform = "== 'darwin'"}
 invoke = "*"
 ipython = "*"
+isort = "*"
 mock = {version = "*",markers = "python_version < '3.6'"}
 plumbum = "*"
 pyreadline = {version = "*",sys_platform = "== 'win32'"}

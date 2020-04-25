@@ -5,10 +5,10 @@ while maintaining a reasonable degree of isolation between the two.
 """
 
 import sys
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from typing import Optional
 
-from .utils import namedtuple_with_defaults, StdSim
+from .utils import StdSim, namedtuple_with_defaults
 
 
 class CommandResult(namedtuple_with_defaults('CommandResult', ['stdout', 'stderr', 'stop', 'data'])):

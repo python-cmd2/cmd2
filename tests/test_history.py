@@ -3,22 +3,23 @@
 """
 Test history functions of cmd2
 """
-import tempfile
 import os
+import tempfile
 
 import pytest
 
+import cmd2
 # Python 3.5 had some regressions in the unitest.mock module, so use
 # 3rd party mock if available
 from cmd2.parsing import StatementParser
+
+from .conftest import HELP_HISTORY, normalize, run_cmd
 
 try:
     import mock
 except ImportError:
     from unittest import mock
 
-import cmd2
-from .conftest import run_cmd, normalize, HELP_HISTORY
 
 
 #

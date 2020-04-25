@@ -4,7 +4,6 @@ History management classes
 """
 
 import re
-
 from typing import List, Union
 
 import attr

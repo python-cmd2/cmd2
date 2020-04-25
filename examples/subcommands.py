@@ -7,6 +7,7 @@ This example shows an easy way for a single command to have many subcommands, ea
 and provides separate contextual help.
 """
 import argparse
+
 import cmd2
 
 sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']

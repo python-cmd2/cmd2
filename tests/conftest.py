@@ -3,7 +3,7 @@
 Cmd2 unit/functional testing
 """
 import sys
-from contextlib import redirect_stdout, redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from typing import List, Optional, Union
 from unittest import mock
 
@@ -11,7 +11,6 @@ from pytest import fixture
 
 import cmd2
 from cmd2.utils import StdSim
-
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:

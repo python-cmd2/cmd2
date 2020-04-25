@@ -8,8 +8,7 @@ from typing import Dict, Iterable, List, Optional, Tuple, Union
 
 import attr
 
-from . import constants
-from . import utils
+from . import constants, utils
 from .exceptions import Cmd2ShlexError
 
 

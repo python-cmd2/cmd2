@@ -13,7 +13,7 @@
     10) How to make custom attributes settable at runtime
 """
 import cmd2
-from cmd2 import style, fg, bg
+from cmd2 import bg, fg, style
 
 
 class BasicApp(cmd2.Cmd):

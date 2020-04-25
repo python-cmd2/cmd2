@@ -9,6 +9,7 @@ from typing import Optional
 import pytest
 
 import cmd2
+
 from .conftest import run_cmd
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)

@@ -14,10 +14,16 @@ from collections import deque
 from typing import Dict, List, Optional, Union
 
 from . import ansi, cmd2, constants
-from .argparse_custom import ATTR_CHOICES_CALLABLE, generate_range_error
-from .argparse_custom import ATTR_SUPPRESS_TAB_HINT, ATTR_DESCRIPTIVE_COMPLETION_HEADER, ATTR_NARGS_RANGE
-from .argparse_custom import ChoicesCallable, CompletionItem
-from .utils import basic_complete, CompletionError
+from .argparse_custom import (
+    ATTR_CHOICES_CALLABLE,
+    ATTR_DESCRIPTIVE_COMPLETION_HEADER,
+    ATTR_NARGS_RANGE,
+    ATTR_SUPPRESS_TAB_HINT,
+    ChoicesCallable,
+    CompletionItem,
+    generate_range_error,
+)
+from .utils import CompletionError, basic_complete
 
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'

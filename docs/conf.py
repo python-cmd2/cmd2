@@ -17,10 +17,9 @@ If extensions (or modules to document with autodoc) are in another directory,
 add these directories to sys.path here. If the directory is relative to the
 documentation root, use os.path.abspath to make it absolute, like shown here.
 """
-from pkg_resources import get_distribution
-
 # Import for custom theme from Read the Docs
 import sphinx_rtd_theme
+from pkg_resources import get_distribution
 
 # -- General configuration -----------------------------------------------------
 

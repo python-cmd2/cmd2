@@ -26,9 +26,10 @@ Always
 import argparse
 from typing import Any
 
+from colorama import Back, Fore, Style
+
 import cmd2
 from cmd2 import ansi
-from colorama import Fore, Back, Style
 
 
 class CmdLineApp(cmd2.Cmd):

@@ -203,7 +203,7 @@ import argparse
 import re
 import sys
 # noinspection PyUnresolvedReferences,PyProtectedMember
-from argparse import ZERO_OR_MORE, ONE_OR_MORE, ArgumentError, _
+from argparse import ONE_OR_MORE, ZERO_OR_MORE, ArgumentError, _
 from typing import Callable, Optional, Tuple, Type, Union
 
 from . import ansi, constants

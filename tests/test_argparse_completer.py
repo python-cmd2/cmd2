@@ -9,9 +9,10 @@ from typing import List
 import pytest
 
 import cmd2
-from cmd2 import with_argparser, Cmd2ArgumentParser, CompletionItem
+from cmd2 import Cmd2ArgumentParser, CompletionItem, with_argparser
 from cmd2.utils import CompletionError, StdSim, basic_complete
-from .conftest import run_cmd, complete_tester
+
+from .conftest import complete_tester, run_cmd
 
 # Lists used in our tests (there is a mix of sorted and unsorted on purpose)
 static_int_choices_list = [-1, 1, -2, 2, 0, -12]

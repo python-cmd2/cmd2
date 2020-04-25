@@ -10,7 +10,6 @@ follow a command without any intervening whitespace.
 """
 
 import re
-
 from typing import List
 
 import cmd2
