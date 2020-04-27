@@ -1680,9 +1680,7 @@ class Cmd(cmd.Cmd):
         except Exception as ex:
             self.pexcept(ex)
         finally:
-            stop = self._run_cmdfinalization_hooks(stop, statement)
-
-        return stop
+            return self._run_cmdfinalization_hooks(stop, statement)
 
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
