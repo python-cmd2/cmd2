@@ -1587,9 +1587,9 @@ class Cmd(cmd.Cmd):
 
         :param line: command line to run
         :param add_to_history: If True, then add this command to history. Defaults to True.
-        :param raise_keyboard_interrupt: if True, then KeyboardInterrupt exceptions will be raised. This is used when
-                                         running commands in a loop to be able to stop the whole loop and not just
-                                         the current command. Defaults to False.
+        :param raise_keyboard_interrupt: if True, then KeyboardInterrupt exceptions will be raised if stop isn't already
+                                         True. This is used when running commands in a loop to be able to stop the whole
+                                         loop and not just the current command. Defaults to False.
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
                                command's stdout.
@@ -1667,9 +1667,6 @@ class Cmd(cmd.Cmd):
                     if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
-        except KeyboardInterrupt as ex:
-            if raise_keyboard_interrupt:
-                raise ex
         except (SkipPostcommandHooks, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
@@ -1677,16 +1674,30 @@ class Cmd(cmd.Cmd):
             self.perror("Invalid syntax: {}".format(ex))
         except RedirectionError as ex:
             self.perror(ex)
+        except KeyboardInterrupt as ex:
+            if raise_keyboard_interrupt and not stop:
+                raise ex
+        except SystemExit:
+            self.pwarning("Caught SystemExit. Attempting to stop command loop...")
+            stop = True
         except Exception as ex:
             self.pexcept(ex)
         finally:
-            stop = self._run_cmdfinalization_hooks(stop, statement)
+            try:
+                stop = self._run_cmdfinalization_hooks(stop, statement)
+            except KeyboardInterrupt as ex:
+                if raise_keyboard_interrupt and not stop:
+                    raise ex
+            except SystemExit:
+                self.pwarning("Caught SystemExit. Attempting to stop command loop...")
+                stop = True
+            except Exception as ex:
+                self.pexcept(ex)
 
         return stop
 
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
-
         with self.sigint_protection:
             if not sys.platform.startswith('win') and self.stdin.isatty():
                 # Before the next command runs, fix any terminal problems like those
@@ -1695,15 +1706,12 @@ class Cmd(cmd.Cmd):
                 proc = subprocess.Popen(['stty', 'sane'])
                 proc.communicate()
 
-        try:
-            data = plugin.CommandFinalizationData(stop, statement)
-            for func in self._cmdfinalization_hooks:
-                data = func(data)
-            # retrieve the final value of stop, ignoring any
-            # modifications to the statement
-            return data.stop
-        except Exception as ex:
-            self.pexcept(ex)
+        data = plugin.CommandFinalizationData(stop, statement)
+        for func in self._cmdfinalization_hooks:
+            data = func(data)
+        # retrieve the final value of stop, ignoring any
+        # modifications to the statement
+        return data.stop
 
     def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *, add_to_history: bool = True,
                            stop_on_keyboard_interrupt: bool = True) -> bool:
