@@ -256,6 +256,10 @@ class PluggedApp(Plugin, cmd2.Cmd):
         """Repeat back the arguments"""
         self.poutput(statement)
 
+    def do_skip_postcmd_hooks(self, _):
+        self.poutput("In do_skip_postcmd_hooks")
+        raise exceptions.SkipPostcommandHooks
+
     parser = Cmd2ArgumentParser(description="Test parser")
     parser.add_argument("my_arg", help="some help text")
 
@@ -847,6 +851,17 @@ def test_cmdfinalization_hook_exception(capsys):
     assert err
     assert app.called_cmdfinalization == 1
 
+def test_skip_postcmd_hooks(capsys):
+    app = PluggedApp()
+    app.register_postcmd_hook(app.postcmd_hook)
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook)
+
+    # Cause a SkipPostcommandHooks exception and verify no postcmd stuff runs but cmdfinalization_hook still does
+    app.onecmd_plus_hooks('skip_postcmd_hooks')
+    out, err = capsys.readouterr()
+    assert "In do_skip_postcmd_hooks" in out
+    assert app.called_postcmd == 0
+    assert app.called_cmdfinalization == 1
 
 def test_cmd2_argparse_exception(capsys):
     """

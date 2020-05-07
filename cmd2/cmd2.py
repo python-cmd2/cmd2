@@ -46,7 +46,7 @@ from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
-from .exceptions import Cmd2ArgparseError, Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError
+from .exceptions import Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError, SkipPostcommandHooks
 from .history import History, HistoryItem
 from .parsing import Macro, MacroArg, Statement, StatementParser, shlex_split
 from .rl_utils import RlType, rl_get_point, rl_make_safe_prompt, rl_set_prompt, rl_type, rl_warning, vt100_support
@@ -1670,7 +1670,7 @@ class Cmd(cmd.Cmd):
         except KeyboardInterrupt as ex:
             if raise_keyboard_interrupt:
                 raise ex
-        except (Cmd2ArgparseError, EmptyStatement):
+        except (SkipPostcommandHooks, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
         except Cmd2ShlexError as ex:
@@ -3894,7 +3894,7 @@ class Cmd(cmd.Cmd):
 
         IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
-                   to guarantee the alert prints.
+                   to guarantee the alert prints and to avoid raising a RuntimeError.
 
         :param alert_msg: the message to display to the user
         :param new_prompt: if you also want to change the prompt that is displayed, then include it here
@@ -3956,7 +3956,7 @@ class Cmd(cmd.Cmd):
 
         IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
-                   to guarantee the prompt changes.
+                   to guarantee the prompt changes and to avoid raising a RuntimeError.
 
                    If user is at a continuation prompt while entering a multiline command, the onscreen prompt will
                    not change. However self.prompt will still be updated and display immediately after the multiline
@@ -3971,9 +3971,9 @@ class Cmd(cmd.Cmd):
 
         Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
 
-        IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid
-                   writing to stderr while a command is running. Therefore it is best to acquire the lock
-                   before calling this function to guarantee the title changes.
+        IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid writing
+                   to stderr while a command is running. Therefore it is best to acquire the lock before calling
+                   this function to guarantee the title changes and to avoid raising a RuntimeError.
 
         :param title: the new window title
         """
