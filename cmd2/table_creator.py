@@ -499,8 +499,8 @@ class SimpleTable(TableCreator):
         self.divider_char = divider_char
         self.empty_data = [EMPTY for _ in self.cols]
 
-    @staticmethod
-    def base_width(num_cols: int, divider_char: Optional[str] = '-') -> int:
+    @classmethod
+    def base_width(cls, num_cols: int, *, divider_char: Optional[str] = '-') -> int:
         """
         Utility method to calculate the width required for a table before data is added to it.
         This is useful to know how much room is left for data with creating a table of a specific width.
@@ -515,16 +515,13 @@ class SimpleTable(TableCreator):
         if num_cols < 1:
             raise ValueError("Column count cannot be less than 1")
 
-        # Generate a line to validate divider_char. If invalid, an exception will be raised.
-        st = SimpleTable([Column('')], divider_char=divider_char)
-        st.generate_header()
+        data_str = SPACE
+        data_width = ansi.style_aware_wcswidth(data_str) * num_cols
 
-        if divider_char is None:
-            inter_cell = SimpleTable.INTER_CELL_CHARS * SPACE
-        else:
-            inter_cell = SPACE * ansi.style_aware_wcswidth(SimpleTable.INTER_CELL_CHARS * divider_char)
+        tbl = cls([Column(data_str)] * num_cols, divider_char=divider_char)
+        data_row = tbl.generate_data_row([data_str] * num_cols)
 
-        return (num_cols - 1) * ansi.style_aware_wcswidth(inter_cell)
+        return ansi.style_aware_wcswidth(data_row) - data_width
 
     def generate_header(self) -> str:
         """Generate table header with an optional divider row"""
@@ -619,6 +616,29 @@ class BorderedTable(TableCreator):
         if padding < 0:
             raise ValueError("Padding cannot be less than 0")
         self.padding = padding
+
+    @classmethod
+    def base_width(cls, num_cols: int, *, column_borders: bool = True, padding: int = 1) -> int:
+        """
+        Utility method to calculate the width required for a table before data is added to it.
+        This is useful to know how much room is left for data with creating a table of a specific width.
+
+        :param num_cols: how many columns the table will have
+        :param column_borders: if True, borders between columns will be included in the calculation (Defaults to True)
+        :param padding: number of spaces between text and left/right borders of cell
+        :return: base width
+        :raises: ValueError if num_cols is less than 1
+        """
+        if num_cols < 1:
+            raise ValueError("Column count cannot be less than 1")
+
+        data_str = SPACE
+        data_width = ansi.style_aware_wcswidth(data_str) * num_cols
+
+        tbl = cls([Column(data_str)] * num_cols, column_borders=column_borders, padding=padding)
+        data_row = tbl.generate_data_row([data_str] * num_cols)
+
+        return ansi.style_aware_wcswidth(data_row) - data_width
 
     def generate_table_top_border(self):
         """Generate a border which appears at the top of the header and data section"""
