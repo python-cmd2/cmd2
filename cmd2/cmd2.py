@@ -1678,7 +1678,6 @@ class Cmd(cmd.Cmd):
             if raise_keyboard_interrupt and not stop:
                 raise ex
         except SystemExit:
-            self.pwarning("Caught SystemExit. Attempting to stop command loop...")
             stop = True
         except Exception as ex:
             self.pexcept(ex)
@@ -1689,7 +1688,6 @@ class Cmd(cmd.Cmd):
                 if raise_keyboard_interrupt and not stop:
                     raise ex
             except SystemExit:
-                self.pwarning("Caught SystemExit. Attempting to stop command loop...")
                 stop = True
             except Exception as ex:
                 self.pexcept(ex)

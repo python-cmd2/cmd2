@@ -222,11 +222,24 @@ class Plugin:
         self.called_cmdfinalization += 1
         raise ValueError
 
+    def cmdfinalization_hook_system_exit(self, data: cmd2.plugin.CommandFinalizationData) -> \
+            cmd2.plugin.CommandFinalizationData:
+        """A command finalization hook which raises a SystemExit"""
+        self.called_cmdfinalization += 1
+        raise SystemExit
+
+    def cmdfinalization_hook_keyboard_interrupt(self, data: cmd2.plugin.CommandFinalizationData) -> \
+            cmd2.plugin.CommandFinalizationData:
+        """A command finalization hook which raises a KeyboardInterrupt"""
+        self.called_cmdfinalization += 1
+        raise KeyboardInterrupt
+
     def cmdfinalization_hook_not_enough_parameters(self) -> plugin.CommandFinalizationData:
         """A command finalization hook with no parameters."""
         pass
 
-    def cmdfinalization_hook_too_many_parameters(self, one: plugin.CommandFinalizationData, two: str) -> plugin.CommandFinalizationData:
+    def cmdfinalization_hook_too_many_parameters(self, one: plugin.CommandFinalizationData, two: str) -> \
+            plugin.CommandFinalizationData:
         """A command finalization hook with too many parameters."""
         return one
 
@@ -849,6 +862,35 @@ def test_cmdfinalization_hook_exception(capsys):
     assert not stop
     assert out == 'hello\n'
     assert err
+    assert app.called_cmdfinalization == 1
+
+def test_cmdfinalization_hook_system_exit(capsys):
+    app = PluggedApp()
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook_system_exit)
+    stop = app.onecmd_plus_hooks('say hello')
+    assert stop
+    assert app.called_cmdfinalization == 1
+
+def test_cmdfinalization_hook_keyboard_interrupt(capsys):
+    app = PluggedApp()
+    app.register_cmdfinalization_hook(app.cmdfinalization_hook_keyboard_interrupt)
+
+    # First make sure KeyboardInterrupt isn't raised unless told to
+    stop = app.onecmd_plus_hooks('say hello', raise_keyboard_interrupt=False)
+    assert not stop
+    assert app.called_cmdfinalization == 1
+
+    # Now enable raising the KeyboardInterrupt
+    app.reset_counters()
+    with pytest.raises(KeyboardInterrupt):
+        stop = app.onecmd_plus_hooks('say hello', raise_keyboard_interrupt=True)
+    assert not stop
+    assert app.called_cmdfinalization == 1
+
+    # Now make sure KeyboardInterrupt isn't raised if stop is already True
+    app.reset_counters()
+    stop = app.onecmd_plus_hooks('quit', raise_keyboard_interrupt=True)
+    assert stop
     assert app.called_cmdfinalization == 1
 
 def test_skip_postcmd_hooks(capsys):

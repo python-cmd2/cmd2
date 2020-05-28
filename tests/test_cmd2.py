@@ -466,6 +466,17 @@ def test_in_script(request):
 
     assert "WE ARE IN SCRIPT" in out[-1]
 
+def test_system_exit_in_command(base_app, capsys):
+    """Test raising SystemExit from a command"""
+    import types
+
+    def do_system_exit(self, _):
+        raise SystemExit
+    setattr(base_app, 'do_system_exit', types.MethodType(do_system_exit, base_app))
+
+    stop = base_app.onecmd_plus_hooks('system_exit')
+    assert stop
+
 def test_output_redirection(base_app):
     fd, filename = tempfile.mkstemp(prefix='cmd2_test', suffix='.txt')
     os.close(fd)
