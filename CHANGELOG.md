@@ -1,4 +1,4 @@
-## 1.0.3 (TBD, 2020)
+## 1.1.0 (TBD, 2020)
 * Bug Fixes
     * Fixed issue where subcommand usage text could contain a subcommand alias instead of the actual name
 * Enhancements
@@ -14,6 +14,15 @@
           documentation for an overview.
         * See [table_creation.py](https://github.com/python-cmd2/cmd2/blob/master/examples/table_creation.py)
           for an example.
+    * Added the following exceptions to the public API
+        * `SkipPostcommandHooks` - Custom exception class for when a command has a failure bad enough to skip
+          post command hooks, but not bad enough to print the exception to the user.
+        * `Cmd2ArgparseError` - A `SkipPostcommandHooks` exception for when a command fails to parse its arguments.
+          Normally argparse raises a `SystemExit` exception in these cases. To avoid stopping the command
+          loop, catch the `SystemExit` and raise this instead. If you still need to run post command hooks
+          after parsing fails, just return instead of raising an exception.
+    * Added explicit handling of `SystemExit`. If a command raises this exception, the command loop will be
+      gracefully stopped.
     
 ## 1.0.2 (April 06, 2020)
 * Bug Fixes
