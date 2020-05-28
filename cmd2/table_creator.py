@@ -465,8 +465,9 @@ class TableCreator:
                 if cell_index == len(self.cols) - 1:
                     row_buf.write(post_line)
 
-            # Add a newline if this is not the last row
-            row_buf.write('\n')
+            # Add a newline if this is not the last line
+            if line_index < total_lines - 1:
+                row_buf.write('\n')
 
         return row_buf.getvalue()
 
@@ -480,6 +481,9 @@ class SimpleTable(TableCreator):
     Implementation of TableCreator which generates a borderless table with an optional divider row after the header.
     This class can be used to create the whole table at once or one row at a time.
     """
+    # Num chars between cells
+    INTER_CELL_CHARS = 2
+
     def __init__(self, cols: Sequence[Column], *, tab_width: int = 4, divider_char: Optional[str] = '-') -> None:
         """
         SimpleTable initializer
@@ -495,24 +499,50 @@ class SimpleTable(TableCreator):
         self.divider_char = divider_char
         self.empty_data = [EMPTY for _ in self.cols]
 
+    @staticmethod
+    def base_width(num_cols: int, divider_char: Optional[str] = '-') -> int:
+        """
+        Utility method to calculate the width required for a table before data is added to it.
+        This is useful to know how much room is left for data with creating a table of a specific width.
+
+        :param num_cols: how many columns the table will have
+        :param divider_char: optional character used to build the header divider row. If provided, its value must meet the
+                             same requirements as fill_char in TableCreator.generate_row() or exceptions will be raised.
+                             Set this to None if you don't want a divider row. (Defaults to dash)
+        :return: base width
+        :raises: ValueError if num_cols is less than 1
+        """
+        if num_cols < 1:
+            raise ValueError("Column count cannot be less than 1")
+
+        # Generate a line to validate divider_char. If invalid, an exception will be raised.
+        st = SimpleTable([Column('')], divider_char=divider_char)
+        st.generate_header()
+
+        if divider_char is None:
+            inter_cell = SimpleTable.INTER_CELL_CHARS * SPACE
+        else:
+            inter_cell = SPACE * ansi.style_aware_wcswidth(SimpleTable.INTER_CELL_CHARS * divider_char)
+
+        return (num_cols - 1) * ansi.style_aware_wcswidth(inter_cell)
+
     def generate_header(self) -> str:
-        """
-        Generate header with an optional divider row
-        """
+        """Generate table header with an optional divider row"""
         header_buf = io.StringIO()
 
         # Create the header labels
         if self.divider_char is None:
-            inter_cell = 2 * SPACE
+            inter_cell = SimpleTable.INTER_CELL_CHARS * SPACE
         else:
-            inter_cell = SPACE * ansi.style_aware_wcswidth(2 * self.divider_char)
+            inter_cell = SPACE * ansi.style_aware_wcswidth(SimpleTable.INTER_CELL_CHARS * self.divider_char)
         header = self.generate_row(inter_cell=inter_cell)
         header_buf.write(header)
 
         # Create the divider. Use empty strings for the row_data.
         if self.divider_char is not None:
             divider = self.generate_row(row_data=self.empty_data, fill_char=self.divider_char,
-                                        inter_cell=(2 * self.divider_char))
+                                        inter_cell=(SimpleTable.INTER_CELL_CHARS * self.divider_char))
+            header_buf.write('\n')
             header_buf.write(divider)
         return header_buf.getvalue()
 
@@ -548,6 +578,8 @@ class SimpleTable(TableCreator):
         if include_header:
             header = self.generate_header()
             table_buf.write(header)
+            if len(table_data) > 0:
+                table_buf.write('\n')
 
         for index, row_data in enumerate(table_data):
             if index > 0 and row_spacing > 0:
@@ -555,6 +587,8 @@ class SimpleTable(TableCreator):
 
             row = self.generate_data_row(row_data)
             table_buf.write(row)
+            if index < len(table_data) - 1:
+                table_buf.write('\n')
 
         return table_buf.getvalue()
 
@@ -643,10 +677,7 @@ class BorderedTable(TableCreator):
                                  inter_cell=inter_cell, post_line=post_line)
 
     def generate_header(self) -> str:
-        """
-        Generate header
-        :return: header string
-        """
+        """Generate table header"""
         pre_line = '║' + self.padding * SPACE
 
         inter_cell = self.padding * SPACE
@@ -659,7 +690,9 @@ class BorderedTable(TableCreator):
         # Create the bordered header
         header_buf = io.StringIO()
         header_buf.write(self.generate_table_top_border())
+        header_buf.write('\n')
         header_buf.write(self.generate_row(pre_line=pre_line, inter_cell=inter_cell, post_line=post_line))
+        header_buf.write('\n')
         header_buf.write(self.generate_header_bottom_border())
 
         return header_buf.getvalue()
@@ -699,13 +732,17 @@ class BorderedTable(TableCreator):
             top_border = self.generate_table_top_border()
             table_buf.write(top_border)
 
+        table_buf.write('\n')
+
         for index, row_data in enumerate(table_data):
             if index > 0:
                 row_bottom_border = self.generate_row_bottom_border()
                 table_buf.write(row_bottom_border)
+                table_buf.write('\n')
 
             row = self.generate_data_row(row_data)
             table_buf.write(row)
+            table_buf.write('\n')
 
         table_buf.write(self.generate_table_bottom_border())
         return table_buf.getvalue()
@@ -797,9 +834,12 @@ class AlternatingTable(BorderedTable):
             top_border = self.generate_table_top_border()
             table_buf.write(top_border)
 
+        table_buf.write('\n')
+
         for row_data in table_data:
             row = self.generate_data_row(row_data)
             table_buf.write(row)
+            table_buf.write('\n')
 
         table_buf.write(self.generate_table_bottom_border())
         return table_buf.getvalue()
