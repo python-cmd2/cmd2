@@ -240,7 +240,7 @@ def test_tabs():
     assert row == '  Col  1                Col 2  '
 
 
-def test_simple_table():
+def test_simple_table_creation():
     column_1 = Column("Col 1", width=16)
     column_2 = Column("Col 2", width=16)
 
@@ -310,7 +310,31 @@ def test_simple_table():
     assert "Row spacing cannot be less than 0" in str(excinfo.value)
 
 
-def test_bordered_table():
+def test_simple_table_base_width():
+    # Default divider char
+    assert SimpleTable.base_width(1) == 0
+    assert SimpleTable.base_width(2) == 2
+    assert SimpleTable.base_width(3) == 4
+
+    # Standard divider char
+    divider_char = '*'
+    assert SimpleTable.base_width(1, divider_char=divider_char) == 0
+    assert SimpleTable.base_width(2, divider_char=divider_char) == 2
+    assert SimpleTable.base_width(3, divider_char=divider_char) == 4
+
+    # Wide divider char
+    divider_char = '深'
+    assert SimpleTable.base_width(1, divider_char=divider_char) == 0
+    assert SimpleTable.base_width(2, divider_char=divider_char) == 4
+    assert SimpleTable.base_width(3, divider_char=divider_char) == 8
+
+    # Invalid num_cols value
+    with pytest.raises(ValueError) as excinfo:
+        SimpleTable.base_width(0)
+    assert "Column count cannot be less than 1" in str(excinfo.value)
+
+
+def test_bordered_table_creation():
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
 
@@ -366,7 +390,34 @@ def test_bordered_table():
     assert "Padding cannot be less than 0" in str(excinfo.value)
 
 
-def test_alternating_table():
+def test_bordered_table_base_width():
+    # Default behavior (column_borders=True, padding=1)
+    assert BorderedTable.base_width(1) == 4
+    assert BorderedTable.base_width(2) == 7
+    assert BorderedTable.base_width(3) == 10
+
+    # No column borders
+    assert BorderedTable.base_width(1, column_borders=False) == 4
+    assert BorderedTable.base_width(2, column_borders=False) == 6
+    assert BorderedTable.base_width(3, column_borders=False) == 8
+
+    # No padding
+    assert BorderedTable.base_width(1, padding=0) == 2
+    assert BorderedTable.base_width(2, padding=0) == 3
+    assert BorderedTable.base_width(3, padding=0) == 4
+
+    # Extra padding
+    assert BorderedTable.base_width(1, padding=3) == 8
+    assert BorderedTable.base_width(2, padding=3) == 15
+    assert BorderedTable.base_width(3, padding=3) == 22
+
+    # Invalid num_cols value
+    with pytest.raises(ValueError) as excinfo:
+        BorderedTable.base_width(0)
+    assert "Column count cannot be less than 1" in str(excinfo.value)
+
+
+def test_alternating_table_creation():
     column_1 = Column("Col 1", width=15)
     column_2 = Column("Col 2", width=15)
 
