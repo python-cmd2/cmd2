@@ -291,6 +291,12 @@ blindly returns ``False``, a prior hook's requst to exit the application will
 not be honored. It's best to return the value you were passed unless you have a
 compelling reason to do otherwise.
 
+To purposefully and silently skip postcommand hooks, commands can raise any of
+of the following exceptions.
+
+- :attr:`cmd2.exceptions.SkipPostcommandHooks`
+- :attr:`cmd2.exceptions.Cmd2ArgparseError`
+
 
 Command Finalization Hooks
 --------------------------

@@ -129,7 +129,7 @@ it should stop prompting for user input and cleanly exit. ``cmd2`` already
 includes a ``quit`` command, but if you wanted to make another one called
 ``finis`` you could::
 
-    def do_finis(self, line):
+    def do_finish(self, line):
         """Exit the application"""
         return True
 
@@ -186,6 +186,19 @@ catch it and display it for you. The `debug` :ref:`setting
 name and message. If `debug` is `true`, ``cmd2`` will display a traceback, and
 then display the exception name and message.
 
+There are a few exceptions which commands can raise that do not print as
+described above:
+
+- :attr:`cmd2.exceptions.SkipPostcommandHooks` - all postcommand hooks are
+  skipped and no exception prints
+- :attr:`cmd2.exceptions.Cmd2ArgparseError` - behaves like
+  ``SkipPostcommandHooks``
+- ``SystemExit`` - ``stop`` will be set to ``True`` in an attempt to stop the
+  command loop
+- ``KeyboardInterrupt`` - raised if running in a text script and ``stop`` isn't
+  already True to stop the script
+
+All other ``BaseExceptions`` are not caught by ``cmd2`` and will be raised
 
 Disabling or Hiding Commands
 ----------------------------
