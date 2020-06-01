@@ -14,8 +14,6 @@ from collections import deque
 from typing import Dict, List, Optional, Union
 
 from . import ansi, cmd2, constants
-from .table_creator import Column, SimpleTable
-
 from .argparse_custom import (
     ATTR_CHOICES_CALLABLE,
     ATTR_DESCRIPTIVE_COMPLETION_HEADER,
@@ -25,6 +23,7 @@ from .argparse_custom import (
     CompletionItem,
     generate_range_error,
 )
+from .table_creator import Column, SimpleTable
 from .utils import CompletionError, basic_complete
 
 # If no descriptive header is supplied, then this will be used instead
