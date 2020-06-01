@@ -268,16 +268,6 @@ def test_simple_table_creation():
                      '\n'
                      'Col 1 Row 2       Col 2 Row 2     ')
 
-    # Wide custom divider
-    st = SimpleTable([column_1, column_2], divider_char='深')
-    table = st.generate_table(row_data)
-
-    assert table == ('Col 1               Col 2           \n'
-                     '深深深深深深深深深深深深深深深深深深\n'
-                     'Col 1 Row 1         Col 2 Row 1     \n'
-                     '\n'
-                     'Col 1 Row 2         Col 2 Row 2     ')
-
     # No divider
     st = SimpleTable([column_1, column_2], divider_char=None)
     table = st.generate_table(row_data)
@@ -303,6 +293,36 @@ def test_simple_table_creation():
                      '\n'
                      'Col 1 Row 2       Col 2 Row 2     ')
 
+    # Wide custom divider (divider needs no padding)
+    st = SimpleTable([column_1, column_2], divider_char='深')
+    table = st.generate_table(row_data)
+
+    assert table == ('Col 1             Col 2           \n'
+                     '深深深深深深深深深深深深深深深深深\n'
+                     'Col 1 Row 1       Col 2 Row 1     \n'
+                     '\n'
+                     'Col 1 Row 2       Col 2 Row 2     ')
+
+    # Wide custom divider (divider needs padding)
+    column_2 = Column("Col 2", width=17)
+    st = SimpleTable([column_1, column_2], divider_char='深')
+    table = st.generate_table(row_data)
+
+    assert table == ('Col 1             Col 2            \n'
+                     '深深深深深深深深深深深深深深深深深 \n'
+                     'Col 1 Row 1       Col 2 Row 1      \n'
+                     '\n'
+                     'Col 1 Row 2       Col 2 Row 2      ')
+
+    # Invalid divider character
+    with pytest.raises(TypeError) as excinfo:
+        SimpleTable([column_1, column_2], divider_char='too long')
+    assert "Divider character must be exactly one character long" in str(excinfo.value)
+
+    with pytest.raises(ValueError) as excinfo:
+        SimpleTable([column_1, column_2], divider_char='\n')
+    assert "Divider character is an unprintable character" in str(excinfo.value)
+
     # Invalid row spacing
     st = SimpleTable([column_1, column_2])
     with pytest.raises(ValueError) as excinfo:
@@ -310,28 +330,26 @@ def test_simple_table_creation():
     assert "Row spacing cannot be less than 0" in str(excinfo.value)
 
 
-def test_simple_table_base_width():
-    # Default divider char
-    assert SimpleTable.base_width(1) == 0
-    assert SimpleTable.base_width(2) == 2
-    assert SimpleTable.base_width(3) == 4
-
-    # Standard divider char
-    divider_char = '*'
-    assert SimpleTable.base_width(1, divider_char=divider_char) == 0
-    assert SimpleTable.base_width(2, divider_char=divider_char) == 2
-    assert SimpleTable.base_width(3, divider_char=divider_char) == 4
-
-    # Wide divider char
-    divider_char = '深'
-    assert SimpleTable.base_width(1, divider_char=divider_char) == 0
-    assert SimpleTable.base_width(2, divider_char=divider_char) == 4
-    assert SimpleTable.base_width(3, divider_char=divider_char) == 8
+def test_simple_table_width():
+    # Base width
+    for num_cols in range(1, 10):
+        assert SimpleTable.base_width(num_cols) == (num_cols - 1) * 2
 
     # Invalid num_cols value
     with pytest.raises(ValueError) as excinfo:
         SimpleTable.base_width(0)
     assert "Column count cannot be less than 1" in str(excinfo.value)
+
+    # Total width
+    column_1 = Column("Col 1", width=16)
+    column_2 = Column("Col 2", width=16)
+
+    row_data = list()
+    row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
+    row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
+
+    st = SimpleTable([column_1, column_2])
+    assert st.total_width() == 34
 
 
 def test_bordered_table_creation():
@@ -390,7 +408,7 @@ def test_bordered_table_creation():
     assert "Padding cannot be less than 0" in str(excinfo.value)
 
 
-def test_bordered_table_base_width():
+def test_bordered_table_width():
     # Default behavior (column_borders=True, padding=1)
     assert BorderedTable.base_width(1) == 4
     assert BorderedTable.base_width(2) == 7
@@ -415,6 +433,17 @@ def test_bordered_table_base_width():
     with pytest.raises(ValueError) as excinfo:
         BorderedTable.base_width(0)
     assert "Column count cannot be less than 1" in str(excinfo.value)
+
+    # Total width
+    column_1 = Column("Col 1", width=15)
+    column_2 = Column("Col 2", width=15)
+
+    row_data = list()
+    row_data.append(["Col 1 Row 1", "Col 2 Row 1"])
+    row_data.append(["Col 1 Row 2", "Col 2 Row 2"])
+
+    bt = BorderedTable([column_1, column_2])
+    assert bt.total_width() == 37
 
 
 def test_alternating_table_creation():

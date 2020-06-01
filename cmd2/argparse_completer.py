@@ -484,9 +484,8 @@ class ArgparseCompleter:
 
             # Create a table that's over half the width of the terminal.
             # This will force readline to place each entry on its own line.
-            divider_char = None
             min_width = int(shutil.get_terminal_size().columns * 0.6)
-            base_width = SimpleTable.base_width(2, divider_char=divider_char)
+            base_width = SimpleTable.base_width(2)
             initial_width = base_width + token_width + desc_width
 
             if initial_width < min_width:
@@ -496,7 +495,7 @@ class ArgparseCompleter:
             cols.append(Column(destination.upper(), width=token_width))
             cols.append(Column(desc_header, width=desc_width))
 
-            hint_table = SimpleTable(cols, divider_char=divider_char)
+            hint_table = SimpleTable(cols)
             self._cmd2_app.completion_header = hint_table.generate_header()
             self._cmd2_app.display_matches = [hint_table.generate_data_row([item, item.description]) for item in completions]
 
