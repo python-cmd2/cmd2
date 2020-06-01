@@ -1,15 +1,32 @@
 # coding=utf-8
-"""Custom exceptions for cmd2.  These are NOT part of the public API and are intended for internal use only."""
+"""Custom exceptions for cmd2"""
 
 
-class Cmd2ArgparseError(Exception):
+############################################################################################################
+# The following exceptions are part of the public API
+############################################################################################################
+
+class SkipPostcommandHooks(Exception):
     """
-    Custom exception class for when a command has an error parsing its arguments.
-    This can be raised by argparse decorators or the command functions themselves.
-    The main use of this exception is to tell cmd2 not to run Postcommand hooks.
+    Custom exception class for when a command has a failure bad enough to skip post command
+    hooks, but not bad enough to print the exception to the user.
     """
     pass
 
+
+class Cmd2ArgparseError(SkipPostcommandHooks):
+    """
+    A ``SkipPostcommandHooks`` exception for when a command fails to parse its arguments.
+    Normally argparse raises a SystemExit exception in these cases. To avoid stopping the command
+    loop, catch the SystemExit and raise this instead. If you still need to run post command hooks
+    after parsing fails, just return instead of raising an exception.
+    """
+    pass
+
+
+############################################################################################################
+# The following exceptions are NOT part of the public API and are intended for internal use only.
+############################################################################################################
 
 class Cmd2ShlexError(Exception):
     """Raised when shlex fails to parse a command line string in StatementParser"""

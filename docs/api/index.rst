@@ -19,37 +19,39 @@ This documentation is for ``cmd2`` version |version|.
    :hidden:
 
    cmd
-   decorators
-   parsing
+   ansi
    argparse_completer
    argparse_custom
-   ansi
-   utils
+   constants
+   decorators
+   exceptions
    history
+   parsing
    plugin
    py_bridge
    table_creator
-   constants
+   utils
 
 **Modules**
 
 - :ref:`api/cmd:cmd2.Cmd` - functions and attributes of the main
   class in this library
-- :ref:`api/decorators:cmd2.decorators` - decorators for ``cmd2``
-  commands
-- :ref:`api/parsing:cmd2.parsing` - classes for parsing and storing
-  user input
+- :ref:`api/ansi:cmd2.ansi` - convenience classes and functions for generating
+  ANSI escape sequences to style text in the terminal
 - :ref:`api/argparse_completer:cmd2.argparse_completer` - classes for
   ``argparse``-based tab completion
 - :ref:`api/argparse_custom:cmd2.argparse_custom` - classes and functions
   for extending ``argparse``
-- :ref:`api/ansi:cmd2.ansi` - convenience classes and functions for generating
-  ANSI escape sequences to style text in the terminal
-- :ref:`api/utils:cmd2.utils` - various utility classes and functions
+- :ref:`api/constants:cmd2.constants` - just like it says on the tin
+- :ref:`api/decorators:cmd2.decorators` - decorators for ``cmd2``
+  commands
+- :ref:`api/exceptions:cmd2.exceptions` - custom ``cmd2`` exceptions
 - :ref:`api/history:cmd2.history` - classes for storing the history
   of previously entered commands
+- :ref:`api/parsing:cmd2.parsing` - classes for parsing and storing
+  user input
 - :ref:`api/plugin:cmd2.plugin` - data classes for hook methods
 - :ref:`api/py_bridge:cmd2.py_bridge` - classes for bridging calls from the
   embedded python environment to the host app
 - :ref:`api/table_creator:cmd2.table_creator` - table creation module
-- :ref:`api/constants:cmd2.constants` - just like it says on the tin
+- :ref:`api/utils:cmd2.utils` - various utility classes and functions

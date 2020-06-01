@@ -46,7 +46,7 @@ from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .decorators import with_argparser
-from .exceptions import Cmd2ArgparseError, Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError
+from .exceptions import Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError, SkipPostcommandHooks
 from .history import History, HistoryItem
 from .parsing import Macro, MacroArg, Statement, StatementParser, shlex_split
 from .rl_utils import RlType, rl_get_point, rl_make_safe_prompt, rl_set_prompt, rl_type, rl_warning, vt100_support
@@ -1587,9 +1587,9 @@ class Cmd(cmd.Cmd):
 
         :param line: command line to run
         :param add_to_history: If True, then add this command to history. Defaults to True.
-        :param raise_keyboard_interrupt: if True, then KeyboardInterrupt exceptions will be raised. This is used when
-                                         running commands in a loop to be able to stop the whole loop and not just
-                                         the current command. Defaults to False.
+        :param raise_keyboard_interrupt: if True, then KeyboardInterrupt exceptions will be raised if stop isn't already
+                                         True. This is used when running commands in a loop to be able to stop the whole
+                                         loop and not just the current command. Defaults to False.
         :param py_bridge_call: This should only ever be set to True by PyBridge to signify the beginning
                                of an app() call from Python. It is used to enable/disable the storage of the
                                command's stdout.
@@ -1667,26 +1667,35 @@ class Cmd(cmd.Cmd):
                     if py_bridge_call:
                         # Stop saving command's stdout before command finalization hooks run
                         self.stdout.pause_storage = True
-        except KeyboardInterrupt as ex:
-            if raise_keyboard_interrupt:
-                raise ex
-        except (Cmd2ArgparseError, EmptyStatement):
+        except (SkipPostcommandHooks, EmptyStatement):
             # Don't do anything, but do allow command finalization hooks to run
             pass
         except Cmd2ShlexError as ex:
             self.perror("Invalid syntax: {}".format(ex))
         except RedirectionError as ex:
             self.perror(ex)
+        except KeyboardInterrupt as ex:
+            if raise_keyboard_interrupt and not stop:
+                raise ex
+        except SystemExit:
+            stop = True
         except Exception as ex:
             self.pexcept(ex)
         finally:
-            stop = self._run_cmdfinalization_hooks(stop, statement)
+            try:
+                stop = self._run_cmdfinalization_hooks(stop, statement)
+            except KeyboardInterrupt as ex:
+                if raise_keyboard_interrupt and not stop:
+                    raise ex
+            except SystemExit:
+                stop = True
+            except Exception as ex:
+                self.pexcept(ex)
 
         return stop
 
     def _run_cmdfinalization_hooks(self, stop: bool, statement: Optional[Statement]) -> bool:
         """Run the command finalization hooks"""
-
         with self.sigint_protection:
             if not sys.platform.startswith('win') and self.stdin.isatty():
                 # Before the next command runs, fix any terminal problems like those
@@ -1695,15 +1704,12 @@ class Cmd(cmd.Cmd):
                 proc = subprocess.Popen(['stty', 'sane'])
                 proc.communicate()
 
-        try:
-            data = plugin.CommandFinalizationData(stop, statement)
-            for func in self._cmdfinalization_hooks:
-                data = func(data)
-            # retrieve the final value of stop, ignoring any
-            # modifications to the statement
-            return data.stop
-        except Exception as ex:
-            self.pexcept(ex)
+        data = plugin.CommandFinalizationData(stop, statement)
+        for func in self._cmdfinalization_hooks:
+            data = func(data)
+        # retrieve the final value of stop, ignoring any
+        # modifications to the statement
+        return data.stop
 
     def runcmds_plus_hooks(self, cmds: List[Union[HistoryItem, str]], *, add_to_history: bool = True,
                            stop_on_keyboard_interrupt: bool = True) -> bool:
@@ -3894,7 +3900,7 @@ class Cmd(cmd.Cmd):
 
         IMPORTANT: This function will not print an alert unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
-                   to guarantee the alert prints.
+                   to guarantee the alert prints and to avoid raising a RuntimeError.
 
         :param alert_msg: the message to display to the user
         :param new_prompt: if you also want to change the prompt that is displayed, then include it here
@@ -3956,7 +3962,7 @@ class Cmd(cmd.Cmd):
 
         IMPORTANT: This function will not update the prompt unless it can acquire self.terminal_lock to ensure
                    a prompt is onscreen.  Therefore it is best to acquire the lock before calling this function
-                   to guarantee the prompt changes.
+                   to guarantee the prompt changes and to avoid raising a RuntimeError.
 
                    If user is at a continuation prompt while entering a multiline command, the onscreen prompt will
                    not change. However self.prompt will still be updated and display immediately after the multiline
@@ -3971,9 +3977,9 @@ class Cmd(cmd.Cmd):
 
         Raises a `RuntimeError` if called while another thread holds `terminal_lock`.
 
-        IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid
-                   writing to stderr while a command is running. Therefore it is best to acquire the lock
-                   before calling this function to guarantee the title changes.
+        IMPORTANT: This function will not set the title unless it can acquire self.terminal_lock to avoid writing
+                   to stderr while a command is running. Therefore it is best to acquire the lock before calling
+                   this function to guarantee the title changes and to avoid raising a RuntimeError.
 
         :param title: the new window title
         """
