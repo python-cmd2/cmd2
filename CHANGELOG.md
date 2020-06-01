@@ -1,6 +1,8 @@
 ## 1.1.0 (TBD, 2020)
 * Bug Fixes
     * Fixed issue where subcommand usage text could contain a subcommand alias instead of the actual name
+    * Fixed bug in `ArgparseCompleter` where `fill_width` could become negative if `token_width` was large 
+      relative to the terminal width.
 * Enhancements
     * Made `ipy` consistent with `py` in the following ways
         * `ipy` returns whether any of the commands run in it returned True to stop command loop
