@@ -494,7 +494,7 @@ class ArgparseCompleter:
             cols.append(Column(destination.upper(), width=token_width))
             cols.append(Column(desc_header, width=desc_width))
 
-            hint_table = SimpleTable(cols)
+            hint_table = SimpleTable(cols, divider_char=None)
             self._cmd2_app.completion_header = hint_table.generate_header()
             self._cmd2_app.display_matches = [hint_table.generate_data_row([item, item.description]) for item in completions]
 
