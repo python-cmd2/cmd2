@@ -53,7 +53,7 @@ data_list.append(["John Jones",
 
 def ansi_print(text):
     """Wraps style_aware_write so style can be stripped if needed"""
-    ansi.style_aware_write(sys.stdout, text + '\n')
+    ansi.style_aware_write(sys.stdout, text + '\n\n')
 
 
 def main():

@@ -1147,7 +1147,7 @@ class Cmd(cmd.Cmd):
 
             # Print the header if one exists
             if self.completion_header:
-                sys.stdout.write('\n' + self.completion_header)
+                sys.stdout.write('\n\n' + self.completion_header)
 
             # Call readline's display function
             # rl_display_match_list(strings_array, number of completion matches, longest match length)
@@ -1176,7 +1176,7 @@ class Cmd(cmd.Cmd):
             # Print the header if one exists
             if self.completion_header:
                 # noinspection PyUnresolvedReferences
-                readline.rl.mode.console.write('\n' + self.completion_header)
+                readline.rl.mode.console.write('\n\n' + self.completion_header)
 
             # Display matches using actual display function. This also redraws the prompt and line.
             orig_pyreadline_display(matches_to_display)

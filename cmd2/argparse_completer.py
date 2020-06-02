@@ -23,6 +23,7 @@ from .argparse_custom import (
     CompletionItem,
     generate_range_error,
 )
+from .table_creator import Column, SimpleTable
 from .utils import CompletionError, basic_complete
 
 # If no descriptive header is supplied, then this will be used instead
@@ -467,29 +468,35 @@ class ArgparseCompleter:
 
             # If a metavar was defined, use that instead of the dest field
             destination = action.metavar if action.metavar else action.dest
-            token_width = ansi.style_aware_wcswidth(destination)
-            completions_with_desc = []
-
-            for item in completions:
-                item_width = ansi.style_aware_wcswidth(item)
-                if item_width > token_width:
-                    token_width = item_width
-
-            term_size = shutil.get_terminal_size()
-            fill_width = int(term_size.columns * .6) - (token_width + 2)
-            for item in completions:
-                entry = '{: <{token_width}}{: <{fill_width}}'.format(item, item.description,
-                                                                     token_width=token_width + 2,
-                                                                     fill_width=fill_width)
-                completions_with_desc.append(entry)
 
             desc_header = getattr(action, ATTR_DESCRIPTIVE_COMPLETION_HEADER, None)
             if desc_header is None:
                 desc_header = DEFAULT_DESCRIPTIVE_HEADER
-            header = '\n{: <{token_width}}{}'.format(destination.upper(), desc_header, token_width=token_width + 2)
 
-            self._cmd2_app.completion_header = header
-            self._cmd2_app.display_matches = completions_with_desc
+            # Calculate needed widths for the token and description columns of the table
+            token_width = ansi.style_aware_wcswidth(destination)
+            desc_width = ansi.style_aware_wcswidth(desc_header)
+
+            for item in completions:
+                token_width = max(ansi.style_aware_wcswidth(item), token_width)
+                desc_width = max(ansi.style_aware_wcswidth(item.description), desc_width)
+
+            # Create a table that's over half the width of the terminal.
+            # This will force readline to place each entry on its own line.
+            min_width = int(shutil.get_terminal_size().columns * 0.6)
+            base_width = SimpleTable.base_width(2)
+            initial_width = base_width + token_width + desc_width
+
+            if initial_width < min_width:
+                desc_width += (min_width - initial_width)
+
+            cols = list()
+            cols.append(Column(destination.upper(), width=token_width))
+            cols.append(Column(desc_header, width=desc_width))
+
+            hint_table = SimpleTable(cols, divider_char=None)
+            self._cmd2_app.completion_header = hint_table.generate_header()
+            self._cmd2_app.display_matches = [hint_table.generate_data_row([item, item.description]) for item in completions]
 
         return completions
 

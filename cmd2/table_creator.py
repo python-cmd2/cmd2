@@ -5,6 +5,7 @@ This API is built upon two core classes: Column and TableCreator
 The general use case is to inherit from TableCreator to create a table class with custom formatting options.
 There are already implemented and ready-to-use examples of this below TableCreator's code.
 """
+import copy
 import functools
 import io
 from collections import deque
@@ -103,7 +104,7 @@ class TableCreator:
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
                           then it will be converted to one space.
         """
-        self.cols = cols
+        self.cols = copy.copy(cols)
         self.tab_width = tab_width
 
     @staticmethod
@@ -465,8 +466,9 @@ class TableCreator:
                 if cell_index == len(self.cols) - 1:
                     row_buf.write(post_line)
 
-            # Add a newline if this is not the last row
-            row_buf.write('\n')
+            # Add a newline if this is not the last line
+            if line_index < total_lines - 1:
+                row_buf.write('\n')
 
         return row_buf.getvalue()
 
@@ -480,6 +482,9 @@ class SimpleTable(TableCreator):
     Implementation of TableCreator which generates a borderless table with an optional divider row after the header.
     This class can be used to create the whole table at once or one row at a time.
     """
+    # Spaces between cells
+    INTER_CELL = 2 * SPACE
+
     def __init__(self, cols: Sequence[Column], *, tab_width: int = 4, divider_char: Optional[str] = '-') -> None:
         """
         SimpleTable initializer
@@ -487,32 +492,68 @@ class SimpleTable(TableCreator):
         :param cols: column definitions for this table
         :param tab_width: all tabs will be replaced with this many spaces. If a row's fill_char is a tab,
                           then it will be converted to one space.
-        :param divider_char: optional character used to build the header divider row. If provided, its value must meet the
-                             same requirements as fill_char in TableCreator.generate_row() or exceptions will be raised.
-                             Set this to None if you don't want a divider row. (Defaults to dash)
+        :param divider_char: optional character used to build the header divider row. Set this to None if you don't
+                             want a divider row. Defaults to dash. (Cannot be a line breaking character)
+        :raises: TypeError if fill_char is more than one character (not including ANSI style sequences)
+        :raises: ValueError if text or fill_char contains an unprintable character
         """
+        if divider_char is not None:
+            if len(ansi.strip_style(divider_char)) != 1:
+                raise TypeError("Divider character must be exactly one character long")
+
+            divider_char_width = ansi.style_aware_wcswidth(divider_char)
+            if divider_char_width == -1:
+                raise (ValueError("Divider character is an unprintable character"))
+
         super().__init__(cols, tab_width=tab_width)
         self.divider_char = divider_char
-        self.empty_data = [EMPTY for _ in self.cols]
+
+    @classmethod
+    def base_width(cls, num_cols: int) -> int:
+        """
+        Utility method to calculate the display width required for a table before data is added to it.
+        This is useful when determining how wide to make your columns to have a table be a specific width.
+
+        :param num_cols: how many columns the table will have
+        :return: base width
+        :raises: ValueError if num_cols is less than 1
+        """
+        if num_cols < 1:
+            raise ValueError("Column count cannot be less than 1")
+
+        data_str = SPACE
+        data_width = ansi.style_aware_wcswidth(data_str) * num_cols
+
+        tbl = cls([Column(data_str)] * num_cols)
+        data_row = tbl.generate_data_row([data_str] * num_cols)
+
+        return ansi.style_aware_wcswidth(data_row) - data_width
+
+    def total_width(self) -> int:
+        """Calculate the total display width of this table"""
+        base_width = self.base_width(len(self.cols))
+        data_width = sum(col.width for col in self.cols)
+        return base_width + data_width
 
     def generate_header(self) -> str:
-        """
-        Generate header with an optional divider row
-        """
+        """Generate table header with an optional divider row"""
         header_buf = io.StringIO()
 
         # Create the header labels
-        if self.divider_char is None:
-            inter_cell = 2 * SPACE
-        else:
-            inter_cell = SPACE * ansi.style_aware_wcswidth(2 * self.divider_char)
-        header = self.generate_row(inter_cell=inter_cell)
+        header = self.generate_row(inter_cell=self.INTER_CELL)
         header_buf.write(header)
 
-        # Create the divider. Use empty strings for the row_data.
+        # Create the divider if necessary
         if self.divider_char is not None:
-            divider = self.generate_row(row_data=self.empty_data, fill_char=self.divider_char,
-                                        inter_cell=(2 * self.divider_char))
+            total_width = self.total_width()
+            divider_char_width = ansi.style_aware_wcswidth(self.divider_char)
+
+            # Make divider as wide as table and use padding if width of
+            # divider_char does not divide evenly into table width.
+            divider = self.divider_char * (total_width // divider_char_width)
+            divider += SPACE * (total_width % divider_char_width)
+
+            header_buf.write('\n')
             header_buf.write(divider)
         return header_buf.getvalue()
 
@@ -523,11 +564,7 @@ class SimpleTable(TableCreator):
         :param row_data: data with an entry for each column in the row
         :return: data row string
         """
-        if self.divider_char is None:
-            inter_cell = 2 * SPACE
-        else:
-            inter_cell = SPACE * ansi.style_aware_wcswidth(2 * self.divider_char)
-        return self.generate_row(row_data=row_data, inter_cell=inter_cell)
+        return self.generate_row(row_data=row_data, inter_cell=self.INTER_CELL)
 
     def generate_table(self, table_data: Sequence[Sequence[Any]], *,
                        include_header: bool = True, row_spacing: int = 1) -> str:
@@ -548,6 +585,8 @@ class SimpleTable(TableCreator):
         if include_header:
             header = self.generate_header()
             table_buf.write(header)
+            if len(table_data) > 0:
+                table_buf.write('\n')
 
         for index, row_data in enumerate(table_data):
             if index > 0 and row_spacing > 0:
@@ -555,6 +594,8 @@ class SimpleTable(TableCreator):
 
             row = self.generate_data_row(row_data)
             table_buf.write(row)
+            if index < len(table_data) - 1:
+                table_buf.write('\n')
 
         return table_buf.getvalue()
 
@@ -585,6 +626,35 @@ class BorderedTable(TableCreator):
         if padding < 0:
             raise ValueError("Padding cannot be less than 0")
         self.padding = padding
+
+    @classmethod
+    def base_width(cls, num_cols: int, *, column_borders: bool = True, padding: int = 1) -> int:
+        """
+        Utility method to calculate the display width required for a table before data is added to it.
+        This is useful when determining how wide to make your columns to have a table be a specific width.
+
+        :param num_cols: how many columns the table will have
+        :param column_borders: if True, borders between columns will be included in the calculation (Defaults to True)
+        :param padding: number of spaces between text and left/right borders of cell
+        :return: base width
+        :raises: ValueError if num_cols is less than 1
+        """
+        if num_cols < 1:
+            raise ValueError("Column count cannot be less than 1")
+
+        data_str = SPACE
+        data_width = ansi.style_aware_wcswidth(data_str) * num_cols
+
+        tbl = cls([Column(data_str)] * num_cols, column_borders=column_borders, padding=padding)
+        data_row = tbl.generate_data_row([data_str] * num_cols)
+
+        return ansi.style_aware_wcswidth(data_row) - data_width
+
+    def total_width(self) -> int:
+        """Calculate the total display width of this table"""
+        base_width = self.base_width(len(self.cols), column_borders=self.column_borders, padding=self.padding)
+        data_width = sum(col.width for col in self.cols)
+        return base_width + data_width
 
     def generate_table_top_border(self):
         """Generate a border which appears at the top of the header and data section"""
@@ -643,10 +713,7 @@ class BorderedTable(TableCreator):
                                  inter_cell=inter_cell, post_line=post_line)
 
     def generate_header(self) -> str:
-        """
-        Generate header
-        :return: header string
-        """
+        """Generate table header"""
         pre_line = '║' + self.padding * SPACE
 
         inter_cell = self.padding * SPACE
@@ -659,7 +726,9 @@ class BorderedTable(TableCreator):
         # Create the bordered header
         header_buf = io.StringIO()
         header_buf.write(self.generate_table_top_border())
+        header_buf.write('\n')
         header_buf.write(self.generate_row(pre_line=pre_line, inter_cell=inter_cell, post_line=post_line))
+        header_buf.write('\n')
         header_buf.write(self.generate_header_bottom_border())
 
         return header_buf.getvalue()
@@ -699,13 +768,17 @@ class BorderedTable(TableCreator):
             top_border = self.generate_table_top_border()
             table_buf.write(top_border)
 
+        table_buf.write('\n')
+
         for index, row_data in enumerate(table_data):
             if index > 0:
                 row_bottom_border = self.generate_row_bottom_border()
                 table_buf.write(row_bottom_border)
+                table_buf.write('\n')
 
             row = self.generate_data_row(row_data)
             table_buf.write(row)
+            table_buf.write('\n')
 
         table_buf.write(self.generate_table_bottom_border())
         return table_buf.getvalue()
@@ -797,9 +870,12 @@ class AlternatingTable(BorderedTable):
             top_border = self.generate_table_top_border()
             table_buf.write(top_border)
 
+        table_buf.write('\n')
+
         for row_data in table_data:
             row = self.generate_data_row(row_data)
             table_buf.write(row)
+            table_buf.write('\n')
 
         table_buf.write(self.generate_table_bottom_border())
         return table_buf.getvalue()
