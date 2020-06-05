@@ -46,12 +46,13 @@ Main Features
 - Alerts that seamlessly print while user enters text at prompt
 - Colored and stylized output using `ansi.style()`
 
-Python 2.7 support is EOL
--------------------------
-The last version of cmd2 to support Python 2.7 is [0.8.9](https://pypi.org/project/cmd2/0.8.9/), released on August 21, 2018.
+Python 3.5 support ending soon
+------------------------------
+`cmd2` will end support for Python 3.5 on August 31, 2020.  Python 3.5 was [released](https://docs.python.org/3/whatsnew/3.5.html)
+on Sept. 13, 2015 and its [end-of-life](https://devguide.python.org/#status-of-python-branches) is planned for September 2020. 
 
-Supporting Python 2 was an increasing burden on our limited resources.  Switching to support only Python 3 is allowing
-us to clean up the codebase, remove some cruft, and focus on developing new features.
+New versions of `cmd2` will stop supporting Python 3.5 in a few months. We are very much looking forward to being able to use 
+[features added in Python 3.6](https://docs.python.org/3/whatsnew/3.6.html) such as [f-strings](https://realpython.com/python-f-strings/).
 
 Installation
 ------------
