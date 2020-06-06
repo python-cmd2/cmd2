@@ -1,4 +1,4 @@
-## 1.1.0 (TBD, 2020)
+## 1.1.0 (June 6, 2020)
 * Bug Fixes
     * Fixed issue where subcommand usage text could contain a subcommand alias instead of the actual name
     * Fixed bug in `ArgparseCompleter` where `fill_width` could become negative if `token_width` was large 
