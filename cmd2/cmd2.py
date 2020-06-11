@@ -37,14 +37,17 @@ import pickle
 import re
 import sys
 import threading
+import types
 from code import InteractiveConsole
 from collections import namedtuple
 from contextlib import redirect_stdout
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, AnyStr, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
 from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
+from .command_definition import _UNBOUND_COMMANDS, CommandSet, _PartialPassthru
+from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser
 from .exceptions import Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError, SkipPostcommandHooks
 from .history import History, HistoryItem
@@ -130,7 +133,8 @@ class Cmd(cmd.Cmd):
                  startup_script: str = '', use_ipython: bool = False,
                  allow_cli_args: bool = True, transcript_files: Optional[List[str]] = None,
                  allow_redirection: bool = True, multiline_commands: Optional[List[str]] = None,
-                 terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None) -> None:
+                 terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None,
+                 command_sets: Optional[Iterable[CommandSet]] = None) -> None:
         """An easy but powerful framework for writing line-oriented command
         interpreters. Extends Python's cmd package.
 
@@ -380,6 +384,64 @@ class Cmd(cmd.Cmd):
         # Set to True before returning matches to complete() in cases where matches have already been sorted.
         # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
         self.matches_sorted = False
+
+        # Load modular commands
+        self._command_sets = command_sets if command_sets is not None else []
+        self._load_modular_commands()
+
+    def _load_modular_commands(self) -> None:
+        """
+        Load modular command definitions.
+        :return: None
+        """
+
+        # start by loading registered functions as commands
+        for cmd_name, cmd_func, cmd_completer, cmd_help in _UNBOUND_COMMANDS:
+            assert getattr(self, cmd_func.__name__, None) is None, 'Duplicate command function registered: ' + cmd_name
+            setattr(self, cmd_func.__name__, types.MethodType(cmd_func, self))
+            if cmd_completer is not None:
+                assert getattr(self, cmd_completer.__name__, None) is None, \
+                    'Duplicate command completer registered: ' + cmd_completer.__name__
+                setattr(self, cmd_completer.__name__, types.MethodType(cmd_completer, self))
+            if cmd_help is not None:
+                assert getattr(self, cmd_help.__name__, None) is None, \
+                    'Duplicate command help registered: ' + cmd_help.__name__
+                setattr(self, cmd_help.__name__, types.MethodType(cmd_help, self))
+
+        # Search for all subclasses of CommandSet, instantiate them if they weren't provided in the constructor
+        all_commandset_defs = CommandSet.__subclasses__()
+        existing_commandset_types = [type(command_set) for command_set in self._command_sets]
+        for cmdset_type in all_commandset_defs:
+            init_sig = inspect.signature(cmdset_type.__init__)
+            if cmdset_type in existing_commandset_types or len(init_sig.parameters) != 1 or 'self' not in init_sig.parameters:
+                continue
+            cmdset = cmdset_type()
+            self._command_sets.append(cmdset)
+
+        # initialize each CommandSet and register all matching functions as command, helper, completer functions
+        for cmdset in self._command_sets:
+            cmdset.on_register(self)
+            methods = inspect.getmembers(cmdset, predicate=lambda meth: inspect.ismethod(
+                meth) and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+
+            for method in methods:
+                assert getattr(self, method[0], None) is None, \
+                    'In {}: Duplicate command function: {}'.format(cmdset_type.__name__, method[0])
+
+                command_wrapper = _PartialPassthru(method[1], self)
+                setattr(self, method[0], command_wrapper)
+
+                command = method[0][len(COMMAND_FUNC_PREFIX):]
+
+                completer_func_name = COMPLETER_FUNC_PREFIX + command
+                cmd_completer = getattr(cmdset, completer_func_name, None)
+                if cmd_completer and not getattr(self, completer_func_name, None):
+                    completer_wrapper = _PartialPassthru(cmd_completer, self)
+                    setattr(self, completer_func_name, completer_wrapper)
+                cmd_help = getattr(cmdset, HELP_FUNC_PREFIX + command, None)
+                if cmd_help and not getattr(self, HELP_FUNC_PREFIX + command, None):
+                    help_wrapper = _PartialPassthru(cmd_help, self)
+                    setattr(self, HELP_FUNC_PREFIX + command, help_wrapper)
 
     def add_settable(self, settable: Settable) -> None:
         """
