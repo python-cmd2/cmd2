@@ -46,7 +46,7 @@ from typing import Any, AnyStr, Callable, Dict, Iterable, List, Mapping, Optiona
 from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .command_definition import _UNBOUND_COMMANDS, CommandSet, _PartialPassthru
+from .command_definition import _UNBOUND_COMMANDS, CommandSet, _partial_passthru
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser
 from .exceptions import Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError, SkipPostcommandHooks
@@ -428,7 +428,7 @@ class Cmd(cmd.Cmd):
                 assert getattr(self, method[0], None) is None, \
                     'In {}: Duplicate command function: {}'.format(cmdset_type.__name__, method[0])
 
-                command_wrapper = _PartialPassthru(method[1], self)
+                command_wrapper = _partial_passthru(method[1], self)
                 setattr(self, method[0], command_wrapper)
 
                 command = method[0][len(COMMAND_FUNC_PREFIX):]
@@ -436,11 +436,11 @@ class Cmd(cmd.Cmd):
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
                 if cmd_completer and not getattr(self, completer_func_name, None):
-                    completer_wrapper = _PartialPassthru(cmd_completer, self)
+                    completer_wrapper = _partial_passthru(cmd_completer, self)
                     setattr(self, completer_func_name, completer_wrapper)
                 cmd_help = getattr(cmdset, HELP_FUNC_PREFIX + command, None)
                 if cmd_help and not getattr(self, HELP_FUNC_PREFIX + command, None):
-                    help_wrapper = _PartialPassthru(cmd_help, self)
+                    help_wrapper = _partial_passthru(cmd_help, self)
                     setattr(self, HELP_FUNC_PREFIX + command, help_wrapper)
 
     def add_settable(self, settable: Settable) -> None:
@@ -2756,16 +2756,31 @@ class Cmd(cmd.Cmd):
 
     def _help_menu(self, verbose: bool = False) -> None:
         """Show a list of commands which help can be displayed for"""
+        cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
+
+        if len(cmds_cats) == 0:
+            # No categories found, fall back to standard behavior
+            self.poutput("{}".format(str(self.doc_leader)))
+            self._print_topics(self.doc_header, cmds_doc, verbose)
+        else:
+            # Categories found, Organize all commands by category
+            self.poutput('{}'.format(str(self.doc_leader)))
+            self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
+            for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
+                self._print_topics(category, cmds_cats[category], verbose)
+            self._print_topics(self.default_category, cmds_doc, verbose)
+
+        self.print_topics(self.misc_header, help_topics, 15, 80)
+        self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
+
+    def _build_command_info(self):
         # Get a sorted list of help topics
         help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
-
         # Get a sorted list of visible command names
         visible_commands = sorted(self.get_visible_commands(), key=self.default_sort_key)
-
         cmds_doc = []
         cmds_undoc = []
         cmds_cats = {}
-
         for command in visible_commands:
             func = self.cmd_func(command)
             has_help_func = False
@@ -2786,21 +2801,7 @@ class Cmd(cmd.Cmd):
                 cmds_doc.append(command)
             else:
                 cmds_undoc.append(command)
-
-        if len(cmds_cats) == 0:
-            # No categories found, fall back to standard behavior
-            self.poutput("{}".format(str(self.doc_leader)))
-            self._print_topics(self.doc_header, cmds_doc, verbose)
-        else:
-            # Categories found, Organize all commands by category
-            self.poutput('{}'.format(str(self.doc_leader)))
-            self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
-            for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
-                self._print_topics(category, cmds_cats[category], verbose)
-            self._print_topics(self.default_category, cmds_doc, verbose)
-
-        self.print_topics(self.misc_header, help_topics, 15, 80)
-        self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
+        return cmds_cats, cmds_doc, cmds_undoc, help_topics
 
     def _print_topics(self, header: str, cmds: List[str], verbose: bool) -> None:
         """Customized version of print_topics that can switch between verbose or traditional output"""

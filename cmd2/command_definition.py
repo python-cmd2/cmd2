@@ -29,10 +29,15 @@ Registered command tuples. (command, do_ function, complete_ function, help_ fun
 """
 
 
-class _PartialPassthru(functools.partial):
+def _partial_passthru(func: Callable, *args, **kwargs) -> functools.partial:
     """
-    Wrapper around partial function that passes through getattr, setattr, and dir to the wrapped function.
-    This allows for CommandSet functions to be wrapped while maintaining the decorated properties
+    Constructs a partial function that passes arguments through to the wrapped function.
+    Must construct a new type every time so that each wrapped function's __doc__ can be copied correctly.
+
+    :param func: wrapped function
+    :param args: positional arguments
+    :param kwargs: keyword arguments
+    :return: partial function that exposes attributes of wrapped function
     """
     def __getattr__(self, item):
         return getattr(self.func, item)
@@ -42,6 +47,16 @@ class _PartialPassthru(functools.partial):
 
     def __dir__(self) -> Iterable[str]:
         return dir(self.func)
+
+    passthru_type = type('PassthruPartial' + func.__name__,
+                         (functools.partial,),
+                         {
+                             '__getattr__': __getattr__,
+                             '__setattr__': __setattr__,
+                             '__dir__': __dir__,
+                         })
+    passthru_type.__doc__ = func.__doc__
+    return passthru_type(func, *args, **kwargs)
 
 
 def register_command(cmd_func: Callable[['Cmd', Union['Statement', 'argparse.Namespace']], None]):
