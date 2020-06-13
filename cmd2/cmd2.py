@@ -46,7 +46,7 @@ from typing import Any, AnyStr, Callable, Dict, Iterable, List, Mapping, Optiona
 from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .command_definition import _UNBOUND_COMMANDS, CommandSet, _PartialPassthru
+from .command_definition import _UNBOUND_COMMANDS, CommandSet, _partial_passthru
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser
 from .exceptions import Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError, SkipPostcommandHooks
@@ -428,7 +428,7 @@ class Cmd(cmd.Cmd):
                 assert getattr(self, method[0], None) is None, \
                     'In {}: Duplicate command function: {}'.format(cmdset_type.__name__, method[0])
 
-                command_wrapper = _PartialPassthru(method[1], self)
+                command_wrapper = _partial_passthru(method[1], self)
                 setattr(self, method[0], command_wrapper)
 
                 command = method[0][len(COMMAND_FUNC_PREFIX):]
@@ -436,11 +436,11 @@ class Cmd(cmd.Cmd):
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
                 if cmd_completer and not getattr(self, completer_func_name, None):
-                    completer_wrapper = _PartialPassthru(cmd_completer, self)
+                    completer_wrapper = _partial_passthru(cmd_completer, self)
                     setattr(self, completer_func_name, completer_wrapper)
                 cmd_help = getattr(cmdset, HELP_FUNC_PREFIX + command, None)
                 if cmd_help and not getattr(self, HELP_FUNC_PREFIX + command, None):
-                    help_wrapper = _PartialPassthru(cmd_help, self)
+                    help_wrapper = _partial_passthru(cmd_help, self)
                     setattr(self, HELP_FUNC_PREFIX + command, help_wrapper)
 
     def add_settable(self, settable: Settable) -> None:

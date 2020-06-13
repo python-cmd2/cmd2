@@ -2,8 +2,7 @@
 """
 A simple example demonstrating a loadable command set
 """
-from cmd2 import Cmd, Statement, with_category
-from cmd2.command_definition import CommandSet, with_default_category, register_command
+from cmd2 import Cmd, Statement, with_category, CommandSet, with_default_category, register_command
 
 
 @register_command
