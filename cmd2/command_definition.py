@@ -87,6 +87,7 @@ def register_command(cmd_func: Callable[['Cmd', Union['Statement', 'argparse.Nam
             break
 
     _UNBOUND_COMMANDS.append((cmd_name, cmd_func, cmd_completer, cmd_help))
+    return cmd_func
 
 
 def with_default_category(category: str):
@@ -132,6 +133,12 @@ class CommandSet(object):
         to perform an initialization requiring access to the Cmd object.
 
         :param cmd: The cmd2 main application
-        :return: None
         """
         self._cmd = cmd
+
+    def on_unregister(self, cmd: 'Cmd'):
+        """
+        Called by ``cmd2.Cmd`` when a CommandSet is unregistered and removed.
+        :param cmd:
+        """
+        self._cmd = None

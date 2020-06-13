@@ -244,8 +244,8 @@ class Cmd(cmd.Cmd):
                                                 shortcuts=shortcuts)
 
         # Load modular commands
-        self._installed_functions: List[str] = []
-        self._installed_command_sets: List[CommandSet] = []
+        self._installed_functions = []  # type: List[str]
+        self._installed_command_sets = []  # type: List[CommandSet]
         if command_sets:
             for command_set in command_sets:
                 self.install_command_set(command_set)
@@ -469,7 +469,34 @@ class Cmd(cmd.Cmd):
                 delattr(self, attrib)
             raise
 
-    def install_command_function(self, cmd_name: str, cmd_func: Callable, cmd_completer: Callable, cmd_help: Callable):
+    def uninstall_command_set(self, cmdset: CommandSet):
+        """
+        Uninstalls an CommandSet and unloads all associated commands
+        :param cmdset: CommandSet to uninstall
+        """
+        if cmdset in self._installed_command_sets:
+            methods = inspect.getmembers(
+                cmdset,
+                predicate=lambda meth: inspect.ismethod(meth) and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+
+            for method in methods:
+                cmd_name = method[0][len(COMMAND_FUNC_PREFIX):]
+
+                delattr(self, COMMAND_FUNC_PREFIX + cmd_name)
+
+                if hasattr(self, COMPLETER_FUNC_PREFIX + cmd_name):
+                    delattr(self, COMPLETER_FUNC_PREFIX + cmd_name)
+                if hasattr(self, HELP_FUNC_PREFIX + cmd_name):
+                    delattr(self, HELP_FUNC_PREFIX + cmd_name)
+
+            cmdset.on_unregister(self)
+            self._installed_command_sets.remove(cmdset)
+
+    def install_command_function(self,
+                                 cmd_name: str,
+                                 cmd_func: Callable,
+                                 cmd_completer: Optional[Callable],
+                                 cmd_help: Optional[Callable]):
         """
         Installs a command by passing in functions for the command, completion, and help
 
@@ -483,7 +510,8 @@ class Cmd(cmd.Cmd):
         if not valid:
             raise ValueError("Invalid command name {!r}: {}".format(cmd_name, errmsg))
 
-        assert getattr(self, COMMAND_FUNC_PREFIX + cmd_name, None) is None, 'Duplicate command function registered: ' + cmd_name
+        assert getattr(self, COMMAND_FUNC_PREFIX + cmd_name, None) is None,\
+            'Duplicate command function registered: ' + cmd_name
         setattr(self, COMMAND_FUNC_PREFIX + cmd_name, types.MethodType(cmd_func, self))
         self._installed_functions.append(cmd_name)
         if cmd_completer is not None:
@@ -494,6 +522,20 @@ class Cmd(cmd.Cmd):
             assert getattr(self, HELP_FUNC_PREFIX + cmd_name, None) is None, \
                 'Duplicate command help registered: ' + HELP_FUNC_PREFIX + cmd_name
             setattr(self, HELP_FUNC_PREFIX + cmd_name, types.MethodType(cmd_help, self))
+
+    def uninstall_command(self, cmd_name: str):
+        """
+        Uninstall an installed command and any associated completer or help functions
+        :param cmd_name: Command to uninstall
+        """
+        if cmd_name in self._installed_functions:
+            delattr(self, COMMAND_FUNC_PREFIX + cmd_name)
+
+            if hasattr(self, COMPLETER_FUNC_PREFIX + cmd_name):
+                delattr(self, COMPLETER_FUNC_PREFIX + cmd_name)
+            if hasattr(self, HELP_FUNC_PREFIX + cmd_name):
+                delattr(self, HELP_FUNC_PREFIX + cmd_name)
+            self._installed_functions.remove(cmd_name)
 
     def add_settable(self, settable: Settable) -> None:
         """
