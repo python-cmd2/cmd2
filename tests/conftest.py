@@ -4,14 +4,13 @@ Cmd2 unit/functional testing
 """
 import sys
 from contextlib import redirect_stderr, redirect_stdout
-from typing import Dict, List, Optional, Union
+from typing import List, Optional, Union
 from unittest import mock
 
 from pytest import fixture
 
 import cmd2
 from cmd2.utils import StdSim
-from cmd2.constants import COMMAND_FUNC_PREFIX, CMD_ATTR_HELP_CATEGORY
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
