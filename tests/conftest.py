@@ -4,13 +4,14 @@ Cmd2 unit/functional testing
 """
 import sys
 from contextlib import redirect_stderr, redirect_stdout
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 from unittest import mock
 
 from pytest import fixture
 
 import cmd2
 from cmd2.utils import StdSim
+from cmd2.constants import COMMAND_FUNC_PREFIX, CMD_ATTR_HELP_CATEGORY
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
 try:
@@ -25,11 +26,14 @@ except ImportError:
         pass
 
 
-def verify_help_text(cmd2_app: cmd2.Cmd, help_output: Union[str, List[str]]) -> None:
+def verify_help_text(cmd2_app: cmd2.Cmd,
+                     help_output: Union[str, List[str]],
+                     verbose_strings: Optional[List[str]] = None) -> None:
     """This function verifies that all expected commands are present in the help text.
 
     :param cmd2_app: instance of cmd2.Cmd
     :param help_output: output of help, either as a string or list of strings
+    :param verbose_strings: optional list of verbose strings to search for
     """
     if isinstance(help_output, str):
         help_text = help_output
@@ -39,7 +43,9 @@ def verify_help_text(cmd2_app: cmd2.Cmd, help_output: Union[str, List[str]]) -> 
     for command in commands:
         assert command in help_text
 
-    # TODO: Consider adding checks for categories and for verbose history
+    if verbose_strings:
+        for verbose_string in verbose_strings:
+            assert verbose_string in help_text
 
 
 # Help text for the history command
