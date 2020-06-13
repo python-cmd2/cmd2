@@ -33,7 +33,7 @@ class ApCustomTestApp(cmd2.Cmd):
 
 @pytest.fixture
 def cust_app():
-    return ApCustomTestApp()
+    return ApCustomTestApp(auto_load_commands=False)
 
 
 def fake_func():

@@ -58,7 +58,7 @@ def completer_takes_arg_tokens(text: str, line: str, begidx: int, endidx: int,
 class AutoCompleteTester(cmd2.Cmd):
     """Cmd2 app that exercises ArgparseCompleter class"""
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, auto_load_commands=False, **kwargs)
 
     ############################################################################################################
     # Begin code related to help and command name completion

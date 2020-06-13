@@ -588,7 +588,7 @@ def test_parse_unclosed_quotes(parser):
         _ = parser.tokenize("command with 'unclosed quotes")
 
 def test_empty_statement_raises_exception():
-    app = cmd2.Cmd()
+    app = cmd2.Cmd(auto_load_commands=False)
     with pytest.raises(exceptions.EmptyStatement):
         app._complete_statement('')
 

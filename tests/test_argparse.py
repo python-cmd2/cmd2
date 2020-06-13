@@ -28,7 +28,7 @@ except ImportError:
 class ArgparseApp(cmd2.Cmd):
     def __init__(self):
         self.maxrepeats = 3
-        cmd2.Cmd.__init__(self)
+        cmd2.Cmd.__init__(self, auto_load_commands=False)
 
     def namespace_provider(self) -> argparse.Namespace:
         ns = argparse.Namespace()
@@ -223,7 +223,7 @@ class SubcommandApp(cmd2.Cmd):
     """ Example cmd2 application where we a base command which has a couple subcommands."""
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        cmd2.Cmd.__init__(self, auto_load_commands=False)
 
     # subcommand functions for the base command
     def base_foo(self, args):

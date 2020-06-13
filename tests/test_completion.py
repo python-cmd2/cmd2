@@ -1098,7 +1098,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
     """
 
     def __init__(self):
-        cmd2.Cmd.__init__(self)
+        cmd2.Cmd.__init__(self, auto_load_commands=False)
 
     # subcommand functions for the base command
     def base_foo(self, args):

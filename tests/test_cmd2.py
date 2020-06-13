@@ -36,7 +36,7 @@ except ImportError:
 
 
 def CreateOutsimApp():
-    c = cmd2.Cmd()
+    c = cmd2.Cmd(auto_load_commands=False)
     c.stdout = utils.StdSim(c.stdout)
     return c
 
@@ -925,7 +925,7 @@ def test_ansi_prompt_not_esacped(base_app):
 
 def test_ansi_prompt_escaped():
     from cmd2.rl_utils import rl_make_safe_prompt
-    app = cmd2.Cmd()
+    app = cmd2.Cmd(auto_load_commands=False)
     color = 'cyan'
     prompt = 'InColor'
     color_prompt = ansi.style(prompt, fg=color)
@@ -1025,13 +1025,31 @@ def helpcat_app():
     app = HelpCategoriesApp()
     return app
 
+
 def test_help_cat_base(helpcat_app):
     out, err = run_cmd(helpcat_app, 'help')
     verify_help_text(helpcat_app, out)
 
+    cmds_cats, cmds_doc, cmds_undoc, help_topics = helpcat_app._build_command_info()
+    assert 'Some Category' in cmds_cats
+    assert 'diddly' in cmds_cats['Some Category']
+    assert 'cat_nodoc' in cmds_cats['Some Category']
+    assert 'Custom Category' in cmds_cats
+    assert 'squat' in cmds_cats['Custom Category']
+    assert 'edit' in cmds_cats['Custom Category']
+    assert 'undoc' in cmds_undoc
+    assert 'Fake Category' not in cmds_cats
+
+    help_text = ''.join(out)
+    assert 'This command does diddly squat...' not in help_text
+
+
 def test_help_cat_verbose(helpcat_app):
     out, err = run_cmd(helpcat_app, 'help --verbose')
     verify_help_text(helpcat_app, out)
+
+    help_text = ''.join(out)
+    assert 'This command does diddly squat...' in help_text
 
 
 class SelectApp(cmd2.Cmd):
@@ -1396,7 +1414,7 @@ def test_eof(base_app):
     assert base_app.do_eof('')
 
 def test_echo(capsys):
-    app = cmd2.Cmd()
+    app = cmd2.Cmd(auto_load_commands=False)
     app.echo = True
     commands = ['help history']
 
@@ -1409,7 +1427,7 @@ def test_read_input_rawinput_true(capsys, monkeypatch):
     prompt_str = 'the_prompt'
     input_str = 'some input'
 
-    app = cmd2.Cmd()
+    app = cmd2.Cmd(auto_load_commands=False)
     app.use_rawinput = True
 
     # Mock out input() to return input_str

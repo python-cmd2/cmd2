@@ -153,7 +153,7 @@ def run_cmd(app, cmd):
 
 @fixture
 def base_app():
-    return cmd2.Cmd()
+    return cmd2.Cmd(auto_load_commands=False)
 
 
 # These are odd file names for testing quoting of them

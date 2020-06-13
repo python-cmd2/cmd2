@@ -29,7 +29,7 @@ class CmdLineApp(cmd2.Cmd):
     def __init__(self, *args, **kwargs):
         self.maxrepeats = 3
 
-        super().__init__(*args, multiline_commands=['orate'], **kwargs)
+        super().__init__(*args, multiline_commands=['orate'], auto_load_commands=False, **kwargs)
 
         # Make maxrepeats settable at runtime
         self.add_settable(Settable('maxrepeats', int, 'Max number of `--repeat`s allowed'))

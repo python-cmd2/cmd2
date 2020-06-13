@@ -263,7 +263,7 @@ class Plugin:
 class PluggedApp(Plugin, cmd2.Cmd):
     """A sample app with a plugin mixed in"""
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, auto_load_commands=False, **kwargs)
 
     def do_say(self, statement):
         """Repeat back the arguments"""
