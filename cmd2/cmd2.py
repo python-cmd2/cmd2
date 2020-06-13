@@ -134,7 +134,8 @@ class Cmd(cmd.Cmd):
                  allow_cli_args: bool = True, transcript_files: Optional[List[str]] = None,
                  allow_redirection: bool = True, multiline_commands: Optional[List[str]] = None,
                  terminators: Optional[List[str]] = None, shortcuts: Optional[Dict[str, str]] = None,
-                 command_sets: Optional[Iterable[CommandSet]] = None) -> None:
+                 command_sets: Optional[Iterable[CommandSet]] = None,
+                 auto_load_commands: bool = True) -> None:
         """An easy but powerful framework for writing line-oriented command
         interpreters. Extends Python's cmd package.
 
@@ -241,6 +242,16 @@ class Cmd(cmd.Cmd):
         self.statement_parser = StatementParser(terminators=terminators,
                                                 multiline_commands=multiline_commands,
                                                 shortcuts=shortcuts)
+
+        # Load modular commands
+        self._installed_functions: List[str] = []
+        self._installed_command_sets: List[CommandSet] = []
+        if command_sets:
+            for command_set in command_sets:
+                self.install_command_set(command_set)
+
+        if auto_load_commands:
+            self._autoload_commands()
 
         # Verify commands don't have invalid names (like starting with a shortcut)
         for cur_cmd in self.get_all_commands():
@@ -385,11 +396,7 @@ class Cmd(cmd.Cmd):
         # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
         self.matches_sorted = False
 
-        # Load modular commands
-        self._command_sets = command_sets if command_sets is not None else []
-        self._load_modular_commands()
-
-    def _load_modular_commands(self) -> None:
+    def _autoload_commands(self) -> None:
         """
         Load modular command definitions.
         :return: None
@@ -397,51 +404,96 @@ class Cmd(cmd.Cmd):
 
         # start by loading registered functions as commands
         for cmd_name, cmd_func, cmd_completer, cmd_help in _UNBOUND_COMMANDS:
-            assert getattr(self, cmd_func.__name__, None) is None, 'Duplicate command function registered: ' + cmd_name
-            setattr(self, cmd_func.__name__, types.MethodType(cmd_func, self))
-            if cmd_completer is not None:
-                assert getattr(self, cmd_completer.__name__, None) is None, \
-                    'Duplicate command completer registered: ' + cmd_completer.__name__
-                setattr(self, cmd_completer.__name__, types.MethodType(cmd_completer, self))
-            if cmd_help is not None:
-                assert getattr(self, cmd_help.__name__, None) is None, \
-                    'Duplicate command help registered: ' + cmd_help.__name__
-                setattr(self, cmd_help.__name__, types.MethodType(cmd_help, self))
+            self.install_command_function(cmd_name, cmd_func, cmd_completer, cmd_help)
 
         # Search for all subclasses of CommandSet, instantiate them if they weren't provided in the constructor
         all_commandset_defs = CommandSet.__subclasses__()
-        existing_commandset_types = [type(command_set) for command_set in self._command_sets]
+        existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
         for cmdset_type in all_commandset_defs:
             init_sig = inspect.signature(cmdset_type.__init__)
-            if cmdset_type in existing_commandset_types or len(init_sig.parameters) != 1 or 'self' not in init_sig.parameters:
+            if cmdset_type in existing_commandset_types or \
+                    len(init_sig.parameters) != 1 or \
+                    'self' not in init_sig.parameters:
                 continue
             cmdset = cmdset_type()
-            self._command_sets.append(cmdset)
+            self.install_command_set(cmdset)
 
-        # initialize each CommandSet and register all matching functions as command, helper, completer functions
-        for cmdset in self._command_sets:
-            cmdset.on_register(self)
-            methods = inspect.getmembers(cmdset, predicate=lambda meth: inspect.ismethod(
-                meth) and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+    def install_command_set(self, cmdset: CommandSet):
+        """
+        Installs a CommandSet, loading all commands defined in the CommandSet
 
+        :param cmdset: CommandSet to load
+        :return: None
+        """
+        existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
+        if type(cmdset) in existing_commandset_types:
+            raise ValueError('CommandSet ' + type(cmdset).__name__ + ' is already installed')
+
+        cmdset.on_register(self)
+        methods = inspect.getmembers(
+            cmdset,
+            predicate=lambda meth: inspect.ismethod(meth) and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+
+        installed_attributes = []
+        try:
             for method in methods:
-                assert getattr(self, method[0], None) is None, \
-                    'In {}: Duplicate command function: {}'.format(cmdset_type.__name__, method[0])
+                command = method[0][len(COMMAND_FUNC_PREFIX):]
+
+                valid, errmsg = self.statement_parser.is_valid_command(command)
+                if not valid:
+                    raise ValueError("Invalid command name {!r}: {}".format(command, errmsg))
+
+                assert getattr(self, COMMAND_FUNC_PREFIX + command, None) is None, \
+                    'In {}: Duplicate command function: {}'.format(type(cmdset).__name__, method[0])
 
                 command_wrapper = _partial_passthru(method[1], self)
                 setattr(self, method[0], command_wrapper)
-
-                command = method[0][len(COMMAND_FUNC_PREFIX):]
+                installed_attributes.append(method[0])
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
                 if cmd_completer and not getattr(self, completer_func_name, None):
                     completer_wrapper = _partial_passthru(cmd_completer, self)
                     setattr(self, completer_func_name, completer_wrapper)
-                cmd_help = getattr(cmdset, HELP_FUNC_PREFIX + command, None)
-                if cmd_help and not getattr(self, HELP_FUNC_PREFIX + command, None):
+                    installed_attributes.append(completer_func_name)
+
+                help_func_name = HELP_FUNC_PREFIX + command
+                cmd_help = getattr(cmdset, help_func_name, None)
+                if cmd_help and not getattr(self, help_func_name, None):
                     help_wrapper = _partial_passthru(cmd_help, self)
-                    setattr(self, HELP_FUNC_PREFIX + command, help_wrapper)
+                    setattr(self, help_func_name, help_wrapper)
+                    installed_attributes.append(help_func_name)
+            self._installed_command_sets.append(cmdset)
+        except Exception:
+            for attrib in installed_attributes:
+                delattr(self, attrib)
+            raise
+
+    def install_command_function(self, cmd_name: str, cmd_func: Callable, cmd_completer: Callable, cmd_help: Callable):
+        """
+        Installs a command by passing in functions for the command, completion, and help
+
+        :param cmd_name: name of the command to install
+        :param cmd_func: function to handle the command
+        :param cmd_completer: completion function for the command
+        :param cmd_help: help generator for the command
+        :return: None
+        """
+        valid, errmsg = self.statement_parser.is_valid_command(cmd_name)
+        if not valid:
+            raise ValueError("Invalid command name {!r}: {}".format(cmd_name, errmsg))
+
+        assert getattr(self, COMMAND_FUNC_PREFIX + cmd_name, None) is None, 'Duplicate command function registered: ' + cmd_name
+        setattr(self, COMMAND_FUNC_PREFIX + cmd_name, types.MethodType(cmd_func, self))
+        self._installed_functions.append(cmd_name)
+        if cmd_completer is not None:
+            assert getattr(self, COMPLETER_FUNC_PREFIX + cmd_name, None) is None, \
+                'Duplicate command completer registered: ' + COMPLETER_FUNC_PREFIX + cmd_name
+            setattr(self, COMPLETER_FUNC_PREFIX + cmd_name, types.MethodType(cmd_completer, self))
+        if cmd_help is not None:
+            assert getattr(self, HELP_FUNC_PREFIX + cmd_name, None) is None, \
+                'Duplicate command help registered: ' + HELP_FUNC_PREFIX + cmd_name
+            setattr(self, HELP_FUNC_PREFIX + cmd_name, types.MethodType(cmd_help, self))
 
     def add_settable(self, settable: Settable) -> None:
         """
