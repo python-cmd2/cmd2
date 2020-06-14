@@ -5,17 +5,16 @@ Supports the definition of commands in separate classes to be composed into cmd2
 import functools
 from typing import (
     Callable,
+    Dict,
     Iterable,
-    List,
     Optional,
-    Tuple,
     Type,
     Union,
 )
-from .constants import COMMAND_FUNC_PREFIX, HELP_FUNC_PREFIX, COMPLETER_FUNC_PREFIX
+from .constants import COMMAND_FUNC_PREFIX
 
 # Allows IDEs to resolve types without impacting imports at runtime, breaking circular dependency issues
-try:
+try:  # pragma: no cover
     from typing import TYPE_CHECKING
     if TYPE_CHECKING:
         from .cmd2 import Cmd, Statement
@@ -23,7 +22,7 @@ try:
 except ImportError:
     pass
 
-_UNBOUND_COMMANDS = []  # type: List[Tuple[str, Callable, Optional[Callable], Optional[Callable]]]
+_REGISTERED_COMMANDS = {}  # type: Dict[str, Callable]
 """
 Registered command tuples. (command, do_ function, complete_ function, help_ function
 """
@@ -69,24 +68,12 @@ def register_command(cmd_func: Callable[['Cmd', Union['Statement', 'argparse.Nam
     """
     assert cmd_func.__name__.startswith(COMMAND_FUNC_PREFIX), 'Command functions must start with `do_`'
 
-    import inspect
-
     cmd_name = cmd_func.__name__[len(COMMAND_FUNC_PREFIX):]
-    cmd_completer = None
-    cmd_help = None
 
-    module = inspect.getmodule(cmd_func)
-
-    module_funcs = [mf for mf in inspect.getmembers(module) if inspect.isfunction(mf[1])]
-    for mf in module_funcs:
-        if mf[0] == COMPLETER_FUNC_PREFIX + cmd_name:
-            cmd_completer = mf[1]
-        elif mf[0] == HELP_FUNC_PREFIX + cmd_name:
-            cmd_help = mf[1]
-        if cmd_completer is not None and cmd_help is not None:
-            break
-
-    _UNBOUND_COMMANDS.append((cmd_name, cmd_func, cmd_completer, cmd_help))
+    if cmd_name not in _REGISTERED_COMMANDS:
+        _REGISTERED_COMMANDS[cmd_name] = cmd_func
+    else:
+        raise KeyError('Command ' + cmd_name + ' is already registered')
     return cmd_func
 
 

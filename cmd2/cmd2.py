@@ -46,7 +46,7 @@ from typing import Any, AnyStr, Callable, Dict, Iterable, List, Mapping, Optiona
 from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .command_definition import _UNBOUND_COMMANDS, CommandSet, _partial_passthru
+from .command_definition import _REGISTERED_COMMANDS, CommandSet, _partial_passthru
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser
 from .exceptions import Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError, SkipPostcommandHooks
@@ -403,8 +403,8 @@ class Cmd(cmd.Cmd):
         """
 
         # start by loading registered functions as commands
-        for cmd_name, cmd_func, cmd_completer, cmd_help in _UNBOUND_COMMANDS:
-            self.install_command_function(cmd_name, cmd_func, cmd_completer, cmd_help)
+        for cmd_name in _REGISTERED_COMMANDS.keys():
+            self.install_registered_command(cmd_name)
 
         # Search for all subclasses of CommandSet, instantiate them if they weren't provided in the constructor
         all_commandset_defs = CommandSet.__subclasses__()
@@ -492,6 +492,28 @@ class Cmd(cmd.Cmd):
             cmdset.on_unregister(self)
             self._installed_command_sets.remove(cmdset)
 
+    def install_registered_command(self, cmd_name: str):
+        cmd_completer = None
+        cmd_help = None
+
+        if cmd_name not in _REGISTERED_COMMANDS:
+            raise KeyError('Command ' + cmd_name + ' has not been registered')
+
+        cmd_func = _REGISTERED_COMMANDS[cmd_name]
+
+        module = inspect.getmodule(cmd_func)
+
+        module_funcs = [mf for mf in inspect.getmembers(module) if inspect.isfunction(mf[1])]
+        for mf in module_funcs:
+            if mf[0] == COMPLETER_FUNC_PREFIX + cmd_name:
+                cmd_completer = mf[1]
+            elif mf[0] == HELP_FUNC_PREFIX + cmd_name:
+                cmd_help = mf[1]
+            if cmd_completer is not None and cmd_help is not None:
+                break
+
+        self.install_command_function(cmd_name, cmd_func, cmd_completer, cmd_help)
+
     def install_command_function(self,
                                  cmd_name: str,
                                  cmd_func: Callable,
@@ -510,8 +532,8 @@ class Cmd(cmd.Cmd):
         if not valid:
             raise ValueError("Invalid command name {!r}: {}".format(cmd_name, errmsg))
 
-        assert getattr(self, COMMAND_FUNC_PREFIX + cmd_name, None) is None,\
-            'Duplicate command function registered: ' + cmd_name
+        if getattr(self, COMMAND_FUNC_PREFIX + cmd_name, None) is not None:
+            raise KeyError('Duplicate command function registered: ' + cmd_name)
         setattr(self, COMMAND_FUNC_PREFIX + cmd_name, types.MethodType(cmd_func, self))
         self._installed_functions.append(cmd_name)
         if cmd_completer is not None:
