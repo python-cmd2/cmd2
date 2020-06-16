@@ -61,7 +61,7 @@ def _partial_passthru(func: Callable, *args, **kwargs) -> functools.partial:
 def register_command(cmd_func: Callable[['Cmd', Union['Statement', 'argparse.Namespace']], None]):
     """
     Decorator that allows an arbitrary function to be automatically registered as a command.
-    If there is a help_ or complete_ function that matches this command, that will also be registered.
+    If there is a ``help_`` or ``complete_`` function that matches this command, that will also be registered.
 
     :param cmd_func: Function to register as a cmd2 command
     :return:
