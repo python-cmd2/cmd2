@@ -9,7 +9,6 @@ from typing import (
     Iterable,
     Optional,
     Type,
-    Union,
 )
 from .constants import COMMAND_FUNC_PREFIX
 
@@ -17,14 +16,14 @@ from .constants import COMMAND_FUNC_PREFIX
 try:  # pragma: no cover
     from typing import TYPE_CHECKING
     if TYPE_CHECKING:
-        from .cmd2 import Cmd, Statement
-        import argparse
+        import cmd2
+
 except ImportError:   # pragma: no cover
     pass
 
 _REGISTERED_COMMANDS = {}  # type: Dict[str, Callable]
 """
-Registered command tuples. (command, do_ function, complete_ function, help_ function
+Registered command tuples. (command, ``do_`` function)
 """
 
 
@@ -58,12 +57,13 @@ def _partial_passthru(func: Callable, *args, **kwargs) -> functools.partial:
     return passthru_type(func, *args, **kwargs)
 
 
-def register_command(cmd_func: Callable[['Cmd', Union['Statement', 'argparse.Namespace']], None]):
+def register_command(cmd_func: Callable):
     """
     Decorator that allows an arbitrary function to be automatically registered as a command.
     If there is a ``help_`` or ``complete_`` function that matches this command, that will also be registered.
 
     :param cmd_func: Function to register as a cmd2 command
+    :type cmd_func: Callable[[cmd2.Cmd, Union[Statement, argparse.Namespace]], None]
     :return:
     """
     assert cmd_func.__name__.startswith(COMMAND_FUNC_PREFIX), 'Command functions must start with `do_`'
@@ -112,20 +112,23 @@ class CommandSet(object):
     """
 
     def __init__(self):
-        self._cmd = None  # type: Optional[Cmd]
+        self._cmd = None  # type: Optional[cmd2.Cmd]
 
-    def on_register(self, cmd: 'Cmd'):
+    def on_register(self, cmd):
         """
         Called by cmd2.Cmd when a CommandSet is registered. Subclasses can override this
         to perform an initialization requiring access to the Cmd object.
 
         :param cmd: The cmd2 main application
+        :type cmd: cmd2.Cmd
         """
         self._cmd = cmd
 
-    def on_unregister(self, cmd: 'Cmd'):
+    def on_unregister(self, cmd):
         """
         Called by ``cmd2.Cmd`` when a CommandSet is unregistered and removed.
+
         :param cmd:
+        :type cmd: cmd2.Cmd
         """
         self._cmd = None
