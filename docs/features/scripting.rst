@@ -94,6 +94,24 @@ where:
 * ``command`` and ``args`` are entered exactly like they would be entered by
   a user of your application.
 
+Advanced Support
+~~~~~~~~~~~~~~~~
+
+When implementing a command, setting ``self.last_result`` allows for application-specific
+data to be returned to a python script from the command. This can allow python scripts to
+make decisions based on the result of previous application commands.
+
+The application command (default: ``app``) returns a ``cmd2.CommandResult`` for each command.
+The ``cmd2.CommandResult`` object provides the captured output to ``stdout`` and ``stderr``
+while a command is executing. Additionally, it provides the value that command stored in
+``self.last_result``.
+
+Additionally, an external test Mixin plugin has been provided to allow for python based
+external testing of the application. For example, for system integration tests scenarios
+where the python application is a component of a larger suite of tools and components. This
+interface allows python based tests to call commands and validate results as part of a
+larger test suite. See :ref:`plugins/external_test:External Test Plugin`
+
 .. _python_scripting:
    https://github.com/python-cmd2/cmd2/blob/master/examples/python_scripting.py
 
