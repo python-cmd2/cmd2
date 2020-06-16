@@ -19,7 +19,7 @@ try:  # pragma: no cover
     if TYPE_CHECKING:
         from .cmd2 import Cmd, Statement
         import argparse
-except ImportError:
+except ImportError:   # pragma: no cover
     pass
 
 _REGISTERED_COMMANDS = {}  # type: Dict[str, Callable]
