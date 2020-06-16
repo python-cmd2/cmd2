@@ -471,7 +471,7 @@ class Cmd(cmd.Cmd):
 
     def uninstall_command_set(self, cmdset: CommandSet):
         """
-        Uninstalls an CommandSet and unloads all associated commands
+        Uninstalls a CommandSet and unloads all associated commands
         :param cmdset: CommandSet to uninstall
         """
         if cmdset in self._installed_command_sets:

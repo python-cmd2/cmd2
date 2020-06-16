@@ -23,6 +23,7 @@ This documentation is for ``cmd2`` version |version|.
    argparse_completer
    argparse_custom
    constants
+   command_definition
    decorators
    exceptions
    history
