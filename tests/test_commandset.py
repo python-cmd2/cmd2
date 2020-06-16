@@ -302,3 +302,27 @@ def test_command_functions(command_sets_manual):
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
     assert first_match is None
 
+
+def test_partial_with_passthru():
+
+    def test_func(arg1, arg2):
+        """Documentation Comment"""
+        print('Do stuff {} - {}'.format(arg1, arg2))
+
+    my_partial = cmd2.command_definition._partial_passthru(test_func, 1)
+
+    setattr(test_func, 'Foo', 5)
+
+    assert hasattr(my_partial, 'Foo')
+
+    assert getattr(my_partial, 'Foo', None) == 5
+
+    a = dir(test_func)
+    b = dir(my_partial)
+    assert a == b
+
+    assert not hasattr(test_func, 'Bar')
+    setattr(my_partial, 'Bar', 6)
+    assert hasattr(test_func, 'Bar')
+
+    assert getattr(test_func, 'Bar', None) == 6

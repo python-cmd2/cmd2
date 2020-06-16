@@ -264,14 +264,14 @@ class Cmd(cmd.Cmd):
         self.last_result = None
 
         # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
-        self._script_dir = []  # type: List[AnyStr]
+        self._script_dir = []  # type: List[str]
 
         # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
         self.sigint_protection = utils.ContextFlag()
 
         # If the current command created a process to pipe to, then this will be a ProcReader object.
         # Otherwise it will be None. It's used to know when a pipe process can be killed and/or waited upon.
-        self._cur_pipe_proc_reader = None
+        self._cur_pipe_proc_reader = None  # type: Optional[utils.ProcReader]
 
         # Used to keep track of whether we are redirecting or piping output
         self._redirecting = False
@@ -295,7 +295,7 @@ class Cmd(cmd.Cmd):
         self.broken_pipe_warning = ''
 
         # Commands that will run at the beginning of the command loop
-        self._startup_commands = []
+        self._startup_commands = []  # type: List[str]
 
         # If a startup script is provided and exists, then execute it in the startup commands
         if startup_script:
@@ -304,7 +304,7 @@ class Cmd(cmd.Cmd):
                 self._startup_commands.append("run_script {}".format(utils.quote_string(startup_script)))
 
         # Transcript files to run instead of interactive command loop
-        self._transcript_files = None
+        self._transcript_files = None  # type: Optional[List[str]]
 
         # Check for command line args
         if allow_cli_args:
@@ -2088,7 +2088,7 @@ class Cmd(cmd.Cmd):
                                                         self._cur_pipe_proc_reader, self._redirecting)
 
         # The ProcReader for this command
-        cmd_pipe_proc_reader = None
+        cmd_pipe_proc_reader = None  # type: Optional[utils.ProcReader]
 
         if not self.allow_redirection:
             # Don't return since we set some state variables at the end of the function
