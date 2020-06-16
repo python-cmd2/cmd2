@@ -41,7 +41,7 @@ import types
 from code import InteractiveConsole
 from collections import namedtuple
 from contextlib import redirect_stdout
-from typing import Any, AnyStr, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
 from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
@@ -438,36 +438,68 @@ class Cmd(cmd.Cmd):
         try:
             for method in methods:
                 command = method[0][len(COMMAND_FUNC_PREFIX):]
-
-                valid, errmsg = self.statement_parser.is_valid_command(command)
-                if not valid:
-                    raise ValueError("Invalid command name {!r}: {}".format(command, errmsg))
-
-                assert getattr(self, COMMAND_FUNC_PREFIX + command, None) is None, \
-                    'In {}: Duplicate command function: {}'.format(type(cmdset).__name__, method[0])
-
                 command_wrapper = _partial_passthru(method[1], self)
-                setattr(self, method[0], command_wrapper)
+
+                self.__install_command_function(command, command_wrapper, type(cmdset).__name__)
                 installed_attributes.append(method[0])
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
-                if cmd_completer and not getattr(self, completer_func_name, None):
+                if cmd_completer is not None:
                     completer_wrapper = _partial_passthru(cmd_completer, self)
-                    setattr(self, completer_func_name, completer_wrapper)
+                    self.__install_completer_function(command, completer_wrapper)
                     installed_attributes.append(completer_func_name)
 
                 help_func_name = HELP_FUNC_PREFIX + command
                 cmd_help = getattr(cmdset, help_func_name, None)
-                if cmd_help and not getattr(self, help_func_name, None):
+                if cmd_help is not None:
                     help_wrapper = _partial_passthru(cmd_help, self)
-                    setattr(self, help_func_name, help_wrapper)
+                    self.__install_help_function(command, help_wrapper)
                     installed_attributes.append(help_func_name)
+
             self._installed_command_sets.append(cmdset)
         except Exception:
             for attrib in installed_attributes:
                 delattr(self, attrib)
             raise
+
+    def __install_command_function(self, command, command_wrapper, context=''):
+        cmd_func_name = COMMAND_FUNC_PREFIX + command
+
+        # Make sure command function doesn't share naem with existing attribute
+        if hasattr(self, cmd_func_name):
+            raise ValueError('Attribute already exists: {} ({})'.format(cmd_func_name, context))
+
+        # Check if command has an invalid name
+        valid, errmsg = self.statement_parser.is_valid_command(command)
+        if not valid:
+            raise ValueError("Invalid command name {!r}: {}".format(command, errmsg))
+
+        # Check if command shares a name with an alias
+        if command in self.aliases:
+            self.pwarning("Deleting alias '{}' because it shares its name with a new command".format(command))
+            del self.aliases[command]
+
+        # Check if command shares a name with a macro
+        if command in self.macros:
+            self.pwarning("Deleting macro '{}' because it shares its name with a new command".format(command))
+            del self.macros[command]
+
+        setattr(self, cmd_func_name, command_wrapper)
+
+    def __install_completer_function(self, cmd_name, cmd_completer):
+        completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
+
+        if hasattr(self, completer_func_name):
+            raise ValueError('Attribute already exists: {}'.format(completer_func_name))
+        setattr(self, completer_func_name, cmd_completer)
+
+    def __install_help_function(self, cmd_name, cmd_completer):
+        help_func_name = HELP_FUNC_PREFIX + cmd_name
+
+        if hasattr(self, help_func_name):
+            raise ValueError('Attribute already exists: {}'.format(help_func_name))
+        setattr(self, help_func_name, cmd_completer)
 
     def uninstall_command_set(self, cmdset: CommandSet):
         """
@@ -528,22 +560,13 @@ class Cmd(cmd.Cmd):
         :param cmd_help: help generator for the command
         :return: None
         """
-        valid, errmsg = self.statement_parser.is_valid_command(cmd_name)
-        if not valid:
-            raise ValueError("Invalid command name {!r}: {}".format(cmd_name, errmsg))
+        self.__install_command_function(cmd_name, types.MethodType(cmd_func, self))
 
-        if getattr(self, COMMAND_FUNC_PREFIX + cmd_name, None) is not None:
-            raise KeyError('Duplicate command function registered: ' + cmd_name)
-        setattr(self, COMMAND_FUNC_PREFIX + cmd_name, types.MethodType(cmd_func, self))
         self._installed_functions.append(cmd_name)
         if cmd_completer is not None:
-            assert getattr(self, COMPLETER_FUNC_PREFIX + cmd_name, None) is None, \
-                'Duplicate command completer registered: ' + COMPLETER_FUNC_PREFIX + cmd_name
-            setattr(self, COMPLETER_FUNC_PREFIX + cmd_name, types.MethodType(cmd_completer, self))
+            self.__install_completer_function(cmd_name, types.MethodType(cmd_completer, self))
         if cmd_help is not None:
-            assert getattr(self, HELP_FUNC_PREFIX + cmd_name, None) is None, \
-                'Duplicate command help registered: ' + HELP_FUNC_PREFIX + cmd_name
-            setattr(self, HELP_FUNC_PREFIX + cmd_name, types.MethodType(cmd_help, self))
+            self.__install_help_function(cmd_name, types.MethodType(cmd_help, self))
 
     def uninstall_command(self, cmd_name: str):
         """

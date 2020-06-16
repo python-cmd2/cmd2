@@ -12,15 +12,9 @@ from cmd2 import utils
 
 from .conftest import (
     complete_tester,
+    normalize,
     run_cmd,
 )
-
-
-# Python 3.5 had some regressions in the unitest.mock module, so use 3rd party mock if available
-try:
-    import mock
-except ImportError:
-    from unittest import mock
 
 
 @cmd2.register_command
@@ -131,6 +125,8 @@ def command_sets_manual():
 
 
 def test_autoload_commands(command_sets_app):
+    # verifies that, when autoload is enabled, CommandSets and registered functions all show up
+
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_app._build_command_info()
 
     assert 'AAA' in cmds_cats
@@ -144,6 +140,7 @@ def test_autoload_commands(command_sets_app):
 
 
 def test_custom_construct_commandsets():
+    # Verifies that a custom initialized CommandSet loads correctly when passed into the constructor
     command_set = CommandSetB('foo')
     app = WithCommandSets(command_sets=[command_set])
 
@@ -159,7 +156,6 @@ def test_load_commands(command_sets_manual):
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
 
     # start by verifying none of the installable commands are present
-
     assert 'AAA' not in cmds_cats
     assert 'Alone' not in cmds_cats
     assert 'Command Set' not in cmds_cats
@@ -167,12 +163,15 @@ def test_load_commands(command_sets_manual):
     # install the `unbound` command
     command_sets_manual.install_registered_command('unbound')
 
-    with pytest.raises(KeyError):
+    # verify that the same registered command can't be installed twice
+    with pytest.raises(ValueError):
         assert command_sets_manual.install_registered_command('unbound')
 
+    # verifies detection of unregistered commands
     with pytest.raises(KeyError):
         assert command_sets_manual.install_registered_command('nonexistent_command')
 
+    # verifies that a duplicate function name is detected
     def do_unbound(cmd: cmd2.Cmd, statement: cmd2.Statement):
         """
         This function duplicates an existing command
@@ -259,6 +258,17 @@ def test_command_functions(command_sets_manual):
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
     assert first_match is None
 
+    # A bad command name gets rejected with an exception
+    with pytest.raises(ValueError):
+        assert command_sets_manual.install_command_function('>"',
+                                                            do_command_with_support,
+                                                            complete_command_with_support,
+                                                            help_command_with_support)
+
+    # create an alias to verify that it gets removed when the command is created
+    out, err = run_cmd(command_sets_manual, 'alias create command_with_support run_pyscript')
+    assert out == normalize("Alias 'command_with_support' created")
+
     command_sets_manual.install_registered_command('command_with_support')
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
@@ -301,6 +311,38 @@ def test_command_functions(command_sets_manual):
 
     first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
     assert first_match is None
+
+    # create an alias to verify that it gets removed when the command is created
+    out, err = run_cmd(command_sets_manual, 'macro create command_with_support run_pyscript')
+    assert out == normalize("Macro 'command_with_support' created")
+
+    command_sets_manual.install_command_function('command_with_support',
+                                                 do_command_with_support,
+                                                 complete_command_with_support,
+                                                 help_command_with_support)
+
+    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    assert 'AAA' in cmds_cats
+    assert 'command_with_support' in cmds_cats['AAA']
+
+    out, err = run_cmd(command_sets_manual, 'command_with_support')
+    assert 'Command with support functions' in out[0]
+
+    out, err = run_cmd(command_sets_manual, 'help command_with_support')
+    assert 'Help for command_with_support' in out[0]
+
+    first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+    assert first_match == 'Ham'
+
+    text = ''
+    line = 'command_with_support Ham'
+    endidx = len(line)
+    begidx = endidx - len(text)
+
+    first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+
+    assert first_match == 'Basket'
+
 
 
 def test_partial_with_passthru():
