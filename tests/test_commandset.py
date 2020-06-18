@@ -5,16 +5,13 @@ Test CommandSet
 """
 
 from typing import List
+
 import pytest
 
 import cmd2
 from cmd2 import utils
 
-from .conftest import (
-    complete_tester,
-    normalize,
-    run_cmd,
-)
+from .conftest import complete_tester, normalize, run_cmd
 
 
 @cmd2.register_command

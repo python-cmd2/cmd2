@@ -3,13 +3,8 @@
 Supports the definition of commands in separate classes to be composed into cmd2.Cmd
 """
 import functools
-from typing import (
-    Callable,
-    Dict,
-    Iterable,
-    Optional,
-    Type,
-)
+from typing import Callable, Dict, Iterable, Optional, Type
+
 from .constants import COMMAND_FUNC_PREFIX
 
 # Allows IDEs to resolve types without impacting imports at runtime, breaking circular dependency issues
