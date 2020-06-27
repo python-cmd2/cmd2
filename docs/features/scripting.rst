@@ -94,6 +94,9 @@ where:
 * ``command`` and ``args`` are entered exactly like they would be entered by
   a user of your application.
 
+See python_scripting_ example and associated conditional_ script for more
+information.
+
 Advanced Support
 ~~~~~~~~~~~~~~~~
 
@@ -117,6 +120,3 @@ larger test suite. See :ref:`plugins/external_test:External Test Plugin`
 
 .. _conditional:
    https://github.com/python-cmd2/cmd2/blob/master/examples/scripts/conditional.py
-
-See python_scripting_ example and associated conditional_ script for more
-information.
