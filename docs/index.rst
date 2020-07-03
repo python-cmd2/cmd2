@@ -67,6 +67,15 @@ Examples
    examples/index
 
 
+Plugins
+=======
+
+.. toctree::
+   :maxdepth: 2
+
+   plugins/index
+
+
 API Reference
 =============
 
