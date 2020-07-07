@@ -9,6 +9,11 @@ from pkg_resources import get_distribution, DistributionNotFound
 
 from .cmd2_ext_test import ExternalTestMixin
 
+__all__ = [
+    'ExternalTestMixin'
+]
+
+
 try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:

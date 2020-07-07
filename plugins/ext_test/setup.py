@@ -12,7 +12,12 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='cmd2-ext-test',
-    use_scm_version=True,
+    version='0.2.0',
+    # use_scm_version={
+    #     'root': '../..',
+    #     'relative_to': __file__,
+    #     'git_describe_command': 'git describe --dirty --tags --long --match plugin-ext-test*'
+    # },
 
     description='External test plugin for cmd2. Allows for external invocation of commands as if from a cmd2 pyscript',
     long_description=long_description,
@@ -28,7 +33,7 @@ setuptools.setup(
 
     python_requires='>=3.4',
     install_requires=['cmd2 >= 0.9.4, <=2'],
-    setup_requires=['setuptools_scm'],
+    setup_requires=['setuptools_scm >= 3.0'],
 
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -46,6 +51,12 @@ setuptools.setup(
     # dependencies for development and testing
     # $ pip install -e .[dev]
     extras_require={
+        'test': [
+            'codecov',
+            'coverage',
+            'pytest',
+            'pytest-cov',
+        ],
         'dev': ['setuptools_scm', 'pytest', 'codecov', 'pytest-cov',
                 'pylint', 'invoke', 'wheel', 'twine']
     },

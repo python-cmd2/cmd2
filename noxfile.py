@@ -15,4 +15,8 @@ def docs(session):
 def tests(session):
     session.install('invoke', './[test]')
     session.run('invoke', 'pytest', '--junit', '--no-pty')
+
+    session.chdir('./plugins/ext_test')
+    session.install('.[test]')
+    session.run('invoke', 'pytest', '--junit', '--no-pty', '--append-cov')
     session.run('codecov')

@@ -64,7 +64,9 @@ EXTRAS_REQUIRE = {
 
 setup(
     name="cmd2",
-    use_scm_version=True,
+    use_scm_version={
+        'git_describe_command': 'git describe --dirty --tags --long --exclude plugin-*'
+    },
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
