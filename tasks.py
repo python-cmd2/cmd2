@@ -15,6 +15,8 @@ import re
 import shutil
 import sys
 
+from plugins import tasks as plugin_tasks
+
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
@@ -38,7 +40,7 @@ def rmrf(items, verbose=True):
 
 
 # create namespaces
-namespace = invoke.Collection()
+namespace = invoke.Collection(plugin=plugin_tasks)
 namespace_clean = invoke.Collection('clean')
 namespace.add_collection(namespace_clean, 'clean')
 
@@ -49,13 +51,12 @@ namespace.add_collection(namespace_clean, 'clean')
 #####
 
 
-@invoke.task
+@invoke.task(post=[plugin_tasks.pytest])
 def pytest(context, junit=False, pty=True):
     """Run tests and code coverage using pytest"""
     with context.cd(TASK_ROOT_STR):
         command_str = 'pytest --cov=cmd2 --cov-report=term --cov-report=html'
         if junit:
-            # command_str += ' --junitxml={}/junit/test-results.xml'.format(TASK_ROOT_STR)
             command_str += ' --junitxml=junit/test-results.xml'
         command_str += ' tests'
         context.run(command_str, pty=pty)
@@ -64,7 +65,7 @@ def pytest(context, junit=False, pty=True):
 namespace.add_task(pytest)
 
 
-@invoke.task
+@invoke.task(post=[plugin_tasks.pytest_clean])
 def pytest_clean(context):
     """Remove pytest cache and code coverage files and directories"""
     # pylint: disable=unused-argument
@@ -77,7 +78,7 @@ def pytest_clean(context):
 namespace_clean.add_task(pytest_clean, 'pytest')
 
 
-@invoke.task
+@invoke.task(post=[plugin_tasks.mypy])
 def mypy(context):
     """Run mypy optional static type checker"""
     with context.cd(TASK_ROOT_STR):
@@ -87,7 +88,7 @@ def mypy(context):
 namespace.add_task(mypy)
 
 
-@invoke.task
+@invoke.task(post=[plugin_tasks.mypy_clean])
 def mypy_clean(context):
     """Remove mypy cache directory"""
     # pylint: disable=unused-argument
@@ -205,7 +206,7 @@ BUILDDIR = 'build'
 DISTDIR = 'dist'
 
 
-@invoke.task
+@invoke.task(post=[plugin_tasks.build_clean])
 def build_clean(context):
     """Remove the build directory"""
     # pylint: disable=unused-argument
@@ -216,7 +217,7 @@ def build_clean(context):
 namespace_clean.add_task(build_clean, 'build')
 
 
-@invoke.task
+@invoke.task(post=[plugin_tasks.dist_clean])
 def dist_clean(context):
     """Remove the dist directory"""
     # pylint: disable=unused-argument
@@ -227,7 +228,7 @@ def dist_clean(context):
 namespace_clean.add_task(dist_clean, 'dist')
 
 
-@invoke.task
+@invoke.task(post=[plugin_tasks.eggs_clean])
 def eggs_clean(context):
     """Remove egg directories"""
     # pylint: disable=unused-argument
@@ -245,7 +246,7 @@ def eggs_clean(context):
 namespace_clean.add_task(eggs_clean, 'eggs')
 
 
-@invoke.task
+@invoke.task(post=[plugin_tasks.pycache_clean])
 def pycache_clean(context):
     """Remove __pycache__ directories"""
     # pylint: disable=unused-argument
@@ -263,9 +264,9 @@ namespace_clean.add_task(pycache_clean, 'pycache')
 #
 # make a dummy clean task which runs all the tasks in the clean namespace
 clean_tasks = list(namespace_clean.tasks.values())
+clean_tasks.append(plugin_tasks.clean_all)
 
-
-@invoke.task(pre=list(namespace_clean.tasks.values()), default=True)
+@invoke.task(pre=clean_tasks, default=True)
 def clean_all(_):
     """Run all clean tasks"""
     # pylint: disable=unused-argument
@@ -307,7 +308,7 @@ def validatetag(context):
 namespace.add_task(validatetag)
 
 
-@invoke.task(pre=[clean_all])
+@invoke.task(pre=[clean_all], post=[plugin_tasks.sdist])
 def sdist(context):
     """Create a source distribution"""
     with context.cd(TASK_ROOT_STR):
@@ -317,7 +318,7 @@ def sdist(context):
 namespace.add_task(sdist)
 
 
-@invoke.task(pre=[clean_all])
+@invoke.task(pre=[clean_all], post=[plugin_tasks.wheel])
 def wheel(context):
     """Build a wheel distribution"""
     with context.cd(TASK_ROOT_STR):
@@ -348,7 +349,7 @@ namespace.add_task(pypi_test)
 
 
 # Flake8 - linter and tool for style guide enforcement and linting
-@invoke.task
+@invoke.task(post=[plugin_tasks.flake8])
 def flake8(context):
     """Run flake8 linter and tool for style guide enforcement"""
     with context.cd(TASK_ROOT_STR):
