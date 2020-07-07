@@ -14,7 +14,7 @@ import shutil
 import sys
 
 import invoke
-from plugins.cmd2_ext_test import tasks as ext_test_tasks
+from plugins.ext_test import tasks as ext_test_tasks
 
 # create namespaces
 namespace = invoke.Collection()
@@ -26,22 +26,19 @@ namespace.add_collection(namespace_clean, 'clean')
 # pytest, tox, pylint, and codecov
 #
 #####
-@invoke.task(pre=[ext_test_tasks.pytest])
-def pytest(_):
+
+
+@invoke.task()
+def pytest(_, junit=False, pty=True):
     """Run tests and code coverage using pytest"""
-    pass
+
+    iexec = invoke.Executor([])
+    iexec.execute([
+        invoke.call(ext_test_tasks.pytest, junit=junit, pty=pty, append_cov=True)
+        ])
 
 
 namespace.add_task(pytest)
-
-
-@invoke.task(pre=[ext_test_tasks.pytest_junit])
-def pytest_junit(_):
-    """Run tests and code coverage using pytest"""
-    pass
-
-
-namespace.add_task(pytest_junit)
 
 
 @invoke.task(pre=[ext_test_tasks.pytest_clean])
@@ -54,17 +51,18 @@ namespace_clean.add_task(pytest_clean, 'pytest')
 
 
 @invoke.task(pre=[ext_test_tasks.mypy])
-def mypy(context):
+def mypy(_):
     """Run mypy optional static type checker"""
     pass
 
 
 namespace.add_task(mypy)
 
+
 @invoke.task(pre=[ext_test_tasks.mypy_clean])
-def mypy_clean(context):
+def mypy_clean(_):
     """Remove mypy cache directory"""
-    #pylint: disable=unused-argument
+    # pylint: disable=unused-argument
     pass
 
 
@@ -79,9 +77,11 @@ namespace_clean.add_task(mypy_clean, 'mypy')
 BUILDDIR = 'build'
 DISTDIR = 'dist'
 
+
 @invoke.task(pre=[ext_test_tasks.build_clean])
 def build_clean(_):
     """Remove the build directory"""
+    pass
 
 
 namespace_clean.add_task(build_clean, 'build')
@@ -96,32 +96,14 @@ def dist_clean(_):
 namespace_clean.add_task(dist_clean, 'dist')
 
 
-@invoke.task(pre=[ext_test_tasks.eggs_clean])
-def eggs_clean(context):
-    """Remove egg directories"""
-    pass
-
-
-namespace_clean.add_task(eggs_clean, 'eggs')
-
-
-@invoke.task(pre=[ext_test_tasks.pycache_clean])
-def pycache_clean(context):
-    """Remove __pycache__ directories"""
-    pass
-
-
-namespace_clean.add_task(pycache_clean, 'pycache')
-
-
 # make a dummy clean task which runs all the tasks in the clean namespace
 clean_tasks = list(namespace_clean.tasks.values())
 
 
 @invoke.task(pre=list(namespace_clean.tasks.values()), default=True)
-def clean_all(context):
+def clean_all(_):
     """Run all clean tasks"""
-    #pylint: disable=unused-argument
+    # pylint: disable=unused-argument
     pass
 
 
@@ -129,38 +111,28 @@ namespace_clean.add_task(clean_all, 'all')
 
 
 @invoke.task(pre=[clean_all], post=[ext_test_tasks.sdist])
-def sdist(context):
-    "Create a source distribution"
-    context.run('python setup.py sdist')
+def sdist(_):
+    """Create a source distribution"""
+    pass
 
 
 namespace.add_task(sdist)
 
 
 @invoke.task(pre=[clean_all], post=[ext_test_tasks.wheel])
-def wheel(context):
-    "Build a wheel distribution"
-    context.run('python setup.py bdist_wheel')
+def wheel(_):
+    """Build a wheel distribution"""
+    pass
+
+
 namespace.add_task(wheel)
-
-
-@invoke.task(pre=[sdist, wheel])
-def pypi(context):
-    "Build and upload a distribution to pypi"
-    context.run('twine upload dist/*')
-namespace.add_task(pypi)
-
-
-@invoke.task(pre=[sdist, wheel])
-def pypi_test(context):
-    "Build and upload a distribution to https://test.pypi.org"
-    context.run('twine upload --repository-url https://test.pypi.org/legacy/ dist/*')
-namespace.add_task(pypi_test)
 
 
 # Flake8 - linter and tool for style guide enforcement and linting
 @invoke.task(pre=[ext_test_tasks.flake8])
-def flake8(context):
-    "Run flake8 linter and tool for style guide enforcement"
-    context.run("flake8 --ignore=E252,W503 --max-complexity=26 --max-line-length=127 --show-source --statistics --exclude=.git,__pycache__,.tox,.eggs,*.egg,.venv,.idea,.pytest_cache,.vscode,build,dist,htmlcov")
+def flake8(_):
+    """Run flake8 linter and tool for style guide enforcement"""
+    pass
+
+
 namespace.add_task(flake8)

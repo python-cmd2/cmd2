@@ -51,13 +51,13 @@ namespace.add_collection(namespace_clean, 'clean')
 #####
 
 
-@invoke.task(post=[plugin_tasks.pytest])
+@invoke.task()
 def pytest(context, junit=False, pty=True):
     """Run tests and code coverage using pytest"""
     with context.cd(TASK_ROOT_STR):
-        command_str = 'pytest --cov=cmd2 --cov-report=term --cov-report=html'
+        command_str = 'pytest --cov=cmd2 --cov-report=term --cov-report=html '
         if junit:
-            command_str += ' --junitxml=junit/test-results.xml'
+            command_str += ' --junitxml=junit/test-results.xml '
         command_str += ' tests'
         context.run(command_str, pty=pty)
 
@@ -228,7 +228,7 @@ def dist_clean(context):
 namespace_clean.add_task(dist_clean, 'dist')
 
 
-@invoke.task(post=[plugin_tasks.eggs_clean])
+@invoke.task()
 def eggs_clean(context):
     """Remove egg directories"""
     # pylint: disable=unused-argument
@@ -246,7 +246,7 @@ def eggs_clean(context):
 namespace_clean.add_task(eggs_clean, 'eggs')
 
 
-@invoke.task(post=[plugin_tasks.pycache_clean])
+@invoke.task()
 def pycache_clean(context):
     """Remove __pycache__ directories"""
     # pylint: disable=unused-argument
@@ -265,6 +265,7 @@ namespace_clean.add_task(pycache_clean, 'pycache')
 # make a dummy clean task which runs all the tasks in the clean namespace
 clean_tasks = list(namespace_clean.tasks.values())
 clean_tasks.append(plugin_tasks.clean_all)
+
 
 @invoke.task(pre=clean_tasks, default=True)
 def clean_all(_):
