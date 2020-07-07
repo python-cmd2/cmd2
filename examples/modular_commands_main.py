@@ -4,12 +4,12 @@
 A simple example demonstrating how to integrate tab completion with argparse-based commands.
 """
 import argparse
-from typing import Dict, List
+from typing import Dict, Iterable, List, Optional
 
-from cmd2 import Cmd, Cmd2ArgumentParser, CompletionItem, with_argparser
+from cmd2 import Cmd, Cmd2ArgumentParser, CommandSet, CompletionItem, with_argparser
 from cmd2.utils import CompletionError, basic_complete
 from modular_commands.commandset_basic import BasicCompletionCommandSet  # noqa: F401
-from modular_commands.commandset_custominit import CustomInitCommandSet
+from modular_commands.commandset_custominit import CustomInitCommandSet  # noqa: F401
 
 # Data source for argparse.choices
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']
@@ -58,8 +58,8 @@ def choices_arg_tokens(arg_tokens: Dict[str, List[str]]) -> List[str]:
 
 
 class WithCommandSets(Cmd):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, command_sets: Optional[Iterable[CommandSet]] = None):
+        super().__init__(command_sets=command_sets)
         self.sport_item_strs = ['Bat', 'Basket', 'Basketball', 'Football', 'Space Ball']
 
     def choices_method(self) -> List[str]:
@@ -122,6 +122,6 @@ if __name__ == '__main__':
     import sys
 
     print("Starting")
-    command_sets = [CustomInitCommandSet('First argument', 'Second argument')]
-    app = WithCommandSets(command_sets=command_sets)
+    my_sets = [CustomInitCommandSet('First argument', 'Second argument')]
+    app = WithCommandSets(command_sets=my_sets)
     sys.exit(app.cmdloop())
