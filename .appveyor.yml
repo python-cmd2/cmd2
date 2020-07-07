@@ -7,12 +7,12 @@ environment:
     - PYTHON: "C:\\Miniconda36-x64"
       PYTHON_VERSION: "3.6.x"
       PYTHON_ARCH: "64"
-      TOXENV: "py36"
+      NOXSESSION: "tests-3.6"
 
     - PYTHON: "C:\\Miniconda37-x64"
       PYTHON_VERSION: "3.7.x"
       PYTHON_ARCH: "64"
-      TOXENV: "py37"
+      NOXSESSION: "tests-3.7"
 
 init:
   - "%PYTHON%/python -V"
@@ -30,10 +30,10 @@ install:
   # Update conda stuff to make sure pip, setuptools, wheel etc are up to date
   - "conda update --all -y"
 
-  # Install tox
-  - "python -m pip install --upgrade tox"
+  # Install nox
+  - "python -m pip install --upgrade nox"
 
 
 
 test_script:
-- "tox -e %TOXENV%"
+- "nox --non-interactive --session %NOXSESSION%"

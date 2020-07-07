@@ -16,16 +16,16 @@ jobs:
     matrix:
       Python35:
         python.version: '3.5'
-        TOXENV: 'py35'
+        NOXSESSION: 'tests-3.5'
       Python36:
         python.version: '3.6'
-        TOXENV: 'py36'
+        NOXSESSION: 'tests-3.6'
       Python37:
         python.version: '3.7'
-        TOXENV: 'py37'
+        NOXSESSION: 'tests-3.7'
       Python38:
         python.version: '3.8'
-        TOXENV: 'py38'
+        NOXSESSION: 'tests-3.8'
     # Increase the maxParallel value to simultaneously run the job for all versions in the matrix (max 10 for free open-source)
     maxParallel: 4
 
@@ -38,7 +38,7 @@ jobs:
 
     # Install dependencies - install specific PyPI packages with pip, including cmd2 dependencies
   - script: |
-      python -m pip install --upgrade pip && pip3 install --upgrade setuptools tox
+      python -m pip install --upgrade pip && pip3 install --upgrade setuptools nox
     displayName: 'Upgrade pip and setuptools'
     continueOnError: false
 
@@ -46,7 +46,7 @@ jobs:
 
     # Test - test with pytest, collect coverage metrics with pytest-cov, and publish these metrics to codecov.io
   - script: |
-      tox -e $(TOXENV)
+      nox --non-interactive --session $(NOXSESSION)
     displayName: 'Run tests and code coverage'
     continueOnError: false
 
