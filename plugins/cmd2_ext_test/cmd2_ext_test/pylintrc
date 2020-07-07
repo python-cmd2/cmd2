@@ -1,0 +1,10 @@
+#
+# pylint configuration
+#
+#   $ pylint --rcfile=cmd2_myplugin/pylintrc cmd2_myplugin
+#
+
+[messages control]
+# too-few-public-methods          pylint expects a class to have at
+#                                 least two public methods
+disable=too-few-public-methods
