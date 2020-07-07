@@ -311,7 +311,7 @@ command finalization hook::
             self.register_cmdfinalization_hook(self.myhookmethod)
 
         def myhookmethod(self, data: cmd2.plugin.CommandFinalizationData) -> cmd2.plugin.CommandFinalizationData:
-            return stop
+            return data
 
 Command Finalization hooks must check whether the
 :data:`~cmd2.plugin.CommandFinalizationData.statement` attribute of the passed
