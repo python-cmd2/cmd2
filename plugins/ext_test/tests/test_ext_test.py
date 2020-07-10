@@ -3,8 +3,8 @@
 
 import pytest
 
-from cmd2 import cmd2, CommandResult
 import cmd2_ext_test
+from cmd2 import CommandResult, cmd2
 
 ######
 #

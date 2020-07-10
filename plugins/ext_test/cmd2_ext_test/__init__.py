@@ -5,7 +5,7 @@
 An overview of what myplugin does.
 """
 
-from pkg_resources import get_distribution, DistributionNotFound
+from pkg_resources import DistributionNotFound, get_distribution
 
 from .cmd2_ext_test import ExternalTestMixin
 

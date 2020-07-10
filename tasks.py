@@ -9,14 +9,14 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 import os
-import invoke
 import pathlib
 import re
 import shutil
 import sys
 
-from plugins import tasks as plugin_tasks
+import invoke
 
+from plugins import tasks as plugin_tasks
 
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
