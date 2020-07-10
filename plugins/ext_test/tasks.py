@@ -14,7 +14,6 @@ import shutil
 
 import invoke
 
-
 TASK_ROOT = pathlib.Path(__file__).resolve().parent
 TASK_ROOT_STR = str(TASK_ROOT)
 
