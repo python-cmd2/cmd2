@@ -28,14 +28,11 @@ namespace.add_collection(namespace_clean, 'clean')
 #####
 
 
+@invoke.task(pre=[ext_test_tasks.pytest])
 @invoke.task()
-def pytest(_, junit=False, pty=True):
+def pytest(_):
     """Run tests and code coverage using pytest"""
-
-    iexec = invoke.Executor([])
-    iexec.execute([
-        invoke.call(ext_test_tasks.pytest, junit=junit, pty=pty, append_cov=True)
-        ])
+    pass
 
 
 namespace.add_task(pytest)

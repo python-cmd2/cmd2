@@ -13,6 +13,7 @@ with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
 setuptools.setup(
     name='cmd2-ext-test',
     version='0.2.0',
+    # TODO: Figure out why this doesn't work on CI Server
     # use_scm_version={
     #     'root': '../..',
     #     'relative_to': __file__,
