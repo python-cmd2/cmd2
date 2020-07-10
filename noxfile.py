@@ -16,7 +16,11 @@ def tests(session):
     session.install('invoke', './[test]')
     session.run('invoke', 'pytest', '--junit', '--no-pty')
 
+    # cd into test directory to run other unit test
     session.chdir('./plugins/ext_test')
     session.install('.[test]')
     session.run('invoke', 'pytest', '--junit', '--no-pty', '--append-cov')
+
+    # return to top directory to submit coverage
+    session.chdir('../..')
     session.run('codecov')
