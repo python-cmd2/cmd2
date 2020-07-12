@@ -19,7 +19,7 @@ documentation root, use os.path.abspath to make it absolute, like shown here.
 """
 # Import for custom theme from Read the Docs
 import sphinx_rtd_theme
-from pkg_resources import get_distribution
+import cmd2
 
 # -- General configuration -----------------------------------------------------
 
@@ -57,7 +57,7 @@ author = 'cmd2 contributors'
 # built documents.
 #
 # version will look like x.y.z
-version = get_distribution('cmd2').version
+version = cmd2.__version__
 # release will look like x.y
 release = '.'.join(version.split('.')[:2])
 
