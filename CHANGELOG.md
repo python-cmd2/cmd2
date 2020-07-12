@@ -1,3 +1,9 @@
+## 1.2.0 (July TBD, 2020)
+* Enhancements
+    * Switched to getting version using `importlib.metadata` instead of using `pkg_resources`
+        * Improves `cmd2` application launch time on systems that have a lot of Python packages on `sys.path`
+        * Added dependency on `importlib_metadata` when running on versions of Python prior to 3.8
+
 ## 1.1.0 (June 6, 2020)
 * Bug Fixes
     * Fixed issue where subcommand usage text could contain a subcommand alias instead of the actual name
