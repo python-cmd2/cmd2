@@ -9,16 +9,13 @@ Make sure you satisfy the following Python module requirements if you are trying
     - setuptools >= 39.1.0
 """
 import os
-import re
-import shutil
-import sys
-
 import invoke
 
 from plugins.ext_test import tasks as ext_test_tasks
+from plugins.template import tasks as template_tasks
 
 # create namespaces
-namespace = invoke.Collection()
+namespace = invoke.Collection(ext_test=ext_test_tasks, template=template_tasks)
 namespace_clean = invoke.Collection('clean')
 namespace.add_collection(namespace_clean, 'clean')
 
