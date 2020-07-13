@@ -2,12 +2,17 @@
 # coding=utf-8
 """External test interface plugin"""
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 import cmd2
 
+if TYPE_CHECKING:
+    _Base = cmd2.Cmd
+else:
+    _Base = object
 
-class ExternalTestMixin:
+
+class ExternalTestMixin(_Base):
     """A cmd2 plugin (mixin class) that exposes an interface to execute application commands from python"""
 
     def __init__(self, *args, **kwargs):

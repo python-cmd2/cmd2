@@ -1,0 +1,19 @@
+#
+# pylint configuration for tests package
+#
+#   $ pylint --rcfile=tests/pylintrc tests
+#
+
+[basic]
+# allow for longer method and function names
+method-rgx=(([a-z][a-z0-9_]{2,50})|(_[a-z0-9_]*))$
+function-rgx=(([a-z][a-z0-9_]{2,50})|(_[a-z0-9_]*))$
+
+[messages control]
+# too-many-public-methods -> test classes can have lots of methods, so let's ignore those
+# missing-docstring -> prefer method names instead of docstrings
+# no-self-use -> test methods part of a class hardly ever use self
+# unused-variable -> sometimes we are expecting exceptions
+# redefined-outer-name -> pylint fixtures cause these
+# protected-access -> we want to test private methods
+disable=too-many-public-methods,missing-docstring,no-self-use,unused-variable,redefined-outer-name,protected-access
