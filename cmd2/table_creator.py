@@ -10,11 +10,20 @@ import functools
 import io
 from collections import deque
 from enum import Enum
-from typing import Any, Deque, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Sequence, Tuple, Union
 
 from wcwidth import wcwidth
 
 from . import ansi, constants, utils
+
+# This is needed for compatibility with early versions of Python 3.5 prior to 3.5.4
+try:
+    from typing import Deque
+except ImportError:
+    import typing
+
+    # noinspection PyProtectedMember, PyUnresolvedReferences
+    Deque = typing._alias(deque, typing.T)
 
 # Constants
 EMPTY = ''
