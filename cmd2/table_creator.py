@@ -21,6 +21,8 @@ try:
     from typing import Deque
 except ImportError:
     import typing
+
+    # noinspection PyProtectedMember, PyUnresolvedReferences
     Deque = typing._alias(deque, typing.T)
 
 # Constants
