@@ -20,9 +20,8 @@ from . import ansi, constants, utils
 try:
     from typing import Deque
 except ImportError:
-    import collections
     import typing
-    Deque = typing._alias(collections.deque, typing.T)
+    Deque = typing._alias(deque, typing.T)
 
 # Constants
 EMPTY = ''
