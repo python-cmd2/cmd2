@@ -1,3 +1,7 @@
+## 1.2.1 (July TBD, 2020)
+* Bug Fixes
+    * Relax minimum version `importlib-metadata` to >= 1.6.0 when using Python < 3.8
+
 ## 1.2.0 (July 13, 2020)
 * Bug Fixes
     * Fixed `typing` module compatibility issue with Python 3.5 prior to 3.5.4 
