@@ -1,4 +1,4 @@
-## 1.2.0 (July TBD, 2020)
+## 1.2.0 (July 13, 2020)
 * Enhancements
     * Switched to getting version using `importlib.metadata` instead of using `pkg_resources`
         * Improves `cmd2` application launch time on systems that have a lot of Python packages on `sys.path`

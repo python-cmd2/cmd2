@@ -19,6 +19,7 @@ documentation root, use os.path.abspath to make it absolute, like shown here.
 """
 # Import for custom theme from Read the Docs
 import sphinx_rtd_theme
+
 import cmd2
 
 # -- General configuration -----------------------------------------------------
