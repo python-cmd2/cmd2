@@ -1,6 +1,6 @@
-## 1.2.1 (July TBD, 2020)
+## 1.2.1 (July 14, 2020)
 * Bug Fixes
-    * Relax minimum version `importlib-metadata` to >= 1.6.0 when using Python < 3.8
+    * Relax minimum version of `importlib-metadata` to >= 1.6.0 when using Python < 3.8
 
 ## 1.2.0 (July 13, 2020)
 * Bug Fixes
