@@ -1,4 +1,6 @@
 ## 1.2.0 (July 13, 2020)
+* Bug Fixes
+    * Fixed `typing` module compatibility issue with Python 3.5 prior to 3.5.4 
 * Enhancements
     * Switched to getting version using `importlib.metadata` instead of using `pkg_resources`
         * Improves `cmd2` application launch time on systems that have a lot of Python packages on `sys.path`
