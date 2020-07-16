@@ -55,6 +55,7 @@ setuptools.setup(
     # $ pip install -e .[dev]
     extras_require={
         'test': [
+            "gnureadline; sys_platform=='darwin'",  # include gnureadline on macOS to ensure it is available in tox env
             'codecov',
             'coverage',
             'pytest',
