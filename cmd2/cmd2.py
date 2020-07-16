@@ -200,7 +200,7 @@ class Cmd(cmd.Cmd):
         self.max_completion_items = 50
 
         # A dictionary mapping settable names to their Settable instance
-        self.settables = dict()
+        self.settables = dict()  # type: Dict[str, Settable]
         self.build_settables()
 
         # Use as prompt for multiline commands on the 2nd+ line of input
@@ -220,7 +220,7 @@ class Cmd(cmd.Cmd):
         self.exclude_from_history = ['eof', 'history']
 
         # Dictionary of macro names and their values
-        self.macros = dict()
+        self.macros = dict()  # type: Dict[str, Macro]
 
         # Keeps track of typed command history in the Python shell
         self._py_history = []
@@ -249,14 +249,14 @@ class Cmd(cmd.Cmd):
         self.last_result = None
 
         # Used by run_script command to store current script dir as a LIFO queue to support _relative_run_script command
-        self._script_dir = []
+        self._script_dir = []  # type: List[str]
 
         # Context manager used to protect critical sections in the main thread from stopping due to a KeyboardInterrupt
         self.sigint_protection = utils.ContextFlag()
 
         # If the current command created a process to pipe to, then this will be a ProcReader object.
         # Otherwise it will be None. It's used to know when a pipe process can be killed and/or waited upon.
-        self._cur_pipe_proc_reader = None
+        self._cur_pipe_proc_reader = None  # type: Optional[utils.ProcReader]
 
         # Used to keep track of whether we are redirecting or piping output
         self._redirecting = False
@@ -280,7 +280,7 @@ class Cmd(cmd.Cmd):
         self.broken_pipe_warning = ''
 
         # Commands that will run at the beginning of the command loop
-        self._startup_commands = []
+        self._startup_commands = []  # type: List[str]
 
         # If a startup script is provided and exists, then execute it in the startup commands
         if startup_script:
@@ -289,7 +289,7 @@ class Cmd(cmd.Cmd):
                 self._startup_commands.append("run_script {}".format(utils.quote_string(startup_script)))
 
         # Transcript files to run instead of interactive command loop
-        self._transcript_files = None
+        self._transcript_files = None  # type: Optional[List[str]]
 
         # Check for command line args
         if allow_cli_args:
@@ -333,7 +333,7 @@ class Cmd(cmd.Cmd):
         # Commands that have been disabled from use. This is to support commands that are only available
         # during specific states of the application. This dictionary's keys are the command names and its
         # values are DisabledCommand objects.
-        self.disabled_commands = dict()
+        self.disabled_commands = dict()  # type: Dict[str, DisabledCommand]
 
         # If any command has been categorized, then all other commands that haven't been categorized
         # will display under this section in the help output.
@@ -1910,7 +1910,7 @@ class Cmd(cmd.Cmd):
                                                         self._cur_pipe_proc_reader, self._redirecting)
 
         # The ProcReader for this command
-        cmd_pipe_proc_reader = None
+        cmd_pipe_proc_reader = None  # type: Optional[utils.ProcReader]
 
         if not self.allow_redirection:
             # Don't return since we set some state variables at the end of the function
@@ -2694,16 +2694,31 @@ class Cmd(cmd.Cmd):
 
     def _help_menu(self, verbose: bool = False) -> None:
         """Show a list of commands which help can be displayed for"""
+        cmds_cats, cmds_doc, cmds_undoc, help_topics = self._build_command_info()
+
+        if len(cmds_cats) == 0:
+            # No categories found, fall back to standard behavior
+            self.poutput("{}".format(str(self.doc_leader)))
+            self._print_topics(self.doc_header, cmds_doc, verbose)
+        else:
+            # Categories found, Organize all commands by category
+            self.poutput('{}'.format(str(self.doc_leader)))
+            self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
+            for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
+                self._print_topics(category, cmds_cats[category], verbose)
+            self._print_topics(self.default_category, cmds_doc, verbose)
+
+        self.print_topics(self.misc_header, help_topics, 15, 80)
+        self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
+
+    def _build_command_info(self):
         # Get a sorted list of help topics
         help_topics = sorted(self.get_help_topics(), key=self.default_sort_key)
-
         # Get a sorted list of visible command names
         visible_commands = sorted(self.get_visible_commands(), key=self.default_sort_key)
-
         cmds_doc = []
         cmds_undoc = []
         cmds_cats = {}
-
         for command in visible_commands:
             func = self.cmd_func(command)
             has_help_func = False
@@ -2724,21 +2739,7 @@ class Cmd(cmd.Cmd):
                 cmds_doc.append(command)
             else:
                 cmds_undoc.append(command)
-
-        if len(cmds_cats) == 0:
-            # No categories found, fall back to standard behavior
-            self.poutput("{}".format(str(self.doc_leader)))
-            self._print_topics(self.doc_header, cmds_doc, verbose)
-        else:
-            # Categories found, Organize all commands by category
-            self.poutput('{}'.format(str(self.doc_leader)))
-            self.poutput('{}'.format(str(self.doc_header)), end="\n\n")
-            for category in sorted(cmds_cats.keys(), key=self.default_sort_key):
-                self._print_topics(category, cmds_cats[category], verbose)
-            self._print_topics(self.default_category, cmds_doc, verbose)
-
-        self.print_topics(self.misc_header, help_topics, 15, 80)
-        self.print_topics(self.undoc_header, cmds_undoc, 15, 80)
+        return cmds_cats, cmds_doc, cmds_undoc, help_topics
 
     def _print_topics(self, header: str, cmds: List[str], verbose: bool) -> None:
         """Customized version of print_topics that can switch between verbose or traditional output"""
