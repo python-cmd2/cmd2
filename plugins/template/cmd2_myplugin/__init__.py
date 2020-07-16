@@ -5,11 +5,16 @@
 An overview of what myplugin does.
 """
 
-from pkg_resources import get_distribution, DistributionNotFound
-
 from .myplugin import empty_decorator, MyPluginMixin  # noqa: F401
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+    # For python 3.8 and later
+    import importlib.metadata as importlib_metadata
+except ImportError:  # pragma: no cover
+    # For everyone else
+    import importlib_metadata
+try:
+    __version__ = importlib_metadata.version(__name__)
+except importlib_metadata.PackageNotFoundError:  # pragma: no cover
+    # package is not installed
     __version__ = 'unknown'
