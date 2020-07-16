@@ -31,6 +31,7 @@ This documentation is for ``cmd2`` version |version|.
    py_bridge
    table_creator
    utils
+   command_definition
 
 **Modules**
 

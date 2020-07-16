@@ -1,8 +1,8 @@
 #
 # coding=utf-8
-"""cmd2 External Python Testing Mixin
+"""cmd2 Modular Command Mixin
 
-Allows developers to exercise their cmd2 application using the PyScript interface
+Allows registration of arbitrary functions and CommandSets as commands in a cmd2 application
 """
 
 try:
@@ -17,8 +17,12 @@ except importlib_metadata.PackageNotFoundError:
     # package is not installed
     __version__ = 'unknown'
 
-from .cmd2_ext_test import ExternalTestMixin
+from .command_definition import CommandSet, with_default_category, register_command
+from .modular_mixin import ModularCommandsMixin
 
 __all__ = [
-    'ExternalTestMixin'
+    'CommandSet',
+    'ModularCommandsMixin',
+    'register_command',
+    'with_default_category',
 ]
