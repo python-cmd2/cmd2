@@ -26,11 +26,11 @@ You can also register methods to be called at the beginning of the command
 loop::
 
     class App(cmd2.Cmd):
-        def __init__(self, *args, *kwargs):
+        def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.register_preloop_hook(self.myhookmethod)
 
-        def myhookmethod(self):
+        def myhookmethod(self) -> None:
             self.poutput("before the loop begins")
 
 To retain backwards compatibility with ``cmd.Cmd``, after all registered
@@ -41,12 +41,12 @@ A similar approach allows you to register functions to be called after the
 command loop has finished::
 
     class App(cmd2.Cmd):
-        def __init__(self, *args, *kwargs):
+        def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.register_postloop_hook(self.myhookmethod)
 
-        def myhookmethod(self):
-            self.poutput("before the loop begins")
+        def myhookmethod(self) -> None:
+            self.poutput("after the loop ends")
 
 To retain backwards compatibility with ``cmd.Cmd``, after all registered
 postloop hooks have been called, the :meth:`~cmd2.Cmd.postloop` method is
@@ -147,7 +147,7 @@ timer for command execution been started.
 To define and register a postparsing hook, do the following::
 
     class App(cmd2.Cmd):
-        def __init__(self, *args, *kwargs):
+        def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.register_postparsing_hook(self.myhookmethod)
 
@@ -215,7 +215,7 @@ Once output is redirected and the timer started, all the hooks registered with
 :meth:`~cmd2.Cmd.register_precmd_hook` are called. Here's how to do it::
 
     class App(cmd2.Cmd):
-        def __init__(self, *args, *kwargs):
+        def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.register_precmd_hook(self.myhookmethod)
 
@@ -254,7 +254,7 @@ timer is still running.
 Here's how to define and register a postcommand hook::
 
     class App(cmd2.Cmd):
-        def __init__(self, *args, *kwargs):
+        def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.register_postcmd_hook(self.myhookmethod)
 
@@ -306,7 +306,7 @@ or the command method raise an exception. Here's how to create and register a
 command finalization hook::
 
     class App(cmd2.Cmd):
-        def __init__(self, *args, *kwargs):
+        def __init__(self, *args, **kwargs):
             super().__init__(*args, **kwargs)
             self.register_cmdfinalization_hook(self.myhookmethod)
 
