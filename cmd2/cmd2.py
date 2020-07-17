@@ -4281,11 +4281,11 @@ class Cmd(cmd.Cmd):
         signature = inspect.signature(func)
         _, param = list(signature.parameters.items())[0]
         if param.annotation != plugin.CommandFinalizationData:
-            raise TypeError("{} must have one parameter declared with type "
-                            "'cmd2.plugin.CommandFinalizationData'".format(func.__name__))
+            raise TypeError("{} must have one parameter declared with type {}".format(func.__name__,
+                                                                                      plugin.CommandFinalizationData))
         if signature.return_annotation != plugin.CommandFinalizationData:
-            raise TypeError("{} must declare return a return type of "
-                            "'cmd2.plugin.CommandFinalizationData'".format(func.__name__))
+            raise TypeError("{} must declare return a return type of {}".format(func.__name__,
+                                                                                plugin.CommandFinalizationData))
 
     def register_cmdfinalization_hook(self, func: Callable[[plugin.CommandFinalizationData],
                                                            plugin.CommandFinalizationData]) -> None:
