@@ -17,7 +17,7 @@ from cmd2.constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC
 
 from .command_definition import CommandSet, _REGISTERED_COMMANDS, _partial_passthru
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     _Base = cmd2.Cmd
 else:
     _Base = object

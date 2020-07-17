@@ -7,7 +7,7 @@ from typing import Callable, TYPE_CHECKING
 
 import cmd2
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     _Base = cmd2.Cmd
 else:
     _Base = object

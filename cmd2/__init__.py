@@ -11,7 +11,7 @@ except ImportError:
     import importlib_metadata
 try:
     __version__ = importlib_metadata.version(__name__)
-except importlib_metadata.PackageNotFoundError:
+except importlib_metadata.PackageNotFoundError:  # pragma: no cover
     # package is not installed
     pass
 
@@ -31,6 +31,7 @@ from .cmd2 import Cmd
 from .constants import COMMAND_NAME, DEFAULT_SHORTCUTS
 from .decorators import with_argument_list, with_argparser, with_argparser_and_unknown_args, with_category
 from .exceptions import Cmd2ArgparseError, SkipPostcommandHooks
+from . import plugin
 from .parsing import Statement
 from .py_bridge import CommandResult
 from .utils import categorize, CompletionError, Settable
