@@ -432,7 +432,8 @@ class Cmd(cmd.Cmd):
         cmdset.on_register(self)
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: inspect.ismethod(meth) and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+            predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable)) and
+                                   meth.__name__.startswith(COMMAND_FUNC_PREFIX))
 
         installed_attributes = []
         try:
