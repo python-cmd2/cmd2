@@ -30,16 +30,37 @@ def with_category(category: str) -> Callable:
         return func
     return cat_decorator
 
+##########################
+# The _parse_positionals and _swap_args decorators allow for additional positional args to be preserved
+# in cmd2 command functions/callables. As long as the 2-ple of arguments we expect to be there can be
+# found we can swap out the statement with each decorator's specific parameters
+##########################
+
 
 def _parse_positionals(args: Tuple) -> Tuple['cmd2.Cmd', Union[Statement, str]]:
+    """
+    Helper function for cmd2 decorators to inspect the positional arguments until the cmd2.Cmd argument is found
+    Assumes that we will find cmd2.Cmd followed by the command statement object or string.
+    :arg args: The positional arguments to inspect
+    :return: The cmd2.Cmd reference and the command line statement
+    """
     for pos, arg in enumerate(args):
         from cmd2 import Cmd
-        if isinstance(arg, Cmd):
-            return arg, args[pos + 1]
-    return None, None
+        if isinstance(arg, Cmd) and len(args) > pos:
+            next_arg = args[pos + 1]
+            if isinstance(next_arg, (Statement, str)):
+                return arg, args[pos + 1]
+    raise TypeError('Expected arguments: cmd: cmd2.Cmd, statement: Union[Statement, str] Not found')
 
 
 def _arg_swap(args: Union[Tuple[Any], List[Any]], search_arg: Any, *replace_arg: Any) -> List[Any]:
+    """
+    Helper function for cmd2 decorators to swap the Statement parameter with one or more decorator-specific parameters
+    :param args: The original positional arguments
+    :param search_arg: The argument to search for (usually the Statement)
+    :param replace_arg: The arguments to substitute in
+    :return: The new set of arguments to pass to the command function
+    """
     index = args.index(search_arg)
     args_list = list(args)
     args_list[index:index + 1] = replace_arg
