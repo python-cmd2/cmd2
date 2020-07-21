@@ -58,8 +58,15 @@ def pytest(context, junit=False, pty=True):
         command_str = 'pytest --cov=cmd2 --cov-report=term --cov-report=html '
         if junit:
             command_str += ' --junitxml=junit/test-results.xml '
-        command_str += ' tests'
-        context.run(command_str, pty=pty)
+        tests_cmd = command_str + ' tests'
+        context.run(tests_cmd, pty=pty)
+
+        command_str += ' --cov-append'
+
+        for root, dirnames, _ in os.walk(TASK_ROOT/'isolated_tests'):
+            for dir in dirnames:
+                if dir.startswith('test_'):
+                    context.run(command_str + ' isolated_tests/' + dir)
 
 
 namespace.add_task(pytest)
