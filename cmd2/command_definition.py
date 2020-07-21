@@ -16,11 +16,6 @@ try:  # pragma: no cover
 except ImportError:   # pragma: no cover
     pass
 
-_REGISTERED_COMMANDS = {}  # type: Dict[str, Callable]
-"""
-Registered command tuples. (command, ``do_`` function)
-"""
-
 
 def _partial_passthru(func: Callable, *args, **kwargs) -> functools.partial:
     """
@@ -50,26 +45,6 @@ def _partial_passthru(func: Callable, *args, **kwargs) -> functools.partial:
                          })
     passthru_type.__doc__ = func.__doc__
     return passthru_type(func, *args, **kwargs)
-
-
-def register_command(cmd_func: Callable):
-    """
-    Decorator that allows an arbitrary function to be automatically registered as a command.
-    If there is a ``help_`` or ``complete_`` function that matches this command, that will also be registered.
-
-    :param cmd_func: Function to register as a cmd2 command
-    :type cmd_func: Callable[[cmd2.Cmd, Union[Statement, argparse.Namespace]], None]
-    :return:
-    """
-    assert cmd_func.__name__.startswith(COMMAND_FUNC_PREFIX), 'Command functions must start with `do_`'
-
-    cmd_name = cmd_func.__name__[len(COMMAND_FUNC_PREFIX):]
-
-    if cmd_name not in _REGISTERED_COMMANDS:
-        _REGISTERED_COMMANDS[cmd_name] = cmd_func
-    else:
-        raise KeyError('Command ' + cmd_name + ' is already registered')
-    return cmd_func
 
 
 def with_default_category(category: str):

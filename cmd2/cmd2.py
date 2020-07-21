@@ -46,7 +46,7 @@ from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple
 from . import ansi, constants, plugin, utils
 from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
-from .command_definition import _REGISTERED_COMMANDS, CommandSet, _partial_passthru
+from .command_definition import CommandSet, _partial_passthru
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser
 from .exceptions import Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError, SkipPostcommandHooks
@@ -90,6 +90,7 @@ except ImportError:  # pragma: no cover
 
 class _SavedReadlineSettings:
     """readline settings that are backed up when switching between readline environments"""
+
     def __init__(self):
         self.completer = None
         self.delims = ''
@@ -98,6 +99,7 @@ class _SavedReadlineSettings:
 
 class _SavedCmd2Env:
     """cmd2 environment settings that are backed up when entering an interactive Python shell"""
+
     def __init__(self):
         self.readline_settings = _SavedReadlineSettings()
         self.readline_module = None
@@ -397,15 +399,7 @@ class Cmd(cmd.Cmd):
         self.matches_sorted = False
 
     def _autoload_commands(self) -> None:
-        """
-        Load modular command definitions.
-        :return: None
-        """
-
-        # start by loading registered functions as commands
-        for cmd_name in _REGISTERED_COMMANDS.keys():
-            self.install_registered_command(cmd_name)
-
+        """Load modular command definitions."""
         # Search for all subclasses of CommandSet, instantiate them if they weren't provided in the constructor
         all_commandset_defs = CommandSet.__subclasses__()
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
@@ -418,12 +412,11 @@ class Cmd(cmd.Cmd):
             cmdset = cmdset_type()
             self.install_command_set(cmdset)
 
-    def install_command_set(self, cmdset: CommandSet):
+    def install_command_set(self, cmdset: CommandSet) -> None:
         """
         Installs a CommandSet, loading all commands defined in the CommandSet
 
         :param cmdset: CommandSet to load
-        :return: None
         """
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
         if type(cmdset) in existing_commandset_types:
@@ -524,64 +517,6 @@ class Cmd(cmd.Cmd):
 
             cmdset.on_unregister(self)
             self._installed_command_sets.remove(cmdset)
-
-    def install_registered_command(self, cmd_name: str):
-        cmd_completer = None
-        cmd_help = None
-
-        if cmd_name not in _REGISTERED_COMMANDS:
-            raise KeyError('Command ' + cmd_name + ' has not been registered')
-
-        cmd_func = _REGISTERED_COMMANDS[cmd_name]
-
-        module = inspect.getmodule(cmd_func)
-
-        module_funcs = [mf for mf in inspect.getmembers(module) if inspect.isfunction(mf[1])]
-        for mf in module_funcs:
-            if mf[0] == COMPLETER_FUNC_PREFIX + cmd_name:
-                cmd_completer = mf[1]
-            elif mf[0] == HELP_FUNC_PREFIX + cmd_name:
-                cmd_help = mf[1]
-            if cmd_completer is not None and cmd_help is not None:
-                break
-
-        self.install_command_function(cmd_name, cmd_func, cmd_completer, cmd_help)
-
-    def install_command_function(self,
-                                 cmd_name: str,
-                                 cmd_func: Callable,
-                                 cmd_completer: Optional[Callable],
-                                 cmd_help: Optional[Callable]):
-        """
-        Installs a command by passing in functions for the command, completion, and help
-
-        :param cmd_name: name of the command to install
-        :param cmd_func: function to handle the command
-        :param cmd_completer: completion function for the command
-        :param cmd_help: help generator for the command
-        :return: None
-        """
-        self.__install_command_function(cmd_name, types.MethodType(cmd_func, self))
-
-        self._installed_functions.append(cmd_name)
-        if cmd_completer is not None:
-            self.__install_completer_function(cmd_name, types.MethodType(cmd_completer, self))
-        if cmd_help is not None:
-            self.__install_help_function(cmd_name, types.MethodType(cmd_help, self))
-
-    def uninstall_command(self, cmd_name: str):
-        """
-        Uninstall an installed command and any associated completer or help functions
-        :param cmd_name: Command to uninstall
-        """
-        if cmd_name in self._installed_functions:
-            delattr(self, COMMAND_FUNC_PREFIX + cmd_name)
-
-            if hasattr(self, COMPLETER_FUNC_PREFIX + cmd_name):
-                delattr(self, COMPLETER_FUNC_PREFIX + cmd_name)
-            if hasattr(self, HELP_FUNC_PREFIX + cmd_name):
-                delattr(self, HELP_FUNC_PREFIX + cmd_name)
-            self._installed_functions.remove(cmd_name)
 
     def add_settable(self, settable: Settable) -> None:
         """
@@ -2156,7 +2091,8 @@ class Cmd(cmd.Cmd):
             if proc.returncode is not None:
                 subproc_stdin.close()
                 new_stdout.close()
-                raise RedirectionError('Pipe process exited with code {} before command could run'.format(proc.returncode))
+                raise RedirectionError(
+                    'Pipe process exited with code {} before command could run'.format(proc.returncode))
             else:
                 redir_saved_state.redirecting = True
                 cmd_pipe_proc_reader = utils.ProcReader(proc, self.stdout, sys.stderr)
@@ -2165,7 +2101,8 @@ class Cmd(cmd.Cmd):
         elif statement.output:
             import tempfile
             if (not statement.output_to) and (not self._can_clip):
-                raise RedirectionError("Cannot redirect to paste buffer; missing 'pyperclip' and/or pyperclip dependencies")
+                raise RedirectionError(
+                    "Cannot redirect to paste buffer; missing 'pyperclip' and/or pyperclip dependencies")
 
             # Redirecting to a file
             elif statement.output_to:
@@ -2271,7 +2208,6 @@ class Cmd(cmd.Cmd):
             # Check to see if this command should be stored in history
             if statement.command not in self.exclude_from_history and \
                     statement.command not in self.disabled_commands and add_to_history:
-
                 self.history.append(statement)
 
             stop = func(statement)
@@ -3358,7 +3294,7 @@ class Cmd(cmd.Cmd):
                     if 'gnureadline' in sys.modules:
                         # Restore what the readline module pointed to
                         if cmd2_env.readline_module is None:
-                            del(sys.modules['readline'])
+                            del (sys.modules['readline'])
                         else:
                             sys.modules['readline'] = cmd2_env.readline_module
 
@@ -3387,6 +3323,7 @@ class Cmd(cmd.Cmd):
                          other arguments. (Defaults to None)
         :return: True if running of commands should stop
         """
+
         def py_quit():
             """Function callable from the interactive Python console to exit that environment"""
             raise EmbeddedConsoleExit
