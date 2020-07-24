@@ -3,7 +3,7 @@
 """An example cmd2 plugin"""
 
 import functools
-from typing import Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 import cmd2
 

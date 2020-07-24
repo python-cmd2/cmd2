@@ -3,7 +3,7 @@
 Supports the definition of commands in separate classes to be composed into cmd2.Cmd
 """
 import functools
-from typing import Callable, Dict, Iterable, Optional, Type
+from typing import Callable, Iterable, Optional, Type
 
 from .constants import COMMAND_FUNC_PREFIX
 

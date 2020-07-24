@@ -211,4 +211,3 @@ def test_commandset_decorators(command_sets_app):
     assert len(result.stderr) > 0
     assert 'unrecognized arguments' in result.stderr
     assert result.data is None
-

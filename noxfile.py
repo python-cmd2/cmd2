@@ -22,7 +22,9 @@ def docs(session):
 def tests(session, plugin):
     if plugin is None:
         session.install('invoke', './[test]')
-        session.run('invoke', 'pytest', '--junit', '--no-pty')
+        session.run('invoke', 'pytest', '--junit', '--no-pty', '--base')
+        session.install('./plugins/ext_test/')
+        session.run('invoke', 'pytest', '--junit', '--no-pty', '--isolated')
     elif plugin == 'coverage':
         session.install('invoke', 'codecov', 'coverage')
         session.run('codecov')
