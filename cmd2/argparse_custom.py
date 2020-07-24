@@ -728,11 +728,32 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output"""
 
-    def __init__(self, *args, **kwargs) -> None:
-        if 'formatter_class' not in kwargs:
-            kwargs['formatter_class'] = Cmd2HelpFormatter
-
-        super().__init__(*args, **kwargs)
+    def __init__(self,
+                 prog=None,
+                 usage=None,
+                 description=None,
+                 epilog=None,
+                 parents=None,
+                 formatter_class=Cmd2HelpFormatter,
+                 prefix_chars='-',
+                 fromfile_prefix_chars=None,
+                 argument_default=None,
+                 conflict_handler='error',
+                 add_help=True,
+                 allow_abbrev=True) -> None:
+        super(Cmd2ArgumentParser, self).__init__(
+            prog=prog,
+            usage=usage,
+            description=description,
+            epilog=epilog,
+            parents=parents if parents else [],
+            formatter_class=formatter_class,
+            prefix_chars=prefix_chars,
+            fromfile_prefix_chars=fromfile_prefix_chars,
+            argument_default=argument_default,
+            conflict_handler=conflict_handler,
+            add_help=add_help,
+            allow_abbrev=allow_abbrev)
 
     def add_subparsers(self, **kwargs):
         """Custom override. Sets a default title if one was not given."""

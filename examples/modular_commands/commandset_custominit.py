@@ -2,19 +2,7 @@
 """
 A simple example demonstrating a loadable command set
 """
-from cmd2 import Cmd, CommandSet, Statement, register_command, with_category, with_default_category
-
-
-@register_command
-@with_category("AAA")
-def do_another_command(cmd: Cmd, statement: Statement):
-    """
-    This is an example of registering an unbound function
-    :param cmd:
-    :param statement:
-    :return:
-    """
-    cmd.poutput('Another Unbound Command: {}'.format(statement.args))
+from cmd2 import Cmd, CommandSet, Statement, with_category, with_default_category
 
 
 @with_default_category('Custom Init')
