@@ -4,37 +4,8 @@ A simple example demonstrating a loadable command set
 """
 from typing import List
 
-from cmd2 import Cmd, CommandSet, Statement, register_command, with_category, with_default_category
+from cmd2 import Cmd, CommandSet, Statement, with_category, with_default_category
 from cmd2.utils import CompletionError
-
-
-@register_command
-@with_category("AAA")
-def do_unbound(cmd: Cmd, statement: Statement):
-    """This is an example of registering an unbound function
-
-    :param cmd:
-    :param statement:
-    :return:
-    """
-    cmd.poutput('Unbound Command: {}'.format(statement.args))
-
-
-@register_command
-@with_category("AAA")
-def do_func_with_help(cmd: Cmd, statement: Statement):
-    """
-    This is an example of registering an unbound function
-
-    :param cmd:
-    :param statement:
-    :return:
-    """
-    cmd.poutput('Unbound Command: {}'.format(statement.args))
-
-
-def help_func_with_help(cmd: Cmd):
-    cmd.poutput('Help for func_with_help')
 
 
 @with_default_category('Basic Completion')

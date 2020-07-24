@@ -4,17 +4,17 @@
 Test CommandSet
 """
 
+import argparse
 from typing import List
 
 import pytest
 
 import cmd2
 from cmd2 import utils
+from cmd2_ext_test import ExternalTestMixin
 
-from .conftest import complete_tester, normalize, run_cmd
 
-
-@cmd2.with_default_category('Command Set')
+@cmd2.with_default_category('Fruits')
 class CommandSetA(cmd2.CommandSet):
     def do_apple(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
         cmd.poutput('Apple!')
@@ -23,28 +23,45 @@ class CommandSetA(cmd2.CommandSet):
         """Banana Command"""
         cmd.poutput('Banana!!')
 
-    def do_cranberry(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
-        cmd.poutput('Cranberry!!')
+    cranberry_parser = cmd2.Cmd2ArgumentParser('cranberry')
+    cranberry_parser.add_argument('arg1', choices=['lemonade', 'juice', 'sauce'])
+
+    @cmd2.with_argparser_and_unknown_args(cranberry_parser)
+    def do_cranberry(self, cmd: cmd2.Cmd, ns: argparse.Namespace, unknown: List[str]):
+        cmd.poutput('Cranberry {}!!'.format(ns.arg1))
+        if unknown and len(unknown):
+            cmd.poutput('Unknown: ' + ', '.join(['{}']*len(unknown)).format(*unknown))
+        cmd.last_result = {'arg1': ns.arg1,
+                           'unknown': unknown}
 
     def help_cranberry(self, cmd: cmd2.Cmd):
         cmd.stdout.write('This command does diddly squat...\n')
 
-    def do_durian(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
+    @cmd2.with_argument_list
+    @cmd2.with_category('Also Alone')
+    def do_durian(self, cmd: cmd2.Cmd, args: List[str]):
         """Durian Command"""
-        cmd.poutput('Durian!!')
+        cmd.poutput('{} Arguments: '.format(len(args)))
+        cmd.poutput(', '.join(['{}']*len(args)).format(*args))
+        cmd.last_result = {'args': args}
 
     def complete_durian(self, cmd: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         return utils.basic_complete(text, line, begidx, endidx, ['stinks', 'smells', 'disgusting'])
 
+    elderberry_parser = cmd2.Cmd2ArgumentParser('elderberry')
+    elderberry_parser.add_argument('arg1')
+
     @cmd2.with_category('Alone')
-    def do_elderberry(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
-        cmd.poutput('Elderberry!!')
+    @cmd2.with_argparser(elderberry_parser)
+    def do_elderberry(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+        cmd.poutput('Elderberry {}!!'.format(ns.arg1))
+        cmd.last_result = {'arg1': ns.arg1}
 
 
-class WithCommandSets(cmd2.Cmd):
+class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
     """Class for testing custom help_* methods which override docstring help."""
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(WithCommandSets, self).__init__(*args, **kwargs)
 
 
 @cmd2.with_default_category('Command Set B')
@@ -84,8 +101,11 @@ def test_autoload_commands(command_sets_app):
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
 
-    assert 'Command Set' in cmds_cats
-    assert 'cranberry' in cmds_cats['Command Set']
+    assert 'Also Alone' in cmds_cats
+    assert 'durian' in cmds_cats['Also Alone']
+
+    assert 'Fruits' in cmds_cats
+    assert 'cranberry' in cmds_cats['Fruits']
 
 
 def test_custom_construct_commandsets():
@@ -96,6 +116,7 @@ def test_custom_construct_commandsets():
     cmds_cats, cmds_doc, cmds_undoc, help_topics = app._build_command_info()
     assert 'Command Set B' in cmds_cats
 
+    # Verifies that the same CommandSet can not be loaded twice
     command_set_2 = CommandSetB('bar')
     with pytest.raises(ValueError):
         assert app.install_command_set(command_set_2)
@@ -112,8 +133,8 @@ def test_load_commands(command_sets_manual):
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
 
-    assert 'Command Set' in cmds_cats
-    assert 'cranberry' in cmds_cats['Command Set']
+    assert 'Fruits' in cmds_cats
+    assert 'cranberry' in cmds_cats['Fruits']
 
     # uninstall the command set and verify it is now also no longer accessible
     command_sets_manual.uninstall_command_set(cmd_set)
@@ -121,7 +142,7 @@ def test_load_commands(command_sets_manual):
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
 
     assert 'Alone' not in cmds_cats
-    assert 'Command Set' not in cmds_cats
+    assert 'Fruits' not in cmds_cats
 
     # reinstall the command set and verify it is accessible
     command_sets_manual.install_command_set(cmd_set)
@@ -131,8 +152,8 @@ def test_load_commands(command_sets_manual):
     assert 'Alone' in cmds_cats
     assert 'elderberry' in cmds_cats['Alone']
 
-    assert 'Command Set' in cmds_cats
-    assert 'cranberry' in cmds_cats['Command Set']
+    assert 'Fruits' in cmds_cats
+    assert 'cranberry' in cmds_cats['Fruits']
 
 
 def test_partial_with_passthru():
@@ -158,3 +179,36 @@ def test_partial_with_passthru():
     assert hasattr(test_func, 'Bar')
 
     assert getattr(test_func, 'Bar', None) == 6
+
+
+def test_commandset_decorators(command_sets_app):
+    result = command_sets_app.app_cmd('cranberry juice extra1 extra2')
+    assert len(result.data['unknown']) == 2
+    assert 'extra1' in result.data['unknown']
+    assert 'extra2' in result.data['unknown']
+    assert result.data['arg1'] == 'juice'
+    assert result.stderr is None
+
+    result = command_sets_app.app_cmd('durian juice extra1 extra2')
+    assert len(result.data['args']) == 3
+    assert 'juice' in result.data['args']
+    assert 'extra1' in result.data['args']
+    assert 'extra2' in result.data['args']
+    assert result.stderr is None
+
+    result = command_sets_app.app_cmd('durian')
+    assert len(result.data['args']) == 0
+    assert result.stderr is None
+
+    result = command_sets_app.app_cmd('elderberry')
+    assert result.stderr is not None
+    assert len(result.stderr) > 0
+    assert 'arguments are required' in result.stderr
+    assert result.data is None
+
+    result = command_sets_app.app_cmd('elderberry a b')
+    assert result.stderr is not None
+    assert len(result.stderr) > 0
+    assert 'unrecognized arguments' in result.stderr
+    assert result.data is None
+
