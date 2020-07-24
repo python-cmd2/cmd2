@@ -1,8 +1,8 @@
 #
 # coding=utf-8
 
-from cmd2 import cmd2
 import cmd2_myplugin
+from cmd2 import cmd2
 
 ######
 #

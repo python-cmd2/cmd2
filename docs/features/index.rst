@@ -17,6 +17,7 @@ Features
    hooks
    initialization
    misc
+   modular_commands
    multiline_commands
    os
    packaging

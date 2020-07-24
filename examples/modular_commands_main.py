@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # coding=utf-8
 """
-A simple example demonstrating how to integrate tab completion with argparse-based commands.
+A complex example demonstrating a variety of methods to load CommandSets using a mix of command decorators
+with examples of how to integrate tab completion with argparse-based commands.
 """
 import argparse
 from typing import Dict, Iterable, List, Optional
@@ -9,8 +10,8 @@ from typing import Dict, Iterable, List, Optional
 from cmd2 import Cmd, Cmd2ArgumentParser, CommandSet, CompletionItem, with_argparser
 from cmd2.utils import CompletionError, basic_complete
 from modular_commands.commandset_basic import BasicCompletionCommandSet  # noqa: F401
-from modular_commands.commandset_custominit import CustomInitCommandSet  # noqa: F401
 from modular_commands.commandset_complex import CommandSetA  # noqa: F401
+from modular_commands.commandset_custominit import CustomInitCommandSet  # noqa: F401
 
 # Data source for argparse.choices
 food_item_strs = ['Pizza', 'Ham', 'Ham Sandwich', 'Potato']

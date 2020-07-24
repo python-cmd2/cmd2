@@ -1,11 +1,14 @@
 # coding=utf-8
 """Decorators for ``cmd2`` commands"""
 import argparse
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
 
 from . import constants
 from .exceptions import Cmd2ArgparseError
 from .parsing import Statement
+
+if TYPE_CHECKING:
+    import cmd2
 
 
 def with_category(category: str) -> Callable:

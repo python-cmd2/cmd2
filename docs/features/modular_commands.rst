@@ -1,0 +1,201 @@
+Modular Commands
+================
+
+Overview
+--------
+
+Cmd2 also enables developers to modularize their command definitions into Command Sets. Command sets represent
+a logical grouping of commands within an cmd2 application. By default, all CommandSets will be discovered and loaded
+automatically when the cmd2.Cmd class is instantiated with this mixin. This also enables the developer to
+dynamically add/remove commands from the cmd2 application. This could be useful for loadable plugins that
+add additional capabilities.
+
+Features
+~~~~~~~~
+
+* Modular Command Sets - Commands can be broken into separate modules rather than in one god class holding all commands.
+* Automatic Command Discovery - In your application, merely defining and importing a CommandSet is sufficient for
+  cmd2 to discover and load your command. No manual registration is necessary.
+* Dynamically Loadable/Unloadable Commands - Command functions and CommandSets can both be loaded and unloaded
+  dynamically during application execution. This can enable features such as dynamically loaded modules that
+  add additional commands.
+
+See the examples for more details: https://github.com/python-cmd2/cmd2/tree/master/plugins/command_sets/examples
+
+
+Defining Commands
+-----------------
+
+Command Sets
+~~~~~~~~~~~~~
+
+CommandSets group multiple commands together. The plugin will inspect functions within a ``CommandSet``
+using the same rules as when they're defined in ``cmd2.Cmd``. Commands must be prefixed with ``do_``, help
+functions with ``help_``, and completer functions with ``complete_``.
+
+A new decorator ``with_default_category`` is provided to categorize all commands within a CommandSet in the
+same command category.  Individual commands in a CommandSet may be override the default category by specifying a
+specific category with ``cmd.with_category``.
+
+CommandSet methods will always expect ``self``, and ``cmd2.Cmd`` as the first two parameters. The parameters that
+follow will depend on the specific command decorator being used.
+
+CommandSets will only be auto-loaded if the constructor takes no arguments.
+If you need to provide constructor arguments, see :ref:`features/modular_commands:Manual CommandSet Construction`
+
+.. code-block:: python
+
+    import cmd2
+    from cmd2 import CommandSet, with_default_category
+
+    @with_default_category('My Category')
+    class AutoLoadCommandSet(CommandSet):
+        def __init__(self):
+            super().__init__()
+
+        def do_hello(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+            cmd.poutput('Hello')
+
+        def do_world(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+            cmd.poutput('World')
+
+    class ExampleApp(cmd2.Cmd):
+        """
+        CommandSets are automatically loaded. Nothing needs to be done.
+        """
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+        def do_something(self, arg):
+            self.poutput('this is the something command')
+
+
+Manual CommandSet Construction
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If a CommandSet class requires parameters to be provided to the constructor, you man manually construct
+CommandSets and pass in the constructor to Cmd2.
+
+.. code-block:: python
+
+    import cmd2
+    from cmd2 import CommandSet, with_default_category
+
+    @with_default_category('My Category')
+    class CustomInitCommandSet(CommandSet):
+        def __init__(self, arg1, arg2):
+            super().__init__()
+
+            self._arg1 = arg1
+            self._arg2 = arg2
+
+        def do_show_arg1(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+            cmd.poutput('Arg1: ' + self._arg1)
+
+        def do_show_arg2(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+            cmd.poutput('Arg2: ' + self._arg2)
+
+    class ExampleApp(cmd2.Cmd):
+        """
+        CommandSets with constructor parameters are provided in the constructor
+        """
+        def __init__(self, *args, **kwargs):
+            # gotta have this or neither the plugin or cmd2 will initialize
+            super().__init__(*args, **kwargs)
+
+        def do_something(self, arg):
+            self.last_result = 5
+            self.poutput('this is the something command')
+
+
+    def main():
+        my_commands = CustomInitCommandSet(1, 2)
+        app = ExampleApp(command_sets=[my_commands])
+        app.cmdloop()
+
+
+Dynamic Commands
+~~~~~~~~~~~~~~~~
+
+You man also dynamically load and unload commands by installing and removing CommandSets at runtime. For example,
+if you could support runtime loadable plugins or add/remove commands based on your state.
+
+You may need to disable command auto-loading if you need dynamically load commands at runtime.
+
+.. code-block:: python
+
+    import argparse
+    import cmd2
+    from cmd2 import CommandSet, with_argparser, with_category, with_default_category
+
+
+    @with_default_category('Fruits')
+    class LoadableFruits(CommandSet):
+        def __init__(self):
+            super().__init__()
+
+        def do_apple(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+            cmd.poutput('Apple')
+
+        def do_banana(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+            cmd.poutput('Banana')
+
+
+    @with_default_category('Vegetables')
+    class LoadableVegetables(CommandSet):
+        def __init__(self):
+            super().__init__()
+
+        def do_arugula(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+            cmd.poutput('Arugula')
+
+        def do_bokchoy(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+            cmd.poutput('Bok Choy')
+
+
+    class ExampleApp(cmd2.Cmd):
+        """
+        CommandSets are loaded via the `load` and `unload` commands
+        """
+
+        def __init__(self, *args, **kwargs):
+            # gotta have this or neither the plugin or cmd2 will initialize
+            super().__init__(*args, auto_load_commands=False, **kwargs)
+
+            self._fruits = LoadableFruits()
+            self._vegetables = LoadableVegetables()
+
+        load_parser = cmd2.Cmd2ArgumentParser('load')
+        load_parser.add_argument('cmds', choices=['fruits', 'vegetables'])
+
+        @with_argparser(load_parser)
+        @with_category('Command Loading')
+        def do_load(self, ns: argparse.Namespace):
+            if ns.cmds == 'fruits':
+                try:
+                    self.install_command_set(self._fruits)
+                    self.poutput('Fruits loaded')
+                except ValueError:
+                    self.poutput('Fruits already loaded')
+
+            if ns.cmds == 'vegetables':
+                try:
+                    self.install_command_set(self._vegetables)
+                    self.poutput('Vegetables loaded')
+                except ValueError:
+                    self.poutput('Vegetables already loaded')
+
+        @with_argparser(load_parser)
+        def do_unload(self, ns: argparse.Namespace):
+            if ns.cmds == 'fruits':
+                self.uninstall_command_set(self._fruits)
+                self.poutput('Fruits unloaded')
+
+            if ns.cmds == 'vegetables':
+                self.uninstall_command_set(self._vegetables)
+                self.poutput('Vegetables unloaded')
+
+
+    if __name__ == '__main__':
+        app = ExampleApp()
+        app.cmdloop()

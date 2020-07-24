@@ -2,7 +2,7 @@
 # coding=utf-8
 """External test interface plugin"""
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 import cmd2
 

@@ -209,3 +209,15 @@ to:
 - remove commands included in ``cmd2``
 - hide commands from the help menu
 - disable and re-enable commands at runtime
+
+
+Modular Commands and Loading/Unloading Commands
+-----------------------------------------------
+
+See :ref:`features/modular_commands:Modular Commands` for details of how
+to:
+
+- Define commands in separate CommandSet modules
+- Load or unload commands at runtime
+
+

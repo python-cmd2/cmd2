@@ -27,10 +27,9 @@ WARNING: This example requires the plumbum package, which isn't normally require
 """
 import argparse
 
-from plumbum.colors import bg, fg
-
 import cmd2
 from cmd2 import ansi
+from plumbum.colors import bg, fg
 
 
 class FgColors(ansi.ColorBase):

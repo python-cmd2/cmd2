@@ -52,21 +52,28 @@ namespace.add_collection(namespace_clean, 'clean')
 
 
 @invoke.task()
-def pytest(context, junit=False, pty=True):
+def pytest(context, junit=False, pty=True, base=False, isolated=False):
     """Run tests and code coverage using pytest"""
     with context.cd(TASK_ROOT_STR):
-        command_str = 'pytest --cov=cmd2 --cov-report=term --cov-report=html '
+        command_str = 'pytest '
+        command_str += ' --cov=cmd2 '
+        command_str += ' --cov-append --cov-report=term --cov-report=html '
+
+        if not base and not isolated:
+            base = True
+            isolated = True
+
         if junit:
             command_str += ' --junitxml=junit/test-results.xml '
-        tests_cmd = command_str + ' tests'
-        context.run(tests_cmd, pty=pty)
 
-        command_str += ' --cov-append'
-
-        for root, dirnames, _ in os.walk(TASK_ROOT/'isolated_tests'):
-            for dir in dirnames:
-                if dir.startswith('test_'):
-                    context.run(command_str + ' isolated_tests/' + dir)
+        if base:
+            tests_cmd = command_str + ' tests'
+            context.run(tests_cmd, pty=pty)
+        if isolated:
+            for root, dirnames, _ in os.walk(str(TASK_ROOT/'isolated_tests')):
+                for dir in dirnames:
+                    if dir.startswith('test_'):
+                        context.run(command_str + ' isolated_tests/' + dir)
 
 
 namespace.add_task(pytest)
