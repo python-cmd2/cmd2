@@ -724,6 +724,24 @@ class Cmd2HelpFormatter(argparse.RawTextHelpFormatter):
         return result
 
 
+class _UnloadableSubParsersAction(argparse._SubParsersAction):
+    """Extends the argparse internal SubParsers action to allow sub-parsers to be removed dynamically"""
+    def remove_parser(self, name):
+        """Removes a sub-parser from the sub-parsers group"""
+        for choice_action in self._choices_actions:
+            if choice_action.dest == name:
+                self._choices_actions.remove(choice_action)
+                break
+
+        subparser = self._name_parser_map[name]
+        to_remove = []
+        for name, parser in self._name_parser_map.items():
+            if parser is subparser:
+                to_remove.append(name)
+        for name in to_remove:
+            del self._name_parser_map[name]
+
+
 # noinspection PyCompatibility
 class Cmd2ArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser class that improves error and help output"""
@@ -754,11 +772,21 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             conflict_handler=conflict_handler,
             add_help=add_help,
             allow_abbrev=allow_abbrev)
+        self.register('action', 'unloadable_parsers', _UnloadableSubParsersAction)
 
-    def add_subparsers(self, **kwargs):
-        """Custom override. Sets a default title if one was not given."""
+    def add_subparsers(self, unloadable=False, **kwargs):
+        """
+        Custom override. Sets a default title if one was not given.
+
+        :param unloadable: Flag whether this sub-parsers group will support unloading parsers
+        :param kwargs: additional keyword arguments
+        :return: argparse Subparser Action
+        """
         if 'title' not in kwargs:
             kwargs['title'] = 'subcommands'
+
+        if unloadable:
+            kwargs['action'] = 'unloadable_parsers'
 
         return super().add_subparsers(**kwargs)
 

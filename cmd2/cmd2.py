@@ -43,7 +43,7 @@ from contextlib import redirect_stdout
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
 from . import ansi, constants, plugin, utils
-from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
+from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem, _UnloadableSubParsersAction
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .command_definition import CommandSet, _partial_passthru
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
@@ -260,6 +260,8 @@ class Cmd(cmd.Cmd):
             if not valid:
                 raise ValueError("Invalid command name {!r}: {}".format(cur_cmd, errmsg))
 
+        self._register_subcommands(self)
+
         # Stores results from the last command run to enable usage of results in a Python script or interactive console
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
         self.last_result = None
@@ -429,12 +431,12 @@ class Cmd(cmd.Cmd):
 
         installed_attributes = []
         try:
-            for method in methods:
-                command = method[0][len(COMMAND_FUNC_PREFIX):]
-                command_wrapper = _partial_passthru(method[1], self)
+            for method_name, method in methods:
+                command = method_name[len(COMMAND_FUNC_PREFIX):]
+                command_wrapper = _partial_passthru(method, self)
 
                 self.__install_command_function(command, command_wrapper, type(cmdset).__name__)
-                installed_attributes.append(method[0])
+                installed_attributes.append(method_name)
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
@@ -451,6 +453,8 @@ class Cmd(cmd.Cmd):
                     installed_attributes.append(help_func_name)
 
             self._installed_command_sets.append(cmdset)
+
+            self._register_subcommands(cmdset)
         except Exception:
             for attrib in installed_attributes:
                 delattr(self, attrib)
@@ -500,6 +504,9 @@ class Cmd(cmd.Cmd):
         :param cmdset: CommandSet to uninstall
         """
         if cmdset in self._installed_command_sets:
+
+            self._unregister_subcommands(cmdset)
+
             methods = inspect.getmembers(
                 cmdset,
                 predicate=lambda meth: inspect.ismethod(meth) and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
@@ -516,6 +523,88 @@ class Cmd(cmd.Cmd):
 
             cmdset.on_unregister(self)
             self._installed_command_sets.remove(cmdset)
+
+    def _register_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
+        """
+        Register sub-commands with their base command
+
+        :param cmdset: CommandSet containing sub-commands
+        """
+        if not (cmdset is self or cmdset in self._installed_command_sets):
+            raise ValueError('Adding sub-commands from an unregistered CommandSet')
+
+        # find all methods that start with the sub-command prefix
+        methods = inspect.getmembers(
+            cmdset,
+            predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable))
+            and hasattr(meth, constants.SUBCMD_ATTR_NAME)
+            and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
+            and hasattr(meth, constants.CMD_ATTR_ARGPARSER)
+        )
+
+        # iterate through all matching methods
+        for method_name, method in methods:
+            subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
+            command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)
+            subcmd_parser = getattr(method, constants.CMD_ATTR_ARGPARSER)
+
+            # Search for the base command function and verify it has an argparser defined
+            command_func = self.cmd_func(command_name)
+            if command_func is None or not hasattr(command_func, constants.CMD_ATTR_ARGPARSER):
+                raise TypeError('Could not find command: ' + command_name + ' needed by sub-command ' + str(method))
+            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER)
+            if command_parser is None:
+                raise TypeError('Could not find argparser for command: ' + command_name + ' needed by sub-command ' + str(method))
+
+            if hasattr(method, '__doc__') and method.__doc__ is not None:
+                help_text = method.__doc__.splitlines()[0]
+            else:
+                help_text = subcommand_name
+
+            if isinstance(cmdset, CommandSet):
+                command_handler = _partial_passthru(method, self)
+            else:
+                command_handler = method
+            subcmd_parser.set_defaults(handler=command_handler)
+
+            for action in command_parser._actions:
+                if isinstance(action, _UnloadableSubParsersAction):
+                    action.add_parser(subcommand_name, parents=[subcmd_parser], help=help_text)
+
+    def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
+        """
+        Unregister sub-commands from their base command
+
+        :param cmdset: CommandSet containing sub-commands
+        """
+        if not (cmdset is self or cmdset in self._installed_command_sets):
+            raise ValueError('Removing sub-commands from an unregistered CommandSet')
+
+        # find all methods that start with the sub-command prefix
+        methods = inspect.getmembers(
+            cmdset,
+            predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable))
+            and hasattr(meth, constants.SUBCMD_ATTR_NAME)
+            and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
+            and hasattr(meth, constants.CMD_ATTR_ARGPARSER)
+        )
+
+        # iterate through all matching methods
+        for method_name, method in methods:
+            subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
+            command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)
+
+            # Search for the base command function and verify it has an argparser defined
+            command_func = self.cmd_func(command_name)
+            if command_func is None or not hasattr(command_func, constants.CMD_ATTR_ARGPARSER):
+                raise TypeError('Could not find command: ' + command_name + ' needed by sub-command ' + str(method))
+            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER)
+            if command_parser is None:
+                raise TypeError('Could not find argparser for command: ' + command_name + ' needed by sub-command ' + str(method))
+
+            for action in command_parser._actions:
+                if isinstance(action, _UnloadableSubParsersAction):
+                    action.remove_parser(subcommand_name)
 
     def add_settable(self, settable: Settable) -> None:
         """

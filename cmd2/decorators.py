@@ -335,3 +335,34 @@ def with_argparser(parser: argparse.ArgumentParser, *,
 
     # noinspection PyTypeChecker
     return arg_decorator
+
+
+def as_subcommand_to(command: str,
+                     subcommand: str,
+                     parser: argparse.ArgumentParser) -> Callable[[argparse.Namespace], Optional[bool]]:
+    """
+    Tag this method as a sub-command to an existing argparse decorated command.
+
+    :param command: Command Name
+    :param subcommand: Sub-command name
+    :param parser: argparse Parser to for this sub-command
+    :return: Wrapper function that can receive an argparse.Namespace
+    """
+    def arg_decorator(func: Callable):
+        _set_parser_prog(parser, subcommand)
+
+        # If the description has not been set, then use the method docstring if one exists
+        if parser.description is None and func.__doc__:
+            parser.description = func.__doc__
+
+        parser.set_defaults(func=func)
+
+        # # Set some custom attributes for this command
+        setattr(func, constants.SUBCMD_ATTR_COMMAND, command)
+        setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
+        setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
+
+        return func
+
+    # noinspection PyTypeChecker
+    return arg_decorator
