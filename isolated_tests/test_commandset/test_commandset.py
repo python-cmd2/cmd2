@@ -121,6 +121,10 @@ def test_custom_construct_commandsets():
     with pytest.raises(ValueError):
         assert app.install_command_set(command_set_2)
 
+    # Verify that autoload doesn't conflict with a manually loaded CommandSet that could be autoloaded.
+    app2 = WithCommandSets(command_sets=[CommandSetA()])
+    assert hasattr(app2, 'do_apple')
+
 
 def test_load_commands(command_sets_manual):
 
@@ -143,6 +147,9 @@ def test_load_commands(command_sets_manual):
 
     assert 'Alone' not in cmds_cats
     assert 'Fruits' not in cmds_cats
+
+    # uninstall a second time and verify no errors happen
+    command_sets_manual.uninstall_command_set(cmd_set)
 
     # reinstall the command set and verify it is accessible
     command_sets_manual.install_command_set(cmd_set)
@@ -211,3 +218,166 @@ def test_commandset_decorators(command_sets_app):
     assert len(result.stderr) > 0
     assert 'unrecognized arguments' in result.stderr
     assert result.data is None
+
+
+def test_load_commandset_errors(command_sets_manual, capsys):
+    cmd_set = CommandSetA()
+
+    # create a conflicting command before installing CommandSet to verify rollback behavior
+    command_sets_manual._install_command_function('durian', cmd_set.do_durian)
+    with pytest.raises(ValueError):
+        command_sets_manual.install_command_set(cmd_set)
+
+    # verify that the commands weren't installed
+    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+
+    assert 'Alone' not in cmds_cats
+    assert 'Fruits' not in cmds_cats
+    assert not command_sets_manual._installed_command_sets
+
+    delattr(command_sets_manual, 'do_durian')
+
+    # pre-create intentionally conflicting macro and alias names
+    command_sets_manual.app_cmd('macro create apple run_pyscript')
+    command_sets_manual.app_cmd('alias create banana run_pyscript')
+
+    # now install a command set and verify the commands are now present
+    command_sets_manual.install_command_set(cmd_set)
+    out, err = capsys.readouterr()
+
+    # verify aliases and macros are deleted with warning if they conflict with a command
+    assert "Deleting alias 'banana'" in err
+    assert "Deleting macro 'apple'" in err
+
+    # verify duplicate commands are detected
+    with pytest.raises(ValueError):
+        command_sets_manual._install_command_function('banana', cmd_set.do_banana)
+
+    # verify bad command names are detected
+    with pytest.raises(ValueError):
+        command_sets_manual._install_command_function('bad command', cmd_set.do_banana)
+
+    # verify error conflict with existing completer function
+    with pytest.raises(ValueError):
+        command_sets_manual._install_completer_function('durian', cmd_set.complete_durian)
+
+    # verify error conflict with existing help function
+    with pytest.raises(ValueError):
+        command_sets_manual._install_help_function('cranberry', cmd_set.help_cranberry)
+
+
+class LoadableBase(cmd2.CommandSet):
+    def __init__(self, dummy):
+        super(LoadableBase, self).__init__()
+        self._dummy = dummy  # prevents autoload
+
+    cut_parser = cmd2.Cmd2ArgumentParser('cut')
+    cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut', unloadable=True)
+
+    @cmd2.with_argparser(cut_parser)
+    def do_cut(self, ns: argparse.Namespace):
+        """Cut something"""
+        func = getattr(ns, 'handler', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(ns)
+        else:
+            # No subcommand was provided, so call help
+            self.poutput('This command does nothing without sub-parsers registered')
+            self.do_help('cut')
+
+
+class LoadableBadBase(cmd2.CommandSet):
+    def __init__(self, dummy):
+        super(LoadableBadBase, self).__init__()
+        self._dummy = dummy  # prevents autoload
+
+    def do_cut(self, ns: argparse.Namespace):
+        """Cut something"""
+        func = getattr(ns, 'handler', None)
+        if func is not None:
+            # Call whatever subcommand function was selected
+            func(ns)
+        else:
+            # No subcommand was provided, so call help
+            self.poutput('This command does nothing without sub-parsers registered')
+            self.do_help('cut')
+
+
+@cmd2.with_default_category('Fruits')
+class LoadableFruits(cmd2.CommandSet):
+    def __init__(self, dummy):
+        super(LoadableFruits, self).__init__()
+        self._dummy = dummy  # prevents autoload
+
+    def do_apple(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+        cmd.poutput('Apple')
+
+    banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+    banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
+
+    @cmd2.as_subcommand_to('cut', 'banana', banana_parser)
+    def cut_banana(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+        """Cut banana"""
+        cmd.poutput('cutting banana: ' + ns.direction)
+
+
+@cmd2.with_default_category('Vegetables')
+class LoadableVegetables(cmd2.CommandSet):
+    def __init__(self, dummy):
+        super(LoadableVegetables, self).__init__()
+        self._dummy = dummy  # prevents autoload
+
+    def do_arugula(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+        cmd.poutput('Arugula')
+
+    bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+    bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
+
+    @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
+    def cut_bokchoy(self, cmd: cmd2.Cmd, _: cmd2.Statement):
+        cmd.poutput('Bok Choy')
+
+
+def test_subcommands(command_sets_manual):
+
+    base_cmds = LoadableBase(1)
+    badbase_cmds = LoadableBadBase(1)
+    fruit_cmds = LoadableFruits(1)
+    veg_cmds = LoadableVegetables(1)
+
+    # installing sub-commands without base command present raises exception
+    with pytest.raises(TypeError):
+        command_sets_manual.install_command_set(fruit_cmds)
+
+    # if the base command is present but isn't an argparse command, expect exception
+    command_sets_manual.install_command_set(badbase_cmds)
+    with pytest.raises(TypeError):
+        command_sets_manual.install_command_set(fruit_cmds)
+
+    # verify that the commands weren't installed
+    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    assert 'cut' in cmds_doc
+    assert 'Fruits' not in cmds_cats
+
+    # Now install the good base commands
+    command_sets_manual.uninstall_command_set(badbase_cmds)
+    command_sets_manual.install_command_set(base_cmds)
+
+    # verify that we catch an attempt to register subcommands when the commandset isn't installed
+    with pytest.raises(ValueError):
+        command_sets_manual._register_subcommands(fruit_cmds)
+
+    # verify that command set install and uninstalls without problems
+    command_sets_manual.install_command_set(fruit_cmds)
+    command_sets_manual.install_command_set(veg_cmds)
+    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    assert 'Fruits' in cmds_cats
+
+    command_sets_manual.uninstall_command_set(fruit_cmds)
+    cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
+    assert 'Fruits' not in cmds_cats
+
+    # verify a double-unregister raises exception
+    with pytest.raises(ValueError):
+        command_sets_manual._unregister_subcommands(fruit_cmds)
