@@ -427,7 +427,7 @@ class Cmd(cmd.Cmd):
         methods = inspect.getmembers(
             cmdset,
             predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable))
-            and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+            and hasattr(meth, '__name__') and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
 
         installed_attributes = []
         try:
@@ -435,21 +435,21 @@ class Cmd(cmd.Cmd):
                 command = method_name[len(COMMAND_FUNC_PREFIX):]
                 command_wrapper = _partial_passthru(method, self)
 
-                self.__install_command_function(command, command_wrapper, type(cmdset).__name__)
+                self._install_command_function(command, command_wrapper, type(cmdset).__name__)
                 installed_attributes.append(method_name)
 
                 completer_func_name = COMPLETER_FUNC_PREFIX + command
                 cmd_completer = getattr(cmdset, completer_func_name, None)
                 if cmd_completer is not None:
                     completer_wrapper = _partial_passthru(cmd_completer, self)
-                    self.__install_completer_function(command, completer_wrapper)
+                    self._install_completer_function(command, completer_wrapper)
                     installed_attributes.append(completer_func_name)
 
                 help_func_name = HELP_FUNC_PREFIX + command
                 cmd_help = getattr(cmdset, help_func_name, None)
                 if cmd_help is not None:
                     help_wrapper = _partial_passthru(cmd_help, self)
-                    self.__install_help_function(command, help_wrapper)
+                    self._install_help_function(command, help_wrapper)
                     installed_attributes.append(help_func_name)
 
             self._installed_command_sets.append(cmdset)
@@ -458,9 +458,10 @@ class Cmd(cmd.Cmd):
         except Exception:
             for attrib in installed_attributes:
                 delattr(self, attrib)
+            self._installed_command_sets.remove(cmdset)
             raise
 
-    def __install_command_function(self, command, command_wrapper, context=''):
+    def _install_command_function(self, command: str, command_wrapper: Callable, context=''):
         cmd_func_name = COMMAND_FUNC_PREFIX + command
 
         # Make sure command function doesn't share naem with existing attribute
@@ -484,19 +485,19 @@ class Cmd(cmd.Cmd):
 
         setattr(self, cmd_func_name, command_wrapper)
 
-    def __install_completer_function(self, cmd_name, cmd_completer):
+    def _install_completer_function(self, cmd_name: str, cmd_completer: Callable):
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
 
         if hasattr(self, completer_func_name):
             raise ValueError('Attribute already exists: {}'.format(completer_func_name))
         setattr(self, completer_func_name, cmd_completer)
 
-    def __install_help_function(self, cmd_name, cmd_completer):
+    def _install_help_function(self, cmd_name: str, cmd_help: Callable):
         help_func_name = HELP_FUNC_PREFIX + cmd_name
 
         if hasattr(self, help_func_name):
             raise ValueError('Attribute already exists: {}'.format(help_func_name))
-        setattr(self, help_func_name, cmd_completer)
+        setattr(self, help_func_name, cmd_help)
 
     def uninstall_command_set(self, cmdset: CommandSet):
         """
@@ -551,10 +552,12 @@ class Cmd(cmd.Cmd):
             # Search for the base command function and verify it has an argparser defined
             command_func = self.cmd_func(command_name)
             if command_func is None or not hasattr(command_func, constants.CMD_ATTR_ARGPARSER):
-                raise TypeError('Could not find command: ' + command_name + ' needed by sub-command ' + str(method))
+                raise TypeError('Could not find command "{}" needed by sub-command: {}'
+                                .format(command_name, str(method)))
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER)
             if command_parser is None:
-                raise TypeError('Could not find argparser for command: ' + command_name + ' needed by sub-command ' + str(method))
+                raise TypeError('Could not find argparser for command "{}" needed by sub-command: {}'
+                                .format(command_name, str(method)))
 
             if hasattr(method, '__doc__') and method.__doc__ is not None:
                 help_text = method.__doc__.splitlines()[0]
@@ -597,10 +600,12 @@ class Cmd(cmd.Cmd):
             # Search for the base command function and verify it has an argparser defined
             command_func = self.cmd_func(command_name)
             if command_func is None or not hasattr(command_func, constants.CMD_ATTR_ARGPARSER):
-                raise TypeError('Could not find command: ' + command_name + ' needed by sub-command ' + str(method))
+                raise TypeError('Could not find command "{}" needed by sub-command: {}'
+                                .format(command_name, str(method)))
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER)
             if command_parser is None:
-                raise TypeError('Could not find argparser for command: ' + command_name + ' needed by sub-command ' + str(method))
+                raise TypeError('Could not find argparser for command "{}" needed by sub-command: {}'
+                                .format(command_name, str(method)))
 
             for action in command_parser._actions:
                 if isinstance(action, _UnloadableSubParsersAction):
