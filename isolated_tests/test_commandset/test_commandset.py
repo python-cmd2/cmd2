@@ -346,7 +346,7 @@ def test_subcommands(command_sets_manual):
     fruit_cmds = LoadableFruits(1)
     veg_cmds = LoadableVegetables(1)
 
-    # installing sub-commands without base command present raises exception
+    # installing subcommands without base command present raises exception
     with pytest.raises(TypeError):
         command_sets_manual.install_command_set(fruit_cmds)
 

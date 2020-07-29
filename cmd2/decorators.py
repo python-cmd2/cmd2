@@ -1,7 +1,7 @@
 # coding=utf-8
 """Decorators for ``cmd2`` commands"""
 import argparse
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from . import constants
 from .exceptions import Cmd2ArgparseError
@@ -339,13 +339,18 @@ def with_argparser(parser: argparse.ArgumentParser, *,
 
 def as_subcommand_to(command: str,
                      subcommand: str,
-                     parser: argparse.ArgumentParser) -> Callable[[argparse.Namespace], Optional[bool]]:
+                     parser: argparse.ArgumentParser,
+                     *,
+                     help_text: Optional[str] = None,
+                     aliases: Iterable[str] = None) -> Callable[[argparse.Namespace], Optional[bool]]:
     """
-    Tag this method as a sub-command to an existing argparse decorated command.
+    Tag this method as a subcommand to an existing argparse decorated command.
 
     :param command: Command Name
-    :param subcommand: Sub-command name
-    :param parser: argparse Parser to for this sub-command
+    :param subcommand: Subcommand name
+    :param parser: argparse Parser for this subcommand
+    :param help_text: Help message for this subcommand
+    :param aliases: Alternative names for this subcommand
     :return: Wrapper function that can receive an argparse.Namespace
     """
     def arg_decorator(func: Callable):
@@ -357,10 +362,16 @@ def as_subcommand_to(command: str,
 
         parser.set_defaults(func=func)
 
-        # # Set some custom attributes for this command
+        # Set some custom attributes for this command
         setattr(func, constants.SUBCMD_ATTR_COMMAND, command)
         setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
         setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
+        parser_args = {}
+        if help_text is not None:
+            parser_args['help'] = help_text
+        if aliases is not None:
+            parser_args['aliases'] = aliases[:]
+        setattr(func, constants.SUBCMD_ATTR_PARSER_ARGS, parser_args)
 
         return func
 

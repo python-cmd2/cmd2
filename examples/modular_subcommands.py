@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 # coding=utf-8
-"""A simple example demonstracting modular sub-command loading through CommandSets
+"""A simple example demonstracting modular subcommand loading through CommandSets
 
-In this example, there are loadable CommandSets defined. Each CommandSet has 1 sub-command defined that will be
+In this example, there are loadable CommandSets defined. Each CommandSet has 1 subcommand defined that will be
 attached to the 'cut' command.
 
 The cut command is implemented with the `do_cut` function that has been tagged as an argparse command.
 
 The `load` and `unload` command will load and unload the CommandSets. The available top level commands as well as
-sub-commands to the `cut` command will change depending on which CommandSets are loaded.
+subcommands to the `cut` command will change depending on which CommandSets are loaded.
 """
 import argparse
 import cmd2

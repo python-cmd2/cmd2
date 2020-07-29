@@ -50,6 +50,7 @@ CMD_ATTR_ARGPARSER = 'argparser'
 # Whether or not tokens are unquoted before sending to argparse
 CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
 
-# sub-command attributes for the base command name and the sub-command name
+# subcommand attributes for the base command name and the subcommand name
 SUBCMD_ATTR_COMMAND = 'parent_command'
 SUBCMD_ATTR_NAME = 'subcommand_name'
+SUBCMD_ATTR_PARSER_ARGS = 'subcommand_parser_args'

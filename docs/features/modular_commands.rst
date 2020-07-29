@@ -19,7 +19,7 @@ Features
 * Dynamically Loadable/Unloadable Commands - Command functions and CommandSets can both be loaded and unloaded
   dynamically during application execution. This can enable features such as dynamically loaded modules that
   add additional commands.
-* Sub-command Injection - Sub-commands can be defined separately from the base command. This allows for a more
+* Subcommand Injection - Subcommands can be defined separately from the base command. This allows for a more
   action-centric instead of object-centric command system while still organizing your code and handlers around the
   objects being managed.
 
@@ -204,19 +204,19 @@ You may need to disable command auto-loading if you need dynamically load comman
         app.cmdloop()
 
 
-Injecting Sub-Commands
+Injecting Subcommands
 ----------------------
 
 Description
 ~~~~~~~~~~~
-Using the `with_argparse` decorator, it is possible to define sub-commands for your command. This has a tendency to
+Using the `with_argparse` decorator, it is possible to define subcommands for your command. This has a tendency to
 either drive your interface into an object-centric interface. For example, imagine you have a tool that manages your
 media collection and you want to manage movies or shows. An object-centric approach would push you to have base commands
-such as `movies` and `shows` which each have sub-commands `add`, `edit`, `list`, `delete`. If you wanted to present an
+such as `movies` and `shows` which each have subcommands `add`, `edit`, `list`, `delete`. If you wanted to present an
 action-centric command set, so that `add`, `edit`, `list`, and `delete` are the base commands, you'd have to organize
 your code around these similar actions rather than organizing your code around similar objects being managed.
 
-Sub-command injection allows you to inject sub-commands into a base command to present an interface that is sensible to
+Subcommand injection allows you to inject subcommands into a base command to present an interface that is sensible to
 a user while still organizing your code in whatever structure make more logical sense to the developer.
 
 Example
