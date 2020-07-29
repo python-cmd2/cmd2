@@ -774,7 +774,7 @@ class Cmd2ArgumentParser(argparse.ArgumentParser):
             allow_abbrev=allow_abbrev)
         self.register('action', 'unloadable_parsers', _UnloadableSubParsersAction)
 
-    def add_subparsers(self, unloadable=False, **kwargs):
+    def add_subparsers(self, unloadable: bool = False, **kwargs):
         """
         Custom override. Sets a default title if one was not given.
 

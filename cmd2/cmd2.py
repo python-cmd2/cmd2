@@ -527,14 +527,14 @@ class Cmd(cmd.Cmd):
 
     def _register_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
         """
-        Register sub-commands with their base command
+        Register subcommands with their base command
 
-        :param cmdset: CommandSet containing sub-commands
+        :param cmdset: CommandSet containing subcommands
         """
         if not (cmdset is self or cmdset in self._installed_command_sets):
-            raise ValueError('Adding sub-commands from an unregistered CommandSet')
+            raise ValueError('Adding subcommands from an unregistered CommandSet')
 
-        # find all methods that start with the sub-command prefix
+        # find all methods that start with the subcommand prefix
         methods = inspect.getmembers(
             cmdset,
             predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable))
@@ -548,21 +548,17 @@ class Cmd(cmd.Cmd):
             subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
             command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)
             subcmd_parser = getattr(method, constants.CMD_ATTR_ARGPARSER)
+            parser_args = getattr(method, constants.SUBCMD_ATTR_PARSER_ARGS, {})
 
             # Search for the base command function and verify it has an argparser defined
             command_func = self.cmd_func(command_name)
             if command_func is None or not hasattr(command_func, constants.CMD_ATTR_ARGPARSER):
-                raise TypeError('Could not find command "{}" needed by sub-command: {}'
+                raise TypeError('Could not find command "{}" needed by subcommand: {}'
                                 .format(command_name, str(method)))
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER)
             if command_parser is None:
-                raise TypeError('Could not find argparser for command "{}" needed by sub-command: {}'
+                raise TypeError('Could not find argparser for command "{}" needed by subcommand: {}'
                                 .format(command_name, str(method)))
-
-            if hasattr(method, '__doc__') and method.__doc__ is not None:
-                help_text = method.__doc__.splitlines()[0]
-            else:
-                help_text = subcommand_name
 
             if isinstance(cmdset, CommandSet):
                 command_handler = _partial_passthru(method, self)
@@ -572,18 +568,18 @@ class Cmd(cmd.Cmd):
 
             for action in command_parser._actions:
                 if isinstance(action, _UnloadableSubParsersAction):
-                    action.add_parser(subcommand_name, parents=[subcmd_parser], help=help_text)
+                    action.add_parser(subcommand_name, parents=[subcmd_parser], **parser_args)
 
     def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
         """
-        Unregister sub-commands from their base command
+        Unregister subcommands from their base command
 
-        :param cmdset: CommandSet containing sub-commands
+        :param cmdset: CommandSet containing subcommands
         """
         if not (cmdset is self or cmdset in self._installed_command_sets):
-            raise ValueError('Removing sub-commands from an unregistered CommandSet')
+            raise ValueError('Removing subcommands from an unregistered CommandSet')
 
-        # find all methods that start with the sub-command prefix
+        # find all methods that start with the subcommand prefix
         methods = inspect.getmembers(
             cmdset,
             predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable))
@@ -600,11 +596,11 @@ class Cmd(cmd.Cmd):
             # Search for the base command function and verify it has an argparser defined
             command_func = self.cmd_func(command_name)
             if command_func is None or not hasattr(command_func, constants.CMD_ATTR_ARGPARSER):
-                raise TypeError('Could not find command "{}" needed by sub-command: {}'
+                raise TypeError('Could not find command "{}" needed by subcommand: {}'
                                 .format(command_name, str(method)))
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER)
             if command_parser is None:
-                raise TypeError('Could not find argparser for command "{}" needed by sub-command: {}'
+                raise TypeError('Could not find argparser for command "{}" needed by subcommand: {}'
                                 .format(command_name, str(method)))
 
             for action in command_parser._actions:
@@ -3387,7 +3383,7 @@ class Cmd(cmd.Cmd):
                     if 'gnureadline' in sys.modules:
                         # Restore what the readline module pointed to
                         if cmd2_env.readline_module is None:
-                            del (sys.modules['readline'])
+                            del sys.modules['readline']
                         else:
                             sys.modules['readline'] = cmd2_env.readline_module
 
