@@ -192,10 +192,10 @@ and will not include the description value of the CompletionItems.
 completion and enables nargs range parsing. See _add_argument_wrapper for
 more details on these arguments.
 
-``argparse.ArgumentParser._get_nargs_pattern`` - adds support to for nargs
-ranges. See _get_nargs_pattern_wrapper for more details.
+``argparse.ArgumentParser._get_nargs_pattern`` - adds support for nargs ranges.
+See _get_nargs_pattern_wrapper for more details.
 
-``argparse.ArgumentParser._match_argument`` - adds support to for nargs ranges.
+``argparse.ArgumentParser._match_argument`` - adds support for nargs ranges.
 See _match_argument_wrapper for more details.
 """
 
