@@ -272,7 +272,7 @@ class LoadableBase(cmd2.CommandSet):
         self._dummy = dummy  # prevents autoload
 
     cut_parser = cmd2.Cmd2ArgumentParser('cut')
-    cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut', unloadable=True)
+    cut_subparsers = cut_parser.add_subparsers(title='item', help='item to cut')
 
     @cmd2.with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace):
