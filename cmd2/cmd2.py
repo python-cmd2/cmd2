@@ -517,6 +517,11 @@ class Cmd(cmd.Cmd):
             for method in methods:
                 cmd_name = method[0][len(COMMAND_FUNC_PREFIX):]
 
+                # Enable the command before uninstalling it to make sure we remove both
+                # the real functions and the ones used by the DisabledCommand object.
+                if cmd_name in self.disabled_commands:
+                    self.enable_command(cmd_name)
+
                 delattr(self, COMMAND_FUNC_PREFIX + cmd_name)
 
                 if hasattr(self, COMPLETER_FUNC_PREFIX + cmd_name):
@@ -553,11 +558,15 @@ class Cmd(cmd.Cmd):
             parser_args = getattr(method, constants.SUBCMD_ATTR_PARSER_ARGS, {})
 
             # Search for the base command function and verify it has an argparser defined
-            command_func = self.cmd_func(command_name)
-            if command_func is None or not hasattr(command_func, constants.CMD_ATTR_ARGPARSER):
+            if command_name in self.disabled_commands:
+                command_func = self.disabled_commands[command_name].command_function
+            else:
+                command_func = self.cmd_func(command_name)
+
+            if command_func is None:
                 raise TypeError('Could not find command "{}" needed by subcommand: {}'
                                 .format(command_name, str(method)))
-            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER)
+            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
             if command_parser is None:
                 raise TypeError('Could not find argparser for command "{}" needed by subcommand: {}'
                                 .format(command_name, str(method)))
@@ -596,11 +605,15 @@ class Cmd(cmd.Cmd):
             command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)
 
             # Search for the base command function and verify it has an argparser defined
-            command_func = self.cmd_func(command_name)
-            if command_func is None or not hasattr(command_func, constants.CMD_ATTR_ARGPARSER):
+            if command_name in self.disabled_commands:
+                command_func = self.disabled_commands[command_name].command_function
+            else:
+                command_func = self.cmd_func(command_name)
+
+            if command_func is None:
                 raise TypeError('Could not find command "{}" needed by subcommand: {}'
                                 .format(command_name, str(method)))
-            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER)
+            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
             if command_parser is None:
                 raise TypeError('Could not find argparser for command "{}" needed by subcommand: {}'
                                 .format(command_name, str(method)))
