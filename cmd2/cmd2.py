@@ -426,7 +426,7 @@ class Cmd(cmd.Cmd):
         cmdset.on_register(self)
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable))
+            predicate=lambda meth: isinstance(meth, Callable)
             and hasattr(meth, '__name__') and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
 
         installed_attributes = []
@@ -511,7 +511,8 @@ class Cmd(cmd.Cmd):
 
             methods = inspect.getmembers(
                 cmdset,
-                predicate=lambda meth: inspect.ismethod(meth) and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+                predicate=lambda meth: isinstance(meth, Callable)
+                and hasattr(meth, '__name__') and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
 
             for method in methods:
                 cmd_name = method[0][len(COMMAND_FUNC_PREFIX):]
@@ -538,7 +539,7 @@ class Cmd(cmd.Cmd):
         # find all methods that start with the subcommand prefix
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable))
+            predicate=lambda meth: isinstance(meth, Callable)
             and hasattr(meth, constants.SUBCMD_ATTR_NAME)
             and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
             and hasattr(meth, constants.CMD_ATTR_ARGPARSER)
@@ -583,7 +584,7 @@ class Cmd(cmd.Cmd):
         # find all methods that start with the subcommand prefix
         methods = inspect.getmembers(
             cmdset,
-            predicate=lambda meth: (inspect.ismethod(meth) or isinstance(meth, Callable))
+            predicate=lambda meth: isinstance(meth, Callable)
             and hasattr(meth, constants.SUBCMD_ATTR_NAME)
             and hasattr(meth, constants.SUBCMD_ATTR_COMMAND)
             and hasattr(meth, constants.CMD_ATTR_ARGPARSER)
