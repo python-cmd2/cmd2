@@ -458,7 +458,8 @@ class Cmd(cmd.Cmd):
         except Exception:
             for attrib in installed_attributes:
                 delattr(self, attrib)
-            self._installed_command_sets.remove(cmdset)
+            if cmdset in self._installed_command_sets:
+                self._installed_command_sets.remove(cmdset)
             raise
 
     def _install_command_function(self, command: str, command_wrapper: Callable, context=''):
