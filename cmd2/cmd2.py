@@ -43,7 +43,7 @@ from contextlib import redirect_stdout
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Type, Union
 
 from . import ansi, constants, plugin, utils
-from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem, _UnloadableSubParsersAction
+from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .command_definition import CommandSet, _partial_passthru
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
@@ -567,7 +567,7 @@ class Cmd(cmd.Cmd):
             subcmd_parser.set_defaults(handler=command_handler)
 
             for action in command_parser._actions:
-                if isinstance(action, _UnloadableSubParsersAction):
+                if isinstance(action, argparse._SubParsersAction):
                     action.add_parser(subcommand_name, parents=[subcmd_parser], **parser_args)
 
     def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
@@ -604,7 +604,7 @@ class Cmd(cmd.Cmd):
                                 .format(command_name, str(method)))
 
             for action in command_parser._actions:
-                if isinstance(action, _UnloadableSubParsersAction):
+                if isinstance(action, argparse._SubParsersAction):
                     action.remove_parser(subcommand_name)
 
     def add_settable(self, settable: Settable) -> None:
