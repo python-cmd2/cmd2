@@ -12,6 +12,7 @@ wcwidth = ">=0.1.7"
 
 [dev-packages]
 cmd2 = {editable = true,path = "."}
+cmd2_ext_test = {editable = true,path = "plugins/ext_test"}
 codecov = "*"
 doc8 = "*"
 flake8 = "*"
