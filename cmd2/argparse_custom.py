@@ -537,8 +537,16 @@ argparse.ArgumentParser._match_argument = _match_argument_wrapper
 # Patch argparse._SubParsersAction to add remove_parser function
 ############################################################################################################
 
-def _SubParsersAction_remove_parser(self, name):
-    """Removes a sub-parser from a sub-parsers group"""
+def _SubParsersAction_remove_parser(self, name: str):
+    """
+    Removes a sub-parser from a sub-parsers group
+
+    This is a custom method being added to the argparse._SubParsersAction
+    class so cmd2 can remove subcommands from a parser.
+
+    :param self: instance of the _SubParsersAction being edited
+    :param name: name of the sub-parser to remove
+    """
     for choice_action in self._choices_actions:
         if choice_action.dest == name:
             self._choices_actions.remove(choice_action)
