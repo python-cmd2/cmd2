@@ -13,7 +13,8 @@ add additional capabilities.
 Features
 ~~~~~~~~
 
-* Modular Command Sets - Commands can be broken into separate modules rather than in one god class holding all commands.
+* Modular Command Sets - Commands can be broken into separate modules rather than in one god class holding all
+  commands.
 * Automatic Command Discovery - In your application, merely defining and importing a CommandSet is sufficient for
   cmd2 to discover and load your command. No manual registration is necessary.
 * Dynamically Loadable/Unloadable Commands - Command functions and CommandSets can both be loaded and unloaded
@@ -211,10 +212,11 @@ Description
 ~~~~~~~~~~~
 Using the `with_argparse` decorator, it is possible to define subcommands for your command. This has a tendency to
 either drive your interface into an object-centric interface. For example, imagine you have a tool that manages your
-media collection and you want to manage movies or shows. An object-centric approach would push you to have base commands
-such as `movies` and `shows` which each have subcommands `add`, `edit`, `list`, `delete`. If you wanted to present an
-action-centric command set, so that `add`, `edit`, `list`, and `delete` are the base commands, you'd have to organize
-your code around these similar actions rather than organizing your code around similar objects being managed.
+media collection and you want to manage movies or shows. An object-centric approach would push you to have base
+commands such as `movies` and `shows` which each have subcommands `add`, `edit`, `list`, `delete`. If you wanted to
+present an action-centric command set, so that `add`, `edit`, `list`, and `delete` are the base commands, you'd have
+to organize your code around these similar actions rather than organizing your code around similar objects being
+managed.
 
 Subcommand injection allows you to inject subcommands into a base command to present an interface that is sensible to
 a user while still organizing your code in whatever structure make more logical sense to the developer.
