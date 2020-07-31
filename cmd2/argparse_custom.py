@@ -197,6 +197,10 @@ See _get_nargs_pattern_wrapper for more details.
 
 ``argparse.ArgumentParser._match_argument`` - adds support for nargs ranges.
 See _match_argument_wrapper for more details.
+
+``argparse._SubParsersAction.remove_parser`` - new function which removes a
+sub-parser from a sub-parsers group. See _SubParsersAction_remove_parser for
+more details.
 """
 
 import argparse
@@ -534,7 +538,7 @@ argparse.ArgumentParser._match_argument = _match_argument_wrapper
 ############################################################################################################
 
 def _SubParsersAction_remove_parser(self, name):
-    """Removes a sub-parser from the sub-parsers group"""
+    """Removes a sub-parser from a sub-parsers group"""
     for choice_action in self._choices_actions:
         if choice_action.dest == name:
             self._choices_actions.remove(choice_action)
