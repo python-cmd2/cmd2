@@ -60,17 +60,31 @@ cases where the choice list is dynamically generated when the user hits tab.
 
         parser.add_argument('-o', '--options', choices_function=my_choices_function)
 
-``choices_method`` - this is exactly like choices_function, but the function
-needs to be an instance method of a cmd2-based class. When ArgparseCompleter
-calls the method, it will pass the app instance as the self argument. This is
-good in cases where the list of choices being generated relies on state data of
-the cmd2-based app
+``choices_method`` - this is equivalent to choices_function, but the function
+needs to be an instance method of a cmd2.Cmd or cmd2.CommandSet subclass. When
+ArgparseCompleter calls the method, it well detect whether is is bound to a
+CommandSet or Cmd subclass.
+If bound to a cmd2.Cmd subclass, it will pass the app instance as the `self`
+argument. This is good in cases where the list of choices being generated
+relies on state data of the cmd2-based app.
+If bound to a cmd2.CommandSet subclass, it will pass the CommandSet instance
+as the `self` argument, and the app instance as the positional argument.
 
-    Example::
+    Example bound to cmd2.Cmd::
 
         def my_choices_method(self):
             ...
             return my_generated_list
+
+        parser.add_argument("arg", choices_method=my_choices_method)
+
+    Example bound to cmd2.CommandSEt::
+
+        def my_choices_method(self, app: cmd2.Cmd):
+            ...
+            return my_generated_list
+
+        parser.add_argument("arg", choices_method=my_choices_method)
 
 ``completer_function`` - pass a tab completion function that does custom
 completion. Since custom tab completion operations commonly need to modify
@@ -84,10 +98,16 @@ completer function. completer_method should be used in those cases.
             return completions
         parser.add_argument('-o', '--options', completer_function=my_completer_function)
 
-``completer_method`` - this is exactly like completer_function, but the
-function needs to be an instance method of a cmd2-based class. When
-ArgparseCompleter calls the method, it will pass the app instance as the self
-argument. cmd2 provides a few completer methods for convenience (e.g.,
+``completer_method`` - this is equivalent to completer_function, but the function
+needs to be an instance method of a cmd2.Cmd or cmd2.CommandSet subclass. When
+ArgparseCompleter calls the method, it well detect whether is is bound to a
+CommandSet or Cmd subclass.
+If bound to a cmd2.Cmd subclass, it will pass the app instance as the `self`
+argument. This is good in cases where the list of choices being generated
+relies on state data of the cmd2-based app.
+If bound to a cmd2.CommandSet subclass, it will pass the CommandSet instance
+as the `self` argument, and the app instance as the positional argument.
+cmd2 provides a few completer methods for convenience (e.g.,
 path_complete, delimiter_complete)
 
     Example::
@@ -559,6 +579,10 @@ def _SubParsersAction_remove_parser(self, name: str):
             to_remove.append(name)
     for name in to_remove:
         del self._name_parser_map[name]
+
+    if name in self.choices:
+        del self.choices[name]
+
 
 
 # noinspection PyProtectedMember
