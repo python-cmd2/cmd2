@@ -54,3 +54,6 @@ CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
 SUBCMD_ATTR_COMMAND = 'parent_command'
 SUBCMD_ATTR_NAME = 'subcommand_name'
 SUBCMD_ATTR_PARSER_ARGS = 'subcommand_parser_args'
+
+# arpparse attribute linking to command set instance
+PARSER_ATTR_COMMANDSET = 'command_set'

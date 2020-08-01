@@ -24,6 +24,9 @@ class Cmd2ArgparseError(SkipPostcommandHooks):
     pass
 
 
+class CommandSetRegistrationError(Exception):
+    pass
+
 ############################################################################################################
 # The following exceptions are NOT part of the public API and are intended for internal use only.
 ############################################################################################################

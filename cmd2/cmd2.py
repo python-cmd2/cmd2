@@ -48,7 +48,14 @@ from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .command_definition import CommandSet, _partial_passthru
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
 from .decorators import with_argparser
-from .exceptions import Cmd2ShlexError, EmbeddedConsoleExit, EmptyStatement, RedirectionError, SkipPostcommandHooks
+from .exceptions import (
+    CommandSetRegistrationError,
+    Cmd2ShlexError,
+    EmbeddedConsoleExit,
+    EmptyStatement,
+    RedirectionError,
+    SkipPostcommandHooks
+)
 from .history import History, HistoryItem
 from .parsing import Macro, MacroArg, Statement, StatementParser, shlex_split
 from .rl_utils import RlType, rl_get_point, rl_make_safe_prompt, rl_set_prompt, rl_type, rl_warning, vt100_support
@@ -245,8 +252,8 @@ class Cmd(cmd.Cmd):
                                                 shortcuts=shortcuts)
 
         # Load modular commands
-        self._installed_functions = []  # type: List[str]
         self._installed_command_sets = []  # type: List[CommandSet]
+        self._cmd_to_command_sets = {}  # type: Dict[str, CommandSet]
         if command_sets:
             for command_set in command_sets:
                 self.install_command_set(command_set)
@@ -259,8 +266,6 @@ class Cmd(cmd.Cmd):
             valid, errmsg = self.statement_parser.is_valid_command(cur_cmd)
             if not valid:
                 raise ValueError("Invalid command name {!r}: {}".format(cur_cmd, errmsg))
-
-        self._register_subcommands(self)
 
         # Stores results from the last command run to enable usage of results in a Python script or interactive console
         # Built-in commands don't make use of this.  It is purely there for user-defined commands and convenience.
@@ -399,6 +404,8 @@ class Cmd(cmd.Cmd):
         # If False, then complete() will sort the matches using self.default_sort_key before they are displayed.
         self.matches_sorted = False
 
+        self._register_subcommands(self)
+
     def _autoload_commands(self) -> None:
         """Load modular command definitions."""
         # Search for all subclasses of CommandSet, instantiate them if they weren't provided in the constructor
@@ -406,12 +413,11 @@ class Cmd(cmd.Cmd):
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
         for cmdset_type in all_commandset_defs:
             init_sig = inspect.signature(cmdset_type.__init__)
-            if cmdset_type in existing_commandset_types or \
-                    len(init_sig.parameters) != 1 or \
-                    'self' not in init_sig.parameters:
-                continue
-            cmdset = cmdset_type()
-            self.install_command_set(cmdset)
+            if not (cmdset_type in existing_commandset_types or
+                    len(init_sig.parameters) != 1 or
+                    'self' not in init_sig.parameters):
+                cmdset = cmdset_type()
+                self.install_command_set(cmdset)
 
     def install_command_set(self, cmdset: CommandSet) -> None:
         """
@@ -421,7 +427,7 @@ class Cmd(cmd.Cmd):
         """
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
         if type(cmdset) in existing_commandset_types:
-            raise ValueError('CommandSet ' + type(cmdset).__name__ + ' is already installed')
+            raise CommandSetRegistrationError('CommandSet ' + type(cmdset).__name__ + ' is already installed')
 
         cmdset.on_register(self)
         methods = inspect.getmembers(
@@ -452,6 +458,8 @@ class Cmd(cmd.Cmd):
                     self._install_help_function(command, help_wrapper)
                     installed_attributes.append(help_func_name)
 
+                self._cmd_to_command_sets[command] = cmdset
+
             self._installed_command_sets.append(cmdset)
 
             self._register_subcommands(cmdset)
@@ -460,19 +468,22 @@ class Cmd(cmd.Cmd):
                 delattr(self, attrib)
             if cmdset in self._installed_command_sets:
                 self._installed_command_sets.remove(cmdset)
+            if cmdset in self._cmd_to_command_sets.values():
+                self._cmd_to_command_sets = \
+                    {key: val for key, val in self._cmd_to_command_sets.items() if val is not cmdset}
             raise
 
     def _install_command_function(self, command: str, command_wrapper: Callable, context=''):
         cmd_func_name = COMMAND_FUNC_PREFIX + command
 
-        # Make sure command function doesn't share naem with existing attribute
+        # Make sure command function doesn't share name with existing attribute
         if hasattr(self, cmd_func_name):
-            raise ValueError('Attribute already exists: {} ({})'.format(cmd_func_name, context))
+            raise CommandSetRegistrationError('Attribute already exists: {} ({})'.format(cmd_func_name, context))
 
         # Check if command has an invalid name
         valid, errmsg = self.statement_parser.is_valid_command(command)
         if not valid:
-            raise ValueError("Invalid command name {!r}: {}".format(command, errmsg))
+            raise CommandSetRegistrationError("Invalid command name {!r}: {}".format(command, errmsg))
 
         # Check if command shares a name with an alias
         if command in self.aliases:
@@ -490,14 +501,14 @@ class Cmd(cmd.Cmd):
         completer_func_name = COMPLETER_FUNC_PREFIX + cmd_name
 
         if hasattr(self, completer_func_name):
-            raise ValueError('Attribute already exists: {}'.format(completer_func_name))
+            raise CommandSetRegistrationError('Attribute already exists: {}'.format(completer_func_name))
         setattr(self, completer_func_name, cmd_completer)
 
     def _install_help_function(self, cmd_name: str, cmd_help: Callable):
         help_func_name = HELP_FUNC_PREFIX + cmd_name
 
         if hasattr(self, help_func_name):
-            raise ValueError('Attribute already exists: {}'.format(help_func_name))
+            raise CommandSetRegistrationError('Attribute already exists: {}'.format(help_func_name))
         setattr(self, help_func_name, cmd_help)
 
     def uninstall_command_set(self, cmdset: CommandSet):
@@ -506,7 +517,7 @@ class Cmd(cmd.Cmd):
         :param cmdset: CommandSet to uninstall
         """
         if cmdset in self._installed_command_sets:
-
+            self._check_uninstallable(cmdset)
             self._unregister_subcommands(cmdset)
 
             methods = inspect.getmembers(
@@ -522,6 +533,9 @@ class Cmd(cmd.Cmd):
                 if cmd_name in self.disabled_commands:
                     self.enable_command(cmd_name)
 
+                if cmd_name in self._cmd_to_command_sets:
+                    del self._cmd_to_command_sets[cmd_name]
+
                 delattr(self, COMMAND_FUNC_PREFIX + cmd_name)
 
                 if hasattr(self, COMPLETER_FUNC_PREFIX + cmd_name):
@@ -532,14 +546,42 @@ class Cmd(cmd.Cmd):
             cmdset.on_unregister(self)
             self._installed_command_sets.remove(cmdset)
 
+    def _check_uninstallable(self, cmdset: CommandSet):
+        methods = inspect.getmembers(
+            cmdset,
+            predicate=lambda meth: isinstance(meth, Callable)
+                                   and hasattr(meth, '__name__') and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+
+        for method in methods:
+            command_name = method[0][len(COMMAND_FUNC_PREFIX):]
+
+            # Search for the base command function and verify it has an argparser defined
+            if command_name in self.disabled_commands:
+                command_func = self.disabled_commands[command_name].command_function
+            else:
+                command_func = self.cmd_func(command_name)
+
+            command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
+            def check_parser_uninstallable(parser):
+                for action in parser._actions:
+                    if isinstance(action, argparse._SubParsersAction):
+                        for subparser in action.choices.values():
+                            attached_cmdset = getattr(subparser, constants.PARSER_ATTR_COMMANDSET, None)
+                            if attached_cmdset is not None and attached_cmdset is not cmdset:
+                                raise CommandSetRegistrationError(
+                                    'Cannot uninstall CommandSet when another CommandSet depends on it')
+                            check_parser_uninstallable(subparser)
+            if command_parser is not None:
+                check_parser_uninstallable(command_parser)
+
     def _register_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
         """
         Register subcommands with their base command
 
-        :param cmdset: CommandSet containing subcommands
+        :param cmdset: CommandSet or cmd2.Cmd subclass containing subcommands
         """
         if not (cmdset is self or cmdset in self._installed_command_sets):
-            raise ValueError('Adding subcommands from an unregistered CommandSet')
+            raise CommandSetRegistrationError('Cannot register subcommands with an unregistered CommandSet')
 
         # find all methods that start with the subcommand prefix
         methods = inspect.getmembers(
@@ -553,9 +595,13 @@ class Cmd(cmd.Cmd):
         # iterate through all matching methods
         for method_name, method in methods:
             subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
-            command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)
+            full_command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)  # type: str
             subcmd_parser = getattr(method, constants.CMD_ATTR_ARGPARSER)
             parser_args = getattr(method, constants.SUBCMD_ATTR_PARSER_ARGS, {})
+
+            command_tokens = full_command_name.split()
+            command_name = command_tokens[0]
+            subcommand_names = command_tokens[1:]
 
             # Search for the base command function and verify it has an argparser defined
             if command_name in self.disabled_commands:
@@ -564,12 +610,12 @@ class Cmd(cmd.Cmd):
                 command_func = self.cmd_func(command_name)
 
             if command_func is None:
-                raise TypeError('Could not find command "{}" needed by subcommand: {}'
-                                .format(command_name, str(method)))
+                raise CommandSetRegistrationError('Could not find command "{}" needed by subcommand: {}'
+                                                  .format(command_name, str(method)))
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
             if command_parser is None:
-                raise TypeError('Could not find argparser for command "{}" needed by subcommand: {}'
-                                .format(command_name, str(method)))
+                raise CommandSetRegistrationError('Could not find argparser for command "{}" needed by subcommand: {}'
+                                                  .format(command_name, str(method)))
 
             if isinstance(cmdset, CommandSet):
                 command_handler = _partial_passthru(method, self)
@@ -577,9 +623,23 @@ class Cmd(cmd.Cmd):
                 command_handler = method
             subcmd_parser.set_defaults(handler=command_handler)
 
-            for action in command_parser._actions:
+            def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
+                if not subcmd_names:
+                    return action
+                cur_subcmd = subcmd_names.pop(0)
+                for sub_action in action._actions:
+                    if isinstance(sub_action, argparse._SubParsersAction):
+                        for choice_name, choice in sub_action.choices.items():
+                            if choice_name == cur_subcmd:
+                                return find_subcommand(choice, subcmd_names)
+                raise CommandSetRegistrationError('Could not find sub-command "{}"'.format(full_command_name))
+
+            target_parser = find_subcommand(command_parser, subcommand_names)
+
+            for action in target_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    action.add_parser(subcommand_name, parents=[subcmd_parser], **parser_args)
+                    attached_parser = action.add_parser(subcommand_name, parents=[subcmd_parser], **parser_args)
+                    setattr(attached_parser, constants.PARSER_ATTR_COMMANDSET, cmdset)
 
     def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
         """
@@ -588,7 +648,7 @@ class Cmd(cmd.Cmd):
         :param cmdset: CommandSet containing subcommands
         """
         if not (cmdset is self or cmdset in self._installed_command_sets):
-            raise ValueError('Removing subcommands from an unregistered CommandSet')
+            raise CommandSetRegistrationError('Cannot unregister subcommands with an unregistered CommandSet')
 
         # find all methods that start with the subcommand prefix
         methods = inspect.getmembers(
@@ -610,13 +670,17 @@ class Cmd(cmd.Cmd):
             else:
                 command_func = self.cmd_func(command_name)
 
-            if command_func is None:
-                raise TypeError('Could not find command "{}" needed by subcommand: {}'
-                                .format(command_name, str(method)))
+            if command_func is None:  # pragma: no cover
+                    # This really shouldn't be possible since _register_subcommands would prevent this from happening
+                    # but keeping in case it does for some strange reason
+                raise CommandSetRegistrationError('Could not find command "{}" needed by subcommand: {}'
+                                                  .format(command_name, str(method)))
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
-            if command_parser is None:
-                raise TypeError('Could not find argparser for command "{}" needed by subcommand: {}'
-                                .format(command_name, str(method)))
+            if command_parser is None:  # pragma: no cover
+                # This really shouldn't be possible since _register_subcommands would prevent this from happening
+                # but keeping in case it does for some strange reason
+                raise CommandSetRegistrationError('Could not find argparser for command "{}" needed by subcommand: {}'
+                                                  .format(command_name, str(method)))
 
             for action in command_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
@@ -1439,6 +1503,7 @@ class Cmd(cmd.Cmd):
         # Parse the command line
         statement = self.statement_parser.parse_command_only(line)
         command = statement.command
+        cmd_set = self._cmd_to_command_sets[command] if command in self._cmd_to_command_sets else None
         expanded_line = statement.command_and_args
 
         # We overwrote line with a properly formatted but fully stripped version
@@ -1509,7 +1574,8 @@ class Cmd(cmd.Cmd):
                     import functools
                     compfunc = functools.partial(self._complete_argparse_command,
                                                  argparser=argparser,
-                                                 preserve_quotes=getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES))
+                                                 preserve_quotes=getattr(func, constants.CMD_ATTR_PRESERVE_QUOTES),
+                                                 cmd_set=cmd_set)
                 else:
                     compfunc = self.completedefault
 
@@ -1677,7 +1743,9 @@ class Cmd(cmd.Cmd):
             return None
 
     def _complete_argparse_command(self, text: str, line: str, begidx: int, endidx: int, *,
-                                   argparser: argparse.ArgumentParser, preserve_quotes: bool) -> List[str]:
+                                   argparser: argparse.ArgumentParser,
+                                   preserve_quotes: bool,
+                                   cmd_set: Optional[CommandSet] = None) -> List[str]:
         """Completion function for argparse commands"""
         from .argparse_completer import ArgparseCompleter
         completer = ArgparseCompleter(argparser, self)
@@ -1686,7 +1754,7 @@ class Cmd(cmd.Cmd):
         # To have tab completion parsing match command line parsing behavior,
         # use preserve_quotes to determine if we parse the quoted or unquoted tokens.
         tokens_to_parse = raw_tokens if preserve_quotes else tokens
-        return completer.complete_command(tokens_to_parse, text, line, begidx, endidx)
+        return completer.complete_command(tokens_to_parse, text, line, begidx, endidx, cmd_set=cmd_set)
 
     def in_script(self) -> bool:
         """Return whether a text script is running"""

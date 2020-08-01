@@ -23,6 +23,7 @@ from .argparse_custom import (
     CompletionItem,
     generate_range_error,
 )
+from .command_definition import CommandSet
 from .table_creator import Column, SimpleTable
 from .utils import CompletionError, basic_complete
 
@@ -181,7 +182,8 @@ class ArgparseCompleter:
                 if isinstance(action, argparse._SubParsersAction):
                     self._subcommand_action = action
 
-    def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int) -> List[str]:
+    def complete_command(self, tokens: List[str], text: str, line: str, begidx: int, endidx: int, *,
+                         cmd_set: Optional[CommandSet] = None) -> List[str]:
         """
         Complete the command using the argparse metadata and provided argument dictionary
         :raises: CompletionError for various types of tab completion errors
@@ -358,7 +360,8 @@ class ArgparseCompleter:
 
                                 completer = ArgparseCompleter(self._subcommand_action.choices[token], self._cmd2_app,
                                                               parent_tokens=parent_tokens)
-                                return completer.complete_command(tokens[token_index:], text, line, begidx, endidx)
+                                return completer.complete_command(tokens[token_index:], text, line, begidx, endidx,
+                                                                  cmd_set=cmd_set)
                             else:
                                 # Invalid subcommand entered, so no way to complete remaining tokens
                                 return []
@@ -403,7 +406,8 @@ class ArgparseCompleter:
         # Check if we are completing a flag's argument
         if flag_arg_state is not None:
             completion_results = self._complete_for_arg(flag_arg_state.action, text, line,
-                                                        begidx, endidx, consumed_arg_values)
+                                                        begidx, endidx, consumed_arg_values,
+                                                        cmd_set=cmd_set)
 
             # If we have results, then return them
             if completion_results:
@@ -423,7 +427,8 @@ class ArgparseCompleter:
                 pos_arg_state = _ArgumentState(action)
 
             completion_results = self._complete_for_arg(pos_arg_state.action, text, line,
-                                                        begidx, endidx, consumed_arg_values)
+                                                        begidx, endidx, consumed_arg_values,
+                                                        cmd_set=cmd_set)
 
             # If we have results, then return them
             if completion_results:
@@ -543,7 +548,8 @@ class ArgparseCompleter:
 
     def _complete_for_arg(self, arg_action: argparse.Action,
                           text: str, line: str, begidx: int, endidx: int,
-                          consumed_arg_values: Dict[str, List[str]]) -> List[str]:
+                          consumed_arg_values: Dict[str, List[str]], *,
+                          cmd_set: Optional[CommandSet] = None) -> List[str]:
         """
         Tab completion routine for an argparse argument
         :return: list of completions
@@ -563,6 +569,12 @@ class ArgparseCompleter:
         kwargs = {}
         if isinstance(arg_choices, ChoicesCallable):
             if arg_choices.is_method:
+                cmd_set = getattr(self._parser, constants.PARSER_ATTR_COMMANDSET, cmd_set)
+                if cmd_set is not None:
+                    if isinstance(cmd_set, CommandSet):
+                        # If command is part of a CommandSet, `self` should be the CommandSet and Cmd will be next
+                        if cmd_set is not None:
+                            args.append(cmd_set)
                 args.append(self._cmd2_app)
 
             # Check if arg_choices.to_call expects arg_tokens

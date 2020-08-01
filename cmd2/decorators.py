@@ -7,7 +7,7 @@ from . import constants
 from .exceptions import Cmd2ArgparseError
 from .parsing import Statement
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     import cmd2
 
 
@@ -53,7 +53,10 @@ def _parse_positionals(args: Tuple) -> Tuple['cmd2.Cmd', Union[Statement, str]]:
             next_arg = args[pos + 1]
             if isinstance(next_arg, (Statement, str)):
                 return arg, args[pos + 1]
-    raise TypeError('Expected arguments: cmd: cmd2.Cmd, statement: Union[Statement, str] Not found')
+
+    # This shouldn't happen unless we forget to pass statement in `Cmd.onecmd` or
+    # somehow call the unbound class method.
+    raise TypeError('Expected arguments: cmd: cmd2.Cmd, statement: Union[Statement, str] Not found')  # pragma: no cover
 
 
 def _arg_swap(args: Union[Tuple[Any], List[Any]], search_arg: Any, *replace_arg: Any) -> List[Any]:
@@ -346,7 +349,7 @@ def as_subcommand_to(command: str,
     """
     Tag this method as a subcommand to an existing argparse decorated command.
 
-    :param command: Command Name
+    :param command: Command Name. Space-delimited subcommands may optionally be specified
     :param subcommand: Subcommand name
     :param parser: argparse Parser for this subcommand
     :param help_text: Help message for this subcommand
