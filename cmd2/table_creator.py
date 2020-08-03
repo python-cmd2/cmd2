@@ -19,7 +19,7 @@ from . import ansi, constants, utils
 # This is needed for compatibility with early versions of Python 3.5 prior to 3.5.4
 try:
     from typing import Deque
-except ImportError:
+except ImportError:  # pragma: no cover
     import typing
 
     # noinspection PyProtectedMember, PyUnresolvedReferences
