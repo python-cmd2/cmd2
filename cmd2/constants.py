@@ -50,6 +50,9 @@ CMD_ATTR_ARGPARSER = 'argparser'
 # Whether or not tokens are unquoted before sending to argparse
 CMD_ATTR_PRESERVE_QUOTES = 'preserve_quotes'
 
+# optional attribute
+SUBCMD_HANDLER = 'cmd2_handler'
+
 # subcommand attributes for the base command name and the subcommand name
 SUBCMD_ATTR_COMMAND = 'parent_command'
 SUBCMD_ATTR_NAME = 'subcommand_name'

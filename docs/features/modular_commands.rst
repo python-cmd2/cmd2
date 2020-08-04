@@ -314,10 +314,10 @@ command and each CommandSet
 
         @with_argparser(cut_parser)
         def do_cut(self, ns: argparse.Namespace):
-            func = getattr(ns, 'handler', None)
-            if func is not None:
+            handler = ns.get_handler()
+            if handler is not None:
                 # Call whatever subcommand function was selected
-                func(ns)
+                handler(ns)
             else:
                 # No subcommand was provided, so call help
                 self.poutput('This command does nothing without sub-parsers registered')
