@@ -1,4 +1,4 @@
-include LICENSE README.md CHANGELOG.md CONTRIBUTING.md tox.ini noxfile.py Pipfile
+include LICENSE README.md CHANGELOG.md CONTRIBUTING.md noxfile.py Pipfile
 recursive-include examples *
 recursive-include tests *
 recursive-include docs *
