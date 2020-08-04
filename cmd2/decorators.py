@@ -172,7 +172,10 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
                                     ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
                                     preserve_quotes: bool = False) -> \
         Callable[[argparse.Namespace, List], Optional[bool]]:
-    """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing
+    """
+    Deprecated decorator. Use `with_argparser(parser, with_unknown_args=True)` instead.
+
+    A decorator to alter a cmd2 method to populate its ``args`` argument by parsing
     arguments with the given instance of argparse.ArgumentParser, but also returning
     unknown args as a list.
 
@@ -194,77 +197,23 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
     >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
     >>>
     >>> class MyApp(cmd2.Cmd):
-    >>>     @cmd2.with_argparser_and_unknown_args(parser)
+    >>>     @cmd2.with_argparser(parser, with_unknown_args=True)
     >>>     def do_argprint(self, args, unknown):
     >>>         "Print the options and argument list this options command was called with."
     >>>         self.poutput('args: {!r}'.format(args))
     >>>         self.poutput('unknowns: {}'.format(unknown))
     """
-    import functools
+    import warnings
+    warnings.warn('This decorator will be deprecated. Use `with_argparser(parser, with_unknown_args=True)`.',
+                  PendingDeprecationWarning, stacklevel=2)
 
-    def arg_decorator(func: Callable):
-        @functools.wraps(func)
-        def cmd_wrapper(*args: Tuple[Any, ...], **kwargs: Dict[str, Any]) -> Optional[bool]:
-            """
-            Command function wrapper which translates command line into argparse Namespace and calls actual
-            command function
-
-            :param args: All positional arguments to this function.  We're expecting there to be:
-                            cmd2_app, statement: Union[Statement, str]
-                            contiguously somewhere in the list
-            :param kwargs: any keyword arguments being passed to command function
-            :return: return value of command function
-            :raises: Cmd2ArgparseError if argparse has error parsing command line
-            """
-            cmd2_app, statement = _parse_positionals(args)
-            statement, parsed_arglist = cmd2_app.statement_parser.get_command_arg_list(command_name,
-                                                                                       statement,
-                                                                                       preserve_quotes)
-
-            if ns_provider is None:
-                namespace = None
-            else:
-                namespace = ns_provider(cmd2_app)
-
-            try:
-                ns, unknown = parser.parse_known_args(parsed_arglist, namespace)
-            except SystemExit:
-                raise Cmd2ArgparseError
-            else:
-                setattr(ns, '__statement__', statement)
-
-                def get_handler(self: argparse.Namespace) -> Optional[Callable]:
-                    return getattr(self, constants.SUBCMD_HANDLER, None)
-
-                setattr(ns, 'get_handler', types.MethodType(get_handler, ns))
-
-                args_list = _arg_swap(args, statement, ns, unknown)
-                return func(*args_list, **kwargs)
-
-        # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command
-        command_name = func.__name__[len(constants.COMMAND_FUNC_PREFIX):]
-        _set_parser_prog(parser, command_name)
-
-        # If the description has not been set, then use the method docstring if one exists
-        if parser.description is None and func.__doc__:
-            parser.description = func.__doc__
-
-        # Set the command's help text as argparser.description (which can be None)
-        cmd_wrapper.__doc__ = parser.description
-
-        # Set some custom attributes for this command
-        setattr(cmd_wrapper, constants.CMD_ATTR_ARGPARSER, parser)
-        setattr(cmd_wrapper, constants.CMD_ATTR_PRESERVE_QUOTES, preserve_quotes)
-
-        return cmd_wrapper
-
-    # noinspection PyTypeChecker
-    return arg_decorator
+    return with_argparser(parser, ns_provider=ns_provider, preserve_quotes=preserve_quotes, with_unknown_args=True)
 
 
 def with_argparser(parser: argparse.ArgumentParser, *,
                    ns_provider: Optional[Callable[..., argparse.Namespace]] = None,
-                   preserve_quotes: bool = False) -> Callable[[argparse.Namespace], Optional[bool]]:
+                   preserve_quotes: bool = False,
+                   with_unknown_args: bool = False) -> Callable[[argparse.Namespace], Optional[bool]]:
     """A decorator to alter a cmd2 method to populate its ``args`` argument by parsing arguments
     with the given instance of argparse.ArgumentParser.
 
@@ -273,6 +222,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
                         argparse.Namespace. This is useful if the Namespace needs to be prepopulated with
                         state data that affects parsing.
     :param preserve_quotes: if True, then arguments passed to argparse maintain their quotes
+    :param with_unknown_args: if true, then capture unknown args
     :return: function that gets passed the argparse-parsed args in a Namespace
              A member called __statement__ is added to the Namespace to provide command functions access to the
              Statement object. This can be useful if the command function needs to know the command line.
@@ -290,6 +240,21 @@ def with_argparser(parser: argparse.ArgumentParser, *,
     >>>     def do_argprint(self, args):
     >>>         "Print the options and argument list this options command was called with."
     >>>         self.poutput('args: {!r}'.format(args))
+
+    :Example with unknown args:
+
+    >>> parser = argparse.ArgumentParser()
+    >>> parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
+    >>> parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
+    >>> parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
+    >>>
+    >>> class MyApp(cmd2.Cmd):
+    >>>     @cmd2.with_argparser(parser, with_unknown_args=True)
+    >>>     def do_argprint(self, args, unknown):
+    >>>         "Print the options and argument list this options command was called with."
+    >>>         self.poutput('args: {!r}'.format(args))
+    >>>         self.poutput('unknowns: {}'.format(unknown))
+
     """
     import functools
 
@@ -318,7 +283,11 @@ def with_argparser(parser: argparse.ArgumentParser, *,
                 namespace = ns_provider(cmd2_app)
 
             try:
-                ns = parser.parse_args(parsed_arglist, namespace)
+                if with_unknown_args:
+                    new_args = parser.parse_known_args(parsed_arglist, namespace)
+                else:
+                    new_args = (parser.parse_args(parsed_arglist, namespace), )
+                ns = new_args[0]
             except SystemExit:
                 raise Cmd2ArgparseError
             else:
@@ -329,7 +298,7 @@ def with_argparser(parser: argparse.ArgumentParser, *,
 
                 setattr(ns, 'get_handler', types.MethodType(get_handler, ns))
 
-                args_list = _arg_swap(args, statement, ns)
+                args_list = _arg_swap(args, statement, *new_args)
                 return func(*args_list, **kwargs)
 
         # argparser defaults the program name to sys.argv[0], but we want it to be the name of our command

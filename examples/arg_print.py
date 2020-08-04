@@ -56,7 +56,7 @@ class ArgumentAndOptionPrinter(cmd2.Cmd):
     pprint_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     pprint_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
 
-    @cmd2.with_argparser_and_unknown_args(pprint_parser)
+    @cmd2.with_argparser(pprint_parser, with_unknown_args=True)
     def do_pprint(self, args, unknown):
         """Print the options and argument list this options command was called with."""
         self.poutput('oprint was called with the following\n\toptions: {!r}\n\targuments: {}'.format(args, unknown))

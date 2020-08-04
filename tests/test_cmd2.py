@@ -1224,7 +1224,7 @@ def test_select_ctrl_c(outsim_app, monkeypatch, capsys):
 class HelpNoDocstringApp(cmd2.Cmd):
     greet_parser = argparse.ArgumentParser()
     greet_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
-    @cmd2.with_argparser_and_unknown_args(greet_parser)
+    @cmd2.with_argparser(greet_parser, with_unknown_args=True)
     def do_greet(self, opts, arg):
         arg = ''.join(arg)
         if opts.shout:
@@ -1268,7 +1268,7 @@ class MultilineApp(cmd2.Cmd):
     orate_parser = argparse.ArgumentParser()
     orate_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
 
-    @cmd2.with_argparser_and_unknown_args(orate_parser)
+    @cmd2.with_argparser(orate_parser, with_unknown_args=True)
     def do_orate(self, opts, arg):
         arg = ''.join(arg)
         if opts.shout:

@@ -41,7 +41,7 @@ class CmdLineApp(cmd2.Cmd):
     speak_parser.add_argument('-s', '--shout', action="store_true", help="N00B EMULATION MODE")
     speak_parser.add_argument('-r', '--repeat', type=int, help="output [n] times")
 
-    @cmd2.with_argparser_and_unknown_args(speak_parser)
+    @cmd2.with_argparser(speak_parser, with_unknown_args=True)
     def do_speak(self, opts, arg):
         """Repeats what you tell me to."""
         arg = ' '.join(arg)
@@ -61,7 +61,8 @@ class CmdLineApp(cmd2.Cmd):
 
     mumble_parser = argparse.ArgumentParser()
     mumble_parser.add_argument('-r', '--repeat', type=int, help="output [n] times")
-    @cmd2.with_argparser_and_unknown_args(mumble_parser)
+
+    @cmd2.with_argparser(mumble_parser, with_unknown_args=True)
     def do_mumble(self, opts, arg):
         """Mumbles what you tell me to."""
         repetitions = opts.repeat or 1
