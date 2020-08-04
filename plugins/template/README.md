@@ -208,7 +208,7 @@ python supported by cmd2, and all supported platforms. cmd2 uses a three
 tiered testing strategy to accomplish this objective.
 
 - [pytest](https://pytest.org) runs the unit tests
-- [tox](https://tox.readthedocs.io/) runs the unit tests on multiple versions
+- [nox](https://nox.thea.codes/en/stable/) runs the unit tests on multiple versions
   of python
 - [AppVeyor](https://www.appveyor.com/) and [TravisCI](https://travis-ci.com)
   run the tests on the various supported platforms
@@ -218,7 +218,7 @@ This plugin template is set up to use the same strategy.
 
 ### Create python environments
 
-This project uses [tox](https://tox.readthedocs.io/en/latest/) to run the test
+This project uses [nox](https://nox.thea.codes/en/stable/) to run the test
 suite against multiple python versions. I recommend
 [pyenv](https://github.com/pyenv/pyenv) with the
 [pyenv-virtualenv](https://github.com/pyenv/pyenv-virtualenv>) plugin to manage
@@ -296,12 +296,12 @@ Run `invoke pytest` from the top level directory of your plugin to run all the
 unit tests found in the `tests` directory.
 
 
-### Use tox to run unit tests in multiple versions of python
+### Use nox to run unit tests in multiple versions of python
 
-The included `tox.ini` is setup to run the unit tests in python 3.4, 3.5, 3.6,
+The included `noxfile.py` is setup to run the unit tests in python 3.4, 3.5, 3.6,
 and 3.7. You can run your unit tests in all of these versions of python by:
 ```
-$ invoke tox
+$ nox
 ```
 
 

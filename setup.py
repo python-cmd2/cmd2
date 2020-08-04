@@ -47,7 +47,7 @@ EXTRAS_REQUIRE = {
     ":sys_platform=='win32'": ['pyreadline'],
     # Extra dependencies for running unit tests
     'test': [
-        "gnureadline; sys_platform=='darwin'",  # include gnureadline on macOS to ensure it is available in tox env
+        "gnureadline; sys_platform=='darwin'",  # include gnureadline on macOS to ensure it is available in nox env
         "mock ; python_version<'3.6'",  # for python 3.5 we need the third party mock module
         'codecov',
         'coverage',
@@ -57,7 +57,7 @@ EXTRAS_REQUIRE = {
     ],
     # development only dependencies:  install with 'pip install -e .[dev]'
     'dev': ["mock ; python_version<'3.6'",  # for python 3.5 we need the third party mock module
-            'pytest', 'codecov', 'pytest-cov', 'pytest-mock', 'tox', 'nox', 'flake8',
+            'pytest', 'codecov', 'pytest-cov', 'pytest-mock', 'nox', 'flake8',
             'sphinx', 'sphinx-rtd-theme', 'sphinx-autobuild', 'doc8',
             'invoke', 'twine>=1.11',
             ]

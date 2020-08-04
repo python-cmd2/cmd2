@@ -46,7 +46,7 @@ namespace.add_collection(namespace_clean, 'clean')
 
 #####
 #
-# pytest, tox, nox, pylint, and codecov
+# pytest, nox, pylint, and codecov
 #
 #####
 
@@ -112,27 +112,6 @@ def mypy_clean(context):
 
 
 namespace_clean.add_task(mypy_clean, 'mypy')
-
-
-@invoke.task
-def tox(context):
-    """Run unit and integration tests on multiple python versions using tox"""
-    with context.cd(TASK_ROOT_STR):
-        context.run("tox")
-
-
-namespace.add_task(tox)
-
-
-@invoke.task
-def tox_clean(context):
-    """Remove tox virtualenvs and logs"""
-    # pylint: disable=unused-argument
-    with context.cd(TASK_ROOT_STR):
-        rmrf('.tox')
-
-
-namespace_clean.add_task(tox_clean, 'tox')
 
 
 @invoke.task

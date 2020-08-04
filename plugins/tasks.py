@@ -22,7 +22,7 @@ namespace.add_collection(namespace_clean, 'clean')
 
 #####
 #
-# pytest, tox, pylint, and codecov
+# pytest, pylint, and codecov
 #
 #####
 
