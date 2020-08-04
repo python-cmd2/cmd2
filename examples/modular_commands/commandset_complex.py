@@ -23,7 +23,7 @@ class CommandSetA(cmd2.CommandSet):
     cranberry_parser = cmd2.Cmd2ArgumentParser('cranberry')
     cranberry_parser.add_argument('arg1', choices=['lemonade', 'juice', 'sauce'])
 
-    @cmd2.with_argparser_and_unknown_args(cranberry_parser)
+    @cmd2.with_argparser(cranberry_parser, with_unknown_args=True)
     def do_cranberry(self, cmd: cmd2.Cmd, ns: argparse.Namespace, unknown: List[str]):
         cmd.poutput('Cranberry {}!!'.format(ns.arg1))
         if unknown and len(unknown):

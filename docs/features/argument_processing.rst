@@ -272,7 +272,7 @@ Here's what it looks like::
     dir_parser = argparse.ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
-    @with_argparser_and_unknown_args(dir_parser)
+    @with_argparser(dir_parser, with_unknown_args=True)
     def do_dir(self, args, unknown):
         """List contents of current directory."""
         # No arguments for this command

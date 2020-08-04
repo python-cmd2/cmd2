@@ -1,7 +1,10 @@
 ## 1.3.0 (August 4, 2020)
-* Enchancements
+* Enhancements
     * Added CommandSet - Enables defining a separate loadable module of commands to register/unregister
-      with your cmd2 application. 
+      with your cmd2 application.
+* Other
+    * Marked with_argparser_and_unknown_args pending deprecation and consolidated implementation into
+      with_argparser 
 
 ## 1.2.1 (July 14, 2020)
 * Bug Fixes

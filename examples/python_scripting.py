@@ -96,7 +96,7 @@ class CmdLineApp(cmd2.Cmd):
     dir_parser = argparse.ArgumentParser()
     dir_parser.add_argument('-l', '--long', action='store_true', help="display in long format with one item per line")
 
-    @cmd2.with_argparser_and_unknown_args(dir_parser)
+    @cmd2.with_argparser(dir_parser, with_unknown_args=True)
     def do_dir(self, args, unknown):
         """List contents of current directory."""
         # No arguments for this command

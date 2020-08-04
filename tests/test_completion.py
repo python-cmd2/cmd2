@@ -1132,7 +1132,7 @@ class SubcommandsWithUnknownExample(cmd2.Cmd):
     parser_sport = base_subparsers.add_parser('sport', help='sport help')
     sport_arg = parser_sport.add_argument('sport', help='Enter name of a sport', choices=sport_item_strs)
 
-    @cmd2.with_argparser_and_unknown_args(base_parser)
+    @cmd2.with_argparser(base_parser, with_unknown_args=True)
     def do_base(self, args):
         """Base command help"""
         func = getattr(args, 'func', None)

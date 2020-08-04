@@ -92,7 +92,7 @@ class ArgparseApp(cmd2.Cmd):
     known_parser.add_argument('-p', '--piglatin', action='store_true', help='atinLay')
     known_parser.add_argument('-s', '--shout', action='store_true', help='N00B EMULATION MODE')
     known_parser.add_argument('-r', '--repeat', type=int, help='output [n] times')
-    @cmd2.with_argparser_and_unknown_args(known_parser)
+    @cmd2.with_argparser(known_parser, with_unknown_args=True)
     def do_speak(self, args, extra, *, keyword_arg: Optional[str] = None):
         """Repeat what you tell me to."""
         words = []
@@ -112,11 +112,11 @@ class ArgparseApp(cmd2.Cmd):
         if keyword_arg is not None:
             print(keyword_arg)
 
-    @cmd2.with_argparser_and_unknown_args(argparse.ArgumentParser(), preserve_quotes=True)
+    @cmd2.with_argparser(argparse.ArgumentParser(), preserve_quotes=True, with_unknown_args=True)
     def do_test_argparse_with_list_quotes(self, args, extra):
         self.stdout.write('{}'.format(' '.join(extra)))
 
-    @cmd2.with_argparser_and_unknown_args(argparse.ArgumentParser(), ns_provider=namespace_provider)
+    @cmd2.with_argparser(argparse.ArgumentParser(), ns_provider=namespace_provider, with_unknown_args=True)
     def do_test_argparse_with_list_ns(self, args, extra):
         self.stdout.write('{}'.format(args.custom_stuff))
 
