@@ -1,6 +1,7 @@
 # coding=utf-8
 """Decorators for ``cmd2`` commands"""
 import argparse
+import types
 from typing import TYPE_CHECKING, Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 from . import constants
@@ -231,6 +232,12 @@ def with_argparser_and_unknown_args(parser: argparse.ArgumentParser, *,
                 raise Cmd2ArgparseError
             else:
                 setattr(ns, '__statement__', statement)
+
+                def get_handler(self: argparse.Namespace) -> Optional[Callable]:
+                    return getattr(self, constants.SUBCMD_HANDLER, None)
+
+                setattr(ns, 'get_handler', types.MethodType(get_handler, ns))
+
                 args_list = _arg_swap(args, statement, ns, unknown)
                 return func(*args_list, **kwargs)
 
@@ -316,6 +323,12 @@ def with_argparser(parser: argparse.ArgumentParser, *,
                 raise Cmd2ArgparseError
             else:
                 setattr(ns, '__statement__', statement)
+
+                def get_handler(self: argparse.Namespace) -> Optional[Callable]:
+                    return getattr(self, constants.SUBCMD_HANDLER, None)
+
+                setattr(ns, 'get_handler', types.MethodType(get_handler, ns))
+
                 args_list = _arg_swap(args, statement, ns)
                 return func(*args_list, **kwargs)
 

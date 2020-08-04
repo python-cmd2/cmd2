@@ -413,9 +413,9 @@ class Cmd(cmd.Cmd):
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
         for cmdset_type in all_commandset_defs:
             init_sig = inspect.signature(cmdset_type.__init__)
-            if not (cmdset_type in existing_commandset_types or
-                    len(init_sig.parameters) != 1 or
-                    'self' not in init_sig.parameters):
+            if not (cmdset_type in existing_commandset_types
+                    or len(init_sig.parameters) != 1
+                    or 'self' not in init_sig.parameters):
                 cmdset = cmdset_type()
                 self.install_command_set(cmdset)
 
@@ -550,7 +550,7 @@ class Cmd(cmd.Cmd):
         methods = inspect.getmembers(
             cmdset,
             predicate=lambda meth: isinstance(meth, Callable)
-                                   and hasattr(meth, '__name__') and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
+            and hasattr(meth, '__name__') and meth.__name__.startswith(COMMAND_FUNC_PREFIX))
 
         for method in methods:
             command_name = method[0][len(COMMAND_FUNC_PREFIX):]
@@ -562,6 +562,7 @@ class Cmd(cmd.Cmd):
                 command_func = self.cmd_func(command_name)
 
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)
+
             def check_parser_uninstallable(parser):
                 for action in parser._actions:
                     if isinstance(action, argparse._SubParsersAction):
@@ -621,7 +622,7 @@ class Cmd(cmd.Cmd):
                 command_handler = _partial_passthru(method, self)
             else:
                 command_handler = method
-            subcmd_parser.set_defaults(handler=command_handler)
+            subcmd_parser.set_defaults(cmd2_handler=command_handler)
 
             def find_subcommand(action: argparse.ArgumentParser, subcmd_names: List[str]) -> argparse.ArgumentParser:
                 if not subcmd_names:
@@ -671,8 +672,8 @@ class Cmd(cmd.Cmd):
                 command_func = self.cmd_func(command_name)
 
             if command_func is None:  # pragma: no cover
-                    # This really shouldn't be possible since _register_subcommands would prevent this from happening
-                    # but keeping in case it does for some strange reason
+                # This really shouldn't be possible since _register_subcommands would prevent this from happening
+                # but keeping in case it does for some strange reason
                 raise CommandSetRegistrationError('Could not find command "{}" needed by subcommand: {}'
                                                   .format(command_name, str(method)))
             command_parser = getattr(command_func, constants.CMD_ATTR_ARGPARSER, None)

@@ -281,13 +281,13 @@ class LoadableBase(cmd2.CommandSet):
     @cmd2.with_argparser(cut_parser)
     def do_cut(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
         """Cut something"""
-        func = getattr(ns, 'handler', None)
-        if func is not None:
+        handler = ns.get_handler()
+        if handler is not None:
             # Call whatever subcommand function was selected
-            func(ns)
+            handler(ns)
         else:
             # No subcommand was provided, so call help
-            cmd.poutput('This command does nothing without sub-parsers registered')
+            cmd.pwarning('This command does nothing without sub-parsers registered')
             cmd.do_help('cut')
 
 
@@ -297,13 +297,13 @@ class LoadableBase(cmd2.CommandSet):
     @cmd2.with_argparser(stir_parser)
     def do_stir(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
         """Stir something"""
-        func = getattr(ns, 'handler', None)
-        if func is not None:
+        handler = ns.get_handler()
+        if handler is not None:
             # Call whatever subcommand function was selected
-            func(ns)
+            handler(ns)
         else:
             # No subcommand was provided, so call help
-            cmd.poutput('This command does nothing without sub-parsers registered')
+            cmd.pwarning('This command does nothing without sub-parsers registered')
             cmd.do_help('stir')
 
     stir_pasta_parser = cmd2.Cmd2ArgumentParser('pasta', add_help=False)
@@ -312,10 +312,10 @@ class LoadableBase(cmd2.CommandSet):
 
     @cmd2.as_subcommand_to('stir', 'pasta', stir_pasta_parser)
     def stir_pasta(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
-        func = getattr(ns, 'handler', None)
-        if func is not None:
+        handler = ns.get_handler()
+        if handler is not None:
             # Call whatever subcommand function was selected
-            func(ns)
+            handler(ns)
         else:
             cmd.poutput('Stir pasta haphazardly')
 
@@ -327,10 +327,10 @@ class LoadableBadBase(cmd2.CommandSet):
 
     def do_cut(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
         """Cut something"""
-        func = getattr(ns, 'handler', None)
-        if func is not None:
+        handler = ns.get_handler()
+        if handler is not None:
             # Call whatever subcommand function was selected
-            func(ns)
+            handler(ns)
         else:
             # No subcommand was provided, so call help
             cmd.poutput('This command does nothing without sub-parsers registered')
@@ -417,6 +417,9 @@ def test_subcommands(command_sets_manual):
     with pytest.raises(CommandSetRegistrationError):
         command_sets_manual._register_subcommands(fruit_cmds)
 
+    cmd_result = command_sets_manual.app_cmd('cut')
+    assert 'This command does nothing without sub-parsers registered' in cmd_result.stderr
+
     # verify that command set install without problems
     command_sets_manual.install_command_set(fruit_cmds)
     command_sets_manual.install_command_set(veg_cmds)
@@ -432,6 +435,9 @@ def test_subcommands(command_sets_manual):
     assert first_match is not None
     # check that the alias shows up correctly
     assert ['banana', 'bananer', 'bokchoy'] == command_sets_manual.completion_matches
+
+    cmd_result = command_sets_manual.app_cmd('cut banana discs')
+    assert 'cutting banana: discs' in cmd_result.stdout
 
     text = ''
     line = 'cut bokchoy {}'.format(text)
@@ -546,10 +552,10 @@ class AppWithSubCommands(cmd2.Cmd):
     @cmd2.with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace):
         """Cut something"""
-        func = getattr(ns, 'handler', None)
-        if func is not None:
+        handler = ns.get_handler()
+        if handler is not None:
             # Call whatever subcommand function was selected
-            func(ns)
+            handler(ns)
         else:
             # No subcommand was provided, so call help
             self.poutput('This command does nothing without sub-parsers registered')

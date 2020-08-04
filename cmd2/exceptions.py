@@ -31,6 +31,7 @@ class CommandSetRegistrationError(Exception):
 # The following exceptions are NOT part of the public API and are intended for internal use only.
 ############################################################################################################
 
+
 class Cmd2ShlexError(Exception):
     """Raised when shlex fails to parse a command line string in StatementParser"""
     pass

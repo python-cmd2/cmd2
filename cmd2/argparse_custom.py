@@ -584,7 +584,6 @@ def _SubParsersAction_remove_parser(self, name: str):
         del self.choices[name]
 
 
-
 # noinspection PyProtectedMember
 setattr(argparse._SubParsersAction, 'remove_parser', _SubParsersAction_remove_parser)
 
