@@ -11,8 +11,7 @@ import pytest
 
 import cmd2
 from cmd2 import utils
-from cmd2_ext_test import ExternalTestMixin
-from .conftest import complete_tester, run_cmd
+from .conftest import complete_tester, WithCommandSets
 from cmd2.exceptions import CommandSetRegistrationError
 
 
@@ -75,24 +74,6 @@ class CommandSetB(cmd2.CommandSet):
 
     def do_crocodile(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
         cmd.poutput('Crocodile!!')
-
-
-class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
-    """Class for testing custom help_* methods which override docstring help."""
-    def __init__(self, *args, **kwargs):
-        super(WithCommandSets, self).__init__(*args, **kwargs)
-
-
-@pytest.fixture
-def command_sets_app():
-    app = WithCommandSets()
-    return app
-
-
-@pytest.fixture()
-def command_sets_manual():
-    app = WithCommandSets(auto_load_commands=False)
-    return app
 
 
 def test_autoload_commands(command_sets_app):
@@ -542,7 +523,7 @@ def test_nested_subcommands(command_sets_manual):
 
 
 class AppWithSubCommands(cmd2.Cmd):
-    """Class for testing custom help_* methods which override docstring help."""
+    """Class for testing usage of `as_subcommand_to` decorator directly in a Cmd2 subclass."""
     def __init__(self, *args, **kwargs):
         super(AppWithSubCommands, self).__init__(*args, **kwargs)
 
@@ -611,125 +592,190 @@ def test_static_subcommands(static_subcommands_app):
     assert ['diced', 'quartered'] == static_subcommands_app.completion_matches
 
 
-# reproduces test_argparse.py except with SubCommands
-class SubcommandSet(cmd2.CommandSet):
-    """ Example cmd2 application where we a base command which has a couple subcommands."""
+complete_states_expected_self = None
+
+
+class WithCompleterCommandSet(cmd2.CommandSet):
+    states = ['alabama', 'alaska', 'arizona', 'arkansas', 'california', 'colorado', 'connecticut', 'delaware']
 
     def __init__(self, dummy):
-        super(SubcommandSet, self).__init__()
+        """dummy variable prevents this from being autoloaded in other tests"""
+        super(WithCompleterCommandSet, self).__init__()
 
-    # subcommand functions for the base command
-    def base_foo(self, cmd: cmd2.Cmd, args):
-        """foo subcommand of base command"""
-        cmd.poutput(args.x * args.y)
-
-    def base_bar(self, cmd: cmd2.Cmd, args):
-        """bar subcommand of base command"""
-        cmd.poutput('((%s))' % args.z)
-
-    def base_helpless(self, cmd: cmd2.Cmd, args):
-        """helpless subcommand of base command"""
-        cmd.poutput('((%s))' % args.z)
-
-    # create the top-level parser for the base command
-    base_parser = argparse.ArgumentParser()
-    base_subparsers = base_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    base_subparsers.required = True
-
-    # create the parser for the "foo" subcommand
-    parser_foo = base_subparsers.add_parser('foo', help='foo help')
-    parser_foo.add_argument('-x', type=int, default=1, help='integer')
-    parser_foo.add_argument('y', type=float, help='float')
-    parser_foo.set_defaults(func=base_foo)
-
-    # create the parser for the "bar" subcommand
-    parser_bar = base_subparsers.add_parser('bar', help='bar help', aliases=['bar_1', 'bar_2'])
-    parser_bar.add_argument('z', help='string')
-    parser_bar.set_defaults(func=base_bar)
-
-    # create the parser for the "helpless" subcommand
-    # This subcommand has aliases and no help text. It exists to prevent changes to _set_parser_prog() which
-    # use an approach which relies on action._choices_actions list. See comment in that function for more
-    # details.
-    parser_bar = base_subparsers.add_parser('helpless', aliases=['helpless_1', 'helpless_2'])
-    parser_bar.add_argument('z', help='string')
-    parser_bar.set_defaults(func=base_bar)
-
-    @cmd2.with_argparser(base_parser)
-    def do_base(self, cmd: cmd2.Cmd, args):
-        """Base command help"""
-        # Call whatever subcommand function was selected
-        func = getattr(args, 'func')
-        func(self, cmd, args)
+    def complete_states(self, cmd: cmd2.Cmd, text: str, line: str, begidx: int, endidx: int) -> List[str]:
+        assert self is complete_states_expected_self
+        return utils.basic_complete(text, line, begidx, endidx, self.states)
 
 
-@pytest.fixture
-def subcommand_app():
-    app = WithCommandSets(auto_load_commands=False,
-                          command_sets=[SubcommandSet(1)])
-    return app
+class SubclassCommandSetCase1(WithCompleterCommandSet):
+    parser = cmd2.Cmd2ArgumentParser()
+    parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
+
+    @cmd2.with_argparser(parser)
+    def do_case1(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+        cmd.poutput('something {}'.format(ns.state))
 
 
-def test_subcommand_foo(subcommand_app):
-    out, err = run_cmd(subcommand_app, 'base foo -x2 5.0')
-    assert out == ['10.0']
+class SubclassCommandSetErrorCase2(WithCompleterCommandSet):
+    parser = cmd2.Cmd2ArgumentParser()
+    parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
+
+    @cmd2.with_argparser(parser)
+    def do_error2(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+        cmd.poutput('something {}'.format(ns.state))
 
 
-def test_subcommand_bar(subcommand_app):
-    out, err = run_cmd(subcommand_app, 'base bar baz')
-    assert out == ['((baz))']
+class SubclassCommandSetCase2(cmd2.CommandSet):
+    def __init__(self, dummy):
+        """dummy variable prevents this from being autoloaded in other tests"""
+        super(SubclassCommandSetCase2, self).__init__()
 
-def test_subcommand_invalid(subcommand_app):
-    out, err = run_cmd(subcommand_app, 'base baz')
-    assert err[0].startswith('usage: base')
-    assert err[1].startswith("base: error: argument SUBCOMMAND: invalid choice: 'baz'")
+    parser = cmd2.Cmd2ArgumentParser()
+    parser.add_argument('state', type=str, completer_method=WithCompleterCommandSet.complete_states)
 
-def test_subcommand_base_help(subcommand_app):
-    out, err = run_cmd(subcommand_app, 'help base')
-    assert out[0].startswith('usage: base')
-    assert out[1] == ''
-    assert out[2] == 'Base command help'
+    @cmd2.with_argparser(parser)
+    def do_case2(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
+        cmd.poutput('something {}'.format(ns.state))
 
-def test_subcommand_help(subcommand_app):
-    # foo has no aliases
-    out, err = run_cmd(subcommand_app, 'help base foo')
-    assert out[0].startswith('usage: base foo')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
 
-    # bar has aliases (usage should never show alias name)
-    out, err = run_cmd(subcommand_app, 'help base bar')
-    assert out[0].startswith('usage: base bar')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+def test_cross_commandset_completer(command_sets_manual):
+    global complete_states_expected_self
+    # This tests the different ways to locate the matching CommandSet when completing an argparse argument.
+    # Exercises the `_complete_for_arg` function of `ArgparseCompleter` in `argparse_completer.py`
 
-    out, err = run_cmd(subcommand_app, 'help base bar_1')
-    assert out[0].startswith('usage: base bar')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    ####################################################################################################################
+    # This exercises Case 1
+    # If the CommandSet holding a command is a sub-class of the class that defines the completer function, then use that
+    # CommandSet instance as self when calling the completer
+    case1_set = SubclassCommandSetCase1(1)
 
-    out, err = run_cmd(subcommand_app, 'help base bar_2')
-    assert out[0].startswith('usage: base bar')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    command_sets_manual.install_command_set(case1_set)
 
-    # helpless has aliases and no help text (usage should never show alias name)
-    out, err = run_cmd(subcommand_app, 'help base helpless')
-    assert out[0].startswith('usage: base helpless')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    text = ''
+    line = 'case1 {}'.format(text)
+    endidx = len(line)
+    begidx = endidx
+    complete_states_expected_self = case1_set
+    first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+    complete_states_expected_self = None
 
-    out, err = run_cmd(subcommand_app, 'help base helpless_1')
-    assert out[0].startswith('usage: base helpless')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    assert first_match == 'alabama'
+    assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
 
-    out, err = run_cmd(subcommand_app, 'help base helpless_2')
-    assert out[0].startswith('usage: base helpless')
-    assert out[1] == ''
-    assert out[2] == 'positional arguments:'
+    command_sets_manual.uninstall_command_set(case1_set)
 
-def test_subcommand_invalid_help(subcommand_app):
-    out, err = run_cmd(subcommand_app, 'help base baz')
-    assert out[0].startswith('usage: base')
+    ####################################################################################################################
+    # This exercises Case 2
+    # If the CommandSet holding a command is unrelated to the CommandSet holding the completer function, then search
+    # all installed CommandSet instances for one that is an exact type match
 
+    # First verify that, without the correct command set
+    base_set = WithCompleterCommandSet(1)
+    case2_set = SubclassCommandSetCase2(2)
+    command_sets_manual.install_command_set(base_set)
+    command_sets_manual.install_command_set(case2_set)
+
+    text = ''
+    line = 'case2 {}'.format(text)
+    endidx = len(line)
+    begidx = endidx
+    complete_states_expected_self = base_set
+    first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+    complete_states_expected_self = None
+
+    assert first_match == 'alabama'
+    assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
+
+    command_sets_manual.uninstall_command_set(case2_set)
+    command_sets_manual.uninstall_command_set(base_set)
+
+    ####################################################################################################################
+    # This exercises Case 3
+    # If the CommandSet holding a command is unrelated to the CommandSet holding the completer function,
+    # and no exact type match can be found, but sub-class matches can be found and there is only a single
+    # subclass match, then use the lone subclass match as the parent CommandSet.
+
+    command_sets_manual.install_command_set(case1_set)
+    command_sets_manual.install_command_set(case2_set)
+
+    text = ''
+    line = 'case2 {}'.format(text)
+    endidx = len(line)
+    begidx = endidx
+    complete_states_expected_self = case1_set
+    first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+    complete_states_expected_self = None
+
+    assert first_match == 'alabama'
+    assert command_sets_manual.completion_matches == WithCompleterCommandSet.states
+
+    command_sets_manual.uninstall_command_set(case2_set)
+    command_sets_manual.uninstall_command_set(case1_set)
+
+    ####################################################################################################################
+    # Error Case 1
+    # If the CommandSet holding a command is unrelated to the CommandSet holding the completer function, then search
+    # all installed CommandSet instances for one that is an exact type match, none are found
+    # search for sub-class matches, also none are found.
+
+    command_sets_manual.install_command_set(case2_set)
+
+    text = ''
+    line = 'case2 {}'.format(text)
+    endidx = len(line)
+    begidx = endidx
+    first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+
+    assert first_match is None
+    assert command_sets_manual.completion_matches == []
+
+    command_sets_manual.uninstall_command_set(case2_set)
+
+    ####################################################################################################################
+    # Error Case 2
+    # If the CommandSet holding a command is unrelated to the CommandSet holding the completer function, then search
+    # all installed CommandSet instances for one that is an exact type match, none are found
+    # search for sub-class matches, more than 1 is found
+
+    error_case2_set = SubclassCommandSetErrorCase2(4)
+    command_sets_manual.install_command_set(case1_set)
+    command_sets_manual.install_command_set(case2_set)
+    command_sets_manual.install_command_set(error_case2_set)
+
+    text = ''
+    line = 'case2 {}'.format(text)
+    endidx = len(line)
+    begidx = endidx
+    first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+
+    assert first_match is None
+    assert command_sets_manual.completion_matches == []
+
+    command_sets_manual.uninstall_command_set(case2_set)
+
+
+class CommandSetWithPathComplete(cmd2.CommandSet):
+    def __init__(self, dummy):
+        """dummy variable prevents this from being autoloaded in other tests"""
+        super(CommandSetWithPathComplete, self).__init__()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path', nargs='+', help='paths', completer_method=cmd2.Cmd.path_complete)
+
+    @cmd2.with_argparser(parser)
+    def do_path(self, app: cmd2.Cmd, args):
+        app.poutput(args.path)
+
+
+def test_path_complete(command_sets_manual):
+    test_set = CommandSetWithPathComplete(1)
+
+    command_sets_manual.install_command_set(test_set)
+
+    text = ''
+    line = 'path {}'.format(text)
+    endidx = len(line)
+    begidx = endidx
+    first_match = complete_tester(text, line, begidx, endidx, command_sets_manual)
+
+    assert first_match is not None

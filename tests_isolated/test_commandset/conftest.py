@@ -10,6 +10,7 @@ from unittest import mock
 from pytest import fixture
 
 import cmd2
+from cmd2_ext_test import ExternalTestMixin
 from cmd2.utils import StdSim
 
 # Prefer statically linked gnureadline if available (for macOS compatibility due to issues with libedit)
@@ -194,3 +195,21 @@ def complete_tester(text: str, line: str, begidx: int, endidx: int, app) -> Opti
         with mock.patch.object(readline, 'get_begidx', get_begidx):
             with mock.patch.object(readline, 'get_endidx', get_endidx):
                 return app.complete(text, 0)
+
+
+class WithCommandSets(ExternalTestMixin, cmd2.Cmd):
+    """Class for testing custom help_* methods which override docstring help."""
+    def __init__(self, *args, **kwargs):
+        super(WithCommandSets, self).__init__(*args, **kwargs)
+
+
+@fixture
+def command_sets_app():
+    app = WithCommandSets()
+    return app
+
+
+@fixture()
+def command_sets_manual():
+    app = WithCommandSets(auto_load_commands=False)
+    return app

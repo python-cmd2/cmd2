@@ -8,7 +8,8 @@ Cmd2 also enables developers to modularize their command definitions into Comman
 a logical grouping of commands within an cmd2 application. By default, all CommandSets will be discovered and loaded
 automatically when the cmd2.Cmd class is instantiated with this mixin. This also enables the developer to
 dynamically add/remove commands from the cmd2 application. This could be useful for loadable plugins that
-add additional capabilities.
+add additional capabilities. Additionally, it allows for object-oriented encapsulation and garbage collection of state
+that is specific to a CommandSet.
 
 Features
 ~~~~~~~~
