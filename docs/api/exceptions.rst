@@ -9,3 +9,6 @@ Custom cmd2 exceptions
 
 .. autoclass:: cmd2.exceptions.Cmd2ArgparseError
     :members:
+
+.. autoclass:: cmd2.exceptions.CommandSetRegistrationError
+    :members:
