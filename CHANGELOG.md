@@ -1,3 +1,11 @@
+## 1.3.3 (TBD)
+* Bug Fixes
+    * Added explicit testing against python 3.5.3 for Debian 9 support.
+    * Added fallback definition of typing.Deque (taken from 3.5.4)
+* Other 
+    * Added missing doc-string for new cmd2.Cmd __init__ parameters 
+      introduced by CommandSet enhancement
+
 ## 1.3.2 (August 10, 2020)
 * Bug Fixes
     * Fixed `prog` value of subcommands added with `as_subcommand_to()` decorator.
