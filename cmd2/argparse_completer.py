@@ -24,8 +24,9 @@ from .argparse_custom import (
     generate_range_error,
 )
 from .command_definition import CommandSet
+from .exceptions import CompletionError
 from .table_creator import Column, SimpleTable
-from .utils import CompletionError, basic_complete, get_defining_class
+from .utils import get_defining_class
 
 # If no descriptive header is supplied, then this will be used instead
 DEFAULT_DESCRIPTIVE_HEADER = 'Description'
@@ -459,7 +460,7 @@ class ArgparseCompleter:
                 if action.help != argparse.SUPPRESS:
                     match_against.append(flag)
 
-        return basic_complete(text, line, begidx, endidx, match_against)
+        return self._cmd2_app.basic_complete(text, line, begidx, endidx, match_against)
 
     def _format_completions(self, action, completions: List[Union[str, CompletionItem]]) -> List[str]:
         # Check if the results are CompletionItems and that there aren't too many to display
@@ -524,7 +525,7 @@ class ArgparseCompleter:
                     return completer.complete_subcommand_help(tokens[token_index:], text, line, begidx, endidx)
                 elif token_index == len(tokens) - 1:
                     # Since this is the last token, we will attempt to complete it
-                    return basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
+                    return self._cmd2_app.basic_complete(text, line, begidx, endidx, self._subcommand_action.choices)
                 else:
                     break
         return []
@@ -568,45 +569,44 @@ class ArgparseCompleter:
         args = []
         kwargs = {}
         if isinstance(arg_choices, ChoicesCallable):
-            if arg_choices.is_method:
-                # figure out what class the completer was defined in
-                completer_class = get_defining_class(arg_choices.to_call)
+            # figure out what class the completer was defined in
+            completer_class = get_defining_class(arg_choices.to_call)
 
-                # Was there a defining class identified? If so, is it a sub-class of CommandSet?
-                if completer_class is not None and issubclass(completer_class, CommandSet):
-                    # Since the completer function is provided as an unbound function, we need to locate the instance
-                    # of the CommandSet to pass in as `self` to emulate a bound method call.
-                    # We're searching for candidates that match the completer function's parent type in this order:
-                    #   1. Does the CommandSet registered with the command's argparser match as a subclass?
-                    #   2. Do any of the registered CommandSets in the Cmd2 application exactly match the type?
-                    #   3. Is there a registered CommandSet that is is the only matching subclass?
+            # Was there a defining class identified? If so, is it a sub-class of CommandSet?
+            if completer_class is not None and issubclass(completer_class, CommandSet):
+                # Since the completer function is provided as an unbound function, we need to locate the instance
+                # of the CommandSet to pass in as `self` to emulate a bound method call.
+                # We're searching for candidates that match the completer function's parent type in this order:
+                #   1. Does the CommandSet registered with the command's argparser match as a subclass?
+                #   2. Do any of the registered CommandSets in the Cmd2 application exactly match the type?
+                #   3. Is there a registered CommandSet that is is the only matching subclass?
 
-                    # Now get the CommandSet associated with the current command/subcommand argparser
-                    parser_cmd_set = getattr(self._parser, constants.PARSER_ATTR_COMMANDSET, cmd_set)
-                    if isinstance(parser_cmd_set, completer_class):
-                        # Case 1: Parser's CommandSet is a sub-class of the completer function's CommandSet
-                        cmd_set = parser_cmd_set
-                    else:
-                        # Search all registered CommandSets
-                        cmd_set = None
-                        candidate_sets = []  # type: List[CommandSet]
-                        for installed_cmd_set in self._cmd2_app._installed_command_sets:
-                            if type(installed_cmd_set) == completer_class:
-                                # Case 2: CommandSet is an exact type match for the completer's CommandSet
-                                cmd_set = installed_cmd_set
-                                break
+                # Now get the CommandSet associated with the current command/subcommand argparser
+                parser_cmd_set = getattr(self._parser, constants.PARSER_ATTR_COMMANDSET, cmd_set)
+                if isinstance(parser_cmd_set, completer_class):
+                    # Case 1: Parser's CommandSet is a sub-class of the completer function's CommandSet
+                    cmd_set = parser_cmd_set
+                else:
+                    # Search all registered CommandSets
+                    cmd_set = None
+                    candidate_sets = []  # type: List[CommandSet]
+                    for installed_cmd_set in self._cmd2_app._installed_command_sets:
+                        if type(installed_cmd_set) == completer_class:
+                            # Case 2: CommandSet is an exact type match for the completer's CommandSet
+                            cmd_set = installed_cmd_set
+                            break
 
-                            # Add candidate for Case 3:
-                            if isinstance(installed_cmd_set, completer_class):
-                                candidate_sets.append(installed_cmd_set)
-                        if cmd_set is None and len(candidate_sets) == 1:
-                            # Case 3: There exists exactly 1 CommandSet that is a subclass of the completer's CommandSet
-                            cmd_set = candidate_sets[0]
-                    if cmd_set is None:
-                        # No cases matched, raise an error
-                        raise CompletionError('Could not find CommandSet instance matching defining type for completer')
-                    args.append(cmd_set)
-                args.append(self._cmd2_app)
+                        # Add candidate for Case 3:
+                        if isinstance(installed_cmd_set, completer_class):
+                            candidate_sets.append(installed_cmd_set)
+                    if cmd_set is None and len(candidate_sets) == 1:
+                        # Case 3: There exists exactly 1 CommandSet that is a subclass of the completer's CommandSet
+                        cmd_set = candidate_sets[0]
+                if cmd_set is None:
+                    # No cases matched, raise an error
+                    raise CompletionError('Could not find CommandSet instance matching defining type for completer')
+                args.append(cmd_set)
+            args.append(self._cmd2_app)
 
             # Check if arg_choices.to_call expects arg_tokens
             to_call_params = inspect.signature(arg_choices.to_call).parameters
@@ -650,6 +650,6 @@ class ArgparseCompleter:
             arg_choices = [choice for choice in arg_choices if choice not in used_values]
 
             # Do tab completion on the choices
-            results = basic_complete(text, line, begidx, endidx, arg_choices)
+            results = self._cmd2_app.basic_complete(text, line, begidx, endidx, arg_choices)
 
         return self._format_completions(arg_action, results)
