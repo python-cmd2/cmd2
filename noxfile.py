@@ -14,7 +14,7 @@ def docs(session):
                 '-d', '{}/doctrees'.format(tmpdir), '.', '{}/html'.format(tmpdir))
 
 
-@nox.session(python=['3.5', '3.6', '3.7', '3.8', '3.9'])
+@nox.session(python=['3.5.3', '3.5', '3.6', '3.7', '3.8', '3.9'])
 @nox.parametrize('plugin', [None,
                             'ext_test',
                             'template',

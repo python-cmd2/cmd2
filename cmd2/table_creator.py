@@ -22,8 +22,17 @@ try:
 except ImportError:  # pragma: no cover
     import typing
 
+    # The following copied from the implementation of Deque in Python 3.5.4
     # noinspection PyProtectedMember, PyUnresolvedReferences
-    Deque = typing._alias(deque, typing.T)
+    class Deque(deque, typing.MutableSequence[typing.T]):
+        __slots__ = ()
+        __extra__ = deque
+
+        def __new__(cls, *args, **kwds):
+            if typing._geqv(cls, Deque):
+                raise TypeError('Type Deque cannot be instantiated; use deque() instead')
+            return typing._generic_new(deque, cls, *args, **kwds)
+
 
 # Constants
 EMPTY = ''
