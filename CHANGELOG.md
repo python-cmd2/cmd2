@@ -1,8 +1,11 @@
-## 1.3.2 (August 7, 2020)
+## 1.3.2 (August 10, 2020)
 * Bug Fixes
     * Fixed `prog` value of subcommands added with `as_subcommand_to()` decorator.
     * Fixed missing settings in subcommand parsers created with `as_subcommand_to()` decorator. These settings
       include things like description and epilog text.
+    * Fixed issue with CommandSet auto-discovery only searching direct sub-classes
+* Enhancements
+    * Added functions to fetch registered CommandSets by type and command name
 
 ## 1.3.1 (August 6, 2020)
 * Bug Fixes
