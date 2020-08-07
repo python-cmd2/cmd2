@@ -1,9 +1,15 @@
+## 1.3.2 (August 7, 2020)
+* Bug Fixes
+    * Fixed `prog` value of subcommands added with `as_subcommand_to()` decorator.
+    * Fixed missing settings in subcommand parsers created with `as_subcommand_to()` decorator. These settings
+      include things like description and epilog text.
+
 ## 1.3.1 (August 6, 2020)
 * Bug Fixes
     * Fixed issue determining whether an argparse completer function required a reference to a containing
-       CommandSet. Also resolves issues determining the correct CommandSet instance when calling the argparse 
-       argument completer function.  Manifested as a TypeError when using `cmd2.Cmd.path_complete` as a completer 
-       for an argparse-based command defined in a CommandSet
+      CommandSet. Also resolves issues determining the correct CommandSet instance when calling the argparse 
+      argument completer function.  Manifested as a TypeError when using `cmd2.Cmd.path_complete` as a completer 
+      for an argparse-based command defined in a CommandSet
 
 ## 1.3.0 (August 4, 2020)
 * Enhancements

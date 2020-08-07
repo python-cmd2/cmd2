@@ -330,7 +330,7 @@ class LoadableFruits(cmd2.CommandSet):
     banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
-    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help_text='Cut banana', aliases=['bananer'])
+    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
     def cut_banana(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
         """Cut banana"""
         cmd.poutput('cutting banana: ' + ns.direction)
@@ -545,7 +545,7 @@ class AppWithSubCommands(cmd2.Cmd):
     banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
-    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help_text='Cut banana', aliases=['bananer'])
+    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
     def cut_banana(self, ns: argparse.Namespace):
         """Cut banana"""
         self.poutput('cutting banana: ' + ns.direction)

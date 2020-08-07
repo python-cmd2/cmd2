@@ -56,7 +56,7 @@ SUBCMD_HANDLER = 'cmd2_handler'
 # subcommand attributes for the base command name and the subcommand name
 SUBCMD_ATTR_COMMAND = 'parent_command'
 SUBCMD_ATTR_NAME = 'subcommand_name'
-SUBCMD_ATTR_PARSER_ARGS = 'subcommand_parser_args'
+SUBCMD_ATTR_ADD_PARSER_KWARGS = 'subcommand_add_parser_kwargs'
 
 # arpparse attribute linking to command set instance
 PARSER_ATTR_COMMANDSET = 'command_set'
