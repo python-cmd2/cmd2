@@ -352,32 +352,14 @@ def as_subcommand_to(command: str,
         setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
         setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
 
-        # Dictionary of arguments which will be passed to ArgumentParser.add_subparser()
-        parser_args = dict()
-
-        # parser is set as the parent to the one being created by ArgumentParser.add_parser().
-        # argparse only copies actions (arguments) from a parent and not the following settings.
-        # To retain these settings, we will copy them from parser and pass them as ArgumentParser
-        # constructor arguments to add_parser().
-        parser_args['prog'] = parser.prog
-        parser_args['usage'] = parser.usage
-        parser_args['description'] = parser.description
-        parser_args['epilog'] = parser.epilog
-        parser_args['formatter_class'] = parser.formatter_class
-        parser_args['prefix_chars'] = parser.prefix_chars
-        parser_args['fromfile_prefix_chars'] = parser.fromfile_prefix_chars
-        parser_args['argument_default'] = parser.argument_default
-        parser_args['conflict_handler'] = parser.conflict_handler
-        parser_args['add_help'] = parser.add_help
-        parser_args['allow_abbrev'] = parser.allow_abbrev
-
-        # Add remaining arguments specific to add_parser()
+        # Keyword arguments for ArgumentParser.add_subparser()
+        add_parser_kwargs = dict()
         if help is not None:
-            parser_args['help'] = help
+            add_parser_kwargs['help'] = help
         if aliases is not None:
-            parser_args['aliases'] = aliases[:]
+            add_parser_kwargs['aliases'] = aliases[:]
 
-        setattr(func, constants.SUBCMD_ATTR_PARSER_ARGS, parser_args)
+        setattr(func, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, add_parser_kwargs)
 
         return func
 

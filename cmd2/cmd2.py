@@ -47,7 +47,7 @@ from .argparse_custom import DEFAULT_ARGUMENT_PARSER, CompletionItem
 from .clipboard import can_clip, get_paste_buffer, write_to_paste_buffer
 from .command_definition import CommandSet, _partial_passthru
 from .constants import COMMAND_FUNC_PREFIX, COMPLETER_FUNC_PREFIX, HELP_FUNC_PREFIX
-from .decorators import with_argparser
+from .decorators import with_argparser, as_subcommand_to
 from .exceptions import (
     CommandSetRegistrationError,
     Cmd2ShlexError,
@@ -572,6 +572,7 @@ class Cmd(cmd.Cmd):
                                 raise CommandSetRegistrationError(
                                     'Cannot uninstall CommandSet when another CommandSet depends on it')
                             check_parser_uninstallable(subparser)
+                        break
             if command_parser is not None:
                 check_parser_uninstallable(command_parser)
 
@@ -598,7 +599,6 @@ class Cmd(cmd.Cmd):
             subcommand_name = getattr(method, constants.SUBCMD_ATTR_NAME)
             full_command_name = getattr(method, constants.SUBCMD_ATTR_COMMAND)  # type: str
             subcmd_parser = getattr(method, constants.CMD_ATTR_ARGPARSER)
-            parser_args = getattr(method, constants.SUBCMD_ATTR_PARSER_ARGS, {})
 
             command_tokens = full_command_name.split()
             command_name = command_tokens[0]
@@ -633,14 +633,37 @@ class Cmd(cmd.Cmd):
                         for choice_name, choice in sub_action.choices.items():
                             if choice_name == cur_subcmd:
                                 return find_subcommand(choice, subcmd_names)
+                        break
                 raise CommandSetRegistrationError('Could not find sub-command "{}"'.format(full_command_name))
 
             target_parser = find_subcommand(command_parser, subcommand_names)
 
             for action in target_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
-                    attached_parser = action.add_parser(subcommand_name, parents=[subcmd_parser], **parser_args)
+                    # Get the kwargs for add_parser()
+                    add_parser_kwargs = getattr(method, constants.SUBCMD_ATTR_ADD_PARSER_KWARGS, {})
+
+                    # Set subcmd_parser as the parent to the parser we're creating to get its arguments
+                    add_parser_kwargs['parents'] = [subcmd_parser]
+
+                    # argparse only copies actions from a parent and not the following settings.
+                    # To retain these settings, we will copy them from subcmd_parser and pass them
+                    # as ArgumentParser constructor arguments to add_parser().
+                    add_parser_kwargs['prog'] = subcmd_parser.prog
+                    add_parser_kwargs['usage'] = subcmd_parser.usage
+                    add_parser_kwargs['description'] = subcmd_parser.description
+                    add_parser_kwargs['epilog'] = subcmd_parser.epilog
+                    add_parser_kwargs['formatter_class'] = subcmd_parser.formatter_class
+                    add_parser_kwargs['prefix_chars'] = subcmd_parser.prefix_chars
+                    add_parser_kwargs['fromfile_prefix_chars'] = subcmd_parser.fromfile_prefix_chars
+                    add_parser_kwargs['argument_default'] = subcmd_parser.argument_default
+                    add_parser_kwargs['conflict_handler'] = subcmd_parser.conflict_handler
+                    add_parser_kwargs['add_help'] = subcmd_parser.add_help
+                    add_parser_kwargs['allow_abbrev'] = subcmd_parser.allow_abbrev
+
+                    attached_parser = action.add_parser(subcommand_name, **add_parser_kwargs)
                     setattr(attached_parser, constants.PARSER_ATTR_COMMANDSET, cmdset)
+                    break
 
     def _unregister_subcommands(self, cmdset: Union[CommandSet, 'Cmd']) -> None:
         """
@@ -686,6 +709,7 @@ class Cmd(cmd.Cmd):
             for action in command_parser._actions:
                 if isinstance(action, argparse._SubParsersAction):
                     action.remove_parser(subcommand_name)
+                    break
 
     def add_settable(self, settable: Settable) -> None:
         """
@@ -2599,8 +2623,52 @@ class Cmd(cmd.Cmd):
                 if saved_readline_settings is not None:
                     self._restore_readline(saved_readline_settings)
 
-    # -----  Alias subcommand functions -----
+    # Top-level parser for alias
+    alias_description = ("Manage aliases\n"
+                         "\n"
+                         "An alias is a command that enables replacement of a word by another string.")
+    alias_epilog = ("See also:\n"
+                    "  macro")
+    alias_parser = DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
+    alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+    alias_subparsers.required = True
 
+    # Preserve quotes since we are passing strings to other commands
+    @with_argparser(alias_parser, preserve_quotes=True)
+    def do_alias(self, args: argparse.Namespace) -> None:
+        """Manage aliases"""
+        # Call handler for whatever subcommand was selected
+        handler = args.get_handler()
+        handler(args)
+
+    ############################################
+    # Add subcommands to alias
+    ############################################
+
+    # alias -> create
+    alias_create_description = "Create or overwrite an alias"
+
+    alias_create_epilog = ("Notes:\n"
+                           "  If you want to use redirection, pipes, or terminators in the value of the\n"
+                           "  alias, then quote them.\n"
+                           "\n"
+                           "  Since aliases are resolved during parsing, tab completion will function as\n"
+                           "  it would for the actual command the alias resolves to.\n"
+                           "\n"
+                           "Examples:\n"
+                           "  alias create ls !ls -lF\n"
+                           "  alias create show_log !cat \"log file.txt\"\n"
+                           "  alias create save_results print_results \">\" out.txt\n")
+
+    alias_create_parser = DEFAULT_ARGUMENT_PARSER('create', add_help=False, description=alias_create_description,
+                                                  epilog=alias_create_epilog)
+    alias_create_parser.add_argument('name', help='name of this alias')
+    alias_create_parser.add_argument('command', help='what the alias resolves to',
+                                     choices_method=_get_commands_aliases_and_macros_for_completion)
+    alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER, help='arguments to pass to command',
+                                     completer_method=path_complete)
+
+    @as_subcommand_to('alias', 'create', alias_create_parser, help=alias_create_description.lower())
     def _alias_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite an alias"""
 
@@ -2633,6 +2701,16 @@ class Cmd(cmd.Cmd):
         self.aliases[args.name] = value
         self.poutput("Alias '{}' {}".format(args.name, result))
 
+    # alias -> delete
+    alias_delete_help = "delete aliases"
+    alias_delete_description = "Delete specified aliases or all aliases if --all is used"
+
+    alias_delete_parser = DEFAULT_ARGUMENT_PARSER('delete', add_help=False, description=alias_delete_description)
+    alias_delete_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='alias(es) to delete',
+                                     choices_method=_get_alias_completion_items, descriptive_header='Value')
+    alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
+
+    @as_subcommand_to('alias', 'delete', alias_delete_parser, help=alias_delete_help)
     def _alias_delete(self, args: argparse.Namespace) -> None:
         """Delete aliases"""
         if args.all:
@@ -2648,6 +2726,18 @@ class Cmd(cmd.Cmd):
                 else:
                     self.perror("Alias '{}' does not exist".format(cur_name))
 
+    # alias -> list
+    alias_list_help = "list aliases"
+    alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup\n"
+                              "script to preserve aliases across sessions\n"
+                              "\n"
+                              "Without arguments, all aliases will be listed.")
+
+    alias_list_parser = DEFAULT_ARGUMENT_PARSER('list', add_help=False, description=alias_list_description)
+    alias_list_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='alias(es) to list',
+                                   choices_method=_get_alias_completion_items, descriptive_header='Value')
+
+    @as_subcommand_to('alias', 'list', alias_list_parser, help=alias_delete_help)
     def _alias_list(self, args: argparse.Namespace) -> None:
         """List some or all aliases"""
         if args.names:
@@ -2660,76 +2750,76 @@ class Cmd(cmd.Cmd):
             for cur_alias in sorted(self.aliases, key=self.default_sort_key):
                 self.poutput("alias create {} {}".format(cur_alias, self.aliases[cur_alias]))
 
-    # Top-level parser for alias
-    alias_description = ("Manage aliases\n"
+    # Top-level parser for macro
+    macro_description = ("Manage macros\n"
                          "\n"
-                         "An alias is a command that enables replacement of a word by another string.")
-    alias_epilog = ("See also:\n"
-                    "  macro")
-    alias_parser = DEFAULT_ARGUMENT_PARSER(description=alias_description, epilog=alias_epilog)
-
-    # Add subcommands to alias
-    alias_subparsers = alias_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    alias_subparsers.required = True
-
-    # alias -> create
-    alias_create_description = "Create or overwrite an alias"
-
-    alias_create_epilog = ("Notes:\n"
-                           "  If you want to use redirection, pipes, or terminators in the value of the\n"
-                           "  alias, then quote them.\n"
-                           "\n"
-                           "  Since aliases are resolved during parsing, tab completion will function as\n"
-                           "  it would for the actual command the alias resolves to.\n"
-                           "\n"
-                           "Examples:\n"
-                           "  alias create ls !ls -lF\n"
-                           "  alias create show_log !cat \"log file.txt\"\n"
-                           "  alias create save_results print_results \">\" out.txt\n")
-
-    alias_create_parser = alias_subparsers.add_parser('create', help=alias_create_description.lower(),
-                                                      description=alias_create_description,
-                                                      epilog=alias_create_epilog)
-    alias_create_parser.add_argument('name', help='name of this alias')
-    alias_create_parser.add_argument('command', help='what the alias resolves to',
-                                     choices_method=_get_commands_aliases_and_macros_for_completion)
-    alias_create_parser.add_argument('command_args', nargs=argparse.REMAINDER, help='arguments to pass to command',
-                                     completer_method=path_complete)
-    alias_create_parser.set_defaults(func=_alias_create)
-
-    # alias -> delete
-    alias_delete_help = "delete aliases"
-    alias_delete_description = "Delete specified aliases or all aliases if --all is used"
-    alias_delete_parser = alias_subparsers.add_parser('delete', help=alias_delete_help,
-                                                      description=alias_delete_description)
-    alias_delete_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='alias(es) to delete',
-                                     choices_method=_get_alias_completion_items, descriptive_header='Value')
-    alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
-    alias_delete_parser.set_defaults(func=_alias_delete)
-
-    # alias -> list
-    alias_list_help = "list aliases"
-    alias_list_description = ("List specified aliases in a reusable form that can be saved to a startup\n"
-                              "script to preserve aliases across sessions\n"
-                              "\n"
-                              "Without arguments, all aliases will be listed.")
-
-    alias_list_parser = alias_subparsers.add_parser('list', help=alias_list_help,
-                                                    description=alias_list_description)
-    alias_list_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='alias(es) to list',
-                                   choices_method=_get_alias_completion_items, descriptive_header='Value')
-    alias_list_parser.set_defaults(func=_alias_list)
+                         "A macro is similar to an alias, but it can contain argument placeholders.")
+    macro_epilog = ("See also:\n"
+                    "  alias")
+    macro_parser = DEFAULT_ARGUMENT_PARSER(description=macro_description, epilog=macro_epilog)
+    macro_subparsers = macro_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
+    macro_subparsers.required = True
 
     # Preserve quotes since we are passing strings to other commands
-    @with_argparser(alias_parser, preserve_quotes=True)
-    def do_alias(self, args: argparse.Namespace) -> None:
-        """Manage aliases"""
-        # Call whatever subcommand function was selected
-        func = getattr(args, 'func')
-        func(self, args)
+    @with_argparser(macro_parser, preserve_quotes=True)
+    def do_macro(self, args: argparse.Namespace) -> None:
+        """Manage macros"""
+        # Call handler for whatever subcommand was selected
+        handler = args.get_handler()
+        handler(args)
 
-    # -----  Macro subcommand functions -----
+    ############################################
+    # Add subcommands to macro
+    ############################################
 
+    # macro -> create
+    macro_create_help = "create or overwrite a macro"
+    macro_create_description = "Create or overwrite a macro"
+
+    macro_create_epilog = ("A macro is similar to an alias, but it can contain argument placeholders.\n"
+                           "Arguments are expressed when creating a macro using {#} notation where {1}\n"
+                           "means the first argument.\n"
+                           "\n"
+                           "The following creates a macro called my_macro that expects two arguments:\n"
+                           "\n"
+                           "  macro create my_macro make_dinner --meat {1} --veggie {2}\n"
+                           "\n"
+                           "When the macro is called, the provided arguments are resolved and the\n"
+                           "assembled command is run. For example:\n"
+                           "\n"
+                           "  my_macro beef broccoli ---> make_dinner --meat beef --veggie broccoli\n"
+                           "\n"
+                           "Notes:\n"
+                           "  To use the literal string {1} in your command, escape it this way: {{1}}.\n"
+                           "\n"
+                           "  Extra arguments passed to a macro are appended to resolved command.\n"
+                           "\n"
+                           "  An argument number can be repeated in a macro. In the following example the\n"
+                           "  first argument will populate both {1} instances.\n"
+                           "\n"
+                           "    macro create ft file_taxes -p {1} -q {2} -r {1}\n"
+                           "\n"
+                           "  To quote an argument in the resolved command, quote it during creation.\n"
+                           "\n"
+                           "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
+                           "\n"
+                           "  If you want to use redirection, pipes, or terminators in the value of the\n"
+                           "  macro, then quote them.\n"
+                           "\n"
+                           "    macro create show_results print_results -type {1} \"|\" less\n"
+                           "\n"
+                           "  Because macros do not resolve until after hitting Enter, tab completion\n"
+                           "  will only complete paths while typing a macro.")
+
+    macro_create_parser = DEFAULT_ARGUMENT_PARSER('create', add_help=False, description=macro_create_description,
+                                                  epilog=macro_create_epilog)
+    macro_create_parser.add_argument('name', help='name of this macro')
+    macro_create_parser.add_argument('command', help='what the macro resolves to',
+                                     choices_method=_get_commands_aliases_and_macros_for_completion)
+    macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
+                                     help='arguments to pass to command', completer_method=path_complete)
+
+    @as_subcommand_to('macro', 'create', macro_create_parser, help=macro_create_help)
     def _macro_create(self, args: argparse.Namespace) -> None:
         """Create or overwrite a macro"""
 
@@ -2809,6 +2899,15 @@ class Cmd(cmd.Cmd):
         self.macros[args.name] = Macro(name=args.name, value=value, minimum_arg_count=max_arg_num, arg_list=arg_list)
         self.poutput("Macro '{}' {}".format(args.name, result))
 
+    # macro -> delete
+    macro_delete_help = "delete macros"
+    macro_delete_description = "Delete specified macros or all macros if --all is used"
+    macro_delete_parser = DEFAULT_ARGUMENT_PARSER('delete', add_help=False, description=macro_delete_description)
+    macro_delete_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='macro(s) to delete',
+                                     choices_method=_get_macro_completion_items, descriptive_header='Value')
+    macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
+
+    @as_subcommand_to('macro', 'delete', macro_delete_parser, help=macro_delete_help)
     def _macro_delete(self, args: argparse.Namespace) -> None:
         """Delete macros"""
         if args.all:
@@ -2824,6 +2923,18 @@ class Cmd(cmd.Cmd):
                 else:
                     self.perror("Macro '{}' does not exist".format(cur_name))
 
+    # macro -> list
+    macro_list_help = "list macros"
+    macro_list_description = ("List specified macros in a reusable form that can be saved to a startup script\n"
+                              "to preserve macros across sessions\n"
+                              "\n"
+                              "Without arguments, all macros will be listed.")
+
+    macro_list_parser = DEFAULT_ARGUMENT_PARSER('list', add_help=False, description=macro_list_description)
+    macro_list_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='macro(s) to list',
+                                   choices_method=_get_macro_completion_items, descriptive_header='Value')
+
+    @as_subcommand_to('macro', 'list', macro_list_parser, help=macro_list_help)
     def _macro_list(self, args: argparse.Namespace) -> None:
         """List some or all macros"""
         if args.names:
@@ -2835,97 +2946,6 @@ class Cmd(cmd.Cmd):
         else:
             for cur_macro in sorted(self.macros, key=self.default_sort_key):
                 self.poutput("macro create {} {}".format(cur_macro, self.macros[cur_macro].value))
-
-    # Top-level parser for macro
-    macro_description = ("Manage macros\n"
-                         "\n"
-                         "A macro is similar to an alias, but it can contain argument placeholders.")
-    macro_epilog = ("See also:\n"
-                    "  alias")
-    macro_parser = DEFAULT_ARGUMENT_PARSER(description=macro_description, epilog=macro_epilog)
-
-    # Add subcommands to macro
-    macro_subparsers = macro_parser.add_subparsers(dest='subcommand', metavar='SUBCOMMAND')
-    macro_subparsers.required = True
-
-    # macro -> create
-    macro_create_help = "create or overwrite a macro"
-    macro_create_description = "Create or overwrite a macro"
-
-    macro_create_epilog = ("A macro is similar to an alias, but it can contain argument placeholders.\n"
-                           "Arguments are expressed when creating a macro using {#} notation where {1}\n"
-                           "means the first argument.\n"
-                           "\n"
-                           "The following creates a macro called my_macro that expects two arguments:\n"
-                           "\n"
-                           "  macro create my_macro make_dinner --meat {1} --veggie {2}\n"
-                           "\n"
-                           "When the macro is called, the provided arguments are resolved and the\n"
-                           "assembled command is run. For example:\n"
-                           "\n"
-                           "  my_macro beef broccoli ---> make_dinner --meat beef --veggie broccoli\n"
-                           "\n"
-                           "Notes:\n"
-                           "  To use the literal string {1} in your command, escape it this way: {{1}}.\n"
-                           "\n"
-                           "  Extra arguments passed to a macro are appended to resolved command.\n"
-                           "\n"
-                           "  An argument number can be repeated in a macro. In the following example the\n"
-                           "  first argument will populate both {1} instances.\n"
-                           "\n"
-                           "    macro create ft file_taxes -p {1} -q {2} -r {1}\n"
-                           "\n"
-                           "  To quote an argument in the resolved command, quote it during creation.\n"
-                           "\n"
-                           "    macro create backup !cp \"{1}\" \"{1}.orig\"\n"
-                           "\n"
-                           "  If you want to use redirection, pipes, or terminators in the value of the\n"
-                           "  macro, then quote them.\n"
-                           "\n"
-                           "    macro create show_results print_results -type {1} \"|\" less\n"
-                           "\n"
-                           "  Because macros do not resolve until after hitting Enter, tab completion\n"
-                           "  will only complete paths while typing a macro.")
-
-    macro_create_parser = macro_subparsers.add_parser('create', help=macro_create_help,
-                                                      description=macro_create_description,
-                                                      epilog=macro_create_epilog)
-    macro_create_parser.add_argument('name', help='name of this macro')
-    macro_create_parser.add_argument('command', help='what the macro resolves to',
-                                     choices_method=_get_commands_aliases_and_macros_for_completion)
-    macro_create_parser.add_argument('command_args', nargs=argparse.REMAINDER,
-                                     help='arguments to pass to command', completer_method=path_complete)
-    macro_create_parser.set_defaults(func=_macro_create)
-
-    # macro -> delete
-    macro_delete_help = "delete macros"
-    macro_delete_description = "Delete specified macros or all macros if --all is used"
-    macro_delete_parser = macro_subparsers.add_parser('delete', help=macro_delete_help,
-                                                      description=macro_delete_description)
-    macro_delete_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='macro(s) to delete',
-                                     choices_method=_get_macro_completion_items, descriptive_header='Value')
-    macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
-    macro_delete_parser.set_defaults(func=_macro_delete)
-
-    # macro -> list
-    macro_list_help = "list macros"
-    macro_list_description = ("List specified macros in a reusable form that can be saved to a startup script\n"
-                              "to preserve macros across sessions\n"
-                              "\n"
-                              "Without arguments, all macros will be listed.")
-
-    macro_list_parser = macro_subparsers.add_parser('list', help=macro_list_help, description=macro_list_description)
-    macro_list_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='macro(s) to list',
-                                   choices_method=_get_macro_completion_items, descriptive_header='Value')
-    macro_list_parser.set_defaults(func=_macro_list)
-
-    # Preserve quotes since we are passing strings to other commands
-    @with_argparser(macro_parser, preserve_quotes=True)
-    def do_macro(self, args: argparse.Namespace) -> None:
-        """Manage macros"""
-        # Call whatever subcommand function was selected
-        func = getattr(args, 'func')
-        func(self, args)
 
     def complete_help_command(self, text: str, line: str, begidx: int, endidx: int) -> List[str]:
         """Completes the command argument of help"""
