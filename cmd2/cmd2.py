@@ -2660,7 +2660,7 @@ class Cmd(cmd.Cmd):
                            "  alias create show_log !cat \"log file.txt\"\n"
                            "  alias create save_results print_results \">\" out.txt\n")
 
-    alias_create_parser = DEFAULT_ARGUMENT_PARSER('create', add_help=False, description=alias_create_description,
+    alias_create_parser = DEFAULT_ARGUMENT_PARSER(add_help=False, description=alias_create_description,
                                                   epilog=alias_create_epilog)
     alias_create_parser.add_argument('name', help='name of this alias')
     alias_create_parser.add_argument('command', help='what the alias resolves to',
@@ -2705,7 +2705,7 @@ class Cmd(cmd.Cmd):
     alias_delete_help = "delete aliases"
     alias_delete_description = "Delete specified aliases or all aliases if --all is used"
 
-    alias_delete_parser = DEFAULT_ARGUMENT_PARSER('delete', add_help=False, description=alias_delete_description)
+    alias_delete_parser = DEFAULT_ARGUMENT_PARSER(add_help=False, description=alias_delete_description)
     alias_delete_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='alias(es) to delete',
                                      choices_method=_get_alias_completion_items, descriptive_header='Value')
     alias_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all aliases")
@@ -2733,7 +2733,7 @@ class Cmd(cmd.Cmd):
                               "\n"
                               "Without arguments, all aliases will be listed.")
 
-    alias_list_parser = DEFAULT_ARGUMENT_PARSER('list', add_help=False, description=alias_list_description)
+    alias_list_parser = DEFAULT_ARGUMENT_PARSER(add_help=False, description=alias_list_description)
     alias_list_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='alias(es) to list',
                                    choices_method=_get_alias_completion_items, descriptive_header='Value')
 
@@ -2811,7 +2811,7 @@ class Cmd(cmd.Cmd):
                            "  Because macros do not resolve until after hitting Enter, tab completion\n"
                            "  will only complete paths while typing a macro.")
 
-    macro_create_parser = DEFAULT_ARGUMENT_PARSER('create', add_help=False, description=macro_create_description,
+    macro_create_parser = DEFAULT_ARGUMENT_PARSER(add_help=False, description=macro_create_description,
                                                   epilog=macro_create_epilog)
     macro_create_parser.add_argument('name', help='name of this macro')
     macro_create_parser.add_argument('command', help='what the macro resolves to',
@@ -2902,7 +2902,7 @@ class Cmd(cmd.Cmd):
     # macro -> delete
     macro_delete_help = "delete macros"
     macro_delete_description = "Delete specified macros or all macros if --all is used"
-    macro_delete_parser = DEFAULT_ARGUMENT_PARSER('delete', add_help=False, description=macro_delete_description)
+    macro_delete_parser = DEFAULT_ARGUMENT_PARSER(add_help=False, description=macro_delete_description)
     macro_delete_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='macro(s) to delete',
                                      choices_method=_get_macro_completion_items, descriptive_header='Value')
     macro_delete_parser.add_argument('-a', '--all', action='store_true', help="delete all macros")
@@ -2930,7 +2930,7 @@ class Cmd(cmd.Cmd):
                               "\n"
                               "Without arguments, all macros will be listed.")
 
-    macro_list_parser = DEFAULT_ARGUMENT_PARSER('list', add_help=False, description=macro_list_description)
+    macro_list_parser = DEFAULT_ARGUMENT_PARSER(add_help=False, description=macro_list_description)
     macro_list_parser.add_argument('names', nargs=argparse.ZERO_OR_MORE, help='macro(s) to list',
                                    choices_method=_get_macro_completion_items, descriptive_header='Value')
 
