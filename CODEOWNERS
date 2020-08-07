@@ -16,14 +16,19 @@
 # cmd2 code
 cmd2/__init__.py           @tleonhardt @kotfu
 cmd2/ansi.py               @kmvanbrunt @tleonhardt
-cmd2/argparse_*.py         @kmvanbrunt
+cmd2/argparse_*.py         @kmvanbrunt @anselor
 cmd2/clipboard.py          @tleonhardt
 cmd2/cmd2.py               @tleonhardt @kmvanbrunt @kotfu
+cmd2/command_definition.py @anselor
 cmd2/constants.py          @kotfu
+cmd2/decorators.py         @kotfu @kmvanbrunt @anselor
+cmd2/exceptions.py         @kmvanbrunt @anselor
+cmd2/history.py            @kotfu @tleonhardt
 cmd2/parsing.py            @kotfu @kmvanbrunt
 cmd2/plugin.py             @kotfu
-cmd2/pyscript_bridge.py    @kmvanbrunt
+cmd2/py_bridge.py          @kmvanbrunt
 cmd2/rl_utils.py           @kmvanbrunt
+cmd2/table_creator.py      @kmvanbrunt
 cmd2/transcript.py         @kotfu
 cmd2/utils.py              @tleonhardt @kotfu @kmvanbrunt
 
@@ -34,6 +39,11 @@ docs/*                  @tleonhardt @kotfu
 examples/async_printing.py  @kmvanbrunt
 examples/environment.py     @kotfu
 examples/tab_*.py           @kmvanbrunt
+examples/modular_*.py       @anselor
+examples/modular_commands/* @anselor
+
+plugins/template/*          @kotfu
+plugins/ext_test/*          @anselor
 
 # Unit Tests
 tests/pyscript/*              @kmvanbrunt
@@ -46,6 +56,8 @@ tests/test_comp*.py           @kmvanbrunt
 tests/test_pars*.py           @kotfu
 tests/test_run_pyscript.py    @kmvanbrunt
 tests/test_transcript.py      @kotfu
+
+tests_isolated/test_commandset/*    @anselor
 
 # Top-level project stuff
 CONTRIBUTING.md         @tleonhardt @kotfu
