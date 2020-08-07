@@ -406,18 +406,47 @@ class Cmd(cmd.Cmd):
 
         self._register_subcommands(self)
 
+    def find_commandsets(self, commandset_type: Type[CommandSet], *, subclass_match: bool = False) -> List[CommandSet]:
+        """
+        Find all CommandSets that match the provided CommandSet type.
+        By default, locates a CommandSet that is an exact type match but may optionally return all CommandSets that
+        are sub-classes of the provided type
+        :param commandset_type: CommandSet sub-class type to search for
+        :param subclass_match: If True, return all sub-classes of provided type, otherwise only search for exact match
+        :return: Matching CommandSets
+        """
+        return [cmdset for cmdset in self._installed_command_sets
+                if type(cmdset) == commandset_type or (subclass_match and isinstance(cmdset, commandset_type))]
+
+    def find_commandset_for_command(self, command_name: str) -> Optional[CommandSet]:
+        """
+        Finds the CommandSet that registered the command name
+        :param command_name: command name to search
+        :return: CommandSet that provided the command
+        """
+        return self._cmd_to_command_sets.get(command_name)
+
     def _autoload_commands(self) -> None:
         """Load modular command definitions."""
-        # Search for all subclasses of CommandSet, instantiate them if they weren't provided in the constructor
+        # Search for all subclasses of CommandSet, instantiate them if they weren't already provided in the constructor
         all_commandset_defs = CommandSet.__subclasses__()
         existing_commandset_types = [type(command_set) for command_set in self._installed_command_sets]
-        for cmdset_type in all_commandset_defs:
-            init_sig = inspect.signature(cmdset_type.__init__)
-            if not (cmdset_type in existing_commandset_types
-                    or len(init_sig.parameters) != 1
-                    or 'self' not in init_sig.parameters):
-                cmdset = cmdset_type()
-                self.install_command_set(cmdset)
+
+        def load_commandset_by_type(commandset_types: List[Type]) -> None:
+            for cmdset_type in commandset_types:
+                # check if the type has sub-classes. We will only auto-load leaf class types.
+                subclasses = cmdset_type.__subclasses__()
+                if subclasses:
+                    load_commandset_by_type(subclasses)
+                else:
+                    init_sig = inspect.signature(cmdset_type.__init__)
+                    if not (cmdset_type in existing_commandset_types
+                            or len(init_sig.parameters) != 1
+                            or 'self' not in init_sig.parameters):
+                        cmdset = cmdset_type()
+                        self.install_command_set(cmdset)
+
+        load_commandset_by_type(all_commandset_defs)
 
     def install_command_set(self, cmdset: CommandSet) -> None:
         """
@@ -471,6 +500,7 @@ class Cmd(cmd.Cmd):
             if cmdset in self._cmd_to_command_sets.values():
                 self._cmd_to_command_sets = \
                     {key: val for key, val in self._cmd_to_command_sets.items() if val is not cmdset}
+            cmdset.on_unregister(self)
             raise
 
     def _install_command_function(self, command: str, command_wrapper: Callable, context=''):
