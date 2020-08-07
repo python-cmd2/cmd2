@@ -326,7 +326,7 @@ def as_subcommand_to(command: str,
                      subcommand: str,
                      parser: argparse.ArgumentParser,
                      *,
-                     help_text: Optional[str] = None,
+                     help: Optional[str] = None,
                      aliases: Iterable[str] = None) -> Callable[[argparse.Namespace], Optional[bool]]:
     """
     Tag this method as a subcommand to an existing argparse decorated command.
@@ -334,28 +334,49 @@ def as_subcommand_to(command: str,
     :param command: Command Name. Space-delimited subcommands may optionally be specified
     :param subcommand: Subcommand name
     :param parser: argparse Parser for this subcommand
-    :param help_text: Help message for this subcommand
-    :param aliases: Alternative names for this subcommand
+    :param help: Help message for this subcommand which displays in the list of subcommands of the command we are adding to.
+                 This is passed as the help argument to ArgumentParser.add_subparser().
+    :param aliases: Alternative names for this subcommand. This is passed as the alias argument to
+                    ArgumentParser.add_subparser().
     :return: Wrapper function that can receive an argparse.Namespace
     """
     def arg_decorator(func: Callable):
-        _set_parser_prog(parser, subcommand)
+        _set_parser_prog(parser, command + ' ' + subcommand)
 
         # If the description has not been set, then use the method docstring if one exists
         if parser.description is None and func.__doc__:
             parser.description = func.__doc__
 
-        parser.set_defaults(func=func)
-
         # Set some custom attributes for this command
         setattr(func, constants.SUBCMD_ATTR_COMMAND, command)
         setattr(func, constants.CMD_ATTR_ARGPARSER, parser)
         setattr(func, constants.SUBCMD_ATTR_NAME, subcommand)
-        parser_args = {}
-        if help_text is not None:
-            parser_args['help'] = help_text
+
+        # Dictionary of arguments which will be passed to ArgumentParser.add_subparser()
+        parser_args = dict()
+
+        # parser is set as the parent to the one being created by ArgumentParser.add_parser().
+        # argparse only copies actions (arguments) from a parent and not the following settings.
+        # To retain these settings, we will copy them from parser and pass them as ArgumentParser
+        # constructor arguments to add_parser().
+        parser_args['prog'] = parser.prog
+        parser_args['usage'] = parser.usage
+        parser_args['description'] = parser.description
+        parser_args['epilog'] = parser.epilog
+        parser_args['formatter_class'] = parser.formatter_class
+        parser_args['prefix_chars'] = parser.prefix_chars
+        parser_args['fromfile_prefix_chars'] = parser.fromfile_prefix_chars
+        parser_args['argument_default'] = parser.argument_default
+        parser_args['conflict_handler'] = parser.conflict_handler
+        parser_args['add_help'] = parser.add_help
+        parser_args['allow_abbrev'] = parser.allow_abbrev
+
+        # Add remaining arguments specific to add_parser()
+        if help is not None:
+            parser_args['help'] = help
         if aliases is not None:
             parser_args['aliases'] = aliases[:]
+
         setattr(func, constants.SUBCMD_ATTR_PARSER_ARGS, parser_args)
 
         return func
