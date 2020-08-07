@@ -2623,6 +2623,10 @@ class Cmd(cmd.Cmd):
                 if saved_readline_settings is not None:
                     self._restore_readline(saved_readline_settings)
 
+    #############################################################
+    # Parsers and functions for alias command and subcommands
+    #############################################################
+
     # Top-level parser for alias
     alias_description = ("Manage aliases\n"
                          "\n"
@@ -2640,10 +2644,6 @@ class Cmd(cmd.Cmd):
         # Call handler for whatever subcommand was selected
         handler = args.get_handler()
         handler(args)
-
-    ############################################
-    # Add subcommands to alias
-    ############################################
 
     # alias -> create
     alias_create_description = "Create or overwrite an alias"
@@ -2750,6 +2750,10 @@ class Cmd(cmd.Cmd):
             for cur_alias in sorted(self.aliases, key=self.default_sort_key):
                 self.poutput("alias create {} {}".format(cur_alias, self.aliases[cur_alias]))
 
+    #############################################################
+    # Parsers and functions for macro command and subcommands
+    #############################################################
+
     # Top-level parser for macro
     macro_description = ("Manage macros\n"
                          "\n"
@@ -2767,10 +2771,6 @@ class Cmd(cmd.Cmd):
         # Call handler for whatever subcommand was selected
         handler = args.get_handler()
         handler(args)
-
-    ############################################
-    # Add subcommands to macro
-    ############################################
 
     # macro -> create
     macro_create_help = "create or overwrite a macro"
