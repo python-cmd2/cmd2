@@ -15,8 +15,12 @@ from .conftest import complete_tester, WithCommandSets
 from cmd2.exceptions import CommandSetRegistrationError
 
 
+class CommandSetBase(cmd2.CommandSet):
+    pass
+
+
 @cmd2.with_default_category('Fruits')
-class CommandSetA(cmd2.CommandSet):
+class CommandSetA(CommandSetBase):
     def do_apple(self, cmd: cmd2.Cmd, statement: cmd2.Statement):
         cmd.poutput('Apple!')
 
@@ -60,7 +64,7 @@ class CommandSetA(cmd2.CommandSet):
 
 
 @cmd2.with_default_category('Command Set B')
-class CommandSetB(cmd2.CommandSet):
+class CommandSetB(CommandSetBase):
     def __init__(self, arg1):
         super().__init__()
         self._arg1 = arg1
@@ -95,8 +99,8 @@ def test_autoload_commands(command_sets_app):
 
 def test_custom_construct_commandsets():
     # Verifies that a custom initialized CommandSet loads correctly when passed into the constructor
-    command_set = CommandSetB('foo')
-    app = WithCommandSets(command_sets=[command_set])
+    command_set_b = CommandSetB('foo')
+    app = WithCommandSets(command_sets=[command_set_b])
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = app._build_command_info()
     assert 'Command Set B' in cmds_cats
@@ -107,15 +111,40 @@ def test_custom_construct_commandsets():
         assert app.install_command_set(command_set_2)
 
     # Verify that autoload doesn't conflict with a manually loaded CommandSet that could be autoloaded.
-    app2 = WithCommandSets(command_sets=[CommandSetA()])
+    command_set_a = CommandSetA()
+    app2 = WithCommandSets(command_sets=[command_set_a])
+
+    with pytest.raises(CommandSetRegistrationError):
+        app2.install_command_set(command_set_b)
+
+    app.uninstall_command_set(command_set_b)
+
+    app2.install_command_set(command_set_b)
+
     assert hasattr(app2, 'do_apple')
+    assert hasattr(app2, 'do_aardvark')
+
+    assert app2.find_commandset_for_command('aardvark') is command_set_b
+    assert app2.find_commandset_for_command('apple') is command_set_a
+
+    matches = app2.find_commandsets(CommandSetBase, subclass_match=True)
+    assert command_set_a in matches
+    assert command_set_b in matches
+    assert command_set_2 not in matches
 
 
 def test_load_commands(command_sets_manual):
 
     # now install a command set and verify the commands are now present
     cmd_set = CommandSetA()
+
+    assert command_sets_manual.find_commandset_for_command('elderberry') is None
+    assert not command_sets_manual.find_commandsets(CommandSetA)
+
     command_sets_manual.install_command_set(cmd_set)
+
+    assert command_sets_manual.find_commandsets(CommandSetA)[0] is cmd_set
+    assert command_sets_manual.find_commandset_for_command('elderberry') is cmd_set
 
     cmds_cats, cmds_doc, cmds_undoc, help_topics = command_sets_manual._build_command_info()
 
@@ -329,7 +358,7 @@ class LoadableFruits(cmd2.CommandSet):
     banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
-    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help_text='Cut banana', aliases=['bananer'])
+    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
     def cut_banana(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
         """Cut banana"""
         cmd.poutput('cutting banana: ' + ns.direction)
@@ -544,7 +573,7 @@ class AppWithSubCommands(cmd2.Cmd):
     banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
-    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help_text='Cut banana', aliases=['bananer'])
+    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help='Cut banana', aliases=['bananer'])
     def cut_banana(self, ns: argparse.Namespace):
         """Cut banana"""
         self.poutput('cutting banana: ' + ns.direction)

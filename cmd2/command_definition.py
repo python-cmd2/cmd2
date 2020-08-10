@@ -6,6 +6,7 @@ import functools
 from typing import Callable, Iterable, Optional, Type
 
 from .constants import COMMAND_FUNC_PREFIX
+from .exceptions import CommandSetRegistrationError
 
 # Allows IDEs to resolve types without impacting imports at runtime, breaking circular dependency issues
 try:  # pragma: no cover
@@ -92,7 +93,10 @@ class CommandSet(object):
         :param cmd: The cmd2 main application
         :type cmd: cmd2.Cmd
         """
-        self._cmd = cmd
+        if self._cmd is None:
+            self._cmd = cmd
+        else:
+            raise CommandSetRegistrationError('This CommandSet has already been registered')
 
     def on_unregister(self, cmd):
         """

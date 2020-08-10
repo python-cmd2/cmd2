@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # coding=utf-8
-"""A simple example demonstracting modular subcommand loading through CommandSets
+"""A simple example demonstrating modular subcommand loading through CommandSets
 
 In this example, there are loadable CommandSets defined. Each CommandSet has 1 subcommand defined that will be
 attached to the 'cut' command.
@@ -23,10 +23,11 @@ class LoadableFruits(CommandSet):
     def do_apple(self, cmd: cmd2.Cmd, _: cmd2.Statement):
         cmd.poutput('Apple')
 
-    banana_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+    banana_description = "Cut a banana"
+    banana_parser = cmd2.Cmd2ArgumentParser(add_help=False, description=banana_description)
     banana_parser.add_argument('direction', choices=['discs', 'lengthwise'])
 
-    @cmd2.as_subcommand_to('cut', 'banana', banana_parser)
+    @cmd2.as_subcommand_to('cut', 'banana', banana_parser, help=banana_description.lower())
     def cut_banana(self, cmd: cmd2.Cmd, ns: argparse.Namespace):
         """Cut banana"""
         cmd.poutput('cutting banana: ' + ns.direction)
@@ -40,10 +41,11 @@ class LoadableVegetables(CommandSet):
     def do_arugula(self, cmd: cmd2.Cmd, _: cmd2.Statement):
         cmd.poutput('Arugula')
 
-    bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False)
+    bokchoy_description = "Cut some bokchoy"
+    bokchoy_parser = cmd2.Cmd2ArgumentParser(add_help=False, description=bokchoy_description)
     bokchoy_parser.add_argument('style', choices=['quartered', 'diced'])
 
-    @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser)
+    @cmd2.as_subcommand_to('cut', 'bokchoy', bokchoy_parser, help=bokchoy_description.lower())
     def cut_bokchoy(self, cmd: cmd2.Cmd, _: cmd2.Statement):
         cmd.poutput('Bok Choy')
 
@@ -95,9 +97,9 @@ class ExampleApp(cmd2.Cmd):
 
     @with_argparser(cut_parser)
     def do_cut(self, ns: argparse.Namespace):
+        # Call handler for whatever subcommand was selected
         handler = ns.get_handler()
         if handler is not None:
-            # Call whatever subcommand function was selected
             handler(ns)
         else:
             # No subcommand was provided, so call help
