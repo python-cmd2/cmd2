@@ -179,6 +179,14 @@ class Cmd(cmd.Cmd):
         :param shortcuts: dictionary containing shortcuts for commands. If not supplied,
                           then defaults to constants.DEFAULT_SHORTCUTS. If you do not want
                           any shortcuts, pass an empty dictionary.
+        :param command_sets: Provide CommandSet instances to load during cmd2 initialization.
+                             This allows CommandSets with custom constructor parameters to be
+                             loaded.  This also allows the a set of CommandSets to be provided
+                             when `auto_load_commands` is set to False
+        :param auto_load_commands: If True, cmd2 will check for all subclasses of `CommandSet`
+                                   that are currently loaded by Python and automatically
+                                   instantiate and register all commands. If False, CommandSets
+                                   must be manually installed with `install_command_set`.
         """
         # If use_ipython is False, make sure the ipy command isn't available in this instance
         if not use_ipython:
