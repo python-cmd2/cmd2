@@ -8,6 +8,8 @@
     * Added explicit testing against python 3.5.2 for Ubuntu 16.04, and 3.5.3 for Debian 9
     * Added fallback definition of typing.Deque (taken from 3.5.4)
     * Removed explicit type hints that fail due to a bug in 3.5.2 favoring comment-based hints instead
+    * When passing a ns_provider to an argparse command, will now attempt to resolve the correct
+      CommandSet instance for self. If not, it'll fall back and pass in the cmd2 app
 * Other 
     * Added missing doc-string for new cmd2.Cmd __init__ parameters 
       introduced by CommandSet enhancement
